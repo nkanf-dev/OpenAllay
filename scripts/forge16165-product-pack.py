@@ -293,11 +293,11 @@ def archived_transport(record, proof, request):
     exact(transport,('kind','artifact','run','artifactId','sourceRevision','rootReceipt','originalClosureSpecSha256',
         'derivedGeneratedRoot','derivedClassRoot','originalClosureSpec'),'archived normal build transport')
     require(transport['kind']=='archived-normal-FG-build-derived-views'
-        and transport['run']==37465710119 and transport['artifactId']==11414900293
-        and transport['sourceRevision']==request['nativeSourceRevision']=='c943b9a52d96b908a4cb0e3e8115ae9ff15c1c64',
+        and transport['run']==37469212164 and transport['artifactId']==11415649433
+        and transport['sourceRevision']==request['nativeSourceRevision']=='b3bdf9c8bad6849907e554df23913d0f68610611',
         'Exact passed normal native source/run')
     archive_path=ref(transport['artifact'],'original uploaded native evidence')
-    require(transport['artifact']['sha256']=='0b5c561c9a9b64b62a0c4461950bfd60b7af1b579197f0156b21f1239087cdea',
+    require(transport['artifact']['sha256']=='b069bc8fc1073c51adceb814544dd49c4e47d7c9f6e26a48c421b3d42592665d',
         'Original successful native artifact identity')
     root_receipt=checked_json(transport['rootReceipt'],'root verified successful native run receipt')
     require(root_receipt.get('run')==transport['run'] and root_receipt.get('source')==transport['sourceRevision']
