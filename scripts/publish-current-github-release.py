@@ -12,8 +12,8 @@ def main():
         raise ValueError('Missing verified release packages')
     command = ['gh', 'release', 'create', tag]
     command += [str(path) for path in jars]
-    command += [str(path) for path in sorted((release / 'build-receipts').glob('*.json'))]
-    command += [str(release / 'SHA256SUMS'), 'release-publication-records.json',
+    # Internal source/build records stay in the retained CI artifact, not player downloads.
+    command += [str(release / 'SHA256SUMS'),
                 '--notes-file', 'release-notes.md', '--title', 'OpenAllay ' + tag,
                 '--verify-tag']
     if '-' in tag:
