@@ -140,6 +140,6 @@ task buildNativeApplication {
             minecraft:'1.12.2',forge:'14.23.5.2864',forgeGradle:'3.0.197',toolJava:System.getProperty('java.version'),
             nativeRelease:17,engineSha256:roles.engine.sha256,sdkSha256:roles.sdk.sha256,builderSha256:roles.builder.sha256,
             namespaceReceiptSha256:sha(new File(out,'namespace-receipt.json')),curatedClassMapSha256:sha(curated),
-            jar:jar.absolutePath,jarSha256:sha(jar),gameLaunch:false])))+'\n','UTF-8')
+            jar:jar.absolutePath,jarSha256:sha(jar),gameLaunch:false]))+'\n','UTF-8')
     }
 }
