@@ -48,7 +48,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         this.correlationId = java.util.Objects.requireNonNull(correlationId, "correlationId");
         this.actor = java.util.Objects.requireNonNull(actor, "actor");
         this.dimension = java.util.Objects.requireNonNull(dimension, "dimension");
-        this.level = client.level;
+        this.level = dev.openallay.client.context.MinecraftClientContextFacts.world(client);
         ACTIVE.add(this);
     }
 
@@ -59,7 +59,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         result.whenComplete((value, failure) -> pending.remove(capture));
         cancellation.onCancel(() -> result.completeExceptionally(unavailable("Native view capture was cancelled")));
         try {
-            client.execute(() -> {
+            dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> {
                 try {
                     verify(capture);
                     if (request.target() == WorldViewRequest.Target.ASSOCIATED_UI) {
@@ -67,7 +67,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
                         observations.associatedCapture(correlationId, actor).whenComplete((value, failure) -> {
                             try {
                                 if (failure != null) result.completeExceptionally(failure);
-                                else client.execute(() -> {
+                                else dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> {
                                     try { verify(capture); if (available(capture)) result.complete(value); }
                                     catch (Throwable invalidated) { result.completeExceptionally(invalidated); }
                                 });
@@ -85,7 +85,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
 
     /** Exact native pre-GUI frame hook. One readback serves each target group. */
     public static void beforeGui(Minecraft client, boolean advanceGameTime) {
-        if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || client.level == null) return;
+        if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || dev.openallay.client.context.MinecraftClientContextFacts.world(client) == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
             if (capture.client == client) capture.frame(WorldViewRequest.Target.WORLD);
         }
@@ -93,7 +93,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
 
     /** Exact native post-final-GUI frame hook. Native game UI only, never Guide pixels. */
     public static void afterGui(Minecraft client, boolean advanceGameTime) {
-        if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || client.level == null) return;
+        if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || dev.openallay.client.context.MinecraftClientContextFacts.world(client) == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
             if (capture.client == client) capture.frame(WorldViewRequest.Target.GAME_UI);
         }
@@ -125,7 +125,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             Frame frame = new Frame(UUID.randomUUID().toString(), capturedAt, target, MinecraftNativeImageCapture.width(client),
                     MinecraftNativeImageCapture.height(client), MinecraftCameraFacts.guiScale(client),
                     camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !MinecraftClientWindow.hudHidden(client),
-                    target == WorldViewRequest.Target.GAME_UI && (MinecraftClientWindow.screen(client) != null || MinecraftClientWindow.overlay(client) != null));
+                    target == WorldViewRequest.Target.GAME_UI && (MinecraftClientWindow.screen(client) != null || dev.openallay.client.context.MinecraftFocusNativeFacts.overlay(client) != null));
             selected.forEach(value -> value.submitted = true);
             MinecraftNativeImageCapture.capture(client).whenComplete((image, failure) -> {
                 if (failure != null) selected.forEach(value -> value.result.completeExceptionally(failure));
@@ -184,7 +184,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
                     WorldViewCapture result = new WorldViewCapture(frame.id, frame.capturedAt, actor, dimension,
                             frame.target, frame.hud, frame.gameUi, frame.width, frame.height, frame.guiScale,
                             frame.camera, frame.screen, reference, evidence);
-                    client.execute(() -> {
+                    dev.openallay.client.context.MinecraftClientContextFacts.execute(client, () -> {
                         for (Pending capture : selected) {
                             try {
                                 verify(capture);
@@ -202,17 +202,17 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
     }
 
     private boolean available(Pending capture) {
-        return !closed && client.level == level && !capture.cancellation.isCancelled() && !capture.result.isDone();
+        return !closed && dev.openallay.client.context.MinecraftClientContextFacts.world(client) == level && !capture.cancellation.isCancelled() && !capture.result.isDone();
     }
 
     private void verify(Pending capture) {
         capture.cancellation.throwIfCancelled();
-        if (closed || client.level != level || client.player == null || client.level == null
-                || !actor.equals(client.player.getUUID())
-                || !dimension.equals(dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(client.level.dimension()).toString())) {
+        if (closed || dev.openallay.client.context.MinecraftClientContextFacts.world(client) != level || client.player == null || dev.openallay.client.context.MinecraftClientContextFacts.world(client) == null
+                || !actor.equals(dev.openallay.client.context.MinecraftClientContextFacts.uuid(client.player))
+                || !dimension.equals(dev.openallay.client.context.MinecraftClientContextFacts.dimension(client))) {
             throw unavailable("Native view source is no longer available");
         }
-        if (!client.isSameThread()) throw new IllegalStateException("Native view admission must run on the Minecraft thread");
+        if (!dev.openallay.client.context.MinecraftClientContextFacts.ownerThread(client)) throw new IllegalStateException("Native view admission must run on the Minecraft thread");
     }
 
     @Override public void close() {

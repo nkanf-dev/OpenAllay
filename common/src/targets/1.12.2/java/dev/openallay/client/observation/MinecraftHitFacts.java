@@ -11,6 +11,7 @@ import net.minecraftforge.fluids.FluidRegistry;
 /** Actual one-class legacy raytrace discriminator, never aliased modern hit subclasses. */
 public final class MinecraftHitFacts {
     private MinecraftHitFacts() {}
+    public static IBlockState state(Minecraft client, BlockPos position) { return client.world.getBlockState(position); }
     public static RayTraceResult hit(Minecraft client) { return client.objectMouseOver; }
     public static String kind(RayTraceResult hit) { return hit.typeOfHit.name().toLowerCase(java.util.Locale.ROOT); }
     public static Vec3d location(RayTraceResult hit) { return hit.hitVec; }

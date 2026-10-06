@@ -14,6 +14,7 @@ import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 /** Real native hit payload access; shared capture retains snapshot construction. */
 public final class MinecraftHitFacts {
     private MinecraftHitFacts() {}
+    public static BlockState state(Minecraft client, net.minecraft.core.BlockPos position) { return client.level.getBlockState(position); }
     public static String availability() { return ""; }
     public static HitResult hit(Minecraft client) { return client.hitResult; }
     public static String kind(HitResult hit) { return hit.getType().name().toLowerCase(java.util.Locale.ROOT); }
