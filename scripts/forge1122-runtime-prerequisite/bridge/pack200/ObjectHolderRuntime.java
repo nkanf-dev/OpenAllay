@@ -21,7 +21,15 @@ public final class ObjectHolderRuntime {
     public static Field makeWritable(Field field) throws ReflectiveOperationException {
         try {
             if (!admitted(field) || !Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers())
-                    || field.getType().isPrimitive()) throw new IllegalArgumentException("Foreign or invalid holder field");
+                    || field.getType().isPrimitive()) {
+                String detail=field.getDeclaringClass().getName()+"\t"+field.getName()+"\t"+field.getType().getName()
+                    +"\tmodifiers="+field.getModifiers()+"\tadmitted="+admitted(field)
+                    +"\tloader="+field.getDeclaringClass().getClassLoader().getClass().getName()
+                    +"\tcodeSource="+field.getDeclaringClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm()+"\n";
+                Files.write(Paths.get(System.getProperty("openallay.objectholder.invalid")),detail.getBytes(StandardCharsets.UTF_8),
+                            StandardOpenOption.CREATE,StandardOpenOption.APPEND);
+                throw new IllegalArgumentException("Foreign or invalid holder field: "+detail.trim());
+            }
             java.net.URL location = field.getDeclaringClass().getProtectionDomain().getCodeSource().getLocation();
             if ("jar".equals(location.getProtocol())) location = ((java.net.JarURLConnection) location.openConnection()).getJarFileURL();
             File source = new File(location.toURI()).getCanonicalFile();

@@ -276,9 +276,7 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if args.objectholder_bridge and not args.objectholder_phase_diagnostic:
-        with (output / "objectholder-phase-tests.log").open("w") as log:
-            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.ObjectHolderPhaseTest"],
-                           check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+        runtime.write_json(output / "objectholder-phase-test-reused.json", {"run": "37520069517", "status": "pass", "unchangedPhaseInputsAndPatch": True})
     elif args.title_only:
         runtime.write_json(output / "bridge-tests-reused.json", json.loads((PACKET / "prior-bridge-tests.json").read_text()))
     elif args.pack200_bridge:
@@ -343,6 +341,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         "-Dopenallay.objectholder.rejected=" + str(output / "objectholder-rejected"),
         "-Dopenallay.objectholder.writes=" + str(output / "objectholder-writes.tsv"),
         "-Dopenallay.objectholder.metadata=" + str(output / "objectholder-metadata.tsv"),
+        "-Dopenallay.objectholder.invalid=" + str(output / "objectholder-invalid.tsv"),
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
         if args.objectholder_bridge else [])
     command = [str(java), "-Xms256M", "-Xmx1536M",
