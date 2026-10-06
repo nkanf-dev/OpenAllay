@@ -369,7 +369,8 @@ def build_and_stage(directory, target=None, family_ids=None):
         selection = ",".join(family["id"] for family in families)
         # Compile actual accepted native families. The Builder dependency delegates
         # assemble+verifyUniversalPackage because testBundledExtensions stays false.
-        compiler.compile_target(ROOT, target, loaders=tuple(family["loader"] for family in families), artifact_ids=selection)
+        compiler.compile_target(ROOT, target, loaders=tuple(family["loader"] for family in families), artifact_ids=selection,
+                                execute=lambda command, **options: subprocess.run(command, stdout=sys.stderr, **options))
         engine = {name: hashlib.sha256(content).hexdigest() for name, content in native.engine_files(ROOT).items()}
         require(expected_engine is None or engine == expected_engine, "Compiled engine differs across accepted native groups")
         expected_engine = engine
