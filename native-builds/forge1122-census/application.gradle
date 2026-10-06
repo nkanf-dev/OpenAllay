@@ -51,7 +51,7 @@ task prepareNativeApplication {
     doLast {
         if (out.exists()) throw new GradleException('Fresh native output path required')
         out.mkdirs(); toolClasses.mkdirs(); ap.mkdirs()
-        def evidence=file(property('censusOutput'))
+        def evidence=project.file(project.property('censusOutput'))
         def selected=new JsonSlurper().parse(new File(evidence,'source-selection.json'))
         def inputs=new JsonSlurper().parse(new File(evidence,'native-inputs.json'))
         execute(['python3','-B',new File(canonical,'scripts/supplement-forge1122-native-api.py').absolutePath,
