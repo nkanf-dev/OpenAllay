@@ -21,6 +21,8 @@ import net.minecraft.client.Minecraft;
 final class GuideNativeWorldAccessProbe {
     private GuideNativeWorldAccessProbe() {}
     static void run(UUID actor, String world, Consumer<Map<String, Object>> finished) {
+        String phase = System.getProperty("openallay.e2e.worldPhase", "");
+        if (phase.equals("persist") || phase.equals("reload")) { persistence(actor, world, finished); return; }
         Minecraft client = Minecraft.getInstance();
         var server = client.getSingleplayerServer();
         if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || server.isPublished()
@@ -106,6 +108,70 @@ final class GuideNativeWorldAccessProbe {
             client.execute(() -> finished.accept(report));
         }, "openallay-native-world-sdk-probe");
         worker.setDaemon(true); worker.start();
+    }
+    private static void persistence(UUID actor, String world, Consumer<Map<String,Object>> finished) {
+        Minecraft client = Minecraft.getInstance();
+        String phase = System.getProperty("openallay.e2e.worldPhase", "");
+        boolean reload = phase.equals("reload");
+        var server = client.getSingleplayerServer();
+        String requested = System.getProperty(reload ? "openallay.e2e.resumeWorld" : "openallay.e2e.createWorld", "");
+        if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || server.isPublished()
+                || !world.equals(requested) || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
+                || !world.equals(server.getWorldData().getLevelName()) || GuideProbeWorldSettings.commandsAllowed(server)
+                || client.player == null || !actor.equals(client.player.getUUID())) {
+            throw new IllegalStateException("Persistence probe requires its explicitly owned isolated world");
+        }
+        String dimension = dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(
+                dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player).dimension()).toString();
+        int freshX=(int)Math.floor(client.player.getX())+5, freshY=Math.max(5,Math.min(250,(int)Math.floor(client.player.getY())+3)), freshZ=(int)Math.floor(client.player.getZ())+5;
+        var access=OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
+        java.nio.file.Path retained=client.gameDirectory.toPath().resolve("config/openallay/e2e/native-world-persistence.json");
+        Thread worker=new Thread(() -> {
+            Map<String,Object> report=new LinkedHashMap<>();
+            report.put("scenario","native-world-sdk");report.put("phase",phase);report.put("world",world);report.put("modelUsed",false);
+            try (WorldSession session=access.open(new Invocation(actor,dimension))) {
+                if (!reload) {
+                    require(session.existingWorldId().isEmpty(),"fresh persistence identity read");
+                    String id=session.worldId();
+                    String before=session.call(() -> session.read(freshX,freshY,freshZ));
+                    String actual=session.call(() -> {
+                        String state="{\"id\":\"minecraft:chest\",\"properties\":{\"facing\":\"north\",\"type\":\"single\",\"waterlogged\":\"false\"},\"blockEntity\":\"{id:'minecraft:chest',Items:[{Slot:0b,id:'minecraft:diamond',Count:3b}]}\"}";
+                        String intended=session.preview(freshX,freshY,freshZ,state);
+                        require(session.read(freshX,freshY,freshZ).equals(before),"persistence preview did not write");
+                        WorldSession.WriteOutcome result=session.write(freshX,freshY,freshZ,intended);
+                        require(result.failure()==null && result.changed() && intended.equals(result.actual()),"persistence native chest write");
+                        return result.actual();
+                    });
+                    JsonObject receipt=new JsonObject();receipt.addProperty("world",world);receipt.addProperty("worldId",id);
+                    receipt.addProperty("x",freshX);receipt.addProperty("y",freshY);receipt.addProperty("z",freshZ);
+                    receipt.addProperty("before",before);receipt.addProperty("actual",actual);
+                    java.nio.file.Files.createDirectories(retained.getParent());
+                    java.nio.file.Files.writeString(retained,receipt.toString(),java.nio.charset.StandardCharsets.UTF_8,
+                            java.nio.file.StandardOpenOption.CREATE_NEW,java.nio.file.StandardOpenOption.WRITE);
+                    report.put("worldId",id);report.put("actual",actual);report.put("saveAdmission","Native client shutdown owns game/chunk/SavedData save; reload must prove persisted bytes");
+                } else {
+                    JsonObject receipt=JsonTrees.parse(java.nio.file.Files.readString(retained,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                    require(world.equals(receipt.get("world").getAsString()),"retained world receipt");
+                    String id=session.existingWorldId().orElseThrow(() -> new IllegalStateException("Native identity missing after reload"));
+                    require(id.equals(receipt.get("worldId").getAsString()),"native UUID persisted across new process");
+                    int x=receipt.get("x").getAsInt(),y=receipt.get("y").getAsInt(),z=receipt.get("z").getAsInt();
+                    String actual=session.call(() -> session.read(x,y,z));
+                    require(actual.equals(receipt.get("actual").getAsString()),"complete native container image persisted across reload");
+                    session.call(() -> {
+                        WorldSession.WriteOutcome restored=session.write(x,y,z,receipt.get("before").getAsString());
+                        require(restored.failure()==null && receipt.get("before").getAsString().equals(restored.actual()),"restore pre-probe image after reload");
+                        return null;
+                    });
+                    report.put("worldId",id);report.put("persistedActual",actual);report.put("originalImageRestored",true);
+                }
+                report.put("outcome","COMPLETED");
+            } catch (Exception | Error failure) {
+                report.put("outcome","HARNESS_FAILED");report.put("failure",failure.toString());
+                report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
+                if(failure.getCause()!=null)report.put("cause",failure.getCause().toString());
+            }
+            client.execute(() -> finished.accept(report));
+        },"openallay-native-world-persistence-probe");worker.setDaemon(true);worker.start();
     }
     private static void require(boolean value, String check) { if (!value) throw new IllegalStateException(check); }
     private static final class Invocation implements ExtensionInvocation {

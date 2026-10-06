@@ -258,7 +258,7 @@ public final class GuideClientE2EController {
             nativeProbePending = true;
             started = true;
             startedAt = Instant.now();
-            GuideNativeWorldAccessProbe.run(actor, System.getProperty("openallay.e2e.createWorld", ""),
+            GuideNativeWorldAccessProbe.run(actor, System.getProperty("openallay.e2e.createWorld", System.getProperty("openallay.e2e.resumeWorld", "")),
                     report -> finish(gson.toJson(report)));
             return;
         }
@@ -674,7 +674,8 @@ public final class GuideClientE2EController {
         boolean existing = Files.isDirectory(client.gameDirectory.toPath().resolve("saves").resolve(name));
         if (!name.matches("openallay-builder-[a-zA-Z0-9_.-]+")
                 || (!create.isBlank() && (!resume.isBlank() || existing))
-                || (create.isBlank() && (!List.of("builder-reload", "builder-live-undo").contains(config.scenario()) || !existing))) {
+                || (create.isBlank() && (!(List.of("builder-reload", "builder-live-undo").contains(config.scenario())
+                        || "native-world-sdk".equals(config.scenario()) && "reload".equals(System.getProperty("openallay.e2e.worldPhase", ""))) || !existing))) {
             failWithoutRequest("unsafe_world_name", "Acceptance requires a new disposable world or an explicitly resumed Builder reload world");
             return;
         }
