@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack]
+        options: [tooling, abi, engine, native, pack, boot]
 permissions:
   contents: read
 concurrency:
@@ -140,3 +140,36 @@ jobs:
             build/forge16165-pack-inputs/postprocessed/*.json
             build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.json
             build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+
+  product-native-boot:
+    if: inputs.mode == 'boot'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Install isolated display and screenshot support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/acceptance-tools
+          build/acceptance-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Boot the actual product once with required Mixin bindings
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py
+      - name: Retain actual product/native evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-product-boot-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/e2e/forge16165-product/*.json
+            build/e2e/forge16165-product/*.log
+            build/e2e/forge16165-product/*.png
+            build/e2e/forge16165-product/game/logs/
+            build/e2e/forge16165-product/game/crash-reports/
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
