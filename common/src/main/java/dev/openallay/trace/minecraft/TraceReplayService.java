@@ -30,7 +30,7 @@ public final class TraceReplayService {
 
     public ToolResult<List<String>> traceIds(CommandSourceStack source) {
         requireServerThread(source);
-        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(source.getServer()));
+        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source)));
         if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
@@ -40,7 +40,7 @@ public final class TraceReplayService {
 
     public ToolResult<ReplayReport> replay(CommandSourceStack source, String traceId) {
         requireServerThread(source);
-        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(source.getServer()));
+        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source)));
         if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
@@ -76,7 +76,7 @@ public final class TraceReplayService {
 
     private static void requireServerThread(CommandSourceStack source) {
         Objects.requireNonNull(source, "source");
-        if (!source.getServer().isSameThread()) {
+        if (!dev.openallay.server.NativeServerOwner.isOwner(dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source))) {
             throw new IllegalStateException("Trace replay must run on the Minecraft server thread");
         }
     }

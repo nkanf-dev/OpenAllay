@@ -72,7 +72,7 @@ public final class MinecraftContextCapture {
             String correlationId) {
         Objects.requireNonNull(source, "source");
         capabilities = Set.copyOf(capabilities);
-        if (!source.getServer().isSameThread()) {
+        if (!dev.openallay.server.NativeServerOwner.isOwner(MinecraftCommandSourceFacts.server(source))) {
             throw new IllegalStateException("Minecraft context must be captured on server thread");
         }
 
@@ -80,11 +80,11 @@ public final class MinecraftContextCapture {
         java.time.Instant capturedAt = java.time.Instant.now();
         ServerPlayer serverPlayer = MinecraftCommandCaller.player(source);
         CallerSnapshot caller = serverPlayer == null
-                ? new CallerSnapshot(CallerKind.CONSOLE, null, source.getTextName(), true)
+                ? new CallerSnapshot(CallerKind.CONSOLE, null, MinecraftCommandSourceFacts.name(source), true)
                 : new CallerSnapshot(
                         CallerKind.PLAYER,
-                        serverPlayer.getUUID(),
-                        source.getTextName(),
+                        dev.openallay.server.NativeServerOwner.actor(serverPlayer),
+                        MinecraftCommandSourceFacts.name(source),
                         MinecraftCommandPermissions.canReadWorld(source));
 
         Optional<PlayerSnapshot> player = capabilities.contains(ContextCapability.PLAYER)
@@ -154,7 +154,7 @@ public final class MinecraftContextCapture {
                         new DiagnosticValue("position", "z", Double.toString(serverPlayer.getZ())),
                         new DiagnosticValue("position", "dimension", player.dimension()),
                         new DiagnosticValue("player", "game_mode", player.gameMode()));
-        var level = source.getLevel();
+        var level = MinecraftCommandSourceFacts.level(source);
         var border = level.getWorldBorder();
         Map<String, ObservableGameStateSnapshot.QueryValue> queries = new LinkedHashMap<>();
         if (authorizedWorldQuery(source, WorldQueryOperation.TIME)) {
@@ -287,7 +287,7 @@ public final class MinecraftContextCapture {
                 capturedAt,
                 "minecraft:registry",
                 REGISTRY_PROVENANCE), RegistryCatalogCapture.capture(
-                        REGISTRY_PROVENANCE, () -> source.getServer().isSameThread()));
+                        REGISTRY_PROVENANCE, () -> dev.openallay.server.NativeServerOwner.isOwner(MinecraftCommandSourceFacts.server(source))));
     }
 
     private RecipeSnapshot captureRecipes(
