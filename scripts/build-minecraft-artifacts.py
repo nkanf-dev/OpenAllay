@@ -276,7 +276,7 @@ REUSE_GROUP_FIELDS = {"target", "sourceSha", "runId", "runAttempt", "jobId", "jo
 REUSE_ORCHESTRATION_PATHS = {
     RELEASE_BUILD_SELECTION, ".github/workflows/minecraft-native.yml", ".github/workflows/release.yml",
     "scripts/build-minecraft-artifacts.py", "scripts/verify-release-package-source.py",
-    "scripts/fetch-release-build-groups.py",
+    "scripts/fetch-release-build-groups.py", "scripts/collect-release-group-metadata.py",
     "docs/releases/0.4.3.md", "README.md", "README.zh-CN.md", "docs/native-binary-artifacts.md",
 }
 REUSE_NATIVE_PATHS = {
@@ -339,6 +339,21 @@ def selected_native_blob(tree, revision, module, scope, relative, target, loader
     return None if selected is None else git_output("show", revision + ":" + selected, binary=True)
 
 
+def verify_1201_refmap_build_scope(old_source, current_source, families):
+    """Admit only the reviewed inactive 1.20.1 Fabric producer block repair."""
+    require(all("1.20.1" not in family["supportedTargets"] for family in families),
+            "The 1.20.1 refmap producer repair requires rebuilding its target, not reuse")
+    old_block = b"    if (minecraftTarget == '1.20.1') {\n        mixin { defaultRefmapName.set('openallay.refmap.json') }\n    }"
+    new_block = b"    if (minecraftTarget == '1.20.1') {\n        mixin {\n            useLegacyMixinAp.set(true)\n            defaultRefmapName.set('openallay.refmap.json')\n        }\n    }"
+    old = git_output("show", old_source + ":fabric/build.gradle", binary=True)
+    new = git_output("show", current_source + ":fabric/build.gradle", binary=True)
+    require(old.count(old_block) == 1 and old.count(new_block) == 0
+            and new.count(new_block) == 1 and new.count(old_block) == 0,
+            "Expected the single exact reviewed Fabric 1.20.1 refmap block replacement")
+    require(new.replace(new_block, old_block, 1) == old,
+            "Fabric build source has changes beyond the inactive 1.20.1 refmap producer block")
+
+
 def verify_reused_source(old_source, current_source, families):
     require(re.fullmatch(r"[0-9a-f]{40}", old_source) is not None and old_source != current_source,
             "Expected exact original source commit")
@@ -346,6 +361,9 @@ def verify_reused_source(old_source, current_source, families):
     changed = git_output("diff", "--no-renames", "--name-only", "-z", old_source, current_source).split("\0")
     native_units = set()
     for path in filter(None, changed):
+        if path == "fabric/build.gradle":
+            verify_1201_refmap_build_scope(old_source, current_source, families)
+            continue
         if path in REUSE_ORCHESTRATION_PATHS:
             continue
         require(path in REUSE_NATIVE_PATHS, "Reused release source changes an unapproved native leaf: " + path)

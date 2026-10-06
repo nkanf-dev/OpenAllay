@@ -1,6 +1,11 @@
 name: Build release packages
 on:
   workflow_dispatch:
+    inputs:
+      metadata_only:
+        type: boolean
+        default: false
+        description: Read original successful group metadata without compiling
 permissions:
   contents: read
 concurrency:
@@ -8,6 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
+    if: ${{ !inputs.metadata_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -92,3 +98,30 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: release/
+  collect-metadata:
+    if: ${{ inputs.metadata_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: 37419529652
+          pattern: release-packages-*
+          path: build/metadata-groups
+      - name: Extract only successful original receipt records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/collect-release-group-metadata.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-small-metadata-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: build/release-metadata/

@@ -48,7 +48,10 @@ loom {
         }
     }
     if (minecraftTarget == '1.20.1') {
-        mixin { defaultRefmapName.set('openallay.refmap.json') }
+        mixin {
+            useLegacyMixinAp.set(true)
+            defaultRefmapName.set('openallay.refmap.json')
+        }
     }
     def aw = project(':common').selectedMinecraftTargetResource("${mod_id}.accesswidener")
     if (aw.exists()) {
