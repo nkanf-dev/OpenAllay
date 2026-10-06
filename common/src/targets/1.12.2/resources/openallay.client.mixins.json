@@ -18,7 +18,9 @@
     "MinecraftFpsAccess",
     "GuideProbeMouseInvoker",
     "MainWindowResizeMixin",
-    "GuideTextFieldDrawAccessMixin"
+    "GuideTextFieldDrawAccessMixin",
+    "GuiScreenMenuKeyObservationMixin",
+    "GuiTextFieldMenuKeyObservationMixin"
   ],
   "injectors": {
     "defaultRequire": 1
