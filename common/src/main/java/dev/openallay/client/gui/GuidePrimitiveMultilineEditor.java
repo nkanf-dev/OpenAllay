@@ -45,11 +45,8 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
     @Override public void setValueListener(Consumer<String> listener) { text.listener(listener); }
     @Override public void resize(int width, int height, int x, int y) {
         int contentWidth = GuideComposerGeometry.contentWidth(width, PADDING * 2);
-        boolean reflow = this.width != width;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+        boolean reflow = getWidth() != width;
+        guideSetBounds(x, y, width, height);
         if (reflow) text.wrap(contentWidth, text -> GuideNativeFont.width(font, GuideNativeFont.plain(text)));
         // Geometry changes clamp the existing offset; they do not move selection/caret/focus.
         clampScroll();
@@ -61,7 +58,7 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
         if (!focused) { selecting = false; draggingScrollbar = false; }
     }
     private int lineHeight() { return GuideNativeFont.lineHeight(font) + 1; }
-    private int viewportHeight() { return Math.max(1, height - PADDING * 2); }
+    private int viewportHeight() { return Math.max(1, getHeight() - PADDING * 2); }
     private double maximumScroll() { return Math.max(0, text.lines().size() * lineHeight() - viewportHeight()); }
     private void clampScroll() { scroll = Math.max(0, Math.min(maximumScroll(), scroll)); }
     private void changed() {
@@ -72,15 +69,15 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
         clampScroll();
     }
     private int indexAt(double mouseX, double mouseY) {
-        int line = (int) Math.floor((mouseY - y - PADDING + scroll) / lineHeight());
-        return text.indexAt(line, (int) Math.round(mouseX - x - PADDING));
+        int line = (int) Math.floor((mouseY - getY() - PADDING + scroll) / lineHeight());
+        return text.indexAt(line, (int) Math.round(mouseX - getX() - PADDING));
     }
     @Override public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) {
         double mouseX = event.x(), mouseY = event.y();
         int button = event.button();
         if (!visible || !active || button != 0 || !isMouseOver(mouseX, mouseY)) return false;
         setFocused(true);
-        if (maximumScroll() > 0 && mouseX >= x + width - PADDING) {
+        if (maximumScroll() > 0 && mouseX >= getX() + getWidth() - PADDING) {
             draggingScrollbar = true;
             scrollToMouse(mouseY);
             return true;
@@ -104,8 +101,8 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
         if (!active || !visible || !isFocused() || button != 0) return false;
         if (draggingScrollbar) { scrollToMouse(mouseY); return true; }
         if (!selecting) return false;
-        if (mouseY < y + PADDING) scroll -= lineHeight();
-        if (mouseY > y + height - PADDING) scroll += lineHeight();
+        if (mouseY < getY() + PADDING) scroll -= lineHeight();
+        if (mouseY > getY() + getHeight() - PADDING) scroll += lineHeight();
         clampScroll();
         text.seek(indexAt(mouseX, mouseY), true);
         changed();
@@ -127,7 +124,7 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
         double thumb = Math.min(viewportHeight(), Math.max(12,
                 viewportHeight() * (double) viewportHeight() / (text.lines().size() * lineHeight())));
         double travel = viewportHeight() - thumb;
-        scroll = travel <= 0 ? 0 : (mouseY - y - PADDING - thumb / 2) / travel * maximumScroll();
+        scroll = travel <= 0 ? 0 : (mouseY - getY() - PADDING - thumb / 2) / travel * maximumScroll();
         clampScroll();
     }
     @Override public boolean guideKeyPressed(GuideInputKey event) {
@@ -179,51 +176,51 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
         return true;
     }
     @Override protected void paintGuideWidget(GuideGraphics graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(x, y, x + width, y + height, 0xFF101010);
-        graphics.outline(x, y, width, height, isFocused() ? 0xFFFFFFFF : 0xFF707070);
-        if (height <= PADDING * 2) return;
-        graphics.enableScissor(x + PADDING, y + PADDING, x + width - PADDING, y + height - PADDING);
+        graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xFF101010);
+        graphics.outline(getX(), getY(), getWidth(), getHeight(), isFocused() ? 0xFFFFFFFF : 0xFF707070);
+        if (getHeight() <= PADDING * 2) return;
+        graphics.enableScissor(getX() + PADDING, getY() + PADDING, getX() + getWidth() - PADDING, getY() + getHeight() - PADDING);
         try {
             int first = Math.max(0, (int) (scroll / lineHeight()));
             int last = Math.min(text.lines().size(), first + viewportHeight() / lineHeight() + 2);
             for (int i = first; i < last; i++) {
                 GuideMultilineTextState.Line line = text.lines().get(i);
-                int top = y + PADDING + i * lineHeight() - (int) scroll;
+                int top = getY() + PADDING + i * lineHeight() - (int) scroll;
                 int start = Math.max(line.start(), text.selectionStart());
                 int end = Math.min(line.end(), text.selectionEnd());
                 boolean newlineSelected = line.end() < text.value().length()
                         && text.value().charAt(line.end()) == '\n'
                         && text.selectionStart() <= line.end() && text.selectionEnd() > line.end();
                 if (start < end || newlineSelected) {
-                    int left = x + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(line.start(), Math.min(start, line.end()))));
-                    int right = newlineSelected ? x + width - PADDING
-                            : x + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(line.start(), end)));
+                    int left = getX() + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(line.start(), Math.min(start, line.end()))));
+                    int right = newlineSelected ? getX() + getWidth() - PADDING
+                            : getX() + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(line.start(), end)));
                     graphics.fill(left, top, Math.max(left + 1, right), top + lineHeight(), 0xFF264F78);
                 }
-                graphics.text(font, text.value().substring(line.start(), line.end()), x + PADDING, top,
+                graphics.text(font, text.value().substring(line.start(), line.end()), getX() + PADDING, top,
                         active ? 0xFFE0E0E0 : 0xFF707070, false);
             }
             if (text.value().isEmpty()) {
-                graphics.text(font, placeholder, x + PADDING, y + PADDING, 0xFF707070, false);
+                graphics.text(font, placeholder, getX() + PADDING, getY() + PADDING, 0xFF707070, false);
             }
             if (isFocused() && active && (frame / 6) % 2 == 0) {
                 GuideMultilineTextState.Line line = text.lines().get(text.cursorLine());
-                int caretX = x + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(line.start(), text.cursor())));
-                int caretY = y + PADDING + text.cursorLine() * lineHeight() - (int) scroll;
+                int caretX = getX() + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(line.start(), text.cursor())));
+                int caretY = getY() + PADDING + text.cursorLine() * lineHeight() - (int) scroll;
                 graphics.fill(caretX, caretY, caretX + 1, caretY + GuideNativeFont.lineHeight(font), 0xFFFFFFFF);
             }
         } finally { graphics.disableScissor(); }
         if (maximumScroll() > 0) {
             int thumb = Math.min(viewportHeight(), Math.max(12, viewportHeight() * viewportHeight()
                     / (text.lines().size() * lineHeight())));
-            int top = y + PADDING + (int) ((viewportHeight() - thumb) * scroll / maximumScroll());
-            graphics.fill(x + width - 3, top, x + width - 1, top + thumb, 0xFF909090);
+            int top = getY() + PADDING + (int) ((viewportHeight() - thumb) * scroll / maximumScroll());
+            graphics.fill(getX() + getWidth() - 3, top, getX() + getWidth() - 1, top + thumb, 0xFF909090);
         }
         if (Boolean.getBoolean("openallay.e2e.enabled")) {
             GuideMultilineTextState.Line caret = text.lines().get(text.cursorLine());
             painted = new ProbeReceipt(++paintedFrames, text.cursor(), text.selectionStart(), text.selectionEnd(),
-                    text.lines().size(), width, x + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(caret.start(), text.cursor()))),
-                    y + PADDING + text.cursorLine() * lineHeight() - (int) scroll, isFocused());
+                    text.lines().size(), getWidth(), getX() + PADDING + GuideNativeFont.width(font, GuideNativeFont.plain(text.value().substring(caret.start(), text.cursor()))),
+                    getY() + PADDING + text.cursorLine() * lineHeight() - (int) scroll, isFocused());
         }
     }
     @Override protected void narrateGuideWidget(GuideNarration output) {

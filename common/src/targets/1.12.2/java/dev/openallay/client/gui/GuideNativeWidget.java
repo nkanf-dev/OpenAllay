@@ -50,4 +50,10 @@ public abstract class GuideNativeWidget extends GuiButton implements GuideWidget
     public final void guideActive(boolean active) { this.active = active; }
     public final boolean guideVisible() { return visible; }
     public final void guideVisible(boolean visible) { this.visible = visible; }
+    protected final void guideSetBounds(int x, int y, int width, int height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
 }

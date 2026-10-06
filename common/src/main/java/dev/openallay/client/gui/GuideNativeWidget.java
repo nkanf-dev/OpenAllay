@@ -41,4 +41,7 @@ public abstract class GuideNativeWidget extends AbstractWidget {
         super.setFocused(focused);
         if (previous != focused) onFocusedChanged(focused);
     }
+    protected final void guideSetBounds(int x, int y, int width, int height) {
+        setRectangle(width, height, x, y);
+    }
 }

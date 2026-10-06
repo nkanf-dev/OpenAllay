@@ -45,4 +45,10 @@ public abstract class GuideNativeWidget extends AbstractWidget implements GuideN
     @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) { return guideMouseDragged(GuideNativeInput.capture(x, y, button), dx, dy); }
     @Override public boolean mouseReleased(double x, double y, int button) { return guideMouseReleased(GuideNativeInput.capture(x, y, button)); }
     @Override public boolean mouseScrolled(double x, double y, double vertical) { return guideMouseScrolled(x, y, vertical); }
+    protected final void guideSetBounds(int x, int y, int width, int height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
 }
