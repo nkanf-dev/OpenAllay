@@ -1,7 +1,6 @@
 package dev.openallay.server;
 
 import dev.openallay.bridge.server.ServerBridgeSession;
-import dev.openallay.context.minecraft.MinecraftServerPlayerLevel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,11 +23,11 @@ public final class NativeServerActorHandoffs {
     private boolean stopped;
     public NativeServerActorHandoffs(MinecraftServer server) { this.server = server; }
     private void owner() {
-        if (!server.isSameThread()) throw new IllegalStateException("Native handoff requires server owner");
+        if (!NativeServerOwner.isOwner(server)) throw new IllegalStateException("Native handoff requires server owner");
     }
     public void admit(ServerPlayer player) {
         owner();
-        UUID actor = player.getUUID();
+        UUID actor = NativeServerOwner.actor(player);
         Admission value = new Admission(player, NativeServerConnectionGuard.capture(player));
         synchronized (lock) {
             if (stopped || actors.containsKey(actor)) throw new IllegalStateException("Actor must be revoked before admission");
@@ -38,7 +37,7 @@ public final class NativeServerActorHandoffs {
     /** Revoke before callbacks. Returned retirement action is invoked outside all native locks. */
     public Runnable revoke(ServerPlayer player) {
         owner();
-        UUID actor = player.getUUID();
+        UUID actor = NativeServerOwner.actor(player);
         List<Handoff> detached = new ArrayList<>();
         synchronized (lock) {
             Admission old = actors.get(actor);
@@ -96,8 +95,8 @@ public final class NativeServerActorHandoffs {
     }
     private boolean nativeCurrent(UUID actor, Admission token) {
         owner();
-        return admitted(actor, token) && server.getPlayerList().getPlayer(actor) == token.player
-                && MinecraftServerPlayerLevel.get(token.player).getServer() == server && token.connection.getAsBoolean();
+        return admitted(actor, token) && NativeServerOwner.player(server, actor) == token.player
+                && NativeServerOwner.server(token.player) == server && token.connection.getAsBoolean();
     }
     private boolean enqueue(UUID actor, Admission token, Runnable action, Runnable retired, boolean nativeSchedule) {
         Handoff value = new Handoff(actor, token, action, retired);
@@ -115,10 +114,10 @@ public final class NativeServerActorHandoffs {
             if (atCapacity) dev.openallay.OpenAllayConstants.LOGGER.warn("Native server handoff capacity reached; admission rejected");
             return false;
         }
-        if (server.isSameThread() && !nativeSchedule) return run(value);
+        if (NativeServerOwner.isOwner(server) && !nativeSchedule) return run(value);
         try {
-            if (nativeSchedule && server.isSameThread()) NativeServerDeferredHandoff.enqueue(server, () -> run(value));
-            else server.execute(() -> run(value));
+            if (nativeSchedule && NativeServerOwner.isOwner(server)) NativeServerDeferredHandoff.enqueue(server, () -> run(value));
+            else NativeServerOwner.execute(server, () -> run(value));
             return true;
         }
         catch (RuntimeException failure) {

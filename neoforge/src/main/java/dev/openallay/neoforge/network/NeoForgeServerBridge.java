@@ -2,7 +2,7 @@ package dev.openallay.neoforge.network;
 
 import dev.openallay.OpenAllayRuntime;
 import dev.openallay.bridge.server.ServerBridgeSession;
-import dev.openallay.context.minecraft.MinecraftServerPlayerLevel;
+import dev.openallay.server.NativeServerOwner;
 import dev.openallay.neoforge.NeoForgeNativeLoaderFacts;
 import dev.openallay.server.MinecraftServerGuideContextProvider;
 import dev.openallay.server.NativeServerActorHandoffs;
@@ -20,9 +20,9 @@ public final class NeoForgeServerBridge {
     void registerLifecycle() {
         NeoForgeNativeServerLifecycle.register(this::started, this::joined, this::disconnected, this::stopped);
     }
-    private static MinecraftServer server(ServerPlayer player) { return MinecraftServerPlayerLevel.get(player).getServer(); }
+    private static MinecraftServer server(ServerPlayer player) { return NativeServerOwner.server(player); }
     private static void owner(MinecraftServer server) {
-        if (!server.isSameThread()) throw new IllegalStateException("Server lifecycle requires native owner");
+        if (!NativeServerOwner.isOwner(server)) throw new IllegalStateException("Server lifecycle requires native owner");
     }
     private void started(MinecraftServer server) {
         owner(server);
@@ -35,24 +35,24 @@ public final class NeoForgeServerBridge {
         value.session.started(new MinecraftServerGuideContextProvider(runtime, server,
                         dev.openallay.json.EngineJson.create(), value::bind),
                 NeoForgeNativeLoaderFacts.configDir().resolve("openallay/server-model.json"), System.getenv(),
-                server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("openallay/images"));
+                NativeServerOwner.worldDirectory(server).resolve("openallay/images"));
     }
     private void joined(ServerPlayer player) {
         MinecraftServer server = server(player); owner(server);
         SessionOwner value = current;
         if (value == null || value.server != server) return;
-        ServerPlayer previous = value.players.remove(player.getUUID());
+        ServerPlayer previous = value.players.remove(NativeServerOwner.actor(player));
         if (previous != null) NativeServerActorHandoffs.cleanup(value.handoffs.revoke(previous),
-                () -> value.session.disconnected(previous.getUUID()));
+                () -> value.session.disconnected(NativeServerOwner.actor(previous)));
         value.handoffs.admit(player);
-        value.players.put(player.getUUID(), player);
-        value.session.connected(player.getUUID());
+        value.players.put(NativeServerOwner.actor(player), player);
+        value.session.connected(NativeServerOwner.actor(player));
     }
     private void disconnected(ServerPlayer player) {
         MinecraftServer server = server(player); owner(server);
         SessionOwner value = current;
-        if (value == null || value.server != server || !value.players.remove(player.getUUID(), player)) return;
-        NativeServerActorHandoffs.cleanup(value.handoffs.revoke(player), () -> value.session.disconnected(player.getUUID()));
+        if (value == null || value.server != server || !value.players.remove(NativeServerOwner.actor(player), player)) return;
+        NativeServerActorHandoffs.cleanup(value.handoffs.revoke(player), () -> value.session.disconnected(NativeServerOwner.actor(player)));
     }
     private void stopped(MinecraftServer server) {
         owner(server);
@@ -69,9 +69,9 @@ public final class NeoForgeServerBridge {
     void receive(NeoForgeBridgePayloads.Packet packet, ServerPlayer player) {
         MinecraftServer server = server(player); owner(server);
         SessionOwner value = current;
-        if (value != null && value.server == server && value.players.get(player.getUUID()) == player) {
-            value.bind(player.getUUID()).dispatch(player.getUUID(),
-                    () -> value.session.receive(player.getUUID(), packet.kind(), packet.json()), () -> {});
+        if (value != null && value.server == server && value.players.get(NativeServerOwner.actor(player)) == player) {
+            value.bind(NativeServerOwner.actor(player)).dispatch(NativeServerOwner.actor(player),
+                    () -> value.session.receive(NativeServerOwner.actor(player), packet.kind(), packet.json()), () -> {});
         }
     }
     private final class SessionOwner {
