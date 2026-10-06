@@ -28,6 +28,7 @@ public final class ObjectHolderBridge {
     static final String CLASS_SHA = "81c886b7bbc4f13d233491982b1ef8ae0eaba43565f5917f539380d8de4481b6";
     static final String FORGE_SHA = "ff578d670d2c720a72f8fff31ea3d6868595c7e980ecdecba3254f307ef2c2a9";
     static final String HELPER = "dev/openallay/runtime/forge1122/pack200/ObjectHolderRuntime";
+    private static final String FARMER_OWNER="net/minecraftforge/fml/common/registry/VillagerRegistry";
     private static final java.util.Set<String> HOLDERS = new HashSet<String>(Arrays.asList(
         "net/minecraft/init/Blocks", "net/minecraft/init/Items", "net/minecraft/init/MobEffects",
         "net/minecraft/init/Biomes", "net/minecraft/init/Enchantments", "net/minecraft/init/SoundEvents", "net/minecraft/init/PotionTypes"));
@@ -47,7 +48,7 @@ public final class ObjectHolderBridge {
         instrumentation.addTransformer(new ClassFileTransformer() {
             public byte[] transform(ClassLoader loader, String name, Class<?> redefining,
                                     ProtectionDomain domain, byte[] bytes) {
-                if (!HOLDERS.contains(name) && !"net/minecraftforge/registries/ObjectHolderRef$FinalFieldHelper".equals(name)
+                if (!HOLDERS.contains(name) && !FARMER_OWNER.equals(name) && !"net/minecraftforge/registries/ObjectHolderRef$FinalFieldHelper".equals(name)
                         && !"net/minecraftforge/registries/ObjectHolderRegistry".equals(name)) return null;
                 try {
                     if (redefining != null || !seen.add(name) || loader == null
@@ -61,6 +62,14 @@ public final class ObjectHolderBridge {
                         throw new IllegalStateException("Unexpected ObjectHolderRef$FinalFieldHelper source: " + external);
                     byte[] patched;
                     if (HOLDERS.contains(name)) patched=patchHolder(name,bytes);
+                    else if(FARMER_OWNER.equals(name)) {
+                        try(java.util.jar.JarFile archive=new java.util.jar.JarFile(forge);java.io.InputStream stream=archive.getInputStream(archive.getJarEntry(FARMER_OWNER+".class"))) {
+                            java.io.ByteArrayOutputStream raw=new java.io.ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;
+                            while((n=stream.read(buffer))!=-1)raw.write(buffer,0,n);
+                            if(!"ca8bd837d411f4804ea56269304e54bfa097597ab41acb3ceac12a6fee79a596".equals(sha(raw.toByteArray())))throw new IllegalStateException("Exact original farmer class resource differs");
+                        }
+                        patched=patchFarmer(bytes);
+                    }
                     else {
                         String rawName=name+".class";
                         try(java.util.jar.JarFile archive=new java.util.jar.JarFile(forge);
@@ -106,6 +115,35 @@ public final class ObjectHolderBridge {
             method.accept(new org.objectweb.asm.util.TraceMethodVisitor(text));result.put(method.name+method.desc,text.text.toString()); }
         return result;
     }
+    static byte[] patchFarmer(byte[] bytes) throws Exception {
+        ClassNode node=new ClassNode(Opcodes.ASM5);new ClassReader(bytes).accept(node,0);
+        if(!FARMER_OWNER.equals(node.name))throw new IllegalStateException("Farmer holder owner differs");
+        int found=0;
+        for(Object object:node.fields) {
+            FieldNode field=(FieldNode)object;
+            if(!"FARMER".equals(field.name))continue;
+            if(!"Lnet/minecraftforge/fml/common/registry/VillagerRegistry$VillagerProfession;".equals(field.desc)
+                    || field.access!=(Opcodes.ACC_PUBLIC|Opcodes.ACC_STATIC|Opcodes.ACC_FINAL) || field.value!=null)
+                throw new IllegalStateException("Exact farmer registry field differs");
+            int annotations=0;
+            if(field.visibleAnnotations!=null)for(Object value:field.visibleAnnotations) {
+                org.objectweb.asm.tree.AnnotationNode annotation=(org.objectweb.asm.tree.AnnotationNode)value;
+                if("Lnet/minecraftforge/fml/common/registry/GameRegistry$ObjectHolder;".equals(annotation.desc)
+                        && annotation.values!=null && annotation.values.equals(Arrays.asList("value","minecraft:farmer")))annotations++;
+            }
+            if(annotations!=1)throw new IllegalStateException("Exact genuine farmer ObjectHolder annotation absent");
+            String identity=FARMER_OWNER.replace('/','.')+"\tFARMER\tnet.minecraftforge.fml.common.registry.VillagerRegistry$VillagerProfession\n";
+            Files.write(Paths.get(System.getProperty("openallay.objectholder.fields")),identity.getBytes(StandardCharsets.UTF_8),StandardOpenOption.APPEND);
+            field.access&=~Opcodes.ACC_FINAL;found++;
+            Files.write(Paths.get(System.getProperty("openallay.objectholder.metadata")),
+                (identity.trim()+"\toriginalAccess=25\ttransformedAccess=9\tObjectHolder=minecraft:farmer\n").getBytes(StandardCharsets.UTF_8),StandardOpenOption.CREATE,StandardOpenOption.APPEND);
+        }
+        if(found!=1)throw new IllegalStateException("Exactly one FARMER field required");
+        ClassWriter writer=new ClassWriter(0);node.accept(writer);byte[] result=writer.toByteArray();
+        if(!methodInstructions(bytes).equals(methodInstructions(result)))throw new IllegalStateException("Farmer original initialization changed");
+        return result;
+    }
+
     static byte[] patchHolder(String name, byte[] bytes) throws Exception {
         ClassNode node = new ClassNode(Opcodes.ASM5); new ClassReader(bytes).accept(node, 0);
         if (!name.equals(node.name)) throw new IllegalStateException("Holder name differs");

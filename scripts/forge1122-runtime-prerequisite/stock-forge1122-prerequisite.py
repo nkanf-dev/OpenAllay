@@ -232,7 +232,7 @@ def prepare_pack200(args, output, java, cp, runtime):
     helper_classes.mkdir()
     helper_sources = sorted((PACKET / "bridge/pack200").glob("*.java"))
     with (output / "pack200-helper-compile.log").open("w") as log:
-        subprocess.run([str(java.parent / "javac"), "--release", "8", "-d", str(helper_classes)] + [str(p) for p in helper_sources],
+        subprocess.run([str(java.parent / "javac"), "--release", "8", "-cp", str(forge), "-d", str(helper_classes)] + [str(p) for p in helper_sources],
                        check=True, stdout=log, stderr=subprocess.STDOUT)
     helper = output / "pack200-runtime-helper.jar"
     subprocess.run([str(java.parent / "jar"), "cf", str(helper), "-C", str(helper_classes), "."], check=True)
@@ -277,6 +277,10 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if args.objectholder_bridge and not args.objectholder_phase_diagnostic:
         runtime.write_json(output / "objectholder-phase-test-reused.json", {"run": "37520069517", "status": "pass", "unchangedPhaseInputsAndPatch": True})
+        fields=output/"farmer-test-fields.tsv";fields.write_text("")
+        with (output/"farmer-holder-tests.log").open("w") as log:
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.FarmerHolderTest",str(fields),str(output/"farmer-test-metadata.tsv")],
+                           check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
     elif args.title_only:
         runtime.write_json(output / "bridge-tests-reused.json", json.loads((PACKET / "prior-bridge-tests.json").read_text()))
     elif args.pack200_bridge:

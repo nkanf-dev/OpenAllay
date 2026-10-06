@@ -34,7 +34,14 @@ public final class ObjectHolderRuntime {
             if ("jar".equals(location.getProtocol())) location = ((java.net.JarURLConnection) location.openConnection()).getJarFileURL();
             File source = new File(location.toURI()).getCanonicalFile();
             File client = new File(System.getProperty("openallay.objectholder.client")).getCanonicalFile();
-            if (!source.equals(client)) throw new IllegalArgumentException("Holder source differs from official client");
+            boolean farmer="net.minecraftforge.fml.common.registry.VillagerRegistry".equals(field.getDeclaringClass().getName())
+                && "FARMER".equals(field.getName()) && "net.minecraftforge.fml.common.registry.VillagerRegistry$VillagerProfession".equals(field.getType().getName());
+            File forge=new File(System.getProperty("openallay.pack200.forge")).getCanonicalFile();
+            if (!(farmer?source.equals(forge):source.equals(client))) throw new IllegalArgumentException("Holder source differs from exact official owner");
+            if(farmer) {
+                net.minecraftforge.fml.common.registry.GameRegistry.ObjectHolder annotation=field.getAnnotation(net.minecraftforge.fml.common.registry.GameRegistry.ObjectHolder.class);
+                if(annotation==null || !"minecraft:farmer".equals(annotation.value()))throw new IllegalArgumentException("Exact farmer ObjectHolder annotation differs");
+            }
             Class<?> registry = Class.forName("net.minecraftforge.registries.IForgeRegistryEntry", false, field.getDeclaringClass().getClassLoader());
             if (!registry.isAssignableFrom(field.getType())) throw new IllegalArgumentException("Holder must be genuine registry reference");
             field.setAccessible(true);
