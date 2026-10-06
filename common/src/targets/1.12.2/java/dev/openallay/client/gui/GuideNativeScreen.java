@@ -17,6 +17,7 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
     protected final GuideWidget addGuideWidget(GuideWidget widget) {
         if (widget instanceof GuideNativeButton button) addGuideWidget(button);
         else if (widget instanceof GuideNativeEditBox field) addGuideWidget(field);
+        else if (widget instanceof GuideNativeWidget primitive) super.addButton(primitive);
         else throw new IllegalArgumentException("Widget has no selected native registration leaf");
         return widget;
     }
@@ -59,8 +60,26 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
                 return true;
             }
         }
+        for (GuiButton button : buttonList) {
+            if (button instanceof GuideNativeWidget primitive && primitive.guideMouseClicked(event, doubleClick)) {
+                setGuideFocused(primitive);
+                return true;
+            }
+        }
         clearGuideFocus();
         return super.guideMouseClicked(event, doubleClick);
+    }
+    @Override public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {
+        return getGuideFocused() != null && getGuideFocused().guideMouseDragged(event, dx, dy);
+    }
+    @Override public boolean guideMouseReleased(GuideInputMouse event) {
+        return getGuideFocused() != null && getGuideFocused().guideMouseReleased(event);
+    }
+    @Override public boolean guideMouseScrolled(double x, double y, double horizontal, double vertical) {
+        for (GuiButton button : buttonList) {
+            if (button instanceof GuideNativeWidget primitive && primitive.guideMouseScrolled(x, y, vertical)) return true;
+        }
+        return false;
     }
     @Override protected void actionPerformed(GuiButton button) {
         if (button instanceof GuideNativeButton guideButton) guideButton.onPress();
@@ -97,7 +116,10 @@ public abstract class GuideNativeScreen extends GuideNativeScreenCallbacks {
         setGuiSize(width, height);
         repositionGuideElements();
     }
-    protected final void tickGuideWidgets() { for (GuideNativeEditBox field : textFields) field.tick(); }
+    protected final void tickGuideWidgets() {
+        for (GuideNativeEditBox field : textFields) field.tick();
+        for (GuiButton button : buttonList) if (button instanceof GuidePrimitiveMultilineEditor primitive) primitive.tick();
+    }
     @Override protected final void tickGuideScreen() { tick(); }
     public void tick() { super.tickGuideScreen(); }
     public void onClose() { mc.displayGuiScreen(null); }

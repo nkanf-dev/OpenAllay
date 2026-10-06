@@ -11,6 +11,9 @@ import net.minecraft.client.gui.navigation.CommonInputs;
 /** Primitive callback family. Native widgets retain keyboard, clipboard and IME ownership. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static String getClipboard() { return net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard(); }
+    public static void setClipboard(String text) { net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(text); }
+
     public static GuideWidgetInput widgetInput(GuiEventListener widget) {
         return new GuideNativeWidgetInput(widget);
     }

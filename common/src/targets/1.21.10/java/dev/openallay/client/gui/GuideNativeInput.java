@@ -13,6 +13,9 @@ import net.minecraft.client.input.CharacterEvent;
 /** Native input binding for 1.21.10; shared handlers never own Minecraft event types. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static String getClipboard() { return net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard(); }
+    public static void setClipboard(String text) { net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(text); }
+
     public static GuideWidgetInput widgetInput(GuiEventListener widget) {
         return new GuideNativeWidgetInput(widget);
     }

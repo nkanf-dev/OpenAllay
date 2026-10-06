@@ -5,6 +5,15 @@ import org.lwjgl.glfw.GLFW;
 /** Product input codes use the public GLFW compile-time contract. */
 public final class GuideInputCodes {
     private GuideInputCodes() {}
+    public static final int KEY_A = GLFW.GLFW_KEY_A;
+    public static final int KEY_C = GLFW.GLFW_KEY_C;
+    public static final int KEY_X = GLFW.GLFW_KEY_X;
+    public static final int KEY_Z = GLFW.GLFW_KEY_Z;
+    public static final int KEY_Y = GLFW.GLFW_KEY_Y;
+    public static final int KEY_BACK = GLFW.GLFW_KEY_BACKSPACE;
+    public static final int KEY_DELETE = GLFW.GLFW_KEY_DELETE;
+    public static final int KEY_LEFT = GLFW.GLFW_KEY_LEFT;
+    public static final int KEY_RIGHT = GLFW.GLFW_KEY_RIGHT;
     public static final int KEY_ESCAPE = GLFW.GLFW_KEY_ESCAPE;
     public static final int KEY_RETURN = GLFW.GLFW_KEY_ENTER;
     public static final int KEY_NUMPADENTER = GLFW.GLFW_KEY_KP_ENTER;

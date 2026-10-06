@@ -40,4 +40,20 @@ public abstract class GuideNativeWidget extends AbstractWidget implements GuideN
     }
     protected abstract void paintGuideWidget(GuideGraphics graphics, int mouseX, int mouseY, float delta);
     protected abstract void narrateGuideWidget(GuideNarration output);
+
+    public boolean guideKeyPressed(GuideInputKey event) { return false; }
+    public boolean guideKeyReleased(GuideInputKey event) { return false; }
+    public boolean guideCharTyped(GuideInputCharacter event) { return false; }
+    public boolean guideMouseClicked(GuideInputMouse event, boolean doubleClick) { return false; }
+    public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) { return false; }
+    public boolean guideMouseReleased(GuideInputMouse event) { return false; }
+    public boolean guideMouseScrolled(double x, double y, double amount) { return false; }
+
+    @Override public boolean keyPressed(int key, int scancode, int modifiers) { return guideKeyPressed(GuideNativeInput.capture(key, scancode, modifiers)); }
+    @Override public boolean keyReleased(int key, int scancode, int modifiers) { return guideKeyReleased(GuideNativeInput.capture(key, scancode, modifiers)); }
+    @Override public boolean charTyped(char character, int modifiers) { return guideCharTyped(GuideNativeInput.capture(character, modifiers)); }
+    @Override public boolean mouseClicked(double x, double y, int button) { return guideMouseClicked(GuideNativeInput.capture(x, y, button), false); }
+    @Override public boolean mouseDragged(double x, double y, int button, double dx, double dy) { return guideMouseDragged(GuideNativeInput.capture(x, y, button), dx, dy); }
+    @Override public boolean mouseReleased(double x, double y, int button) { return guideMouseReleased(GuideNativeInput.capture(x, y, button)); }
+    @Override public boolean mouseScrolled(double x, double y, double vertical) { return guideMouseScrolled(x, y, vertical); }
 }

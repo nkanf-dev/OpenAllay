@@ -9,6 +9,7 @@ import net.minecraft.util.FormattedCharSequence;
 /** Native formatted lines stay real native values behind the product text contract. */
 public final class GuideNativeFont {
     private GuideNativeFont() {}
+    public static int lineHeight(Font font) { return font.lineHeight; }
     private record Line(FormattedCharSequence nativeLine) implements GuideTextLine {
         private Line { Objects.requireNonNull(nativeLine, "nativeLine"); }
         @Override public String plainText() {

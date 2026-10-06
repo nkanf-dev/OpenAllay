@@ -6,6 +6,9 @@ import org.lwjgl.input.Keyboard;
 /** LWJGL 2 event semantics captured at the actual GuiScreen callback boundary. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static String getClipboard() { return net.minecraft.client.gui.GuiScreen.getClipboardString(); }
+    public static void setClipboard(String text) { net.minecraft.client.gui.GuiScreen.setClipboardString(text); }
+
     public static GuideWidgetInput widgetInput(GuideWidgetInput widget) {
         return java.util.Objects.requireNonNull(widget, "widget");
     }

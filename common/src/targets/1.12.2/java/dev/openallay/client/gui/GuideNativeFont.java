@@ -8,6 +8,7 @@ import net.minecraft.util.text.ITextComponent;
 /** Actual FontRenderer line wrapping and legacy formatted String projection. */
 public final class GuideNativeFont {
     private GuideNativeFont() {}
+    public static int lineHeight(FontRenderer font) { return font.FONT_HEIGHT; }
     private record Line(String nativeLine) implements GuideTextLine {
         private Line { Objects.requireNonNull(nativeLine, "nativeLine"); }
         @Override public String plainText() {
