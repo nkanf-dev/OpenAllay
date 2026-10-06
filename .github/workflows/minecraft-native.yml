@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122]
 permissions:
   contents: read
 concurrency:
@@ -417,3 +417,40 @@ jobs:
             build/forge36-shared/
             native-builds/engine-only/engine-core/build/test-results/
             native-builds/engine-only/engine-core/build/reports/tests/
+
+  native1122-application:
+    if: inputs.mode == 'native1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Capture immutable application JDK17 path before legacy build JDK8 setup
+        run: printf 'OPENALLAY_NATIVE_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Compile native Java17 against the exact stock named FG3 island
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/build-forge1122-native.py
+      - name: Retain concrete diagnostics and supplementary API even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-native-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-native-report/
+            ${{ runner.temp }}/forge1122-native-inputs/*.json
+            ${{ runner.temp }}/forge1122-native-inputs/*.log
+            ${{ runner.temp }}/forge1122-native/*.json
+            ${{ runner.temp }}/forge1122-native/*.properties
+            ${{ runner.temp }}/forge1122-native/*.txt
+            ${{ runner.temp }}/forge1122-native/*.tsv
+            ${{ runner.temp }}/forge1122-native/supplement/
+            ${{ runner.temp }}/forge1122-native/ap/
+            ${{ runner.temp }}/forge1122-native/jar/
