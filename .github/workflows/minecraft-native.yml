@@ -89,6 +89,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with:
           cache-provider: basic
+          cache-read-only: false
       - name: Compile the real native source union once
         env: {GH_TOKEN: '${{ github.token }}'}
         run: python3 -B scripts/build-forge16165-native.py

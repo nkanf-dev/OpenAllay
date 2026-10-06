@@ -55,7 +55,8 @@ final class NeoForgeNativeModMetadata {
     }
 
     private static List<String> configStrings(IModInfo mod, String key) {
-        Object value = mod.getConfigElement(key).orElse(null);
+        Object value = mod instanceof net.minecraftforge.forgespi.language.IConfigurable config
+                ? config.getConfigElement(key).orElse(null) : null;
         if (value instanceof String text && !text.isBlank()) {
             return List.of(text);
         }
