@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, stock1122-objectholder, stock1122-phase-diagnostic]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122]
 permissions:
   contents: read
 concurrency:
@@ -457,3 +457,33 @@ jobs:
             ${{ runner.temp }}/forge1122-native/supplement/
             ${{ runner.temp }}/forge1122-native/ap/
             ${{ runner.temp }}/forge1122-native/jar/
+
+
+  affected-modern-native1122:
+    if: inputs.mode == 'modern1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Compile shared modern native code and test affected UI and voice fixtures only
+        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :common:test --tests dev.openallay.client.gui.GuideNativeFontTest --tests dev.openallay.client.gui.OpenAllayScreenNativeTooltipTest --tests dev.openallay.client.voice.OpenAlCaptureTest --tests dev.openallay.client.voice.JavaSoundCaptureTest
+      - name: Test affected canonical world binding architecture and codec fixtures only
+        if: ${{ !cancelled() }}
+        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :adapters:minecraft:test --tests dev.openallay.adapter.minecraft.v26_2.world.AdapterArchitectureTest --tests dev.openallay.adapter.minecraft.v26_2.world.NativeBlockCodecTest
+      - name: Retain affected representative compile and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-affected-modern-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            common/build/test-results/
+            common/build/reports/tests/
+            adapters/minecraft/build/test-results/
+            adapters/minecraft/build/reports/tests/
