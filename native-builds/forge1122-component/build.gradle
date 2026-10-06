@@ -1,10 +1,17 @@
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import java.security.MessageDigest
+import javax.inject.Inject
+import org.gradle.process.ExecOperations
+
+abstract class ComponentExecServices {
+    @Inject abstract ExecOperations getExecOperations()
+}
 plugins {
     id 'java'
     id 'com.gradleup.shadow' version '9.6.1'
 }
+def componentExec=objects.newInstance(ComponentExecServices).execOperations
 def request=new JsonSlurper().parse(file(property('componentInputs')))
 def expected=['forge','launchwrapper','engine','native','sdk','rhino','featureDependencies','output','java17','stockAsm','featureStaging'] as Set
 if(request.keySet()!=expected) throw new GradleException('Exact component request required')
@@ -59,6 +66,7 @@ task privateMixin(type:com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJa
     configurations=[project.configurations.mixinPrivate]
     relocate 'org.objectweb.asm','dev.openallay.internal.forge1122.asm'
     exclude 'META-INF/*.SF','META-INF/*.RSA','META-INF/*.DSA','module-info.class','META-INF/versions/**/module-info.class'
+    filesMatching('META-INF/services/**') { duplicatesStrategy=DuplicatesStrategy.INCLUDE }
     mergeServiceFiles()
     preserveFileTimestamps=false;reproducibleFileOrder=true
 }
@@ -106,7 +114,7 @@ task componentCensus {
     doLast {
         def log=new File(out,'class-census.tsv');def result=new File(out,'class-census.log')
         log.withOutputStream { stdout -> result.withOutputStream { stderr ->
-            exec { commandLine([file(request.java17).absolutePath,'-cp',
+            componentExec.exec { commandLine([file(request.java17).absolutePath,'-cp',
                 files(compileCensus.destinationDirectory,privateMixin.archiveFile,stockAsm).asPath,
                 'dev.openallay.forge1122.component.ComponentClassCensus',featureCore.archiveFile.get().asFile.absolutePath,
                 lifecycleFacade.archiveFile.get().asFile.absolutePath,privateMixin.archiveFile.get().asFile.absolutePath])
