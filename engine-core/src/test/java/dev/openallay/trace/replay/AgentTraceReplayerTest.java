@@ -4,9 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.tool.Tool;
@@ -40,7 +38,7 @@ final class AgentTraceReplayerTest {
                         new TraceExpectation(
                                 "success",
                                 ExpectationMatch.CONTAINS,
-                                JsonParser.parseString("{\"answer\":\"grounded\"}"),
+                                dev.openallay.json.JsonTrees.parse("{\"answer\":\"grounded\"}"),
                                 null)),
                 new AssistantMessageStep("完整的预录回答。"));
 
@@ -67,7 +65,7 @@ final class AgentTraceReplayerTest {
                         new TraceExpectation(
                                 "success",
                                 ExpectationMatch.EXACT,
-                                JsonParser.parseString("{\"answer\":\"wrong\"}"),
+                                dev.openallay.json.JsonTrees.parse("{\"answer\":\"wrong\"}"),
                                 null)),
                 new AssistantMessageStep("must not execute"));
 
@@ -120,7 +118,7 @@ final class AgentTraceReplayerTest {
                 return new ToolResult.Success<>(new Output("grounded", List.of(1, 2, 3)));
             }
         }));
-        return new AgentTraceReplayer(registry, new Gson());
+        return new AgentTraceReplayer(registry, dev.openallay.json.EngineJson.create());
     }
 
     private static AgentTrace trace(dev.openallay.trace.model.TraceStep... steps) {
@@ -128,6 +126,6 @@ final class AgentTraceReplayerTest {
     }
 
     private static JsonObject object(String json) {
-        return JsonParser.parseString(json).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
     }
 }

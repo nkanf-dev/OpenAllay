@@ -2,7 +2,6 @@ package dev.openallay.guide.history;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideUsageSnapshot;
 import dev.openallay.model.ModelUsage;
 import java.math.BigDecimal;
@@ -24,16 +23,16 @@ final class GuideUsageProjectionCodecTest {
 
     @Test
     void missingExtraFractionalAndWrongTypedFieldsAreRejectedNotMigrated() {
-        var encoded = JsonParser.parseString(codec.encodeModelUsage(new ModelUsage(10, 3, 0))).getAsJsonObject();
+        var encoded = dev.openallay.json.JsonTrees.parse(codec.encodeModelUsage(new ModelUsage(10, 3, 0))).getAsJsonObject();
         encoded.remove("cacheReadKnown");
         assertThrows(IllegalArgumentException.class, () -> codec.decodeModelUsage(encoded.toString()));
-        var extra = JsonParser.parseString(codec.encodeUsageProjection(GuideUsageSnapshot.empty())).getAsJsonObject();
+        var extra = dev.openallay.json.JsonTrees.parse(codec.encodeUsageProjection(GuideUsageSnapshot.empty())).getAsJsonObject();
         extra.addProperty("version", 1);
         assertThrows(IllegalArgumentException.class, () -> codec.decodeUsageProjection(extra.toString()));
-        var fractional = JsonParser.parseString(codec.encodeUsageProjection(GuideUsageSnapshot.empty())).getAsJsonObject();
+        var fractional = dev.openallay.json.JsonTrees.parse(codec.encodeUsageProjection(GuideUsageSnapshot.empty())).getAsJsonObject();
         fractional.addProperty("actualCalls", 0.5);
         assertThrows(IllegalArgumentException.class, () -> codec.decodeUsageProjection(fractional.toString()));
-        var wrong = JsonParser.parseString(codec.encodeUsageProjection(GuideUsageSnapshot.empty())).getAsJsonObject();
+        var wrong = dev.openallay.json.JsonTrees.parse(codec.encodeUsageProjection(GuideUsageSnapshot.empty())).getAsJsonObject();
         wrong.addProperty("costIncomplete", "true");
         assertThrows(IllegalArgumentException.class, () -> codec.decodeUsageProjection(wrong.toString()));
     }

@@ -2,9 +2,7 @@ package dev.openallay.model.anthropic;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.http.SseEvent;
 import java.util.ArrayList;
@@ -18,14 +16,14 @@ final class AnthropicUsageReportingTest {
                 "{\"input_tokens\":null,\"output_tokens\":1}",
                 "{\"input_tokens\":0,\"output_tokens\":0}",
                 "{\"input_tokens\":3,\"output_tokens\":1,\"extra_field\":42}")) {
-            JsonObject response = JsonParser.parseString("""
+            JsonObject response = dev.openallay.json.JsonTrees.parse("""
                     {"model":"claude-test","stop_reason":"end_turn","content":[{"type":"text","text":"OK"}]}
                     """).getAsJsonObject();
-            if (!raw.equals("missing")) response.add("usage", JsonParser.parseString(raw));
+            if (!raw.equals("missing")) response.add("usage", dev.openallay.json.JsonTrees.parse(raw));
             List<ModelEvent> events = new ArrayList<>();
-            var turn = new AnthropicJsonCodec(new Gson()).parseTurn(response.toString(), events::add);
+            var turn = new AnthropicJsonCodec(dev.openallay.json.EngineJson.create()).parseTurn(response.toString(), events::add);
             boolean hasUsageObject = !raw.equals("missing") && !raw.equals("null");
-            JsonObject reported = hasUsageObject ? JsonParser.parseString(raw).getAsJsonObject() : null;
+            JsonObject reported = hasUsageObject ? dev.openallay.json.JsonTrees.parse(raw).getAsJsonObject() : null;
             boolean hasInput = AnthropicJsonCodec.hasCount(reported, "input_tokens");
             boolean hasOutput = AnthropicJsonCodec.hasCount(reported, "output_tokens");
             var updates = events.stream().filter(ModelEvent.UsageUpdate.class::isInstance)

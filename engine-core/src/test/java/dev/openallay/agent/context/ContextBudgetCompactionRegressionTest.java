@@ -11,7 +11,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
@@ -33,7 +32,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 final class ContextBudgetCompactionRegressionTest {
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = dev.openallay.json.EngineJson.create();
     private static final ContextTokenEstimator ESTIMATOR = new Utf8ContextTokenEstimator();
     private static final String SYSTEM = "system";
     private static final List<String> SUMMARY_FIELDS = List.of(
@@ -155,15 +154,15 @@ final class ContextBudgetCompactionRegressionTest {
         ContextCheckpoint checkpoint = result.checkpoint();
         assertNotNull(checkpoint);
         assertEquals(ContextCheckpoint.Status.SUCCEEDED, checkpoint.status());
-        JsonObject summary = JsonParser.parseString(checkpoint.summary()).getAsJsonObject();
-        assertEquals(Set.copyOf(SUMMARY_FIELDS), summary.keySet());
+        JsonObject summary = dev.openallay.json.JsonTrees.parse(checkpoint.summary()).getAsJsonObject();
+        assertEquals(Set.copyOf(SUMMARY_FIELDS), dev.openallay.json.JsonTrees.keys(summary));
         for (String field : SUMMARY_FIELDS) {
             assertTrue(summary.get(field).isJsonArray(), "summary field: " + field);
             for (JsonElement value : summary.getAsJsonArray(field)) {
                 assertTrue(value.isJsonPrimitive() && value.getAsJsonPrimitive().isString());
             }
         }
-        assertEquals(JsonParser.parseString(SUMMARY), summary,
+        assertEquals(dev.openallay.json.JsonTrees.parse(SUMMARY), summary,
                 "retry response must remain intact rather than lose selected facts locally");
         assertTrue(result.projection().messages().getFirst().content().stream()
                 .filter(ModelContent.Text.class::isInstance)

@@ -2,7 +2,6 @@ package dev.openallay.guide.history;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.agent.context.ContextCheckpoint;
@@ -233,11 +232,11 @@ final class SqliteGuideHistoryForkTest {
         SqliteGuideHistoryStore store = store("cutoff.db");
         List<GuideRequestSnapshot> requests = seed(store, 3);
         List<ModelMessage> actual = pair("historical-call");
-        ContextCheckpoint valid = checkpoint(actual, actual.size(), ContextSourceHash.compute(new Gson(), actual));
+        ContextCheckpoint valid = checkpoint(actual, actual.size(), ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), actual));
         ContextCheckpoint stale = checkpoint(actual, actual.size(), "b".repeat(64));
-        ContextCheckpoint split = checkpoint(actual, 2, ContextSourceHash.compute(new Gson(), actual.subList(0, 2)));
+        ContextCheckpoint split = checkpoint(actual, 2, ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), actual.subList(0, 2)));
         ContextCheckpoint failed = new ContextCheckpoint(UUID.randomUUID(), 0, actual.size(),
-                ContextSourceHash.compute(new Gson(), actual), "fork-model", NOW, ContextCheckpoint.Status.FAILED,
+                ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), actual), "fork-model", NOW, ContextCheckpoint.Status.FAILED,
                 null, "synthetic_compaction_failure", "original checkpoint diagnostic", 10);
         store.commit(new GuideHistoryCommit(SCOPE, List.of(
                 new GuideHistoryMutation.CaptureRequestBoundary(requests.get(1).requestId(), actual,
@@ -273,7 +272,7 @@ final class SqliteGuideHistoryForkTest {
         SqliteGuideHistoryStore store = store(database); List<GuideRequestSnapshot> requests = seed(store, 1);
         List<ModelMessage> messages = pair("checkpoint-order-call");
         ContextCheckpoint stale = checkpoint(messages, messages.size(), "c".repeat(64));
-        ContextCheckpoint valid = checkpoint(messages, messages.size(), ContextSourceHash.compute(new Gson(), messages));
+        ContextCheckpoint valid = checkpoint(messages, messages.size(), ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), messages));
         store.commit(new GuideHistoryCommit(SCOPE, List.of(new GuideHistoryMutation.CaptureRequestBoundary(
                 requests.getFirst().requestId(), messages, List.of(stale, valid)))));
         GuideHistoryForkResult branch = fork(store, requests, 0, "branch");
@@ -281,7 +280,7 @@ final class SqliteGuideHistoryForkTest {
         assertEquals(stale.sourceHash(), branch.checkpoints().getFirst().sourceHash());
         assertEquals(valid.sourceHash(), branch.checkpoints().getLast().sourceHash());
         ContextCheckpoint newCheckpoint = checkpoint(messages, messages.size(),
-                ContextSourceHash.compute(new Gson(), messages));
+                ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), messages));
         store.commit(new GuideHistoryCommit(SCOPE, List.of(new GuideHistoryMutation.UpsertCheckpoint(
                 "branch", branch.checkpoints().size(), newCheckpoint))));
         try (var connection = java.sql.DriverManager.getConnection("jdbc:sqlite:" + database);
@@ -300,7 +299,7 @@ final class SqliteGuideHistoryForkTest {
         SqliteGuideHistoryStore store = store(database);
         List<GuideRequestSnapshot> requests = seed(store, 1);
         List<ModelMessage> messages = pair("checkpoint-restart-call");
-        String hash = ContextSourceHash.compute(new Gson(), messages);
+        String hash = ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), messages);
         ContextCheckpoint stale = checkpoint(messages, messages.size(), "d".repeat(64));
         ContextCheckpoint valid = checkpoint(messages, messages.size(), hash);
         ContextCheckpoint failed = new ContextCheckpoint(UUID.randomUUID(), 0, messages.size(), hash,

@@ -107,10 +107,10 @@ final class JavascriptWorldBridgeTest {
         var blocks = output.getAsJsonObject("blocks");
         var entities = output.getAsJsonObject("entities");
         var entity = output.getAsJsonObject("entity");
-        assertEquals(Set.of("bounds", "blocks", "coverage", "evidence"), blocks.keySet());
-        assertEquals(Set.of("bounds", "entities", "coverage", "evidence"), entities.keySet());
+        assertEquals(Set.of("bounds", "blocks", "coverage", "evidence"), dev.openallay.json.JsonTrees.keys(blocks));
+        assertEquals(Set.of("bounds", "entities", "coverage", "evidence"), dev.openallay.json.JsonTrees.keys(entities));
         assertEquals(Set.of("observationId", "uuid", "type", "name", "position", "data", "evidence"),
-                entity.keySet());
+                dev.openallay.json.JsonTrees.keys(entity));
         assertEquals("minecraft:oak_log", blocks.getAsJsonArray("blocks")
                 .get(0).getAsJsonObject().get("id").getAsString());
         assertEquals(1, blocks.getAsJsonArray("blocks").size());
@@ -129,7 +129,7 @@ final class JavascriptWorldBridgeTest {
         for (String record : List.of("blocks", "entities", "entity")) {
             var metadata = output.getAsJsonObject(record).getAsJsonObject("evidence");
             assertEquals(Set.of("authority", "completeness", "capturedAt", "sourceId", "provenance",
-                            "gameVersion", "loader", "details"), metadata.keySet());
+                            "gameVersion", "loader", "details"), dev.openallay.json.JsonTrees.keys(metadata));
             assertEquals(WorldObservationTestFixtures.DIMENSION,
                     metadata.getAsJsonObject("details").get("minecraft:dimension").getAsString());
             assertEquals(WorldObservationTestFixtures.CAPTURED_AT.toString(),

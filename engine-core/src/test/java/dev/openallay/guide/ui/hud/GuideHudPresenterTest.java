@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideModelMode;
 import dev.openallay.guide.GuideRequestPhase;
 import dev.openallay.guide.GuideRequestSnapshot;
@@ -40,7 +39,7 @@ final class GuideHudPresenterTest {
         GuideHudPresenter presenter = new GuideHudPresenter();
         GuideToolActivity tool = new GuideToolActivity("private-call", 0, "openallay:inspect_inventory",
                 GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString("{\"privateToolResult\":\"not a reply\"}").getAsJsonObject(),
+                dev.openallay.json.JsonTrees.parse("{\"privateToolResult\":\"not a reply\"}").getAsJsonObject(),
                 List.of(), List.of());
         GuideRequestSnapshot completed = request("main", GuideRequestStatus.COMPLETED, 1, 8,
                 List.of(new GuideTimelineEntry.Assistant(0, "raw markdown should not be parsed",
@@ -199,7 +198,7 @@ final class GuideHudPresenterTest {
                 "minecraft:client_player", "minecraft:client", "26.2", "fabric", java.util.Map.of("minecraft:dimension", "minecraft:overworld"));
         var source = new dev.openallay.guide.GuideSource("openallay:run_javascript", evidence);
         GuideToolActivity tool = new GuideToolActivity("items-call", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                         {"status":"success","value":{"viewKind":"ITEM","preview":[
                         {"itemId":"minecraft:diamond","displayName":"Diamond","count":64},
                         {"itemId":"minecraft:oak_log","displayName":"Oak log","count":128}]}}
@@ -233,7 +232,7 @@ final class GuideHudPresenterTest {
     @Test
     void interactiveReadingPreservesEveryAdmittedRequestWhilePassiveShowsTheLatestTask() {
         GuideToolActivity tool = new GuideToolActivity("old-items", 0, "openallay:run_javascript",
-                GuideToolStatus.SUCCEEDED, JsonParser.parseString("""
+                GuideToolStatus.SUCCEEDED, dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"viewKind":"ITEM","preview":[
                 {"itemId":"minecraft:diamond","displayName":"Diamond","count":64}]}}
                 """).getAsJsonObject(), List.of(), List.of());
@@ -343,7 +342,7 @@ final class GuideHudPresenterTest {
         var first = (GuideUiRow.Tool) presenter.projectInteractive(snapshot(ACTOR, "main", session("main", started)), CONFIG).rows().getFirst();
         assertEquals(dev.openallay.guide.ui.GuideToolDisplayStatus.RUNNING, first.detail().displayStatus());
         GuideToolActivity completed = new GuideToolActivity("stable-call", 0, "openallay:run_javascript",
-                GuideToolStatus.SUCCEEDED, JsonParser.parseString("""
+                GuideToolStatus.SUCCEEDED, dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"viewKind":"SCALAR","preview":"placed 48 blocks"}}
                 """).getAsJsonObject(), List.of(), List.of());
         GuideRequestSnapshot ended = new GuideRequestSnapshot(requestId, "main", GuideTopology.CLIENT_LOCAL,

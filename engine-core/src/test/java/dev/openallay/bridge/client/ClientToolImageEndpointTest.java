@@ -1,7 +1,6 @@
 package dev.openallay.bridge.client;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.Gson;
 import dev.openallay.agent.tool.ModelImageToolOutput;
 import dev.openallay.agent.tool.ToolRuntimeCatalog;
 import dev.openallay.bridge.protocol.*;
@@ -35,7 +34,7 @@ final class ClientToolImageEndpointTest {
         custody.complete(List.of(ServerAgentImageAttachment.from(fixture.ref, fixture.bytes)));
         ToolExecutionMessage message = fixture.message();
         assertArrayEquals(fixture.bytes, message.imageAttachments().getFirst().bytes());
-        assertEquals(List.of(fixture.ref), new Gson().fromJson(message.result().get("value"), Output.class).images());
+        assertEquals(List.of(fixture.ref), dev.openallay.json.EngineJson.create().fromJson(message.result().get("value"), Output.class).images());
         assertTrue(fixture.endpoint.close(fixture.request));
         assertFalse(fixture.endpoint.close(fixture.request));
         assertEquals(1, closes.get());
@@ -90,7 +89,7 @@ final class ClientToolImageEndpointTest {
             }));
             endpoint = new ClientToolExecutionEndpoint((required, correlation, cancellation) ->
                     CompletableFuture.completedFuture(ToolInvocationContext.developmentConsole(correlation)),
-                    sent::add, new Gson(), 97, Runnable::run);
+                    sent::add, dev.openallay.json.EngineJson.create(), 97, Runnable::run);
         }
         void open() { endpoint.open(request, "main", ToolRuntimeCatalog.from(tools.registrations(), Set.of())); }
         void invoke() { endpoint.handle(new ClientToolCallPayload(request, invocation, "main", "test:visual", "{}")); }

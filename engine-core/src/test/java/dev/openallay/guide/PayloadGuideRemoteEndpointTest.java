@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.bridge.protocol.ServerAgentEventPayload;
@@ -20,7 +19,7 @@ final class PayloadGuideRemoteEndpointTest {
     @Test
     void sendsActualModelContextWithServerRequests() {
         FakePort port = new FakePort();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         UUID request = UUID.randomUUID();
         List<dev.openallay.model.ModelMessage> actual = List.of(
                 dev.openallay.model.ModelMessage.userText("old question"),
@@ -40,7 +39,7 @@ final class PayloadGuideRemoteEndpointTest {
     @Test
     void sendsRealToolInputsAndPlaintextFailureInsteadOfDisplaySurrogates() {
         FakePort port = new FakePort();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         com.google.gson.JsonObject input = new com.google.gson.JsonObject();
         input.addProperty("source", "return mc.items.filter(x => x.id); ");
         List<dev.openallay.model.ModelMessage> actual = List.of(
@@ -58,7 +57,7 @@ final class PayloadGuideRemoteEndpointTest {
     @Test
     void malformedRemoteEventFailsOnlyItsRequestAndCancelsTransport() {
         FakePort port = new FakePort();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         UUID request = UUID.randomUUID();
         List<AgentEvent> events = new ArrayList<>();
 
@@ -74,7 +73,7 @@ final class PayloadGuideRemoteEndpointTest {
     @Test
     void sendsPutEditAndRemoveWithTheSameRequestAndMessageCorrelation() {
         FakePort port = new FakePort();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), Runnable::run, Runnable::run);
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), Runnable::run, Runnable::run);
         UUID requestId = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
         assertTrue(endpoint.ask(requestId, "main", "question", ignored -> {}));
@@ -101,11 +100,11 @@ final class PayloadGuideRemoteEndpointTest {
     @Test
     void keepsDeliveringThroughTerminalUntilExplicitRelease() {
         FakePort port = new FakePort();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         UUID requestId = UUID.randomUUID();
         List<AgentEvent> actual = new ArrayList<>();
         endpoint.ask(requestId, "main", "question", actual::add);
-        var codec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(new Gson());
+        var codec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
         port.events.accept(codec.encode(requestId, new AgentEvent.FinalText("done")));
         port.events.accept(codec.encode(requestId, new AgentEvent.RequestReleased()));
         assertEquals(List.of(new AgentEvent.FinalText("done"), new AgentEvent.RequestReleased()), actual);
@@ -115,7 +114,7 @@ final class PayloadGuideRemoteEndpointTest {
     void typedSteerReadsOnlyOnWorkerAndRemoveFencesTheQueuedRead() {
         FakePort port = new FakePort();
         List<Runnable> work = new ArrayList<>();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), work::add, Runnable::run);
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), work::add, Runnable::run);
         UUID requestId = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
         endpoint.ask(requestId, "main", "question", ignored -> {});
@@ -142,7 +141,7 @@ final class PayloadGuideRemoteEndpointTest {
     void typedSteerEditsKeepOnlyCurrentPayloadAndReadFailuresRejectThatMessage() {
         FakePort port = new FakePort();
         List<Runnable> work = new ArrayList<>();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), work::add, Runnable::run);
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), work::add, Runnable::run);
         UUID requestId = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
         List<AgentEvent> actual = new ArrayList<>();
@@ -188,7 +187,7 @@ final class PayloadGuideRemoteEndpointTest {
         java.util.concurrent.CompletableFuture<Void> readGate = new java.util.concurrent.CompletableFuture<>();
         java.util.concurrent.CompletableFuture<Void> released = new java.util.concurrent.CompletableFuture<>();
         List<AgentEvent> actual = new java.util.concurrent.CopyOnWriteArrayList<>();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), worker, Runnable::run);
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), worker, Runnable::run);
         UUID requestId = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
         endpoint.ask(requestId, "main", "question", event -> {
@@ -207,7 +206,7 @@ final class PayloadGuideRemoteEndpointTest {
                 return bytes;
             }));
             reading.get(5, java.util.concurrent.TimeUnit.SECONDS);
-            var codec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(new Gson());
+            var codec = new dev.openallay.bridge.protocol.ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
             port.events.accept(codec.encode(requestId, new AgentEvent.FinalText("done")));
             port.events.accept(codec.encode(requestId, new AgentEvent.RequestReleased()));
             org.junit.jupiter.api.Assertions.assertFalse(released.isDone());
@@ -226,7 +225,7 @@ final class PayloadGuideRemoteEndpointTest {
     void slowImagePutKeepsLaterTextPutBehindItOnTheSamePayloadWorker() throws Exception {
         FakePort port = new FakePort();
         java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), worker, Runnable::run);
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), worker, Runnable::run);
         UUID request = UUID.randomUUID(); UUID imageId = UUID.randomUUID(); UUID textId = UUID.randomUUID();
         endpoint.ask(request, "main", "question", ignored -> {});
         byte[] bytes = {1, 2, 3};
@@ -254,7 +253,7 @@ final class PayloadGuideRemoteEndpointTest {
     void revokedSlowImageDoesNotResurrectAndItsReplacementRemainsAheadOfLaterText() throws Exception {
         FakePort port = new FakePort();
         java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
-        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), worker, Runnable::run);
+        PayloadGuideRemoteEndpoint endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), worker, Runnable::run);
         UUID request = UUID.randomUUID(); UUID imageId = UUID.randomUUID(); UUID textId = UUID.randomUUID();
         endpoint.ask(request, "main", "question", ignored -> {});
         byte[] bytes = {1, 2, 3};

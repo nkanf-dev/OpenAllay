@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -33,9 +32,9 @@ final class ServerAgentSteerChunkerTest {
         }
         assertEquals(text, restored.orElseThrow());
         assertEquals(0, incoming.activeAssemblies());
-        JsonObject shape = JsonParser.parseString(codec.encode(chunks.getFirst())).getAsJsonObject();
+        JsonObject shape = dev.openallay.json.JsonTrees.parse(codec.encode(chunks.getFirst())).getAsJsonObject();
         assertEquals(Set.of("requestId", "messageId", "index", "total", "contentHash", "base64Data"),
-                shape.keySet());
+                dev.openallay.json.JsonTrees.keys(shape));
         shape.addProperty("version", 1);
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(shape.toString(), ServerAgentSteerChunkPayload.class));

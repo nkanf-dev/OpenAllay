@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
@@ -19,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 final class ServerAgentSteerProtocolTest {
     private final BridgeJsonCodec bridge = new BridgeJsonCodec();
-    private final ServerAgentEventCodec events = new ServerAgentEventCodec(new Gson());
+    private final ServerAgentEventCodec events = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
 
     @Test
     void exactPutAndNullableRemoveShapesKeepBothCorrelations() {
@@ -30,14 +28,14 @@ final class ServerAgentSteerProtocolTest {
                         ServerAgentHistoryMessage.from(ModelMessage.userText("只读取方块状态 ⚙"))),
                 new ServerAgentSteerPayload(request, message, ServerAgentSteerPayload.Operation.REMOVE, null))) {
             String json = bridge.encode(value);
-            JsonObject body = JsonParser.parseString(json).getAsJsonObject();
-            assertEquals(Set.of("requestId", "messageId", "operation", "message", "imageAttachments"), body.keySet());
+            JsonObject body = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
+            assertEquals(Set.of("requestId", "messageId", "operation", "message", "imageAttachments"), dev.openallay.json.JsonTrees.keys(body));
             assertEquals(value, bridge.decode(json, ServerAgentSteerPayload.class));
-            JsonObject missing = body.deepCopy();
+            JsonObject missing = dev.openallay.json.JsonTrees.copy(body);
             missing.remove("message");
             assertThrows(IllegalArgumentException.class,
                     () -> bridge.decode(missing.toString(), ServerAgentSteerPayload.class));
-            JsonObject extra = body.deepCopy();
+            JsonObject extra = dev.openallay.json.JsonTrees.copy(body);
             extra.addProperty("version", 1);
             assertThrows(IllegalArgumentException.class,
                     () -> bridge.decode(extra.toString(), ServerAgentSteerPayload.class));
@@ -70,7 +68,7 @@ final class ServerAgentSteerProtocolTest {
             assertThrows(IllegalArgumentException.class,
                     () -> bridge.decode(malformed, ServerAgentSteerPayload.class));
         }
-        JsonObject missingPut = JsonParser.parseString(put).getAsJsonObject();
+        JsonObject missingPut = dev.openallay.json.JsonTrees.parse(put).getAsJsonObject();
         missingPut.add("message", com.google.gson.JsonNull.INSTANCE);
         assertThrows(IllegalArgumentException.class,
                 () -> bridge.decode(missingPut.toString(), ServerAgentSteerPayload.class));
@@ -91,7 +89,7 @@ final class ServerAgentSteerProtocolTest {
                     () -> events.decode(payload, UUID.randomUUID()));
             assertThrows(IllegalArgumentException.class, () -> events.decode(
                     new ServerAgentEventPayload(request, payload.eventType(), payload.eventJson(), true), request));
-            JsonObject extra = JsonParser.parseString(payload.eventJson()).getAsJsonObject();
+            JsonObject extra = dev.openallay.json.JsonTrees.parse(payload.eventJson()).getAsJsonObject();
             extra.addProperty("extra", true);
             assertThrows(IllegalArgumentException.class, () -> events.decode(
                     new ServerAgentEventPayload(request, payload.eventType(), extra.toString(), false), request));
@@ -99,7 +97,7 @@ final class ServerAgentSteerProtocolTest {
         ServerAgentEventPayload applied = events.encode(request,
                 new AgentEvent.SteerApplied(message, ModelMessage.userText("instruction")));
         assertEquals(Set.of("messageId", "message"),
-                JsonParser.parseString(applied.eventJson()).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(applied.eventJson()).getAsJsonObject()));
         assertThrows(IllegalArgumentException.class, () -> events.decode(
                 new ServerAgentEventPayload(request, "steer_applied",
                         applied.eventJson().replace("\"USER\"", "\"ASSISTANT\""), false), request));

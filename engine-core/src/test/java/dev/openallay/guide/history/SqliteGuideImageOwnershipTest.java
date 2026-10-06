@@ -657,7 +657,7 @@ final class SqliteGuideImageOwnershipTest {
                 GuideRequestSnapshot.legacyProgress(GuideRequestStatus.COMPLETED, null, NOW, NOW), bill, null);
         var checkpoint = new dev.openallay.agent.context.ContextCheckpoint(UUID.randomUUID(),
                 0, 3, dev.openallay.agent.context.ContextSourceHash.compute(
-                        new com.google.gson.Gson(), original.subList(0, 3)), "test:model", NOW,
+                        dev.openallay.json.EngineJson.create(), original.subList(0, 3)), "test:model", NOW,
                 dev.openallay.agent.context.ContextCheckpoint.Status.SUCCEEDED,
                 "derived summary does not replace originals", null, null, 12);
         List<GuideHistoryMutation> mutations = new java.util.ArrayList<>(List.of(

@@ -3,7 +3,6 @@ package dev.openallay.client.gui.nativeview;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.context.RecipeReference;
 import dev.openallay.guide.GuideModelMode;
 import dev.openallay.guide.GuideModelSelection;
@@ -29,7 +28,7 @@ final class NativeDomainViewBindingsTest {
                 "minecraft:recipe_manager", generation, "minecraft:apple");
         GuideToolActivity activity = new GuideToolActivity(
                 "call-exact", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                         {"status":"success","value":{"viewKind":"RECIPE","preview":[{
                           "reference":{"sourceId":"minecraft:recipe_manager","generation":"%s","recipeId":"minecraft:apple"},
                           "references":[],"id":"minecraft:apple","type":"minecraft:crafting",

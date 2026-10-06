@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.AgentEvent;
@@ -15,7 +14,6 @@ import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.SourceObservation;
 import dev.openallay.guide.semantic.SemanticInline;
-import dev.openallay.json.EngineJson;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelUsage;
 import dev.openallay.testing.GroundedTestFixtures;
@@ -26,7 +24,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 final class GuideStateReducerTest {
-    private final GuideStateReducer reducer = new GuideStateReducer(new Gson());
+    private final GuideStateReducer reducer = new GuideStateReducer(dev.openallay.json.EngineJson.create());
 
     @Test
     void rejectsMalformedProgressClocksAndAttempts() {
@@ -471,7 +469,7 @@ final class GuideStateReducerTest {
         JsonObject value = new JsonObject();
         JsonArray sources = new JsonArray();
         for (SourceObservation observation : observations) {
-            sources.add(EngineJson.withInstant(new Gson()).toJsonTree(observation));
+            sources.add(dev.openallay.json.EngineJson.create().toJsonTree(observation));
         }
         value.add("sources", sources);
         result.add("value", value);
@@ -491,7 +489,7 @@ final class GuideStateReducerTest {
         result.addProperty("status", "success");
         JsonObject value = new JsonObject();
         JsonArray evidence = new JsonArray();
-        evidence.add(EngineJson.withInstant(new Gson()).toJsonTree(GroundedTestFixtures.serverEvidence()));
+        evidence.add(dev.openallay.json.EngineJson.create().toJsonTree(GroundedTestFixtures.serverEvidence()));
         value.add("evidence", evidence);
         result.add("value", value);
         return result;

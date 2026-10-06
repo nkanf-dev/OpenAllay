@@ -3,8 +3,6 @@ package dev.openallay.benchmark;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -71,7 +69,7 @@ final class ServerModelRoutingBenchmarkTest {
                         ToolInvocationContext.developmentConsole(correlationId)),
                 Runnable::run,
                 Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
-                new Gson());
+                dev.openallay.json.EngineJson.create());
 
         success(service.setModelSelection(GuideModelSelection.server()).join());
         UUID requestId = success(service.ask(testCase.prompt()).join());
@@ -86,7 +84,7 @@ final class ServerModelRoutingBenchmarkTest {
                         .equals(List.of(testCase.prompt(), "server answer " + attempt));
 
         return new BenchmarkOutcome(
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                         {"sessionId":"%s","selection":"%s","canonicalModelId":"%s"}
                         """.formatted(
                                 session.sessionId(),

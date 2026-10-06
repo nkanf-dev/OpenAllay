@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.context.ContextBudget;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextSourceHash;
@@ -438,7 +436,7 @@ final class SqliteGuideHistoryContextTest {
     }
 
     private static List<ModelMessage> transcript(boolean reasoning) {
-        JsonObject input = JsonParser.parseString(
+        JsonObject input = dev.openallay.json.JsonTrees.parse(
                 "{\"skills\":[\"openallay:crafting\"],\"source\":\"return skills;\"}").getAsJsonObject();
         JsonObject result = new JsonObject();
         result.addProperty("code", "skill_missing");
@@ -459,7 +457,7 @@ final class SqliteGuideHistoryContextTest {
     private static ContextCheckpoint checkpoint(
             long id, int end, List<ModelMessage> source, String model) {
         return new ContextCheckpoint(new UUID(0, id), 0, end,
-                ContextSourceHash.compute(new Gson(), source), model, NOW,
+                ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), source), model, NOW,
                 ContextCheckpoint.Status.SUCCEEDED, "grounded summary", null, null, 10);
     }
 

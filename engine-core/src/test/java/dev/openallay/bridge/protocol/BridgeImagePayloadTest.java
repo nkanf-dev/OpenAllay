@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRole;
@@ -42,9 +41,9 @@ final class BridgeImagePayloadTest {
         assertThrows(IllegalArgumentException.class, () -> new ServerAgentSteerPayload(UUID.randomUUID(), UUID.randomUUID(),
                 ServerAgentSteerPayload.Operation.PUT, detached, List.of()));
         var applied = new dev.openallay.agent.AgentEvent.SteerApplied(UUID.randomUUID(), input);
-        var eventCodec = new ServerAgentEventCodec(new com.google.gson.Gson());
+        var eventCodec = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
         assertEquals(applied, eventCodec.decode(eventCodec.encode(request.requestId(), applied), request.requestId()));
-        JsonObject malformed = JsonParser.parseString(wire).getAsJsonObject();
+        JsonObject malformed = dev.openallay.json.JsonTrees.parse(wire).getAsJsonObject();
         malformed.getAsJsonObject("userInput").remove("inputObservation");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(malformed.toString(), ServerAgentRequestPayload.class));
         assertThrows(IllegalArgumentException.class, () -> new ModelMessage(ModelRole.USER,
@@ -63,18 +62,18 @@ final class BridgeImagePayloadTest {
         String encoded = codec.encode(payload);
         assertEquals(payload, codec.decode(encoded, ServerAgentRequestPayload.class));
         historyOnlyImageRequiresTheSameExactAttachmentClosure();
-        JsonObject object = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject object = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         JsonObject input = object.getAsJsonObject("userInput");
         assertEquals(image, payload.userInput().toModelMessage());
         assertEquals("[Image]", payload.question());
         assertTrue(!input.toString().contains("base64Data"));
-        assertEquals(java.util.Set.of("role", "content", "inputObservation"), input.keySet());
+        assertEquals(java.util.Set.of("role", "content", "inputObservation"), dev.openallay.json.JsonTrees.keys(input));
         JsonObject block = input.getAsJsonArray("content").get(0).getAsJsonObject();
-        assertEquals(java.util.Set.of("kind", "image", "originToolUseId"), block.keySet());
+        assertEquals(java.util.Set.of("kind", "image", "originToolUseId"), dev.openallay.json.JsonTrees.keys(block));
         assertEquals(java.util.Set.of("sha256", "mimeType", "width", "height", "byteSize"),
-                block.getAsJsonObject("image").keySet());
-        assertEquals(java.util.Set.of("reference", "base64Data"), object.getAsJsonArray("imageAttachments")
-                .get(0).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(block.getAsJsonObject("image")));
+        assertEquals(java.util.Set.of("reference", "base64Data"), dev.openallay.json.JsonTrees.keys(object.getAsJsonArray("imageAttachments")
+                .get(0).getAsJsonObject()));
         assertEquals(REFERENCE, attachment.reference());
         org.junit.jupiter.api.Assertions.assertArrayEquals(BYTES, attachment.bytes());
         assertEquals(1, payload.imageAttachments().size(), "duplicate use of one image needs one attachment");
@@ -108,11 +107,11 @@ final class BridgeImagePayloadTest {
     void oldRequestShapeAndStringOrUrlImageInputsAreNotAccepted() {
         var codec = new BridgeJsonCodec();
         var payload = new ServerAgentRequestPayload(UUID.randomUUID(), "main", "question", true);
-        JsonObject current = JsonParser.parseString(codec.encode(payload)).getAsJsonObject();
+        JsonObject current = dev.openallay.json.JsonTrees.parse(codec.encode(payload)).getAsJsonObject();
         current.remove("userInput");
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(current.toString(), ServerAgentRequestPayload.class));
-        JsonObject imageRequest = JsonParser.parseString(codec.encode(new ServerAgentRequestPayload(
+        JsonObject imageRequest = dev.openallay.json.JsonTrees.parse(codec.encode(new ServerAgentRequestPayload(
                 UUID.randomUUID(), "main", imageMessage(), true, List.of(),
                 List.of(ServerAgentImageAttachment.from(REFERENCE, BYTES))))).getAsJsonObject();
         imageRequest.getAsJsonObject("userInput").getAsJsonArray("content").get(0)
@@ -135,10 +134,10 @@ final class BridgeImagePayloadTest {
         String encoded = codec.encode(request);
         assertEquals(request, codec.decode(encoded, ServerAgentRequestPayload.class));
         assertEquals(canonical, request.history().stream().map(ServerAgentHistoryMessage::toModelMessage).toList());
-        var wire = JsonParser.parseString(encoded).getAsJsonObject();
+        var wire = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         var result = wire.getAsJsonArray("history").get(1).getAsJsonObject()
                 .getAsJsonArray("content").get(0).getAsJsonObject();
-        assertEquals(java.util.Set.of("kind", "toolUseId", "json", "error", "images"), result.keySet());
+        assertEquals(java.util.Set.of("kind", "toolUseId", "json", "error", "images"), dev.openallay.json.JsonTrees.keys(result));
         assertEquals(2, result.getAsJsonArray("images").size());
         result.remove("images");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(wire.toString(), ServerAgentRequestPayload.class));
@@ -164,13 +163,13 @@ final class BridgeImagePayloadTest {
                 observation, true, List.of(), List.of(attachment)));
         assertThrows(IllegalArgumentException.class, () -> new ServerAgentSteerPayload(UUID.randomUUID(), UUID.randomUUID(),
                 ServerAgentSteerPayload.Operation.PUT, history.getFirst(), List.of(attachment)));
-        JsonObject absent = JsonParser.parseString(wire).getAsJsonObject();
+        JsonObject absent = dev.openallay.json.JsonTrees.parse(wire).getAsJsonObject();
         absent.getAsJsonArray("history").get(0).getAsJsonObject().getAsJsonArray("content")
                 .get(1).getAsJsonObject().remove("originToolUseId");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(absent.toString(), ServerAgentRequestPayload.class));
         var player = ModelMessage.userInput("look", List.of(REFERENCE));
         var applied = new dev.openallay.agent.AgentEvent.SteerApplied(UUID.randomUUID(), player);
-        var eventCodec = new ServerAgentEventCodec(new com.google.gson.Gson());
+        var eventCodec = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
         UUID requestId = UUID.randomUUID();
         assertEquals(applied, eventCodec.decode(eventCodec.encode(requestId, applied), requestId));
     }
@@ -187,7 +186,7 @@ final class BridgeImagePayloadTest {
                 .map(ServerAgentImageAttachment::reference).toList());
         assertThrows(IllegalArgumentException.class, () -> new ServerAgentRequestPayload(UUID.randomUUID(),
                 "main", ModelMessage.userText("follow up"), true, history, List.of()));
-        JsonObject wire = JsonParser.parseString(codec.encode(request)).getAsJsonObject();
+        JsonObject wire = dev.openallay.json.JsonTrees.parse(codec.encode(request)).getAsJsonObject();
         wire.addProperty("question", "changed display");
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(wire.toString(), ServerAgentRequestPayload.class));

@@ -3,7 +3,6 @@ package dev.openallay.extension;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.extension.catalog.ExtensionCatalogCodec;
 import dev.openallay.extension.catalog.ExtensionCatalogEntry;
 import dev.openallay.extension.install.ExtensionPackageManifestCodec;
@@ -38,14 +37,14 @@ final class ExtensionRequirementsCodecTest {
 
     @Test
     void packageAndCatalogRoundTripAndLoaderDescriptorsPreserveDeclarations() {
-        JsonObject packageJson = JsonParser.parseString(PACKAGE).getAsJsonObject();
+        JsonObject packageJson = dev.openallay.json.JsonTrees.parse(PACKAGE).getAsJsonObject();
         packageJson.add("requirements", RequirementCodec.encode(DECLARATIONS));
         var packages = new ExtensionPackageManifestCodec();
         var manifest = packages.decode(packageJson.toString());
         assertEquals(DECLARATIONS, manifest.descriptor().requirements());
         assertEquals(manifest, packages.decode(packages.encode(manifest)));
 
-        JsonObject catalogJson = JsonParser.parseString(CATALOG).getAsJsonObject();
+        JsonObject catalogJson = dev.openallay.json.JsonTrees.parse(CATALOG).getAsJsonObject();
         catalogEntry(catalogJson).add("requirements", RequirementCodec.encode(DECLARATIONS));
         var catalogs = new ExtensionCatalogCodec();
         var catalog = catalogs.decode(catalogJson.toString());
@@ -83,11 +82,11 @@ final class ExtensionRequirementsCodecTest {
         var catalogs = new ExtensionCatalogCodec();
         for (String invalid : new String[] {"null", "{\"unknown\":[]}",
                 "{\"capabilities\":[\"future:unknown\",\"future:unknown\"]}"}) {
-            JsonObject packageJson = JsonParser.parseString(PACKAGE).getAsJsonObject();
-            packageJson.add("requirements", JsonParser.parseString(invalid));
+            JsonObject packageJson = dev.openallay.json.JsonTrees.parse(PACKAGE).getAsJsonObject();
+            packageJson.add("requirements", dev.openallay.json.JsonTrees.parse(invalid));
             assertThrows(IllegalArgumentException.class, () -> packages.decode(packageJson.toString()));
-            JsonObject catalogJson = JsonParser.parseString(CATALOG).getAsJsonObject();
-            catalogEntry(catalogJson).add("requirements", JsonParser.parseString(invalid));
+            JsonObject catalogJson = dev.openallay.json.JsonTrees.parse(CATALOG).getAsJsonObject();
+            catalogEntry(catalogJson).add("requirements", dev.openallay.json.JsonTrees.parse(invalid));
             assertThrows(IllegalArgumentException.class, () -> catalogs.decode(catalogJson.toString()));
         }
         assertThrows(IllegalArgumentException.class, () -> packages.decode(
@@ -107,7 +106,7 @@ final class ExtensionRequirementsCodecTest {
         var skills = new SkillRepository(new SkillParser(), Set.of());
         var registry = new OpenAllayExtensionRegistry(
                 new OpenAllayExtensionEnvironment("fabric", "26.2", "0.2.0"), data, modules, skills, Set.of());
-        JsonObject packageJson = JsonParser.parseString(PACKAGE).getAsJsonObject();
+        JsonObject packageJson = dev.openallay.json.JsonTrees.parse(PACKAGE).getAsJsonObject();
         packageJson.add("requirements", RequirementCodec.encode(DECLARATIONS));
         var descriptor = new ExtensionPackageManifestCodec().decode(packageJson.toString()).descriptor();
         var result = registry.register(new OpenAllayExtension() {

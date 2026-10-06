@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.tool.ToolResult;
 import java.io.StringReader;
 import java.net.URI;
@@ -23,16 +22,16 @@ final class ModelProfilesConfigWriterTest {
         ModelProfilesConfig config = config();
 
         String encoded = new ModelProfilesConfigWriter().encode(config);
-        JsonObject root = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject root = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
 
         assertEquals(List.of("defaultProfileId", "profiles"),
-                root.keySet().stream().toList());
+                dev.openallay.json.JsonTrees.keys(root).stream().toList());
         assertEquals(List.of(
                         "id", "displayName", "enabled", "protocol", "baseUrl", "model",
                         "credentialRef", "contextWindowTokens", "maxOutputTokens",
                         "connectTimeoutSeconds", "requestTimeoutSeconds", "metadata"),
-                root.getAsJsonArray("profiles").get(0).getAsJsonObject()
-                        .keySet().stream().toList());
+                dev.openallay.json.JsonTrees.keys(root.getAsJsonArray("profiles").get(0).getAsJsonObject()
+                        ).stream().toList());
         assertTrue(encoded.endsWith(System.lineSeparator()));
         assertFalse(encoded.contains("secret-value"));
         assertFalse(encoded.contains("\"apiKey\""));
@@ -62,7 +61,7 @@ final class ModelProfilesConfigWriterTest {
                 null);
         String encoded = new ModelProfilesConfigWriter().encode(new ModelProfilesConfig(
                 minimal.id(), List.of(minimal)));
-        JsonObject profile = JsonParser.parseString(encoded).getAsJsonObject()
+        JsonObject profile = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject()
                 .getAsJsonArray("profiles").get(0).getAsJsonObject();
 
         assertFalse(profile.has("contextWindowTokens"));
@@ -71,7 +70,7 @@ final class ModelProfilesConfigWriterTest {
                         "id", "displayName", "enabled", "protocol", "baseUrl", "model",
                         "credentialRef", "maxOutputTokens", "connectTimeoutSeconds",
                         "requestTimeoutSeconds"),
-                profile.keySet().stream().toList());
+                dev.openallay.json.JsonTrees.keys(profile).stream().toList());
     }
 
     @Test
@@ -82,7 +81,7 @@ final class ModelProfilesConfigWriterTest {
                 Duration.ofSeconds(30), Duration.ofSeconds(300), null);
         var config = new ModelProfilesConfig(profile.id(), List.of(profile));
         String encoded = new ModelProfilesConfigWriter().encode(config);
-        JsonObject json = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject json = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         assertFalse(json.has("schemaVersion"));
         assertFalse(json.getAsJsonArray("profiles").get(0).getAsJsonObject().has("maxOutputTokens"));
         var loaded = success(new ModelProfilesConfigLoader().load(new StringReader(encoded),
@@ -104,7 +103,7 @@ final class ModelProfilesConfigWriterTest {
                     source.metadata(), effort);
             var configured = new ModelProfilesConfig(profile.id(), List.of(profile));
             String encoded = new ModelProfilesConfigWriter().encode(configured);
-            var json = JsonParser.parseString(encoded).getAsJsonObject()
+            var json = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject()
                     .getAsJsonArray("profiles").get(0).getAsJsonObject();
             assertEquals(effort != ModelReasoningEffort.AUTO, json.has("reasoningEffort"));
             if (effort != ModelReasoningEffort.AUTO) {

@@ -3,7 +3,6 @@ package dev.openallay.knowledge.online;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.net.HttpCancellation;
@@ -34,7 +33,7 @@ final class OnlineKnowledgeSourcesTest {
         CancellationSignal cancellation = new CancellationSignal();
 
         List<OnlineKnowledgeSource.RawHit> wiki = new MinecraftWikiKnowledgeSource(
-                transport, new Gson()).search("poison", 3, cancellation).join();
+                transport, dev.openallay.json.EngineJson.create()).search("poison", 3, cancellation).join();
         List<OnlineKnowledgeSource.RawHit> mcmod = new McModKnowledgeSource(transport)
                 .search("农夫乐事", 3, cancellation).join();
 

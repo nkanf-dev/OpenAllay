@@ -2,8 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.guide.semantic.RichComponent;
 import dev.openallay.guide.semantic.SemanticBlock;
@@ -19,7 +17,7 @@ final class GuideLivePresentationSourceTest {
     private final UUID actor = UUID.randomUUID();
     private final UUID owner = UUID.randomUUID();
     private final Instant now = Instant.parse("2026-10-02T00:00:00Z");
-    private final GuideStateReducer reducer = new GuideStateReducer(new Gson());
+    private final GuideStateReducer reducer = new GuideStateReducer(dev.openallay.json.EngineJson.create());
     private final GuideLivePresentationSource source = new GuideLivePresentationSource(actor);
     private final List<GuidePresentationEvent> observed = new ArrayList<>();
 
@@ -81,7 +79,7 @@ final class GuideLivePresentationSourceTest {
         AgentEvent started = new AgentEvent.ToolStarted("actual-item", "run_javascript");
         GuideRequestSnapshot running = reducer.apply(initial, started, now);
         source.applied(owner, initial, running, started);
-        AgentEvent complete = new AgentEvent.ToolCompleted("actual-item", "run_javascript", false, JsonParser.parseString("""
+        AgentEvent complete = new AgentEvent.ToolCompleted("actual-item", "run_javascript", false, dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"viewKind":"ITEM","preview":[{"itemId":"minecraft:stone","count":2}]}}
                 """).getAsJsonObject());
         GuideRequestSnapshot done = reducer.apply(running, complete, now);
@@ -101,7 +99,7 @@ final class GuideLivePresentationSourceTest {
         GuideRequestSnapshot initial = start(); source.admit(owner, initial);
         AgentEvent started = new AgentEvent.ToolStarted("empty", "load_skill");
         GuideRequestSnapshot running = reducer.apply(initial, started, now);
-        AgentEvent complete = new AgentEvent.ToolCompleted("empty", "load_skill", false, JsonParser.parseString(
+        AgentEvent complete = new AgentEvent.ToolCompleted("empty", "load_skill", false, dev.openallay.json.JsonTrees.parse(
                 "{\"status\":\"success\",\"value\":{\"debug\":\"opaque\"}}") .getAsJsonObject());
         source.applied(owner, running, reducer.apply(running, complete, now), complete);
         assertTrue(observed.isEmpty());
@@ -161,14 +159,14 @@ final class GuideLivePresentationSourceTest {
     @Test void canonicalIntentNotResultFieldsOrProgramProvidesCardTitleAndDescription() {
         source.subscribe(observed::add);
         GuideRequestSnapshot initial = start(); source.admit(owner, initial);
-        var arguments = JsonParser.parseString("""
+        var arguments = dev.openallay.json.JsonTrees.parse("""
                 {"title":"Stone supply","description":"Compare available stone for the build.",
                  "source":"PRIVATE_PROGRAM_DO_NOT_DISPLAY"}
                 """).getAsJsonObject();
         AgentEvent.ToolStarted started = new AgentEvent.ToolStarted("supply", "openallay:run_javascript", arguments, List.of());
         GuideRequestSnapshot running = reducer.apply(initial, started, now);
         AgentEvent.ToolCompleted complete = new AgentEvent.ToolCompleted("supply", "openallay:run_javascript", false,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"viewKind":"TABLE","title":"Wrong result title",
                      "description":"Wrong result description","handle":"PRIVATE_HANDLE",
                      "preview":[{"privateColumn":"PRIVATE_ROW_DO_NOT_DISPLAY"}],"complete":true}}
@@ -190,7 +188,7 @@ final class GuideLivePresentationSourceTest {
                         "Remote stone list", "Read available building blocks.")));
         GuideRequestSnapshot running = reducer.apply(initial, started, now);
         AgentEvent.ToolCompleted complete = new AgentEvent.ToolCompleted("remote", "openallay:run_javascript", false,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"viewKind":"ITEM",
                      "preview":[{"itemId":"minecraft:stone","displayName":"Stone","count":2}]}}
                     """).getAsJsonObject());
@@ -205,7 +203,7 @@ final class GuideLivePresentationSourceTest {
         AgentEvent.ToolStarted started = new AgentEvent.ToolStarted("table", "run_javascript");
         GuideRequestSnapshot running = reducer.apply(initial, started, now);
         AgentEvent.ToolCompleted complete = new AgentEvent.ToolCompleted("table", "run_javascript", false,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                     {"status":"success","value":{"viewKind":"TABLE","preview":[{"body":"Not a description"}]}}
                     """).getAsJsonObject());
         source.applied(owner, running, reducer.apply(running, complete, now), complete);

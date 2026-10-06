@@ -6,9 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.context.ContextStructure;
 import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.agent.session.AgentSessionStore;
@@ -96,14 +94,14 @@ final class AgentModelContextLifecycleTest {
                     RunJavascriptTool.ID, "path: testmod inspect\nkind: literal\nexecutable: true"));
         });
         AgentToolExecutor tools = new CompositeAgentToolExecutor(List.of(
-                new LocalAgentToolExecutor(registry, new Gson()), javascript));
+                new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()), javascript));
         ScriptedModelClient model = new ScriptedModelClient();
         model.enqueue(request -> completed(toolTurn("load_entry", LOAD_SKILL,
-                JsonParser.parseString("{\"name\":\"run-game-commands\"}").getAsJsonObject())));
+                dev.openallay.json.JsonTrees.parse("{\"name\":\"run-game-commands\"}").getAsJsonObject())));
         model.enqueue(request -> {
             assertTrue(modelText(request.messages()).contains(skill.document().instructions()));
             assertTrue(modelText(request.messages()).contains("references/commands.md"));
-            return completed(toolTurn("load_reference", LOAD_SKILL, JsonParser.parseString(
+            return completed(toolTurn("load_reference", LOAD_SKILL, dev.openallay.json.JsonTrees.parse(
                     "{\"name\":\"run-game-commands\",\"reference\":\"references/commands.md\"}")
                     .getAsJsonObject()));
         });
@@ -128,7 +126,7 @@ final class AgentModelContextLifecycleTest {
             return completed(textTurn("The visible command is testmod inspect."));
         });
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         List<AgentEvent> firstEvents = new ArrayList<>();
         List<AgentEvent> secondEvents = new ArrayList<>();
         AgentRequest first = request("load-workflow", "Prepare the command discovery workflow.");
@@ -180,7 +178,7 @@ final class AgentModelContextLifecycleTest {
             return completed(textTurn("The failed code called filter on an object, not its values array."));
         });
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         AgentRequest first = request("filter-failure", "Find my biome using diagnostics.");
         List<AgentEvent> firstEvents = new ArrayList<>();
         List<AgentEvent> secondEvents = new ArrayList<>();
@@ -221,7 +219,7 @@ final class AgentModelContextLifecycleTest {
         });
         AgentSessionStore sessions = new AgentSessionStore();
         ScriptedJavascriptTools tools = new ScriptedJavascriptTools();
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         AgentRequest first = request("provider-failure", "Which visible commands are available?");
         List<AgentEvent> firstEvents = new ArrayList<>();
         List<AgentEvent> secondEvents = new ArrayList<>();
@@ -262,7 +260,7 @@ final class AgentModelContextLifecycleTest {
             return completed(textTurn("Both completed reads remain available."));
         });
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         AgentRequest first = request("cancel-after-parallel", "Read both facts.");
         List<AgentEvent> firstEvents = new ArrayList<>();
         List<AgentEvent> secondEvents = new ArrayList<>();
@@ -298,7 +296,7 @@ final class AgentModelContextLifecycleTest {
             return completed(textTurn("One read completed; the other was cancelled."));
         });
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         AgentRequest first = request("cancel-during-parallel", "Read both facts.");
         List<AgentEvent> firstEvents = new ArrayList<>();
         List<AgentEvent> secondEvents = new ArrayList<>();
@@ -336,7 +334,7 @@ final class AgentModelContextLifecycleTest {
             public CompletableFuture<AgentToolResult> execute(
                     String name, JsonObject input, ToolInvocationContext context,
                     CancellationSignal cancellation) {
-                inputs.add(input.deepCopy());
+                inputs.add(dev.openallay.json.JsonTrees.copy(input));
                 requestCancellation = cancellation;
                 assertTrue(sessions.cancel(first.sessionKey()));
                 return new CompletableFuture<>();
@@ -352,7 +350,7 @@ final class AgentModelContextLifecycleTest {
         };
         ScriptedModelClient model = new ScriptedModelClient();
         model.enqueue(request -> completed(parallelTurn()));
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         List<AgentEvent> events = new ArrayList<>();
 
         CompletableFuture<AgentResult> running = agent.ask(first, events::add);
@@ -430,9 +428,9 @@ final class AgentModelContextLifecycleTest {
 
     private static void assertActualProviderBodiesRetainSkill(ModelRequest request, SkillFixture skill) {
         // Only local JSON encoders run. No provider client or transport is constructed.
-        JsonObject openAi = JsonParser.parseString(new OpenAiJsonCodec(new Gson())
+        JsonObject openAi = dev.openallay.json.JsonTrees.parse(new OpenAiJsonCodec(dev.openallay.json.EngineJson.create())
                 .requestBody(config(ModelProtocol.OPENAI_CHAT), request)).getAsJsonObject();
-        JsonObject anthropic = JsonParser.parseString(new AnthropicJsonCodec(new Gson())
+        JsonObject anthropic = dev.openallay.json.JsonTrees.parse(new AnthropicJsonCodec(dev.openallay.json.EngineJson.create())
                 .requestBody(config(ModelProtocol.ANTHROPIC_MESSAGES), request)).getAsJsonObject();
         List<String> openAiUses = new ArrayList<>();
         List<String> openAiResults = new ArrayList<>();
@@ -443,7 +441,7 @@ final class AgentModelContextLifecycleTest {
                 for (var call : message.getAsJsonArray("tool_calls")) {
                     JsonObject encoded = call.getAsJsonObject();
                     openAiUses.add(encoded.get("id").getAsString());
-                    JsonObject input = JsonParser.parseString(encoded.getAsJsonObject("function")
+                    JsonObject input = dev.openallay.json.JsonTrees.parse(encoded.getAsJsonObject("function")
                             .get("arguments").getAsString()).getAsJsonObject();
                     assertFalse(input.has("durableProjection"));
                 }
@@ -498,7 +496,7 @@ final class AgentModelContextLifecycleTest {
             return requests.size() == 1 ? oldModel : completed(textTurn("new answer"));
         };
         GameGuideAgent agent = new GameGuideAgent(model, new CompositeAgentToolExecutor(List.of()),
-                sessions, new Gson());
+                sessions, dev.openallay.json.EngineJson.create());
         AgentRequest oldRequest = request("noncooperative-old", "old question");
         List<AgentEvent> oldEvents = new java.util.concurrent.CopyOnWriteArrayList<>();
         CompletableFuture<AgentResult> oldResult = agent.ask(oldRequest, oldEvents::add);
@@ -544,7 +542,7 @@ final class AgentModelContextLifecycleTest {
             }
         };
         GameGuideAgent agent = new GameGuideAgent((request, events, cancellation) -> pendingModel,
-                tools, sessions, new Gson());
+                tools, sessions, dev.openallay.json.EngineJson.create());
         AgentRequest request = request("blocked-cleanup", "old question");
         CompletableFuture<AgentResult> result = agent.ask(request, ignored -> {});
         try {
@@ -583,7 +581,7 @@ final class AgentModelContextLifecycleTest {
         java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
         ModelClient model = (request, events, signal) -> completed(
                 calls.getAndIncrement() == 0 ? advertised : textTurn("retry answer"));
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         List<AgentEvent> oldEvents = new java.util.concurrent.CopyOnWriteArrayList<>();
         CompletableFuture<AgentResult> oldResult = agent.ask(oldRequest, oldEvents::add);
         AgentRequest retry = request("predeclared-retry", "retry question");
@@ -793,7 +791,7 @@ final class AgentModelContextLifecycleTest {
         @Override
         public List<ModelToolDefinition> definitions() {
             return List.of(new ModelToolDefinition(RUN_JAVASCRIPT, "Read detached game data",
-                    JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject()));
+                    dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject()));
         }
 
         @Override public Set<ContextCapability> requiredContext() { return Set.of(); }
@@ -807,7 +805,7 @@ final class AgentModelContextLifecycleTest {
         @Override
         public CompletableFuture<AgentToolResult> execute(
                 String name, JsonObject input, ToolInvocationContext context, CancellationSignal cancellation) {
-            inputs.add(input.deepCopy());
+            inputs.add(dev.openallay.json.JsonTrees.copy(input));
             return scripts.removeFirst().apply(input, cancellation);
         }
     }
@@ -818,7 +816,7 @@ final class AgentModelContextLifecycleTest {
         @Override
         public CompletableFuture<AgentToolResult> execute(
                 String name, JsonObject input, ToolInvocationContext context, CancellationSignal cancellation) {
-            inputs.add(input.deepCopy());
+            inputs.add(dev.openallay.json.JsonTrees.copy(input));
             CompletableFuture<AgentToolResult> result = new CompletableFuture<>();
             pending.put(input.get("source").getAsString(), result);
             // Deliberately noncooperative. The Agent must settle its own cancelled result

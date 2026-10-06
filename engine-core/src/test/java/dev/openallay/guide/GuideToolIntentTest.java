@@ -5,14 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 final class GuideToolIntentTest {
     @Test
     void projectsOnlyActualStringIntentAndSanitizesControlsWithoutInterpretingText() {
-        JsonObject arguments = JsonParser.parseString("{\"title\":false,\"description\":{}}").getAsJsonObject();
+        JsonObject arguments = dev.openallay.json.JsonTrees.parse("{\"title\":false,\"description\":{}}").getAsJsonObject();
         assertTrue(GuideToolIntent.fromArguments(arguments).empty());
         arguments.addProperty("title", "  **分析** [[tw:item|minecraft:apple]]\n/openallay test  ");
         arguments.addProperty("description", "screen.openallay.title\t<clickEvent>🧚");
@@ -42,7 +41,7 @@ final class GuideToolIntentTest {
         JsonObject arguments = new JsonObject();
         arguments.addProperty("title", "Compare swords");
         arguments.addProperty("description", "Rank observed attack damage");
-        JsonObject normalized = JsonParser.parseString(
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse(
                 "{\"status\":\"success\",\"value\":{\"title\":\"Overwrite\",\"description\":\"Invent success\"}}")
                 .getAsJsonObject();
         GuideToolActivity activity = new GuideToolActivity("call-1", 0, "openallay:run_javascript",

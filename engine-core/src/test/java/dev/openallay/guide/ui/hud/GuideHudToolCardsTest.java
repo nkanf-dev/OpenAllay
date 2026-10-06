@@ -1,7 +1,6 @@
 package dev.openallay.guide.ui.hud;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideToolActivity;
 import dev.openallay.guide.GuideToolStatus;
 import dev.openallay.guide.semantic.RichComponent;
@@ -74,7 +73,7 @@ final class GuideHudToolCardsTest {
 
     private static GuideUiRow.Tool tool(String normalized) {
         var activity = new GuideToolActivity("stable-call", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString(normalized).getAsJsonObject(), List.of(), List.of());
+                dev.openallay.json.JsonTrees.parse(normalized).getAsJsonObject(), List.of(), List.of());
         return new GuideUiRow.Tool(UUID.fromString("d5168b68-aaf6-49e9-b071-c29625c51ed1"), 0, activity,
                 GuideToolDetailPresenter.project(activity, false).forRequest(true));
     }

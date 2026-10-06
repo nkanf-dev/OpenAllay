@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.guide.history.GuideHistoryAccess;
@@ -32,7 +31,7 @@ final class GuideServiceManagerObservationDetachTest {
                 public boolean ask(UUID id, String session, String question, java.util.function.Consumer<dev.openallay.agent.AgentEvent> events) { return false; }
                 public boolean cancel(UUID id) { return false; }
                 public void disconnect() {}
-            }, contexts, owner::execute, Clock.systemUTC(), new Gson(), history,
+            }, contexts, owner::execute, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), history,
                     actor -> GuideHistoryScope.derive(actor, GuideHistoryScope.Kind.MULTIPLAYER, "fixture.example"));
             manager.forActor(UUID.randomUUID()); run(owner);
             contexts.capture(Set.of(), "old");

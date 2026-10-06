@@ -2,7 +2,6 @@ package dev.openallay.requirement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.JsonParser;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -12,7 +11,7 @@ final class RequirementCodecTest {
     @Test
     void absentAndEmptyDeclarationsStayEmpty() {
         assertEquals(RequirementSet.EMPTY, RequirementCodec.decode(null));
-        assertEquals(RequirementSet.EMPTY, RequirementCodec.decode(JsonParser.parseString("{}")));
+        assertEquals(RequirementSet.EMPTY, RequirementCodec.decode(dev.openallay.json.JsonTrees.parse("{}")));
         assertEquals(RequirementSet.EMPTY, RequirementCodec.fromMetadata(Map.of()));
         assertEquals(RequirementSet.EMPTY, RequirementCodec.fromMetadata(Map.of(
                 RequirementCodec.CAPABILITIES_KEY, " ", RequirementCodec.SKILLS_KEY, "")));
@@ -42,7 +41,7 @@ final class RequirementCodecTest {
                 "{\"capabilities\":[\"future:unknown\\n\"]}"
         }) {
             assertThrows(IllegalArgumentException.class,
-                    () -> RequirementCodec.decode(JsonParser.parseString(invalid)), invalid);
+                    () -> RequirementCodec.decode(dev.openallay.json.JsonTrees.parse(invalid)), invalid);
         }
         assertThrows(IllegalArgumentException.class, () -> RequirementCodec.fromMetadata(
                 Map.of(RequirementCodec.CAPABILITIES_KEY, "a,b")));

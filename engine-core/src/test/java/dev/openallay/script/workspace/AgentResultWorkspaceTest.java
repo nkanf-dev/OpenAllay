@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.context.SourceObservation;
 import dev.openallay.script.result.JavascriptResultShape;
 import dev.openallay.script.result.JavascriptSemanticKind;
@@ -20,7 +19,7 @@ final class AgentResultWorkspaceTest {
     @Test
     void storesReopensAndInvalidatesCanonicalResults() {
         AgentResultWorkspace workspace = new AgentResultWorkspace();
-        String handle = workspace.store(JsonParser.parseString("[1,2,3]"));
+        String handle = workspace.store(dev.openallay.json.JsonTrees.parse("[1,2,3]"));
 
         assertEquals(3, workspace.open(handle).getAsJsonArray().size());
         assertEquals(1, workspace.select(List.of(handle)).size());
@@ -41,7 +40,7 @@ final class AgentResultWorkspaceTest {
                 GroundedTestFixtures.serverEvidence(), Instant.EPOCH.plusSeconds(20));
         ArrayList<SourceObservation> supplied = new ArrayList<>(List.of(source));
         String handle = workspace.store(
-                JsonParser.parseString("[1,2,3]"),
+                dev.openallay.json.JsonTrees.parse("[1,2,3]"),
                 JavascriptResultShape.ordinary(JavascriptSemanticKind.GENERIC), false, supplied);
         supplied.clear();
 
@@ -61,7 +60,7 @@ final class AgentResultWorkspaceTest {
     @Test
     void sourceSelectionRejectsMissingAndClosedHandles() {
         AgentResultWorkspace workspace = new AgentResultWorkspace();
-        String handle = workspace.store(JsonParser.parseString("1"));
+        String handle = workspace.store(dev.openallay.json.JsonTrees.parse("1"));
         assertEquals(List.of(), workspace.sources(handle));
         assertTrue(workspace.selectSources(null).isEmpty());
         assertEquals("workspace_handle_unavailable", assertThrows(WorkspaceException.class,
@@ -78,7 +77,7 @@ final class AgentResultWorkspaceTest {
 
     @Test
     void presentsEverySmallArrayRowWithoutAnArbitraryRowCap() {
-        var value = JsonParser.parseString("""
+        var value = dev.openallay.json.JsonTrees.parse("""
                 [
                   {"id":"a","damage":1},{"id":"b","damage":2},{"id":"c","damage":3},
                   {"id":"d","damage":4},{"id":"e","damage":5},{"id":"f","damage":6},
@@ -143,7 +142,7 @@ final class AgentResultWorkspaceTest {
         AgentResultWorkspace workspace = new AgentResultWorkspace();
         java.util.ArrayList<String> handles = new java.util.ArrayList<>();
         for (int index = 0; index < 5; index++) {
-            handles.add(workspace.store(JsonParser.parseString("[" + index + "]")));
+            handles.add(workspace.store(dev.openallay.json.JsonTrees.parse("[" + index + "]")));
         }
 
         WorkspaceException failure = assertThrows(
@@ -156,7 +155,7 @@ final class AgentResultWorkspaceTest {
     @Test
     void marksAnswerSizedResultsCompleteAndTellsModelToStopVerifying() {
         var result = new JavascriptResultPresenter().present(
-                "r_complete", JsonParser.parseString("[{\"id\":\"example:sword\",\"damage\":14}]"));
+                "r_complete", dev.openallay.json.JsonTrees.parse("[{\"id\":\"example:sword\",\"damage\":14}]"));
 
         assertTrue(result.complete());
         assertTrue(result.modelText().contains("scope: complete"));

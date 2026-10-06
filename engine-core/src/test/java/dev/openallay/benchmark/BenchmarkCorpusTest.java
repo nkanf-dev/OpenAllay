@@ -21,7 +21,7 @@ final class BenchmarkCorpusTest {
                 new InputStreamReader(input, StandardCharsets.UTF_8));
 
         assertEquals(Set.of("cases"),
-                new com.google.gson.Gson().toJsonTree(corpus).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.EngineJson.create().toJsonTree(corpus).getAsJsonObject()));
         assertTrue(corpus.cases().size() >= 10);
         Set<String> categories = corpus.cases().stream()
                 .map(BenchmarkCase::category)

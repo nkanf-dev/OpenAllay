@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -192,8 +191,8 @@ final class ModelUpstreamRecoveryHttpTest {
         ModelConfig config = new ModelConfig(true, protocol, uri, "fixture-model",
                 SecretValue.of("local-test-key"), 128_000, 512, Duration.ofSeconds(2), timeout);
         return protocol == ModelProtocol.OPENAI_CHAT
-                ? new OpenAiChatClient(config, new Gson())
-                : new AnthropicMessagesClient(config, new Gson());
+                ? new OpenAiChatClient(config, dev.openallay.json.EngineJson.create())
+                : new AnthropicMessagesClient(config, dev.openallay.json.EngineJson.create());
     }
 
     private static ModelRequest continuation(boolean stream) {

@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.model.anthropic.AnthropicJsonCodec;
 import dev.openallay.model.config.ModelConfig;
@@ -83,8 +81,8 @@ final class ModelRequestOutputTokenCapTest {
                 assertEquals(stream, restored.stream());
                 assertEquals("Use tools. " + playerValue, restored.systemPrompt());
                 assertEquals(playerValue, schema.get("description").getAsString());
-                assertEquals(new Gson().toJsonTree(request), new Gson().toJsonTree(restored));
-                assertFalse(new Gson().toJson(restored).contains("[REDACTED]"));
+                assertEquals(dev.openallay.json.EngineJson.create().toJsonTree(request), dev.openallay.json.EngineJson.create().toJsonTree(restored));
+                assertFalse(dev.openallay.json.EngineJson.create().toJson(restored).contains("[REDACTED]"));
                 assertEncodedLimit(restored, cap == null ? 1024 : cap);
             }
         }
@@ -94,9 +92,9 @@ final class ModelRequestOutputTokenCapTest {
         for (ModelProtocol protocol : List.of(ModelProtocol.OPENAI_CHAT, ModelProtocol.ANTHROPIC_MESSAGES)) {
             ModelConfig config = config(protocol);
             String body = protocol == ModelProtocol.OPENAI_CHAT
-                    ? new OpenAiJsonCodec(new Gson()).requestBody(config, request)
-                    : new AnthropicJsonCodec(new Gson()).requestBody(config, request);
-            JsonObject encoded = JsonParser.parseString(body).getAsJsonObject();
+                    ? new OpenAiJsonCodec(dev.openallay.json.EngineJson.create()).requestBody(config, request)
+                    : new AnthropicJsonCodec(dev.openallay.json.EngineJson.create()).requestBody(config, request);
+            JsonObject encoded = dev.openallay.json.JsonTrees.parse(body).getAsJsonObject();
             String field = protocol == ModelProtocol.OPENAI_CHAT ? "max_completion_tokens" : "max_tokens";
             assertEquals(expected, encoded.get(field).getAsInt());
             assertEquals(request.stream(), encoded.get("stream").getAsBoolean());

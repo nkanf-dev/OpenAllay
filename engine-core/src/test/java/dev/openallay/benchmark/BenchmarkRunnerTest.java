@@ -3,7 +3,6 @@ package dev.openallay.benchmark;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import com.google.gson.JsonParser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -19,20 +18,20 @@ final class BenchmarkRunnerTest {
                 new BenchmarkCase.Verifier(
                         BenchmarkCase.Kind.JSON_PATH_EQUALS,
                         "winner.id",
-                        JsonParser.parseString("\"minecraft:netherite_sword\""),
+                        dev.openallay.json.JsonTrees.parse("\"minecraft:netherite_sword\""),
                         ""));
 
         BenchmarkReport report = new BenchmarkRunner(new BenchmarkVerifier()).run(
                 List.of(testCase),
                 (ignored, attempt) -> new BenchmarkOutcome(
-                        JsonParser.parseString(attempt == 2
+                        dev.openallay.json.JsonTrees.parse(attempt == 2
                                 ? "{\"winner\":{\"id\":\"minecraft:iron_sword\"}}"
                                 : "{\"winner\":{\"id\":\"minecraft:netherite_sword\"}}"),
                         List.of(),
                         metrics(true, attempt + 1, attempt + 2)));
 
         assertEquals(java.util.Set.of("cases"),
-                new com.google.gson.Gson().toJsonTree(report).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.EngineJson.create().toJsonTree(report).getAsJsonObject()));
         BenchmarkReport.CaseReport result = report.cases().getFirst();
         assertEquals(2, result.successes());
         assertEquals(2.0 / 3.0, result.successProbability(), 0.0001);
@@ -67,7 +66,7 @@ final class BenchmarkRunnerTest {
                 new BenchmarkRunner(new BenchmarkVerifier()).run(
                                 List.of(testCase),
                                 (ignored, attempt) -> new BenchmarkOutcome(
-                                        JsonParser.parseString("{\"ok\":true}"),
+                                        dev.openallay.json.JsonTrees.parse("{\"ok\":true}"),
                                         List.of(),
                                         metrics(true, 3, 0)))
                         .cases()
@@ -95,7 +94,7 @@ final class BenchmarkRunnerTest {
                 new BenchmarkRunner(new BenchmarkVerifier()).run(
                                 List.of(testCase),
                                 (ignored, number) -> new BenchmarkOutcome(
-                                        JsonParser.parseString("{\"partial\":true}"),
+                                        dev.openallay.json.JsonTrees.parse("{\"partial\":true}"),
                                         List.of(),
                                         new BenchmarkMetrics(
                                                 false,

@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -152,15 +151,15 @@ final class BridgeJsonCodecTest {
         BridgeJsonCodec codec = new BridgeJsonCodec();
         String json = codec.encode(payload);
         assertEquals(payload, codec.decode(json, ServerAgentRequestPayload.class));
-        JsonObject current = JsonParser.parseString(json).getAsJsonObject();
-        assertEquals(Set.of("documents"), current.getAsJsonObject("skillDocuments").keySet());
+        JsonObject current = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
+        assertEquals(Set.of("documents"), dev.openallay.json.JsonTrees.keys(current.getAsJsonObject("skillDocuments")));
         JsonObject document = current.getAsJsonObject("skillDocuments")
                 .getAsJsonArray("documents").get(0).getAsJsonObject();
         assertEquals(Set.of("name", "document", "source", "fingerprint", "length", "chunks",
-                "availableReferences", "description"), document.keySet());
-        assertEquals(Set.of("offset", "end", "fingerprint"), document.getAsJsonArray("chunks")
-                .get(0).getAsJsonObject().keySet());
-        JsonObject old = current.deepCopy();
+                "availableReferences", "description"), dev.openallay.json.JsonTrees.keys(document));
+        assertEquals(Set.of("offset", "end", "fingerprint"), dev.openallay.json.JsonTrees.keys(document.getAsJsonArray("chunks")
+                .get(0).getAsJsonObject()));
+        JsonObject old = dev.openallay.json.JsonTrees.copy(current);
         old.remove("skillDocuments");
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(old.toString(), ServerAgentRequestPayload.class));
@@ -305,15 +304,15 @@ final class BridgeJsonCodecTest {
     private static void assertExactPayloadShape(
             BridgeJsonCodec codec, Object payload, Set<String> fields) {
         String json = codec.encode(payload);
-        JsonObject body = JsonParser.parseString(json).getAsJsonObject();
-        assertEquals(fields, body.keySet());
+        JsonObject body = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
+        assertEquals(fields, dev.openallay.json.JsonTrees.keys(body));
         assertEquals(payload, codec.decode(json, payload.getClass()));
 
-        JsonObject missing = body.deepCopy();
+        JsonObject missing = dev.openallay.json.JsonTrees.copy(body);
         missing.remove(fields.iterator().next());
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(missing.toString(), payload.getClass()));
-        JsonObject extra = body.deepCopy();
+        JsonObject extra = dev.openallay.json.JsonTrees.copy(body);
         extra.addProperty("unexpected", true);
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decode(extra.toString(), payload.getClass()));

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.capability.CapabilityCatalogSnapshot;
 import dev.openallay.capability.CapabilityKind;
@@ -336,7 +335,7 @@ final class SettingsDiagnosticsAggregatorTest {
                 0,
                 "openallay:inspect_inventory",
                 GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                         {"authorization":"secret-value"}
                         """).getAsJsonObject(),
                 List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),

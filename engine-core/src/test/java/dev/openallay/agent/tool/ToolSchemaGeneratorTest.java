@@ -62,7 +62,7 @@ final class ToolSchemaGeneratorTest {
         assertEquals("Exact namespaced identifier", id.get("description").getAsString());
         assertEquals("^[a-z]+:[a-z_]+$", id.get("pattern").getAsString());
         assertEquals(2, schema.getAsJsonArray("anyOf").size());
-        assertTrue(schema.getAsJsonArray("required").isEmpty());
+        assertTrue((schema.getAsJsonArray("required").size() == 0));
     }
 
     @Test
@@ -78,7 +78,7 @@ final class ToolSchemaGeneratorTest {
         JsonObject schema = new ToolSchemaGenerator().generateOutput(Output.class);
 
         assertEquals("object", schema.get("type").getAsString());
-        assertTrue(schema.getAsJsonArray("required").isEmpty());
+        assertTrue((schema.getAsJsonArray("required").size() == 0));
         assertEquals("date-time", schema.getAsJsonObject("properties")
                 .getAsJsonObject("capturedAt").get("format").getAsString());
     }

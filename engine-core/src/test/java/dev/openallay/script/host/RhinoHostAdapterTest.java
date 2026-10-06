@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.script.JavascriptExecutionException;
 import dev.openallay.script.RhinoJavascriptRuntime;
@@ -87,7 +86,7 @@ final class RhinoHostAdapterTest {
         var roots = Map.<String, Object>of(
                 "fixture", fixture,
                 "mapping", Map.of("name", "detached", "rows", List.of(1, 2)),
-                "json", JsonParser.parseString(
+                "json", dev.openallay.json.JsonTrees.parse(
                         "{\"groups\":[{\"values\":[1,2]},{\"values\":[\"a\",\"b\"]}],\"empty\":[]}"));
         var runtime = new RhinoJavascriptRuntime();
         for (boolean unrestricted : List.of(false, true)) {
@@ -104,12 +103,12 @@ final class RhinoHostAdapterTest {
             var values = runtime.execute(
                     "return JSON.parse(JSON.stringify(mc.fixture.values));", roots, Map.of(), Map.of(),
                     new CancellationSignal(), null, null, unrestricted).value();
-            assertEquals(JsonParser.parseString("[1,2,3]"), values);
+            assertEquals(dev.openallay.json.JsonTrees.parse("[1,2,3]"), values);
             var workspace = runtime.execute(
                     "return JSON.parse(JSON.stringify(workspace.open('selected')));", Map.of(),
-                    Map.of("selected", JsonParser.parseString("{\"rows\":[1,2],\"empty\":[]}")),
+                    Map.of("selected", dev.openallay.json.JsonTrees.parse("{\"rows\":[1,2],\"empty\":[]}")),
                     Map.of(), new CancellationSignal(), null, null, unrestricted).value();
-            assertEquals(JsonParser.parseString("{\"rows\":[1,2],\"empty\":[]}"), workspace);
+            assertEquals(dev.openallay.json.JsonTrees.parse("{\"rows\":[1,2],\"empty\":[]}"), workspace);
         }
     }
 
@@ -236,7 +235,7 @@ final class RhinoHostAdapterTest {
                 Optional.of("present"),
                 Mode.ACTIVE,
                 Instant.parse("2026-07-24T00:00:00Z"),
-                JsonParser.parseString("{\"nested\":[\"a\",\"b\"]}"));
+                dev.openallay.json.JsonTrees.parse("{\"nested\":[\"a\",\"b\"]}"));
     }
 
     private static com.google.gson.JsonObject execute(String source, Fixture fixture) {

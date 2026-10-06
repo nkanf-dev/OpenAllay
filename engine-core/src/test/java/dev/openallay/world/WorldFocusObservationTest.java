@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 final class WorldFocusObservationTest {
     @Test
     void deeplyCopiesComponentJsonAtConstructionAndAccess() {
-        var source = com.google.gson.JsonParser.parseString(
+        var source = dev.openallay.json.JsonTrees.parse(
                 "{\"minecraft:custom_data\":{\"precise\":9007199254740993.125,\"flags\":[true,null,\"original\"]}}")
                 .getAsJsonObject();
         WorldFocusObservation.Item item = new WorldFocusObservation.Item(
@@ -111,7 +111,7 @@ final class WorldFocusObservationTest {
 
     @Test
     void unknownNativeBorderProvenanceRemainsDistinctFromObservedTrueAndFalse() {
-        var gson = new com.google.gson.GsonBuilder().serializeNulls().create();
+        var gson = dev.openallay.json.EngineJson.create(builder -> builder.serializeNulls());
         for (Boolean provenance : java.util.Arrays.asList(null, Boolean.FALSE, Boolean.TRUE)) {
             var value = new WorldFocusObservation.Block("minecraft:stone", new WorldPosition(1, 64, 1),
                     "north", false, provenance, Map.of(), "");

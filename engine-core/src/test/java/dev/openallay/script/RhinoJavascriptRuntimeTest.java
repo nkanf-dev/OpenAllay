@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.latvian.mods.rhino.Context;
 import dev.latvian.mods.rhino.EvaluatorException;
 import dev.latvian.mods.rhino.WrappedException;
@@ -66,16 +65,16 @@ final class RhinoJavascriptRuntimeTest {
                     assertEquals("Java 2", result.getAsString());
                     observedExamples.add("varargs");
                 } else if (result.getAsJsonObject().has("text")) {
-                    assertEquals(JsonParser.parseString("{\"text\":\"Java 2\",\"length\":6}"), result);
+                    assertEquals(dev.openallay.json.JsonTrees.parse("{\"text\":\"Java 2\",\"length\":6}"), result);
                     observedExamples.add("exact-overloads");
                 } else if (result.getAsJsonObject().has("value")) {
-                    assertEquals(JsonParser.parseString("{\"name\":\"java.io.StreamTokenizer\",\"value\":2}"), result);
+                    assertEquals(dev.openallay.json.JsonTrees.parse("{\"name\":\"java.io.StreamTokenizer\",\"value\":2}"), result);
                     observedExamples.add("selected-field");
                 } else {
                     var info = result.getAsJsonObject();
-                    assertEquals(java.util.Set.of("name", "module", "fields", "methods"), info.keySet());
+                    assertEquals(java.util.Set.of("name", "module", "fields", "methods"), dev.openallay.json.JsonTrees.keys(info));
                     assertEquals("java.util.ArrayList", info.get("name").getAsString());
-                    assertEquals(JsonParser.parseString("""
+                    assertEquals(dev.openallay.json.JsonTrees.parse("""
                             {"name":"java.base","named":true,"automatic":false,
                              "packageName":"java.util","packageOpenToBridge":false}
                             """), info.get("module"));
@@ -181,7 +180,7 @@ final class RhinoJavascriptRuntimeTest {
                   grouped: helpers.groupBy(swords, item => item.damage >= 10 ? "high" : "normal")
                 };
                 """,
-                Map.of("items", JsonParser.parseString("""
+                Map.of("items", dev.openallay.json.JsonTrees.parse("""
                         [
                           {"id":"minecraft:iron_sword","damage":6,"tags":["minecraft:swords"]},
                           {"id":"example:obsidian_sword","damage":12,"tags":["minecraft:swords"]},
@@ -220,13 +219,13 @@ final class RhinoJavascriptRuntimeTest {
                   return selected;
                 });
                 """,
-                Map.of("items", JsonParser.parseString(
+                Map.of("items", dev.openallay.json.JsonTrees.parse(
                         "[{\"value\":1},{\"value\":2},{\"value\":3}]")),
                 Map.of(),
                 new CancellationSignal());
 
         assertEquals(
-                JsonParser.parseString("[2,3,4]"),
+                dev.openallay.json.JsonTrees.parse("[2,3,4]"),
                 execution.value());
     }
 
@@ -247,7 +246,7 @@ final class RhinoJavascriptRuntimeTest {
                           return damage;
                         });
                         """,
-                        Map.of("items", JsonParser.parseString("""
+                        Map.of("items", dev.openallay.json.JsonTrees.parse("""
                                 [
                                   {"modifiers":[{"type":"minecraft:attack_damage","amount":5}]},
                                   {"modifiers":[{"type":"minecraft:attack_damage","amount":9}]}
@@ -265,7 +264,7 @@ final class RhinoJavascriptRuntimeTest {
     void runsTheExactBundledHighestDamageSwordExampleAgainstMinecraft26Shape() {
         JavascriptExecution execution = new RhinoJavascriptRuntime().execute(
                 bundledExample("Highest-damage sword"),
-                Map.of("items", JsonParser.parseString("""
+                Map.of("items", dev.openallay.json.JsonTrees.parse("""
                         [
                           {
                             "id":"minecraft:iron_sword",
@@ -332,14 +331,14 @@ final class RhinoJavascriptRuntimeTest {
         JavascriptExecution execution = new RhinoJavascriptRuntime().execute(
                 bundledExample("Least-material container recipe"),
                 Map.of(
-                        "items", JsonParser.parseString("""
+                        "items", dev.openallay.json.JsonTrees.parse("""
                                 [
                                   {"id":"minecraft:chest","tags":["minecraft:container"]},
                                   {"id":"minecraft:barrel","tags":["minecraft:container"]},
                                   {"id":"minecraft:stick","tags":[]}
                                 ]
                                 """),
-                        "recipes", JsonParser.parseString("""
+                        "recipes", dev.openallay.json.JsonTrees.parse("""
                                 [
                                   {
                                     "id":"minecraft:chest",
@@ -387,7 +386,7 @@ final class RhinoJavascriptRuntimeTest {
         JavascriptExecution execution = new RhinoJavascriptRuntime().execute(
                 bundledExample("Strongest poison effect and its production path"),
                 Map.of(
-                        "items", JsonParser.parseString("""
+                        "items", dev.openallay.json.JsonTrees.parse("""
                                 [
                                   {
                                     "id":"minecraft:poisonous_potato",
@@ -403,7 +402,7 @@ final class RhinoJavascriptRuntimeTest {
                                   }
                                 ]
                                 """),
-                        "recipes", JsonParser.parseString("""
+                        "recipes", dev.openallay.json.JsonTrees.parse("""
                                 [
                                   {
                                     "id":"example:venom_flask_recipe",
@@ -439,7 +438,7 @@ final class RhinoJavascriptRuntimeTest {
     @Test
     void reopensOnlyExplicitWorkspaceValues() {
         Map<String, com.google.gson.JsonElement> values =
-                Map.of("r_1", JsonParser.parseString("[3,8,5]"));
+                Map.of("r_1", dev.openallay.json.JsonTrees.parse("[3,8,5]"));
 
         JavascriptExecution execution = new RhinoJavascriptRuntime().execute(
                 "return helpers.maxBy(workspace.open('r_1'), value => value);",
@@ -740,9 +739,9 @@ final class RhinoJavascriptRuntimeTest {
         String data = "api_key=sample-game-value password='sample password' "
                 + "Authorization: Bearer sample-bearer-value sk-examplevalue123456";
         for (String source : List.of(
-                "throw new Error(" + new com.google.gson.Gson().toJson(data) + ");",
+                "throw new Error(" + dev.openallay.json.EngineJson.create().toJson(data) + ");",
                 "const Integer = Java.type('java.lang.Integer');\nreturn Integer.parseInt("
-                        + new com.google.gson.Gson().toJson(data) + ");")) {
+                        + dev.openallay.json.EngineJson.create().toJson(data) + ");")) {
             JavascriptExecutionException failure = assertThrows(
                     JavascriptExecutionException.class,
                     () -> new RhinoJavascriptRuntime().execute(

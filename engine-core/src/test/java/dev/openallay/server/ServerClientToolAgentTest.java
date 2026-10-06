@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 final class ServerClientToolAgentTest {
     @Test
     void remoteClientToolFailureReturnsToTheModelAndTheAgentCompletes() {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new FactTool()));
         AtomicReference<PlayerClientToolRouter> routerRef = new AtomicReference<>();

@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -127,7 +126,7 @@ final class ModelToolResultBudgetTest {
                 new ModelResultView(handle, initial.type(), initial.cardinality(),
                         initial.canonicalUtf8Bytes(), initial.complete(), "current request only"),
                 0, List.of(), List.of());
-        JsonObject normalized = new ToolResultNormalizer(new Gson()).normalize(
+        JsonObject normalized = new ToolResultNormalizer(dev.openallay.json.EngineJson.create()).normalize(
                 new ToolResult.Success<>(output), RunJavascriptTool.Output.class);
         String exact = normalized.toString();
         JsonObject modelView = normalized.getAsJsonObject("value").getAsJsonObject("modelView");
@@ -183,7 +182,7 @@ final class ModelToolResultBudgetTest {
                     handle, initial.type(), initial.cardinality(), initial.fields(), initial.preview(),
                     initial.modelText(), initial.viewKind(), initial.complete(), initial.omittedRows(),
                     initial.omittedFields(), view, 0, List.of(), List.of());
-            JsonObject normalized = new ToolResultNormalizer(new Gson()).normalize(
+            JsonObject normalized = new ToolResultNormalizer(dev.openallay.json.EngineJson.create()).normalize(
                     new ToolResult.Success<>(output), RunJavascriptTool.Output.class);
             String normalizedExact = normalized.toString();
             AgentToolResult result = new AgentToolResult(RunJavascriptTool.ID, normalized, false, counted);

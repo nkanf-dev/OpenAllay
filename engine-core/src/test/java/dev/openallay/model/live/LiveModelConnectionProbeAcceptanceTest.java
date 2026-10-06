@@ -40,7 +40,7 @@ final class LiveModelConnectionProbeAcceptanceTest {
                 .orElseThrow(() -> new AssertionError("settings probe profile does not exist"));
         assertTrue(profile.available(), "settings probe profile is unavailable");
 
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         ModelConnectionProbe probe = new ModelConnectionProbe(
                 config -> ProviderModelClients.create(config, gson),
                 Clock.systemUTC(),

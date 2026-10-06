@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -163,7 +162,7 @@ final class GuideServiceModelSelectionTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run,
                 Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
-                new Gson());
+                dev.openallay.json.EngineJson.create());
     }
 
     private static final class MutableRemote implements GuideRemoteEndpoint {

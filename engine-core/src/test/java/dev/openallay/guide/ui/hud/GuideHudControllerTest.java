@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.client.ClientEventDispatcher;
@@ -207,7 +206,7 @@ final class GuideHudControllerTest {
                 (capabilities, correlation) -> {
                     captures++;
                     throw new AssertionError("HUD must not capture Game state");
-                }, dispatcher, Clock.systemUTC(), new Gson());
+                }, dispatcher, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
 
         void assertPassive() {
             assertEquals(0, captures);

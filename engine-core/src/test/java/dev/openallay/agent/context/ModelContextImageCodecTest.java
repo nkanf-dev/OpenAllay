@@ -24,18 +24,18 @@ final class ModelContextImageCodecTest {
         assertEquals(anchor.capturedAt(), restored.capturedAt());
         assertEquals(anchor.focus().actorId(), restored.focus().actorId());
         assertEquals(anchor.image().orElseThrow().capturedAt(), restored.image().orElseThrow().capturedAt());
-        var sourceJson = com.google.gson.JsonParser.parseString(encoded).getAsJsonObject()
+        var sourceJson = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject()
                 .getAsJsonArray("messages").get(0).getAsJsonObject().getAsJsonObject("inputObservation");
-        assertEquals(com.google.gson.JsonParser.parseString("{\"seconds\":" + anchor.capturedAt().getEpochSecond()
+        assertEquals(dev.openallay.json.JsonTrees.parse("{\"seconds\":" + anchor.capturedAt().getEpochSecond()
                 + ",\"nanos\":" + anchor.capturedAt().getNano() + "}"), sourceJson.get("capturedAt"));
-        assertEquals(com.google.gson.JsonParser.parseString("{\"seconds\":"
+        assertEquals(dev.openallay.json.JsonTrees.parse("{\"seconds\":"
                 + anchor.image().orElseThrow().capturedAt().getEpochSecond() + ",\"nanos\":"
                 + anchor.image().orElseThrow().capturedAt().getNano() + "}"),
                 sourceJson.getAsJsonObject("image").get("capturedAt"));
         assertEquals(new java.math.BigDecimal("9007199254740993.125"), restored.focus().mainHand().components()
                 .getAsJsonObject("minecraft:custom_data").get("precise").getAsBigDecimal());
-        assertEquals(java.util.Set.of("role", "content", "inputObservation"), com.google.gson.JsonParser.parseString(encoded)
-                .getAsJsonObject().getAsJsonArray("messages").get(0).getAsJsonObject().keySet());
+        assertEquals(java.util.Set.of("role", "content", "inputObservation"), dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(encoded)
+                .getAsJsonObject().getAsJsonArray("messages").get(0).getAsJsonObject()));
         assertEquals(List.of(ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor))),
                 codec.decode(codec.encode(List.of(ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor))))));
         var focusOnly = ModelMessage.userText("this block").withInputObservation(
@@ -43,7 +43,7 @@ final class ModelContextImageCodecTest {
         assertEquals(List.of(focusOnly), codec.decode(codec.encode(List.of(focusOnly))));
         String plain = codec.encode(List.of(ModelMessage.userText("plain")));
         assertTrue(plain.contains("\"inputObservation\":null"));
-        var missing = com.google.gson.JsonParser.parseString(plain).getAsJsonObject();
+        var missing = dev.openallay.json.JsonTrees.parse(plain).getAsJsonObject();
         missing.getAsJsonArray("messages").get(0).getAsJsonObject().remove("inputObservation");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(missing.toString()));
         for (String invalid : List.of(
@@ -56,10 +56,10 @@ final class ModelContextImageCodecTest {
                 encoded.replace("\"nanos\":125000000", "\"nanos\":125000000,\"extraTime\":1"))) {
             assertThrows(IllegalArgumentException.class, () -> codec.decode(invalid));
         }
-        String firstHash = ContextSourceHash.compute(new com.google.gson.Gson(), List.of(input));
+        String firstHash = ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), List.of(input));
         var different = new dev.openallay.world.ClientObservationAnchor(java.util.UUID.randomUUID(), anchor.capturedAt(),
                 anchor.focus(), anchor.image());
-        assertNotEquals(firstHash, ContextSourceHash.compute(new com.google.gson.Gson(),
+        assertNotEquals(firstHash, ContextSourceHash.compute(dev.openallay.json.EngineJson.create(),
                 List.of(ModelMessage.userText("Which item is this?").withInputObservation(different))));
     }
 

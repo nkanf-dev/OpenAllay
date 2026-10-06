@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
@@ -46,12 +45,12 @@ final class ModelContextCodecTest {
         ModelContent.ToolResult success = assertInstanceOf(ModelContent.ToolResult.class,
                 decoded.get(4).content().getFirst());
         assertFalse(success.error());
-        assertEquals(JsonParser.parseString("{\"rows\":[{\"name\":\"biome\",\"value\":\"平原\"}],\"count\":1}"),
+        assertEquals(dev.openallay.json.JsonTrees.parse("{\"rows\":[{\"name\":\"biome\",\"value\":\"平原\"}],\"count\":1}"),
                 success.value());
-        JsonObject envelope = JsonParser.parseString(encoded).getAsJsonObject();
-        assertEquals(Set.of("messages"), envelope.keySet());
+        JsonObject envelope = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
+        assertEquals(Set.of("messages"), dev.openallay.json.JsonTrees.keys(envelope));
         assertEquals(Set.of("role", "content", "inputObservation"),
-                envelope.getAsJsonArray("messages").get(1).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(envelope.getAsJsonArray("messages").get(1).getAsJsonObject()));
     }
 
     @Test
@@ -91,7 +90,7 @@ final class ModelContextCodecTest {
                 "{\"messages\":[],\"unknown\":true}")) {
             assertThrows(IllegalArgumentException.class, () -> codec.decode(json), json);
         }
-        JsonObject envelope = JsonParser.parseString("{\"messages\":[]}").getAsJsonObject();
+        JsonObject envelope = dev.openallay.json.JsonTrees.parse("{\"messages\":[]}").getAsJsonObject();
         envelope.addProperty("version", 1);
         assertThrows(IllegalArgumentException.class, () -> codec.decode(envelope.toString()),
                 "a version field is an unknown field, not a compatibility path");
@@ -126,36 +125,36 @@ final class ModelContextCodecTest {
 
     @Test
     void rejectsWrongTypedMissingAndExtraToolFieldsWithoutCoercingErrorFlag() {
-        JsonObject valid = JsonParser.parseString(codec.encode(transcript())).getAsJsonObject();
+        JsonObject valid = dev.openallay.json.JsonTrees.parse(codec.encode(transcript())).getAsJsonObject();
         for (String field : List.of("type", "id", "name", "input")) {
-            JsonObject broken = valid.deepCopy();
+            JsonObject broken = dev.openallay.json.JsonTrees.copy(valid);
             content(broken, 1, 1).remove(field);
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), field);
         }
         for (String field : List.of("type", "toolUseId", "value", "error", "images")) {
-            JsonObject broken = valid.deepCopy();
+            JsonObject broken = dev.openallay.json.JsonTrees.copy(valid);
             content(broken, 2, 0).remove(field);
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), field);
         }
         for (String value : List.of("null", "0", "\"false\"", "{}", "[]")) {
-            JsonObject broken = valid.deepCopy();
-            content(broken, 2, 0).add("error", JsonParser.parseString(value));
+            JsonObject broken = dev.openallay.json.JsonTrees.copy(valid);
+            content(broken, 2, 0).add("error", dev.openallay.json.JsonTrees.parse(value));
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), value);
         }
         for (String value : List.of("null", "1", "\"{}\"", "[]")) {
-            JsonObject broken = valid.deepCopy();
-            content(broken, 1, 1).add("input", JsonParser.parseString(value));
+            JsonObject broken = dev.openallay.json.JsonTrees.copy(valid);
+            content(broken, 1, 1).add("input", dev.openallay.json.JsonTrees.parse(value));
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), value);
         }
         for (String field : List.of("id", "name")) {
             for (String value : List.of("null", "true", "9", "\"\"", "\"  \"")) {
-                JsonObject broken = valid.deepCopy();
-                content(broken, 1, 1).add(field, JsonParser.parseString(value));
+                JsonObject broken = dev.openallay.json.JsonTrees.copy(valid);
+                content(broken, 1, 1).add(field, dev.openallay.json.JsonTrees.parse(value));
                 assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()), field + ": " + value);
             }
         }
         for (int[] position : List.of(new int[] {1, 1}, new int[] {2, 0})) {
-            JsonObject broken = valid.deepCopy();
+            JsonObject broken = dev.openallay.json.JsonTrees.copy(valid);
             content(broken, position[0], position[1]).addProperty("displaySummary", "must not be a model message");
             assertThrows(IllegalArgumentException.class, () -> codec.decode(broken.toString()));
         }
@@ -163,38 +162,38 @@ final class ModelContextCodecTest {
 
     @Test
     void rejectsOrphanMissingDuplicateReorderedAndWrongRoleToolPairs() {
-        JsonObject valid = JsonParser.parseString(codec.encode(transcript())).getAsJsonObject();
-        JsonObject missingResult = valid.deepCopy();
+        JsonObject valid = dev.openallay.json.JsonTrees.parse(codec.encode(transcript())).getAsJsonObject();
+        JsonObject missingResult = dev.openallay.json.JsonTrees.copy(valid);
         missingResult.getAsJsonArray("messages").remove(2);
         assertThrows(IllegalArgumentException.class, () -> codec.decode(missingResult.toString()));
-        JsonObject orphanResult = valid.deepCopy();
+        JsonObject orphanResult = dev.openallay.json.JsonTrees.copy(valid);
         orphanResult.getAsJsonArray("messages").remove(1);
         assertThrows(IllegalArgumentException.class, () -> codec.decode(orphanResult.toString()));
-        JsonObject duplicateId = valid.deepCopy();
+        JsonObject duplicateId = dev.openallay.json.JsonTrees.copy(valid);
         content(duplicateId, 3, 0).addProperty("id", "failed_filter");
         content(duplicateId, 4, 0).addProperty("toolUseId", "failed_filter");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(duplicateId.toString()));
-        JsonObject mismatchedId = valid.deepCopy();
+        JsonObject mismatchedId = dev.openallay.json.JsonTrees.copy(valid);
         content(mismatchedId, 2, 0).addProperty("toolUseId", "unknown_call");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(mismatchedId.toString()));
-        JsonObject wrongUseRole = valid.deepCopy();
+        JsonObject wrongUseRole = dev.openallay.json.JsonTrees.copy(valid);
         wrongUseRole.getAsJsonArray("messages").get(1).getAsJsonObject().addProperty("role", "USER");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(wrongUseRole.toString()));
-        JsonObject wrongResultRole = valid.deepCopy();
+        JsonObject wrongResultRole = dev.openallay.json.JsonTrees.copy(valid);
         wrongResultRole.getAsJsonArray("messages").get(2).getAsJsonObject().addProperty("role", "ASSISTANT");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(wrongResultRole.toString()));
-        JsonObject mixedResult = valid.deepCopy();
+        JsonObject mixedResult = dev.openallay.json.JsonTrees.copy(valid);
         mixedResult.getAsJsonArray("messages").get(2).getAsJsonObject().getAsJsonArray("content")
-                .add(JsonParser.parseString("{\"type\":\"text\",\"text\":\"display note\"}"));
+                .add(dev.openallay.json.JsonTrees.parse("{\"type\":\"text\",\"text\":\"display note\"}"));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(mixedResult.toString()));
 
-        JsonObject parallel = valid.deepCopy();
+        JsonObject parallel = dev.openallay.json.JsonTrees.copy(valid);
         JsonArray uses = parallel.getAsJsonArray("messages").get(1).getAsJsonObject().getAsJsonArray("content");
-        JsonObject secondUse = uses.get(1).getAsJsonObject().deepCopy();
+        JsonObject secondUse = dev.openallay.json.JsonTrees.copy(uses.get(1).getAsJsonObject());
         secondUse.addProperty("id", "second_parallel");
         uses.add(secondUse);
         JsonArray results = parallel.getAsJsonArray("messages").get(2).getAsJsonObject().getAsJsonArray("content");
-        JsonObject secondResult = results.get(0).getAsJsonObject().deepCopy();
+        JsonObject secondResult = dev.openallay.json.JsonTrees.copy(results.get(0).getAsJsonObject());
         secondResult.addProperty("toolUseId", "second_parallel");
         results.add(secondResult);
         assertEquals(2, codec.decode(parallel.toString()).get(2).content().size());
@@ -233,9 +232,9 @@ final class ModelContextCodecTest {
         rows.add(nested);
         rows.add(new JsonPrimitive("preserve-unrelated-text"));
         JsonObject input = new JsonObject();
-        input.add("nested", rows.deepCopy());
+        input.add("nested", dev.openallay.json.JsonTrees.copy(rows));
         JsonObject output = new JsonObject();
-        output.add("nested", rows.deepCopy());
+        output.add("nested", dev.openallay.json.JsonTrees.copy(rows));
         String question = "Keep " + known + " private. token=QuestionPrivateValue";
         List<ModelMessage> messages = List.of(
                 ModelMessage.userText(question),
@@ -336,9 +335,9 @@ final class ModelContextCodecTest {
         nested.addProperty("publicEndpoint", ordinaryUrl);
         nested.addProperty("count", 2);
         JsonObject input = new JsonObject();
-        input.add("nested", nested.deepCopy());
+        input.add("nested", dev.openallay.json.JsonTrees.copy(nested));
         JsonObject output = new JsonObject();
-        output.add("nested", nested.deepCopy());
+        output.add("nested", dev.openallay.json.JsonTrees.copy(nested));
         List<ModelMessage> actual = List.of(
                 ModelMessage.userText(headerText),
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
@@ -446,7 +445,7 @@ final class ModelContextCodecTest {
                 new ModelMessage(ModelRole.ASSISTANT, List.of(
                         new ModelContent.ToolUse("corrected_filter", "openallay__run_javascript", correctedInput))),
                 new ModelMessage(ModelRole.USER, List.of(new ModelContent.ToolResult("corrected_filter",
-                        JsonParser.parseString("{\"rows\":[{\"name\":\"biome\",\"value\":\"平原\"}],\"count\":1}"), false))),
+                        dev.openallay.json.JsonTrees.parse("{\"rows\":[{\"name\":\"biome\",\"value\":\"平原\"}],\"count\":1}"), false))),
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("Observed biome: 平原."))));
     }
 }

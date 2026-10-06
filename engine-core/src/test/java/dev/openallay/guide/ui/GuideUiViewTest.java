@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideFailure;
 import dev.openallay.guide.GuideClientModelProfile;
 import dev.openallay.guide.GuideMessage;
@@ -204,7 +203,7 @@ final class GuideUiViewTest {
                 0,
                 "openallay:inspect_inventory",
                 GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                         {"status":"success","value":{"counts":{"minecraft:apple":3}}}
                         """).getAsJsonObject(),
                 List.of(GuideToolMessage.of(

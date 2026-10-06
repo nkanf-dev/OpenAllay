@@ -266,7 +266,7 @@ final class JavascriptCommandBridgeTest {
                 .value();
 
         assertEquals("no_feedback", result.getAsJsonObject().get("state").getAsString());
-        assertTrue(result.getAsJsonObject().getAsJsonArray("messages").isEmpty());
+        assertTrue((result.getAsJsonObject().getAsJsonArray("messages").size() == 0));
     }
 
     @Test

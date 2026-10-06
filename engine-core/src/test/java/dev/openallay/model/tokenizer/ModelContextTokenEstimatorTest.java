@@ -2,7 +2,6 @@ package dev.openallay.model.tokenizer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.knuddels.jtokkit.Encodings;
@@ -72,7 +71,7 @@ final class ModelContextTokenEstimatorTest {
 
     @Test
     void includesTheActualNativeCodecJsonForReasoningToolIdsArgumentsResultsAndSchemas() {
-        var gson = new Gson();
+        var gson = dev.openallay.json.EngineJson.create();
         var arguments = new JsonObject();
         arguments.addProperty("resource", "农夫乐事:苹果酒");
         var schema = new JsonObject();
@@ -99,7 +98,7 @@ final class ModelContextTokenEstimatorTest {
             String body = protocol == ModelProtocol.OPENAI_CHAT
                     ? new OpenAiJsonCodec(gson).requestBody(config, request)
                     : new AnthropicJsonCodec(gson).requestBody(config, request);
-            var actualInput = com.google.gson.JsonParser.parseString(body).getAsJsonObject();
+            var actualInput = dev.openallay.json.JsonTrees.parse(body).getAsJsonObject();
             actualInput.remove("model");
             actualInput.remove("stream");
             actualInput.remove(protocol == ModelProtocol.OPENAI_CHAT ? "max_completion_tokens" : "max_tokens");
@@ -143,7 +142,7 @@ final class ModelContextTokenEstimatorTest {
 
     @Test
     void imageInputCountsOnlyMetadataFramingAndLabelsTheMissingImageCostUnknown() {
-        var gson = new Gson();
+        var gson = dev.openallay.json.EngineJson.create();
         var image = new ImageReference("a".repeat(64), "image/png", 8_000, 8_000, 5_000_000);
         var messages = List.of(ModelMessage.userInput("look at this", List.of(image)));
         for (ModelProtocol protocol : ModelProtocol.values()) {

@@ -5,10 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonSerializer;
 import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
@@ -28,7 +26,7 @@ final class ToolCodecAndNormalizerTest {
     record UngroundedOutput(String fact, List<EvidenceMetadata> evidence)
             implements EvidenceBearing {}
 
-    private final Gson gson = new Gson();
+    private final Gson gson = dev.openallay.json.EngineJson.create();
 
     @Test
     void decodesRecordsAndReturnsInvalidArgumentsOnConversionFailure() {
@@ -59,10 +57,10 @@ final class ToolCodecAndNormalizerTest {
                 new ToolResult.Success<>(new Output("unabridged", "first", List.of(3, 2, 1))),
                 Output.class);
 
-        assertEquals(List.of("outputType", "status", "value"), new ArrayList<>(value.keySet()));
+        assertEquals(List.of("outputType", "status", "value"), new ArrayList<>(dev.openallay.json.JsonTrees.keys(value)));
         assertEquals(
                 List.of("alpha", "complete", "zeta"),
-                new ArrayList<>(value.getAsJsonObject("value").keySet()));
+                new ArrayList<>(dev.openallay.json.JsonTrees.keys(value.getAsJsonObject("value"))));
         assertEquals("unabridged", value.getAsJsonObject("value").get("zeta").getAsString());
         assertEquals(3, value.getAsJsonObject("value").getAsJsonArray("complete").size());
     }
@@ -85,18 +83,18 @@ final class ToolCodecAndNormalizerTest {
         var value = normalized.getAsJsonObject("value");
         assertEquals(output, EngineJson.withInstant(gson).fromJson(value, UngroundedOutput.class));
         var time = output.evidence().getFirst().capturedAt();
-        assertEquals(JsonParser.parseString("{\"seconds\":" + time.getEpochSecond()
+        assertEquals(dev.openallay.json.JsonTrees.parse("{\"seconds\":" + time.getEpochSecond()
                 + ",\"nanos\":" + time.getNano() + "}"),
                 value.getAsJsonArray("evidence").get(0).getAsJsonObject().get("capturedAt"));
     }
 
     @Test
     void suppliedTimestampAdaptersSurviveOutputNormalizationAndRoundTrip() {
-        Gson supplied = new GsonBuilder()
+        Gson supplied = dev.openallay.json.EngineJson.create(builder -> builder
                 .registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (value, type, context) ->
                         new com.google.gson.JsonPrimitive("caller:" + value))
                 .registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (value, type, context) ->
-                        Instant.parse(value.getAsString().substring("caller:".length()))).create();
+                        Instant.parse(value.getAsString().substring("caller:".length()))));
         var output = new UngroundedOutput("unchanged", List.of(GroundedTestFixtures.serverEvidence()));
         var value = new ToolResultNormalizer(supplied).normalize(new ToolResult.Success<>(output), UngroundedOutput.class)
                 .getAsJsonObject("value");
@@ -106,6 +104,6 @@ final class ToolCodecAndNormalizerTest {
     }
 
     private static JsonObject object(String json) {
-        return JsonParser.parseString(json).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
     }
 }

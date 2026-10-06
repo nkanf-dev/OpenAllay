@@ -2,7 +2,6 @@ package dev.openallay.agent.context;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.model.*;
@@ -84,7 +83,7 @@ final class ContextProjectionAdmissionTest {
             return CompletableFuture.completedFuture(new ModelTurn("test", "test",
                     List.of(new ModelContent.Text(response)), "end_turn", ModelUsage.empty()));
         };
-        ContextCompactor compactor = new ContextCompactor(model, new Gson(), estimator, budget,
+        ContextCompactor compactor = new ContextCompactor(model, dev.openallay.json.EngineJson.create(), estimator, budget,
                 "test", Clock.systemUTC());
         // Two complete historical units cannot enter one summary call. Their carry must coexist
         // with the second unit even when it would already fit the final current question.
@@ -124,7 +123,7 @@ final class ContextProjectionAdmissionTest {
     private static ContextCompactor compactor(ContextTokenEstimator estimator, ContextBudget budget) {
         return new ContextCompactor((request, events, cancellation) ->
                 CompletableFuture.failedFuture(new AssertionError("No summary call expected")),
-                new Gson(), estimator, budget, "test", Clock.systemUTC());
+                dev.openallay.json.EngineJson.create(), estimator, budget, "test", Clock.systemUTC());
     }
 
     private static List<ModelMessage> exchange(String payload) {

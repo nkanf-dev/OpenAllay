@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import dev.openallay.model.CancellationSignal;
@@ -58,7 +56,7 @@ final class AnthropicMessagesClientTest {
                         """);
             }
         })) {
-            AnthropicMessagesClient client = new AnthropicMessagesClient(config(server.uri()), new Gson());
+            AnthropicMessagesClient client = new AnthropicMessagesClient(config(server.uri()), dev.openallay.json.EngineJson.create());
             List<ModelEvent> events = new ArrayList<>();
             ModelRequest initial = request(List.of(ModelMessage.userText("查询事实")), false);
             ModelTurn first = client.complete(initial, events::add, new CancellationSignal()).join();
@@ -70,7 +68,7 @@ final class AnthropicMessagesClientTest {
             ModelMessage result = new ModelMessage(
                     ModelRole.USER,
                     List.of(new ModelContent.ToolResult(
-                            tool.id(), JsonParser.parseString("{\"fact\":42}"), false)));
+                            tool.id(), dev.openallay.json.JsonTrees.parse("{\"fact\":42}"), false)));
             ModelTurn second = client.complete(
                             request(List.of(ModelMessage.userText("查询事实"), assistant, result), false),
                             events::add,
@@ -78,7 +76,7 @@ final class AnthropicMessagesClientTest {
                     .join();
 
             assertEquals("事实是 42。", second.text());
-            JsonObject encoded = JsonParser.parseString(secondBody.get()).getAsJsonObject();
+            JsonObject encoded = dev.openallay.json.JsonTrees.parse(secondBody.get()).getAsJsonObject();
             assertTrue(encoded.toString().contains("tool_result"));
             assertTrue(encoded.toString().contains("call_1"));
             assertEquals(2, calls.get());
@@ -117,7 +115,7 @@ final class AnthropicMessagesClientTest {
             exchange.close();
         })) {
             List<ModelEvent> events = new ArrayList<>();
-            ModelTurn turn = new AnthropicMessagesClient(config(server.uri()), new Gson())
+            ModelTurn turn = new AnthropicMessagesClient(config(server.uri()), dev.openallay.json.EngineJson.create())
                     .complete(request(List.of(ModelMessage.userText("test")), true), events::add, new CancellationSignal())
                     .join();
             assertEquals("铁锭", turn.text());
@@ -130,7 +128,7 @@ final class AnthropicMessagesClientTest {
     }
 
     private static ModelRequest request(List<ModelMessage> messages, boolean stream) {
-        JsonObject schema = JsonParser.parseString("""
+        JsonObject schema = dev.openallay.json.JsonTrees.parse("""
                 {"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}
                 """).getAsJsonObject();
         return new ModelRequest(

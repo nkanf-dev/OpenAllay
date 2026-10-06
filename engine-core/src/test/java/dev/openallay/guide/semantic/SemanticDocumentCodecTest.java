@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.context.RecipeReference;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -84,7 +83,7 @@ final class SemanticDocumentCodecTest {
 
         assertEquals(document, codec.decode(encoded));
         assertEquals(java.util.Set.of("blocks", "fallbackText", "diagnostics"),
-                JsonParser.parseString(encoded).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject()));
         org.junit.jupiter.api.Assertions.assertFalse(encoded.contains("org.commonmark"));
     }
 
@@ -92,18 +91,18 @@ final class SemanticDocumentCodecTest {
     void rejectsMissingOrUnknownFieldsAndFallbackMismatch() {
         JsonObject encoded = codec.encodeObject(new SemanticMessageParser().parse("Hello"));
 
-        JsonObject missing = encoded.deepCopy();
+        JsonObject missing = dev.openallay.json.JsonTrees.copy(encoded);
         missing.remove("blocks");
-        JsonObject unknown = encoded.deepCopy();
+        JsonObject unknown = dev.openallay.json.JsonTrees.copy(encoded);
         unknown.addProperty("providerBody", "secret");
-        JsonObject fallback = encoded.deepCopy();
+        JsonObject fallback = dev.openallay.json.JsonTrees.copy(encoded);
         fallback.addProperty("fallbackText", "changed");
 
         assertThrows(IllegalArgumentException.class, () -> codec.decode(missing.toString()));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(unknown.toString()));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(fallback.toString()));
 
-        JsonObject badNode = JsonParser.parseString(codec.encode(
+        JsonObject badNode = dev.openallay.json.JsonTrees.parse(codec.encode(
                 new SemanticMessageParser().parse("Hello"))).getAsJsonObject();
         badNode.getAsJsonArray("blocks").get(0).getAsJsonObject()
                 .addProperty("callback", "java.lang.Runtime");

@@ -17,7 +17,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 final class AgentSkillOwnershipTest {
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = dev.openallay.json.EngineJson.create();
     private static final UUID ACTOR = UUID.fromString("00000000-0000-0000-0000-000000000077");
 
     @Test

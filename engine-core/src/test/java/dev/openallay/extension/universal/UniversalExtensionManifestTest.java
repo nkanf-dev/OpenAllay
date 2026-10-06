@@ -1,7 +1,6 @@
 package dev.openallay.extension.universal;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.JsonParser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -11,8 +10,8 @@ class UniversalExtensionManifestTest {
         var manifest = UniversalExtensionManifest.decode(json);
         assertEquals("community.Entry", manifest.entrypoint());
         assertEquals(UniversalExtensionFixtures.descriptor("test:extension"), manifest.descriptor());
-        var object = JsonParser.parseString(json).getAsJsonObject();
-        object.add("requirements", JsonParser.parseString(
+        var object = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
+        object.add("requirements", dev.openallay.json.JsonTrees.parse(
                 "{\"capabilities\":[\"test:read\"],\"extensions\":[\"test:other\"],\"skills\":[\"test-skill\"]}"));
         assertEquals(java.util.Set.of("test:read"), UniversalExtensionManifest.decode(object.toString())
                 .descriptor().requirements().capabilities());

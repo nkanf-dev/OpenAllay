@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
 import dev.openallay.context.EvidenceMetadata;
@@ -151,7 +150,7 @@ final class RhinoJavascriptSchemaHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void infersHostAndWorkspaceArrayViewsWithTheSameSemanticsAsNativeArrays(boolean unrestricted) {
-        JsonElement fixture = JsonParser.parseString("""
+        JsonElement fixture = dev.openallay.json.JsonTrees.parse("""
                 {"groups":[{"values":[1,2]},{"values":["a","b"]}],"empty":[]}
                 """);
         JsonElement actual = new RhinoJavascriptRuntime().execute("""
@@ -160,7 +159,7 @@ final class RhinoJavascriptSchemaHelperTest {
                   native: helpers.schema({groups: [{values: [1,2]}, {values: ["a","b"]}], empty: []}, 5)};
                 """, Map.of("fixture", fixture), Map.of("fixture", fixture), Map.of(),
                 new CancellationSignal(), null, null, unrestricted).value();
-        JsonElement expected = JsonParser.parseString("""
+        JsonElement expected = dev.openallay.json.JsonTrees.parse("""
                 {"empty":[],"groups":[{"values":["number"]},{"values":["string"]}]}
                 """);
         for (String field : List.of("host", "workspace", "native")) {
@@ -185,7 +184,7 @@ final class RhinoJavascriptSchemaHelperTest {
         JsonElement actual = new RhinoJavascriptRuntime().execute(
                 "return helpers.schema(mc.values, 5);", Map.of("values", values),
                 Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value();
-        assertEquals(JsonParser.parseString("[{\"id\":\"number\",\"nested\":[[\"number\"]]}]"), actual);
+        assertEquals(dev.openallay.json.JsonTrees.parse("[{\"id\":\"number\",\"nested\":[[\"number\"]]}]"), actual);
         assertEquals(8, reads[0], "Schema inference must retain bounded lazy sampling");
     }
 
@@ -230,12 +229,12 @@ final class RhinoJavascriptSchemaHelperTest {
     }
 
     private static void assertSchema(boolean unrestricted, String source, String expected) {
-        assertEquals(JsonParser.parseString(expected), new RhinoJavascriptRuntime().execute(source,
+        assertEquals(dev.openallay.json.JsonTrees.parse(expected), new RhinoJavascriptRuntime().execute(source,
                 Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value());
     }
 
     private static JsonElement worldSchema() {
-        return JsonParser.parseString("""
+        return dev.openallay.json.JsonTrees.parse("""
                 {
                   "blocks":[{"blockEntity":"boolean","fluid":"string","id":"string",
                     "position":"object","relative":"object","state":"object"}],

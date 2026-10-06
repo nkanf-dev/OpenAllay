@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
@@ -182,7 +181,7 @@ final class GuideObservationImageCustodyTest {
             public boolean ask(UUID id, String session, String question, Consumer<AgentEvent> events) { return false; }
             public boolean cancel(UUID id) { return true; }
             public void disconnect() {}
-        }, contexts, owner::execute, Clock.systemUTC(), new Gson(), null, null, store);
+        }, contexts, owner::execute, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), null, null, store);
         UUID ask(String text) { var asked = service.ask(text); owner.runAll(); return success(asked.join()); }
         void followUp(String text) { var queued = service.followUp(text); owner.runAll(); success(queued.join()); }
     }

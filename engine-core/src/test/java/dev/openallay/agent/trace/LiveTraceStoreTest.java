@@ -7,12 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentState;
 import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.context.ToolInvocationContext;
-import dev.openallay.json.EngineJson;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
@@ -59,13 +57,13 @@ final class LiveTraceStoreTest {
         payload.addProperty("question", question);
         payload.addProperty("source", source);
         payload.add("nested", rows);
-        JsonObject originalPayload = payload.deepCopy();
+        JsonObject originalPayload = dev.openallay.json.JsonTrees.copy(payload);
         LiveAgentTrace trace = trace(payload);
         LiveTraceStore store = new LiveTraceStore(temporary);
 
         store.record(trace);
         String encoded = store.encoded(trace.requestId());
-        JsonObject encodedTrace = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject encodedTrace = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         JsonObject encodedPayload = encodedTrace.getAsJsonArray("events").get(0).getAsJsonObject()
                 .getAsJsonObject("payload");
         assertEquals(originalPayload, encodedPayload);
@@ -78,11 +76,11 @@ final class LiveTraceStoreTest {
                 .get("elapsedNanos").getAsLong());
         assertEquals(trace.requestId().toString(), encodedTrace.get("requestId").getAsString());
         for (var time : java.util.Map.of("startedAt", trace.startedAt(), "completedAt", trace.completedAt()).entrySet()) {
-            var expected = JsonParser.parseString("{\"seconds\":" + time.getValue().getEpochSecond()
+            var expected = dev.openallay.json.JsonTrees.parse("{\"seconds\":" + time.getValue().getEpochSecond()
                     + ",\"nanos\":" + time.getValue().getNano() + "}");
             assertEquals(expected, encodedTrace.get(time.getKey()));
         }
-        assertEquals(trace, EngineJson.withInstant(new Gson()).fromJson(encoded, LiveAgentTrace.class));
+        assertEquals(trace, dev.openallay.json.EngineJson.create().fromJson(encoded, LiveAgentTrace.class));
         assertEquals("COMPLETED", encodedTrace.get("finalState").getAsString());
         assertEquals("final text 不截断\n".repeat(4096), encodedTrace.get("finalText").getAsString());
         assertEquals(trace, store.find(trace.requestId()).orElseThrow());
@@ -90,7 +88,7 @@ final class LiveTraceStoreTest {
         assertEquals(originalPayload, trace.events().getFirst().payload());
         var path = temporary.resolve(trace.requestId() + ".json");
         assertTrue(Files.exists(path));
-        assertEquals(encodedTrace, JsonParser.parseString(Files.readString(path)));
+        assertEquals(encodedTrace, dev.openallay.json.JsonTrees.parse(Files.readString(path)));
     }
 
     @Test
@@ -112,9 +110,9 @@ final class LiveTraceStoreTest {
         store.record(onTrace);
         var path = temporary.resolve(onTrace.requestId() + ".json");
         assertTrue(Files.exists(path));
-        JsonObject persisted = JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+        JsonObject persisted = dev.openallay.json.JsonTrees.parse(Files.readString(path)).getAsJsonObject();
         assertEquals(payload, persisted.getAsJsonArray("events").get(0).getAsJsonObject().get("payload"));
-        assertEquals(JsonParser.parseString(store.encoded(onTrace.requestId())), persisted);
+        assertEquals(dev.openallay.json.JsonTrees.parse(store.encoded(onTrace.requestId())), persisted);
         assertEquals("return 'full javascript source';", payload.get("source").getAsString());
         assertEquals("cookie=" + secret, payload.get("provider").getAsString());
         assertEquals("Bearer header-only-secret", payload.get("authorization").getAsString());
@@ -140,7 +138,7 @@ final class LiveTraceStoreTest {
 
     @Test
     void recorderExcludesTypedTurnReasoningAndPreservesSafeRequestAndOrdinaryReasoningFields() throws Exception {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         ImageReference reference = new ImageReference("a".repeat(64), "image/png", 2, 3, 96);
         java.util.concurrent.atomic.AtomicInteger reads = new java.util.concurrent.atomic.AtomicInteger();
         String resolverState = "resolver-only-binary-state";
@@ -171,7 +169,7 @@ final class LiveTraceStoreTest {
                 new ModelContent.Reasoning("turn-private-thought", "turn-private-signature"),
                 new ModelContent.Text("visible answer token=synthetic-output-token"), use);
         ModelToolDefinition tool = new ModelToolDefinition("openallay__run_javascript", "Run source",
-                JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject());
+                dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject());
         ModelRequest modelRequest = new ModelRequest("system prompt", ModelContextCodec.safe(messages),
                 List.of(tool), false, "main", 192, resolver);
         ModelTurn modelTurn = new ModelTurn("provider", "model", turnContent, "tool_use", ModelUsage.empty());
@@ -188,7 +186,7 @@ final class LiveTraceStoreTest {
                 "turn-private-signature")) {
             assertFalse(encoded.contains(privateValue), privateValue);
         }
-        JsonArray events = JsonParser.parseString(encoded).getAsJsonObject().getAsJsonArray("events");
+        JsonArray events = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject().getAsJsonArray("events");
         assertEquals(3, events.size());
         assertEquals(request.userMessage(), events.get(0).getAsJsonObject().getAsJsonObject("payload")
                 .get("userMessage").getAsString());
@@ -197,7 +195,7 @@ final class LiveTraceStoreTest {
         assertEquals(expectedRequest, encodedRequest,
                 "the recorder must preserve every model-facing field without the request-only resolver");
         assertEquals(Set.of("systemPrompt", "messages", "tools", "stream", "sessionKey", "maxOutputTokens"),
-                encodedRequest.keySet());
+                dev.openallay.json.JsonTrees.keys(encodedRequest));
         JsonObject encodedReference = encodedRequest.getAsJsonArray("messages").get(0).getAsJsonObject()
                 .getAsJsonArray("content").get(1).getAsJsonObject().getAsJsonObject("reference");
         JsonObject expectedReference = new JsonObject();
@@ -207,7 +205,7 @@ final class LiveTraceStoreTest {
         expectedReference.addProperty("height", reference.height());
         expectedReference.addProperty("byteSize", reference.byteSize());
         assertEquals(expectedReference, encodedReference);
-        assertEquals(Set.of("sha256", "mimeType", "width", "height", "byteSize"), encodedReference.keySet());
+        assertEquals(Set.of("sha256", "mimeType", "width", "height", "byteSize"), dev.openallay.json.JsonTrees.keys(encodedReference));
         assertEquals(192, encodedRequest.get("maxOutputTokens").getAsInt());
         assertEquals(gson.toJsonTree(userInput), events.get(0).getAsJsonObject()
                 .getAsJsonObject("payload").get("userInput"));
@@ -237,7 +235,7 @@ final class LiveTraceStoreTest {
     }
 
     private static JsonObject modelFacingPayload(ModelRequest request) {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         JsonObject payload = new JsonObject();
         payload.addProperty("systemPrompt", request.systemPrompt());
         payload.add("messages", gson.toJsonTree(request.messages()));

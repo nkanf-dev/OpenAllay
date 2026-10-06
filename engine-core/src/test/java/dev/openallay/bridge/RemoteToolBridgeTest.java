@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.bridge.protocol.RemoteCancelPayload;
 import dev.openallay.bridge.protocol.RemoteToolCallPayload;
 import dev.openallay.bridge.protocol.RemoteToolResultChunkPayload;
@@ -45,7 +44,7 @@ final class RemoteToolBridgeTest {
                 (actor, capabilities, id, cancellation) -> context,
                 (actor, chunk) -> sent.add(chunk),
                 new CorrelationRegistry(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 5);
         RemoteToolCallPayload call = new RemoteToolCallPayload(
                 correlation, "main", "test:fact", "{\"value\":7}");
@@ -69,7 +68,7 @@ final class RemoteToolBridgeTest {
                 (actor, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(id)),
                 (actor, chunk) -> { recipients.add(actor); sent.add(chunk); },
-                new CorrelationRegistry(), new Gson(), 3);
+                new CorrelationRegistry(), dev.openallay.json.EngineJson.create(), 3);
         UUID correlation = UUID.randomUUID();
         server.handle(owner, new RemoteToolCallPayload(
                 correlation, "main", "test:fact", "{\"value\":42}"));
@@ -98,7 +97,7 @@ final class RemoteToolBridgeTest {
                         ToolInvocationContext.developmentConsole(id)),
                 (actor, chunk) -> sent.add(chunk),
                 new CorrelationRegistry(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 128);
         UUID correlation = UUID.randomUUID();
         RunJavascriptTool.Input input = new RunJavascriptTool.Input(
@@ -108,7 +107,7 @@ final class RemoteToolBridgeTest {
                 correlation,
                 "main",
                 RunJavascriptTool.ID,
-                new Gson().toJson(input))));
+                dev.openallay.json.EngineJson.create().toJson(input))));
         assertEquals(input, javascript.input);
         assertTrue(sent.isEmpty());
 

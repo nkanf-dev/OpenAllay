@@ -54,7 +54,7 @@ import org.junit.jupiter.api.Test;
 final class ServerCancellationCorrelationTest {
     @Test
     void duplicateCancelForOldOwnerCannotCancelNewAskInTheSameSession() throws Exception {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         UUID actor = UUID.randomUUID();
         UUID oldId = UUID.randomUUID();
         UUID newId = UUID.randomUUID();
@@ -174,7 +174,7 @@ final class ServerCancellationCorrelationTest {
 
     @Test
     void cancelDuringPendingCaptureFinalizesAcceptedContextBeforeFailureExactlyOnce() {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentSessionStore sessions = new AgentSessionStore();

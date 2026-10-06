@@ -2,7 +2,6 @@ package dev.openallay.extension.universal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import dev.openallay.api.extension.*;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
@@ -71,7 +70,7 @@ class UniversalExtensionBridgeTest {
                 new CancellationSignal())) {
             scope.open(ignored -> fail("No fabricated evidence"));
             for (String json : List.of("42", "true", "\"text\"", "null", "[1,{\"a\":2}]")) {
-                JsonElement input = JsonParser.parseString(json);
+                JsonElement input = dev.openallay.json.JsonTrees.parse(json);
                 assertEquals(input, scope.invokeHostMethod("test:binding", "read", List.of(input)));
                 assertEquals(List.of(input.toString()), arguments.get());
                 assertThrows(UnsupportedOperationException.class, () -> arguments.get().add("1"));
@@ -87,7 +86,7 @@ class UniversalExtensionBridgeTest {
                     new CancellationSignal())) {
                 scope.open(ignored -> {});
                 var failure = assertThrows(JavascriptExecutionException.class,
-                        () -> scope.invokeHostMethod("test:binding", "read", List.of(JsonParser.parseString("1"))));
+                        () -> scope.invokeHostMethod("test:binding", "read", List.of(dev.openallay.json.JsonTrees.parse("1"))));
                 assertEquals("javascript_extension_host_invalid", failure.code());
             }
         }
@@ -108,7 +107,7 @@ class UniversalExtensionBridgeTest {
                 new CancellationSignal())) {
             scope.open(ignored -> {});
             assertThrows(ModelClientException.class, () -> scope.invokeHostMethod("test:binding", "read",
-                    List.of(JsonParser.parseString("1"))));
+                    List.of(dev.openallay.json.JsonTrees.parse("1"))));
         }
         CancellationSignal signal = new CancellationSignal();
         registry = registryWithMethod(JavascriptHostValueType.JSON, (context, values) -> {
@@ -117,7 +116,7 @@ class UniversalExtensionBridgeTest {
         try (var scope = registry.prepareJavascriptInvocation(ToolInvocationContext.developmentConsole("cancel"), signal)) {
             scope.open(ignored -> {});
             assertThrows(ModelClientException.class, () -> scope.invokeHostMethod("test:binding", "read",
-                    List.of(JsonParser.parseString("1"))));
+                    List.of(dev.openallay.json.JsonTrees.parse("1"))));
         }
     }
     @Test void participantAndHostMethodsShareOneSdkIdentityPerActualExecution() throws Exception {
@@ -191,7 +190,7 @@ class UniversalExtensionBridgeTest {
                 new CancellationSignal())) {
             scope.open(ignored -> {});
             return assertThrows(JavascriptExecutionException.class, () -> scope.invokeHostMethod("test:binding", "read",
-                    List.of(JsonParser.parseString("1"))));
+                    List.of(dev.openallay.json.JsonTrees.parse("1"))));
         }
     }
     private static dev.openallay.extension.OpenAllayExtensionRegistry registryWithMethod(

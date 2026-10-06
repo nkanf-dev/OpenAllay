@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -111,7 +110,7 @@ final class GuideServiceContextLoadTest {
                 ACTOR, local, remote,
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, CLOCK, new Gson(), SCOPE, history);
+                Runnable::run, CLOCK, dev.openallay.json.EngineJson.create(), SCOPE, history);
     }
 
     private static GuideHistoryContextSeed seed(String user, String assistant) {

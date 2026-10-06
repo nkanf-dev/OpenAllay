@@ -2,7 +2,6 @@ package dev.openallay.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpServer;
 import dev.openallay.model.anthropic.AnthropicMessagesClient;
 import dev.openallay.model.config.ModelConfig;
@@ -43,8 +42,8 @@ final class ModelImagePayloadFailureTest {
                         SecretValue.of("test-secret"), 128_000, 1024,
                         Duration.ofSeconds(5), Duration.ofSeconds(10));
                 ModelClient client = protocol == ModelProtocol.OPENAI_CHAT
-                        ? new OpenAiChatClient(config, new Gson())
-                        : new AnthropicMessagesClient(config, new Gson());
+                        ? new OpenAiChatClient(config, dev.openallay.json.EngineJson.create())
+                        : new AnthropicMessagesClient(config, dev.openallay.json.EngineJson.create());
                 for (boolean stream : List.of(false, true)) {
                     for (ImagePayloadResolver resolver : List.of(ImagePayloadResolver.unavailable(),
                             (ImagePayloadResolver) reference -> { throw new IOException("wrong player"); })) {
@@ -91,8 +90,8 @@ final class ModelImagePayloadFailureTest {
                         SecretValue.of("test-secret"), 128_000, 1024,
                         Duration.ofSeconds(5), Duration.ofSeconds(10));
                 ModelClient provider = protocol == ModelProtocol.OPENAI_CHAT
-                        ? new OpenAiChatClient(config, new Gson())
-                        : new AnthropicMessagesClient(config, new Gson());
+                        ? new OpenAiChatClient(config, dev.openallay.json.EngineJson.create())
+                        : new AnthropicMessagesClient(config, dev.openallay.json.EngineJson.create());
                 var observed = ObservingModelClient.observe(provider, config.model());
                 for (boolean stream : List.of(false, true)) {
                     int before = networkRequests.get();
@@ -146,7 +145,7 @@ final class ModelImagePayloadFailureTest {
         var request = new ModelRequest("System", List.of(ModelMessage.userInput(null, List.of(image))),
                 List.of(), false, "session", null,
                 reference -> { throw new AssertionError("invalid image read"); });
-        var future = assertDoesNotThrow(() -> new AnthropicMessagesClient(config, new Gson())
+        var future = assertDoesNotThrow(() -> new AnthropicMessagesClient(config, dev.openallay.json.EngineJson.create())
                 .complete(request, ignored -> {}, new CancellationSignal()));
         assertTrue(future.isCompletedExceptionally());
         assertInstanceOf(IllegalArgumentException.class,

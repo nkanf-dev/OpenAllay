@@ -3,13 +3,12 @@ package dev.openallay.guide.ui;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
 final class GuideRecipePresenterTest {
     @Test
     void projectsGroundedSearchResultIntoNativeCardReferences() {
-        var recipes = JsonParser.parseString("""
+        var recipes = dev.openallay.json.JsonTrees.parse("""
                 [{
                   "reference":{"sourceId":"minecraft:client_recipe_book","generation":"%s","recipeId":"test:iron"},
                   "references":[
@@ -43,7 +42,7 @@ final class GuideRecipePresenterTest {
 
     @Test
     void malformedSemanticCardFailsClosedToTextFallback() {
-        var recipes = JsonParser.parseString("""
+        var recipes = dev.openallay.json.JsonTrees.parse("""
                 [{
                   "reference":{"sourceId":"viewer:jei","generation":"bad","recipeId":"test:iron"},
                   "id":"test:iron","type":"minecraft:crafting",

@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.ToolRuntimeCatalog;
 import dev.openallay.bridge.protocol.ClientToolCallPayload;
 import dev.openallay.bridge.protocol.ClientToolCancelPayload;
@@ -50,7 +48,7 @@ final class ClientToolExecutionEndpointTest {
                             ToolInvocationContext.developmentConsole(correlation));
                 },
                 chunk -> {},
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 128,
                 (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
@@ -80,7 +78,7 @@ final class ClientToolExecutionEndpointTest {
                 (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(correlation)),
                 sent::add,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 4,
                 (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
@@ -103,7 +101,7 @@ final class ClientToolExecutionEndpointTest {
         String normalized = reassemble(sent);
         assertEquals(
                 42,
-                JsonParser.parseString(normalized)
+                dev.openallay.json.JsonTrees.parse(normalized)
                         .getAsJsonObject()
                         .getAsJsonObject("value")
                         .get("value")
@@ -120,7 +118,7 @@ final class ClientToolExecutionEndpointTest {
                 (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(correlation)),
                 sent::add,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 128,
                 (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
@@ -155,7 +153,7 @@ final class ClientToolExecutionEndpointTest {
         ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
                 (capabilities, correlation, cancellation) -> context,
                 sent::add,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 128,
                 (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
@@ -213,7 +211,7 @@ final class ClientToolExecutionEndpointTest {
             ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
                     (capabilities, correlation, cancellation) -> context,
                     chunk -> responseThread.complete(Thread.currentThread().getName()),
-                    new Gson(),
+                    dev.openallay.json.EngineJson.create(),
                     128,
                     worker);
             UUID requestId = UUID.randomUUID();
@@ -249,7 +247,7 @@ final class ClientToolExecutionEndpointTest {
                 (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(correlation)),
                 chunk -> {},
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 128,
                 (java.util.concurrent.Executor) Runnable::run);
         ToolRuntimeCatalog catalog =
@@ -293,7 +291,7 @@ final class ClientToolExecutionEndpointTest {
         ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
                 (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(correlation)),
-                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run);
+                sent::add, dev.openallay.json.EngineJson.create(), 128, (java.util.concurrent.Executor) Runnable::run);
         ToolRuntimeCatalog catalog = ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of());
         for (boolean commandSetting : List.of(false, true)) {
             commands.replace(new CommandCapabilityConfig(commandSetting));
@@ -310,7 +308,7 @@ final class ClientToolExecutionEndpointTest {
                 sent.clear();
                 endpoint.handle(new ClientToolCallPayload(requestId, UUID.randomUUID(), "main",
                         "openallay:load_skill", "{\"name\":\"" + skill + "\"}"));
-                var result = JsonParser.parseString(reassemble(sent)).getAsJsonObject();
+                var result = dev.openallay.json.JsonTrees.parse(reassemble(sent)).getAsJsonObject();
                 assertEquals(commandSetting && skill.equals("run-game-commands") ? "success" : "failure",
                         result.get("status").getAsString());
                 if (result.get("status").getAsString().equals("failure"))
@@ -333,15 +331,15 @@ final class ClientToolExecutionEndpointTest {
         ClientToolExecutionEndpoint endpoint = new ClientToolExecutionEndpoint(
                 (capabilities, correlation, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(correlation)),
-                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run);
+                sent::add, dev.openallay.json.EngineJson.create(), 128, (java.util.concurrent.Executor) Runnable::run);
         UUID requestId = UUID.randomUUID();
         var opened = assertInstanceOf(ToolResult.Success.class, endpoint.open(
                 requestId, "main", ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of())));
         var request = (ClientToolExecutionEndpoint.OpenedRequest) opened.value();
         assertEquals(new dev.openallay.skill.LoadSkillTool(captured, "client").catalogManifest(),
                 request.skillDocuments());
-        assertFalse(new Gson().toJson(request.skillDocuments()).contains("Captured client instructions."));
-        assertFalse(new Gson().toJson(request.skillDocuments()).contains("content"));
+        assertFalse(dev.openallay.json.EngineJson.create().toJson(request.skillDocuments()).contains("Captured client instructions."));
+        assertFalse(dev.openallay.json.EngineJson.create().toJson(request.skillDocuments()).contains("content"));
         assertFalse(new dev.openallay.skill.LoadSkillTool(captured, "server").catalogManifest()
                 .equals(request.skillDocuments()));
         assertTrue(repository.reload(List.of(skillSource("New client instructions.")), java.util.Set.of()));
@@ -350,9 +348,9 @@ final class ClientToolExecutionEndpointTest {
             sent.clear();
             endpoint.handle(new ClientToolCallPayload(requestId, UUID.randomUUID(), "main",
                     "openallay:load_skill", "{\"name\":\"guide\"}"));
-            var normalized = JsonParser.parseString(reassemble(sent)).getAsJsonObject();
+            var normalized = dev.openallay.json.JsonTrees.parse(reassemble(sent)).getAsJsonObject();
             assertEquals("success", normalized.get("status").getAsString());
-            var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            var output = dev.openallay.json.EngineJson.create().fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
             assertEquals(dev.openallay.skill.LoadSkillTool.LoadState.COMPLETE, output.state());
             assertEquals("Captured client instructions.", output.content());
             assertEquals(request.skillDocuments().documents().getFirst().source(), output.source());
@@ -398,7 +396,7 @@ final class ClientToolExecutionEndpointTest {
                                     dev.openallay.context.CallerKind.PLAYER, UUID.randomUUID(), playerName, false),
                             base.player(), base.registries(), base.recipes(), base.observableGameState(), base.metrics()));
                 },
-                sent::add, new Gson(), 128, (java.util.concurrent.Executor) Runnable::run);
+                sent::add, dev.openallay.json.EngineJson.create(), 128, (java.util.concurrent.Executor) Runnable::run);
         UUID id = UUID.randomUUID();
         var opened = assertInstanceOf(ToolResult.Success.class, endpoint.open(id, "main",
                 ToolRuntimeCatalog.from(registry.registrations(), java.util.Set.of())));
@@ -410,11 +408,11 @@ final class ClientToolExecutionEndpointTest {
             var input = new dev.openallay.skill.LoadSkillTool.Input(name,
                     document.equals("SKILL.md") ? null : document);
             endpoint.handle(new ClientToolCallPayload(id, UUID.randomUUID(), "main", "openallay:load_skill",
-                    new Gson().toJson(input)));
+                    dev.openallay.json.EngineJson.create().toJson(input)));
             String wire = reassemble(sent);
-            var normalized = JsonParser.parseString(wire).getAsJsonObject();
+            var normalized = dev.openallay.json.JsonTrees.parse(wire).getAsJsonObject();
             assertEquals("success", normalized.get("status").getAsString());
-            var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            var output = dev.openallay.json.EngineJson.create().fromJson(normalized.get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
             String expected = document.equals("SKILL.md") ? contents : referenceContents;
             var identity = request.skillDocuments().documents().stream()
                     .filter(value -> value.document().equals(document)).findFirst().orElseThrow();
@@ -434,7 +432,7 @@ final class ClientToolExecutionEndpointTest {
         sent.clear();
         endpoint.handle(new ClientToolCallPayload(id, UUID.randomUUID(), "main", "test:player_fields",
                 "{\"token\":\"quest-token\",\"password\":\"castle-password\"}"));
-        var playerOutput = JsonParser.parseString(reassemble(sent)).getAsJsonObject().getAsJsonObject("value");
+        var playerOutput = dev.openallay.json.JsonTrees.parse(reassemble(sent)).getAsJsonObject().getAsJsonObject("value");
         assertEquals(playerName, playerOutput.get("displayName").getAsString());
         assertEquals("quest-token", playerOutput.get("token").getAsString());
         assertEquals("castle-password", playerOutput.get("password").getAsString());
@@ -482,7 +480,7 @@ final class ClientToolExecutionEndpointTest {
                         return context;
                     },
                     sent::add,
-                    new Gson(),
+                    dev.openallay.json.EngineJson.create(),
                     128,
                     (java.util.concurrent.Executor) Runnable::run);
             endpoint.open(requestId, "main", ToolRuntimeCatalog.from(

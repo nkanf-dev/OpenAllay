@@ -40,7 +40,7 @@ final class PlayerClientToolRouterTest {
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
                 registry,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
@@ -85,7 +85,7 @@ final class PlayerClientToolRouterTest {
         ToolRegistry registry = registry();
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, new ArrayList<>()));
+                registry, dev.openallay.json.EngineJson.create(), transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
@@ -120,7 +120,7 @@ final class PlayerClientToolRouterTest {
         List<SentCall> calls = new ArrayList<>();
         List<SentCancel> cancels = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, cancels));
+                registry, dev.openallay.json.EngineJson.create(), transport(calls, cancels));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
@@ -156,7 +156,7 @@ final class PlayerClientToolRouterTest {
         List<SentCall> calls = new ArrayList<>();
         List<SentCancel> cancels = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry(), new Gson(), transport(calls, cancels));
+                registry(), dev.openallay.json.EngineJson.create(), transport(calls, cancels));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
@@ -181,7 +181,7 @@ final class PlayerClientToolRouterTest {
         List<SentCancel> cancels = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
                 registry(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 transport(calls, cancels),
                 Duration.ofMillis(10));
         UUID actor = UUID.randomUUID();
@@ -206,7 +206,7 @@ final class PlayerClientToolRouterTest {
     void cancellationRacingALateChunkCannotRecreatePartialAssembly() {
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry(), new Gson(), transport(calls, new ArrayList<>()));
+                registry(), dev.openallay.json.EngineJson.create(), transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
@@ -242,7 +242,7 @@ final class PlayerClientToolRouterTest {
         registry.register("test", List.of(javascript));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, new ArrayList<>()));
+                registry, dev.openallay.json.EngineJson.create(), transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(
@@ -284,7 +284,7 @@ final class PlayerClientToolRouterTest {
         registry.register("test", List.of(javascript));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, new ArrayList<>()));
+                registry, dev.openallay.json.EngineJson.create(), transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(actor, requestId, "main", List.of(), emptySkills()));
@@ -314,7 +314,7 @@ final class PlayerClientToolRouterTest {
         registry.register("test", List.of(javascript));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), new PlayerClientToolRouter.Transport() {
+                registry, dev.openallay.json.EngineJson.create(), new PlayerClientToolRouter.Transport() {
                     @Override
                     public boolean call(UUID actorId, ClientToolCallPayload payload) {
                         calls.add(new SentCall(actorId, payload));
@@ -347,7 +347,7 @@ final class PlayerClientToolRouterTest {
 
     @Test
     void acceptsModelFacingOutputAndRebuildsProjectionFromStructuredValue() {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         JsonObject normalized = new ToolResultNormalizer(gson).normalize(
                 new ToolResult.Success<>(new ModelTextTool.Output(99)),
                 ModelTextTool.Output.class);
@@ -369,7 +369,7 @@ final class PlayerClientToolRouterTest {
 
     @Test
     void preservesPlayerNamedFieldsInSchemaValidClientResults() {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         var value = new PlayerFieldsTool.Output("player-token", "player-password", "player-api-value", 42);
         JsonObject normalized = new ToolResultNormalizer(gson).normalize(
                 new ToolResult.Success<>(value), PlayerFieldsTool.Output.class);
@@ -388,7 +388,7 @@ final class PlayerClientToolRouterTest {
 
     @Test
     void rejectsMalformedModelTextAndUnknownEnvelopeFields() {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         JsonObject valid = new ToolResultNormalizer(gson).normalize(
                 new ToolResult.Success<>(new ModelTextTool.Output(99)),
                 ModelTextTool.Output.class);
@@ -398,13 +398,13 @@ final class PlayerClientToolRouterTest {
                 new com.google.gson.JsonPrimitive(" "),
                 new JsonObject());
         for (var text : invalidTexts) {
-            JsonObject invalid = valid.deepCopy();
+            JsonObject invalid = dev.openallay.json.JsonTrees.copy(valid);
             invalid.add("modelText", text);
             AgentToolResult completed = receiveResult(new ModelTextTool(), invalid, false);
             assertTrue(completed.failure());
             assertEquals("client_tool_result_invalid", completed.normalized().get("code").getAsString());
         }
-        JsonObject extra = valid.deepCopy();
+        JsonObject extra = dev.openallay.json.JsonTrees.copy(valid);
         extra.addProperty("unknown", "field");
         assertTrue(receiveResult(new ModelTextTool(), extra, false).failure());
 
@@ -426,7 +426,7 @@ final class PlayerClientToolRouterTest {
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(snapshot)));
         List<SentCall> remoteCalls = new ArrayList<>();
-        PlayerClientToolRouter router = new PlayerClientToolRouter(registry, new Gson(),
+        PlayerClientToolRouter router = new PlayerClientToolRouter(registry, dev.openallay.json.EngineJson.create(),
                 transport(remoteCalls, new ArrayList<>()));
         var sessions = new dev.openallay.agent.session.AgentSessionStore();
         String rawFingerprint = new dev.openallay.skill.LoadSkillTool(snapshot, "server")
@@ -442,9 +442,9 @@ final class PlayerClientToolRouterTest {
                 requests.add(request);
                 int step = turn.getAndIncrement();
                 if (currentAsk > 0 || step > 0) {
-                    assertTrue(new Gson().toJson(request).contains(playerValue));
-                    assertTrue(new Gson().toJson(request).contains("example"));
-                    assertTrue(new Gson().toJson(request).contains("player-password"));
+                    assertTrue(dev.openallay.json.EngineJson.create().toJson(request).contains(playerValue));
+                    assertTrue(dev.openallay.json.EngineJson.create().toJson(request).contains("example"));
+                    assertTrue(dev.openallay.json.EngineJson.create().toJson(request).contains("player-password"));
                 }
                 if (step < 2) {
                     if (currentAsk > 0) assertTrue(request.systemPrompt().contains("guide / SKILL.md: full"));
@@ -460,7 +460,7 @@ final class PlayerClientToolRouterTest {
                         "end_turn", dev.openallay.model.ModelUsage.empty()));
             };
             try {
-                var agent = new dev.openallay.agent.GameGuideAgent(model, tools, sessions, new Gson(), null,
+                var agent = new dev.openallay.agent.GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create(), null,
                         (request, tokens) -> {});
                 List<dev.openallay.agent.AgentEvent> events = new ArrayList<>();
                 var result = agent.ask(new dev.openallay.agent.AgentRequest(id, actor, "main", "Use the workflow.",
@@ -472,7 +472,7 @@ final class PlayerClientToolRouterTest {
                 for (int index = 0; index < completed.size(); index++) {
                     var event = completed.get(index);
                     assertFalse(event.failure());
-                    var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(event.normalized().get("value"),
+                    var output = dev.openallay.json.EngineJson.create().fromJson(event.normalized().get("value"),
                             dev.openallay.skill.LoadSkillTool.Output.class);
                     assertEquals(rawFingerprint, output.fingerprint());
                     assertEquals(currentAsk == 0 && index == 0 ? dev.openallay.skill.LoadSkillTool.LoadState.COMPLETE
@@ -480,10 +480,10 @@ final class PlayerClientToolRouterTest {
                     assertEquals(currentAsk == 0 && index == 0 ? rawBody : "", output.content());
                 }
                 assertTrue(requests.getLast().systemPrompt().contains("guide / SKILL.md: full"));
-                assertTrue(new Gson().toJson(requests).contains(playerValue));
+                assertTrue(dev.openallay.json.EngineJson.create().toJson(requests).contains(playerValue));
                 if (currentAsk == 0) {
-                    assertTrue(new Gson().toJson(events).contains(playerValue));
-                    assertTrue(new Gson().toJson(events).contains("player-password"));
+                    assertTrue(dev.openallay.json.EngineJson.create().toJson(events).contains(playerValue));
+                    assertTrue(dev.openallay.json.EngineJson.create().toJson(events).contains("player-password"));
                 }
                 assertTrue(remoteCalls.isEmpty());
             } finally {
@@ -503,7 +503,7 @@ final class PlayerClientToolRouterTest {
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(snapshot)));
         List<SentCall> calls = new ArrayList<>();
-        PlayerClientToolRouter router = new PlayerClientToolRouter(registry, new Gson(),
+        PlayerClientToolRouter router = new PlayerClientToolRouter(registry, dev.openallay.json.EngineJson.create(),
                 transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID id = UUID.randomUUID();
@@ -516,7 +516,7 @@ final class PlayerClientToolRouterTest {
             AgentToolResult actual = tools.execute("openallay__load_skill", input,
                     ToolInvocationContext.developmentConsole(id.toString()), new CancellationSignal()).join();
             assertFalse(actual.failure());
-            var output = dev.openallay.json.EngineJson.withInstant(new Gson()).fromJson(actual.normalized().get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
+            var output = dev.openallay.json.EngineJson.create().fromJson(actual.normalized().get("value"), dev.openallay.skill.LoadSkillTool.Output.class);
             assertEquals(body, output.content());
             var manifest = new dev.openallay.skill.LoadSkillTool(snapshot, "server").catalogManifest();
             assertEquals(manifest.documents().getFirst().fingerprint(), output.fingerprint());
@@ -541,7 +541,7 @@ final class PlayerClientToolRouterTest {
         var input = new dev.openallay.skill.LoadSkillTool.Input("guide");
         var output = ((ToolResult.Success<dev.openallay.skill.LoadSkillTool.Output>) skill.invokeFresh(
                 ToolInvocationContext.developmentConsole("capture"), input)).value();
-        JsonObject valid = new ToolResultNormalizer(new Gson()).normalize(
+        JsonObject valid = new ToolResultNormalizer(dev.openallay.json.EngineJson.create()).normalize(
                 new ToolResult.Success<>(output), dev.openallay.skill.LoadSkillTool.Output.class);
         AgentToolResult accepted = receiveSkillResult(snapshot, skill.catalogManifest(), valid, true);
         assertFalse(accepted.failure());
@@ -561,7 +561,7 @@ final class PlayerClientToolRouterTest {
                 value -> value.addProperty("undeclared", "body"),
                 value -> { value.addProperty("state", "ALREADY_LOADED"); value.addProperty("content", ""); });
         for (var corrupt : corruptions) {
-            JsonObject invalid = valid.deepCopy();
+            JsonObject invalid = dev.openallay.json.JsonTrees.copy(valid);
             corrupt.accept(invalid.getAsJsonObject("value"));
             AgentToolResult result = receiveSkillResult(snapshot, skill.catalogManifest(), invalid, false);
             assertTrue(result.failure());
@@ -577,7 +577,7 @@ final class PlayerClientToolRouterTest {
         registry.register("test", List.of(new dev.openallay.skill.LoadSkillTool(server)));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, new ArrayList<>()));
+                registry, dev.openallay.json.EngineJson.create(), transport(calls, new ArrayList<>()));
         UUID actor = UUID.randomUUID();
         UUID requestId = UUID.randomUUID();
         AgentToolExecutor tools = success(router.open(actor, requestId, "main",
@@ -605,7 +605,7 @@ final class PlayerClientToolRouterTest {
         registry.register("test", List.of(tool));
         List<SentCall> calls = new ArrayList<>();
         PlayerClientToolRouter router = new PlayerClientToolRouter(
-                registry, new Gson(), transport(calls, new ArrayList<>()), Duration.ofMinutes(5), Runnable::run);
+                registry, dev.openallay.json.EngineJson.create(), transport(calls, new ArrayList<>()), Duration.ofMinutes(5), Runnable::run);
         UUID actor = UUID.fromString("00000000-0000-0000-0000-000000000001");
         UUID requestId = UUID.fromString("00000000-0000-0000-0000-000000000002");
         AgentToolExecutor tools = success(router.open(
@@ -661,7 +661,7 @@ final class PlayerClientToolRouterTest {
     }
 
     private static JsonObject javascriptArguments(String source) {
-        return new Gson().toJsonTree(new RunJavascriptTool.Input(source, List.of())).getAsJsonObject();
+        return dev.openallay.json.EngineJson.create().toJsonTree(new RunJavascriptTool.Input(source, List.of())).getAsJsonObject();
     }
 
     private static dev.openallay.skill.SkillCatalogSnapshot emptySkills() {

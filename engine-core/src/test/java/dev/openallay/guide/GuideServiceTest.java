@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -321,7 +320,7 @@ final class GuideServiceTest {
         return new GuideService(ACTOR, local, new FakeRemote(false),
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)),
-                dispatcher, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), new Gson());
+                dispatcher, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), dev.openallay.json.EngineJson.create());
     }
 
     private static GuideService service(FakeLocal local, FakeRemote remote) {
@@ -333,7 +332,7 @@ final class GuideServiceTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run,
                 Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
-                new Gson());
+                dev.openallay.json.EngineJson.create());
     }
 
     private static GuideRequestSnapshot request(

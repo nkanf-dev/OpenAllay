@@ -2,7 +2,6 @@ package dev.openallay.bridge.client;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.ModelImageToolOutput;
 import dev.openallay.agent.tool.ToolRuntimeCatalog;
@@ -489,7 +488,7 @@ final class ClientBridgeSessionTest {
             }));
             session.configureClientTools(() -> ToolRuntimeCatalog.from(registry.registrations(), Set.of()),
                     (required, correlation, cancellation) -> CompletableFuture.completedFuture(
-                            ToolInvocationContext.developmentConsole(correlation)), new Gson());
+                            ToolInvocationContext.developmentConsole(correlation)), dev.openallay.json.EngineJson.create());
             session.configureResultImages(store, contexts);
             session.receive("capabilities", codec.encode(capabilities()));
         }

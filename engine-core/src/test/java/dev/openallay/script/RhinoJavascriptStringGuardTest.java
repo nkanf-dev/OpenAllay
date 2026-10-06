@@ -2,7 +2,6 @@ package dev.openallay.script;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +14,7 @@ final class RhinoJavascriptStringGuardTest {
     @ParameterizedTest(name = "{0}, unrestricted={1}")
     @MethodSource("nativeOperationCases")
     void keepsNativeOperationsAndTheirExactUserSources(String source, boolean unrestricted, String expected) {
-        assertEquals(JsonParser.parseString(expected), new RhinoJavascriptRuntime().execute(source,
+        assertEquals(dev.openallay.json.JsonTrees.parse(expected), new RhinoJavascriptRuntime().execute(source,
                 Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value());
     }
 
@@ -23,7 +22,7 @@ final class RhinoJavascriptStringGuardTest {
     @MethodSource("legalCoercionCases")
     void preservesEcmaScriptCoercionBeforeCallingTheNativeMethod(
             String source, boolean unrestricted, String expected) {
-        assertEquals(JsonParser.parseString(expected), new RhinoJavascriptRuntime().execute(source,
+        assertEquals(dev.openallay.json.JsonTrees.parse(expected), new RhinoJavascriptRuntime().execute(source,
                 Map.of(), Map.of(), Map.of(), new CancellationSignal(), null, null, unrestricted).value());
     }
 
@@ -73,7 +72,7 @@ final class RhinoJavascriptStringGuardTest {
                 const padded = String.prototype.padStart.call(receiver, 5, fill);
                 return {repeated, padded, calls};
                 """;
-        assertEquals(JsonParser.parseString("""
+        assertEquals(dev.openallay.json.JsonTrees.parse("""
                 {"repeated":"abab","padded":"cccab","calls":["receiver","count","receiver","fill"]}
                 """), new RhinoJavascriptRuntime().execute(source, Map.of(), Map.of(), Map.of(),
                 new CancellationSignal(), null, null, unrestricted).value());
@@ -89,7 +88,7 @@ final class RhinoJavascriptStringGuardTest {
                 try { new String.prototype.repeat(1); } catch (error) { errors.push(error.name); }
                 return errors;
                 """;
-        assertEquals(JsonParser.parseString("[\"RangeError\",\"RangeError\",\"TypeError\"]"),
+        assertEquals(dev.openallay.json.JsonTrees.parse("[\"RangeError\",\"RangeError\",\"TypeError\"]"),
                 new RhinoJavascriptRuntime().execute(source, Map.of(), Map.of(), Map.of(),
                         new CancellationSignal(), null, null, unrestricted).value());
     }

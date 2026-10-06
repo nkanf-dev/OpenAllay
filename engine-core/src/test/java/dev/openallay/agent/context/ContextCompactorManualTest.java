@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
@@ -39,7 +38,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 final class ContextCompactorManualTest {
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = dev.openallay.json.EngineJson.create();
     private static final String DERIVED_PREFIX =
             "[OpenAllay derived conversation memory; NOT factual evidence]\n";
     private static final String SUMMARY = """
@@ -81,7 +80,7 @@ final class ContextCompactorManualTest {
                 prompt.apply(messages), messages, List.of()));
         assertEquals(2, result.checkpoint().sourceToIndexExclusive());
         assertTrue(compactor.matches(result.checkpoint(), messages));
-        assertEquals(JsonParser.parseString(SUMMARY), JsonParser.parseString(result.checkpoint().summary()));
+        assertEquals(dev.openallay.json.JsonTrees.parse(SUMMARY), dev.openallay.json.JsonTrees.parse(result.checkpoint().summary()));
     }
 
     @Test
@@ -407,7 +406,7 @@ final class ContextCompactorManualTest {
     }
 
     private static String summaryWithGoal(String goal) {
-        JsonObject object = JsonParser.parseString(EMPTY_SUMMARY).getAsJsonObject();
+        JsonObject object = dev.openallay.json.JsonTrees.parse(EMPTY_SUMMARY).getAsJsonObject();
         object.getAsJsonArray("goals").add(goal);
         return object.toString();
     }

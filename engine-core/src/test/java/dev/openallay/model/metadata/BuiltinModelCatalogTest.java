@@ -1,8 +1,6 @@
 package dev.openallay.model.metadata;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.model.config.CredentialResolver;
 import dev.openallay.model.config.ModelProfileDefinition;
 import dev.openallay.model.config.ModelProfilesConfig;
@@ -29,7 +27,7 @@ final class BuiltinModelCatalogTest {
                 StandardCharsets.UTF_8)).catalog();
     }
     private static String sampleJson() {
-        return new Gson().toJson(JsonParser.parseReader(new InputStreamReader(
+        return dev.openallay.json.EngineJson.create().toJson(dev.openallay.json.JsonTrees.parse(new InputStreamReader(
                 BuiltinModelCatalogTest.class.getResourceAsStream("/model-metadata/builtin-sample.json"),
                 StandardCharsets.UTF_8)));
     }
@@ -101,7 +99,7 @@ final class BuiltinModelCatalogTest {
         assertEquals(List.of(0, 272_000), entry.pricing().tiers().stream()
                 .map(BuiltinModelCatalog.Tier::minInputTokens).toList());
         assertEquals("0.75", entry.pricing().tiers().get(1).output().toPlainString());
-        var json = JsonParser.parseString(sampleJson()).getAsJsonObject();
+        var json = dev.openallay.json.JsonTrees.parse(sampleJson()).getAsJsonObject();
         var model = json.getAsJsonArray("models").get(0).getAsJsonObject();
         model.add("maxOutputTokens", com.google.gson.JsonNull.INSTANCE);
         model.add("pricing", com.google.gson.JsonNull.INSTANCE);

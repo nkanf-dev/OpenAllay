@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -93,7 +92,7 @@ final class AgentBenchmarkRecorderTest {
 
     private static JsonObject success(String preview) {
         JsonObject value = new JsonObject();
-        value.add("preview", JsonParser.parseString(preview));
+        value.add("preview", dev.openallay.json.JsonTrees.parse(preview));
         JsonObject normalized = new JsonObject();
         normalized.addProperty("status", "success");
         normalized.add("value", value);

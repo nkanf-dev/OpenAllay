@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
@@ -48,7 +47,7 @@ final class GuideServiceManagerHistoryTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 dispatcher,
                 Clock.systemUTC(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 history,
                 actor -> selected[0]);
 
@@ -82,7 +81,7 @@ final class GuideServiceManagerHistoryTest {
         GuideServiceManager manager = new GuideServiceManager(new IdleLocal(), new IdleRemote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)),
-                dispatcher, Clock.systemUTC(), new Gson(), history, actor -> selected[0]);
+                dispatcher, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), history, actor -> selected[0]);
         manager.forActor(ACTOR);
         dispatcher.runAll();
         history.flushGate = new CompletableFuture<>();
@@ -143,7 +142,7 @@ final class GuideServiceManagerHistoryTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run,
                 Clock.systemUTC(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 history,
                 actor -> scope);
         GuideService service = manager.forActor(ACTOR);
@@ -173,7 +172,7 @@ final class GuideServiceManagerHistoryTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run,
                 Clock.systemUTC(),
-                new Gson());
+                dev.openallay.json.EngineJson.create());
 
         assertFailure(manager.resetHistoryDatabase().get(2, TimeUnit.SECONDS), "history_unavailable");
     }
@@ -190,7 +189,7 @@ final class GuideServiceManagerHistoryTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run,
                 Clock.systemUTC(),
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 history,
                 actor -> scope);
 
@@ -222,7 +221,7 @@ final class GuideServiceManagerHistoryTest {
         GuideHistoryScope[] selected = {GuideHistoryScope.derive(
                 ACTOR, GuideHistoryScope.Kind.SINGLEPLAYER, "world-a")};
         GuideServiceManager manager = new GuideServiceManager(new IdleLocal(), new IdleRemote(),
-                contexts, Runnable::run, Clock.systemUTC(), new Gson(), new RecordingHistory(),
+                contexts, Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), new RecordingHistory(),
                 actor -> selected[0]);
         manager.forActor(ACTOR);
         assertEquals(1, clears[0]);

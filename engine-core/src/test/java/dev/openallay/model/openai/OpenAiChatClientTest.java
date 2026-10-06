@@ -6,9 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpServer;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
@@ -65,7 +63,7 @@ final class OpenAiChatClientTest {
                     512,
                     Duration.ofSeconds(5),
                     Duration.ofSeconds(10));
-            JsonObject schema = JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject();
+            JsonObject schema = dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject();
             ModelRequest request = new ModelRequest(
                     "Use tools.",
                     List.of(ModelMessage.userText("fact")),
@@ -73,7 +71,7 @@ final class OpenAiChatClientTest {
                     false);
 
             List<ModelEvent> events = new ArrayList<>();
-            ModelTurn turn = new OpenAiChatClient(config, new Gson())
+            ModelTurn turn = new OpenAiChatClient(config, dev.openallay.json.EngineJson.create())
                     .complete(request, events::add, new CancellationSignal())
                     .join();
             ModelContent.ToolUse tool = turn.toolUses().getFirst();
@@ -127,7 +125,7 @@ final class OpenAiChatClientTest {
 
             CompletionException failure = assertThrows(
                     CompletionException.class,
-                    () -> new OpenAiChatClient(config, new Gson())
+                    () -> new OpenAiChatClient(config, dev.openallay.json.EngineJson.create())
                             .complete(request, events::add, new CancellationSignal())
                             .join());
 

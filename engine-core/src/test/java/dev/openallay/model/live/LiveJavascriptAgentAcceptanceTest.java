@@ -58,7 +58,7 @@ final class LiveJavascriptAgentAcceptanceTest {
         Map<String, String> environment = System.getenv();
         Assumptions.assumeTrue(Boolean.parseBoolean(
                 environment.get("OPENALLAY_LIVE_JAVASCRIPT_AGENT")));
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         ModelClient raw = model(environment, gson);
         boolean stream = Boolean.parseBoolean(
                 environment.getOrDefault("OPENALLAY_LIVE_STREAM", "true"));

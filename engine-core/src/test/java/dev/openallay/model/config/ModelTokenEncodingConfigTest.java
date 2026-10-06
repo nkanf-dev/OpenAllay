@@ -2,7 +2,6 @@ package dev.openallay.model.config;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.JsonParser;
 import dev.openallay.client.gui.settings.ModelProfileDraft;
 import dev.openallay.model.tokenizer.ModelContextTokenEstimator;
 import dev.openallay.model.tokenizer.ModelTokenEncoding;
@@ -21,7 +20,7 @@ final class ModelTokenEncodingConfigTest {
         var definition = definition(ModelTokenEncoding.O200K_BASE);
         var config = new ModelProfilesConfig("gateway", List.of(definition));
         String encoded = new ModelProfilesConfigWriter().encode(config);
-        assertEquals("o200k_base", JsonParser.parseString(encoded).getAsJsonObject()
+        assertEquals("o200k_base", dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject()
                 .getAsJsonArray("profiles").get(0).getAsJsonObject().get("tokenEncoding").getAsString());
         var loaded = new ModelProfilesConfigLoader().load(new StringReader(encoded), Map.of("KEY", "test-key"));
         var value = ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
@@ -45,7 +44,7 @@ final class ModelTokenEncodingConfigTest {
         var loaded = new ModelProfilesConfigLoader().load(new StringReader(auto), Map.of("KEY", "test-key"));
         assertEquals(ModelTokenEncoding.AUTO, ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded)
                 .value().profiles().getFirst().runtimeConfig().tokenEncoding());
-        var root = JsonParser.parseString(auto).getAsJsonObject();
+        var root = dev.openallay.json.JsonTrees.parse(auto).getAsJsonObject();
         root.getAsJsonArray("profiles").get(0).getAsJsonObject().addProperty("tokenEncoding", "claude-exact");
         assertInstanceOf(ToolResult.Failure.class, new ModelProfilesConfigLoader()
                 .load(new StringReader(root.toString()), Map.of("KEY", "test-key")));

@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -217,7 +216,7 @@ final class GuideServiceInputObservationOccurrenceTest {
         Fixture(Path directory) throws Exception {
             store = new FileImageAttachmentStore(directory.resolve("managed-images"));
             service = new GuideService(InputObservationFixtures.ACTOR, endpoint, offline(), contexts,
-                    owner::execute, Clock.systemUTC(), new Gson(), null, null, store);
+                    owner::execute, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), null, null, store);
             try {
                 source = success(await(service.importImage(sourceBytes)));
                 ordinary = success(await(service.importImage(ordinaryBytes)));

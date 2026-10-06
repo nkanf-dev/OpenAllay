@@ -1,7 +1,6 @@
 package dev.openallay.bridge.server;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.Gson;
 import dev.openallay.FeatureServices;
 import dev.openallay.bridge.protocol.*;
 import dev.openallay.tool.ToolRegistry;
@@ -44,7 +43,7 @@ final class ServerBridgeSessionTest {
         assertEquals(request, chunk.requestId());
         String json = new ResultChunker.Reassembler().accept(chunk.asRemoteChunk()).orElseThrow();
         ServerAgentEventPayload event = fixture.codec.decode(json, ServerAgentEventPayload.class);
-        var decoded = new ServerAgentEventCodec(new Gson()).decode(event, request);
+        var decoded = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create()).decode(event, request);
         assertEquals(message, ((dev.openallay.agent.AgentEvent.SteerRejected) decoded).messageId());
         assertFalse(event.terminal());
     }

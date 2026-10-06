@@ -7,9 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
@@ -45,7 +43,7 @@ final class ContextCompactorTest {
         ModelClient model = (request, events, cancellation) -> {
             requests.add(request);
             int call = calls.incrementAndGet();
-            JsonObject oversized = JsonParser.parseString(SUMMARY).getAsJsonObject();
+            JsonObject oversized = dev.openallay.json.JsonTrees.parse(SUMMARY).getAsJsonObject();
             com.google.gson.JsonArray goals = new com.google.gson.JsonArray();
             goals.add("x".repeat(4000));
             oversized.add("goals", goals);
@@ -56,7 +54,7 @@ final class ContextCompactorTest {
                     List.of(new ModelContent.Text(call == 1 ? oversized.toString() : SUMMARY)),
                     "end_turn", usage));
         };
-        ContextCompactor compactor = new ContextCompactor(model, new Gson(),
+        ContextCompactor compactor = new ContextCompactor(model, dev.openallay.json.EngineJson.create(),
                 new Utf8ContextTokenEstimator(), new ContextBudget(1_200, 100),
                 "captured-summary-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
         List<ModelMessage> messages = List.of(ModelMessage.userText("a".repeat(500)),
@@ -143,8 +141,8 @@ final class ContextCompactorTest {
         ModelRequest summaryRequest = model.requests.getFirst();
         String summaryInput = ((ModelContent.Text) summaryRequest.messages()
                 .getFirst().content().getFirst()).text();
-        assertEquals(new Gson().toJson(history), summaryInput);
-        JsonObject serializedError = JsonParser.parseString(summaryInput).getAsJsonArray()
+        assertEquals(dev.openallay.json.EngineJson.create().toJson(history), summaryInput);
+        JsonObject serializedError = dev.openallay.json.JsonTrees.parse(summaryInput).getAsJsonArray()
                 .get(1).getAsJsonObject().getAsJsonArray("content").get(0).getAsJsonObject();
         assertTrue(serializedError.get("value").isJsonPrimitive());
         assertEquals(actualError, serializedError.get("value").getAsString());
@@ -201,7 +199,7 @@ final class ContextCompactorTest {
                 .isPresent());
         ContextCompactor otherModel = new ContextCompactor(
                 model,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 new Utf8ContextTokenEstimator(),
                 new ContextBudget(1_200, 100),
                 "other-model",
@@ -223,7 +221,7 @@ final class ContextCompactorTest {
         List<ModelMessage> messages = List.of(
                 history.get(0), history.get(1), ModelMessage.userText("current"));
         ContextCheckpoint corruptedSummary = new ContextCheckpoint(
-                java.util.UUID.randomUUID(), 0, 2, ContextSourceHash.compute(new Gson(), history),
+                java.util.UUID.randomUUID(), 0, 2, ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), history),
                 "test-model", Instant.EPOCH, ContextCheckpoint.Status.SUCCEEDED,
                 "{\"goals\":[]}", null, null, 100);
         assertTrue(compactor.matches(corruptedSummary, messages));
@@ -233,7 +231,7 @@ final class ContextCompactorTest {
 
         ContextCheckpoint splitExchange = new ContextCheckpoint(
                 java.util.UUID.randomUUID(), 0, 1,
-                ContextSourceHash.compute(new Gson(), history.subList(0, 1)),
+                ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), history.subList(0, 1)),
                 "test-model", Instant.EPOCH, ContextCheckpoint.Status.SUCCEEDED,
                 SUMMARY, null, null, 100);
         assertTrue(compactor.matches(splitExchange, messages));
@@ -265,21 +263,21 @@ final class ContextCompactorTest {
         ContextCheckpointCodec codec = new ContextCheckpointCodec();
 
         assertEquals(checkpoint, codec.decode(codec.encode(checkpoint)));
-        JsonObject encoded = JsonParser.parseString(codec.encode(checkpoint)).getAsJsonObject();
+        JsonObject encoded = dev.openallay.json.JsonTrees.parse(codec.encode(checkpoint)).getAsJsonObject();
         assertEquals(java.util.Set.of(
                 "checkpointId", "sourceFromIndex", "sourceToIndexExclusive", "sourceHash",
                 "modelIdentifier", "createdAt", "status", "summary", "failureCode",
-                "failureMessage", "estimatedProjectionTokens"), encoded.keySet());
-        JsonObject unknown = encoded.deepCopy();
+                "failureMessage", "estimatedProjectionTokens"), dev.openallay.json.JsonTrees.keys(encoded));
+        JsonObject unknown = dev.openallay.json.JsonTrees.copy(encoded);
         unknown.addProperty("unknown", true);
         assertThrows(IllegalArgumentException.class, () -> codec.decode(unknown.toString()));
-        JsonObject missing = encoded.deepCopy();
+        JsonObject missing = dev.openallay.json.JsonTrees.copy(encoded);
         missing.remove("sourceHash");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(missing.toString()));
-        JsonObject corruptedHash = encoded.deepCopy();
+        JsonObject corruptedHash = dev.openallay.json.JsonTrees.copy(encoded);
         corruptedHash.addProperty("sourceHash", "not-a-source-hash");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(corruptedHash.toString()));
-        JsonObject wrongType = encoded.deepCopy();
+        JsonObject wrongType = dev.openallay.json.JsonTrees.copy(encoded);
         wrongType.addProperty("sourceFromIndex", "0");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(wrongType.toString()));
     }
@@ -309,7 +307,7 @@ final class ContextCompactorTest {
             return rawSummary;
         };
         ContextCompactor compactor = new ContextCompactor(
-                model, new Gson(), new Utf8ContextTokenEstimator(), new ContextBudget(1_200, 100),
+                model, dev.openallay.json.EngineJson.create(), new Utf8ContextTokenEstimator(), new ContextBudget(1_200, 100),
                 "test-model", Clock.fixed(Instant.EPOCH, ZoneOffset.UTC));
         List<ModelMessage> messages = List.of(
                 ModelMessage.userText("a".repeat(500)),
@@ -398,7 +396,7 @@ final class ContextCompactorTest {
     private static ContextCompactor compactor(FakeModel model, ContextBudget budget) {
         return new ContextCompactor(
                 model,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 new Utf8ContextTokenEstimator(),
                 budget,
                 "test-model",

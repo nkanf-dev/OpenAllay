@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
@@ -59,14 +58,14 @@ final class JavascriptHostBindingTest {
                   resultClass: typeof value.getClass, prototype: Object.getPrototypeOf(native) === null,
                   value: JSON.parse(JSON.stringify(value)), same: native === require("test_native:methods") });
                 """);
-        var value = JsonParser.parseString(roundTrip.getAsString());
+        var value = dev.openallay.json.JsonTrees.parse(roundTrip.getAsString());
         assertEquals("undefined", value.getAsJsonObject().get("java").getAsString());
         assertEquals("undefined", value.getAsJsonObject().get("packages").getAsString());
         assertEquals("undefined", value.getAsJsonObject().get("getClass").getAsString());
         assertEquals("undefined", value.getAsJsonObject().get("resultClass").getAsString());
         assertTrue(value.getAsJsonObject().get("prototype").getAsBoolean());
         assertTrue(value.getAsJsonObject().get("same").getAsBoolean());
-        assertEquals(JsonParser.parseString("""
+        assertEquals(dev.openallay.json.JsonTrees.parse("""
                 {"groups":[{"values":[1,2]}],"empty":[]}
                 """),
                 value.getAsJsonObject().get("value"));

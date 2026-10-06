@@ -3,7 +3,6 @@ package dev.openallay.engine;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.ModelToolResultProjection;
 import dev.openallay.model.metadata.BuiltinModelCatalog;
 import dev.openallay.script.JavascriptModuleCatalog;
@@ -32,7 +31,7 @@ final class EngineClasspathIsolationTest {
 
     @Test
     void currentReflectedSkillOutputContractKeepsExactInstructions() {
-        JsonObject normalized = JsonParser.parseString("""
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{},"modelText":"retain these instructions exactly"}
                 """).getAsJsonObject();
         normalized.addProperty("outputType", LoadSkillTool.Output.class.getName());

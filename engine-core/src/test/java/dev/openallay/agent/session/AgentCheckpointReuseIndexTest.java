@@ -2,7 +2,6 @@ package dev.openallay.agent.session;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.agent.context.ContextSourceHash;
 import dev.openallay.model.ModelMessage;
@@ -48,7 +47,7 @@ final class AgentCheckpointReuseIndexTest {
         assertTrue(store.finish(old, List.of(ModelMessage.userText("derived memory"))));
         assertTrue(store.checkpoints(key).isEmpty());
         assertEquals(ContextCheckpoint.Status.SUCCEEDED, diagnostic.status());
-        assertEquals(ContextSourceHash.compute(new Gson(), source), diagnostic.sourceHash());
+        assertEquals(ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), source), diagnostic.sourceHash());
         AgentSessionStore.Lease successor = lease(store.reserve(key, UUID.randomUUID()));
         assertFalse(store.recordCheckpoint(old, checkpoint(source, true)));
         assertFalse(store.finish(old, source));
@@ -58,7 +57,7 @@ final class AgentCheckpointReuseIndexTest {
 
     private static ContextCheckpoint checkpoint(List<ModelMessage> source, boolean success) {
         return new ContextCheckpoint(UUID.randomUUID(), 0, source.size(),
-                ContextSourceHash.compute(new Gson(), source), "test", Instant.EPOCH,
+                ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), source), "test", Instant.EPOCH,
                 success ? ContextCheckpoint.Status.SUCCEEDED : ContextCheckpoint.Status.FAILED,
                 success ? SUMMARY : null, success ? null : "summary_malformed",
                 success ? null : "Actual failure", 100);

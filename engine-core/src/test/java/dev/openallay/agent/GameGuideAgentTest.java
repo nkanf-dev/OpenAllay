@@ -6,9 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.session.AgentSessionStore;
 import dev.openallay.agent.session.AgentSessionKey;
 import dev.openallay.agent.context.ContextBudget;
@@ -65,7 +63,7 @@ final class GameGuideAgentTest {
         var request = new AgentRequest(initial.requestId(), initial.actorId(), initial.sessionId(),
                 initial.userInput(), initial.systemPrompt(), initial.context(), initial.stream(), ref -> new byte[4]);
         var sessions = new AgentSessionStore();
-        assertTrue(new GameGuideAgent(model, visual, sessions, new Gson()).ask(request, ignored -> {}).join().successful());
+        assertTrue(new GameGuideAgent(model, visual, sessions, dev.openallay.json.EngineJson.create()).ask(request, ignored -> {}).join().successful());
         assertEquals(2, model.requests.size());
         var result = (ModelContent.ToolResult) model.requests.getLast().messages().getLast().content().getFirst();
         assertEquals(List.of(image), result.images());
@@ -87,7 +85,7 @@ final class GameGuideAgentTest {
         AgentSessionStore store = new AgentSessionStore();
         AgentRequest request = request(UUID.randomUUID());
         List<AgentEvent> events = new ArrayList<>();
-        CompletableFuture<AgentResult> running = new GameGuideAgent(model, tools, store, new Gson())
+        CompletableFuture<AgentResult> running = new GameGuideAgent(model, tools, store, dev.openallay.json.EngineJson.create())
                 .ask(request, events::add);
         UUID instructionId = UUID.randomUUID();
         ModelMessage instruction = ModelMessage.userText("Keep the original goal, but use the north side");
@@ -122,7 +120,7 @@ final class GameGuideAgentTest {
         AgentSessionStore store = new AgentSessionStore();
         AgentRequest request = request(UUID.randomUUID());
         List<AgentEvent> events = new ArrayList<>();
-        CompletableFuture<AgentResult> running = new GameGuideAgent(model, new FakeTools(), store, new Gson())
+        CompletableFuture<AgentResult> running = new GameGuideAgent(model, new FakeTools(), store, dev.openallay.json.EngineJson.create())
                 .ask(request, events::add);
         UUID id = UUID.randomUUID();
         store.steer(request.sessionKey(), request.requestId(), id, ModelMessage.userText("arrived during final stream"));
@@ -157,7 +155,7 @@ final class GameGuideAgentTest {
                 ToolInvocationContext.developmentConsole("image-steer"), true, images);
         ModelMessage supplement = ModelMessage.userInput("Inspect this image too", List.of(reference));
         List<AgentEvent> events = new ArrayList<>();
-        AgentResult result = new GameGuideAgent(model, new FakeTools(), store, new Gson())
+        AgentResult result = new GameGuideAgent(model, new FakeTools(), store, dev.openallay.json.EngineJson.create())
                 .ask(request, event -> {
                     events.add(event);
                     if (event.equals(new AgentEvent.StateChanged(AgentState.PREPARING))) {
@@ -185,7 +183,7 @@ final class GameGuideAgentTest {
         AgentRequest request = request(UUID.randomUUID());
         UUID id = UUID.randomUUID();
         List<AgentEvent> events = new ArrayList<>();
-        assertTrue(new GameGuideAgent(model, new FakeTools(), store, new Gson()).ask(request, event -> {
+        assertTrue(new GameGuideAgent(model, new FakeTools(), store, dev.openallay.json.EngineJson.create()).ask(request, event -> {
             events.add(event);
             if (event.equals(new AgentEvent.StateChanged(AgentState.PREPARING))) {
                 store.steer(request.sessionKey(), request.requestId(), id,
@@ -207,7 +205,7 @@ final class GameGuideAgentTest {
         List<AgentEvent> events = new ArrayList<>();
         AgentRequest request = request(UUID.randomUUID());
         GameGuideAgent agent = new GameGuideAgent(model, new FakeTools(), new AgentSessionStore(),
-                new Gson(), null, (observed, tokens) -> {
+                dev.openallay.json.EngineJson.create(), null, (observed, tokens) -> {
                     assertEquals(request.requestId(), observed.requestId());
                     estimates.add(tokens);
                 });
@@ -222,7 +220,7 @@ final class GameGuideAgentTest {
         assertFalse(events.stream().anyMatch(AgentEvent.ContextCompacted.class::isInstance));
         QueueModelClient other = new QueueModelClient();
         other.enqueue(CompletableFuture.completedFuture(textTurn("still works")));
-        assertTrue(new GameGuideAgent(other, new FakeTools(), new AgentSessionStore(), new Gson(), null,
+        assertTrue(new GameGuideAgent(other, new FakeTools(), new AgentSessionStore(), dev.openallay.json.EngineJson.create(), null,
                 (observed, tokens) -> { throw new IllegalStateException("observer unavailable"); })
                 .ask(request(UUID.randomUUID()), ignored -> {}).join().successful());
     }
@@ -234,7 +232,7 @@ final class GameGuideAgentTest {
         model.enqueue(CompletableFuture.completedFuture(textTurn("铁锭事实是 42。")));
         FakeTools tools = new FakeTools();
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create());
         List<AgentEvent> events = new ArrayList<>();
 
         AgentResult result = agent.ask(request(UUID.randomUUID()), events::add).join();
@@ -286,7 +284,7 @@ final class GameGuideAgentTest {
         List<AgentEvent> events = new ArrayList<>();
 
         CompletableFuture<AgentResult> pending = new GameGuideAgent(
-                        model, tools, sessions, new Gson())
+                        model, tools, sessions, dev.openallay.json.EngineJson.create())
                 .ask(request, events::add);
 
         assertNotNull(tools.cancellation);
@@ -327,7 +325,7 @@ final class GameGuideAgentTest {
         List<AgentEvent> events = new ArrayList<>();
 
         CompletableFuture<AgentResult> pending = new GameGuideAgent(
-                        model, tools, sessions, new Gson())
+                        model, tools, sessions, dev.openallay.json.EngineJson.create())
                 .ask(request, events::add);
 
         assertNotNull(tools.cancellation);
@@ -366,7 +364,7 @@ final class GameGuideAgentTest {
         List<AgentEvent> events = new ArrayList<>();
 
         AgentResult result = new GameGuideAgent(
-                        model, new FakeTools(), new AgentSessionStore(), new Gson())
+                        model, new FakeTools(), new AgentSessionStore(), dev.openallay.json.EngineJson.create())
                 .ask(request(UUID.randomUUID()), events::add)
                 .join();
 
@@ -398,7 +396,7 @@ final class GameGuideAgentTest {
                         model,
                         new CompositeAgentToolExecutor(List.of(new FakeTools())),
                         new AgentSessionStore(),
-                        new Gson())
+                        dev.openallay.json.EngineJson.create())
                 .ask(request(UUID.randomUUID()), events::add)
                 .join();
 
@@ -421,7 +419,7 @@ final class GameGuideAgentTest {
         model.enqueue(CompletableFuture.completedFuture(textTurn("The lookup failed.")));
 
         AgentResult result = new GameGuideAgent(
-                        model, new FailingTools(), new AgentSessionStore(), new Gson())
+                        model, new FailingTools(), new AgentSessionStore(), dev.openallay.json.EngineJson.create())
                 .ask(request(UUID.randomUUID()), ignored -> {})
                 .join();
 
@@ -440,7 +438,7 @@ final class GameGuideAgentTest {
         model.enqueue(CompletableFuture.completedFuture(textTurn("done")));
         PendingTools tools = new PendingTools();
         GameGuideAgent agent = new GameGuideAgent(
-                model, tools, new AgentSessionStore(), new Gson());
+                model, tools, new AgentSessionStore(), dev.openallay.json.EngineJson.create());
 
         CompletableFuture<AgentResult> result =
                 agent.ask(request(UUID.randomUUID()), ignored -> {});
@@ -467,7 +465,7 @@ final class GameGuideAgentTest {
         CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
         model.enqueue(pending);
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, new FakeTools(), sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, new FakeTools(), sessions, dev.openallay.json.EngineJson.create());
         UUID actor = UUID.randomUUID();
         List<AgentEvent> firstEvents = new ArrayList<>();
         CompletableFuture<AgentResult> first = agent.ask(request(actor), firstEvents::add);
@@ -485,7 +483,7 @@ final class GameGuideAgentTest {
     void allowsDifferentSessionsForTheSameActorToRunConcurrently() {
         ConcurrentModelClient model = new ConcurrentModelClient();
         AgentSessionStore sessions = new AgentSessionStore();
-        GameGuideAgent agent = new GameGuideAgent(model, new FakeTools(), sessions, new Gson());
+        GameGuideAgent agent = new GameGuideAgent(model, new FakeTools(), sessions, dev.openallay.json.EngineJson.create());
         UUID actor = UUID.randomUUID();
 
         CompletableFuture<AgentResult> first =
@@ -510,10 +508,10 @@ final class GameGuideAgentTest {
         AgentSessionStore sessions = new AgentSessionStore();
         UUID actor = UUID.randomUUID();
 
-        new GameGuideAgent(firstModel, new FakeTools(), sessions, new Gson())
+        new GameGuideAgent(firstModel, new FakeTools(), sessions, dev.openallay.json.EngineJson.create())
                 .ask(request(actor), ignored -> {})
                 .join();
-        new GameGuideAgent(secondModel, new FakeTools(), sessions, new Gson())
+        new GameGuideAgent(secondModel, new FakeTools(), sessions, dev.openallay.json.EngineJson.create())
                 .ask(request(actor), ignored -> {})
                 .join();
 
@@ -534,7 +532,7 @@ final class GameGuideAgentTest {
         FakeTools tools = new FakeTools();
         List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(
-                        model, tools, new AgentSessionStore(), new Gson())
+                        model, tools, new AgentSessionStore(), dev.openallay.json.EngineJson.create())
                 .ask(request(UUID.randomUUID()), events::add)
                 .join();
 
@@ -613,8 +611,8 @@ final class GameGuideAgentTest {
         registry.register("test", List.of(counted));
         List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(model,
-                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
-                new AgentSessionStore(), new Gson()).ask(request(UUID.randomUUID()), events::add).join();
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()),
+                new AgentSessionStore(), dev.openallay.json.EngineJson.create()).ask(request(UUID.randomUUID()), events::add).join();
         assertTrue(result.successful());
         assertEquals(3, executions.get());
         assertEquals(3, observations.get(), "each equal source call must actually reach live observation");
@@ -660,8 +658,8 @@ final class GameGuideAgentTest {
         registry.register("test", List.of(javascript));
         List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(model,
-                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
-                new AgentSessionStore(), new Gson()).ask(request(UUID.randomUUID()), events::add).join();
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()),
+                new AgentSessionStore(), dev.openallay.json.EngineJson.create()).ask(request(UUID.randomUUID()), events::add).join();
         assertTrue(result.successful());
         assertEquals(1, captures.get());
         List<AgentEvent.ToolCompleted> completed = events.stream().filter(AgentEvent.ToolCompleted.class::isInstance)
@@ -698,8 +696,8 @@ final class GameGuideAgentTest {
                 "Read the player position and item count.", AgentSystemPrompt.compose(""), context, false);
         List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(model,
-                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
-                new AgentSessionStore(), new Gson()).ask(request, events::add).join();
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()),
+                new AgentSessionStore(), dev.openallay.json.EngineJson.create()).ask(request, events::add).join();
         assertTrue(result.successful());
         assertEquals(1, captures.get());
         assertEquals(2, model.requests.size());
@@ -738,8 +736,8 @@ final class GameGuideAgentTest {
                 "Count the captured items.", AgentSystemPrompt.compose(""), context, false);
         List<AgentEvent> events = new ArrayList<>();
         AgentResult result = new GameGuideAgent(model,
-                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, new Gson()),
-                new AgentSessionStore(), new Gson()).ask(request, events::add).join();
+                new dev.openallay.agent.tool.LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()),
+                new AgentSessionStore(), dev.openallay.json.EngineJson.create()).ask(request, events::add).join();
         assertTrue(result.successful());
         ModelContent.ToolResult failure = (ModelContent.ToolResult) model.requests.get(1)
                 .messages().getLast().content().getFirst();
@@ -790,7 +788,7 @@ final class GameGuideAgentTest {
         FakeTools tools = new FakeTools();
 
         AgentResult result = new GameGuideAgent(
-                        model, tools, new AgentSessionStore(), new Gson())
+                        model, tools, new AgentSessionStore(), dev.openallay.json.EngineJson.create())
                 .ask(request(UUID.randomUUID()), ignored -> {})
                 .join();
 
@@ -819,7 +817,7 @@ final class GameGuideAgentTest {
         List<AgentEvent> events = new ArrayList<>();
 
         AgentResult result = new GameGuideAgent(
-                        model, new FakeTools(), sessions, new Gson(), compactor(model))
+                        model, new FakeTools(), sessions, dev.openallay.json.EngineJson.create(), compactor(model))
                 .ask(request(actor), events::add)
                 .join();
 
@@ -849,7 +847,7 @@ final class GameGuideAgentTest {
         malformed.enqueue(CompletableFuture.completedFuture(textTurn("not-json")));
 
         AgentResult failed = new GameGuideAgent(
-                        malformed, new FakeTools(), failedSessions, new Gson(), compactor(malformed))
+                        malformed, new FakeTools(), failedSessions, dev.openallay.json.EngineJson.create(), compactor(malformed))
                 .ask(request(actor), ignored -> {})
                 .join();
 
@@ -863,7 +861,7 @@ final class GameGuideAgentTest {
         CompletableFuture<ModelTurn> pending = new CompletableFuture<>();
         pendingModel.enqueue(pending);
         CompletableFuture<AgentResult> running = new GameGuideAgent(
-                        pendingModel, new FakeTools(), cancelledSessions, new Gson(), compactor(pendingModel))
+                        pendingModel, new FakeTools(), cancelledSessions, dev.openallay.json.EngineJson.create(), compactor(pendingModel))
                 .ask(request(actor), ignored -> {});
         assertTrue(cancelledSessions.cancel(key));
 
@@ -878,7 +876,7 @@ final class GameGuideAgentTest {
         model.enqueue(CompletableFuture.completedFuture(toolTurn("call_large", 42)));
         ContextCompactor smallBudget = new ContextCompactor(
                 model,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 new Utf8ContextTokenEstimator(),
                 new ContextBudget(600, 100),
                 "test-model",
@@ -888,7 +886,7 @@ final class GameGuideAgentTest {
                         model,
                         new LargeResultTools(),
                         new AgentSessionStore(),
-                        new Gson(),
+                        dev.openallay.json.EngineJson.create(),
                         smallBudget)
                 .ask(request(UUID.randomUUID()), ignored -> {})
                 .join();
@@ -900,7 +898,7 @@ final class GameGuideAgentTest {
 
     private static ContextCompactor compactor(ModelClient model) {
         return new ContextCompactor(
-                model, new Gson(), new Utf8ContextTokenEstimator(),
+                model, dev.openallay.json.EngineJson.create(), new Utf8ContextTokenEstimator(),
                 new ContextBudget(1_200, 100),
                 "test-model", Clock.systemUTC());
     }
@@ -1028,7 +1026,7 @@ final class GameGuideAgentTest {
             return List.of(new ModelToolDefinition(
                     "test__fact",
                     "Return a fact",
-                    JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject()));
+                    dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject()));
         }
 
         @Override
@@ -1150,7 +1148,7 @@ final class GameGuideAgentTest {
             return List.of(new ModelToolDefinition(
                     "test__fact",
                     "Return a fact",
-                    JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject()));
+                    dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject()));
         }
 
         @Override
@@ -1183,7 +1181,7 @@ final class GameGuideAgentTest {
         public List<ModelToolDefinition> definitions() {
             return List.of(new ModelToolDefinition(
                     "test__fact", "Return a fact",
-                    JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject()));
+                    dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject()));
         }
 
         @Override public Set<ContextCapability> requiredContext() { return Set.of(); }

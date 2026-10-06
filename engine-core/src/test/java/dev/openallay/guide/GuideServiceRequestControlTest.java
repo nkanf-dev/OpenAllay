@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -49,7 +48,7 @@ final class GuideServiceRequestControlTest {
         Endpoint endpoint = new Endpoint();
         GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
                 (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                ownerQueue::addLast, Clock.systemUTC(), new Gson());
+                ownerQueue::addLast, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         CompletableFuture<ToolResult<UUID>> asking = service.ask("original goal");
         runOwner(ownerQueue);
         UUID first = success(asking.join());
@@ -273,7 +272,7 @@ final class GuideServiceRequestControlTest {
         ArrayDeque<Runnable> queue = new ArrayDeque<>(); Endpoint endpoint = new Endpoint();
         GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
                 (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                queue::addLast, Clock.systemUTC(), new Gson());
+                queue::addLast, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         UUID owner = service.presentationSessionOwner("main").orElseThrow();
         var selection = service.selectSession("other"); runOwner(queue); success(selection.join());
         var delivered = service.followUp("main", owner, "/compact spoken literal", () -> true);
@@ -315,7 +314,7 @@ final class GuideServiceRequestControlTest {
         UUID owner = service.presentationSessionOwner("main").orElseThrow();
         GuideService unavailable = new GuideService(UUID.randomUUID(), null, offline(),
                 (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.systemUTC(), new Gson());
+                Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         UUID unavailableOwner = unavailable.presentationSessionOwner("main").orElseThrow();
         ToolResult<GuideService.InputReceipt> rejected = unavailable.followUp("main", unavailableOwner, "no model", () -> true).join();
         assertInstanceOf(ToolResult.Failure.class, rejected); assertTrue(endpoint.calls.isEmpty());
@@ -330,7 +329,7 @@ final class GuideServiceRequestControlTest {
             ArrayDeque<Runnable> queue = new ArrayDeque<>(); Endpoint endpoint = new Endpoint();
             GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
                     (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                    queue::addLast, Clock.systemUTC(), new Gson());
+                    queue::addLast, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
             UUID owner = service.presentationSessionOwner("main").orElseThrow();
             java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean(true);
             var delivered = service.followUp("main", owner, "cancel before admission", allowed::get);
@@ -348,7 +347,7 @@ final class GuideServiceRequestControlTest {
         ArrayDeque<Runnable> queue = new ArrayDeque<>(); Endpoint endpoint = new Endpoint();
         GuideService service = new GuideService(UUID.randomUUID(), endpoint, offline(),
                 (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                queue::addLast, Clock.systemUTC(), new Gson());
+                queue::addLast, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         UUID owner = service.presentationSessionOwner("main").orElseThrow();
         var delivered = service.followUp("main", owner, "stale after clear", () -> true);
         var cleared = service.clearSelectedSession();
@@ -394,7 +393,7 @@ final class GuideServiceRequestControlTest {
     private static GuideService imageService(Endpoint endpoint, PinStore store, Owner owner) {
         return new GuideService(UUID.randomUUID(), endpoint, offline(),
                 (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                owner::execute, Clock.systemUTC(), new Gson(), null, null, store);
+                owner::execute, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), null, null, store);
     }
     private static final class Owner {
         private final java.util.concurrent.ConcurrentLinkedQueue<Runnable> queued = new java.util.concurrent.ConcurrentLinkedQueue<>();
@@ -436,7 +435,7 @@ final class GuideServiceRequestControlTest {
     private static GuideService service(Endpoint endpoint) {
         return new GuideService(UUID.randomUUID(), endpoint, offline(),
                 (required, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.systemUTC(), new Gson());
+                Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
     }
 
     private static void runOwner(ArrayDeque<Runnable> queue) {

@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideToolActivity;
 import dev.openallay.guide.GuideToolMessage;
 import dev.openallay.guide.GuideToolStatus;
@@ -71,7 +70,7 @@ final class GuideToolDetailPresenterTest {
 
     @Test
     void javascriptResultsUseBoundedStructuredPlayerPreview() {
-        var arguments = JsonParser.parseString("""
+        var arguments = dev.openallay.json.JsonTrees.parse("""
                 {
                   "source":"return mc.items.filter(item => item.id.includes('sword'));",
                   "title":"比较武器",
@@ -85,7 +84,7 @@ final class GuideToolDetailPresenterTest {
                 "openallay:run_javascript",
                 GuideToolStatus.SUCCEEDED,
                 arguments,
-                JsonParser.parseString("""
+                dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{
                   "handle":"r_secret","resultType":"array","cardinality":9,
                   "fields":["damage","itemId"],
@@ -223,7 +222,7 @@ final class GuideToolDetailPresenterTest {
     @Test
     void fullRawValueSurvivesBoundedPlayerPreviewWithoutChangingOriginal() {
         String fullValue = "player result ".repeat(40) + "🧱";
-        var normalized = JsonParser.parseString("""
+        var normalized = dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"string","cardinality":1,
                   "viewKind":"SCALAR","complete":true}}
                 """).getAsJsonObject();
@@ -307,7 +306,7 @@ final class GuideToolDetailPresenterTest {
                 0,
                 toolId,
                 GuideToolStatus.SUCCEEDED,
-                JsonParser.parseString(json).getAsJsonObject(),
+                dev.openallay.json.JsonTrees.parse(json).getAsJsonObject(),
                 List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                 List.of());
     }

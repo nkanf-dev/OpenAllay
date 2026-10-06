@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.GameGuideAgent;
@@ -57,7 +56,7 @@ final class LiveModelAcceptanceTest {
                 Integer.parseInt(env.getOrDefault("OPENALLAY_MAX_OUTPUT_TOKENS", "4096")),
                 Duration.ofSeconds(30),
                 Duration.ofMinutes(5));
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         ModelClient raw = switch (protocol) {
             case ANTHROPIC_MESSAGES -> new AnthropicMessagesClient(config, gson);
             case OPENAI_CHAT -> new OpenAiChatClient(config, gson);
@@ -112,7 +111,7 @@ final class LiveModelAcceptanceTest {
             return List.of(new ModelToolDefinition(
                     "test_fact",
                     "Return the authoritative test fact. Call this before answering.",
-                    JsonParser.parseString("{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}")
+                    dev.openallay.json.JsonTrees.parse("{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}")
                             .getAsJsonObject()));
         }
 

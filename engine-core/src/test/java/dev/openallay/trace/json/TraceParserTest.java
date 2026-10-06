@@ -19,7 +19,7 @@ final class TraceParserTest {
         ToolResult.Success<AgentTrace> result = success(validTrace());
 
         assertEquals(Set.of("id", "userMessage", "requiredContext", "steps"),
-                new com.google.gson.Gson().toJsonTree(result.value()).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.EngineJson.create().toJsonTree(result.value()).getAsJsonObject()));
         assertEquals("iron-recipe", result.value().id());
         assertEquals(Set.of(ContextCapability.RECIPES), result.value().requiredContext());
         assertEquals("test:fact", ((ToolCallStep) result.value().steps().getFirst()).tool());

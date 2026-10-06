@@ -3,10 +3,8 @@ package dev.openallay.model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.model.anthropic.AnthropicJsonCodec;
 import dev.openallay.model.config.ModelConfig;
@@ -21,7 +19,7 @@ import org.junit.jupiter.api.Test;
 final class ModelToolResultProjectionTest {
     @Test
     void genericCanonicalResultBecomesCliTextWithoutLosingFields() {
-        JsonObject normalized = JsonParser.parseString("""
+        JsonObject normalized = dev.openallay.json.JsonTrees.parse("""
                 {
                   "status": "success",
                   "outputType": "example.Skill",
@@ -61,16 +59,16 @@ final class ModelToolResultProjectionTest {
         ModelRequest request =
                 new ModelRequest("system", List.of(result), List.of(), false);
 
-        var openai = JsonParser.parseString(
-                        new OpenAiJsonCodec(new Gson()).requestBody(config(), request))
+        var openai = dev.openallay.json.JsonTrees.parse(
+                        new OpenAiJsonCodec(dev.openallay.json.EngineJson.create()).requestBody(config(), request))
                 .getAsJsonObject();
         String openaiContent = openai.getAsJsonArray("messages")
                 .get(1).getAsJsonObject().get("content").getAsString();
         assertEquals("result: r_1\nid: example:sword", openaiContent);
         assertFalse(openaiContent.startsWith("\""));
 
-        var anthropic = JsonParser.parseString(
-                        new AnthropicJsonCodec(new Gson()).requestBody(config(), request))
+        var anthropic = dev.openallay.json.JsonTrees.parse(
+                        new AnthropicJsonCodec(dev.openallay.json.EngineJson.create()).requestBody(config(), request))
                 .getAsJsonObject();
         String anthropicContent = anthropic.getAsJsonArray("messages")
                 .get(0).getAsJsonObject().getAsJsonArray("content")

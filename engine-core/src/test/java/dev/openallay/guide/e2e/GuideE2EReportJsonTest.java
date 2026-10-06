@@ -4,11 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideRequestStatus;
 import dev.openallay.guide.GuideTopology;
-import dev.openallay.json.EngineJson;
 import dev.openallay.testing.GroundedTestFixtures;
 import java.util.List;
 import java.util.Map;
@@ -47,9 +44,9 @@ final class GuideE2EReportJsonTest {
                 Map.of("total", 10L),
                 Map.of("result", "abc"));
 
-        String encoded = new GuideE2EReportJson(new Gson()).encode(report);
+        String encoded = new GuideE2EReportJson(dev.openallay.json.EngineJson.create()).encode(report);
 
-        var json = JsonParser.parseString(encoded).getAsJsonObject();
+        var json = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         assertEquals("client_local_" + playerValue, json.get("scenario").getAsString());
         assertEquals("fabric", json.get("loader").getAsString());
         assertEquals("26.2", json.get("gameVersion").getAsString());
@@ -65,9 +62,9 @@ final class GuideE2EReportJsonTest {
                 .get(0).getAsJsonObject().get("toolId").getAsString());
         assertEquals("SUCCEEDED", json.getAsJsonArray("toolProbes")
                 .get(0).getAsJsonObject().get("status").getAsString());
-        assertEquals(report, EngineJson.withInstant(new Gson()).fromJson(encoded, GuideE2EReport.class));
+        assertEquals(report, dev.openallay.json.EngineJson.create().fromJson(encoded, GuideE2EReport.class));
         var evidenceTime = report.evidence().getFirst().capturedAt();
-        assertEquals(JsonParser.parseString("{\"seconds\":" + evidenceTime.getEpochSecond()
+        assertEquals(dev.openallay.json.JsonTrees.parse("{\"seconds\":" + evidenceTime.getEpochSecond()
                 + ",\"nanos\":" + evidenceTime.getNano() + "}"),
                 json.getAsJsonArray("evidence").get(0).getAsJsonObject().get("capturedAt"));
         assertTrue(encoded.contains("minecraft:recipe_manager"));

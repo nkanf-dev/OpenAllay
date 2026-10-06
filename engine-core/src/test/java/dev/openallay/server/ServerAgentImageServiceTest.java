@@ -509,7 +509,7 @@ final class ServerAgentImageServiceTest {
     }
 
     private static final class Fixture {
-        private final Gson gson = new Gson();
+        private final Gson gson = dev.openallay.json.EngineJson.create();
         private final AgentSessionStore sessions = new AgentSessionStore();
         private final List<ServerAgentEventPayload> events = new CopyOnWriteArrayList<>();
         private final Map<UUID, CompletableFuture<Void>> releases = new ConcurrentHashMap<>();

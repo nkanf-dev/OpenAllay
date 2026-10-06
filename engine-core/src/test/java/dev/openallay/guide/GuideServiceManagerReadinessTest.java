@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -36,7 +35,7 @@ final class GuideServiceManagerReadinessTest {
                     public boolean ask(UUID id, String session, String question, Consumer<AgentEvent> events) { return false; }
                     public boolean cancel(UUID id) { return true; }
                     public void disconnect() {}
-                }, contexts, owner::execute, Clock.systemUTC(), new Gson());
+                }, contexts, owner::execute, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
         GuideService firstService = manager.forActor(actor);
         var askingFirst = firstService.ask("old world task"); owner.runAll(); UUID first = success(askingFirst.join());
         assertEquals(1, contexts.captures); assertEquals(List.of(first), endpoint.started);

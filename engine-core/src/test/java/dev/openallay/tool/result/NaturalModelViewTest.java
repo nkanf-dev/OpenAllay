@@ -7,13 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
 final class NaturalModelViewTest {
     @Test
     void retainsEveryScalarFindingIncludingMixedTypesAndNestedGroups() {
-        var canonical = JsonParser.parseString("""
+        var canonical = dev.openallay.json.JsonTrees.parse("""
                 {"ids":["a","b","c"],"counts":[1,2,3],"mixed":[null,true,"3",3],
                  "groups":{"first":[1,2],"second":["x","y"]}}
                 """).getAsJsonObject();
@@ -28,7 +27,7 @@ final class NaturalModelViewTest {
 
     @Test
     void samplesContainerRowsAndRetainsScalarFindingsInsideTheRealSample() {
-        var canonical = JsonParser.parseString("""
+        var canonical = dev.openallay.json.JsonTrees.parse("""
                 {"rows":[{"id":"a","counts":[1,2]},{"id":"b","counts":[3,4]}],
                  "answerIds":["a","b"],"total":2}
                 """).getAsJsonObject();
@@ -36,9 +35,9 @@ final class NaturalModelViewTest {
         var view = NaturalModelView.artifact(canonical);
         assertFalse(view.complete());
         assertEquals(1, view.omittedRows());
-        assertEquals(JsonParser.parseString("[\"a\",\"b\"]"),
+        assertEquals(dev.openallay.json.JsonTrees.parse("[\"a\",\"b\"]"),
                 view.value().getAsJsonObject().get("answerIds"));
-        assertEquals(JsonParser.parseString("[1,2]"), view.value().getAsJsonObject()
+        assertEquals(dev.openallay.json.JsonTrees.parse("[1,2]"), view.value().getAsJsonObject()
                 .getAsJsonArray("rows").get(0).getAsJsonObject().get("counts"));
         assertEquals(exact, canonical.toString());
     }
@@ -63,7 +62,7 @@ final class NaturalModelViewTest {
     @Test
     void emptyAndSingleContainerArraysAreCompleteWhenTheirNestedValuesAreComplete() {
         for (String value : new String[] {"[]", "[{}]", "[{\"counts\":[1,2]}]"}) {
-            var canonical = JsonParser.parseString(value);
+            var canonical = dev.openallay.json.JsonTrees.parse(value);
             var chosen = NaturalModelView.artifact(canonical);
             assertTrue(chosen.complete());
             assertEquals(0, chosen.omittedRows());

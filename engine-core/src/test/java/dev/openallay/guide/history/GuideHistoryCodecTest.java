@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.guide.GuideModelSelection;
 import dev.openallay.guide.GuideSource;
 import dev.openallay.guide.GuideTimelineEntry;
@@ -37,8 +36,8 @@ final class GuideHistoryCodecTest {
 
         assertEquals(first, codec.decodeEntry(codec.encodeEntry(first)));
         assertEquals(timeline, codec.decodeTimeline(codec.encodeTimeline(timeline)));
-        JsonObject encoded = JsonParser.parseString(codec.encodeEntry(first)).getAsJsonObject();
-        assertEquals(java.util.Set.of("type", "ordinal", "messageId", "text"), encoded.keySet());
+        JsonObject encoded = dev.openallay.json.JsonTrees.parse(codec.encodeEntry(first)).getAsJsonObject();
+        assertEquals(java.util.Set.of("type", "ordinal", "messageId", "text"), dev.openallay.json.JsonTrees.keys(encoded));
         assertEquals(first.messageId().toString(), encoded.get("messageId").getAsString());
         assertEquals(first.text(), encoded.get("text").getAsString());
     }
@@ -48,24 +47,24 @@ final class GuideHistoryCodecTest {
         GuideHistoryCodec codec = new GuideHistoryCodec();
         String encoded = codec.encodeEntry(new GuideTimelineEntry.User(0, ACTOR, "Keep this text"));
         for (String field : List.of("type", "ordinal", "messageId", "text")) {
-            JsonObject missing = JsonParser.parseString(encoded).getAsJsonObject();
+            JsonObject missing = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
             missing.remove(field);
             assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(missing.toString()), field);
         }
         for (String field : List.of("queued", "version", "content")) {
-            JsonObject extra = JsonParser.parseString(encoded).getAsJsonObject();
+            JsonObject extra = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
             extra.addProperty(field, true);
             assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(extra.toString()), field);
         }
         for (String invalid : List.of("null", "true", "7", "[]", "{}", "\"not-a-uuid\"")) {
-            JsonObject malformed = JsonParser.parseString(encoded).getAsJsonObject();
-            malformed.add("messageId", JsonParser.parseString(invalid));
+            JsonObject malformed = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
+            malformed.add("messageId", dev.openallay.json.JsonTrees.parse(invalid));
             assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformed.toString()), invalid);
         }
-        JsonObject malformedText = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject malformedText = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         malformedText.addProperty("text", false);
         assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformedText.toString()));
-        JsonObject malformedOrdinal = JsonParser.parseString(encoded).getAsJsonObject();
+        JsonObject malformedOrdinal = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject();
         malformedOrdinal.addProperty("ordinal", 0.5);
         assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(malformedOrdinal.toString()));
         malformedOrdinal.addProperty("ordinal", -1);
@@ -124,10 +123,10 @@ final class GuideHistoryCodecTest {
         invocationArguments.addProperty(
                 "source", "return 'debug-source-must-not-persist';");
         invocationArguments.add(
-                "roots", JsonParser.parseString("[\"items\",\"recipes\"]"));
+                "roots", dev.openallay.json.JsonTrees.parse("[\"items\",\"recipes\"]"));
         invocationArguments.add(
-                "handles", JsonParser.parseString("[\"r_previous\"]"));
-        normalized.add("value", JsonParser.parseString(
+                "handles", dev.openallay.json.JsonTrees.parse("[\"r_previous\"]"));
+        normalized.add("value", dev.openallay.json.JsonTrees.parse(
                 "{\"modules\":[\"openallay:crafting\"]}"));
         GuideSource source = new GuideSource(
                 "openallay:get_recipe", GroundedTestFixtures.serverEvidence());
@@ -207,8 +206,8 @@ final class GuideHistoryCodecTest {
             assertNull(activity.normalized());
         }
         assertFalse(encoded.contains("private source"));
-        JsonObject stored = JsonParser.parseString(encoded).getAsJsonArray().get(0).getAsJsonObject();
-        assertEquals(java.util.Set.of("handles", "modules"), stored.getAsJsonObject("invocation").keySet());
+        JsonObject stored = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray().get(0).getAsJsonObject();
+        assertEquals(java.util.Set.of("handles", "modules"), dev.openallay.json.JsonTrees.keys(stored.getAsJsonObject("invocation")));
         assertFalse(stored.has("title"));
         assertFalse(stored.has("invocationArguments"));
     }
@@ -227,9 +226,9 @@ final class GuideHistoryCodecTest {
                 "legacy", 0, "openallay:run_javascript", GuideToolStatus.SUCCEEDED, null,
                 List.of(GuideToolMessage.of(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT, "Title", "Description")),
                 List.of()));
-        JsonObject corrupt = JsonParser.parseString(codec.encodeEntry(tool)).getAsJsonObject();
+        JsonObject corrupt = dev.openallay.json.JsonTrees.parse(codec.encodeEntry(tool)).getAsJsonObject();
         corrupt.getAsJsonArray("presentationMessages").get(0).getAsJsonObject()
-                .getAsJsonArray("arguments").set(0, JsonParser.parseString("7"));
+                .getAsJsonArray("arguments").set(0, dev.openallay.json.JsonTrees.parse("7"));
         assertThrows(IllegalArgumentException.class, () -> codec.decodeEntry(corrupt.toString()));
     }
 
@@ -242,11 +241,11 @@ final class GuideHistoryCodecTest {
 
         String encoded = codec.encodeSources(List.of(source));
         assertEquals(List.of(source), codec.decodeSources(encoded));
-        JsonObject serialized = JsonParser.parseString(encoded).getAsJsonArray()
+        JsonObject serialized = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray()
                 .get(0).getAsJsonObject();
         assertEquals(java.util.Set.of("toolId", "evidence", "lastCapturedAt"),
-                serialized.keySet());
-        JsonArray previousShape = JsonParser.parseString(encoded).getAsJsonArray();
+                dev.openallay.json.JsonTrees.keys(serialized));
+        JsonArray previousShape = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray();
         previousShape.get(0).getAsJsonObject().remove("lastCapturedAt");
         assertThrows(IllegalArgumentException.class,
                 () -> codec.decodeSources(previousShape.toString()));
@@ -260,13 +259,13 @@ final class GuideHistoryCodecTest {
         GuideHistoryCodec codec = new GuideHistoryCodec();
         String encoded = codec.encodeTimeline(List.of(
                 new GuideTimelineEntry.Assistant(0, "answer", false, List.of())));
-        JsonArray unknown = JsonParser.parseString(encoded).getAsJsonArray();
+        JsonArray unknown = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray();
         unknown.get(0).getAsJsonObject().addProperty("unknown", true);
 
-        JsonArray missing = JsonParser.parseString(encoded).getAsJsonArray();
+        JsonArray missing = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray();
         missing.get(0).getAsJsonObject().remove("text");
 
-        JsonArray fractional = JsonParser.parseString(encoded).getAsJsonArray();
+        JsonArray fractional = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray();
         fractional.get(0).getAsJsonObject().addProperty("ordinal", 0.5);
 
         assertThrows(IllegalArgumentException.class,
@@ -292,7 +291,7 @@ final class GuideHistoryCodecTest {
                         null,
                         List.of(GuideToolMessage.of(GuideToolMessage.Key.RESULT_COMPLETED)),
                         List.of()))));
-        JsonArray unknownKey = JsonParser.parseString(encoded).getAsJsonArray();
+        JsonArray unknownKey = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonArray();
         unknownKey.get(0).getAsJsonObject()
                 .getAsJsonArray("presentationMessages")
                 .get(0).getAsJsonObject()

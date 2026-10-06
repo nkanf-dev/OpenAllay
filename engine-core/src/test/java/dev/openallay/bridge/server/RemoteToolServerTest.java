@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.bridge.CorrelationRegistry;
 import dev.openallay.bridge.protocol.RemoteToolCallPayload;
 import dev.openallay.bridge.protocol.RemoteToolRequestClosePayload;
@@ -89,7 +88,7 @@ final class RemoteToolServerTest {
             assertEquals("undefined", preview.get("java").getAsString());
             assertEquals("undefined", preview.get("packages").getAsString());
             var sources = result.getAsJsonObject("value").getAsJsonArray("sources");
-            assertFalse(sources.isEmpty());
+            assertFalse((sources.size() == 0));
             assertTrue(dev.openallay.json.JsonReaders.elements(sources).stream().allMatch(source -> source.getAsJsonObject()
                     .getAsJsonObject("evidence").get("authority").getAsString().equals("SERVER_AUTHORITATIVE")));
             assertEquals(1, request.graphCaptures.get());
@@ -133,7 +132,7 @@ final class RemoteToolServerTest {
     private static final class JavascriptRequest {
         private final UUID actor = GroundedTestFixtures.PLAYER_ID;
         private final UUID correlation = UUID.randomUUID();
-        private final Gson gson = new Gson();
+        private final Gson gson = dev.openallay.json.EngineJson.create();
         private final AtomicInteger graphCaptures = new AtomicInteger();
         private final CompletableFuture<JsonObject> result = new CompletableFuture<>();
         private final ResultChunker.Reassembler reassembler = new ResultChunker.Reassembler();
@@ -169,7 +168,7 @@ final class RemoteToolServerTest {
                         assertEquals(actor, actorId);
                         assertEquals(correlation, chunk.correlationId());
                         reassembler.accept(chunk).ifPresent(json ->
-                                result.complete(JsonParser.parseString(json).getAsJsonObject()));
+                                result.complete(dev.openallay.json.JsonTrees.parse(json).getAsJsonObject()));
                     },
                     new CorrelationRegistry(),
                     gson,
@@ -209,7 +208,7 @@ final class RemoteToolServerTest {
                     },
                     (actorId, chunk) -> sent.add(chunk),
                     new CorrelationRegistry(),
-                    new Gson(),
+                    dev.openallay.json.EngineJson.create(),
                     128);
         }
 

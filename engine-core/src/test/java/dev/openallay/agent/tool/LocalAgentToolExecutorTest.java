@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.context.ContextCapability;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
@@ -38,8 +36,8 @@ final class LocalAgentToolExecutorTest {
                 return new ToolResult.Success<>(new VisualOutput(List.of(image), "captured"));
             }
         }));
-        var result = new LocalAgentToolExecutor(registry, new Gson()).execute("test:visual",
-                JsonParser.parseString("{\"value\":1}").getAsJsonObject(),
+        var result = new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()).execute("test:visual",
+                dev.openallay.json.JsonTrees.parse("{\"value\":1}").getAsJsonObject(),
                 ToolInvocationContext.developmentConsole("visual"), new CancellationSignal()).join();
         assertFalse(result.failure());
         assertEquals(List.of(image), result.images());
@@ -64,13 +62,13 @@ final class LocalAgentToolExecutorTest {
                 return new ToolResult.Success<>(new Output(input.value()));
             }
         }));
-        LocalAgentToolExecutor executor = new LocalAgentToolExecutor(registry, new Gson());
+        LocalAgentToolExecutor executor = new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create());
 
         assertEquals(Set.of(ContextCapability.RECIPES), executor.requiredContext());
         assertEquals("test__fact", executor.definitions().getFirst().name());
         AgentToolResult result = executor.execute(
                         "test__fact",
-                        JsonParser.parseString("{\"value\":42}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":42}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal())
                 .join();
@@ -79,7 +77,7 @@ final class LocalAgentToolExecutorTest {
 
         AgentToolResult canonicalAlias = executor.execute(
                         "test:fact",
-                        JsonParser.parseString("{\"value\":43}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":43}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal())
                 .join();
@@ -90,7 +88,7 @@ final class LocalAgentToolExecutorTest {
 
         AgentToolResult caseFoldedAlias = executor.execute(
                         "test__FACT",
-                        JsonParser.parseString("{\"value\":44}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":44}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal())
                 .join();
@@ -111,10 +109,10 @@ final class LocalAgentToolExecutorTest {
                 return new ToolResult.Success<>(new Output(input.value()));
             }
         }));
-        AgentToolResult result = new LocalAgentToolExecutor(registry, new Gson())
+        AgentToolResult result = new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create())
                 .execute(
                         "test__fact",
-                        JsonParser.parseString("{\"value\":{}}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":{}}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal())
                 .join();
@@ -141,13 +139,13 @@ final class LocalAgentToolExecutorTest {
         }));
         ToolRuntimeCatalog catalog = ToolRuntimeCatalog.from(
                 registry.registrations(), Set.of("test:fact"));
-        LocalAgentToolExecutor executor = new LocalAgentToolExecutor(catalog, new Gson());
+        LocalAgentToolExecutor executor = new LocalAgentToolExecutor(catalog, dev.openallay.json.EngineJson.create());
 
         assertTrue(executor.definitions().isEmpty());
         assertTrue(executor.requiredContext().isEmpty());
         AgentToolResult result = executor.execute(
                         "test__fact",
-                        JsonParser.parseString("{\"value\":42}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":42}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal())
                 .join();
@@ -158,7 +156,7 @@ final class LocalAgentToolExecutorTest {
 
         AgentToolResult canonicalAlias = executor.execute(
                         "test:fact",
-                        JsonParser.parseString("{\"value\":42}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":42}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal())
                 .join();
@@ -186,9 +184,9 @@ final class LocalAgentToolExecutorTest {
             }
         }));
         CompletableFuture<AgentToolResult> execution = new LocalAgentToolExecutor(
-                registry, new Gson()).execute(
+                registry, dev.openallay.json.EngineJson.create()).execute(
                         "test__async",
-                        JsonParser.parseString("{\"value\":7}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":7}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("test"),
                         new CancellationSignal());
 

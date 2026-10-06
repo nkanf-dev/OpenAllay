@@ -3,11 +3,9 @@ package dev.openallay.model.live;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import dev.openallay.model.CancellationSignal;
@@ -72,7 +70,7 @@ final class LiveModelContinuationDiagnosticTest {
             System.out.println("OPENALLAY_CONTINUATION_DIAGNOSTIC retainedRequest=true stream="
                     + request.stream() + " messageCount=" + request.messages().size()
                     + " toolDefinitionCount=" + request.tools().size());
-            ModelTurn turn = ProviderModelClients.create(profile.runtimeConfig(), new Gson())
+            ModelTurn turn = ProviderModelClients.create(profile.runtimeConfig(), dev.openallay.json.EngineJson.create())
                     .complete(request, event -> {
                         if (event instanceof ModelEvent.ResponseStarted) {
                             responseStarted.incrementAndGet();
@@ -129,14 +127,14 @@ final class LiveModelContinuationDiagnosticTest {
         }
         for (JsonElement encoded : messages.getAsJsonArray()) {
             if (!encoded.isJsonObject()
-                    || !encoded.getAsJsonObject().keySet().equals(Set.of("role", "content", "inputObservation"))) {
+                    || !dev.openallay.json.JsonTrees.keys(encoded.getAsJsonObject()).equals(Set.of("role", "content", "inputObservation"))) {
                 throw new IllegalArgumentException("retained message requires current role, content and nullable inputObservation fields");
             }
             dev.openallay.world.ClientObservationAnchorJson.decode(encoded.getAsJsonObject().get("inputObservation"));
         }
         JsonDeserializer<ModelContent> content = (json, type, context) -> {
             JsonObject block = json.getAsJsonObject();
-            Set<String> fields = block.keySet();
+            Set<String> fields = dev.openallay.json.JsonTrees.keys(block);
             if (fields.equals(Set.of("toolUseId", "value", "error", "images"))) {
                 return context.deserialize(block, ModelContent.ToolResult.class);
             }
@@ -151,13 +149,13 @@ final class LiveModelContinuationDiagnosticTest {
             }
             throw new IllegalArgumentException("unsupported retained content shape");
         };
-        Gson gson = new GsonBuilder().registerTypeAdapter(ModelContent.class, content).create();
+        Gson gson = dev.openallay.json.EngineJson.create(builder -> builder.registerTypeAdapter(ModelContent.class, content));
         RetainedRequest retained = gson.fromJson(payload, RetainedRequest.class);
         // The trace contains only model-facing fields, not the request-only image resolver.
         ModelRequest request = new ModelRequest(retained.systemPrompt(), retained.messages(),
                 retained.tools(), retained.stream(), retained.sessionKey(), retained.maxOutputTokens());
         // Require the exact current DTO shape, including every message and tool definition.
-        if (!new Gson().toJsonTree(retained).equals(payload)) {
+        if (!dev.openallay.json.EngineJson.create().toJsonTree(retained).equals(payload)) {
             throw new IllegalArgumentException("retained request did not round-trip exactly");
         }
         return request;

@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
-import dev.openallay.json.EngineJson;
 import dev.openallay.model.metadata.ModelMetadata;
 import dev.openallay.tool.ToolResult;
 import java.io.StringReader;
@@ -109,7 +107,7 @@ final class ModelProfilesConfigLoaderTest {
         assertEquals(256_000, fast.runtimeConfig().contextWindowTokens());
         assertEquals("super-secret", fast.runtimeConfig().apiKey().reveal());
         assertFalse(fast.toString().contains("super-secret"));
-        assertFalse(EngineJson.withInstant(new Gson()).toJson(fast.diagnosticView()).contains("super-secret"));
+        assertFalse(dev.openallay.json.EngineJson.create().toJson(fast.diagnosticView()).contains("super-secret"));
 
         ResolvedModelProfile local = loaded.profiles().get(1);
         assertFalse(local.available());

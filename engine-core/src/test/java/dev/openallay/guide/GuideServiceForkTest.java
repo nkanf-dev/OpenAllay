@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -75,7 +74,7 @@ final class GuideServiceForkTest {
         var reference = images.importImage(ACTOR, encoded.toByteArray());
         GuideService service = new GuideService(ACTOR, local, new Remote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), new Gson(), null, null, images);
+                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), dev.openallay.json.EngineJson.create(), null, null, images);
         UUID request = success(service.ask("historical picture").join());
         List<ModelMessage> original = List.of(ModelMessage.userInput("historical picture", List.of(reference)),
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("picture result"))));
@@ -103,7 +102,7 @@ final class GuideServiceForkTest {
         var reference = images.importImage(ACTOR, encoded.toByteArray());
         GuideService service = new GuideService(ACTOR, local, new Remote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), new Gson(), null, null, images);
+                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), dev.openallay.json.EngineJson.create(), null, null, images);
         UUID request = success(service.ask("historical picture").join());
         List<ModelMessage> original = List.of(ModelMessage.userText("historical picture"),
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
@@ -160,7 +159,7 @@ final class GuideServiceForkTest {
         };
         GuideService service = new GuideService(ACTOR, local, new Remote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), new Gson(), null, null, images);
+                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), dev.openallay.json.EngineJson.create(), null, null, images);
         UUID first = success(service.ask("captured source").join());
         List<ModelMessage> original = context("captured source", "actual source answer");
         local.complete(first, original, original);
@@ -218,14 +217,14 @@ final class GuideServiceForkTest {
         UUID request = success(service.ask("stopped diagnostics").join());
         List<ModelMessage> original = context("stopped diagnostics", "safe stopped answer");
         var initial = new dev.openallay.agent.context.ContextCheckpoint(UUID.randomUUID(), 0, original.size(),
-                dev.openallay.agent.context.ContextSourceHash.compute(new Gson(), original), "fork-model", NOW,
+                dev.openallay.agent.context.ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), original), "fork-model", NOW,
                 dev.openallay.agent.context.ContextCheckpoint.Status.SUCCEEDED, "initial diagnostic", null, null, 10);
         local.events.get(request).accept(new AgentEvent.ContextUpdated(original, original));
         local.events.get(request).accept(new AgentEvent.ContextCompacted(initial));
         service.cancel().join(); local.release(request);
         UUID successor = success(service.ask("successor diagnostics").join());
         var later = new dev.openallay.agent.context.ContextCheckpoint(UUID.randomUUID(), 0, original.size(),
-                dev.openallay.agent.context.ContextSourceHash.compute(new Gson(), original), "fork-model", NOW,
+                dev.openallay.agent.context.ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), original), "fork-model", NOW,
                 dev.openallay.agent.context.ContextCheckpoint.Status.FAILED, null,
                 "synthetic_successor_failure", "successor-only diagnostic", 10);
         local.events.get(successor).accept(new AgentEvent.ContextCompacted(later));
@@ -263,7 +262,7 @@ final class GuideServiceForkTest {
         List<ModelMessage> messages = context("compensated checkpoint", "actual retained context");
         UUID checkpointId = UUID.randomUUID();
         var succeeded = new dev.openallay.agent.context.ContextCheckpoint(checkpointId, 0, messages.size(),
-                dev.openallay.agent.context.ContextSourceHash.compute(new Gson(), messages), "fork-model", NOW,
+                dev.openallay.agent.context.ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), messages), "fork-model", NOW,
                 dev.openallay.agent.context.ContextCheckpoint.Status.SUCCEEDED, "must not resurrect", null, null, 10);
         var failed = new dev.openallay.agent.context.ContextCheckpoint(checkpointId, 0, messages.size(),
                 succeeded.sourceHash(), "fork-model", NOW,
@@ -424,7 +423,7 @@ final class GuideServiceForkTest {
     private static GuideService service(Local local, History history) {
         return new GuideService(ACTOR, local, new Remote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), new Gson(), history == null ? null : SCOPE, history);
+                Runnable::run, Clock.fixed(NOW, ZoneOffset.UTC), dev.openallay.json.EngineJson.create(), history == null ? null : SCOPE, history);
     }
     private static void awaitReleased(GuideService service, UUID requestId) throws Exception {
         CompletableFuture<Void> released = new CompletableFuture<>();

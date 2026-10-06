@@ -18,7 +18,7 @@ final class AgentSessionForkHydrationTest {
         AgentSessionKey source = new AgentSessionKey(actor, "main"); AgentSessionKey branch = new AgentSessionKey(actor, "branch");
         List<ModelMessage> context = List.of(ModelMessage.userText("safe completed task"));
         ContextCheckpoint checkpoint = new ContextCheckpoint(UUID.randomUUID(), 0, 1,
-                ContextSourceHash.compute(new com.google.gson.Gson(), context), "test-model", Instant.EPOCH,
+                ContextSourceHash.compute(dev.openallay.json.EngineJson.create(), context), "test-model", Instant.EPOCH,
                 ContextCheckpoint.Status.SUCCEEDED, "summary", null, null, 10);
         store.hydrate(source, context, List.of(checkpoint));
         AgentSessionStore.Lease activeSource = ((ToolResult.Success<AgentSessionStore.Lease>)

@@ -49,7 +49,7 @@ final class ServerAgentRequestChunkGuardTest {
                 json.replace("\"index\":0", "\"index\":0,\"\\u0069ndex\":0"), ServerAgentRequestChunkPayload.class));
         String over = " ".repeat(BridgeProtocol.MAX_REQUEST_CHUNK_JSON_BYTES + 1) + json;
         assertThrows(IllegalArgumentException.class, () -> codec.decode(over, ServerAgentRequestChunkPayload.class));
-        var wide = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+        var wide = dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
         wide.addProperty("base64Data", "中".repeat(9000));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(wide.toString(),
                 ServerAgentRequestChunkPayload.class));

@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentSystemPrompt;
@@ -42,7 +40,6 @@ import dev.openallay.context.RegistryEntrySnapshot;
 import dev.openallay.context.RegistrySnapshot;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.context.game.ObservableGameStateSnapshot;
-import dev.openallay.json.EngineJson;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.anthropic.AnthropicMessagesClient;
@@ -226,14 +223,14 @@ final class LiveAgentBenchmarkAcceptanceTest {
                 selection,
                 new BenchmarkReport(List.of()),
                 List.of(),
-                EngineJson.withInstant(new GsonBuilder().setPrettyPrinting().create()));
+                dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting()));
         String report = Files.readString(retained, StandardCharsets.UTF_8);
         String audit = Files.readString(auditPath(retained), StandardCharsets.UTF_8);
         assertEquals(Set.of("fixture", "productCommit", "provider", "profileId",
                         "canonicalModelId", "selection", "benchmark", "traces"),
-                JsonParser.parseString(report).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(report).getAsJsonObject()));
         assertEquals(Set.of("attempts"),
-                JsonParser.parseString(audit).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(audit).getAsJsonObject()));
         assertTrue(report.contains("\"profileId\": \"benchmark-profile\""));
         assertTrue(report.contains("\"canonicalModelId\": \"provider/benchmark\""));
         assertTrue(report.contains("\"provider\": \"https://benchmark.example\""));
@@ -247,7 +244,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
         Map<String, String> environment = System.getenv();
         Assumptions.assumeTrue(Boolean.parseBoolean(
                 environment.get("OPENALLAY_LIVE_AGENT_BENCHMARK")));
-        Gson gson = EngineJson.withInstant(new GsonBuilder().setPrettyPrinting().create());
+        Gson gson = dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting());
         BenchmarkCorpus corpus = corpus();
         int repeats = positive(environment.getOrDefault(
                 "OPENALLAY_BENCHMARK_REPEATS", "3"), "OPENALLAY_BENCHMARK_REPEATS");
@@ -506,7 +503,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
                 Set.of("minecraft:food"),
                 Map.of(
                         "minecraft:food",
-                        JsonParser.parseString("""
+                        dev.openallay.json.JsonTrees.parse("""
                                 {"nutrition":%d,"saturationModifier":%s}
                                 """.formatted(nutrition, saturationModifier))));
     }
@@ -569,7 +566,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
     }
 
     private static JavascriptDataModule module(String id, String summary, String json) {
-        JsonElement value = JsonParser.parseString(json);
+        JsonElement value = dev.openallay.json.JsonTrees.parse(json);
         return new JavascriptDataModule() {
             @Override
             public String id() {
@@ -589,7 +586,7 @@ final class LiveAgentBenchmarkAcceptanceTest {
             @Override
             public Snapshot capture(ToolInvocationContext context) {
                 return new Snapshot(
-                        value.deepCopy(), List.of(GroundedTestFixtures.serverEvidence()));
+                        dev.openallay.json.JsonTrees.copy(value), List.of(GroundedTestFixtures.serverEvidence()));
             }
         };
     }

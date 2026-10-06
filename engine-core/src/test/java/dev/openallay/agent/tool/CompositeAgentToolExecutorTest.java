@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.tool.Tool;
@@ -22,13 +20,13 @@ final class CompositeAgentToolExecutorTest {
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new FactTool()));
         CompositeAgentToolExecutor executor = new CompositeAgentToolExecutor(
-                List.of(new LocalAgentToolExecutor(registry, new Gson())));
+                List.of(new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create())));
 
         assertEquals("test:fact", executor.canonicalToolId("test__fact").orElseThrow());
         assertEquals("test:fact", executor.canonicalToolId("test:fact").orElseThrow());
         AgentToolResult result = executor.execute(
                         "test:fact",
-                        JsonParser.parseString("{\"value\":7}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{\"value\":7}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("alias-test"),
                         new CancellationSignal())
                 .join();
@@ -43,11 +41,11 @@ final class CompositeAgentToolExecutorTest {
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(new FactTool()));
         CompositeAgentToolExecutor executor = new CompositeAgentToolExecutor(
-                List.of(new LocalAgentToolExecutor(registry, new Gson())));
+                List.of(new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create())));
 
         AgentToolResult result = executor.execute(
                         "openallay:invented",
-                        JsonParser.parseString("{}").getAsJsonObject(),
+                        dev.openallay.json.JsonTrees.parse("{}").getAsJsonObject(),
                         ToolInvocationContext.developmentConsole("unknown-test"),
                         new CancellationSignal())
                 .join();

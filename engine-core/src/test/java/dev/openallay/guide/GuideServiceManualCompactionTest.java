@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -333,7 +332,7 @@ final class GuideServiceManualCompactionTest {
         return new GuideService(ACTOR, local, remote,
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)), Runnable::run,
-                Clock.systemUTC(), new Gson(), history == null ? null : SCOPE, history);
+                Clock.systemUTC(), dev.openallay.json.EngineJson.create(), history == null ? null : SCOPE, history);
     }
 
     private static final dev.openallay.guide.history.GuideHistoryScope SCOPE =

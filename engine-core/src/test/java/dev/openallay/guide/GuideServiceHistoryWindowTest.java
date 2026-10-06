@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.guide.history.GuideHistoryAccess;
@@ -47,7 +46,7 @@ final class GuideServiceHistoryWindowTest {
         GuideService service = new GuideService(ACTOR, local, new NoRemote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, CLOCK, new Gson(), SCOPE, history);
+                Runnable::run, CLOCK, dev.openallay.json.EngineJson.create(), SCOPE, history);
         UUID cancelled = success(service.ask("cancel before source is ready").join());
         assertEquals(1, history.contexts.size());
         assertEquals(GuideRequestStatus.CONTEXT_LOADING,
@@ -187,7 +186,7 @@ final class GuideServiceHistoryWindowTest {
                 ACTOR, null, new NoRemote(),
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, CLOCK, new Gson(), SCOPE, history);
+                Runnable::run, CLOCK, dev.openallay.json.EngineJson.create(), SCOPE, history);
     }
 
     private static GuideHistoryMetadata metadata() {

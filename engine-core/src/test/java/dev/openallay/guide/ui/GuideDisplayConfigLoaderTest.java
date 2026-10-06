@@ -3,7 +3,6 @@ package dev.openallay.guide.ui;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,9 +40,9 @@ final class GuideDisplayConfigLoaderTest {
         assertEquals("小羽", load.config().assistantName());
         assertTrue(encoded.endsWith(System.lineSeparator()));
         assertTrue(encoded.contains("\"backgroundOpacity\": 0.2"));
-        JsonObject fullscreen = JsonParser.parseString(encoded).getAsJsonObject()
+        JsonObject fullscreen = dev.openallay.json.JsonTrees.parse(encoded).getAsJsonObject()
                 .getAsJsonObject("ui").getAsJsonObject("fullscreen");
-        assertEquals(Set.of("density", "sessionRailVisible", "theme"), fullscreen.keySet());
+        assertEquals(Set.of("density", "sessionRailVisible", "theme"), dev.openallay.json.JsonTrees.keys(fullscreen));
         assertFalse(encoded.contains("schemaVersion"));
         assertFalse(encoded.contains("formatVersion"));
         assertEquals(encoded, new GuideDisplayConfigWriter().encode(load.config()));
@@ -84,7 +83,7 @@ final class GuideDisplayConfigLoaderTest {
             object(root, domain).addProperty("unexpected", true);
             assertInvalid(root);
             root = current();
-            String field = object(root, domain).keySet().iterator().next();
+            String field = dev.openallay.json.JsonTrees.keys(object(root, domain)).iterator().next();
             object(root, domain).remove(field);
             assertInvalid(root);
             root = current();
@@ -159,7 +158,7 @@ final class GuideDisplayConfigLoaderTest {
     }
 
     private static JsonObject current() {
-        return JsonParser.parseString(new GuideDisplayConfigWriter().encode(GuideDisplayConfig.defaults())).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(new GuideDisplayConfigWriter().encode(GuideDisplayConfig.defaults())).getAsJsonObject();
     }
 
     private static JsonObject object(JsonObject root, String domain) {

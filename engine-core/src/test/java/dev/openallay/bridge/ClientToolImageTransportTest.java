@@ -1,7 +1,6 @@
 package dev.openallay.bridge;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.AgentToolExecutor;
 import dev.openallay.agent.tool.AgentToolResult;
@@ -178,7 +177,7 @@ final class ClientToolImageTransportTest {
         Fixture(UUID actor) {
             this.actor = actor;
             ToolRegistry registry = new ToolRegistry(); registry.register("test", List.of(new VisualTool()));
-            router = new PlayerClientToolRouter(registry, new Gson(), new PlayerClientToolRouter.Transport() {
+            router = new PlayerClientToolRouter(registry, dev.openallay.json.EngineJson.create(), new PlayerClientToolRouter.Transport() {
                 public boolean call(UUID a, ClientToolCallPayload payload) { call.set(payload); return true; }
                 public void cancel(UUID a, ClientToolCancelPayload payload) {}
             }, Duration.ofMinutes(1), Runnable::run);
@@ -193,7 +192,7 @@ final class ClientToolImageTransportTest {
                     ToolInvocationContext.developmentConsole(request.toString()), cancellation);
         }
         List<ClientToolResultChunkPayload> chunks(List<ImageReference> refs, List<ServerAgentImageAttachment> attachments) {
-            JsonObject normalized = new ToolResultNormalizer(new Gson()).normalize(
+            JsonObject normalized = new ToolResultNormalizer(dev.openallay.json.EngineJson.create()).normalize(
                     new ToolResult.Success<>(new VisualTool.Output(refs)), VisualTool.Output.class);
             String json = new BridgeJsonCodec().encode(new ToolExecutionMessage(normalized, attachments));
             return new ArrayList<>(new ResultChunker().split(call.get().invocationId(), json, 97).stream()

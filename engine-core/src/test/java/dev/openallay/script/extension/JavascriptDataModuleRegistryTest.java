@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import dev.openallay.testing.GroundedTestFixtures;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,7 +30,7 @@ final class JavascriptDataModuleRegistryTest {
                     @Override
                     public Snapshot capture(dev.openallay.context.ToolInvocationContext context) {
                         return new Snapshot(
-                                JsonParser.parseString("[{\"id\":\"example:crusher\"}]"),
+                                dev.openallay.json.JsonTrees.parse("[{\"id\":\"example:crusher\"}]"),
                                 List.of(GroundedTestFixtures.serverEvidence()));
                     }
                 },
@@ -159,7 +158,7 @@ final class JavascriptDataModuleRegistryTest {
             @Override
             public Snapshot capture(dev.openallay.context.ToolInvocationContext context) {
                 return new Snapshot(
-                        JsonParser.parseString("[]"),
+                        dev.openallay.json.JsonTrees.parse("[]"),
                         List.of(GroundedTestFixtures.serverEvidence()));
             }
         };

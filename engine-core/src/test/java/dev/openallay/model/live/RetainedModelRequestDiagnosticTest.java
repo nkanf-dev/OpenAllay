@@ -7,13 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentRequest;
 import dev.openallay.agent.AgentState;
 import dev.openallay.agent.context.ModelContextCodec;
 import dev.openallay.agent.trace.LiveAgentTraceRecorder;
 import dev.openallay.context.ToolInvocationContext;
-import dev.openallay.json.EngineJson;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
@@ -28,8 +26,8 @@ import org.junit.jupiter.api.Test;
 final class RetainedModelRequestDiagnosticTest {
     @Test
     void reconstructsExactLastRequestIncludingToolHistoryWithoutExecutingTools() {
-        JsonObject schema = JsonParser.parseString("{\"type\":\"object\"}").getAsJsonObject();
-        JsonObject input = JsonParser.parseString("""
+        JsonObject schema = dev.openallay.json.JsonTrees.parse("{\"type\":\"object\"}").getAsJsonObject();
+        JsonObject input = dev.openallay.json.JsonTrees.parse("""
                 {"value":7,"reasoning":"ordinary tool data","signature":"ordinary tool signature"}
                 """).getAsJsonObject();
         List<ModelMessage> messages = List.of(
@@ -100,11 +98,11 @@ final class RetainedModelRequestDiagnosticTest {
         var request = new ModelRequest("System", List.of(ModelMessage.userText("Ask")), List.of(), false, "retained");
         var agent = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "retained", "Ask", "System",
                 ToolInvocationContext.developmentConsole("persisted-trace-test"), false);
-        var recorder = new LiveAgentTraceRecorder(new Gson(), agent);
+        var recorder = new LiveAgentTraceRecorder(dev.openallay.json.EngineJson.create(), agent);
         recorder.modelRequest(request);
         var persisted = new dev.openallay.agent.trace.LiveTraceJson().encode(
                 recorder.finish(AgentState.COMPLETED, "Done", null));
-        var trace = JsonParser.parseString(persisted).getAsJsonObject();
+        var trace = dev.openallay.json.JsonTrees.parse(persisted).getAsJsonObject();
         var input = trace.getAsJsonArray("events").get(1).getAsJsonObject().getAsJsonObject("payload")
                 .getAsJsonArray("messages").get(0).getAsJsonObject();
         assertTrue(input.has("inputObservation"));
@@ -116,7 +114,7 @@ final class RetainedModelRequestDiagnosticTest {
 
     @Test
     void rejectsUnknownRetainedContentRatherThanSilentlyDroppingIt() {
-        JsonObject trace = JsonParser.parseString("""
+        JsonObject trace = dev.openallay.json.JsonTrees.parse("""
                 {"events":[{"type":"model_request","payload":{"systemPrompt":"system",
                 "messages":[{"role":"USER","content":[{"unknown":"value"}],"inputObservation":null}],
                 "tools":[],"stream":true,"sessionKey":"retained"}}]}
@@ -195,18 +193,18 @@ final class RetainedModelRequestDiagnosticTest {
     private static JsonObject trace(ModelRequest... requests) {
         AgentRequest agentRequest = new AgentRequest(UUID.randomUUID(), UUID.randomUUID(), "retained", "Ask",
                 "System instruction", ToolInvocationContext.developmentConsole("retained-request-test"), false);
-        LiveAgentTraceRecorder recorder = new LiveAgentTraceRecorder(new Gson(), agentRequest);
+        LiveAgentTraceRecorder recorder = new LiveAgentTraceRecorder(dev.openallay.json.EngineJson.create(), agentRequest);
         for (ModelRequest request : requests) {
             recorder.modelRequest(request);
         }
         recorder.state(AgentState.COMPLETED);
         // The current nullable source field must survive the outer trace JsonElement serialization.
-        return EngineJson.withInstant(new Gson()).newBuilder().serializeNulls().create()
+        return dev.openallay.json.EngineJson.create(builder -> builder.serializeNulls())
                 .toJsonTree(recorder.finish(AgentState.COMPLETED, "Done", null)).getAsJsonObject();
     }
 
     private static JsonObject modelFacingPayload(ModelRequest request) {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         JsonObject payload = new JsonObject();
         payload.addProperty("systemPrompt", request.systemPrompt());
         payload.add("messages", gson.toJsonTree(request.messages()));

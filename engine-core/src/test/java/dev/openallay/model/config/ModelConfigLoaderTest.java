@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import com.google.gson.Gson;
 import dev.openallay.tool.ToolResult;
 import java.io.StringReader;
 import java.nio.file.Path;
@@ -70,7 +69,7 @@ final class ModelConfigLoaderTest {
         assertEquals("mimo-v2.5-pro", config.model());
         assertEquals("environment-secret", config.apiKey().reveal());
         assertFalse(config.toString().contains("environment-secret"));
-        assertFalse(new Gson().toJson(config.diagnosticView()).contains("environment-secret"));
+        assertFalse(dev.openallay.json.EngineJson.create().toJson(config.diagnosticView()).contains("environment-secret"));
         assertEquals("https://example.test/v1/", config.baseUri().toString());
         assertEquals(128_000, config.contextWindowTokens());
         assertEquals(128_000 - 2 * 1024, config.contextBudget().inputTokens());

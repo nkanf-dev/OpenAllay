@@ -2,10 +2,8 @@ package dev.openallay.model.live;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClientException;
 import dev.openallay.model.ModelMessage;
@@ -86,7 +84,7 @@ final class LiveModelTransportDiagnosticTest {
                     .timeout(config.requestTimeout())
                     .header("authorization", "Bearer " + config.apiKey().reveal())
                     .header("accept", "application/json");
-            OpenAiJsonCodec codec = new OpenAiJsonCodec(new Gson());
+            OpenAiJsonCodec codec = new OpenAiJsonCodec(dev.openallay.json.EngineJson.create());
             if (operation.equals("probe")) {
                 ModelConfig probeConfig = new ModelConfig(
                         config.enabled(), config.protocol(), config.baseUri(), config.model(),
@@ -159,7 +157,7 @@ final class LiveModelTransportDiagnosticTest {
 
     private static void reportShape(String json) {
         try {
-            JsonElement parsed = JsonParser.parseString(json);
+            JsonElement parsed = dev.openallay.json.JsonTrees.parse(json);
             System.out.println("OPENALLAY_TRANSPORT_DIAGNOSTIC rootType=" + type(parsed));
             if (!parsed.isJsonObject()) {
                 return;
@@ -167,7 +165,7 @@ final class LiveModelTransportDiagnosticTest {
             JsonObject root = parsed.getAsJsonObject();
             reportFields("root", root, "model", "choices", "usage", "error");
             JsonElement choices = root.get("choices");
-            if (choices != null && choices.isJsonArray() && !choices.getAsJsonArray().isEmpty()) {
+            if (choices != null && choices.isJsonArray() && !(choices.getAsJsonArray().size() == 0)) {
                 JsonElement first = choices.getAsJsonArray().get(0);
                 System.out.println("OPENALLAY_TRANSPORT_DIAGNOSTIC choiceType=" + type(first));
                 if (first.isJsonObject()) {

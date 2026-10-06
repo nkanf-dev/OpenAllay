@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
 import dev.openallay.bridge.protocol.CapabilityPayload;
@@ -40,7 +39,7 @@ final class ClientPlacedToolExecutorTest {
                             dev.openallay.bridge.protocol.RemoteCancelPayload payload) {}
                 });
         ClientPlacedToolExecutor tools = new ClientPlacedToolExecutor(
-                new LocalAgentToolExecutor(registry, new Gson()), remote);
+                new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create()), remote);
 
         assertEquals(2, tools.definitions().size());
         assertEquals(1, tools.definitions().stream()

@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelTurn;
 import dev.openallay.model.http.SseEvent;
@@ -22,7 +21,7 @@ final class OpenAiStreamAccumulatorTest {
                 "{\"prompt_tokens\":0,\"completion_tokens\":0}",
                 "{\"prompt_tokens\":9,\"completion_tokens\":2,\"extra_provider_field\":true}")) {
             JsonObject response = textChunk();
-            response.add("usage", JsonParser.parseString(raw));
+            response.add("usage", dev.openallay.json.JsonTrees.parse(raw));
             List<ModelEvent> events = new ArrayList<>();
             OpenAiStreamAccumulator accumulator = new OpenAiStreamAccumulator(events::add);
             accumulator.accept(event(response));
@@ -64,10 +63,10 @@ final class OpenAiStreamAccumulatorTest {
         for (String details : List.of("missing", "null", "{}", "{\"cached_tokens\":null}")) {
             OpenAiStreamAccumulator accumulator = new OpenAiStreamAccumulator(ignored -> {});
             JsonObject response = textChunk();
-            JsonObject usage = JsonParser.parseString(
+            JsonObject usage = dev.openallay.json.JsonTrees.parse(
                     "{\"prompt_tokens\":7,\"completion_tokens\":2}").getAsJsonObject();
             if (!details.equals("missing")) {
-                usage.add("prompt_tokens_details", JsonParser.parseString(details));
+                usage.add("prompt_tokens_details", dev.openallay.json.JsonTrees.parse(details));
             }
             response.add("usage", usage);
 
@@ -92,19 +91,19 @@ final class OpenAiStreamAccumulatorTest {
                 () -> new OpenAiStreamAccumulator(ignored -> {}).accept(event(toolCalls)));
 
         JsonObject usage = textChunk();
-        usage.add("usage", JsonParser.parseString("[]"));
+        usage.add("usage", dev.openallay.json.JsonTrees.parse("[]"));
         assertThrows(RuntimeException.class,
                 () -> new OpenAiStreamAccumulator(ignored -> {}).accept(event(usage)));
 
         JsonObject details = textChunk();
         JsonObject usageObject = new JsonObject();
-        usageObject.add("prompt_tokens_details", JsonParser.parseString("[]"));
+        usageObject.add("prompt_tokens_details", dev.openallay.json.JsonTrees.parse("[]"));
         details.add("usage", usageObject);
         assertThrows(RuntimeException.class,
                 () -> new OpenAiStreamAccumulator(ignored -> {}).accept(event(details)));
 
         JsonObject arguments = textChunk();
-        delta(arguments).add("tool_calls", JsonParser.parseString("""
+        delta(arguments).add("tool_calls", dev.openallay.json.JsonTrees.parse("""
                 [{"index":0,"id":"call_x","type":"function",
                   "function":{"name":"fact","arguments":"[]"}}]
                 """));
@@ -114,7 +113,7 @@ final class OpenAiStreamAccumulatorTest {
     }
 
     private static JsonObject textChunk() {
-        return JsonParser.parseString("""
+        return dev.openallay.json.JsonTrees.parse("""
                 {"model":"compatible-model","choices":[{"finish_reason":"stop",
                  "delta":{"role":"assistant","content":"OK"}}]}
                 """).getAsJsonObject();

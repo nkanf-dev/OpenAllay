@@ -25,7 +25,7 @@ class VoiceConfigStoreTest {
     @Test void gameplayChoiceIsMandatoryExactAndRetainedByEveryCandidateHelper() {
         VoiceConfig draft = VoiceConfig.defaults().withGameplayAction(VoiceConfig.GameplayAction.DRAFT);
         String json = VoiceConfigStore.encode(draft);
-        assertEquals(11, com.google.gson.JsonParser.parseString(json).getAsJsonObject().size());
+        assertEquals(11, dev.openallay.json.JsonTrees.parse(json).getAsJsonObject().size());
         assertEquals(draft, VoiceConfigStore.decode(json));
         assertThrows(RuntimeException.class, () -> VoiceConfigStore.decode(json.replace("\"gameplayAction\":\"DRAFT\",", "")));
         assertThrows(RuntimeException.class, () -> VoiceConfigStore.decode(json.replace("\"gameplayAction\":\"DRAFT\"", "\"gameplayAction\":\"send\"")));

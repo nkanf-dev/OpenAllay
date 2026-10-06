@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.CancellationSignal;
 import dev.openallay.model.ModelClient;
 import dev.openallay.model.ModelContent;
@@ -35,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class ContextCompactorImageTest {
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = dev.openallay.json.EngineJson.create();
     private static final String SUMMARY = """
             {"goals":[],"preferences":[],"completedTopics":[],"currentTasks":[],
              "decisions":[],"unresolvedQuestions":[],"evidenceReferences":[]}
@@ -139,7 +138,7 @@ final class ContextCompactorImageTest {
         assertEquals(source.getLast(), result.projection().messages().getLast());
         assertEquals(ModelRole.USER, result.projection().messages().getFirst().role());
         assertEquals(new ModelContent.Text("[OpenAllay derived conversation memory; NOT factual evidence]\n"
-                        + JsonParser.parseString(SUMMARY)),
+                        + dev.openallay.json.JsonTrees.parse(SUMMARY)),
                 result.projection().messages().getFirst().content().getFirst());
         assertEquals(result.projection().messages(), ModelContextCodec.safe(result.projection().messages()));
         assertTrue(compactor.matches(result.checkpoint(), source));
@@ -150,7 +149,7 @@ final class ContextCompactorImageTest {
         var requests = new ArrayList<ModelRequest>();
         var reads = new AtomicInteger();
         ImagePayloadResolver resolver = image -> { reads.incrementAndGet(); return new byte[6]; };
-        JsonObject overlong = JsonParser.parseString(SUMMARY).getAsJsonObject();
+        JsonObject overlong = dev.openallay.json.JsonTrees.parse(SUMMARY).getAsJsonObject();
         overlong.getAsJsonArray("goals").add("oversized".repeat(1_000));
         ModelClient model = (request, events, cancellation) -> {
             requests.add(request);

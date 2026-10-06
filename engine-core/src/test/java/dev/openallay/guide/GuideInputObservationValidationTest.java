@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.image.ImageInputCapability;
@@ -53,6 +52,6 @@ final class GuideInputObservationValidationTest {
         };
         return new GuideService(actor, null, remote, (capabilities, correlation) ->
                 new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                Runnable::run, Clock.systemUTC(), new Gson());
+                Runnable::run, Clock.systemUTC(), dev.openallay.json.EngineJson.create());
     }
 }

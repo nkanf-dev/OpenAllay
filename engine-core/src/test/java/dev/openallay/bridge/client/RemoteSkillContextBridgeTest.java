@@ -56,7 +56,7 @@ final class RemoteSkillContextBridgeTest {
             assertEquals(1, bridge.calls, "server must not transport an already-retained range");
             CancellationSignal cancelled = new CancellationSignal();
             cancelled.cancel();
-            assertTrue(request.tools.execute("openallay__load_skill", new Gson().toJsonTree(input).getAsJsonObject(),
+            assertTrue(request.tools.execute("openallay__load_skill", dev.openallay.json.EngineJson.create().toJsonTree(input).getAsJsonObject(),
                     ToolInvocationContext.developmentConsole(request.id.toString()), cancelled).isCompletedExceptionally());
             assertEquals(1, bridge.calls);
             assertTrue(request.tools.skillManifest(request.id.toString()).contains("guide / SKILL.md: full"));
@@ -78,12 +78,12 @@ final class RemoteSkillContextBridgeTest {
         SkillCatalogSnapshot captured = client.snapshot(Set.of());
         ToolRegistry localTools = new ToolRegistry();
         localTools.register("test", List.of(new LoadSkillTool(captured, "client")));
-        AgentToolExecutor local = new dev.openallay.agent.tool.LocalAgentToolExecutor(localTools, new Gson());
+        AgentToolExecutor local = new dev.openallay.agent.tool.LocalAgentToolExecutor(localTools, dev.openallay.json.EngineJson.create());
         RetainedSkillContext retained = new RetainedSkillContext();
         LoadSkillTool.Input input = new LoadSkillTool.Input("guide");
         local.prepareSystem("System", retained);
         local.prepareContext("local-first", List.of(), retained);
-        AgentToolResult first = local.execute("openallay__load_skill", new Gson().toJsonTree(input).getAsJsonObject(),
+        AgentToolResult first = local.execute("openallay__load_skill", dev.openallay.json.EngineJson.create().toJsonTree(input).getAsJsonObject(),
                 ToolInvocationContext.developmentConsole("local-first"), new CancellationSignal()).join();
         assertEquals(LoadSkillTool.LoadState.COMPLETE, output(first).state());
         List<ModelMessage> actual = history("local-first-load", input, first);
@@ -105,11 +105,11 @@ final class RemoteSkillContextBridgeTest {
 
         ToolRegistry rebuilt = new ToolRegistry();
         rebuilt.register("test", List.of(new LoadSkillTool(client.snapshot(Set.of()), "client")));
-        AgentToolExecutor localAgain = new dev.openallay.agent.tool.LocalAgentToolExecutor(rebuilt, new Gson());
+        AgentToolExecutor localAgain = new dev.openallay.agent.tool.LocalAgentToolExecutor(rebuilt, dev.openallay.json.EngineJson.create());
         localAgain.prepareSystem("System", retained);
         List<ModelMessage> localProjection = localAgain.refreshContext(actual, retained);
         localAgain.prepareContext("local-again", localProjection, retained);
-        AgentToolResult reuseAgain = localAgain.execute("openallay__load_skill", new Gson().toJsonTree(input).getAsJsonObject(),
+        AgentToolResult reuseAgain = localAgain.execute("openallay__load_skill", dev.openallay.json.EngineJson.create().toJsonTree(input).getAsJsonObject(),
                 ToolInvocationContext.developmentConsole("local-again"), new CancellationSignal()).join();
         assertEquals(LoadSkillTool.LoadState.ALREADY_LOADED, output(reuseAgain).state());
         assertEquals("", output(reuseAgain).content());
@@ -292,11 +292,11 @@ final class RemoteSkillContextBridgeTest {
 
     private static LoadSkillTool.Output output(AgentToolResult result) {
         assertFalse(result.failure(), result.normalized().toString());
-        return new Gson().fromJson(result.normalized().get("value"), LoadSkillTool.Output.class);
+        return dev.openallay.json.EngineJson.create().fromJson(result.normalized().get("value"), LoadSkillTool.Output.class);
     }
 
     private static List<ModelMessage> history(String id, LoadSkillTool.Input input, AgentToolResult result) {
-        JsonObject arguments = new Gson().toJsonTree(input).getAsJsonObject();
+        JsonObject arguments = dev.openallay.json.EngineJson.create().toJsonTree(input).getAsJsonObject();
         return List.of(
                 new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.ToolUse(
                         id, "openallay__load_skill", arguments))),
@@ -318,7 +318,7 @@ final class RemoteSkillContextBridgeTest {
     }
 
     private static final class Bridge {
-        private final Gson gson = new Gson();
+        private final Gson gson = dev.openallay.json.EngineJson.create();
         private final UUID actor = UUID.randomUUID();
         private final SkillRepository client;
         private final SkillCatalogSnapshot server = repository("server-pack", "Server instructions.", Map.of())

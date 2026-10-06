@@ -4,9 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.context.ContextCheckpoint;
 import dev.openallay.guide.GuideToolMessage;
@@ -19,7 +17,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 final class ServerAgentEventCodecTest {
-    private final ServerAgentEventCodec codec = new ServerAgentEventCodec(new Gson());
+    private final ServerAgentEventCodec codec = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
 
     @Test
     void actualCallStartRoundTripsStrictIdentityOnly() {
@@ -29,8 +27,8 @@ final class ServerAgentEventCodecTest {
         assertEquals("model_usage_started", encoded.eventType());
         assertEquals(false, encoded.terminal());
         assertEquals(original, codec.decode(encoded, request));
-        JsonObject body = JsonParser.parseString(encoded.eventJson()).getAsJsonObject();
-        assertEquals(Set.of("callId", "modelIdentifier"), body.keySet());
+        JsonObject body = dev.openallay.json.JsonTrees.parse(encoded.eventJson()).getAsJsonObject();
+        assertEquals(Set.of("callId", "modelIdentifier"), dev.openallay.json.JsonTrees.keys(body));
         body.addProperty("unknown", true);
         assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                 request, encoded.eventType(), body.toString(), false), request));
@@ -45,31 +43,31 @@ final class ServerAgentEventCodecTest {
         assertEquals("model_usage_observed", encoded.eventType());
         assertEquals(false, encoded.terminal());
         assertEquals(original, codec.decode(encoded, request));
-        JsonObject body = JsonParser.parseString(encoded.eventJson()).getAsJsonObject();
-        assertEquals(Set.of("callId", "modelIdentifier", "usage"), body.keySet());
+        JsonObject body = dev.openallay.json.JsonTrees.parse(encoded.eventJson()).getAsJsonObject();
+        assertEquals(Set.of("callId", "modelIdentifier", "usage"), dev.openallay.json.JsonTrees.keys(body));
         assertEquals(Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
                 "uncachedInputTokens", "inputKnown", "outputKnown", "cacheReadKnown",
-                "cacheWriteKnown", "uncachedInputKnown"), body.getAsJsonObject("usage").keySet());
+                "cacheWriteKnown", "uncachedInputKnown"), dev.openallay.json.JsonTrees.keys(body.getAsJsonObject("usage")));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(encoded, UUID.randomUUID()));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                 request, encoded.eventType(), encoded.eventJson(), true), request));
-        for (String field : List.copyOf(body.getAsJsonObject("usage").keySet())) {
-            JsonObject missing = body.deepCopy();
+        for (String field : List.copyOf(dev.openallay.json.JsonTrees.keys(body.getAsJsonObject("usage")))) {
+            JsonObject missing = dev.openallay.json.JsonTrees.copy(body);
             missing.getAsJsonObject("usage").remove(field);
             assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                     request, encoded.eventType(), missing.toString(), false), request));
         }
         for (String bad : List.of("\"12\"", "1.5", "-1", "9223372036854775808", "null")) {
-            JsonObject invalid = body.deepCopy();
-            invalid.getAsJsonObject("usage").add("inputTokens", JsonParser.parseString(bad));
+            JsonObject invalid = dev.openallay.json.JsonTrees.copy(body);
+            invalid.getAsJsonObject("usage").add("inputTokens", dev.openallay.json.JsonTrees.parse(bad));
             assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                     request, encoded.eventType(), invalid.toString(), false), request));
         }
-        JsonObject invalidKnown = body.deepCopy();
+        JsonObject invalidKnown = dev.openallay.json.JsonTrees.copy(body);
         invalidKnown.getAsJsonObject("usage").addProperty("inputKnown", "true");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                 request, encoded.eventType(), invalidKnown.toString(), false), request));
-        JsonObject extra = body.deepCopy();
+        JsonObject extra = dev.openallay.json.JsonTrees.copy(body);
         extra.addProperty("providerBody", "not permitted");
         assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                 request, encoded.eventType(), extra.toString(), false), request));
@@ -99,7 +97,7 @@ final class ServerAgentEventCodecTest {
         assertEquals(false, finalizedPayload.terminal());
         assertEquals(finalized, codec.decode(finalizedPayload, request));
         org.junit.jupiter.api.Assertions.assertFalse(encoded.eventJson().contains("durableProjection"));
-        JsonObject malformed = JsonParser.parseString(encoded.eventJson()).getAsJsonObject();
+        JsonObject malformed = dev.openallay.json.JsonTrees.parse(encoded.eventJson()).getAsJsonObject();
         malformed.addProperty("unknown", true);
         assertThrows(IllegalArgumentException.class, () -> codec.decode(new ServerAgentEventPayload(
                 request, encoded.eventType(), malformed.toString(), false), request));
@@ -141,9 +139,9 @@ final class ServerAgentEventCodecTest {
                         new ModelEvent.AttemptStarted(2, 12_345L)));
         assertEquals(
                 Set.of("attempt", "attemptTimeoutMillis"),
-                JsonParser.parseString(encodedAttempt.eventJson())
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(encodedAttempt.eventJson())
                         .getAsJsonObject()
-                        .keySet());
+                        ));
         ModelEvent.AttemptStarted attempt = assertInstanceOf(
                 ModelEvent.AttemptStarted.class,
                 assertInstanceOf(
@@ -218,12 +216,12 @@ final class ServerAgentEventCodecTest {
                 "call-intent", "openallay:run_javascript", input,
                 dev.openallay.guide.GuideToolInvocationPresentation.messages("openallay:run_javascript", input)));
         assertEquals(Set.of("invocationId", "toolId", "presentationMessages"),
-                JsonParser.parseString(encoded.eventJson()).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(encoded.eventJson()).getAsJsonObject()));
         org.junit.jupiter.api.Assertions.assertFalse(encoded.eventJson().contains("private source"));
         AgentEvent.ToolStarted decoded = assertInstanceOf(AgentEvent.ToolStarted.class, codec.decode(encoded, request));
         var snapshot = dev.openallay.guide.GuideRequestSnapshot.start(request, "main",
                 dev.openallay.guide.GuideTopology.SERVER, "Compare", Instant.EPOCH);
-        snapshot = new dev.openallay.guide.GuideStateReducer(new Gson()).apply(snapshot, decoded, Instant.EPOCH);
+        snapshot = new dev.openallay.guide.GuideStateReducer(dev.openallay.json.EngineJson.create()).apply(snapshot, decoded, Instant.EPOCH);
         assertEquals("call-intent", snapshot.tools().getFirst().invocationId());
         assertEquals(dev.openallay.guide.GuideToolStatus.RUNNING, snapshot.tools().getFirst().status());
         assertEquals(new dev.openallay.guide.GuideToolIntent("比较武器", "按攻击伤害排列"),
@@ -289,12 +287,12 @@ final class ServerAgentEventCodecTest {
         BridgeJsonCodec json = new BridgeJsonCodec();
         ServerAgentCancelPayload value = new ServerAgentCancelPayload(request);
         assertEquals(Set.of("requestId"),
-                JsonParser.parseString(json.encode(value)).getAsJsonObject().keySet());
+                dev.openallay.json.JsonTrees.keys(dev.openallay.json.JsonTrees.parse(json.encode(value)).getAsJsonObject()));
         assertEquals(request, json.decode(
                 json.encode(value), ServerAgentCancelPayload.class).requestId());
         assertThrows(IllegalArgumentException.class,
                 () -> json.decode("{}", ServerAgentCancelPayload.class));
-        JsonObject extraField = JsonParser.parseString(json.encode(value)).getAsJsonObject();
+        JsonObject extraField = dev.openallay.json.JsonTrees.parse(json.encode(value)).getAsJsonObject();
         extraField.addProperty("eventId", UUID.randomUUID().toString());
         assertThrows(IllegalArgumentException.class,
                 () -> json.decode(extraField.toString(), ServerAgentCancelPayload.class));

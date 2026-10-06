@@ -2,7 +2,6 @@ package dev.openallay.guide;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
 import dev.openallay.agent.AgentState;
@@ -161,7 +160,7 @@ final class GuideServicePresentationTest {
     private GuideServiceManager manager(ClientEventDispatcher dispatcher, FakeHistory history) {
         return new GuideServiceManager(local, new FakeRemote(),
                 (caps, correlation) -> new ToolResult.Success<>(ToolInvocationContext.developmentConsole(correlation)),
-                dispatcher, Clock.systemUTC(), new Gson(), history, history == null ? null : ignored -> history.scope);
+                dispatcher, Clock.systemUTC(), dev.openallay.json.EngineJson.create(), history, history == null ? null : ignored -> history.scope);
     }
     private static <T> T success(ToolResult<T> result) {
         return ((ToolResult.Success<T>) assertInstanceOf(ToolResult.Success.class, result,
@@ -221,7 +220,7 @@ final class GuideServicePresentationTest {
             scope = GuideHistoryScope.derive(actor, GuideHistoryScope.Kind.SINGLEPLAYER, "fixture-world");
             Instant now = Instant.parse("2026-10-01T00:00:00Z");
             GuideRequestSnapshot start = GuideRequestSnapshot.start(UUID.randomUUID(), "main", GuideTopology.CLIENT_LOCAL, "loaded question", now);
-            restored = new GuideStateReducer(new Gson()).apply(start, new AgentEvent.FinalText("loaded final result"), now);
+            restored = new GuideStateReducer(dev.openallay.json.EngineJson.create()).apply(start, new AgentEvent.FinalText("loaded final result"), now);
             cursor = new GuideHistoryCursor(0, restored.requestId());
         }
         public CompletableFuture<Optional<GuideHistoryMetadata>> metadata(GuideHistoryScope ignored) {

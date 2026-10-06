@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.bridge.protocol.CapabilityPayload;
 import dev.openallay.bridge.protocol.ServerAgentEventCodec;
@@ -49,7 +48,7 @@ final class RemoteImageEndpointTest {
         var anchor = dev.openallay.world.InputObservationFixtures.anchor(REFERENCE);
         var input = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
         Port port = new Port(ImageInputCapability.SUPPORTED);
-        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson(), Runnable::run, Runnable::run);
+        var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create(), Runnable::run, Runnable::run);
         UUID requestId = UUID.randomUUID();
         try {
             assertTrue(endpoint.askWithContext(requestId, "main", ModelMessage.userText("continue"),
@@ -81,7 +80,7 @@ final class RemoteImageEndpointTest {
                 List.of(new ModelContent.Image(second), new ModelContent.Image(first)));
         var history = List.of(image(first), new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text("Look at the pictures"))));
         Port port = new Port(ImageInputCapability.SUPPORTED);
-        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         Thread caller = Thread.currentThread();
         var readThreads = new CopyOnWriteArrayList<Thread>();
         var reads = new CopyOnWriteArrayList<ImageReference>();
@@ -117,7 +116,7 @@ final class RemoteImageEndpointTest {
     void unknownAndUnsupportedModelsRejectBeforeReadingEvenForHistoryOnlyImages() {
         for (var capability : List.of(ImageInputCapability.UNKNOWN, ImageInputCapability.UNSUPPORTED)) {
             Port port = new Port(capability);
-            var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+            var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
             var failure = assertThrows(GuideModelProfileException.class, () -> endpoint.askWithContext(
                     UUID.randomUUID(), "main", ModelMessage.userText("follow up"), reference -> {
                         throw new AssertionError("unsupported requests must not read images");
@@ -132,7 +131,7 @@ final class RemoteImageEndpointTest {
     @Test
     void missingPayloadFailsItsAcceptedRequestAndNeverSendsATextFallback() throws Exception {
         Port port = new Port(ImageInputCapability.SUPPORTED);
-        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         var received = new CopyOnWriteArrayList<AgentEvent>();
         var released = new CompletableFuture<Void>();
         assertTrue(endpoint.ask(UUID.randomUUID(), "main", IMAGE, reference -> {
@@ -153,7 +152,7 @@ final class RemoteImageEndpointTest {
     void cancelDuringReadRevokesLateUpload() throws Exception {
         disconnectDuringReadWaitsForReleaseAndNeverUploadsLateBytes();
         Port port = new Port(ImageInputCapability.SUPPORTED);
-        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         UUID requestId = UUID.randomUUID();
         CountDownLatch reading = new CountDownLatch(1);
         CountDownLatch finishRead = new CountDownLatch(1);
@@ -188,7 +187,7 @@ final class RemoteImageEndpointTest {
 
     private void disconnectDuringReadWaitsForReleaseAndNeverUploadsLateBytes() throws Exception {
         Port port = new Port(ImageInputCapability.SUPPORTED);
-        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         UUID requestId = UUID.randomUUID();
         var reading = new CountDownLatch(1);
         var finishRead = new CountDownLatch(1);
@@ -221,10 +220,10 @@ final class RemoteImageEndpointTest {
 
     private void terminalImageRequestKeepsItsIdUntilTheActualReleaseEvent() throws Exception {
         Port port = new Port(ImageInputCapability.SUPPORTED);
-        var endpoint = new PayloadGuideRemoteEndpoint(port, new Gson());
+        var endpoint = new PayloadGuideRemoteEndpoint(port, dev.openallay.json.EngineJson.create());
         UUID requestId = UUID.randomUUID();
         var received = new CopyOnWriteArrayList<AgentEvent>();
-        var codec = new ServerAgentEventCodec(new Gson());
+        var codec = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
         try {
             assertTrue(endpoint.ask(requestId, "main", IMAGE, reference -> BYTES, received::add));
             Consumer<ServerAgentEventPayload> events = port.events.get(5, TimeUnit.SECONDS);

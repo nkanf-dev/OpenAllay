@@ -2,7 +2,6 @@ package dev.openallay.client.presentation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.gson.Gson;
 import dev.openallay.guide.*;
 import dev.openallay.guide.ui.GuideUiConfig;
 import java.time.Clock;
@@ -377,7 +376,7 @@ final class GuideNotificationControllerTest {
             public void disconnect() {}
         }, (caps, correlation) -> new dev.openallay.tool.ToolResult.Success<>(
                 dev.openallay.context.ToolInvocationContext.developmentConsole(correlation)), Runnable::run,
-                Clock.systemUTC(), new Gson());
+                Clock.systemUTC(), dev.openallay.json.EngineJson.create());
     }
     private static final class MutableClock extends Clock {
         Instant now = Instant.parse("2026-10-02T00:00:00Z");

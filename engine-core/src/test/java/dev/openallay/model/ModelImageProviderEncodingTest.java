@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.anthropic.AnthropicJsonCodec;
 import dev.openallay.model.config.ModelConfig;
 import dev.openallay.model.config.ModelProtocol;
@@ -26,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class ModelImageProviderEncodingTest {
-    private final Gson gson = new Gson();
+    private final Gson gson = dev.openallay.json.EngineJson.create();
     private final OpenAiJsonCodec openAi = new OpenAiJsonCodec(gson);
     private final AnthropicJsonCodec anthropic = new AnthropicJsonCodec(gson);
     // Encoder fixtures: the scoped artifact resolver separately verifies real image bytes.
@@ -41,7 +40,7 @@ final class ModelImageProviderEncodingTest {
         for (ModelProtocol protocol : ModelProtocol.values()) {
             var reads = new ArrayList<ImageReference>();
             var input = ModelMessage.userText("Which one?").withInputObservation(anchor);
-            var nativeBody = JsonParser.parseString(body(protocol, request(input, image -> {
+            var nativeBody = dev.openallay.json.JsonTrees.parse(body(protocol, request(input, image -> {
                 reads.add(image); return FIRST;
             }))).getAsJsonObject();
             assertEquals(protocol == ModelProtocol.OPENAI_CHAT ? 2 : 1, nativeBody.getAsJsonArray("messages").size());
@@ -61,11 +60,11 @@ final class ModelImageProviderEncodingTest {
             assertImage(protocol, parts.get(2).getAsJsonObject(), PNG, FIRST);
             assertEquals(List.of(PNG), reads);
             var imageOnly = ModelMessage.userInput("", List.of(), java.util.Optional.of(anchor));
-            assertEquals(3, content(protocol, JsonParser.parseString(body(protocol, request(imageOnly,
+            assertEquals(3, content(protocol, dev.openallay.json.JsonTrees.parse(body(protocol, request(imageOnly,
                     image -> FIRST))).getAsJsonObject()).size());
             var focusOnly = ModelMessage.userText("Which item?").withInputObservation(
                     dev.openallay.world.InputObservationFixtures.anchor(null));
-            assertEquals(2, content(protocol, JsonParser.parseString(body(protocol, request(focusOnly,
+            assertEquals(2, content(protocol, dev.openallay.json.JsonTrees.parse(body(protocol, request(focusOnly,
                     image -> { throw new AssertionError("no source frame captured"); }))).getAsJsonObject()).size());
         }
     }
@@ -85,7 +84,7 @@ final class ModelImageProviderEncodingTest {
                             return image.equals(PNG) ? FIRST : SECOND;
                         });
                 String body = body(protocol, request);
-                var root = JsonParser.parseString(body).getAsJsonObject();
+                var root = dev.openallay.json.JsonTrees.parse(body).getAsJsonObject();
                 JsonArray content = content(protocol, root);
                 assertEquals(5, content.size());
                 assertEquals("before", content.get(0).getAsJsonObject().get("text").getAsString());
@@ -107,7 +106,7 @@ final class ModelImageProviderEncodingTest {
     void imageOnlyNativeInputHasNoInventedText() {
         for (ModelProtocol protocol : ModelProtocol.values()) {
             var request = request(ModelMessage.userInput(null, List.of(PNG)), image -> FIRST);
-            JsonArray content = content(protocol, JsonParser.parseString(body(protocol, request)).getAsJsonObject());
+            JsonArray content = content(protocol, dev.openallay.json.JsonTrees.parse(body(protocol, request)).getAsJsonObject());
             assertEquals(1, content.size());
             assertImage(protocol, content.get(0).getAsJsonObject(), PNG, FIRST);
         }
@@ -143,7 +142,7 @@ final class ModelImageProviderEncodingTest {
                 List.of(new ModelContent.Text("one"), new ModelContent.Text("two")));
         var request = request(message, image -> { throw new AssertionError("text input read an image"); });
         for (ModelProtocol protocol : ModelProtocol.values()) {
-            JsonObject root = JsonParser.parseString(body(protocol, request)).getAsJsonObject();
+            JsonObject root = dev.openallay.json.JsonTrees.parse(body(protocol, request)).getAsJsonObject();
             root.remove("model");
             root.remove("stream");
             root.remove(protocol == ModelProtocol.OPENAI_CHAT ? "max_completion_tokens" : "max_tokens");
@@ -181,7 +180,7 @@ final class ModelImageProviderEncodingTest {
             assertEquals(0, reads.get());
             var atLimit = ModelMessage.userInput(null, Collections.nCopies(limit, PNG));
             assertEquals(limit, content(protocol,
-                    JsonParser.parseString(body(protocol, request(atLimit, resolver))).getAsJsonObject()).size());
+                    dev.openallay.json.JsonTrees.parse(body(protocol, request(atLimit, resolver))).getAsJsonObject()).size());
             assertEquals(limit, reads.get());
         }
     }
@@ -266,7 +265,7 @@ final class ModelImageProviderEncodingTest {
                     reads.add(image);
                     return image.equals(PNG) ? FIRST : SECOND;
                 });
-                JsonArray messages = JsonParser.parseString(body(protocol, request)).getAsJsonObject()
+                JsonArray messages = dev.openallay.json.JsonTrees.parse(body(protocol, request)).getAsJsonObject()
                         .getAsJsonArray("messages");
                 JsonArray visual;
                 if (protocol == ModelProtocol.OPENAI_CHAT) {
@@ -323,7 +322,7 @@ final class ModelImageProviderEncodingTest {
             var request = new ModelRequest("System", List.of(observation), List.of(), false, "session", null, image -> {
                 reads.add(image); return FIRST;
             });
-            JsonArray content = content(protocol, JsonParser.parseString(body(protocol, request)).getAsJsonObject());
+            JsonArray content = content(protocol, dev.openallay.json.JsonTrees.parse(body(protocol, request)).getAsJsonObject());
             assertEquals(5, content.size());
             assertTrue(content.get(1).getAsJsonObject().get("text").getAsString().contains("original-view"));
             assertTrue(content.get(3).getAsJsonObject().get("text").getAsString().contains("not a new player"));

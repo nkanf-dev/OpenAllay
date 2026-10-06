@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import dev.openallay.context.EvidenceBearing;
 import dev.openallay.context.EvidenceMetadata;
 import dev.openallay.context.SourceObservation;
@@ -157,9 +156,9 @@ final class RunJavascriptAcceptanceTest {
         assertFalse(success.value().modelText().isBlank());
         assertFalse(success.value().modelText().contains("source="));
         assertFalse(EvidenceBearing.class.isAssignableFrom(RunJavascriptTool.Output.class));
-        var normalized = new ToolResultNormalizer(new Gson()).normalize(success, RunJavascriptTool.Output.class);
+        var normalized = new ToolResultNormalizer(dev.openallay.json.EngineJson.create()).normalize(success, RunJavascriptTool.Output.class);
         assertEquals("success", normalized.get("status").getAsString());
-        assertTrue(normalized.getAsJsonObject("value").getAsJsonArray("sources").isEmpty());
+        assertTrue((normalized.getAsJsonObject("value").getAsJsonArray("sources").size() == 0));
         assertFalse(normalized.getAsJsonObject("value").has("evidence"));
     }
 
@@ -180,7 +179,7 @@ final class RunJavascriptAcceptanceTest {
                 Files.writeString(file, "7\\n", StandardOpenOption.APPEND);
                 const values = String(Files.readString(file)).trim().split(/\\s+/).map(Number);
                 return {count: values.length, sum: values.reduce((sum, value) => sum + value, 0)};
-                """.formatted(new Gson().toJson(file.toString()));
+                """.formatted(dev.openallay.json.EngineJson.create().toJson(file.toString()));
 
         ToolResult.Success<RunJavascriptTool.Output> success = assertInstanceOf(
                 ToolResult.Success.class,
@@ -191,7 +190,7 @@ final class RunJavascriptAcceptanceTest {
         assertEquals(12, success.value().preview().getAsJsonObject().get("sum").getAsInt());
         assertEquals("2\n3\n7\n", Files.readString(file), "the successful operation must not be retried");
         assertTrue(success.value().sources().isEmpty());
-        var normalized = new ToolResultNormalizer(new Gson()).normalize(success, RunJavascriptTool.Output.class);
+        var normalized = new ToolResultNormalizer(dev.openallay.json.EngineJson.create()).normalize(success, RunJavascriptTool.Output.class);
         assertEquals("success", normalized.get("status").getAsString());
         assertEquals(1, workspaces.open(authorized.correlationId()).size());
         assertTrue(workspaces.open(authorized.correlationId()).sources(success.value().handle()).isEmpty());
@@ -422,8 +421,8 @@ final class RunJavascriptAcceptanceTest {
                                 new RunJavascriptTool.Input("return schema.list();", List.of()),
                                 new CancellationSignal())
                         .join());
-        assertFalse(workspaces.open(context.correlationId())
-                .open(listed.value().handle()).getAsJsonArray().isEmpty());
+        assertFalse((workspaces.open(context.correlationId())
+                .open(listed.value().handle()).getAsJsonArray().size() == 0));
         assertTrue(listed.value().sources().isEmpty());
         assertFalse(listed.value().modelText().contains("source="));
     }

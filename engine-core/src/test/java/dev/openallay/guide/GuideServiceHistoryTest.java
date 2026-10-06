@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dev.openallay.agent.AgentEvent;
 import dev.openallay.agent.AgentResult;
@@ -1099,7 +1098,7 @@ final class GuideServiceHistoryTest {
         return new GuideService(ACTOR, local, new FakeRemote(false),
                 (capabilities, correlation) -> new ToolResult.Success<>(
                         ToolInvocationContext.developmentConsole(correlation)),
-                dispatcher, CLOCK, new Gson(), SCOPE, history);
+                dispatcher, CLOCK, dev.openallay.json.EngineJson.create(), SCOPE, history);
     }
 
     private static List<ModelMessage> finalizedToolPair(String callId) {
@@ -1131,7 +1130,7 @@ final class GuideServiceHistoryTest {
                         ToolInvocationContext.developmentConsole(correlation)),
                 Runnable::run,
                 CLOCK,
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 SCOPE,
                 history);
     }

@@ -6,10 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelEvent;
 import dev.openallay.model.ModelMessage;
@@ -36,14 +34,14 @@ final class OpenAiJsonCodecTest {
                 "{\"prompt_tokens\":0,\"completion_tokens\":0}",
                 "{\"prompt_tokens\":9,\"completion_tokens\":2,\"extra_provider_field\":true}")) {
             JsonObject response = textResponse();
-            response.add("usage", JsonParser.parseString(raw));
+            response.add("usage", dev.openallay.json.JsonTrees.parse(raw));
             List<ModelEvent> events = new ArrayList<>();
             codec.parseTurn(response.toString(), events::add);
             assertEquals(!raw.equals("null"), events.stream().anyMatch(ModelEvent.UsageUpdate.class::isInstance));
         }
     }
 
-    private final OpenAiJsonCodec codec = new OpenAiJsonCodec(new Gson());
+    private final OpenAiJsonCodec codec = new OpenAiJsonCodec(dev.openallay.json.EngineJson.create());
 
     @Test
     void acceptsMissingAndNullOptionalToolCallsAndUsage() {
@@ -75,10 +73,10 @@ final class OpenAiJsonCodecTest {
     void acceptsMissingAndNullOptionalPromptTokenDetails() {
         for (String details : List.of("missing", "null", "{}", "{\"cached_tokens\":null}")) {
             JsonObject response = textResponse();
-            JsonObject usage = JsonParser.parseString(
+            JsonObject usage = dev.openallay.json.JsonTrees.parse(
                     "{\"prompt_tokens\":7,\"completion_tokens\":2}").getAsJsonObject();
             if (!details.equals("missing")) {
-                usage.add("prompt_tokens_details", JsonParser.parseString(details));
+                usage.add("prompt_tokens_details", dev.openallay.json.JsonTrees.parse(details));
             }
             response.add("usage", usage);
 
@@ -102,19 +100,19 @@ final class OpenAiJsonCodecTest {
                 () -> codec.parseTurn(toolCalls.toString(), ignored -> {}));
 
         JsonObject usage = textResponse();
-        usage.add("usage", JsonParser.parseString("[]"));
+        usage.add("usage", dev.openallay.json.JsonTrees.parse("[]"));
         assertThrows(RuntimeException.class,
                 () -> codec.parseTurn(usage.toString(), ignored -> {}));
 
         JsonObject details = textResponse();
         JsonObject usageObject = new JsonObject();
-        usageObject.add("prompt_tokens_details", JsonParser.parseString("[]"));
+        usageObject.add("prompt_tokens_details", dev.openallay.json.JsonTrees.parse("[]"));
         details.add("usage", usageObject);
         assertThrows(RuntimeException.class,
                 () -> codec.parseTurn(details.toString(), ignored -> {}));
 
         JsonObject arguments = textResponse();
-        message(arguments).add("tool_calls", JsonParser.parseString("""
+        message(arguments).add("tool_calls", dev.openallay.json.JsonTrees.parse("""
                 [{"id":"call_x","type":"function","function":{"name":"fact","arguments":"[]"}}]
                 """));
         assertThrows(RuntimeException.class,
@@ -141,13 +139,13 @@ final class OpenAiJsonCodecTest {
             messages.add(ModelMessage.userText("current request"));
             messages.add(new ModelMessage(ModelRole.ASSISTANT, current.content()));
             messages.add(new ModelMessage(ModelRole.USER, List.of(
-                    new ModelContent.ToolResult(providerId, JsonParser.parseString("{\"fact\":42}"), false))));
+                    new ModelContent.ToolResult(providerId, dev.openallay.json.JsonTrees.parse("{\"fact\":42}"), false))));
             messages.add(ModelMessage.userText("next request"));
             ModelRequest request = new ModelRequest("Use tools.", messages, List.of(), stream);
             List<ModelMessage> original = List.copyOf(messages);
 
             String body = codec.requestBody(config(), request);
-            JsonObject encoded = JsonParser.parseString(body).getAsJsonObject();
+            JsonObject encoded = dev.openallay.json.JsonTrees.parse(body).getAsJsonObject();
             Set<String> uses = new HashSet<>();
             Set<String> results = new HashSet<>();
             List<String> orderedUses = new ArrayList<>();
@@ -185,7 +183,7 @@ final class OpenAiJsonCodecTest {
                     ((ModelContent.ToolResult) request.messages().get(2).content().getFirst()).toolUseId());
             // Re-encoding a subsequent dispatch still preserves the same history aliases.
             messages.add(ModelMessage.userText("one more request"));
-            JsonObject subsequent = JsonParser.parseString(codec.requestBody(config(),
+            JsonObject subsequent = dev.openallay.json.JsonTrees.parse(codec.requestBody(config(),
                     new ModelRequest("Use tools.", messages, List.of(), stream))).getAsJsonObject();
             assertEquals(orderedUses.getFirst(), subsequent.getAsJsonArray("messages").get(2)
                     .getAsJsonObject().getAsJsonArray("tool_calls").get(0)
@@ -203,7 +201,7 @@ final class OpenAiJsonCodecTest {
                 ModelConfig selected = new ModelConfig(source.enabled(), source.protocol(),
                         source.baseUri(), source.model(), source.apiKey(), source.contextWindowTokens(),
                         source.maxOutputTokens(), source.connectTimeout(), source.requestTimeout(), effort);
-                JsonObject body = JsonParser.parseString(codec.requestBody(selected, request))
+                JsonObject body = dev.openallay.json.JsonTrees.parse(codec.requestBody(selected, request))
                         .getAsJsonObject();
                 assertEquals(effort != dev.openallay.model.config.ModelReasoningEffort.AUTO,
                         body.has("reasoning_effort"));
@@ -221,7 +219,7 @@ final class OpenAiJsonCodecTest {
     private ModelTurn currentToolTurn(String id, boolean stream) {
         if (!stream) {
             JsonObject response = textResponse();
-            message(response).add("tool_calls", JsonParser.parseString("""
+            message(response).add("tool_calls", dev.openallay.json.JsonTrees.parse("""
                     [{"id":"%s","type":"function","function":{"name":"fact","arguments":"{}"}}]
                     """.formatted(id)));
             response.getAsJsonArray("choices").get(0).getAsJsonObject()
@@ -243,7 +241,7 @@ final class OpenAiJsonCodecTest {
         messages.add(new ModelMessage(ModelRole.ASSISTANT,
                 List.of(new ModelContent.ToolUse(id, "fact", input))));
         messages.add(new ModelMessage(ModelRole.USER, List.of(
-                new ModelContent.ToolResult(id, JsonParser.parseString("{\"status\":\"SUCCEEDED\"}"), false))));
+                new ModelContent.ToolResult(id, dev.openallay.json.JsonTrees.parse("{\"status\":\"SUCCEEDED\"}"), false))));
     }
 
     private static void requireProviderSafeId(String id) {
@@ -259,7 +257,7 @@ final class OpenAiJsonCodecTest {
     }
 
     private static JsonObject textResponse() {
-        return JsonParser.parseString("""
+        return dev.openallay.json.JsonTrees.parse("""
                 {"model":"compatible-model","choices":[{"finish_reason":"stop",
                  "message":{"role":"assistant","content":"OK"}}]}
                 """).getAsJsonObject();

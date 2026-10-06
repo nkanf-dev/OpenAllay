@@ -1,14 +1,13 @@
 package dev.openallay.bridge.protocol;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.google.gson.Gson;
 import dev.openallay.agent.AgentEvent;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 final class RequestReleasedCodecTest {
     @Test void releaseIsExactEmptyNonterminalRequestScopedEvent() {
-        var codec = new ServerAgentEventCodec(new Gson());
+        var codec = new ServerAgentEventCodec(dev.openallay.json.EngineJson.create());
         UUID id = UUID.randomUUID();
         var payload = codec.encode(id, new AgentEvent.RequestReleased());
         assertEquals("request_released", payload.eventType());

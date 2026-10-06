@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 final class ServerAgentServiceTest {
     @Test
     void scheduledCancellationKeepsOwnerUntilPartialUsageReceiptIsDelivered() throws Exception {
-        Gson gson = new Gson();
+        Gson gson = dev.openallay.json.EngineJson.create();
         AgentSessionStore sessions = new AgentSessionStore();
         AgentToolExecutor tools = new EmptyTools();
         CompletableFuture<Runnable> queuedReceipt = new CompletableFuture<>();
@@ -113,7 +113,7 @@ final class ServerAgentServiceTest {
         List<ServerAgentEventPayload> events = new java.util.concurrent.CopyOnWriteArrayList<>();
         java.util.concurrent.CountDownLatch released = new java.util.concurrent.CountDownLatch(2);
         ServerAgentService service = new ServerAgentService(
-                new GameGuideAgent(model, tools, sessions, new Gson()),
+                new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create()),
                 tools,
                 sessions,
                 (actor, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
@@ -122,7 +122,7 @@ final class ServerAgentServiceTest {
                     events.add(event);
                     if (event.eventType().equals("request_released")) released.countDown();
                 },
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 "system");
         UUID actor = UUID.randomUUID();
         UUID firstId = UUID.randomUUID();
@@ -172,13 +172,13 @@ final class ServerAgentServiceTest {
         AgentSessionStore sessions = new AgentSessionStore();
         AgentToolExecutor tools = new EmptyTools();
         ServerAgentService service = new ServerAgentService(
-                new GameGuideAgent(model, tools, sessions, new Gson()),
+                new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create()),
                 tools,
                 sessions,
                 (actor, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(id)),
                 (actor, event) -> {},
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 "system");
         UUID requestId = UUID.randomUUID();
         ServerAgentRequestPayload request = new ServerAgentRequestPayload(
@@ -210,10 +210,10 @@ final class ServerAgentServiceTest {
         AgentToolExecutor tools = new EmptyTools();
         List<ServerAgentEventPayload> events = new ArrayList<>();
         ServerAgentService service = new ServerAgentService(
-                new GameGuideAgent(model, tools, sessions, new Gson()), tools, sessions,
+                new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create()), tools, sessions,
                 (actor, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
                         ToolInvocationContext.developmentConsole(id)),
-                (actor, event) -> events.add(event), new Gson(), "system");
+                (actor, event) -> events.add(event), dev.openallay.json.EngineJson.create(), "system");
         UUID actor = UUID.randomUUID();
         service.ask(actor, request(UUID.randomUUID(), "a"));
         service.ask(actor, request(UUID.randomUUID(), "b"));
@@ -233,7 +233,7 @@ final class ServerAgentServiceTest {
         CompletableFuture<Void> ready = new CompletableFuture<>();
         java.util.concurrent.atomic.AtomicInteger captures = new java.util.concurrent.atomic.AtomicInteger();
         ServerAgentService service = new ServerAgentService(
-                new GameGuideAgent(model, tools, sessions, new Gson()),
+                new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create()),
                 tools,
                 sessions,
                 (actor, capabilities, id, cancellation) -> {
@@ -242,7 +242,7 @@ final class ServerAgentServiceTest {
                             ToolInvocationContext.developmentConsole(id));
                 },
                 (actor, event) -> {},
-                new Gson(),
+                dev.openallay.json.EngineJson.create(),
                 "system",
                 cancellation -> ready);
 
@@ -261,14 +261,14 @@ final class ServerAgentServiceTest {
         java.util.concurrent.atomic.AtomicInteger captures = new java.util.concurrent.atomic.AtomicInteger();
         List<ServerAgentEventPayload> events = new ArrayList<>();
         ServerAgentService service = new ServerAgentService(
-                new GameGuideAgent(model, tools, sessions, new Gson()), tools, sessions,
+                new GameGuideAgent(model, tools, sessions, dev.openallay.json.EngineJson.create()), tools, sessions,
                 (actor, capabilities, id, cancellation) -> {
                     captures.incrementAndGet();
                     return CompletableFuture.completedFuture(
                             ToolInvocationContext.developmentConsole(id));
                 },
                 (actor, event) -> events.add(event),
-                new Gson(), "system", cancellation -> ready);
+                dev.openallay.json.EngineJson.create(), "system", cancellation -> ready);
         UUID actor = UUID.randomUUID();
         UUID request = UUID.randomUUID();
         service.ask(actor, request(request, "waiting"));

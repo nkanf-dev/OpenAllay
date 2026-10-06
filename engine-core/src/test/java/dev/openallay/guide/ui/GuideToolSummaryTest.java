@@ -3,7 +3,6 @@ package dev.openallay.guide.ui;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.context.RecipeReference;
 import dev.openallay.guide.GuideToolActivity;
 import dev.openallay.guide.GuideToolIntent;
@@ -20,7 +19,7 @@ final class GuideToolSummaryTest {
     private static final String TITLE_KEY = "screen.openallay.tool.run_javascript";
 
     @Test void actualIntentIsLiteralAndToolTitleKeyRemainsTheFallback() {
-        var arguments = JsonParser.parseString("""
+        var arguments = dev.openallay.json.JsonTrees.parse("""
                 {"title":"Check nearby supplies", "description":"Count apples before crafting",
                  "source":"return inventory;"}
                 """).getAsJsonObject();
@@ -42,11 +41,11 @@ final class GuideToolSummaryTest {
     }
 
     @Test void optionalDescriptionIsNotFabricatedFromResultsOrNarration() {
-        var arguments = JsonParser.parseString("""
+        var arguments = dev.openallay.json.JsonTrees.parse("""
                 {"title":"Count supplies", "source":"return { placed: 318 };"}
                 """).getAsJsonObject();
         var activity = new GuideToolActivity("no-description", 0, "openallay:run_javascript",
-                GuideToolStatus.SUCCEEDED, arguments, JsonParser.parseString("""
+                GuideToolStatus.SUCCEEDED, arguments, dev.openallay.json.JsonTrees.parse("""
                 {"status":"success","value":{"resultType":"object","cardinality":1,
                  "viewKind":"KEY_VALUE","preview":{"placed":318},"complete":true,
                  "modelText":"A convincing description that was not requested"}}
@@ -234,7 +233,7 @@ final class GuideToolSummaryTest {
             assertFalse(summary.toString().contains("Private envelope text"));
             assertSame(detail, tool.detail());
             assertEquals(cards, tool.detail().cards());
-            assertEquals(JsonParser.parseString(results.get(index)), tool.activity().normalized());
+            assertEquals(dev.openallay.json.JsonTrees.parse(results.get(index)), tool.activity().normalized());
         }
         var scalar = tool("scalar", GuideToolStatus.SUCCEEDED, null, results.getFirst(), true);
         assertEquals(List.of("17"), ((GuideDetailCard.Text) scalar.detail().cards().getFirst()).lines());
@@ -353,7 +352,7 @@ final class GuideToolSummaryTest {
     private static GuideUiRow.Tool tool(String id, GuideToolStatus status, JsonObject arguments,
             String normalized, boolean terminal) {
         var activity = new GuideToolActivity(id, 0, "openallay:run_javascript", status,
-                arguments, normalized == null ? null : JsonParser.parseString(normalized).getAsJsonObject(),
+                arguments, normalized == null ? null : dev.openallay.json.JsonTrees.parse(normalized).getAsJsonObject(),
                 List.of(), List.of());
         return new GuideUiRow.Tool(REQUEST, 0, activity,
                 GuideToolDetailPresenter.project(activity, false).forRequest(terminal));

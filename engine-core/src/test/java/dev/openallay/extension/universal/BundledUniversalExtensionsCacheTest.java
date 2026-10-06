@@ -2,7 +2,6 @@ package dev.openallay.extension.universal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -78,7 +77,7 @@ class BundledUniversalExtensionsCacheTest {
                             ? provenance.toString().getBytes(StandardCharsets.UTF_8) : bytes));
     }
     private static JsonObject provenance(byte[] bytes) throws Exception {
-        JsonObject value = JsonParser.parseString("""
+        JsonObject value = dev.openallay.json.JsonTrees.parse("""
                 {"source":{"repository":"test:fixture","revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                  "dirty":false,"pinned":true},"project":"fixture","version":"1.0.0",
                  "extensionId":"test:extension","openAllayApiVersion":"0.3.0",

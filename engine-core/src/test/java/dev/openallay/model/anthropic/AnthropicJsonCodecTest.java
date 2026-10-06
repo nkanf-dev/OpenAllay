@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.model.ModelContent;
 import dev.openallay.model.ModelMessage;
 import dev.openallay.model.ModelRequest;
@@ -22,11 +20,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 final class AnthropicJsonCodecTest {
-    private final AnthropicJsonCodec codec = new AnthropicJsonCodec(new Gson());
+    private final AnthropicJsonCodec codec = new AnthropicJsonCodec(dev.openallay.json.EngineJson.create());
 
     @Test
     void normalizesCacheReadsAndWritesIntoTotalInputAndKeepsPresence() {
-        var usage = codec.parseUsage(JsonParser.parseString("""
+        var usage = codec.parseUsage(dev.openallay.json.JsonTrees.parse("""
                 {"input_tokens":100,"output_tokens":5,"cache_read_input_tokens":50,"cache_creation_input_tokens":25}
                 """).getAsJsonObject());
         assertEquals(175, usage.inputTokens());
@@ -34,7 +32,7 @@ final class AnthropicJsonCodecTest {
         assertEquals(50, usage.cacheReadTokens());
         assertEquals(25, usage.cacheWriteTokens());
         assertTrue(usage.complete());
-        var missing = codec.parseUsage(JsonParser.parseString("""
+        var missing = codec.parseUsage(dev.openallay.json.JsonTrees.parse("""
                 {"input_tokens":100,"output_tokens":5}
                 """).getAsJsonObject());
         assertFalse(missing.inputKnown());
@@ -62,7 +60,7 @@ final class AnthropicJsonCodecTest {
             List<ModelMessage> original = List.copyOf(messages);
 
             String body = codec.requestBody(config(), request);
-            JsonObject encoded = JsonParser.parseString(body).getAsJsonObject();
+            JsonObject encoded = dev.openallay.json.JsonTrees.parse(body).getAsJsonObject();
             List<String> uses = new ArrayList<>();
             List<String> results = new ArrayList<>();
             for (var message : encoded.getAsJsonArray("messages")) {
@@ -108,7 +106,7 @@ final class AnthropicJsonCodecTest {
                 ModelConfig selected = new ModelConfig(source.enabled(), source.protocol(),
                         source.baseUri(), source.model(), source.apiKey(), source.contextWindowTokens(),
                         source.maxOutputTokens(), source.connectTimeout(), source.requestTimeout(), effort);
-                JsonObject body = JsonParser.parseString(codec.requestBody(selected, request))
+                JsonObject body = dev.openallay.json.JsonTrees.parse(codec.requestBody(selected, request))
                         .getAsJsonObject();
                 assertEquals(effort != dev.openallay.model.config.ModelReasoningEffort.AUTO,
                         body.has("output_config"));
@@ -130,7 +128,7 @@ final class AnthropicJsonCodecTest {
         messages.add(new ModelMessage(ModelRole.ASSISTANT,
                 List.of(new ModelContent.ToolUse(id, "fact", input))));
         messages.add(new ModelMessage(ModelRole.USER, List.of(
-                new ModelContent.ToolResult(id, JsonParser.parseString("{\"status\":\"SUCCEEDED\"}"), false))));
+                new ModelContent.ToolResult(id, dev.openallay.json.JsonTrees.parse("{\"status\":\"SUCCEEDED\"}"), false))));
     }
 
     private static ModelConfig config() {

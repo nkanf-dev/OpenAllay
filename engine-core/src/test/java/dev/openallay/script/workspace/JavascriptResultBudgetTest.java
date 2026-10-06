@@ -23,7 +23,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonNull;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.AgentToolResult;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.model.CancellationSignal;
@@ -334,7 +333,7 @@ final class JavascriptResultBudgetTest {
         Assumptions.assumeTrue(fixturePath != null && !fixturePath.isBlank(),
                 "Set OPENALLAY_TEST_RESULT_FIXTURE to an explicit pure JSON fixture path");
         String fixtureJson = Files.readString(Path.of(fixturePath), StandardCharsets.UTF_8);
-        JsonElement canonical = JsonParser.parseString(fixtureJson);
+        JsonElement canonical = dev.openallay.json.JsonTrees.parse(fixtureJson);
         String canonicalExact = canonical.toString();
         JsonObject object = canonical.getAsJsonObject();
         assertEquals(COLUMN_COUNT, object.getAsJsonArray("columns").size());

@@ -3,7 +3,6 @@ package dev.openallay.benchmark;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.JsonParser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +50,7 @@ final class BenchmarkVerifierTest {
 
     private static BenchmarkOutcome outcome(String canonicalResult) {
         return new BenchmarkOutcome(
-                JsonParser.parseString(canonicalResult),
+                dev.openallay.json.JsonTrees.parse(canonicalResult),
                 List.of(),
                 new BenchmarkMetrics(
                         true,

@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.agent.tool.LocalAgentToolExecutor;
 import dev.openallay.agent.tool.ToolSchemaGenerator;
 import dev.openallay.model.CancellationSignal;
@@ -45,7 +43,7 @@ final class RunJavascriptIntentTest {
     void declaresSourceHandlesAndDisplayMetadataWithoutRootSelection() {
         JsonObject schema = new ToolSchemaGenerator().generate(RunJavascriptTool.Input.class);
         JsonObject properties = schema.getAsJsonObject("properties");
-        assertEquals(Set.of("source", "handles", "title", "description"), properties.keySet());
+        assertEquals(Set.of("source", "handles", "title", "description"), dev.openallay.json.JsonTrees.keys(properties));
         assertFalse(properties.has("roots"));
         assertEquals("array", properties.getAsJsonObject("handles").get("type").getAsString());
         assertEquals("string", properties.getAsJsonObject("handles")
@@ -55,7 +53,7 @@ final class RunJavascriptIntentTest {
     @Test
     void rejectsRemovedRootSelectionRatherThanMaintainingAnAlias() {
         ToolResult.Failure<?> failure = assertInstanceOf(ToolResult.Failure.class,
-                new ToolArgumentCodec(new Gson()).decode(
+                new ToolArgumentCodec(dev.openallay.json.EngineJson.create()).decode(
                         arguments("{\"source\":\"return 1;\",\"roots\":[\"items\"]}"),
                         RunJavascriptTool.Input.class));
         assertEquals("invalid_arguments", failure.code());
@@ -63,7 +61,7 @@ final class RunJavascriptIntentTest {
 
     @Test
     void rejectsNonTextWorkspaceHandlesWithoutGsonCoercion() {
-        ToolArgumentCodec codec = new ToolArgumentCodec(new Gson());
+        ToolArgumentCodec codec = new ToolArgumentCodec(dev.openallay.json.EngineJson.create());
         for (String handles : List.of("[17]", "[true]", "[null]", "[{}]", "[[]]", "{}", "true")) {
             ToolResult.Failure<?> failure = assertInstanceOf(ToolResult.Failure.class,
                     codec.decode(arguments("{\"source\":\"return 1;\",\"handles\":" + handles + "}"),
@@ -81,13 +79,13 @@ final class RunJavascriptIntentTest {
         JsonObject sources = properties.getAsJsonObject("sources");
         assertEquals("array", sources.get("type").getAsString());
         JsonObject summary = sources.getAsJsonObject("items").getAsJsonObject("properties");
-        assertEquals(Set.of("evidence", "lastCapturedAt"), summary.keySet());
+        assertEquals(Set.of("evidence", "lastCapturedAt"), dev.openallay.json.JsonTrees.keys(summary));
         assertEquals("date-time", summary.getAsJsonObject("lastCapturedAt").get("format").getAsString());
     }
 
     @Test
     void acceptsLegacyNullEmptyAndUnboundedPlainTextMetadata() {
-        ToolArgumentCodec codec = new ToolArgumentCodec(new Gson());
+        ToolArgumentCodec codec = new ToolArgumentCodec(dev.openallay.json.EngineJson.create());
         for (String metadata : List.of("", ",\"title\":null,\"description\":null",
                 ",\"title\":\"\",\"description\":\"   \"")) {
             assertInstanceOf(ToolResult.Success.class, codec.decode(
@@ -112,11 +110,11 @@ final class RunJavascriptIntentTest {
         }, new AgentResultWorkspaceRegistry(), new JavascriptResultPresenter());
         ToolRegistry registry = new ToolRegistry();
         registry.register("test", List.of(tool));
-        LocalAgentToolExecutor executor = new LocalAgentToolExecutor(registry, new Gson());
+        LocalAgentToolExecutor executor = new LocalAgentToolExecutor(registry, dev.openallay.json.EngineJson.create());
         for (String field : List.of("title", "description", "source")) {
             for (String malformed : List.of("42", "true", "{}", "[]")) {
                 JsonObject input = arguments("{\"source\":\"return schema.list();\"}");
-                input.add(field, JsonParser.parseString(malformed));
+                input.add(field, dev.openallay.json.JsonTrees.parse(malformed));
                 var result = executor.execute("openallay__run_javascript", input,
                         JavascriptAgentTestFixtures.context("intent-validation"), new CancellationSignal()).join();
                 assertTrue(result.failure(), field + ": " + malformed);
@@ -155,7 +153,7 @@ final class RunJavascriptIntentTest {
     @Test
     void executionKeyIgnoresValidLabelsButKeepsMalformedInputRecoverable() {
         JsonObject legacy = arguments("{\"source\":\"return schema.list();\",\"handles\":[]}");
-        JsonObject labeled = legacy.deepCopy();
+        JsonObject labeled = dev.openallay.json.JsonTrees.copy(legacy);
         labeled.addProperty("title", "Inspect catalog");
         labeled.addProperty("description", "Read declared game data");
         assertEquals(legacy, RunJavascriptTool.executionArguments(labeled));
@@ -169,6 +167,6 @@ final class RunJavascriptIntentTest {
     }
 
     private static JsonObject arguments(String json) {
-        return JsonParser.parseString(json).getAsJsonObject();
+        return dev.openallay.json.JsonTrees.parse(json).getAsJsonObject();
     }
 }

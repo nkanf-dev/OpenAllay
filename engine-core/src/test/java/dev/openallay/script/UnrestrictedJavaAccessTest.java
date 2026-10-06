@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import dev.openallay.context.ToolInvocationContext;
 import dev.openallay.extension.JavascriptHostBinding;
 import dev.openallay.extension.JavascriptHostMethod;
@@ -356,21 +355,21 @@ final class UnrestrictedJavaAccessTest {
         JsonObject metadata = execute(PRELUDE + "return Java.inspect(Fixture.create());").getAsJsonObject();
         assertEquals(Set.of("name", "typeName", "superclass", "interfaces", "primitive", "array",
                 "componentType", "modifiers", "modifierBits", "module", "classLoader", "fields", "methods",
-                "constructors"), metadata.keySet());
+                "constructors"), dev.openallay.json.JsonTrees.keys(metadata));
         assertEquals(FIXTURE, metadata.get("name").getAsString());
         assertEquals(PARENT, metadata.get("superclass").getAsString());
         assertFalse(metadata.get("primitive").getAsBoolean());
         assertFalse(metadata.get("array").getAsBoolean());
         assertTrue(metadata.get("componentType").isJsonNull());
         assertEquals(Set.of("name", "named", "automatic", "packageName", "packageOpenToBridge"),
-                metadata.getAsJsonObject("module").keySet());
-        assertEquals(Set.of("name", "type", "identity"), metadata.getAsJsonObject("classLoader").keySet());
+                dev.openallay.json.JsonTrees.keys(metadata.getAsJsonObject("module")));
+        assertEquals(Set.of("name", "type", "identity"), dev.openallay.json.JsonTrees.keys(metadata.getAsJsonObject("classLoader")));
         assertEquals("dev.openallay.script.fixture", metadata.getAsJsonObject("module").get("packageName").getAsString());
         Set<String> fieldSignatures = new HashSet<>();
         for (JsonElement entry : metadata.getAsJsonArray("fields")) {
             JsonObject field = entry.getAsJsonObject();
             assertEquals(Set.of("name", "declaringClass", "type", "modifiers", "modifierBits", "static", "final", "synthetic"),
-                    field.keySet());
+                    dev.openallay.json.JsonTrees.keys(field));
             assertTrue(fieldSignatures.add(field.get("declaringClass") + ":" + field.get("name")), "Duplicate field descriptor");
         }
         assertEquals("private", findField(metadata, "privateValue", FIXTURE).get("modifiers").getAsString());
@@ -378,7 +377,7 @@ final class UnrestrictedJavaAccessTest {
         for (JsonElement entry : metadata.getAsJsonArray("methods")) {
             JsonObject method = entry.getAsJsonObject();
             assertEquals(Set.of("name", "declaringClass", "parameterTypes", "returnType", "modifiers", "modifierBits",
-                    "static", "varArgs", "bridge", "synthetic"), method.keySet());
+                    "static", "varArgs", "bridge", "synthetic"), dev.openallay.json.JsonTrees.keys(method));
             assertTrue(signatures.add(method.get("declaringClass") + ":" + method.get("name")
                     + method.get("parameterTypes") + ":" + method.get("returnType")), "Duplicate method signature");
         }
@@ -386,7 +385,7 @@ final class UnrestrictedJavaAccessTest {
         for (JsonElement entry : metadata.getAsJsonArray("constructors")) {
             JsonObject constructor = entry.getAsJsonObject();
             assertEquals(Set.of("declaringClass", "parameterTypes", "modifiers", "modifierBits", "varArgs", "synthetic"),
-                    constructor.keySet());
+                    dev.openallay.json.JsonTrees.keys(constructor));
             assertEquals(FIXTURE, constructor.get("declaringClass").getAsString());
             assertTrue(java.lang.reflect.Modifier.isPrivate(constructor.get("modifierBits").getAsInt()));
             assertTrue(signatures.add(constructor.get("parameterTypes").toString()), "Duplicate constructor signature");
@@ -556,7 +555,7 @@ final class UnrestrictedJavaAccessTest {
     void safeUnrestrictedSafeOrderDoesNotExposePrivateMembersThroughSharedWrappers() {
         String safeSource = "return {java: typeof Java, packages: typeof Packages, "
                 + "getClass: typeof mc.fixture.getClass, privateValue: typeof mc.fixture.privateValue};";
-        JsonElement expected = JsonParser.parseString("""
+        JsonElement expected = dev.openallay.json.JsonTrees.parse("""
                 {"java":"undefined","packages":"undefined","getClass":"undefined","privateValue":"undefined"}
                 """);
         for (int pass = 0; pass < 2; pass++) {
@@ -635,6 +634,6 @@ final class UnrestrictedJavaAccessTest {
     }
 
     private static void assertJson(String expected, JsonElement actual) {
-        assertEquals(JsonParser.parseString(expected), actual);
+        assertEquals(dev.openallay.json.JsonTrees.parse(expected), actual);
     }
 }
