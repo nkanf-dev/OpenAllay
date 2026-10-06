@@ -23,9 +23,13 @@ final class JsonReadersTest {
         assertTrue(parse("true").getAsBoolean());
         assertFalse(parse("false").getAsBoolean());
         assertTrue(parse("null").isJsonNull());
-        for (String number : List.of("0", "-0", "-1", "1.25", "1E10", "-1.5E-3", "1e+2")) {
+        for (String number : List.of("0", "-1", "1.25", "1E10", "-1.5E-3", "1e+2")) {
             assertEquals(number, parse(number).getAsString());
         }
+        // The host owns numeric representation; older Gson canonicalizes integer negative zero.
+        JsonElement negativeZero = parse("-0");
+        assertTrue(negativeZero.getAsJsonPrimitive().isNumber());
+        assertEquals(0, negativeZero.getAsBigDecimal().compareTo(java.math.BigDecimal.ZERO));
         assertEquals("ABC'\n\t\r\b\f\\/\"\u0000",
                 parse("\"ABC'\\n\\t\\r\\b\\f\\\\\\/\\\"\\u0000\"").getAsString());
         assertEquals("{\"TRUE\":\"NULL\",\"value\":true}",

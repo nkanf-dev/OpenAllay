@@ -86,14 +86,18 @@ class JsonTreesTest {
     }
 
     @Test void copiesRetainNumericObjectsAndLexemesWithoutConversion() {
-        for (String token : List.of("9223372036854775808123456789", "1.2300", "1e999", "-0")) {
+        for (String token : List.of("9223372036854775808123456789", "1.2300", "1e999")) {
             JsonElement original = JsonTrees.parse(token);
             JsonElement copy = JsonTrees.copy(original);
             assertEquals(token, copy.toString());
             assertSame(original.getAsNumber(), copy.getAsNumber());
         }
+        JsonElement negativeZero = JsonTrees.parse("-0");
+        JsonElement copiedZero = JsonTrees.copy(negativeZero);
+        assertEquals(negativeZero.toString(), copiedZero.toString());
+        assertSame(negativeZero.getAsNumber(), copiedZero.getAsNumber());
         for (Number value : List.of(new BigInteger("123456789012345678901234567890"),
-                new BigDecimal("123.4500"), Double.NaN, Double.POSITIVE_INFINITY)) {
+                new BigDecimal("123.4500"), -0.0d, Double.NaN, Double.POSITIVE_INFINITY)) {
             JsonPrimitive original = new JsonPrimitive(value);
             assertSame(value, JsonTrees.copy(original).getAsNumber());
         }
