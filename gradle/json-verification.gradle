@@ -1,0 +1,31 @@
+// Verify the minimum compiled public ABI under an exact external host runtime.
+// This script is test-only. Production and test compiler dependencies remain Gson 2.8.0.
+project(':engine-core') {
+    def host = providers.gradleProperty('jsonVerificationGsonVersion').get()
+    ['compileClasspath', 'testCompileClasspath'].each { name ->
+        configurations.named(name) { resolutionStrategy.force('com.google.code.gson:gson:2.8.0') }
+    }
+    tasks.withType(JavaCompile).configureEach {
+        doFirst {
+            if (classpath.files.findAll { it.name.startsWith('gson-') }*.name != ['gson-2.8.0.jar']) {
+                throw new GradleException('JSON verification compiler requires exactly Gson 2.8.0')
+            }
+        }
+    }
+    configurations.named('testRuntimeClasspath') {
+        resolutionStrategy.force("com.google.code.gson:gson:${host}")
+    }
+    tasks.named('test', Test) {
+        inputs.property('jsonVerificationGsonVersion', host)
+        doFirst {
+            def artifacts = configurations.testRuntimeClasspath.resolvedConfiguration.resolvedArtifacts
+                    .findAll { it.moduleVersion.id.group == 'com.google.code.gson' && it.name == 'gson' }
+            if (artifacts.size() != 1 || artifacts.first().moduleVersion.id.version != host) {
+                throw new GradleException("JSON test runtime must contain exactly Gson ${host}")
+            }
+            logger.lifecycle("JSON verification runtime: ${artifacts.first().moduleVersion.id}")
+        }
+        reports.junitXml.outputLocation = layout.buildDirectory.dir("test-results/json-${host}")
+        reports.html.outputLocation = layout.buildDirectory.dir("reports/tests/json-${host}")
+    }
+}

@@ -30,7 +30,7 @@ dependencies {
     // Host-supplied public SDK stays separately packaged, never shaded into the engine.
     api(project(':extension-api'))
     compileOnlyApi(project(':runtime-json'))
-    api('com.google.code.gson:gson:2.8.9')
+    api('com.google.code.gson:gson:2.8.0')
     api('org.slf4j:slf4j-api:2.0.1')
     api(project(':runtime-rhino'))
     compileOnly(project(path: ':runtime-maven', configuration: 'privateRuntime'))
@@ -175,4 +175,9 @@ tasks.register('printSqliteProofSupportClasspath') {
     doLast {
         println(sourceSets.test.runtimeClasspath.asPath)
     }
+}
+
+// Optional verification-only host runtime; production keeps the minimum public Gson ABI.
+if (providers.gradleProperty('jsonVerificationGsonVersion').isPresent()) {
+    apply from: rootProject.file('gradle/json-verification.gradle')
 }

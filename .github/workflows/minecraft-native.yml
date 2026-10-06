@@ -1,54 +1,42 @@
-name: Preserve accepted mature native products
+name: Mainstream Forge shared JSON ABI verification
 on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 concurrency:
-  group: preserve-mature-products-${{ github.ref }}
+  group: mainstream-json-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  preserve-originals:
+  json-abi:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
-      - name: Retrieve original building/reload/commands/UI
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
-          github-token: ${{ github.token }}
-          run-id: 37388892087
-          artifact-ids: 11380706080
-          path: build/original-product-imports/11380706080
-      - name: Retrieve original building/reload/commands
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with:
-          github-token: ${{ github.token }}
-          run-id: 37397120987
-          artifact-ids: 11383755758
-          path: build/original-product-imports/11383755758
-      - name: Retrieve original UI/editor/native-toasts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-        with:
-          github-token: ${{ github.token }}
-          run-id: 37398771932
-          artifact-ids: 11383699840
-          path: build/original-product-imports/11383699840
-      - name: Retrieve original affected modern UI with correction receipt
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-        with:
-          github-token: ${{ github.token }}
-          run-id: 37401212610
-          artifact-ids: 11384878871
-          path: build/original-product-imports/11384878871
-      - name: Check exact accepted hashes and preserve original provenance
-        run: python3 -B scripts/preserve-accepted-mature-products.py
-      - name: Retain original products without a rebuild or release
+          cache-provider: basic
+          cache-read-only: true
+      - name: Verify old public Gson ABI and configured engine semantics
+        run: ./gradlew --configure-on-demand --stacktrace -PminecraftTarget=1.19.2 :engine-core:compileTestJava :engine-core:test --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.json.JsonTreesTest --tests dev.openallay.json.JsonReadersTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.trace.replay.ToolArgumentCodecTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest --tests dev.openallay.bridge.protocol.ServerAgentEventCodecTest --tests dev.openallay.bridge.client.ClientToolExecutionEndpointTest --tests dev.openallay.bridge.PlayerClientToolRouterTest --tests dev.openallay.model.live.LiveModelContinuationDiagnosticTest --tests dev.openallay.model.live.RetainedModelRequestDiagnosticTest --tests dev.openallay.world.WorldFocusObservationTest --tests dev.openallay.agent.session.AgentSessionStoreTest --tests dev.openallay.guide.history.SqliteGuideHistoryForkTest --tests dev.openallay.agent.trace.LiveTraceStoreTest --tests dev.openallay.model.config.ModelProfilesConfigWriterTest --tests dev.openallay.model.tokenizer.ModelContextTokenEstimatorTest --tests dev.openallay.community.CommunityCatalogCodecTest --tests dev.openallay.extension.catalog.ExtensionCatalogClientTest --tests dev.openallay.extension.install.ExtensionPackageInstallerTest --tests dev.openallay.guide.ui.GuideDisplayConfigLoaderTest -PjsonVerificationGsonVersion=2.8.0
+      - name: Verify the same compiled source against the modern host Gson
+        run: ./gradlew --configure-on-demand --stacktrace -PminecraftTarget=1.19.2 :engine-core:compileTestJava :engine-core:test --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.json.JsonTreesTest --tests dev.openallay.json.JsonReadersTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.trace.replay.ToolArgumentCodecTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest --tests dev.openallay.bridge.protocol.ServerAgentEventCodecTest --tests dev.openallay.bridge.client.ClientToolExecutionEndpointTest --tests dev.openallay.bridge.PlayerClientToolRouterTest --tests dev.openallay.model.live.LiveModelContinuationDiagnosticTest --tests dev.openallay.model.live.RetainedModelRequestDiagnosticTest --tests dev.openallay.world.WorldFocusObservationTest --tests dev.openallay.agent.session.AgentSessionStoreTest --tests dev.openallay.guide.history.SqliteGuideHistoryForkTest --tests dev.openallay.agent.trace.LiveTraceStoreTest --tests dev.openallay.model.config.ModelProfilesConfigWriterTest --tests dev.openallay.model.tokenizer.ModelContextTokenEstimatorTest --tests dev.openallay.community.CommunityCatalogCodecTest --tests dev.openallay.extension.catalog.ExtensionCatalogClientTest --tests dev.openallay.extension.install.ExtensionPackageInstallerTest --tests dev.openallay.guide.ui.GuideDisplayConfigLoaderTest -PjsonVerificationGsonVersion=2.14.0
+      - name: Preserve focused results and full diagnostics
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: accepted-mature-native-products-${{ github.sha }}-${{ github.run_attempt }}
-          retention-days: 90
-          if-no-files-found: error
-          path: build/preserved-mature-products/
+          name: mainstream-json-abi-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            engine-core/build/test-results/
+            engine-core/build/reports/tests/
+            build/reports/problems/
