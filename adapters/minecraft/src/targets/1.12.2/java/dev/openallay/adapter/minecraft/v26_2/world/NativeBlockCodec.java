@@ -65,7 +65,7 @@ final class NativeBlockCodec {
     record Snapshot(IBlockState state,NBTTagCompound tag) { String json(){return encode(state,tag);} }
     static Snapshot snapshot(WorldServer level,BlockPos pos) {
         checkOwnerAndPosition(level,pos);
-        IBlockState state=level.getIBlockState(pos);
+        IBlockState state=level.getBlockState(pos);
         TileEntity entity=NativeBlockEntityLifecycle.live(level,pos);
         if(NativeBlockEntityLifecycle.hasEntity(state)&&entity==null)
             throw new ExtensionException("missing_block_entity","Missing live block entity at "+pos);
@@ -77,7 +77,7 @@ final class NativeBlockCodec {
     /** Terrain reads preserve IDs/properties, but never serialize container content. */
     static String terrainState(WorldServer level, BlockPos pos) {
         checkOwnerAndPosition(level,pos);
-        IBlockState state = level.getIBlockState(pos);
+        IBlockState state = level.getBlockState(pos);
         if (NativeBlockEntityLifecycle.hasEntity(state) && NativeBlockEntityLifecycle.live(level,pos) == null)
             throw new ExtensionException("missing_block_entity", "Missing live block entity at " + pos);
         return stateJson(state);
@@ -216,7 +216,7 @@ final class NativeBlockCodec {
         checkOwnerAndPosition(level, pos);
         Objects.requireNonNull(requireActive, "requireActive");
         Prepared prepared = prepare(level, pos, stateJson);
-        IBlockState before = level.getIBlockState(pos);
+        IBlockState before = level.getBlockState(pos);
         TileEntity previousEntity = NativeBlockEntityLifecycle.live(level,pos);
         NBTTagCompound previousTag = previousEntity == null ? null : save(level, previousEntity);
         if (before.equals(prepared.state()) && Objects.equals(previousTag, prepared.tag()))
@@ -233,7 +233,7 @@ final class NativeBlockCodec {
                 throw placementFailed(pos, "Native setBlock refused the placement");
             }
         }
-        if (!level.getIBlockState(pos).equals(prepared.state())) {
+        if (!level.getBlockState(pos).equals(prepared.state())) {
             throw placementFailed(pos, "Native placement did not retain the requested block state");
         }
         if (prepared.entity() != null) {
@@ -304,7 +304,7 @@ final class NativeBlockCodec {
         var id = NativeWorldResourceIds.parse(rawId, "block id");
         Block block = NativeWorldRegistries.block(id.toString())
                 .orElseThrow(() -> new IllegalArgumentException("Unknown block id: " + rawId));
-        IBlockState state = block.defaultIBlockState();
+        IBlockState state = block.getDefaultState();
         JsonElement properties = json.get("properties");
         if (properties != null) {
             if (!properties.isJsonObject()) throw new IllegalArgumentException("properties must be an object");
