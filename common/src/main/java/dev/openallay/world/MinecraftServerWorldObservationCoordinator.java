@@ -92,8 +92,7 @@ public final class MinecraftServerWorldObservationCoordinator
                         (double) bounds.to().x() + 1,
                         (double) bounds.to().y() + 1,
                         (double) bounds.to().z() + 1);
-                List<Entity> captured = level.getEntities(
-                        (Entity) null,
+                List<Entity> captured = MinecraftWorldObservationFacts.entities(level,
                         box,
                         entity -> request.entityType().isEmpty()
                                 || request.entityType().equals(entityType(entity)));
@@ -102,7 +101,7 @@ public final class MinecraftServerWorldObservationCoordinator
                                 bounds,
                                 dev.openallay.context.minecraft.MinecraftWorldHeight.min(level),
                                 dev.openallay.context.minecraft.MinecraftWorldHeight.max(level),
-                                (chunkX, chunkZ) -> level.hasChunkAt(new BlockPos(
+                                (chunkX, chunkZ) -> MinecraftWorldObservationFacts.loaded(level,new BlockPos(
                                         chunkX << 4,
                                         Math.max(bounds.from().y(), dev.openallay.context.minecraft.MinecraftWorldHeight.min(level)),
                                         chunkZ << 4)));
@@ -118,7 +117,7 @@ public final class MinecraftServerWorldObservationCoordinator
                             detail.type(),
                             detail.name(),
                             detail.position(),
-                            entity.isAlive()));
+                            dev.openallay.client.context.MinecraftClientContextFacts.alive(entity)));
                 }
                 summaries.sort(java.util.Comparator.comparing(WorldEntitySummary::observationId));
                 result.complete(new EntityObservation(
@@ -175,7 +174,7 @@ public final class MinecraftServerWorldObservationCoordinator
                     processed++;
                     continue;
                 }
-                if (!level.hasChunkAt(blockPos)) {
+                if (!MinecraftWorldObservationFacts.loaded(level,blockPos)) {
                     capture.unavailable.add(
                             "chunk:" + (position.x() >> 4) + "," + (position.z() >> 4));
                     processed++;
@@ -183,20 +182,17 @@ public final class MinecraftServerWorldObservationCoordinator
                 }
                 capture.loaded++;
                 var state = level.getBlockState(blockPos);
-                if (capture.request.includeAir() || !state.isAir()) {
+                if (capture.request.includeAir() || !MinecraftWorldObservationFacts.air(level,state,blockPos)) {
                     LinkedHashMap<String, String> properties = new LinkedHashMap<>();
                     properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
-                    var fluidState = state.getFluidState();
-                    String fluid = fluidState.isEmpty()
-                            ? ""
-                            : MinecraftNativeRegistries.FLUID.getKey(fluidState.getType()).toString();
+                    String fluid=dev.openallay.client.observation.MinecraftHitFacts.fluid(state);
                     capture.blocks.add(new WorldBlockSnapshot(
                             MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString(),
                             position,
                             position.subtract(bounds.from()),
                             properties,
                             fluid,
-                            level.getBlockEntity(blockPos) != null));
+                            MinecraftWorldObservationFacts.hasBlockEntity(level,blockPos)));
                 }
                 processed++;
             }
@@ -222,31 +218,32 @@ public final class MinecraftServerWorldObservationCoordinator
 
     private WorldEntitySnapshot detail(String observationId, Entity entity) {
         LinkedHashMap<String, Object> data = new LinkedHashMap<>();
-        data.put("x", entity.position().x());
-        data.put("y", entity.position().y());
-        data.put("z", entity.position().z());
-        data.put("velocityX", entity.getDeltaMovement().x());
-        data.put("velocityY", entity.getDeltaMovement().y());
-        data.put("velocityZ", entity.getDeltaMovement().z());
-        data.put("pose", entity.getPose().name().toLowerCase(java.util.Locale.ROOT));
-        data.put("width", entity.getBbWidth());
-        data.put("height", entity.getBbHeight());
-        data.put("alive", entity.isAlive());
+        data.put("x", dev.openallay.client.context.MinecraftClientContextFacts.x(entity));
+        data.put("y", dev.openallay.client.context.MinecraftClientContextFacts.y(entity));
+        data.put("z", dev.openallay.client.context.MinecraftClientContextFacts.z(entity));
+        data.put("velocityX", MinecraftWorldObservationFacts.motionX(entity));
+        data.put("velocityY", MinecraftWorldObservationFacts.motionY(entity));
+        data.put("velocityZ", MinecraftWorldObservationFacts.motionZ(entity));
+        String pose=MinecraftWorldObservationFacts.pose(entity);
+        if(pose!=null)data.put("pose",pose);
+        data.put("width", MinecraftWorldObservationFacts.width(entity));
+        data.put("height", MinecraftWorldObservationFacts.height(entity));
+        data.put("alive", dev.openallay.client.context.MinecraftClientContextFacts.alive(entity));
         if (entity instanceof LivingEntity living) {
             data.put("health", living.getHealth());
             data.put("maxHealth", living.getMaxHealth());
-            data.put("armor", living.getArmorValue());
-            data.put("effects", living.getActiveEffects().stream()
+            data.put("armor", MinecraftWorldObservationFacts.armor(living));
+            data.put("effects", MinecraftWorldObservationFacts.effects(living).stream()
                     .map(dev.openallay.context.minecraft.MinecraftActiveEffectFacts::id)
                     .sorted()
                     .toList());
         }
-        BlockPos position = entity.blockPosition();
+        BlockPos position = dev.openallay.client.context.MinecraftClientContextFacts.position(entity);
         return new WorldEntitySnapshot(
                 observationId,
-                entity.getUUID(),
+                dev.openallay.client.context.MinecraftClientContextFacts.uuid(entity),
                 entityType(entity),
-                entity.getName().getString(),
+                dev.openallay.client.context.MinecraftClientContextFacts.name(entity),
                 new WorldPosition(position.getX(), position.getY(), position.getZ()),
                 data,
                 evidence(DataCompleteness.COMPLETE, "minecraft:server_entity"));
@@ -268,17 +265,17 @@ public final class MinecraftServerWorldObservationCoordinator
         if (closed.get()) {
             throw cancelled();
         }
-        if (!server.isSameThread()) {
+        if (!dev.openallay.server.NativeServerOwner.isOwner(server)) {
             throw new IllegalStateException(
                     "World observation must run on the Minecraft server thread");
         }
-        ServerPlayer player = server.getPlayerList().getPlayer(expectedActor);
+        ServerPlayer player = dev.openallay.server.NativeServerOwner.player(server,expectedActor);
         if (player != expectedPlayer || !connectionCurrent.getAsBoolean()
                 || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player) != expectedLevel) {
             throw cancelled();
         }
         if (!expectedDimension.equals(
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player).dimension()).toString())) {
+                MinecraftWorldObservationFacts.dimension(dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player)))) {
             throw new JavascriptExecutionException(
                     "world_observation_unavailable",
                     "Player changed dimension during world observation");
@@ -303,7 +300,7 @@ public final class MinecraftServerWorldObservationCoordinator
     }
 
     private static String entityType(Entity entity) {
-        return MinecraftNativeRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        return dev.openallay.client.observation.MinecraftHitFacts.entityType(entity);
     }
 
     private static RuntimeException translate(RuntimeException failure) {

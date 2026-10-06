@@ -40,11 +40,11 @@ public final class MinecraftServerGuideContextProvider
     }
     @Override public dev.openallay.bridge.server.ServerBridgeSession.ContextProvider bind(UUID actor) {
         if (bound != null) {
-            if (!expectedPlayer.getUUID().equals(actor)) throw new IllegalArgumentException("Bound context actor differs");
+            if (!NativeServerOwner.actor(expectedPlayer).equals(actor)) throw new IllegalArgumentException("Bound context actor differs");
             return this;
         }
-        if (!server.isSameThread()) throw new IllegalStateException("Context bind requires server owner");
-        ServerPlayer player = java.util.Objects.requireNonNull(server.getPlayerList().getPlayer(actor), "Actor disconnected");
+        if (!NativeServerOwner.isOwner(server)) throw new IllegalStateException("Context bind requires server owner");
+        ServerPlayer player = java.util.Objects.requireNonNull(NativeServerOwner.player(server,actor), "Actor disconnected");
         return new MinecraftServerGuideContextProvider(runtime, server, gson, binder, player,
                 dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player),
                 NativeServerConnectionGuard.capture(player), binder.apply(actor));
@@ -61,7 +61,7 @@ public final class MinecraftServerGuideContextProvider
         bound.dispatch(actorId, () -> {
             try {
                 cancellation.throwIfCancelled();
-                ServerPlayer player = server.getPlayerList().getPlayer(actorId);
+                ServerPlayer player = NativeServerOwner.player(server,actorId);
                 if (player != expectedPlayer || !connectionCurrent.getAsBoolean()
                         || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player) != expectedLevel) {
                     throw new JavascriptExecutionException(
@@ -70,7 +70,7 @@ public final class MinecraftServerGuideContextProvider
                 }
                 ToolInvocationContext context = new MinecraftContextCapture(
                                 gson, runtime.platform())
-                        .capture(player.createCommandSourceStack(), capabilities, correlationId);
+                        .capture(dev.openallay.context.minecraft.MinecraftCommandCaller.source(player), capabilities, correlationId);
                 cancellation.throwIfCancelled();
                 context.player().ifPresent(snapshot -> runtime.worldObservations().capture(
                         correlationId,
