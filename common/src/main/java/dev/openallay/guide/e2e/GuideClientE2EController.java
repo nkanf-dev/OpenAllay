@@ -995,8 +995,8 @@ public final class GuideClientE2EController {
                 } else {
                     MinecraftClientWindow.setScreen(client, null);
                     if (client.player != null) {
-                        client.player.setYRot(-45.0F);
-                        client.player.setXRot(-12.0F);
+                        dev.openallay.client.MinecraftPlayerRotation.yaw(client.player, -45.0F);
+                        dev.openallay.client.MinecraftPlayerRotation.pitch(client.player, -12.0F);
                     }
                 }
             }
@@ -1107,8 +1107,8 @@ public final class GuideClientE2EController {
                 screenshot(client, "24-builder-review-cancelled.png");
                 MinecraftClientWindow.setScreen(client, null);
                 if (client.player != null) {
-                    client.player.setYRot(-45.0F);
-                    client.player.setXRot(-12.0F);
+                    dev.openallay.client.MinecraftPlayerRotation.yaw(client.player, -45.0F);
+                    dev.openallay.client.MinecraftPlayerRotation.pitch(client.player, -12.0F);
                 }
             }
             case 29 -> {

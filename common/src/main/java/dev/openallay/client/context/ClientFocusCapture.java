@@ -175,16 +175,18 @@ public final class ClientFocusCapture {
             // Player inventory and creative menus are valid native menus without a MenuType.
             diagnostic = "untyped_menu";
         }
+        String stateDiagnostic = MinecraftMenuFacts.stateDiagnostic(nativeMenu);
+        if (!stateDiagnostic.isEmpty()) diagnostic = diagnostic.isEmpty() ? stateDiagnostic : diagnostic + ";" + stateDiagnostic;
         return new WorldFocusObservation.Menu(
                 nativeMenu.getClass().getName(),
                 nativeMenu.containerId,
-                nativeMenu.getStateId(),
+                MinecraftMenuFacts.stateId(nativeMenu),
                 type,
                 typeAvailable,
                 displayed,
                 nativeMenu == client.player.containerMenu,
                 nativeMenu.slots.size(),
-                item(client, nativeMenu.getCarried()),
+                item(client, MinecraftMenuFacts.carried(client, nativeMenu)),
                 diagnostic);
     }
 
@@ -205,7 +207,7 @@ public final class ClientFocusCapture {
             return new WorldFocusObservation.Hover(x, y, mouseGrabbed, "none", -1, -1, null, "");
         }
         return new WorldFocusObservation.Hover(
-                x, y, mouseGrabbed, "slot", slot.index, slot.getContainerSlot(), item(client, slot.getItem()), "");
+                x, y, mouseGrabbed, "slot", slot.index, MinecraftMenuFacts.containerSlot(slot), item(client, slot.getItem()), "");
     }
 
     private static WorldFocusObservation.Item item(Minecraft client, ItemStack stack) {

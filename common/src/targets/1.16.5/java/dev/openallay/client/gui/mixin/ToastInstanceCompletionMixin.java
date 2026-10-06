@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ToastInstanceCompletionMixin {
     @Shadow @Final private Toast toast;
     // The actual inner instance owns this synthetic outer field (named mapping and bytecode agree).
-    @Shadow @Final private ToastComponent this$0;
+    @Shadow(remap = false) @Final ToastComponent this$0;
 
     // The only Toast.height invocation in render is bytecode 97, multiplied by nativeIndex at 102.
     @Redirect(method = "render(IILcom/mojang/blaze3d/vertex/PoseStack;)Z",

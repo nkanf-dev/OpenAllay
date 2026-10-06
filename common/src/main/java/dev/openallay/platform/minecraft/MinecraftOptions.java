@@ -7,5 +7,5 @@ public final class MinecraftOptions {
     private MinecraftOptions() {}
     public static int guiScale(Options options) { return options.guiScale().get(); }
     public static void guiScale(Options options, int value) { options.guiScale().set(value); }
-    public static int simulationDistance(Options options) { return options.simulationDistance().get(); }
+    public static java.util.OptionalInt simulationDistance(Options options) { return java.util.OptionalInt.of(options.simulationDistance().get()); }
 }

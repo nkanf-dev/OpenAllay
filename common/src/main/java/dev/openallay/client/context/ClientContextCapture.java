@@ -196,7 +196,7 @@ public final class ClientContextCapture {
     private ObservableGameStateSnapshot.OptionsState optionsState(
             Minecraft client, Instant capturedAt) {
         List<OptionValue> values = new ArrayList<>();
-        for (String line : client.options.dumpOptionsForReport().lines().toList()) {
+        for (String line : MinecraftClientOptionsFacts.report(client.options).lines().toList()) {
             int separator = line.indexOf(':');
             if (separator <= 0) {
                 continue;
@@ -222,7 +222,7 @@ public final class ClientContextCapture {
                         "minecraft:client_options", "minecraft:options_report"),
                 List.of(new SectionDiagnostic(
                         "mod_option_adapters_not_registered",
-                        "Vanilla options and key mappings are complete for the public report; mod-owned configuration screens require explicit public adapters")));
+                        MinecraftClientOptionsFacts.reportDiagnostic())));
     }
 
     private static boolean safeOptionKey(String key) {
@@ -303,10 +303,9 @@ public final class ClientContextCapture {
         add(values, "position", "block", player.blockPosition().toShortString());
         add(values, "position", "dimension", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(dev.openallay.client.MinecraftLocalPlayerLevel.get(player).dimension()).toString());
         add(values, "position", "direction", player.getDirection().getName());
-        add(values, "position", "yaw", Float.toString(player.getYRot()));
-        add(values, "position", "pitch", Float.toString(player.getXRot()));
-        dev.openallay.client.MinecraftLocalPlayerLevel.get(player).getBiome(player.blockPosition()).unwrapKey().ifPresent(key ->
-                add(values, "position", "biome", dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(key).toString()));
+        add(values, "position", "yaw", Float.toString(dev.openallay.client.MinecraftPlayerRotation.yaw(player)));
+        add(values, "position", "pitch", Float.toString(dev.openallay.client.MinecraftPlayerRotation.pitch(player)));
+        MinecraftClientBiomeFacts.id(client, player).ifPresent(id -> add(values, "position", "biome", id));
 
         Runtime runtime = Runtime.getRuntime();
         add(values, "performance", "fps", Integer.toString(dev.openallay.client.MinecraftNativeClientFacts.fps(client)));
@@ -319,9 +318,9 @@ public final class ClientContextCapture {
         add(values, "performance", "heap_max_bytes", Long.toString(runtime.maxMemory()));
         add(values, "renderer", "chunk_source", client.level.gatherChunkSourceStats());
         add(values, "renderer", "render_distance",
-                Integer.toString(client.options.getEffectiveRenderDistance()));
-        add(values, "renderer", "simulation_distance",
-                Integer.toString(dev.openallay.platform.minecraft.MinecraftOptions.simulationDistance(client.options)));
+                Integer.toString(MinecraftClientOptionsFacts.renderDistance(client.options)));
+        dev.openallay.platform.minecraft.MinecraftOptions.simulationDistance(client.options)
+                .ifPresent(distance -> add(values, "renderer", "simulation_distance", Integer.toString(distance)));
         add(values, "renderer", "entities", Integer.toString(client.level.getEntityCount()));
         add(values, "player", "health", Float.toString(player.getHealth()));
         add(values, "player", "max_health", Float.toString(player.getMaxHealth()));
@@ -330,7 +329,7 @@ public final class ClientContextCapture {
         add(values, "player", "armor", Integer.toString(player.getArmorValue()));
         add(values, "player", "experience_level", Integer.toString(player.experienceLevel));
         add(values, "player", "selected_hotbar_slot",
-                Integer.toString(dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory())));
+                Integer.toString(dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player))));
         add(values, "player", "camera", client.options.getCameraType().name().toLowerCase(Locale.ROOT));
         add(values, "player", "active_effects", player.getActiveEffects().stream()
                 .map(dev.openallay.context.minecraft.MinecraftActiveEffectFacts::id)
@@ -439,8 +438,8 @@ public final class ClientContextCapture {
 
     private PlayerSnapshot player(LocalPlayer player, Minecraft client, Instant capturedAt) {
         List<InventorySlotSnapshot> inventory = new ArrayList<>();
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            inventory.add(new InventorySlotSnapshot(slot, stack(player.getInventory().getItem(slot))));
+        for (int slot = 0; slot < dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player).getContainerSize(); slot++) {
+            inventory.add(new InventorySlotSnapshot(slot, stack(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player).getItem(slot))));
         }
         var position = player.blockPosition();
         String mode = client.gameMode == null || client.gameMode.getPlayerMode() == null
@@ -451,10 +450,10 @@ public final class ClientContextCapture {
                 capturedAt,
                 "minecraft:client_player",
                 "minecraft:client_player");
-        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory());
+        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player));
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
-                player.getInventory().getContainerSize(),
+                dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player).getContainerSize(),
                 selected,
                 selected,
                 stack(player.getOffhandItem()),

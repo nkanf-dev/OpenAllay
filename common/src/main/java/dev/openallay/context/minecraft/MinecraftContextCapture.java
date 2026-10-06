@@ -251,9 +251,9 @@ public final class MinecraftContextCapture {
 
     private PlayerSnapshot capturePlayer(ServerPlayer player, java.time.Instant capturedAt) {
         List<InventorySlotSnapshot> inventory = new ArrayList<>();
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+        for (int slot = 0; slot < MinecraftPlayerFacts.inventory(player).getContainerSize(); slot++) {
             inventory.add(new InventorySlotSnapshot(
-                    slot, captureStack(player.getInventory().getItem(slot))));
+                    slot, captureStack(MinecraftPlayerFacts.inventory(player).getItem(slot))));
         }
         BlockPos position = player.blockPosition();
         EvidenceMetadata evidence = evidence(
@@ -261,10 +261,10 @@ public final class MinecraftContextCapture {
                 capturedAt,
                 "minecraft:server_player",
                 "minecraft:server_player");
-        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory());
+        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(MinecraftPlayerFacts.inventory(player));
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
-                player.getInventory().getContainerSize(),
+                MinecraftPlayerFacts.inventory(player).getContainerSize(),
                 selected,
                 selected,
                 captureStack(player.getOffhandItem()),

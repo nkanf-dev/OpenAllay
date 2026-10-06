@@ -30,7 +30,7 @@ public final class TraceReplayService {
 
     public ToolResult<List<String>> traceIds(CommandSourceStack source) {
         requireServerThread(source);
-        ToolResult<TraceRepository.LoadedTraces> loaded = load(source.getServer().getResourceManager());
+        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(source.getServer()));
         if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }
@@ -40,7 +40,7 @@ public final class TraceReplayService {
 
     public ToolResult<ReplayReport> replay(CommandSourceStack source, String traceId) {
         requireServerThread(source);
-        ToolResult<TraceRepository.LoadedTraces> loaded = load(source.getServer().getResourceManager());
+        ToolResult<TraceRepository.LoadedTraces> loaded = load(dev.openallay.platform.minecraft.MinecraftServerResources.resources(source.getServer()));
         if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
             return new ToolResult.Failure<>(failure.code(), failure.message());
         }

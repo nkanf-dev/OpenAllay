@@ -367,6 +367,7 @@ tasks.named('compileJava',JavaCompile) {
     javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(17) }
     options.release = 17
     options.encoding = 'UTF-8'
+    options.compilerArgs.addAll(['-Xmaxerrs','1000'])
     inputs.file(nativeMappings)
     outputs.files(apRefmap,apMappings)
     doFirst {

@@ -4,7 +4,12 @@ import hashlib,importlib.util,json,os,shutil,subprocess,urllib.request,zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
-def run(cmd,env):subprocess.run(list(map(str,cmd)),cwd=ROOT,env=env,check=True)
+def run(cmd,env):
+    log=ROOT/'build/forge16165-native-report/gradle.log';log.parent.mkdir(parents=True,exist_ok=True)
+    with log.open('a') as output:
+        result=subprocess.run(list(map(str,cmd)),cwd=ROOT,env=env,stdout=output,stderr=subprocess.STDOUT)
+    print(log.read_text()[-8000:])
+    if result.returncode:raise subprocess.CalledProcessError(result.returncode,cmd)
 def main():
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote runner only')
     work=ROOT/'build/forge16165-native-inputs';work.mkdir(parents=True,exist_ok=False)
