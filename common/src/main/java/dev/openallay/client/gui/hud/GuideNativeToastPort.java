@@ -16,8 +16,8 @@ public final class GuideNativeToastPort implements GuideNotificationPort {
     }
 
     @Override public Handle show(Notification notification) {
-        GuideNativeToast toast = new GuideNativeToast(notification, minecraft.font, minecraft.getWindow().getGuiScaledWidth());
-        MinecraftClientWindow.toastManager(minecraft).addToast(toast);
+        GuideNativeToast toast = new GuideNativeToast(notification, GuideNativeToastAccess.font(minecraft), GuideNativeToastAccess.guiWidth(minecraft));
+        GuideNativeToastAccess.add(minecraft, toast);
         toast.queued();
         lastOwnedToast = toast;
         return toast;

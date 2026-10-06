@@ -22,10 +22,10 @@ public final class MinecraftClientWindow {
     public static int guiWidth(Minecraft client) { return new net.minecraft.client.gui.ScaledResolution(client).getScaledWidth(); }
     public static int guiHeight(Minecraft client) { return new net.minecraft.client.gui.ScaledResolution(client).getScaledHeight(); }
     /** Native display resize followed by Minecraft framebuffer and GuiScreen notification. */
-    public static void setWindowed(Minecraft client, int width, int height) throws LWJGLException {
-        if (width <= 0 || height <= 0) throw new IllegalArgumentException("Window dimensions must be positive");
-        if (client.isFullScreen()) client.toggleFullscreen();
-        Display.setDisplayMode(new DisplayMode(width, height));
-        client.resize(width, height);
+    public static void setWindowed(Minecraft client, int width, int height) {
+        ((GuideNativeWindowResize) client).openallay$windowedSize(width, height);
+    }
+    public static void extractDeferredSubtitles(Minecraft client, GuideGraphics graphics) {
+        GuideNativeSubtitleRender.render(client, graphics);
     }
 }
