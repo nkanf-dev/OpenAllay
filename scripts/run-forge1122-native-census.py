@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import subprocess
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -12,6 +13,35 @@ from pathlib import Path
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def download_pin(name, record, work, output):
+    receipt = {'name': name, 'url': record['url'], 'expectedSha256': record['sha256'],
+        'userAgent': 'OpenAllay-CI-Runtime', 'status': 'requesting'}
+    receipt_path = output / ('download-' + name + '.json')
+    def save():
+        receipt_path.write_text(json.dumps(receipt, indent=2) + '\n')
+    save()  # Preserve the exact attempted public URL even on network failure.
+    request = urllib.request.Request(record['url'], headers={'User-Agent': receipt['userAgent']})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            receipt['finalUrl'] = response.geturl()
+            receipt['httpStatus'] = response.status
+            data = response.read(8*1024*1024+1)
+        receipt.update(bytes=len(data), actualSha256=digest(data))
+        if len(data)>8*1024*1024 or receipt['actualSha256']!=record['sha256']:
+            raise ValueError('Pinned public input differs: '+name)
+        path = work/record['filename']
+        path.write_bytes(data)
+        receipt.update(status='verified', path=str(path))
+        save()
+        return path
+    except Exception as error:
+        receipt.update(status='failed', errorType=type(error).__name__, error=str(error)[:2048])
+        if isinstance(error, urllib.error.HTTPError):
+            receipt.update(httpStatus=error.code, rejectedUrl=error.geturl())
+        save()
+        raise
 
 
 def main():
@@ -29,11 +59,7 @@ def main():
     work.mkdir(parents=True); output.mkdir(parents=True)
     files = {}
     for name, record in pins.items():
-        with urllib.request.urlopen(record['url'], timeout=60) as response:
-            data = response.read(8*1024*1024+1)
-        if len(data)>8*1024*1024 or digest(data)!=record['sha256']:
-            raise ValueError('Pinned public input differs: '+name)
-        path = work/record['filename']; path.write_bytes(data); files[name]=path
+        files[name] = download_pin(name, record, work, output)
     with zipfile.ZipFile(files['mdk']) as archive:
         for name in ('gradlew','gradle/wrapper/gradle-wrapper.jar','gradle/wrapper/gradle-wrapper.properties'):
             path=work/name; path.parent.mkdir(parents=True,exist_ok=True); path.write_bytes(archive.read(name))
