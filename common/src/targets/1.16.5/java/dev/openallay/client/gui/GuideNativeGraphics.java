@@ -90,6 +90,7 @@ public class GuideNativeGraphics {
     protected final void nativePopPose() { graphics.popPose(); }
     protected final void nativeTranslatePose(float x, float y) { graphics.translate(x, y, 0.0F); }
     protected final void nativeScalePose(float x, float y) { graphics.scale(x, y, 1.0F); }
+    protected final boolean nativeResizeCursorAvailable() { return true; }
     protected final void nativeRequestResizeCursor() { GuideLegacyCursor.requestResize(); }
 
     protected final void nativeEnableScissor(int x0, int y0, int x1, int y1) {

@@ -47,6 +47,7 @@ public class GuideNativeGraphics {
     protected final void nativePopPose() { graphics.pose().popMatrix(); }
     protected final void nativeTranslatePose(float x, float y) { graphics.pose().translate(x, y); }
     protected final void nativeScalePose(float x, float y) { graphics.pose().scale(x, y); }
+    protected final boolean nativeResizeCursorAvailable() { return true; }
     protected final void nativeRequestResizeCursor() { GuideNativeCursor.requestResize(graphics); }
 
     protected final void nativeEnableScissor(int x0, int y0, int x1, int y1) {

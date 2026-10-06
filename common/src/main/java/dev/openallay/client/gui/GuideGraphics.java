@@ -20,7 +20,12 @@ public final class GuideGraphics extends GuideNativeGraphics {
     public void popPose() { nativePopPose(); }
     public void translatePose(float x, float y) { nativeTranslatePose(x, y); }
     public void scalePose(float x, float y) { nativeScalePose(x, y); }
-    public void requestResizeCursor() { nativeRequestResizeCursor(); }
+    /** Return false when the selected native family has no resize cursor ABI. */
+    public boolean requestResizeCursor() {
+        if (!nativeResizeCursorAvailable()) return false;
+        nativeRequestResizeCursor();
+        return true;
+    }
 
     public void enableScissor(int x0, int y0, int x1, int y1) { nativeEnableScissor(x0, y0, x1, y1); }
     public void disableScissor() { nativeDisableScissor(); }

@@ -46,8 +46,9 @@ public class GuideNativeGraphics {
     protected final void nativePopPose() { GuideImmediateGraphicsPrimitives.popPose(); }
     protected final void nativeTranslatePose(float x, float y) { GuideImmediateGraphicsPrimitives.translatePose(x, y); }
     protected final void nativeScalePose(float x, float y) { GuideImmediateGraphicsPrimitives.scalePose(x, y); }
+    protected final boolean nativeResizeCursorAvailable() { return false; }
     protected final void nativeRequestResizeCursor() {
-        // LWJGL 2 has no system resize cursor selection. Cursor ownership stays with Minecraft.
+        throw new UnsupportedOperationException("LWJGL 2 has no stock resize-all cursor ABI");
     }
     protected final void nativeEnableScissor(int x0, int y0, int x1, int y1) { GuideImmediateGraphicsPrimitives.enableScissor(x0, y0, x1, y1); }
     protected final void nativeDisableScissor() { GuideImmediateGraphicsPrimitives.disableScissor(); }
