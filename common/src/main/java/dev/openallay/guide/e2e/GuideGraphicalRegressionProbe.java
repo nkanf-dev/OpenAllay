@@ -49,7 +49,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideNativeSlider;
-import net.minecraft.client.gui.components.EditBox;
+import dev.openallay.client.gui.GuideNativeEditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import net.minecraft.client.gui.screens.Screen;
 import dev.openallay.platform.minecraft.MinecraftComponents;
@@ -270,8 +270,8 @@ final class GuideGraphicalRegressionProbe {
             case 5 -> {
                 expectedName = "小羽 · 原生图形回归";
                 String label = MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label").getString();
-                EditBox name = MinecraftClientWindow.screen(client).children().stream().filter(EditBox.class::isInstance)
-                        .map(EditBox.class::cast).filter(value -> value.getMessage().getString().equals(label))
+                GuideNativeEditBox name = MinecraftClientWindow.screen(client).children().stream().filter(GuideNativeEditBox.class::isInstance)
+                        .map(GuideNativeEditBox.class::cast).filter(value -> value.getMessage().getString().equals(label))
                         .findFirst().orElseThrow(() -> new IllegalStateException("Actual assistant-name editor unavailable"));
                 name.setValue(expectedName);
                 press("screen.openallay.settings.done");
@@ -1667,9 +1667,9 @@ final class GuideGraphicalRegressionProbe {
         return (GuideHudEditorScreen) MinecraftClientWindow.screen(client);
     }
 
-    private EditBox hudOffsetEditor(String key) {
+    private GuideNativeEditBox hudOffsetEditor(String key) {
         String label = MinecraftComponents.translatable("screen.openallay.settings.ui." + key).getString();
-        return settingsScreen().children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast)
+        return settingsScreen().children().stream().filter(GuideNativeEditBox.class::isInstance).map(GuideNativeEditBox.class::cast)
                 .filter(value -> value.getMessage().getString().equals(label)).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Actual HUD offset editor unavailable: " + key));
     }
@@ -1809,9 +1809,9 @@ final class GuideGraphicalRegressionProbe {
         return true;
     }
 
-    private EditBox nameEditor() {
+    private GuideNativeEditBox nameEditor() {
         String label = MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label").getString();
-        return settingsScreen().children().stream().filter(EditBox.class::isInstance).map(EditBox.class::cast)
+        return settingsScreen().children().stream().filter(GuideNativeEditBox.class::isInstance).map(GuideNativeEditBox.class::cast)
                 .filter(value -> value.getMessage().getString().equals(label)).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Actual assistant-name editor unavailable"));
     }

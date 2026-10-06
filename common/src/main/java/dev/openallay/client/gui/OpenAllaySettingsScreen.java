@@ -3504,10 +3504,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void updateEditorSaveControls() {
         if (!editorSave.busy()) return;
-        for (var child : children()) {
-            if (child instanceof net.minecraft.client.gui.components.AbstractWidget widget) {
-                widget.active = false;
-            }
+        for (GuideWidget widget : guideWidgetChildren()) {
+            widget.guideActive(false);
         }
     }
 
