@@ -18,4 +18,5 @@ public final class MinecraftNativeRegistries {
     public static final IForgeRegistry<PotionType> POTION = ForgeRegistries.POTION_TYPES;
     public static final IForgeRegistry<EntityEntry> ENTITY_TYPE = ForgeRegistries.ENTITIES;
     public static final IForgeRegistry<IRecipe> RECIPE = ForgeRegistries.RECIPES;
+    public static java.util.Collection<net.minecraft.util.ResourceLocation> blockKeys() { return BLOCK.getKeys(); }
 }
