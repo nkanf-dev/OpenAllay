@@ -249,7 +249,7 @@ final class GuideGraphicalRegressionProbe {
                 report.put("actualTools", request.tools().stream().map(value -> Map.of(
                         "toolId", value.toolId(), "status", value.status().name())).toList());
                 report.put("assistantTextSha256", sha256(request.assistantText()));
-                guide().setFocused(null);
+                guide().clearGuideWidgetFocus();
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_HOME, 0));
                 stage = 41;
                 stageWait = 0;
@@ -403,7 +403,7 @@ final class GuideGraphicalRegressionProbe {
                 require(!paintedTail.isEmpty() && "全文末尾：原生图形长回复验收完成。".endsWith(paintedTail),
                         "HUD full response tail was not actually painted after wheel scrolling");
                 checkpoint("07-interactive-hud-bottom", false);
-                GuideNativeInput.keyPressed((dev.openallay.client.gui.GuideWidgetInput) lite, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
+                dev.openallay.client.gui.GuideWidgetInputs.keyPressed((dev.openallay.client.gui.GuideWidgetInput) lite, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
                 recordAction("native-key", "ESC/HUD-to-game");
                 advance();
             }
@@ -1044,7 +1044,7 @@ final class GuideGraphicalRegressionProbe {
                 if (MinecraftClientWindow.screen(client) instanceof OpenAllayScreen)
                     require(jsonReceipt(guide(), "e2eToolsReceipt").get("detailToolId").getAsString().isEmpty(),
                             "Native child capsule opened parent Tool drawer");
-                else { GuideNativeInput.keyPressed((dev.openallay.client.gui.GuideWidgetInput) MinecraftClientWindow.screen(client), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0)); openGuide.accept(service); }
+                else { dev.openallay.client.gui.GuideWidgetInputs.keyPressed((dev.openallay.client.gui.GuideWidgetInput) MinecraftClientWindow.screen(client), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0)); openGuide.accept(service); }
                 checkpoint("live-08-native-child-priority-no-parent-drawer", true);
                 press("screen.openallay.settings.short"); advance();
             }
@@ -1551,8 +1551,8 @@ final class GuideGraphicalRegressionProbe {
 
     private void clickAt(Screen screen, double x, double y, String target) {
         var event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
-        boolean clicked = GuideNativeInput.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
-        boolean released = GuideNativeInput.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
+        boolean clicked = dev.openallay.client.gui.GuideWidgetInputs.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
+        boolean released = dev.openallay.client.gui.GuideWidgetInputs.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
         actions.add(Map.of("type", "native-mouse-callback", "target", target, "stage", stage,
                 "x", x, "y", y, "clickedHandled", clicked, "releasedHandled", released));
     }
@@ -1701,8 +1701,8 @@ final class GuideGraphicalRegressionProbe {
                         && dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) + button.getHeight() <= screen.height,
                 "Actual HUD case button is outside the native viewport");
         var event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
-        boolean clicked = GuideNativeInput.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
-        boolean released = GuideNativeInput.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
+        boolean clicked = dev.openallay.client.gui.GuideWidgetInputs.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
+        boolean released = dev.openallay.client.gui.GuideWidgetInputs.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
         Map<String, Object> action = new LinkedHashMap<>();
         action.put("type", "native-mouse-button");
         action.put("target", key);
