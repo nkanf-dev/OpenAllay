@@ -9,6 +9,14 @@ import net.minecraft.util.FormattedCharSequence;
 /** Native formatted lines stay real native values behind the product text contract. */
 public final class GuideNativeFont {
     private GuideNativeFont() {}
+    public static Object languageIdentity() { return net.minecraft.locale.Language.getInstance(); }
+    public static int width(Font font, String text) { return font.width(text); }
+    public static int width(Font font, Component text) { return font.width(text); }
+    public static String plainSubstrByWidth(Font font, String text, int width) { return font.plainSubstrByWidth(text, width); }
+    public static Component substrByWidth(Font font, Component text, int width) {
+        return dev.openallay.platform.minecraft.MinecraftComponents.literal(font.substrByWidth(text, width).getString());
+    }
+
     public static int lineHeight(Font font) { return font.lineHeight; }
     private record Line(FormattedCharSequence nativeLine) implements GuideTextLine {
         private Line { Objects.requireNonNull(nativeLine, "nativeLine"); }

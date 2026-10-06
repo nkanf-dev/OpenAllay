@@ -8,6 +8,14 @@ import net.minecraft.util.text.ITextComponent;
 /** Actual FontRenderer line wrapping and legacy formatted String projection. */
 public final class GuideNativeFont {
     private GuideNativeFont() {}
+    public static Object languageIdentity() { return net.minecraft.client.Minecraft.getMinecraft().getLanguageManager().getCurrentLanguage(); }
+    public static int width(FontRenderer font, String text) { return font.getStringWidth(text); }
+    public static int width(FontRenderer font, ITextComponent text) { return font.getStringWidth(text.getFormattedText()); }
+    public static String plainSubstrByWidth(FontRenderer font, String text, int width) { return font.trimStringToWidth(text, width); }
+    public static ITextComponent substrByWidth(FontRenderer font, ITextComponent text, int width) {
+        return new net.minecraft.util.text.TextComponentString(font.trimStringToWidth(text.getFormattedText(), width));
+    }
+
     public static int lineHeight(FontRenderer font) { return font.FONT_HEIGHT; }
     private record Line(String nativeLine) implements GuideTextLine {
         private Line { Objects.requireNonNull(nativeLine, "nativeLine"); }

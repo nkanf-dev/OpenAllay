@@ -17,4 +17,8 @@ public class GuideNativeEditBox extends EditBox {
     protected final void formatGuideText(java.util.function.BiFunction<String, Integer, GuideTextLine> formatter) {
         addFormatter((text, offset) -> GuideNativeFont.nativeLine(formatter.apply(text, offset)));
     }
+    protected net.minecraft.network.chat.Component guideNarrationMessage() { return super.createNarrationMessage(); }
+    @Override protected final net.minecraft.network.chat.MutableComponent createNarrationMessage() {
+        return (net.minecraft.network.chat.MutableComponent) guideNarrationMessage();
+    }
 }

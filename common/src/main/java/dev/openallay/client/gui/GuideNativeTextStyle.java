@@ -6,5 +6,6 @@ import net.minecraft.network.chat.TextColor;
 /** Actual native color value, not an integer overload that old Style does not expose. */
 public final class GuideNativeTextStyle {
     private GuideNativeTextStyle() {}
+    public static Style bold(Style style, boolean value) { return style.withBold(value); }
     public static Style color(Style style, int rgb) { return style.withColor(TextColor.fromRgb(rgb)); }
 }

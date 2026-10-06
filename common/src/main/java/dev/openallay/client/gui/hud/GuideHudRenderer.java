@@ -14,7 +14,6 @@ import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import dev.openallay.client.gui.GuideTooltipPlacement;
-import net.minecraft.locale.Language;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import dev.openallay.client.gui.GuideTextLine;
@@ -66,13 +65,13 @@ public final class GuideHudRenderer {
                 graphics.fill(0, 0, contentWidth, contentHeight, hud.backgroundArgb(rgb));
                 graphics.outline(0, 0, contentWidth, contentHeight, backgroundBorderColor(hud.backgroundOpacity()));
                 String title = view.assistantName() + (view.selectedSession().isBlank() ? "" : " · " + view.selectedSession());
-                graphics.text(font, font.plainSubstrByWidth(title, Math.max(1, contentWidth - 16)), 8, 7, textColor());
+                graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, title, Math.max(1, contentWidth - 16)), 8, 7, textColor());
                 if (hud.collapsed()) { results.releaseNativeViews(); return; }
                 Component status = view.progress() == null ? MinecraftComponents.translatable("screen.openallay.hud.idle")
                         : MinecraftComponents.translatable(view.progress().activityTranslationKey());
-                if (view.otherRunningTasks() > 0) status = status.copy().append(MinecraftComponents.translatable(
+                if (view.otherRunningTasks() > 0) status = MinecraftComponents.append(MinecraftComponents.copy(status), MinecraftComponents.translatable(
                         "screen.openallay.hud.other_tasks", view.otherRunningTasks()));
-                graphics.text(font, font.plainSubstrByWidth(status.getString(), Math.max(1, contentWidth - 16)),
+                graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(status), Math.max(1, contentWidth - 16)),
                         8, 22, view.progress() == null ? OpenAllayWidgetTheme.MUTED : OpenAllayWidgetTheme.MINT);
                 if (!view.rows().isEmpty() && bodyHeight > 0) {
                     results.prepare(view, font, Math.max(1, body.width() - 6), body.height());
@@ -84,7 +83,7 @@ public final class GuideHudRenderer {
                     results.releaseNativeViews();
                     if (view.rows().isEmpty() && bodyHeight >= 10) {
                         String preview = !view.streamingPreview().isBlank() ? view.streamingPreview() : view.latestReply();
-                        CacheKey key = new CacheKey(preview, body.width(), body.height(), font, Language.getInstance());
+                        CacheKey key = new CacheKey(preview, body.width(), body.height(), font, GuideNativeFont.languageIdentity());
                         if (!key.equals(cacheKey)) {
                             cacheKey = key;
                             previewLines = GuideNativeFont.split(font, MinecraftComponents.literal(preview), body.width());
@@ -99,7 +98,7 @@ public final class GuideHudRenderer {
                 if (contentHeight >= 54) {
                     footer = readHint(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(),
                             OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage());
-                    graphics.text(font, font.plainSubstrByWidth(footer.getString(), Math.max(1, contentWidth - 16)),
+                    graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(footer), Math.max(1, contentWidth - 16)),
                             8, contentHeight - 12, OpenAllayWidgetTheme.MUTED);
                 }
             } finally { graphics.disableScissor(); }
@@ -131,7 +130,7 @@ public final class GuideHudRenderer {
         Component reminder = nativeOpenGuideKey == null
                 ? MinecraftComponents.translatable("screen.openallay.hud.bind_controls_only")
                 : MinecraftComponents.translatable("screen.openallay.hud.bind_controls", nativeOpenGuideKey);
-        return hint.copy().append("\n").append(reminder);
+        return MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(hint), "\n"), reminder);
     }
     public static int backgroundColor(double opacity) {
         return ((int) Math.round(opacity * 255) << 24) | (OpenAllayWidgetTheme.CHARCOAL & 0xFFFFFF);
@@ -140,5 +139,5 @@ public final class GuideHudRenderer {
         return ((int) Math.round(opacity * 255) << 24) | (OpenAllayWidgetTheme.SLATE_BORDER & 0xFFFFFF);
     }
     public static int textColor() { return OpenAllayWidgetTheme.WHITE; }
-    private record CacheKey(String preview, int width, int height, Font font, Language language) {}
+    private record CacheKey(String preview, int width, int height, Font font, Object language) {}
 }

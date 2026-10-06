@@ -27,28 +27,28 @@ public record GuideUiNotice(Severity severity, Placement placement, String messa
         Objects.requireNonNull(sessionId, "sessionId");
         if (result instanceof ToolResult.Failure<?> failure) return error(failure.code() + ": " + failure.message());
         if (!(result instanceof ToolResult.Success<?> success)) return error(
-                MinecraftComponents.translatable("screen.openallay.composer.submit_failed").getString());
+                MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.submit_failed")));
         boolean editing = route == GuideClientUiState.SubmissionRoute.EDIT_PENDING;
         if (editing && !Boolean.TRUE.equals(success.value())) return warning(
-                MinecraftComponents.translatable("screen.openallay.pending.already_consumed").getString());
+                MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.pending.already_consumed")));
         UUID receiptId = editing ? pendingId : success.value() instanceof UUID id ? id : null;
         if (receiptId == null || route == GuideClientUiState.SubmissionRoute.EDIT_INVALID) return error(
-                MinecraftComponents.translatable("screen.openallay.composer.submit_failed").getString());
+                MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.submit_failed")));
         var session = snapshot.sessions().stream().filter(value -> value.sessionId().equals(sessionId)).findFirst().orElse(null);
         if (session != null) {
             GuidePendingMessage pending = session.pendingMessages().stream()
                     .filter(value -> value.id().equals(receiptId)).findFirst().orElse(null);
             if (pending != null) {
                 if (pending.failure() != null) return error(pending.failure().code() + ": " + pending.failure().message());
-                return info(MinecraftComponents.translatable(pending.kind() == GuidePendingMessage.Kind.STEER
+                return info(MinecraftComponents.getString(MinecraftComponents.translatable(pending.kind() == GuidePendingMessage.Kind.STEER
                         ? "screen.openallay.composer.accepted.steer"
-                        : "screen.openallay.composer.accepted.follow_up").getString());
+                        : "screen.openallay.composer.accepted.follow_up")));
             }
             if (session.requests().stream().anyMatch(request -> request.requestId().equals(receiptId))) return info(
-                    MinecraftComponents.translatable("screen.openallay.composer.accepted.sent").getString());
+                    MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.sent")));
         }
         // A drained Follow-up has a fresh request ID; absence alone cannot prove execution.
-        return info(MinecraftComponents.translatable("screen.openallay.composer.accepted.message").getString());
+        return info(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.message")));
     }
     public boolean empty() { return message.isBlank(); }
     public int color() { return switch (severity) {

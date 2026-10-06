@@ -1,5 +1,7 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.platform.minecraft.MinecraftComponents;
+
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.GuideNativeButton;
@@ -73,7 +75,7 @@ public final class OpenAllayButton extends GuideNativeButton {
                     colors.marker());
         }
 
-        paintGuideButtonLabel(graphics, getMessage().copy().withStyle(GuideNativeTextStyle.color(getMessage().getStyle(), colors.text())), 4);
+        paintGuideButtonLabel(graphics, MinecraftComponents.style(MinecraftComponents.copy(getMessage()), GuideNativeTextStyle.color(getMessage().getStyle(), colors.text())), 4);
     }
 
     public static final class Builder {

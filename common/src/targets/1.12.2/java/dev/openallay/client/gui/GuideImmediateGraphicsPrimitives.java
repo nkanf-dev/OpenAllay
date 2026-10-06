@@ -13,6 +13,8 @@ import org.lwjgl.opengl.GL11;
 /** Typed LWJGL 2 immediate primitives; no screen, layout or provider algorithm lives here. */
 public final class GuideImmediateGraphicsPrimitives {
     private GuideImmediateGraphicsPrimitives() {}
+    private record SavedClip(boolean enabled, int x, int y, int width, int height) {}
+    private static final ThreadLocal<java.util.ArrayDeque<SavedClip>> CLIPS = ThreadLocal.withInitial(java.util.ArrayDeque::new);
     public static int guiWidth() { return new ScaledResolution(Minecraft.getMinecraft()).getScaledWidth(); }
     public static int guiHeight() { return new ScaledResolution(Minecraft.getMinecraft()).getScaledHeight(); }
     public static void pushPose() { GlStateManager.pushMatrix(); }
@@ -45,16 +47,47 @@ public final class GuideImmediateGraphicsPrimitives {
             GlStateManager.color(1, 1, 1, 1);
         }
     }
-    /** Caller supplies already transformed GUI bounds; shared scissor composition remains canonical. */
+    /** Read actual native model-view transform and intersect the caller's real GL clip. */
     public static void enableScissor(int x0, int y0, int x1, int y1) {
         Minecraft client = Minecraft.getMinecraft();
-        ScaledResolution scaled = new ScaledResolution(client);
-        int scale = scaled.getScaleFactor();
+        int scale = new ScaledResolution(client).getScaleFactor();
+        java.nio.FloatBuffer transform = java.nio.ByteBuffer.allocateDirect(16 * 4)
+                .order(java.nio.ByteOrder.nativeOrder()).asFloatBuffer();
+        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, transform);
+        float left = Float.POSITIVE_INFINITY, right = Float.NEGATIVE_INFINITY;
+        float top = Float.POSITIVE_INFINITY, bottom = Float.NEGATIVE_INFINITY;
+        for (int i = 0; i < 4; i++) {
+            float x = (i & 1) == 0 ? x0 : x1;
+            float y = (i & 2) == 0 ? y0 : y1;
+            float tx = transform.get(0) * x + transform.get(4) * y + transform.get(12);
+            float ty = transform.get(1) * x + transform.get(5) * y + transform.get(13);
+            left = Math.min(left, tx); right = Math.max(right, tx);
+            top = Math.min(top, ty); bottom = Math.max(bottom, ty);
+        }
+        if (x1 <= x0 || y1 <= y0) { right = left; bottom = top; }
+        java.nio.IntBuffer box = java.nio.ByteBuffer.allocateDirect(4 * 4)
+                .order(java.nio.ByteOrder.nativeOrder()).asIntBuffer();
+        GL11.glGetInteger(GL11.GL_SCISSOR_BOX, box);
+        SavedClip saved = new SavedClip(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box.get(0), box.get(1), box.get(2), box.get(3));
+        CLIPS.get().push(saved);
+        int l = (int) Math.floor(left * scale), r = (int) Math.ceil(right * scale);
+        int b = (int) Math.floor(client.displayHeight - bottom * scale);
+        int t = (int) Math.ceil(client.displayHeight - top * scale);
+        if (saved.enabled()) {
+            l = Math.max(l, saved.x()); b = Math.max(b, saved.y());
+            r = Math.min(r, saved.x() + saved.width()); t = Math.min(t, saved.y() + saved.height());
+        }
         GL11.glEnable(GL11.GL_SCISSOR_TEST);
-        GL11.glScissor(x0 * scale, client.displayHeight - y1 * scale,
-                Math.max(0, x1 - x0) * scale, Math.max(0, y1 - y0) * scale);
+        GL11.glScissor(l, b, Math.max(0, r - l), Math.max(0, t - b));
     }
-    public static void disableScissor() { GL11.glDisable(GL11.GL_SCISSOR_TEST); }
+    public static void disableScissor() {
+        var clips = CLIPS.get();
+        if (clips.isEmpty()) throw new IllegalStateException("Unbalanced native Guide scissor");
+        SavedClip saved = clips.pop();
+        GL11.glScissor(saved.x(), saved.y(), saved.width(), saved.height());
+        if (saved.enabled()) GL11.glEnable(GL11.GL_SCISSOR_TEST); else GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        if (clips.isEmpty()) CLIPS.remove();
+    }
     public static void blit(ResourceLocation texture, int x0, int y0, int x1, int y1,
             float u0, float u1, float v0, float v1) {
         Minecraft.getMinecraft().getTextureManager().bindTexture(texture);

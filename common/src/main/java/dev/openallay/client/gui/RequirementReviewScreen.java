@@ -58,7 +58,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             if (current != null && current.token() == token) {
                 review = current;
             } else if (!actionPending && !finished) {
-                failure = MinecraftComponents.translatable(PREFIX + "expired").getString();
+                failure = MinecraftComponents.getString(MinecraftComponents.translatable(PREFIX + "expired"));
             }
             // Minecraft 26.2 calls added() before init(width, height). A local dispatcher
             // may deliver this snapshot inline; retain it, but do not create widgets yet.

@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.GuideNativeFont;
+
 import dev.openallay.client.gui.MinecraftClientWindow;
 
 import dev.openallay.client.gui.OpenAllayButton;
@@ -323,12 +325,12 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
 
     private void boundedCenteredText(GuideGraphics graphics, Component message, int y) {
         int available = Math.max(0, panelWidth - 76);
-        String text = font.plainSubstrByWidth(message.getString(), available);
-        graphics.text(font, text, panelX + (panelWidth - font.width(text)) / 2, y, TEXT);
+        String text = GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(message), available);
+        graphics.text(font, text, panelX + (panelWidth - GuideNativeFont.width(font, text)) / 2, y, TEXT);
     }
 
     private void boundedText(GuideGraphics graphics, Component message, int x, int y, int width, int color) {
-        graphics.text(font, font.plainSubstrByWidth(message.getString(), Math.max(0, width)), x, y, color);
+        graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(message), Math.max(0, width)), x, y, color);
     }
 
     private static Component label(String key, Object... arguments) {

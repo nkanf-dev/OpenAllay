@@ -7,7 +7,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Native Button draw and scrolling-label binding. */
 public abstract class GuideNativeButton extends Button {
     protected GuideNativeButton(int x, int y, int width, int height, Component title, java.util.function.Consumer<OpenAllayButton> press, GuideButtonNarration narration) {
-        super(x, y, width, height, title, button -> press.accept((OpenAllayButton) button), narration::create);
+        super(x, y, width, height, title, button -> press.accept((OpenAllayButton) button), defaults -> (net.minecraft.network.chat.MutableComponent) narration.create(defaults));
     }
     @Override protected final void renderContents(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         paintGuideButton(GuideGraphics.wrap(graphics), mouseX, mouseY, delta);

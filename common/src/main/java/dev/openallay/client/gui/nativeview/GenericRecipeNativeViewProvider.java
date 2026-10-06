@@ -122,19 +122,19 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
         private static String processingFacts(GuideRecipeCard.Processing processing) {
             List<String> values = new ArrayList<>();
             if (processing.durationTicks() != null) {
-                values.add(MinecraftComponents.translatable(
+                values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.duration",
-                        processing.durationTicks()).getString());
+                        processing.durationTicks())));
             }
             if (processing.energy() != null) {
-                values.add(MinecraftComponents.translatable(
+                values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.energy",
-                        processing.energy()).getString());
+                        processing.energy())));
             }
             if (processing.temperature() != null) {
-                values.add(MinecraftComponents.translatable(
+                values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.temperature",
-                        processing.temperature()).getString());
+                        processing.temperature())));
             }
             return String.join(" · ", values);
         }

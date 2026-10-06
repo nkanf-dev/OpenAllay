@@ -14,7 +14,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
 
 /** Native renderer for safe semantic layouts. It emits typed intents, never callbacks from text. */
@@ -122,19 +121,19 @@ public final class MinecraftSemanticRenderer {
                     } else if (line.kind() == SemanticLayout.Kind.QUOTE) {
                         graphics.fill(left - 4, current, left - 2, current + line.height(), ACCENT);
                     }
-                    MutableComponent rendered = MinecraftComponents.empty();
+                    Component rendered = MinecraftComponents.empty();
                     int runX = left;
                     for (SemanticLayout.Run run : line.runs()) {
-                        MutableComponent value = MinecraftComponents.literal(run.text());
+                        Component value = MinecraftComponents.literal(run.text());
                         value = switch (run.style()) {
                             case NORMAL -> value;
-                            case EMPHASIS -> value.withStyle(ChatFormatting.ITALIC);
-                            case STRONG -> value.withStyle(ChatFormatting.BOLD);
-                            case CODE -> value.withStyle(ChatFormatting.GRAY);
-                            case REFERENCE -> value.withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE);
+                            case EMPHASIS -> MinecraftComponents.style(value, ChatFormatting.ITALIC);
+                            case STRONG -> MinecraftComponents.style(value, ChatFormatting.BOLD);
+                            case CODE -> MinecraftComponents.style(value, ChatFormatting.GRAY);
+                            case REFERENCE -> MinecraftComponents.style(value, ChatFormatting.AQUA, ChatFormatting.UNDERLINE);
                         };
-                        rendered.append(value);
-                        int runWidth = font.width(value);
+                        MinecraftComponents.append(rendered, value);
+                        int runWidth = GuideNativeFont.width(font, value);
                         Intent intent = intent(run.reference());
                         if (intent != null) {
                             hits.add(new Hit(
@@ -217,17 +216,17 @@ public final class MinecraftSemanticRenderer {
             List<Hit> hits) {
         int runX = x;
         for (SemanticLayout.Run run : runs) {
-            MutableComponent rendered = MinecraftComponents.literal(run.text());
+            Component rendered = MinecraftComponents.literal(run.text());
             rendered = switch (run.style()) {
                 case NORMAL -> rendered;
-                case EMPHASIS -> rendered.withStyle(ChatFormatting.ITALIC);
-                case STRONG -> rendered.withStyle(ChatFormatting.BOLD);
-                case CODE -> rendered.withStyle(ChatFormatting.GRAY);
-                case REFERENCE -> rendered.withStyle(
+                case EMPHASIS -> MinecraftComponents.style(rendered, ChatFormatting.ITALIC);
+                case STRONG -> MinecraftComponents.style(rendered, ChatFormatting.BOLD);
+                case CODE -> MinecraftComponents.style(rendered, ChatFormatting.GRAY);
+                case REFERENCE -> MinecraftComponents.style(rendered,
                         ChatFormatting.AQUA, ChatFormatting.UNDERLINE);
             };
             graphics.text(font, rendered, runX, y, color, false);
-            int runWidth = font.width(rendered);
+            int runWidth = GuideNativeFont.width(font, rendered);
             Intent intent = intent(run.reference());
             if (intent != null) {
                 hits.add(new Hit(new GuideUiLayout.Rect(runX, y - 1, runWidth, 10), intent));
@@ -327,7 +326,7 @@ public final class MinecraftSemanticRenderer {
                 renderItem(graphics, font, ingredient.itemId(), ingredient.label(),
                         ingredient.required(), x + 2, rowY, mouseX, mouseY);
                 String count = ingredient.available() + "/" + ingredient.required();
-                graphics.text(font, count, x + width - font.width(count) - 5, rowY + 5,
+                graphics.text(font, count, x + width - GuideNativeFont.width(font, count) - 5, rowY + 5,
                         ingredient.available() >= ingredient.required() ? SUCCESS : ERROR, false);
                 rowY += 22;
             }
@@ -428,7 +427,7 @@ public final class MinecraftSemanticRenderer {
             int y,
             Intent intent,
             List<Hit> hits) {
-        int width = font.width(label) + 6;
+        int width = GuideNativeFont.width(font, label) + 6;
         graphics.fill(x, y - 2, x + width, y + 9, 0xFF29443F);
         graphics.text(font, label, x + 3, y, ACCENT, false);
         hits.add(new Hit(new GuideUiLayout.Rect(x, y - 2, width, 11), intent));

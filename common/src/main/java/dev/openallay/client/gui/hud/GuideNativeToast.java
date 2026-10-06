@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.gui.Font;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.toasts.Toast;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import dev.openallay.client.gui.GuideTextLine;
@@ -24,7 +23,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     private boolean finished;
     private long fullyVisible;
     private Font cachedFont;
-    private net.minecraft.locale.Language cachedLanguage;
+    private Object cachedLanguage;
     private Display cachedDisplay;
     private Layout layout;
     private int width = 240;
@@ -115,7 +114,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
             title = MinecraftComponents.literal(card.title());
             description = MinecraftComponents.literal(card.description());
             secondary = notification.preview().isBlank() ? MinecraftComponents.empty()
-                    : status.copy().append(": ").append(notification.preview());
+                    : MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(status), ": "), notification.preview());
         } else {
             title = status;
             description = MinecraftComponents.literal(notification.preview());
@@ -123,12 +122,12 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         }
         var summary = MinecraftComponents.empty();
         if (notification.cardCount() > 1) {
-            if (!summary.getString().isBlank()) summary.append(" · ");
-            summary.append(MinecraftComponents.translatable("screen.openallay.notification.more_cards", notification.cardCount() - 1));
+            if (!summary.getString().isBlank()) MinecraftComponents.append(summary, " · ");
+            MinecraftComponents.append(summary, MinecraftComponents.translatable("screen.openallay.notification.more_cards", notification.cardCount() - 1));
         }
         if (notification.additionalTasks() > 0) {
-            if (!summary.getString().isBlank()) summary.append(" · ");
-            summary.append(MinecraftComponents.translatable("screen.openallay.notification.more_tasks", notification.additionalTasks()));
+            if (!summary.getString().isBlank()) MinecraftComponents.append(summary, " · ");
+            MinecraftComponents.append(summary, MinecraftComponents.translatable("screen.openallay.notification.more_tasks", notification.additionalTasks()));
         }
         // 26.2 ToastManager has no native click target. This is the existing generic Guide key only.
         Component hint = guideKey == null ? MinecraftComponents.empty()
@@ -140,16 +139,16 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         Component key = dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE.isUnbound() ? null
                 : dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE.getTranslatedKeyMessage();
         Display display = display(notification, key);
-        var language = net.minecraft.locale.Language.getInstance();
+        var language = GuideNativeFont.languageIdentity();
         if (font == cachedFont && language == cachedLanguage && display.equals(cachedDisplay)) return;
         cachedFont = font;
         cachedLanguage = language;
         cachedDisplay = display;
         width = availableWidth;
         int textWidth = Math.max(1, width - 20);
-        int hintWidth = Math.min(textWidth, font.width(display.hint()));
+        int hintWidth = Math.min(textWidth, GuideNativeFont.width(font, display.hint()));
         int summaryWidth = display.hint().getString().isBlank() ? textWidth : textWidth - hintWidth - 8;
-        layout = new Layout(wrapped(font, display.title().copy().withStyle(net.minecraft.ChatFormatting.BOLD), textWidth, 1),
+        layout = new Layout(wrapped(font, MinecraftComponents.style(MinecraftComponents.copy(display.title()), net.minecraft.ChatFormatting.BOLD), textWidth, 1),
                 wrapped(font, display.description(), textWidth, display.secondary().getString().isBlank() ? 2 : 1),
                 wrapped(font, display.secondary(), textWidth, 1),
                 summaryWidth > 8 ? wrapped(font, display.summary(), summaryWidth, 1) : List.of(),
@@ -162,8 +161,8 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         if (all.size() <= maximumLines) return all;
         List<GuideTextLine> visible = new ArrayList<>(all.subList(0, maximumLines));
         StringBuilder last = new StringBuilder(visible.get(visible.size() - 1).plainText());
-        String ending = font.substrByWidth(MinecraftComponents.literal(last.toString()), Math.max(1, width - font.width("…"))).getString();
-        visible.set(visible.size() - 1, GuideNativeFont.visual(MinecraftComponents.literal(ending + "…").withStyle(text.getStyle())));
+        String ending = GuideNativeFont.substrByWidth(font, MinecraftComponents.literal(last.toString()), Math.max(1, width - GuideNativeFont.width(font, "…"))).getString();
+        visible.set(visible.size() - 1, GuideNativeFont.visual(MinecraftComponents.style(MinecraftComponents.literal(ending + "…"), text.getStyle())));
         return List.copyOf(visible);
     }
 

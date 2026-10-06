@@ -1,5 +1,7 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.platform.minecraft.MinecraftComponents;
+
 import java.util.function.Consumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
@@ -224,6 +226,6 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
         }
     }
     @Override protected void narrateGuideWidget(GuideNarration output) {
-        output.add(GuideNarration.Part.TITLE, getMessage().getString() + ", " + text.value());
+        output.add(GuideNarration.Part.TITLE, MinecraftComponents.getString(getMessage()) + ", " + text.value());
     }
 }

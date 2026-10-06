@@ -98,4 +98,5 @@ public class GuideNativeEditBox extends GuiTextField implements GuideWidgetInput
     public void setMaxLength(int length) { super.setMaxStringLength(length); }
     public void setEditable(boolean editable) { this.editable = editable; super.setEnabled(editable); }
     public void setBordered(boolean bordered) { super.setEnableBackgroundDrawing(bordered); }
+    protected net.minecraft.util.text.ITextComponent guideNarrationMessage() { return getMessage(); }
 }

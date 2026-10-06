@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.locale.Language;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 import net.minecraft.network.chat.Component;
 import dev.openallay.client.gui.GuideTextLine;
@@ -83,7 +82,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     private List<Row> rows = List.of();
     private List<GuideUiRow> sourceRows;
     private Font cachedFont;
-    private Language cachedLanguage;
+    private Object cachedLanguage;
     private GuideUiConfig.Fullscreen cachedPresentation;
     private String cachedAssistantName;
     private String cachedSession;
@@ -100,7 +99,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     public Receipt receipt() { return receipt; }
     public List<Hit> hits() { return hits(cachedFont, paintedHits == null ? null : paintedHits.viewport()); }
     public List<Hit> hits(Font font, GuideUiLayout.Rect viewport) {
-        return paintedHits != null && paintedHits.current(hitEpoch, font, Language.getInstance(), viewport, scroll.offset())
+        return paintedHits != null && paintedHits.current(hitEpoch, font, GuideNativeFont.languageIdentity(), viewport, scroll.offset())
                 ? List.copyOf(hits) : List.of();
     }
     public boolean detailOpen() { return selectedTool != null || !selectedSources.isEmpty(); }
@@ -115,7 +114,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     /** Returns true only when the projected content or measured viewport changed. */
     public boolean prepare(GuideHudView view, Font font, int width, int height) {
         final int measuredWidth = Math.max(1, width);
-        Language language = Language.getInstance();
+        Object language = GuideNativeFont.languageIdentity();
         boolean rowsChanged = sourceRows != view.rows() && !java.util.Objects.equals(sourceRows, view.rows());
         // Compare a new immutable row list only once per snapshot, not once per rendered frame.
         sourceRows = view.rows();
@@ -172,9 +171,8 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                         var summary = GuideToolSummaryPresenter.project(tool);
                         Component title = summary.title().isBlank() ? MinecraftComponents.translatable(summary.titleKey())
                                 : MinecraftComponents.literal(summary.title());
-                        narration = title.getString();
-                        header.addAll(GuideNativeFont.split(font, title.copy().append(" · ")
-                                .append(MinecraftComponents.translatable(summary.status().translationKey())), measuredWidth));
+                        narration = MinecraftComponents.getString(title);
+                        header.addAll(GuideNativeFont.split(font, MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(title), " · "), MinecraftComponents.translatable(summary.status().translationKey())), measuredWidth));
                         if (summary.hasDescription()) header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(summary.description()), measuredWidth));
                         // Keep implementation receipts in explicit detail, not the compact task summary.
                         tool.detail().narration().stream().filter(message -> selectedTool != null || switch (message.key()) {
@@ -185,7 +183,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                         }).forEach(message -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.translatable(
                                 message.key().translationKey(), message.arguments().toArray()), measuredWidth)));
                         tool.detail().failure().ifPresent(failure -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
-                        var cards = GuideHudToolCards.project(tool, key -> MinecraftComponents.translatable(key).getString());
+                        var cards = GuideHudToolCards.project(tool, key -> MinecraftComponents.getString(MinecraftComponents.translatable(key)));
                         document = cards.document();
                         recipes = cards.recipes();
                     } else if (source instanceof GuideUiRow.Status status) {
@@ -301,11 +299,11 @@ public final class GuideHudResultRenderer implements AutoCloseable {
                     int sourceTop = current;
                     for (var line : row.sources()) { graphics.text(font, line, viewport.x() + 3, current, OpenAllayWidgetTheme.MUTED); current += 10; }
                     if (interactive) hits.add(new Hit(new GuideUiLayout.Rect(viewport.x(), sourceTop, viewport.width(), current - sourceTop),
-                            new Action.Sources(assistant.sources()), MinecraftComponents.translatable("screen.openallay.evidence.groups", assistant.sources().size()).getString()));
+                            new Action.Sources(assistant.sources()), MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.evidence.groups", assistant.sources().size()))));
                 }
             }
         } finally { graphics.disableScissor(); nativeViews.endFrame(); }
-        if (interactive) paintedHits = new PaintedHits(hitEpoch, font, Language.getInstance(), viewport, offset);
+        if (interactive) paintedHits = new PaintedHits(hitEpoch, font, GuideNativeFont.languageIdentity(), viewport, offset);
         receipt = new Receipt(++extractedFrame, rendered, assistants, tools, cards, nodes, items, paintedRecipes.size(), scroll.totalHeight(), viewport.height(),
                 offset, Math.max(0, scroll.totalHeight() - viewport.height()), layouts.stats().entries(), nativeViews.activeViewCount(),
                 List.copyOf(paintedNodes), lastPaintedText);
@@ -355,7 +353,7 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     private static SemanticLayoutEngine.Measurer measurer(Font font, GuideUiConfig.Density density) {
         return new SemanticLayoutEngine.Measurer() {
             @Override public int width(String text, SemanticLayout.Style style) {
-                return font.width(MinecraftComponents.literal(text).withStyle(switch (style) {
+                return GuideNativeFont.width(font, MinecraftComponents.style(MinecraftComponents.literal(text), switch (style) {
                     case EMPHASIS -> ChatFormatting.ITALIC;
                     case STRONG -> ChatFormatting.BOLD;
                     case CODE -> ChatFormatting.GRAY;

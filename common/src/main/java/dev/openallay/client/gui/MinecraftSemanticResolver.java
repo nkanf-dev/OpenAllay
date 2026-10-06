@@ -1,5 +1,7 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.platform.minecraft.MinecraftComponents;
+
 import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
 import net.minecraft.client.Minecraft;
@@ -34,7 +36,7 @@ public final class MinecraftSemanticResolver {
                 dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
         String label = suppliedLabel == null || suppliedLabel.isBlank()
-                ? stack.getHoverName().getString() : suppliedLabel;
+                ? MinecraftComponents.getString(stack.getHoverName()) : suppliedLabel;
         return new ItemPresentation(itemId, label, count, stack, true);
     }
 }
