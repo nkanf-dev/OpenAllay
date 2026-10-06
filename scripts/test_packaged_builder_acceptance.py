@@ -1644,7 +1644,8 @@ def read_json(path):
                       "nativeFrames": [{"path": str(frame), "sha256": launcher.digest(frame),
                                         "source": "native-mainRenderTarget"}]}
             launcher.write_json(report_path, report)
-            self.assertEqual(report, launcher.validate_ui_capture(manifest))
+            with patch.object(launcher, "validate_final_screenshot", side_effect=AssertionError("Builder screenshot gate must not run for graphical UI")):
+                self.assertEqual(report, launcher.validate_ui_capture(manifest))
             for key, value in (("themeChangeCount", 3), ("interactKeyRestored", False),
                                ("microphoneCaptureAttempted", True)):
                 invalid = {**report, key: value}

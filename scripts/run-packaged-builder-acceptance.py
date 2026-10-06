@@ -1016,9 +1016,9 @@ def validate_ui_capture(manifest):
                 raise ValueError("Manual native graphical report lacks actual export")
         else:
             validate_live_ux_receipts(report)
-    if (manifest["scenario"] == "ui-live-ux-regressions"
-            and report.get("gameVersion") == "1.18.2" and report.get("loader") == "forge"):
-        validate_18182_native_primitives(report)
+        if (manifest["scenario"] == "ui-live-ux-regressions"
+                and report.get("gameVersion") == "1.18.2" and report.get("loader") == "forge"):
+            validate_18182_native_primitives(report)
     else:
         validate_final_screenshot(manifest)
     return report
