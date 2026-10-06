@@ -17,7 +17,8 @@
     "GuideProbeMouseInvoker",
     "GuideTextFieldDrawAccessMixin",
     "GuiScreenMenuKeyObservationMixin",
-    "GuiTextFieldMenuKeyObservationMixin"
+    "GuiTextFieldMenuKeyObservationMixin",
+    "MainWindowResizeMixin"
   ],
   "injectors": {
     "defaultRequire": 1
