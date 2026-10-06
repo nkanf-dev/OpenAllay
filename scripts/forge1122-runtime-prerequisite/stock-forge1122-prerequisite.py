@@ -194,8 +194,14 @@ def prepare_pack200(args, output, java, cp, runtime):
     runtime.require(runtime.file_hash(forge) == "ff578d670d2c720a72f8fff31ea3d6868595c7e980ecdecba3254f307ef2c2a9", "Official Forge bytes differ")
     java8_home = Path(os.environ["OPENALLAY_PACK200_JAVA8_HOME"])
     java8 = java8_home / "bin/java"
-    java8_info = runtime.check_java(java8, 8)
-    runtime.require("1.8.0_482" in java8_info and "Temurin" in java8_info, "Use pinned build-only Temurin8u482")
+    runtime.require(java8.is_file() and os.access(java8, os.X_OK), "Captured build-only Java8 must be executable")
+    checked = subprocess.run([str(java8), "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             text=True, timeout=15, check=False)
+    java8_info = checked.stdout.strip()
+    # Genuine Java8 reports 1.8, not 8; the shared modern-version helper rejects this syntax.
+    runtime.require(checked.returncode == 0 and re.search(r'version "1\.8\.0_482"', java8_info)
+                    and "Temurin" in java8_info and "build 1.8.0_482-b08" in java8_info,
+                    "Use exact pinned build-only Temurin8u482-b08")
     with zipfile.ZipFile(forge) as archive:
         compressed = archive.read("binpatches.pack.lzma")
     runtime.require(hashlib.sha256(compressed).hexdigest() == "ceebaefd4abca814aa0160e71e62c507d63733b7da1773c1268e04ac9a720882", "Exact bundled LZMA resource differs")
