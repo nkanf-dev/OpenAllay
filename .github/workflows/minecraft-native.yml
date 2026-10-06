@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence]
 permissions:
   contents: read
 concurrency:
@@ -544,7 +544,7 @@ jobs:
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
 
   component1122-boot:
-    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual'
+    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual' || inputs.mode == 'component1122-world-persistence'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -570,7 +570,7 @@ jobs:
           xvfb-run -a -s '-screen 0 1280x960x24'
           build/stock1122-tools/bin/python -B scripts/boot-forge1122-component.py
           --product-pin native-builds/forge1122-component/accepted-product-provider.json
-          ${{ inputs.mode == 'component1122-ui-manual' && '--ui-manual --applied-bindings' || inputs.mode == 'component1122-world-sdk' && '--world-sdk --applied-bindings' || '' }}
+          ${{ inputs.mode == 'component1122-world-persistence' && '--world-persistence --applied-bindings' || inputs.mode == 'component1122-ui-manual' && '--ui-manual --applied-bindings' || inputs.mode == 'component1122-world-sdk' && '--world-sdk --applied-bindings' || '' }}
       - name: Retain component startup proof and exact rejected inputs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -586,6 +586,14 @@ jobs:
             build/e2e/forge1122-component/*.tsv
             build/e2e/forge1122-component/*.png
             build/e2e/forge1122-component/frames/
+            build/e2e/forge1122-component/persist/*.json
+            build/e2e/forge1122-component/persist/*.jsonl
+            build/e2e/forge1122-component/persist/*.tsv
+            build/e2e/forge1122-component/persist/*.log
+            build/e2e/forge1122-component/reload/*.json
+            build/e2e/forge1122-component/reload/*.jsonl
+            build/e2e/forge1122-component/reload/*.tsv
+            build/e2e/forge1122-component/reload/*.log
             build/e2e/forge1122-component/objectholder-rejected/
             build/e2e/forge1122-component/capability-rejected/
             build/e2e/forge1122-component/dimension-phase/

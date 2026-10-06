@@ -328,8 +328,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     output = launch.safe_output(args.output, args.repo)
     runtime.require(not output.exists(), "Capture directory must be fresh")
     output.mkdir(parents=True)
-    game = output / "game"
-    (game / "mods").mkdir(parents=True)
+    shared_game=getattr(args,"game_directory",None)
+    game = Path(shared_game) if shared_game else output / "game"
+    (game / "mods").mkdir(parents=True,exist_ok=bool(shared_game))
     # Stock options only. No mod, hook, agent, resource pack, world or custom title renderer.
     (game / "options.txt").write_text("renderDistance:4\nmaxFps:15\npauseOnLostFocus:false\nguiScale:2\n")
     cp = classpath_libraries(vanilla, root, launch)
@@ -348,7 +349,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             path=Path(record["path"])
             runtime.require(sha(path)==record["sha256"],"Retained component bytes changed")
             if path.name in ("openallay-feature-core.jar","openallay-lifecycle-facade.jar"):
-                shutil.copyfile(path,game/"mods"/path.name)
+                if (game/"mods"/path.name).exists():
+                    runtime.require(sha(game/"mods"/path.name)==record["sha256"],"Shared isolated profile component changed")
+                else:shutil.copyfile(path,game/"mods"/path.name)
             elif path.name=="openallay-private-mixin.jar":
                 cp.append(("dev.openallay:private-mixin-asm:current",path))
             else:raise ValueError("Unknown component archive")
@@ -409,11 +412,14 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             "-Dopenallay.dimension.transformReceipt="+str(output/"dimension-transform.json"),
             "-Dopenallay.dimension.fixtureReceipt="+str(output/"dimension-fixture.json")]
     if world_sdk:
-        name="openallay-builder-forge1122-sdk-"+str(os.getpid())
+        phase=getattr(args,"world_phase","")
+        name=getattr(args,"world_name",None) or "openallay-builder-forge1122-sdk-"+str(os.getpid())
         component_flags += ["-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
             "-Dopenallay.e2e.question=Native WorldSession SDK acceptance",
             "-Dopenallay.e2e.report="+str(output/"world-sdk-report.json"),
-            "-Dopenallay.e2e.createWorld="+name,"-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
+            "-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
+        component_flags += ["-Dopenallay.e2e.resumeWorld="+name] if phase=="reload" else ["-Dopenallay.e2e.createWorld="+name]
+        if phase:component_flags += ["-Dopenallay.e2e.worldPhase="+phase]
         runtime.write_json(output/"world-fixture.json",{"name":name,"freshProfile":True,"commandsAllowed":False,
             "modelInvocation":False,"unrestrictedJavascript":False,"expectedShutdown":"natural-unsignalled-exit0"})
     fixture_process=None
@@ -539,7 +545,11 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         checks=report.get("worldSdkChecks",[])
         if not checks:
             checks=report.get("checks",[])
-        passed=report.get("outcome")=="COMPLETED" and bool(checks) and all(c.get("status")=="PASS" for c in checks)
+        persistence_phase=getattr(args,"world_phase","")
+        if persistence_phase in ("persist","reload"):
+            passed=report.get("outcome")=="COMPLETED" and bool(report.get("worldId")) and report.get("phase")==persistence_phase
+            passed=passed and bool(report.get("actual")) if persistence_phase=="persist" else passed and bool(report.get("persistedActual")) and report.get("originalImageRestored") is True
+        else:passed=report.get("outcome")=="COMPLETED" and bool(checks) and all(c.get("status")=="PASS" for c in checks)
         clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
         oracle_path=output/"applied-bindings.json";oracle=json.loads(oracle_path.read_text()) if oracle_path.is_file() else {}
         required=passed and clean and (not binding_probe or oracle.get("accepted") is True) and (output/"dimension-fixture.json").is_file()
