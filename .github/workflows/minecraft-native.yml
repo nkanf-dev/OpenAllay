@@ -1,24 +1,15 @@
-name: Forge36 native source declaration inventory
+name: Forge16 namespace tooling and new publication ABI
 on:
   workflow_dispatch:
-    inputs:
-      inventory:
-        description: Native declaration selection
-        required: true
-        default: primary
-        type: choice
-        options:
-          - primary
-          - supplement
 permissions:
   contents: read
 concurrency:
-  group: forge36-native-api-${{ github.ref }}
+  group: forge16165-focused-tooling-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  native-api:
+  focused-tooling-publication:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -26,22 +17,18 @@ jobs:
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: temurin
-          java-version: '17.0.18+8'
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+          java-version: '21.0.10+7'
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
-          cache-provider: basic
-          cache-read-only: true
-      - name: Resolve genuine native API and export selected declarations only
-        env:
-          JAVA_HOME_17_X64: ${{ env.JAVA_HOME }}
-        run: python3 -B scripts/forge16165-engine-prerequisite/export-native-api.py ${{ inputs.inventory == 'supplement' && '--supplement' || '' }}
-      - name: Keep small public-access and method-body source evidence
+          distribution: temurin
+          java-version: '17.0.18+8'
+      - name: Resolve actual FG host; accept focused tooling; capture only new ABI
+        run: python3 -B scripts/forge16165-engine-prerequisite/focused-tooling-acceptance.py --output "$PWD/build/forge16165-focused-tooling-report"
+      - name: Retain tiny text evidence, never game or library binaries
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: forge36-native-api-${{ github.sha }}
-          retention-days: 30
-          if-no-files-found: warn
-          path: |
-            build/forge36-native-api/*.json
-            build/forge36-native-api/*.txt
+          name: forge16165-focused-tooling-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: build/forge16165-focused-tooling-report/
