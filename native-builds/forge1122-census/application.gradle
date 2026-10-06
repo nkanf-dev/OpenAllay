@@ -61,7 +61,12 @@ task prepareNativeApplication {
         def selectedPaths=selected.java*.path as Set
         if (!(req.actualMcpUnits instanceof List) || req.actualMcpUnits.toSet().size()!=req.actualMcpUnits.size() ||
                 !selectedPaths.containsAll(req.actualMcpUnits)) throw new GradleException('ACTUAL_MCP units must be explicit selected physical owners')
-        def cp=(inputs.classpath + req.closure.findAll { it.compile }*.path).unique()
+        def processorArtifacts=configurations.nativeApplicationProcessor.resolvedConfiguration.resolvedArtifacts.collect { a ->
+            [coordinate:a.moduleVersion.id.toString(),classifier:a.classifier ?: '',path:a.file.canonicalPath,sha256:sha(a.file)]
+        }
+        new File(out,'normal-annotation-processor-inputs.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(processorArtifacts))+'\n','UTF-8')
+        // The normal Mixin processor jar also owns the source annotation types.
+        def cp=(inputs.classpath + req.closure.findAll { it.compile }*.path + configurations.nativeApplicationProcessor.files*.absolutePath).unique()
         new File(out,'classpath.txt').setText(cp.join('\n')+'\n','UTF-8')
         new File(out,'units.tsv').setText(selected.java.collect { r ->
             if (sha(file(r.path))!=r.sha256) throw new GradleException('Selected canonical source changed')
