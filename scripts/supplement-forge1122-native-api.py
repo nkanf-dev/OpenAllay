@@ -45,7 +45,7 @@ CLASSES = (
     'net.minecraft.block.state.IBlockBehaviors','net.minecraft.block.BlockChest',
     'net.minecraft.block.BlockShulkerBox','net.minecraft.util.datafix.DataFixer',
 )
-BODIES = ('net.minecraft.tileentity.TileEntityLockableLoot',
+BODIES = ('net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
     'net.minecraft.tileentity.TileEntityChest','net.minecraft.tileentity.TileEntityShulkerBox')
 
 def sha(path):
