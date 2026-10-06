@@ -93,7 +93,7 @@ task exportSourceSelection {
         // Reject lexical class references left by an incomplete binding refactor; javac remains authoritative.
         def withoutComments = { String text -> text.replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\r\n]*/, '') }
         j.values().each { set -> set.files.each { f ->
-            def text=withoutComments(f.getText('UTF-8')).replaceAll(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/,'')
+            def text=withoutComments(f.getText('UTF-8')).replaceAll(/"(?:\\.|[^"\\])*+"|'(?:\\.|[^'\\])*+'/,'')
             retirement.java.each { row ->
                 def simple=row.logicalPath.substring(row.logicalPath.lastIndexOf('/')+1).replaceFirst(/\.java$/,'')
                 if ((text =~ /(?<![\w$])${java.util.regex.Pattern.quote(simple)}(?![\w$])/).find())

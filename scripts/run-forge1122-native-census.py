@@ -69,7 +69,7 @@ def main():
     (work/'gradlew').chmod(0o755)
     cmd=[str(work/'gradlew'),'--no-daemon','--max-workers=2','-p',str(island),
         '-PcanonicalSourceRoot='+str(repo),'-PcensusOutput='+str(output),
-        'buildNativeApplication' if args.native_build_request else 'exportNativeInputs','--stacktrace']
+        'buildNativeApplication' if args.native_build_request else 'exportNativeInputs','--full-stacktrace']
     if args.native_build_request:
         cmd.append('-PnativeBuildRequest='+str(args.native_build_request.resolve()))
     with (output/'tooling.log').open('w') as log:
