@@ -1,0 +1,51 @@
+name: Stock Forge36 Java17 client prerequisite
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stock-forge36-java17-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  stock-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '17.0.18+8'
+      - name: Validate frozen prerequisite source only
+        run: python3 -B scripts/forge16165-prerequisite/stock-forge36-prerequisite.py --repo "$PWD" --metadata-only
+      - name: Install isolated display and capture tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/stock-ci-tools
+          build/stock-ci-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Install actual official Forge36 and boot unmodified client once
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          ALSOFT_DRIVERS: 'null'
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/stock-xvfb.log" build/stock-ci-tools/bin/python -B scripts/forge16165-prerequisite/stock-forge36-prerequisite.py --repo "$PWD" --java "$JAVA_HOME/bin/java" --java-release '17.0.18+8' --minecraft-root "$PWD/build/e2e/runtime/forge16165-stock/minecraft" --output "$PWD/build/e2e/forge16165-stock-client"
+      - name: Retain exact installer and client outcome
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-stock-java17-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            build/stock-xvfb.log
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.json
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+            build/e2e/runtime/forge16165-stock/assets/verified.json
+            build/e2e/forge16165-stock-client/*.json
+            build/e2e/forge16165-stock-client/*.log
+            build/e2e/forge16165-stock-client/*.png
+            build/e2e/forge16165-stock-client/game/logs/
+            build/e2e/forge16165-stock-client/game/crash-reports/

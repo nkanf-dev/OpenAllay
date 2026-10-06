@@ -14,3 +14,5 @@
 *.cfg text eol=lf
 *.jks binary
 *.ogg binary
+# Preserve hash-pinned upstream installer metadata byte for byte.
+scripts/forge16165-prerequisite/version.json whitespace=-blank-at-eol
