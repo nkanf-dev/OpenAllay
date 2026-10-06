@@ -278,8 +278,7 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if getattr(args,"component_inputs",None):
         with (output/"capability-component-tests.log").open("w") as log:
-            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.CapabilityBridgeTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
-            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.pack200.CapabilityRuntime"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.CapabilityPhaseTest"],check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
         runtime.write_json(output/"prior-startup-reused.json",{"acceptedRun":"37520988163","oldChecksReplayed":False})
     elif args.objectholder_bridge and not args.objectholder_phase_diagnostic:
         runtime.write_json(output / "objectholder-phase-test-reused.json", {"run": "37520069517", "status": "pass", "unchangedPhaseInputsAndPatch": True})

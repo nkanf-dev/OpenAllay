@@ -18,6 +18,7 @@ import org.objectweb.asm.tree.MethodNode;
 
 /** Exact setter seam for five native nonfinal CapabilityInject fields. */
 public final class CapabilityBridge {
+    static final String PHASE_SHA="03a642bc1c1b45c500aba9e08b834d7614b2285056de630bf82eddd87a166561";
     static final String CLASS_SHA = "7bffb0137bf96289b7682c41e4d178c07b74df2d948a975480673fef1ce994af";
     static final String FORGE_SHA = "ff578d670d2c720a72f8fff31ea3d6868595c7e980ecdecba3254f307ef2c2a9";
     static final String HELPER = "dev/openallay/runtime/forge1122/pack200/CapabilityRuntime";
@@ -41,7 +42,12 @@ public final class CapabilityBridge {
                     String official = forge.toURI().toURL().toExternalForm();
                     if (!external.equals(official) && !external.startsWith("jar:" + official + "!/"))
                         throw new IllegalStateException("Unexpected CapabilityManager$2 source: " + external);
-                    byte[] patched = patch(bytes);
+                    try(java.util.jar.JarFile archive=new java.util.jar.JarFile(forge);java.io.InputStream input=archive.getInputStream(archive.getJarEntry(name+".class"))) {
+                        java.io.ByteArrayOutputStream raw=new java.io.ByteArrayOutputStream();byte[] buffer=new byte[4096];int count;
+                        while((count=input.read(buffer))!=-1)raw.write(buffer,0,count);
+                        if(!CLASS_SHA.equals(sha(raw.toByteArray())))throw new IllegalStateException("Exact original capability class resource differs");
+                    }
+                    byte[] patched = patch(bytes,true);
                     String receipt = "{\"target\":\"CapabilityManager$2.setup\",\"inputSha256\":\"" + sha(bytes)
                             + "\",\"outputSha256\":\"" + sha(patched) + "\",\"stockLaunchClassLoader\":true,"
                             + "\"capabilityNonfinalFieldSetterOnly\":true,\"forgeArchiveUnchanged\":true}\n";
@@ -61,8 +67,9 @@ public final class CapabilityBridge {
         }, false);
     }
 
-    static byte[] patch(byte[] bytes) throws Exception {
-        if (!CLASS_SHA.equals(sha(bytes))) throw new IllegalStateException("Exact CapabilityManager$2.class differs");
+    static byte[] patch(byte[] bytes) throws Exception {return patch(bytes,false);}
+    static byte[] patch(byte[] bytes,boolean postForge) throws Exception {
+        if (!(postForge?PHASE_SHA:CLASS_SHA).equals(sha(bytes))) throw new IllegalStateException("Exact CapabilityManager$2.class differs");
         ClassNode node = new ClassNode(Opcodes.ASM5);
         new ClassReader(bytes).accept(node, 0);
         int replacements=0;
