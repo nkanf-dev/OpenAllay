@@ -122,6 +122,10 @@ task exportSourceSelection {
             j[owner+':java'].exclude(rows.collect { it.logicalPath })
         }
         logger.lifecycle('1122 source selection: audited retirement paths applied')
+        def common = selectConfiguredMinecraftMixins(sets['common:java'],[sets['common:resources']])
+        def fml = selectConfiguredMinecraftMixins(sets['fml:java'],[sets['fml:resources'],sets['common:resources']],common)
+        def adapter = selectConfiguredMinecraftMixins(sets['adapter:java'],[sets['adapter:resources']])
+        validateSelectedMinecraftJava(j.values())
         // Reject lexical class references left by an incomplete binding refactor; javac remains authoritative.
         def withoutComments = { String text -> text.replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\r\n]*/, '') }
         j.values().each { set -> set.files.each { f ->
@@ -133,10 +137,6 @@ task exportSourceSelection {
             }
         } }
         logger.lifecycle('1122 source selection: retired helper references checked')
-        def common = selectConfiguredMinecraftMixins(sets['common:java'],[sets['common:resources']])
-        def fml = selectConfiguredMinecraftMixins(sets['fml:java'],[sets['fml:resources'],sets['common:resources']],common)
-        def adapter = selectConfiguredMinecraftMixins(sets['adapter:java'],[sets['adapter:resources']])
-        validateSelectedMinecraftJava(j.values())
         logger.lifecycle('1122 source selection: configured Mixin owners validated')
         write('source-selection.json',[target:'1.12.2',forge:'14.23.5.2864',
             disposition:'candidate owners only; API inventory decides typed leaf delta',
