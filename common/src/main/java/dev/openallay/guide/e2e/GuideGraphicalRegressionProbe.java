@@ -864,12 +864,12 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 1 -> {
-                require(guide().getGuideWidgetFocused() == composer().widget(), "New Guide did not focus its actual native composer");
+                require(guide().guideWidgetFocused(composer().widget()), "New Guide did not focus its actual native composer");
                 require(GuideNativeInput.charTyped(guide(), GuideNativeInput.characterEvent('x')), "Initial native character was not routed to composer");
                 require("x".equals(composer().getValue()), "Initial character callback did not edit native input");
                 checkpoint("live-01-initial-character-focus", true);
                 clickAt(guide(), 1, 1, "blank-outside-composer");
-                require(guide().getGuideWidgetFocused() != composer().widget(), "Blank click did not blur native text input");
+                require(!guide().guideWidgetFocused(composer().widget()), "Blank click did not blur native text input");
                 MinecraftClientWindow.setWindowed(client, 900, 540);
                 advance();
             }
@@ -880,21 +880,21 @@ final class GuideGraphicalRegressionProbe {
                     advance();
                     return;
                 }
-                require(guide().getGuideWidgetFocused() != composer().widget(), "Resize/rebuild incorrectly refocused blurred composer");
+                require(!guide().guideWidgetFocused(composer().widget()), "Resize/rebuild incorrectly refocused blurred composer");
                 require("x".equals(composer().getValue()), "Resize lost player draft");
                 clickAt(guide(), dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer().widget()) + 8, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer().widget()) + 8, "composer-focus");
-                require(guide().getGuideWidgetFocused() == composer().widget(), "Native input click did not restore text focus");
+                require(guide().guideWidgetFocused(composer().widget()), "Native input click did not restore text focus");
                 String beforeTypedPttKey = composer().getValue();
                 boolean endHandled = GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_END, 0));
                 recordAction("native-key", "END/focused-composer-before-typed-PTT-key");
-                require(endHandled && guide().getGuideWidgetFocused() == composer().widget(), "Native End did not retain composer focus");
+                require(endHandled && guide().guideWidgetFocused(composer().widget()), "Native End did not retain composer focus");
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_V, 0));
                 boolean characterHandled = GuideNativeInput.charTyped(guide(), GuideNativeInput.characterEvent('v'));
                 GuideNativeInput.keyReleased(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_V, 0));
                 report.put("typedPttKeyNativeEdit", Map.of("beforeValue", beforeTypedPttKey,
                         "afterValue", composer().getValue(), "endKeyHandled", endHandled,
-                        "characterHandled", characterHandled, "composerFocused", guide().getGuideWidgetFocused() == composer().widget()));
-                require(characterHandled && guide().getGuideWidgetFocused() == composer().widget() && "xv".equals(composer().getValue()),
+                        "characterHandled", characterHandled, "composerFocused", guide().guideWidgetFocused(composer().widget())));
+                require(characterHandled && guide().guideWidgetFocused(composer().widget()) && "xv".equals(composer().getValue()),
                         "Focused PTT-bound typed key did not insert at native composer End");
                 report.put("focusReceipts", Map.of("initialChar", true, "blankBlur", true,
                         "resizeRemainsBlurred", true, "typedPttKeyEditsText", true,
@@ -1337,7 +1337,7 @@ final class GuideGraphicalRegressionProbe {
                     require(custody.join() instanceof ToolResult.Success<Boolean> success && Boolean.TRUE.equals(success.value()),
                             "Reopened Guide observation producer custody failed");
                     require(readField(screen, "attachment") != null && screen.width > 0 && screen.height > 0
-                            && ((dev.openallay.client.gui.GuideNativeScreen) screen).guideWidgetChildren().stream().anyMatch(child -> child == ((GuideMultilineEditor) readField(screen, "composer")).widget())
+                            && ((dev.openallay.client.gui.GuideNativeScreen) screen).guideWidgetRegistered(((GuideMultilineEditor) readField(screen, "composer")).widget())
                             && findButton(screen, "screen.openallay.settings.short", true) != null,
                             "Reopened Guide native extraction has no initialized owned composer/Settings widgets");
                     return true;
