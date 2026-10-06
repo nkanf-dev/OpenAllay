@@ -44,6 +44,7 @@ CLASSES = (
     'net.minecraft.util.math.BlockPos','net.minecraft.util.math.ChunkPos',
     'net.minecraft.block.state.IBlockBehaviors','net.minecraft.block.BlockChest',
     'net.minecraft.block.BlockShulkerBox','net.minecraft.util.datafix.DataFixer',
+    'net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs',
     'net.minecraft.entity.player.InventoryPlayer',
     'net.minecraft.entity.player.EntityPlayer',
     'net.minecraft.entity.EntityLivingBase',
@@ -53,7 +54,7 @@ CLASSES = (
     'net.minecraft.world.storage.ISaveHandler',
 
 )
-BODIES = ('net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
+BODIES = ('net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
     'net.minecraft.tileentity.TileEntityChest','net.minecraft.tileentity.TileEntityShulkerBox')
 
 def sha(path):
