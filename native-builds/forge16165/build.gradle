@@ -229,20 +229,38 @@ def verifyCompilerInputs = tasks.register('verifyNativeCompilerInputs') {
             }
         }
         def owners = [:]
+        def classHashes = [:]
+        def identicalHostDefinitions = []
+        def conflictingDefinitions = []
         configurations.compileClasspath.files.each { file ->
             if (!file.isFile()) throw new GradleException("No source-owned output on native metadata classpath: ${file}")
             new ZipFile(file).withCloseable { zip ->
                 zip.entries().each { entry ->
                     if (!entry.directory && entry.name.endsWith('.class') &&
                             !entry.name.startsWith('META-INF/versions/') && entry.name != 'module-info.class') {
-                        def previous = owners.put(entry.name,file)
-                        if (previous != null && previous != file) {
-                            throw new GradleException("Competing native compile class owner: ${entry.name}: ${previous}, ${file}")
+                        byte[] bytes = zip.getInputStream(entry).withCloseable { it.readAllBytes() }
+                        def hash = MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()
+                        def previous = owners[entry.name]
+                        if (previous == null) { owners[entry.name] = file; classHashes[entry.name] = hash }
+                        else if (previous != file) {
+                            // Normal Forge host libraries repeat some byte-identical definitions.
+                            // Product/optional-library repeats remain forbidden even when identical.
+                            def hostCopies = entry.name.startsWith('net/minecraftforge/') &&
+                                    previous.name in ['mergetool-1.0.9-api.jar','forgespi-3.2.0.jar'] &&
+                                    file.name in ['mergetool-1.0.9-api.jar','forgespi-3.2.0.jar']
+                            def record = [entry:entry.name, first:previous.absolutePath, second:file.absolutePath,
+                                    firstSha256:classHashes[entry.name], secondSha256:hash]
+                            if (hostCopies && classHashes[entry.name] == hash) identicalHostDefinitions.add(record)
+                            else conflictingDefinitions.add(record)
                         }
                     }
                 }
             }
         }
+        jsonWrite(layout.buildDirectory.file('native-tooling/class-owner-census.json').get().asFile,
+                [identicalPinnedForgeHostDefinitions:identicalHostDefinitions, conflicts:conflictingDefinitions])
+        if (!conflictingDefinitions.empty) throw new GradleException(
+                "Competing native class definitions: ${conflictingDefinitions*.entry}; see complete class-owner-census.json")
         def gson = owners['com/google/gson/Gson.class']
         def actualGson = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.find {
             it.moduleVersion.id.toString() == 'com.google.code.gson:gson:2.8.0'
