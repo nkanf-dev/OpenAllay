@@ -49,6 +49,11 @@ def runtime_proof(work,source):
     cp=launch.version_libraries(vanilla,root,Path('/nonexistent'),allow_gradle=False)
     fml=launch.version_libraries(version,root,Path('/nonexistent'),allow_gradle=False);replacements={tuple(n.split(':')[:2]) for n,_ in fml}
     cp=[(n,p) for n,p in cp if tuple(n.split(':')[:2]) not in replacements]+fml
+    # Forge's transforming loader also owns the installed universal and patched client archives.
+    # They are not ordinary version.libraries JVM entries.
+    universal=next(x for x in install['libraries'] if x['name']=='net.minecraftforge:forge:1.16.5-36.2.42:universal')
+    cp.append((universal['name'],runtime.relative_file(root/'libraries',universal['downloads']['artifact']['path'])))
+    cp.append(('net.minecraftforge:forge:1.16.5-36.2.42:client',outputs['PATCHED']))
     targets={'com/google/gson/Gson.class','com/google/common/collect/ImmutableList.class','org/apache/logging/log4j/Logger.class','org/spongepowered/asm/mixin/Mixin.class','net/minecraftforge/fml/common/Mod.class','net/minecraft/client/Minecraft.class'}
     classes=[];artifacts=[];seen_paths=set()
     for coordinate,p in cp:
@@ -59,7 +64,8 @@ def runtime_proof(work,source):
             if present:
                 digest=sha(p);artifacts.append({'role':'host-'+str(len(artifacts)),'coordinate':coordinate,'path':str(p),'sha256':digest})
                 for entry in present:classes.append({'entry':entry,'coordinate':coordinate,'archiveSha256':digest,'classSha256':hashlib.sha256(z.read(entry)).hexdigest()})
-    if len(classes)!=6 or {c['entry'] for c in classes}!=targets:raise ValueError('Actual runtime sentinel ownership incomplete/competing')
+    save(work/'runtime-sentinel-inspection.json',{'classes':classes,'artifacts':artifacts,'missing':sorted(targets-{c['entry'] for c in classes})})
+    if len(classes)!=6 or {c['entry'] for c in classes}!=targets:raise ValueError('Actual runtime sentinel ownership incomplete/competing; see runtime-sentinel-inspection.json')
     return save(work/'runtime-ownership.json',{'minecraft':'1.16.5','forge':'36.2.42','artifacts':artifacts,'classes':classes})
 
 def main():
