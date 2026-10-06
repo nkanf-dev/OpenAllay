@@ -512,7 +512,7 @@ def native_check(request, artifacts, closure_report):
     for item in deps['openallay']:
         exact(item,('modId','mandatory','versionRange','ordering','side'),'product host dependency')
         require(item['mandatory'] is True and item['ordering']=='NONE' and item['side']=='BOTH'
-            and item['versionRange']=={'forge':'[36.2.42]','minecraft':'[1.16.5]'}[item['modId']], 'Exact product target dependency')
+            and item['versionRange']=={'forge':'[36.2.42,)','minecraft':'[1.16.5]'}[item['modId']], 'Exact product target dependency')
     packmeta=json.loads(before['pack.mcmeta'],object_pairs_hook=closure.pairs)
     require(packmeta.get('pack',{}).get('pack_format')==6,'Actual1.16 resource pack format6')
     palette=json.loads(before['dev/openallay/adapter/minecraft/v26_2/world/material-palette-inputs.json'],object_pairs_hook=closure.pairs)
