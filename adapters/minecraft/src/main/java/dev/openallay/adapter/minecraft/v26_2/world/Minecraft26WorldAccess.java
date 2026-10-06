@@ -5,7 +5,6 @@ import dev.openallay.api.extension.ExtensionInvocation;
 import dev.openallay.api.extension.MinecraftWorldAccess;
 import dev.openallay.api.extension.WorldSession;
 import java.util.Objects;
-import net.minecraft.client.Minecraft;
 
 /** Minecraft 26.2 integrated-server adapter. Construction does not capture a game session. */
 public final class Minecraft26WorldAccess implements MinecraftWorldAccess {
@@ -20,15 +19,11 @@ public final class Minecraft26WorldAccess implements MinecraftWorldAccess {
         if (invocation.callerKind() != ExtensionInvocation.CallerKind.PLAYER
                 || invocation.callerUuid() == null || invocation.playerDimension().isEmpty())
             throw new ExtensionException("player_required", "An exact local player invocation is required");
-        Minecraft client = Minecraft.getInstance();
-        OwnerThreadBridge bridge = new OwnerThreadBridge(invocation::requireActive, () -> {
-            var server = client.getSingleplayerServer();
-            return client.isSameThread() || server != null && server.isSameThread();
-        });
+        OwnerThreadBridge bridge = new OwnerThreadBridge(invocation::requireActive, NativeWorldBinding::isAnyOwnerThread);
         // The callback retains only revocation state, not a native world session.
         try {
             invocation.onCancel(bridge::close);
-            return NativeWorldSession.capture(client, bridge, invocation);
+            return NativeWorldSession.capture(bridge, invocation);
         } catch (RuntimeException | Error failure) {
             bridge.close();
             throw failure;

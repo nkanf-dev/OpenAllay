@@ -23,12 +23,12 @@ final class NativeBlockCodecTest {
     }
 
     @Test void worldSurfaceBoundRequiresVanillaIdsForEveryPossibleNativeAirState() {
-        assertTrue(NativeWorldSession.heightmapCovers(Blocks.AIR,"minecraft:air"));
-        assertTrue(NativeWorldSession.heightmapCovers(Blocks.CAVE_AIR,"minecraft:cave_air"));
-        assertTrue(NativeWorldSession.heightmapCovers(Blocks.VOID_AIR,"minecraft:void_air"));
-        assertFalse(NativeWorldSession.heightmapCovers(Blocks.AIR,"custom:air"));
-        assertFalse(NativeWorldSession.heightmapCovers(Blocks.CAVE_AIR,"custom:invisible_ground"));
-        assertTrue(NativeWorldSession.heightmapCovers(Blocks.OAK_STAIRS,"custom:stairs"));
+        assertTrue(NativeWorldBinding.heightmapCovers(Blocks.AIR,"minecraft:air"));
+        assertTrue(NativeWorldBinding.heightmapCovers(Blocks.CAVE_AIR,"minecraft:cave_air"));
+        assertTrue(NativeWorldBinding.heightmapCovers(Blocks.VOID_AIR,"minecraft:void_air"));
+        assertFalse(NativeWorldBinding.heightmapCovers(Blocks.AIR,"custom:air"));
+        assertFalse(NativeWorldBinding.heightmapCovers(Blocks.CAVE_AIR,"custom:invisible_ground"));
+        assertTrue(NativeWorldBinding.heightmapCovers(Blocks.OAK_STAIRS,"custom:stairs"));
         assertTrue(Blocks.OAK_STAIRS.getStateDefinition().getPossibleStates().size()>1);
     }
 
@@ -145,13 +145,13 @@ final class NativeBlockCodecTest {
         var palette = new net.minecraft.world.level.chunk.PalettedContainer<>(Blocks.AIR.defaultBlockState(),
                 net.minecraft.world.level.chunk.Strategy.createForBlockStates(net.minecraft.world.level.block.Block.BLOCK_STATE_REGISTRY));
         var section = new net.minecraft.world.level.chunk.LevelChunkSection(palette,null);
-        assertTrue(NativeWorldSession.canonicalAir(section));
+        assertTrue(NativeWorldBinding.canonicalAir(section));
         section.setBlockState(1,1,1,Blocks.CAVE_AIR.defaultBlockState());
-        assertFalse(NativeWorldSession.canonicalAir(section),"Native isAir/hasOnlyAir cannot prove canonical identity");
+        assertFalse(NativeWorldBinding.canonicalAir(section),"Native isAir/hasOnlyAir cannot prove canonical identity");
         section.setBlockState(1,1,1,Blocks.VOID_AIR.defaultBlockState());
-        assertFalse(NativeWorldSession.canonicalAir(section));
+        assertFalse(NativeWorldBinding.canonicalAir(section));
         section.setBlockState(1,1,1,Blocks.AIR.defaultBlockState());
-        assertFalse(NativeWorldSession.canonicalAir(section),"An unused noncanonical palette entry only causes safe fallback");
+        assertFalse(NativeWorldBinding.canonicalAir(section),"An unused noncanonical palette entry only causes safe fallback");
     }
 
     private static String state(String id, String snbt) {

@@ -1,0 +1,438 @@
+package dev.openallay.adapter.minecraft.v26_2.world;
+
+import dev.openallay.api.extension.ExtensionException;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import net.minecraft.nbt.NBTException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.io.StringReader;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagInt;
+import net.minecraft.world.WorldServer;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockChest;
+import net.minecraft.block.BlockShulkerBox;
+import net.minecraft.util.Mirror;
+import net.minecraft.util.Rotation;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.properties.IProperty;
+
+/**
+ * Native, live-world block serialization. All calls belong on the game owner thread;
+ * methods taking a level enforce that requirement. No offline region data is used.
+ */
+final class NativeBlockCodec {
+    // Send clients the update, but defer ordinary neighbor and shape propagation.
+    // Native onPlace/preRemoveSideEffects hooks still run with these flags.
+    private static final int WRITE_FLAGS = 18;
+    // Native 1.12 chest/shulker metadata; attached Forge data is opaque and rejected for nonidentity transforms.
+    // Only exact native container payload fields may retain nonidentity transforms.
+    private static final Set<String> CONTAINER_FIELDS = Set.of(
+            "id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", "Lock", "CustomName");
+
+    // Native states are canonical immutable values. Keep a bounded, owner-thread-local
+    // palette, never world handles, live entities, positions or mutable SNBT compounds.
+    private static final int PALETTE_SIZE = 4096;
+    private static final ThreadLocal<Palette> PALETTE = ThreadLocal.withInitial(Palette::new);
+    private static final class Palette {
+        final Map<String, IBlockState> inputs = boundedPalette();
+        final Map<IBlockState, String> encoded = boundedPalette();
+    }
+    private static <K,V> Map<K,V> boundedPalette() {
+        return new java.util.LinkedHashMap<>(64, 0.75f, true) {
+            @Override protected boolean removeEldestEntry(Map.Entry<K,V> entry) { return size() > PALETTE_SIZE; }
+        };
+    }
+
+    private NativeBlockCodec() {}
+
+    /** Reads a block and its full native block-entity metadata from the live level. */
+    public static String read(WorldServer level, BlockPos pos) { return snapshot(level,pos).json(); }
+
+    /** Owner-only pre-hook snapshot. Non-BE states remain immutable native values until needed. */
+    record Snapshot(IBlockState state,NBTTagCompound tag) { String json(){return encode(state,tag);} }
+    static Snapshot snapshot(WorldServer level,BlockPos pos) {
+        checkOwnerAndPosition(level,pos);
+        IBlockState state=level.getIBlockState(pos);
+        TileEntity entity=NativeBlockEntityLifecycle.live(level,pos);
+        if(NativeBlockEntityLifecycle.hasEntity(state)&&entity==null)
+            throw new ExtensionException("missing_block_entity","Missing live block entity at "+pos);
+        // Opaque BE data must be captured before arbitrary native shape hooks. Plain
+        // states need no JSON, properties map or string allocation at this stage.
+        return new Snapshot(state,entity==null?null:save(level,entity));
+    }
+
+    /** Terrain reads preserve IDs/properties, but never serialize container content. */
+    static String terrainState(WorldServer level, BlockPos pos) {
+        checkOwnerAndPosition(level,pos);
+        IBlockState state = level.getIBlockState(pos);
+        if (NativeBlockEntityLifecycle.hasEntity(state) && NativeBlockEntityLifecycle.live(level,pos) == null)
+            throw new ExtensionException("missing_block_entity", "Missing live block entity at " + pos);
+        return stateJson(state);
+    }
+
+    /** Detached equality for failure accounting; SNBT remains opaque, as in the domain image. */
+    static boolean sameImage(String first, String second) {
+        return parse(first).equals(parse(second));
+    }
+
+    /** Actual native states for the fixed, bounded preset material-role inventory. */
+    static JsonObject materialPalette() {
+        // Loaded only inside the authorized context owner action, never at registration.
+        try (InputStream stream = NativeBlockCodec.class.getResourceAsStream("material-palette-inputs.json")) {
+            if (stream == null) throw new ExtensionException("material_unavailable", "The native material palette is unavailable");
+            JsonObject inputs = dev.openallay.json.JsonTrees.parse(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject actual = new JsonObject();
+            for (Map.Entry<String, JsonElement> entry : inputs.entrySet()) {
+                try {
+                    // Strict decode checks the registered ID and every supplied property.
+                    // Full default properties are encoded; none are silently discarded.
+                    actual.add(entry.getKey(), encodeState(decode(entry.getValue().toString())));
+                } catch (IllegalArgumentException unavailable) {
+                    // Omit only a genuinely absent native ID/property/value.
+                    // Available roles remain actual native states with full properties.
+                }
+            }
+            return actual;
+        } catch (IOException failure) {
+            throw new ExtensionException("material_unavailable", "The native material palette could not be read", failure);
+        }
+    }
+
+    /** Drop owner-thread-local immutable palettes at the end of each bounded action. */
+    static void releasePalette() { PALETTE.remove(); }
+
+    /**
+     * Decodes a registered block and its properties without registry default fallback.
+     * Omitted properties use the block's native defaults. Present values must be strings.
+     * The caller must dispatch to the game owner thread before touching native registries.
+     */
+    public static IBlockState decode(String stateJson) {
+        IBlockState cached = PALETTE.get().inputs.get(stateJson);
+        if (cached != null) return cached;
+        JsonObject json = parse(stateJson);
+        IBlockState state = decode(json);
+        cacheInput(stateJson, json, state);
+        return state;
+    }
+
+    private static void cacheInput(String input, JsonObject json, IBlockState state) {
+        if (!NativeBlockEntityLifecycle.hasEntity(state) && (!json.has("blockEntity") || json.get("blockEntity").isJsonNull()))
+            PALETTE.get().inputs.put(input, state);
+    }
+
+    /** Returns a new compound, or null when blockEntity is absent/null. */
+    public static NBTTagCompound blockEntity(String stateJson) {
+        return blockEntity(parse(stateJson));
+    }
+
+    /**
+     * Mirrors first, then rotates clockwise around Y, using native state behavior.
+     * x/front_back negates X; z/left_right negates Z; none leaves axes unchanged.
+     * Vanilla chest, trapped chest, barrel, and shulker-box inventories with known
+     * fields can retain their SNBT: facing belongs to IBlockState and preview rebases
+     * metadata coordinates. Other opaque BE data may contain internal positions or
+     * orientation not covered by IBlockState.mirror/rotate, so nonidentity transforms
+     * fail explicitly. Identity transforms preserve the original SNBT string.
+     */
+    public static String transform(String stateJson, int degrees, String mirror) {
+        JsonObject json = parse(stateJson);
+        IBlockState state = decode(json);
+        NBTTagCompound tag = blockEntity(json);
+        if (degrees % 90 != 0) {
+            throw new IllegalArgumentException("Rotation must be a multiple of 90 degrees");
+        }
+        Rotation rotation = switch (Math.floorMod(degrees, 360)) {
+            case 0 -> Rotation.NONE;
+            case 90 -> Rotation.CLOCKWISE_90;
+            case 180 -> Rotation.CLOCKWISE_180;
+            case 270 -> Rotation.COUNTERCLOCKWISE_90;
+            default -> throw new IllegalArgumentException("Invalid rotation: " + degrees);
+        };
+        Mirror nativeMirror = switch (Objects.requireNonNull(mirror, "mirror")) {
+            case "none" -> Mirror.NONE;
+            case "x", "front_back" -> Mirror.FRONT_BACK;
+            case "z", "left_right" -> Mirror.LEFT_RIGHT;
+            default -> throw new IllegalArgumentException("Unknown mirror: " + mirror);
+        };
+        if (tag != null && !tag.hasNoTags() && (rotation != Rotation.NONE || nativeMirror != Mirror.NONE)
+                && !canTransformContainer(state, tag)) {
+            throw new ExtensionException("unsupported_opaque_block_entity_transform",
+                    "Native block-state transforms do not transform opaque block-entity data");
+        }
+        JsonObject result = encodeState(state.getBlock().withRotation(state.getBlock().withMirror(state,nativeMirror),rotation));
+        if (json.has("blockEntity")) result.add("blockEntity", json.get("blockEntity"));
+        return result.toString();
+    }
+
+    /**
+     * Produces the normalized intended state without placing anything in the level.
+     * Full default properties and native BE data are included. BE x/y/z are rebased to
+     * pos, and an omitted BE creates the block's fresh default entity, not old contents.
+     * Native BE decoding uses the level's registries, but the entity stays detached.
+     */
+    public static String preview(WorldServer level, BlockPos pos, String stateJson) {
+        checkOwnerAndPosition(level, pos);
+        Prepared prepared = prepare(level, pos, stateJson);
+        return encode(prepared.state(), prepared.tag());
+    }
+
+    /**
+     * Prevalidates on a detached BE, then writes live state with flags 18. Returns false
+     * only for a proven unchanged state and BE. A rejected or altered placement throws
+     * placement_failed; false never hides a failed placement. This is not a transaction:
+     * native replacement hooks may have side effects, and callers must journal first.
+     */
+    public static boolean write(WorldServer level, BlockPos pos, String stateJson) {
+        return write(level, pos, stateJson, () -> {});
+    }
+
+    /**
+     * Java-owned invocation validation; no guest-language callback crosses this API.
+     * Cancellation gates the whole synchronous commit once, after all preparation.
+     * Once admitted, BE removal/replacement and readback finish without another
+     * cancellation boundary. The next owner action rejects a cancelled invocation.
+     */
+    static boolean write(WorldServer level, BlockPos pos, String stateJson, Runnable requireActive) {
+        return writeVerified(level, pos, stateJson, requireActive).changed();
+    }
+
+    /** Reuses the exact native verification readback; callers must not serialize it again. */
+    record VerifiedWrite(String actual, boolean changed) {}
+    static VerifiedWrite writeVerified(WorldServer level, BlockPos pos, String stateJson, Runnable requireActive) {
+        checkOwnerAndPosition(level, pos);
+        Objects.requireNonNull(requireActive, "requireActive");
+        Prepared prepared = prepare(level, pos, stateJson);
+        IBlockState before = level.getIBlockState(pos);
+        TileEntity previousEntity = NativeBlockEntityLifecycle.live(level,pos);
+        NBTTagCompound previousTag = previousEntity == null ? null : save(level, previousEntity);
+        if (before.equals(prepared.state()) && Objects.equals(previousTag, prepared.tag()))
+            return new VerifiedWrite(encode(before, previousTag), false);
+
+        // One admission point for the synchronous owner-thread commit. Rechecking
+        // between BE removal and insertion could leave a block with missing contents.
+        requireActive.run();
+        // Conservatively admit native persistence before any mutating hook. A
+        // remove/install/onLoad failure can leave a changed image that must be saved.
+        NativeBlockEntityLifecycle.markDirty(level, pos);
+        if (!before.equals(prepared.state())) {
+            if (!level.setBlockState(pos, prepared.state(), WRITE_FLAGS)) {
+                throw placementFailed(pos, "Native setBlock refused the placement");
+            }
+        }
+        if (!level.getIBlockState(pos).equals(prepared.state())) {
+            throw placementFailed(pos, "Native placement did not retain the requested block state");
+        }
+        if (prepared.entity() != null) {
+            // Unregister the old listener/ticker before installing the validated entity.
+            level.removeTileEntity(pos);
+            NativeBlockEntityLifecycle.install(level, pos, prepared.entity());
+            level.notifyBlockUpdate(pos, prepared.state(), prepared.state(), WRITE_FLAGS);
+        }
+        String actual = read(level, pos);
+        if (!actual.equals(encode(prepared.state(), prepared.tag()))) {
+            throw placementFailed(pos, "Native readback differs from the validated intended state");
+        }
+        return new VerifiedWrite(actual, true);
+    }
+
+    private static boolean canTransformContainer(IBlockState state,NBTTagCompound tag) {
+        var id=NativeWorldRegistries.blockId(state.getBlock());
+        if(id==null || !"minecraft".equals(id.getResourceDomain())) return false;
+        Class<?> blockClass=state.getBlock().getClass();
+        Class<? extends TileEntity> expected;
+        if(blockClass==BlockChest.class) expected=net.minecraft.tileentity.TileEntityChest.class;
+        else if(blockClass==BlockShulkerBox.class) expected=net.minecraft.tileentity.TileEntityShulkerBox.class;
+        else return false;
+        var expectedId=TileEntity.getKey(expected);
+        return expectedId!=null && expectedId.toString().equals(NativeBlockEntityTags.requiredId(tag))
+                && NativeBlockEntityTags.hasOnlyContainerFields(tag,CONTAINER_FIELDS);
+    }
+
+    private static Prepared prepare(WorldServer level, BlockPos pos, String stateJson) {
+        IBlockState cached = PALETTE.get().inputs.get(stateJson);
+        if (cached != null) return new Prepared(cached, null, null);
+        JsonObject json = parse(stateJson);
+        IBlockState state = decode(json);
+        NBTTagCompound tag = blockEntity(json);
+        if (!NativeBlockEntityLifecycle.hasEntity(state)) {
+            if (tag != null) throw new IllegalArgumentException("Block does not support blockEntity: " + json.get("id"));
+            cacheInput(stateJson, json, state);
+            return new Prepared(state, null, null);
+        }
+        TileEntity entity = NativeBlockEntityLifecycle.createDetached(level, pos, state);
+        Class<? extends TileEntity> expectedType=entity.getClass();
+        var expectedId=TileEntity.getKey(expectedType);
+        if(tag!=null) {
+            String rawId=NativeBlockEntityTags.requiredId(tag);
+            var id=NativeWorldResourceIds.parse(rawId,"blockEntity id");
+            if(expectedId==null || !id.equals(expectedId))
+                throw new IllegalArgumentException("blockEntity id "+rawId+" does not match block "+json.get("id"));
+            tag.setString("id",id.toString());
+            tag.setInteger("x",pos.getX()); tag.setInteger("y",pos.getY()); tag.setInteger("z",pos.getZ());
+            NativeBlockEntityData.load(level,entity,tag);
+            NativeBlockEntityLifecycle.afterLoad(entity,pos,state);
+        }
+        NativeBlockEntityLifecycle.validateDetached(entity,pos,state);
+        if(entity.getClass()!=expectedType) throw new ExtensionException("invalid_block_entity","Native load changed the prepared entity class");
+        NBTTagCompound image=save(level,entity);
+        NativeBlockEntityLifecycle.validateDetached(entity,pos,state);
+        if(entity.getClass()!=expectedType || !expectedId.toString().equals(NativeBlockEntityTags.requiredId(image)))
+            throw new ExtensionException("invalid_block_entity","Native save changed the prepared entity identity");
+        return new Prepared(state, entity, image);
+    }
+
+    private static NBTTagCompound save(WorldServer level, TileEntity entity) {
+        return NativeBlockEntityData.save(level, entity);
+    }
+
+    private static IBlockState decode(JsonObject json) {
+        String rawId = string(json.get("id"), "id");
+        var id = NativeWorldResourceIds.parse(rawId, "block id");
+        Block block = NativeWorldRegistries.block(id.toString())
+                .orElseThrow(() -> new IllegalArgumentException("Unknown block id: " + rawId));
+        IBlockState state = block.defaultIBlockState();
+        JsonElement properties = json.get("properties");
+        if (properties != null) {
+            if (!properties.isJsonObject()) throw new IllegalArgumentException("properties must be an object");
+            for (Map.Entry<String, JsonElement> entry : properties.getAsJsonObject().entrySet()) {
+                IProperty<?> property = block.getBlockState().getProperty(entry.getKey());
+                if (property == null) {
+                    throw new IllegalArgumentException("Unknown property " + entry.getKey() + " for " + id);
+                }
+                state = setProperty(state, property, string(entry.getValue(), "property " + entry.getKey()));
+            }
+        }
+        // 1.12 persists block metadata, not every derived/extended property.
+        // Reject an unrepresentable supplied state before mutation; never drop it.
+        if(!block.getStateFromMeta(block.getMetaFromState(state)).equals(state))
+            throw new IllegalArgumentException("Block state cannot be retained by native metadata: "+id);
+        return state;
+    }
+
+    private static <T extends Comparable<T>> IBlockState setProperty(IBlockState state, IProperty<T> property, String name) {
+        T value = property.parseValue(name).orNull();
+        if(value==null) throw new IllegalArgumentException("Invalid value "+name+" for property "+property.getName());
+        return state.withProperty(property, value);
+    }
+
+    private static NBTTagCompound blockEntity(JsonObject json) {
+        JsonElement value = json.get("blockEntity");
+        if (value == null || value.isJsonNull()) return null;
+        NBTTagCompound tag;
+        try {
+            tag = NativeBlockEntityTags.parseCompound(string(value, "blockEntity"));
+        } catch (NBTException failure) {
+            throw new IllegalArgumentException("blockEntity must be a complete SNBT compound", failure);
+        }
+        for (String coordinate : new String[] {"x", "y", "z"}) {
+            if (tag.hasKey(coordinate) && !(tag.getTag(coordinate) instanceof NBTTagInt)) {
+                throw new IllegalArgumentException("blockEntity " + coordinate + " must be an integer tag");
+            }
+        }
+        return tag;
+    }
+
+    private static JsonObject encodeState(IBlockState state) {
+        JsonObject json = new JsonObject();
+        var id = NativeWorldRegistries.blockId(state.getBlock());
+        if (id == null) throw new IllegalArgumentException("Cannot encode an unregistered block");
+        json.addProperty("id", id.toString());
+        json.add("properties", NativeBlockStateProperties.encode(state));
+        return json;
+    }
+
+    private static String encode(IBlockState state, NBTTagCompound tag) {
+        if (tag == null) return stateJson(state);
+        JsonObject json = encodeState(state);
+        json.addProperty("blockEntity", tag.toString());
+        return json.toString();
+    }
+
+    static String stateJson(IBlockState state) {
+        return PALETTE.get().encoded.computeIfAbsent(state, value -> encodeState(value).toString());
+    }
+
+    /** Flat schema parsing rejects duplicate fields and Gson's legacy JSON extensions. */
+    private static JsonObject parse(String stateJson) {
+        if (stateJson == null) throw new IllegalArgumentException("Block state JSON must not be null");
+        try (JsonReader reader = dev.openallay.json.JsonReaders.strict(new java.io.StringReader(stateJson))) {
+
+            JsonObject json = new JsonObject();
+            reader.beginObject();
+            while (reader.hasNext()) {
+                String name = reader.nextName();
+                if (json.has(name)) throw new IllegalArgumentException("Duplicate block-state field: " + name);
+                switch (name) {
+                    case "id" -> json.addProperty(name, readString(reader, name));
+                    case "properties" -> {
+                        JsonObject properties = new JsonObject();
+                        reader.beginObject();
+                        while (reader.hasNext()) {
+                            String property = reader.nextName();
+                            if (properties.has(property)) throw new IllegalArgumentException("Duplicate property: " + property);
+                            properties.addProperty(property, readString(reader, "property " + property));
+                        }
+                        reader.endObject();
+                        json.add(name, properties);
+                    }
+                    case "blockEntity" -> {
+                        if (reader.peek() == JsonToken.NULL) {
+                            reader.nextNull();
+                            json.add(name, com.google.gson.JsonNull.INSTANCE);
+                        } else json.addProperty(name, readString(reader, name));
+                    }
+                    default -> throw new IllegalArgumentException("Unknown block-state field: " + name);
+                }
+            }
+            reader.endObject();
+            if (reader.peek() != JsonToken.END_DOCUMENT) throw new IllegalArgumentException("Trailing block-state JSON data");
+            if (!json.has("id")) throw new IllegalArgumentException("Block state requires id");
+            return json;
+        } catch (IOException | IllegalStateException failure) {
+            throw new IllegalArgumentException("Invalid block-state JSON", failure);
+        }
+    }
+
+    private static String readString(JsonReader reader, String field) throws IOException {
+        if (reader.peek() != JsonToken.STRING) throw new IllegalArgumentException(field + " must be a string");
+        return reader.nextString();
+    }
+
+    private static String string(JsonElement value, String field) {
+        if (!(value instanceof JsonPrimitive primitive) || !primitive.isString()) {
+            throw new IllegalArgumentException(field + " must be a string");
+        }
+        return primitive.getAsString();
+    }
+
+    private static void checkOwnerAndPosition(WorldServer level, BlockPos pos) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(pos, "pos");
+        if (!level.isCallingFromMinecraftThread()) {
+            throw new ExtensionException("wrong_owner", "Native block operations require the server owner thread");
+        }
+        if (!NativeWorldBounds.contains(level, pos)) {
+            throw new IllegalArgumentException("Block position is outside the level's native bounds: " + pos);
+        }
+    }
+
+    private static ExtensionException placementFailed(BlockPos pos, String reason) {
+        return new ExtensionException("placement_failed", reason + " at " + pos);
+    }
+
+    private record Prepared(IBlockState state, TileEntity entity, NBTTagCompound tag) {}
+}

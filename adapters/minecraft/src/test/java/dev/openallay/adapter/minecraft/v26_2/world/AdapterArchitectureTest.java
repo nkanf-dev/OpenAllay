@@ -46,7 +46,7 @@ class AdapterArchitectureTest {
         String factory = Files.readString(sources.resolve(OWN).resolve("Minecraft26WorldAccess.java"));
         assertTrue(factory.contains("implements MinecraftWorldAccess"));
         assertTrue(factory.contains("public Minecraft26WorldAccess() {}"));
-        assertTrue(factory.indexOf("invocation.requireActive()") < factory.indexOf("Minecraft.getInstance()"));
+        assertTrue(factory.indexOf("invocation.requireActive()") < factory.indexOf("NativeWorldBinding::isAnyOwnerThread"));
         assertTrue(factory.contains("invocation.onCancel(bridge::close)"));
         assertFalse(factory.contains("static final Minecraft"));
     }
@@ -107,19 +107,23 @@ class AdapterArchitectureTest {
                 "level.setBlockEntity", "level.blockEntityChanged", "level.sendBlockUpdated", "private static final int WRITE_FLAGS = 18;"))
             assertTrue(codec.contains(call), "Missing native behavior: " + call);
         String session = Files.readString(source.resolve("NativeWorldSession.java"));
-        for (String call : List.of("getChunkNow", "hasPrimedHeightmap", "getBlockEntitiesPos", "updateFromNeighbourShapes",
-                "updateNeighborsAt", "updateNeighbourForOutputSignal", "NativeBlockCodec.sameImage", "bridge.checkActive()"))
-            assertTrue(session.contains(call), "Missing session behavior: " + call);
+        String binding = Files.readString(source.resolve("NativeWorldBinding.java"));
+        for (String call : List.of("getChunkNow", "NativeTerrainHeightmap.isPrimed", "getBlockEntitiesPos", "updateFromNeighbourShapes",
+                "updateNeighborsAt", "updateNeighbourForOutputSignal"))
+            assertTrue(binding.contains(call), "Missing typed binding behavior: " + call);
+        assertTrue(session.contains("binding.sameImage(before,actual)"));
+        assertTrue(session.contains("bridge.checkActive()"));
+        assertFalse(session.contains("net.minecraft."));
         assertFalse(session.contains("requireCapability"), "World access must not use an Extension-private permission gate");
         assertFalse(session.contains("world_write"), "Native world access cannot hardcode a Builder-private permission ID");
         String world = Files.readString(source.resolve("NativeWorldIdentity.java"));
         assertTrue(world.contains("NativeWorldResourceIds.fromNamespaceAndPath(\"openallay_builder\",\"world_identity\")"));
         assertTrue(world.contains("getDataStorage().computeIfAbsent(TYPE)"));
         assertTrue(world.contains("getDataStorage().get(TYPE)"));
-        assertTrue(session.contains("NativeWorldIdentity.getOrCreate(server.overworld())"));
-        assertTrue(session.contains("NativeWorldIdentity.getExisting(server.overworld())"));
-        assertTrue(session.contains("config/openallay-builder"));
-        assertTrue(session.contains("result.add(\"materialPalette\", NativeBlockCodec.materialPalette())"));
+        assertTrue(binding.contains("NativeWorldIdentity.getOrCreate(server.overworld())"));
+        assertTrue(binding.contains("NativeWorldIdentity.getExisting(server.overworld())"));
+        assertTrue(binding.contains("config/openallay-builder"));
+        assertTrue(binding.contains("result.add(\"materialPalette\", NativeBlockCodec.materialPalette())"));
     }
 
     private static String uncheckedRead(Path path) {
