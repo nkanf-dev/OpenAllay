@@ -9,6 +9,7 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraft.block.state.BlockStateContainer$StateImplementation',
     'net.minecraft.server.integrated.IntegratedServer',
     'net.minecraft.client.resources.ResourcePackRepository$Entry',
     'net.minecraft.util.FrameTimer',
@@ -121,12 +122,13 @@ CLASSES = (
 
 )
 BYTECODE = {
+    'net.minecraft.block.state.BlockStateContainer$StateImplementation': ('getPropertyKeys',),
     'net.minecraft.server.integrated.IntegratedServer': ('tick',),
     'net.minecraft.client.gui.toasts.GuiToast$ToastInstance': ('render',),
     'net.minecraft.client.renderer.RenderItem': ('renderItemAndEffectIntoGUI','renderItemOverlayIntoGUI'),
     'net.minecraftforge.fml.client.config.GuiUtils': ('drawHoveringText','preItemToolTip','postItemToolTip'),
 }
-BODIES = ('net.minecraft.server.integrated.IntegratedServer','net.minecraft.item.EnumDyeColor','net.minecraft.block.BlockStoneBrick','net.minecraft.block.BlockFurnace','net.minecraft.block.BlockLadder','net.minecraft.block.BlockFenceGate','net.minecraft.block.BlockPressurePlate','net.minecraft.block.Block','net.minecraft.block.BlockPlanks','net.minecraft.block.BlockOldLog','net.minecraft.block.BlockLog','net.minecraft.block.BlockStone','net.minecraft.block.BlockWoodSlab','net.minecraft.block.BlockStoneSlab','net.minecraft.block.BlockStainedGlass','net.minecraft.block.BlockColored','net.minecraft.nbt.JsonToNBT','net.minecraft.world.storage.WorldInfo','net.minecraft.util.datafix.DataFixesManager','net.minecraftforge.common.util.CompoundDataFixer','net.minecraft.client.resources.ResourcePackRepository','net.minecraft.client.gui.GuiIngame','net.minecraft.client.gui.toasts.GuiToast','net.minecraft.util.ScreenShotHelper','net.minecraft.client.renderer.EntityRenderer','net.minecraft.client.renderer.texture.TextureManager','net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
+BODIES = ('net.minecraft.block.state.BlockStateContainer','net.minecraft.server.integrated.IntegratedServer','net.minecraft.item.EnumDyeColor','net.minecraft.block.BlockStoneBrick','net.minecraft.block.BlockFurnace','net.minecraft.block.BlockLadder','net.minecraft.block.BlockFenceGate','net.minecraft.block.BlockPressurePlate','net.minecraft.block.Block','net.minecraft.block.BlockPlanks','net.minecraft.block.BlockOldLog','net.minecraft.block.BlockLog','net.minecraft.block.BlockStone','net.minecraft.block.BlockWoodSlab','net.minecraft.block.BlockStoneSlab','net.minecraft.block.BlockStainedGlass','net.minecraft.block.BlockColored','net.minecraft.nbt.JsonToNBT','net.minecraft.world.storage.WorldInfo','net.minecraft.util.datafix.DataFixesManager','net.minecraftforge.common.util.CompoundDataFixer','net.minecraft.client.resources.ResourcePackRepository','net.minecraft.client.gui.GuiIngame','net.minecraft.client.gui.toasts.GuiToast','net.minecraft.util.ScreenShotHelper','net.minecraft.client.renderer.EntityRenderer','net.minecraft.client.renderer.texture.TextureManager','net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
     'net.minecraft.tileentity.TileEntityChest','net.minecraft.tileentity.TileEntityShulkerBox')
 
 def sha(path):
