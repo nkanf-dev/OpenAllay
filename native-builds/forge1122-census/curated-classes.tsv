@@ -33,3 +33,24 @@ net.minecraft.world.effect.MobEffect	net.minecraft.potion.Potion	native potion e
 net.minecraft.world.effect.MobEffectInstance	net.minecraft.potion.PotionEffect	native potion effect instance
 net.minecraft.client.multiplayer.ClientPacketListener	net.minecraft.client.network.NetHandlerPlayClient	native play listener
 net.minecraft.commands.CommandSourceStack	net.minecraft.command.ICommandSender	native command sender authority interface
+net.minecraft.client.multiplayer.ServerData	net.minecraft.client.multiplayer.ServerData	native multiplayer server metadata
+net.minecraft.client.Options	net.minecraft.client.settings.GameSettings	native client game options owner
+net.minecraft.client.KeyMapping	net.minecraft.client.settings.KeyBinding	native key binding identity
+net.minecraft.client.gui.screens.Screen	net.minecraft.client.gui.GuiScreen	native screen lifecycle owner; callbacks remain typed target seams
+net.minecraft.client.gui.Gui	net.minecraft.client.gui.Gui	native GUI primitives owner
+net.minecraft.world.inventory.AbstractContainerMenu	net.minecraft.inventory.Container	native menu container owner
+net.minecraft.network.chat.Style	net.minecraft.util.text.Style	native mutable text style
+net.minecraft.server.packs.resources.ResourceManager	net.minecraft.client.resources.IResourceManager	native resource manager interface
+net.minecraft.server.packs.resources.ReloadableResourceManager	net.minecraft.client.resources.IReloadableResourceManager	native reloadable resource manager interface
+net.minecraft.server.packs.resources.Resource	net.minecraft.client.resources.IResource	native opened resource handle
+net.minecraft.server.packs.resources.ResourceManagerReloadListener	net.minecraft.client.resources.IResourceManagerReloadListener	native resource reload callback interface
+net.minecraft.client.server.IntegratedServer	net.minecraft.server.integrated.IntegratedServer	native integrated server owner
+net.minecraft.world.level.GameType	net.minecraft.world.GameType	native game mode
+net.minecraft.world.Difficulty	net.minecraft.world.EnumDifficulty	native world difficulty enum
+net.minecraft.world.item.alchemy.Potion	net.minecraft.potion.PotionType	native brew potion type; distinct from effect Potion
+net.minecraft.world.item.crafting.Recipe	net.minecraft.item.crafting.IRecipe	native crafting recipe interface
+net.minecraft.client.gui.components.toasts.Toast	net.minecraft.client.gui.toasts.IToast	native toast callback interface
+net.minecraft.client.gui.components.toasts.ToastComponent	net.minecraft.client.gui.toasts.GuiToast	native toast owner
+net.minecraft.client.gui.screens.inventory.AbstractContainerScreen	net.minecraft.client.gui.inventory.GuiContainer	native container screen owner
+net.minecraft.client.gui.screens.TitleScreen	net.minecraft.client.gui.GuiMainMenu	native title screen owner
+net.minecraft.client.renderer.GameRenderer	net.minecraft.client.renderer.EntityRenderer	native client world renderer owner
