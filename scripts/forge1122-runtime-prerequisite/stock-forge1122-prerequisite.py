@@ -426,6 +426,12 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             "modelInvocation":False,"unrestrictedJavascript":False,"expectedShutdown":"natural-unsignalled-exit0"})
     fixture_process=None
     fixture_stream=None
+    window_manager=None
+    focus_process=None
+    focus_stream=None
+    if ui_manual:
+        with (output/"window-manager.log").open("w") as manager_log:
+            window_manager=subprocess.Popen(["openbox","--sm-disable"],stdout=manager_log,stderr=subprocess.STDOUT,start_new_session=True)
     if ui_manual or builder:
         import secrets
         packet=PACKET/"ui-fixture"
@@ -482,6 +488,12 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     with log.open("w") as stream:
         process = subprocess.Popen(command, cwd=game, env=env, stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
         receipt["clientPid"] = process.pid
+        if ui_manual:
+            focus_source=output/"owned-x11-focus.py"
+            focus_source.write_text('#!/usr/bin/env python3\n"""Bounded actual X11 focus keeper for one owned CI client PID on one owned display."""\nimport argparse,json,os,re,subprocess,time\nfrom pathlib import Path\n\ndef run(*args):\n    result=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=5)\n    return result.returncode,result.stdout.strip()\ndef main():\n    parser=argparse.ArgumentParser();parser.add_argument(\'--pid\',type=int,required=True);parser.add_argument(\'--receipt\',type=Path,required=True);args=parser.parse_args()\n    receipt={\'ownedClientPid\':args.pid,\'display\':os.environ[\'DISPLAY\'],\'actions\':[],\'status\':\'waiting-owned-window\'}\n    deadline=time.monotonic()+660;last=None\n    try:\n        while time.monotonic()<deadline:\n            try:os.kill(args.pid,0)\n            except ProcessLookupError:receipt[\'status\']=\'owned-client-exited\';break\n            code,listing=run(\'xdotool\',\'search\',\'--onlyvisible\',\'--pid\',str(args.pid))\n            candidates=[]\n            if code==0:\n                for xid in listing.splitlines():\n                    if not xid.isdecimal():continue\n                    code,pid=run(\'xdotool\',\'getwindowpid\',xid)\n                    if code!=0 or pid!=str(args.pid):continue\n                    _,title=run(\'xdotool\',\'getwindowname\',xid)\n                    code,geometry=run(\'xdotool\',\'getwindowgeometry\',\'--shell\',xid)\n                    values=dict(line.split(\'=\',1) for line in geometry.splitlines() if \'=\' in line)\n                    if code==0 and int(values.get(\'WIDTH\',\'0\'))>=320 and int(values.get(\'HEIGHT\',\'0\'))>=240 and \'Minecraft\' in title:\n                        candidates.append((xid,title,values))\n            if len(candidates)==1:\n                xid,title,geometry=candidates[0]\n                _,focus=run(\'xdotool\',\'getwindowfocus\')\n                if focus!=xid:\n                    code,output=run(\'xdotool\',\'windowactivate\',\'--sync\',xid)\n                    if code!=0:code,output=run(\'xdotool\',\'windowfocus\',\'--sync\',xid)\n                    _,actual=run(\'xdotool\',\'getwindowfocus\')\n                    receipt[\'actions\'].append({\'xid\':xid,\'pid\':args.pid,\'title\':title,\'geometry\':geometry,\'previousFocus\':focus,\'requestedActualFocus\':actual,\'exitCode\':code,\'commandOutput\':output})\n                    receipt[\'status\']=\'focused-owned-window\' if actual==xid else \'focus-request-failed\'\n                last=xid\n            elif len(candidates)>1:\n                receipt[\'status\']=\'ambiguous-owned-window-refused\'\n            args.receipt.write_text(json.dumps(receipt,indent=2)+\'\\n\')\n            time.sleep(0.25)\n        else:receipt[\'status\']=\'focus-helper-bounded-timeout\'\n    finally:\n        receipt[\'lastOwnedXid\']=last;args.receipt.write_text(json.dumps(receipt,indent=2)+\'\\n\')\nif __name__==\'__main__\':main()\n')
+            focus_stream=(output/"owned-x11-focus.log").open("w")
+            focus_process=subprocess.Popen([sys.executable,"-B",str(focus_source),"--pid",str(process.pid),"--receipt",str(output/"owned-x11-focus.json")],
+                env=env,stdout=focus_stream,stderr=subprocess.STDOUT,start_new_session=True)
         try:
             if creates_world:
                 try:
@@ -515,6 +527,9 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
                         receipt["status"] = "captured-awaiting-title-review"
         finally:
             receipt["termination"] = stop_owned(process)
+            if focus_process is not None:
+                receipt["focusHelperTermination"]=stop_owned(focus_process);focus_stream.close()
+            if window_manager is not None:receipt["windowManagerTermination"]=stop_owned(window_manager)
             if fixture_process is not None:
                 receipt["fixtureTermination"]=stop_owned(fixture_process)
                 fixture_stream.close()

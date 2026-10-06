@@ -566,6 +566,9 @@ jobs:
           sudo apt-get install -y xvfb xauth x11-xserver-utils libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
           python3 -m venv build/stock1122-tools
           build/stock1122-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Install actual owned-window focus support
+        if: inputs.mode == 'component1122-ui-manual'
+        run: sudo apt-get install -y xdotool openbox
       - name: Boot retained actual component once; verify only new capability and loader boundaries
         env: {GH_TOKEN: '${{ github.token }}'}
         run: >-
