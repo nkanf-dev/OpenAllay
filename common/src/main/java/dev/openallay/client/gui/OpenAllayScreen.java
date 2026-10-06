@@ -1822,7 +1822,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     static Component toolMessage(GuideToolMessage message) {
         Object[] arguments = message.arguments().stream()
-                .map(Component::literal)
+                .map(MinecraftComponents::literal)
                 .toArray();
         return MinecraftComponents.translatable(message.key().translationKey(), arguments);
     }
@@ -2359,7 +2359,7 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         y += canvasHeight + 5;
         // The native canvas is bounded. These scrollable lines preserve every stored player fact.
         for (var line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card)) {
-            Object[] arguments = line.arguments().stream().map(Component::literal).toArray();
+            Object[] arguments = line.arguments().stream().map(MinecraftComponents::literal).toArray();
             y = detailLine(graphics, MinecraftComponents.translatable(line.key(), arguments), detail, y);
         }
         for (GuideRecipeCard.Output output : card.outputs()) {
