@@ -604,5 +604,6 @@ jobs:
             build/e2e/forge1122-component/dimension-phase/
             build/e2e/forge1122-component/game/logs/
             build/e2e/forge1122-component/game/crash-reports/
+            build/e2e/forge1122-component/game/config/openallay-builder/templates/openallay_e2e_legacy_mirror_diagnostic.json
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.json
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
