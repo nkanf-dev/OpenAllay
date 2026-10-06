@@ -65,7 +65,9 @@ task exportSourceSelection {
         def j = sets.findAll { it.key.endsWith(':java') }
         def r = sets.findAll { it.key.endsWith(':resources') }
         validateSelectedMinecraftJava(j.values()); validateSelectedMinecraftResources(r.values())
+        logger.lifecycle('1122 source selection: base owners validated')
         def raw = origins(j)
+        logger.lifecycle('1122 source selection: raw owner snapshot captured')
         def retirement = new JsonSlurper().parse(file('source-retirements.json'))
         if (retirement.keySet() != (['target','java'] as Set) || retirement.target!='1.12.2' ||
                 !(retirement.java instanceof List)) throw new GradleException('Exact1122 retirement plan required')
@@ -75,14 +77,19 @@ task exportSourceSelection {
                     row.owner!='adapter' || !(row.reason instanceof String) || row.reason.empty ||
                     !row.logicalPath.startsWith('dev/openallay/adapter/minecraft/v26_2/world/Native') ||
                     row.origin.contains('/targets/1.12.2/')) throw new GradleException('Invalid obsolete native helper disposition')
-            def set=j[row.owner+':java']
-            def matches=selectedMinecraftSourceOrigins(set,roots[row.owner+':java'],row.owner).findAll {
-                it.logicalPath==row.logicalPath && source.toPath().relativize(it.file.toPath()).toString().replace(File.separator,'/')==row.origin
+            // Audit only the already-materialized owner snapshot. Never query a filtered set from a predicate.
+            def matches=raw.findAll {
+                it.owner==row.owner && it.logicalPath==row.logicalPath &&
+                source.toPath().relativize(new File(it.path).toPath()).toString().replace(File.separator,'/')==row.origin
             }
-            if (matches.size()!=1 || sha(matches.first().file)!=row.sha256 || !retiredFiles.add(matches.first().file))
+            if (matches.size()!=1 || matches.first().sha256!=row.sha256 || !retiredFiles.add(matches.first().path))
                 throw new GradleException('Retired native helper owner/hash differs: '+row.logicalPath)
         }
-        j.values().each { set -> set.exclude { element -> !element.directory && retiredFiles.contains(element.file) } }
+        // Gradle5 PatternFilterable string patterns are stable paths, not a recursive file predicate.
+        retirement.java.groupBy { it.owner }.each { owner, rows ->
+            j[owner+':java'].exclude(rows.collect { it.logicalPath })
+        }
+        logger.lifecycle('1122 source selection: audited retirement paths applied')
         // Reject lexical class references left by an incomplete binding refactor; javac remains authoritative.
         def withoutComments = { String text -> text.replaceAll(/(?s)\/\*.*?\*\/|\/\/[^\r\n]*/, '') }
         j.values().each { set -> set.files.each { f ->
@@ -93,10 +100,12 @@ task exportSourceSelection {
                     throw new GradleException('Selected source still refers to retired helper '+simple+': '+f)
             }
         } }
+        logger.lifecycle('1122 source selection: retired helper references checked')
         def common = selectConfiguredMinecraftMixins(sets['common:java'],[sets['common:resources']])
         def fml = selectConfiguredMinecraftMixins(sets['fml:java'],[sets['fml:resources'],sets['common:resources']],common)
         def adapter = selectConfiguredMinecraftMixins(sets['adapter:java'],[sets['adapter:resources']])
         validateSelectedMinecraftJava(j.values())
+        logger.lifecycle('1122 source selection: configured Mixin owners validated')
         write('source-selection.json',[target:'1.12.2',forge:'14.23.5.2864',
             disposition:'candidate owners only; API inventory decides typed leaf delta',
             neutralSelectorSha256:sha(new File(source,'gradle/minecraft-source-selection.gradle')),
