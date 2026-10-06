@@ -40,6 +40,11 @@ java {
     withJavadocJar()
 }
 
+// Report a complete native API failure batch instead of javac's first 100 diagnostics.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.addAll(['-Xmaxerrs', '1000'])
+}
+
 tasks.withType(Jar).configureEach {
     preserveFileTimestamps = false
     reproducibleFileOrder = true
