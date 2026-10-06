@@ -137,7 +137,7 @@ def export_abi(work,reports,data,groups,request):
         status=execute([javap,'-classpath',os.pathsep.join(map(str,cp)),'-protected','-s','-v',name],destination)
         if status:raise ValueError('requested declaration failed '+name)
         declaration=declaration_only(destination.read_text());destination.write_text(declaration)
-        declared=re.search(r'(?m)^(?:public |protected |private |abstract |final |static )*(?:class|interface|enum) ([^ <]+)',declaration)
+        declared=re.search(r'(?m)^(?:public |protected |private |abstract |final |static )*(?:class|interface|enum) ([^\s<]+)',declaration)
         if not declared or declared.group(1)!=name:raise ValueError('binary declaration identity mismatch '+name)
         # -v supplies access_flags, generic Signature, superclass/interfaces, descriptors and annotations.
         record={'class':name,'kind':kind,'status':'FOUND','owners':owners,'declarationSha256':digest(destination),'rawPublication':kind=='publication'}
@@ -224,7 +224,7 @@ def tool_cases(work,reports,host,mapping):
     write_json(reports/'case-results.json',{'sourceGrammar':'17','preview':False,'sameToolingLauncher':str(java),'cases':case_records,'optionalGradleTaskExecuted':False,'nativeProductCompiled':False,'gameExecuted':False})
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--output',required=True,type=Path);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--output',required=True,type=Path);parser.add_argument('--pending-bodies',action='store_true');args=parser.parse_args()
     reports=args.output.resolve();reports.mkdir(parents=True,exist_ok=False)
     work=ROOT/'build/focused-tooling-work';work.mkdir(parents=True,exist_ok=False)
     request=json.loads((BASE/'focused-tooling-requests.json').read_text())
@@ -232,10 +232,17 @@ def main():
     try:
         if not os.environ.get('GITHUB_ACTIONS')=='true':raise ValueError('remote GitHub runner only')
         data,groups=resolution(work,reports)
-        mapping=mappings(work,reports)
+        mapping=None if args.pending_bodies else mappings(work,reports)
+        if args.pending_bodies:
+            pending={'me.shedaniel.rei.api.common.util.EntryStacks','me.shedaniel.rei.api.client.view.ViewSearchBuilder','me.shedaniel.architectury.fluid.FluidStack'}
+            request['publicationClasses']=[name for name in request['publicationClasses'] if name in pending]
+            request['lateNativeClasses']=[];request['negativeClasses']=[]
+            result['passedNamespaceToolReplayed']=False
         # Independent new evidence stays valuable if tool compile/fixture fails; record both outcomes.
         failures=[]
-        for label,action in [('publicationAbi',lambda:export_abi(work,reports,data,groups,request)),('namespaceTool',lambda:tool_cases(work,reports,groups['nativeHost'],mapping))]:
+        actions=[('publicationAbi',lambda:export_abi(work,reports,data,groups,request))]
+        if not args.pending_bodies:actions.append(('namespaceTool',lambda:tool_cases(work,reports,groups['nativeHost'],mapping)))
+        for label,action in actions:
             try:action();result[label]='PASS'
             except Exception as error:result[label]='FAILED';failures.append(label+': '+str(error))
         if failures:raise ValueError('; '.join(failures))
