@@ -19,7 +19,14 @@ dependencies {
             'closure/openallay-rhino.jar')
     compileOnly 'org.slf4j:slf4j-api:2.0.1'
 }
-tasks.withType(JavaCompile).configureEach { options.release = 17; options.encoding = 'UTF-8' }
+// Only the production probe uses Java17 release flags. ForgeGradle owns its Java8 game recompilation.
+tasks.named('compileJava', JavaCompile) {
+    javaCompiler.set(javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    })
+    options.release.set(17)
+    options.encoding = 'UTF-8'
+}
 tasks.named('jar', Jar) {
     manifest.attributes('FMLModType': 'MOD')
     preserveFileTimestamps = false
