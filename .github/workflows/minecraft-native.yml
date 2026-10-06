@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence, builder1122, component1122-builder-restricted, component1122-builder-partial, component1122-builder-cancel, component1122-builder-undo, component1122-engine-refresh, component1122-builder-legacy-shapes]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence, builder1122, component1122-builder-restricted, component1122-builder-partial, component1122-builder-cancel, component1122-builder-undo, component1122-engine-refresh, component1122-builder-legacy-shapes, component1122-builder-bundle]
 permissions:
   contents: read
 concurrency:
@@ -515,7 +515,7 @@ jobs:
             ${{ runner.temp }}/forge1122-reobf/
 
   component1122-pack:
-    if: inputs.mode == 'component1122-pack' || inputs.mode == 'component1122-mixin-repair' || inputs.mode == 'component1122-native-refresh' || inputs.mode == 'component1122-engine-refresh'
+    if: inputs.mode == 'component1122-pack' || inputs.mode == 'component1122-mixin-repair' || inputs.mode == 'component1122-native-refresh' || inputs.mode == 'component1122-engine-refresh' || inputs.mode == 'component1122-builder-bundle'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -531,7 +531,7 @@ jobs:
         run: printf 'OPENALLAY_COMPONENT_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
       - name: Pack provider-verified retained bytes and census genuine private Mixin
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: python3 -B ${{ inputs.mode == 'component1122-engine-refresh' && 'scripts/refresh-forge1122-component-engine.py' || inputs.mode == 'component1122-native-refresh' && 'scripts/refresh-forge1122-component-native.py' || inputs.mode == 'component1122-mixin-repair' && 'scripts/repair-forge1122-private-mixin.py' || 'scripts/run-forge1122-component.py' }}
+        run: python3 -B ${{ inputs.mode == 'component1122-builder-bundle' && 'scripts/bundle-forge1122-builder.py' || inputs.mode == 'component1122-engine-refresh' && 'scripts/refresh-forge1122-component-engine.py' || inputs.mode == 'component1122-native-refresh' && 'scripts/refresh-forge1122-component-native.py' || inputs.mode == 'component1122-mixin-repair' && 'scripts/repair-forge1122-private-mixin.py' || 'scripts/run-forge1122-component.py' }}
       - name: Retain component artifacts once
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
