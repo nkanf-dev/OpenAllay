@@ -869,8 +869,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void uiInteger(String key, int value, int x, int y, int w, java.util.function.IntConsumer changed) {
         EditBox field = new EditBox(font, x + w / 2, y, w / 2, 20,
                 MinecraftComponents.translatable("screen.openallay.settings.ui." + key));
-        field.setValue(uiIntegerDrafts.getOrDefault(key, Integer.toString(value)));
         field.setMaxLength(6);
+        field.setValue(uiIntegerDrafts.getOrDefault(key, Integer.toString(value)));
         field.setResponder(text -> {
             uiIntegerDrafts.put(key, text);
             try {
@@ -1396,8 +1396,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 Math.max(60, width - saveWidth - 4),
                 20,
                 MinecraftComponents.translatable(general.assistantNameLabelKey()));
-        assistantName.setValue(assistantNameDraft);
         assistantName.setMaxLength(Integer.MAX_VALUE);
+        assistantName.setValue(assistantNameDraft);
         assistantName.setResponder(value -> assistantNameDraft = value);
         assistantName.setVisible(layout.pageWidgetVisible(y, 20));
         addRenderableWidget(assistantName);
@@ -1964,8 +1964,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 20,
                 MinecraftComponents.translatable(
                         "screen.openallay.settings.skills.community.import_path"));
-        skillImportPath.setValue(skillImportPathDraft);
         skillImportPath.setMaxLength(Integer.MAX_VALUE);
+        skillImportPath.setValue(skillImportPathDraft);
         skillImportPath.setResponder(value -> skillImportPathDraft = value);
         dev.openallay.client.gui.GuideNativeTextHints.setHint(skillImportPath, MinecraftComponents.translatable(
                 "screen.openallay.settings.skills.community.import_hint"));
@@ -2119,8 +2119,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private EditBox field(int x, int y, int width, String narrationKey, String value) {
         EditBox field = new EditBox(
                 font, x, y, width, 18, MinecraftComponents.translatable(narrationKey));
-        field.setValue(value == null ? "" : value);
         field.setMaxLength(2048);
+        field.setValue(value == null ? "" : value);
         field.setResponder(ignored -> confirmation = Confirmation.NONE);
         field.setVisible(y >= layout.editor().y() + 30
                 && y + 18 <= layout.editor().bottom());
@@ -2135,6 +2135,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 width,
                 18,
                 MinecraftComponents.translatable("screen.openallay.settings.models.api_key"));
+        field.setMaxLength(4096);
         field.setValue(pendingApiKey);
         boolean saved = selectedView().map(
                         ModelProfileSettingsView.Profile::credentialStoredLocally)
@@ -2147,7 +2148,6 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 : environment
                         ? "screen.openallay.settings.models.api_key_environment_hint"
                         : "screen.openallay.settings.models.api_key_enter_hint"));
-        field.setMaxLength(4096);
         field.setResponder(value -> {
             pendingApiKey = value;
             confirmation = Confirmation.NONE;

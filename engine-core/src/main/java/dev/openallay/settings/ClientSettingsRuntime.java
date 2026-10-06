@@ -501,12 +501,12 @@ public record ClientSettingsRuntime(
         ModelProfileDefinition definition = new ModelProfileDefinition(
                 "default",
                 "Configure a model",
-                false,
+                true,
                 ModelProtocol.OPENAI_CHAT,
                 URI.create("https://example.invalid/v1"),
                 "configure-model-id",
                 CredentialReference.environment("OPENALLAY_API_KEY").encoded(),
-                256_000,
+                null,
                 null,
                 Duration.ofSeconds(30),
                 Duration.ofSeconds(300),
@@ -517,7 +517,7 @@ public record ClientSettingsRuntime(
         ResolvedModelProfile resolved = new ResolvedModelProfile(
                 definition,
                 null,
-                new GuideFailure("model_disabled", "This model profile is disabled"));
+                new GuideFailure("invalid_model_config", "Configure a model"));
         return new ModelProfilesConfigLoader.Load(
                 config, List.of(resolved));
     }

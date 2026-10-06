@@ -552,9 +552,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
             composerImages.paste();
             return true;
         }
+        // Native confirmation also includes Space, which must remain text/IME input here.
         ComposerKeyAction composerAction = composerKeyAction(
                 composer != null && getFocused() == composer.widget(),
-                input.confirmation(),
+                input.intent() == GuideKeyIntent.ENTER,
                 input.shift(),
                 input.control());
         if (composerAction == ComposerKeyAction.SUBMIT) {
@@ -3970,10 +3971,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
 
     static ComposerKeyAction composerKeyAction(
             boolean composerFocused,
-            boolean confirmation,
+            boolean enterPressed,
             boolean shiftDown,
             boolean controlDown) {
-        if (!composerFocused || !confirmation) return ComposerKeyAction.DELEGATE;
+        if (!composerFocused || !enterPressed) return ComposerKeyAction.DELEGATE;
         if (controlDown) return ComposerKeyAction.SUBMIT;
         return shiftDown ? ComposerKeyAction.NEWLINE : ComposerKeyAction.SUBMIT;
     }
