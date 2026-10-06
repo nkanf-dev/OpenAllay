@@ -17,7 +17,8 @@
     "LegacyEditBoxHintMixin",
     "MinecraftFpsAccess",
     "GuideProbeMouseInvoker",
-    "MainWindowResizeMixin"
+    "MainWindowResizeMixin",
+    "GuideTextFieldDrawAccessMixin"
   ],
   "injectors": {
     "defaultRequire": 1
