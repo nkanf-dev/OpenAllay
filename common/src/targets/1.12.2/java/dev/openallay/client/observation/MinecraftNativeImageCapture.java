@@ -11,8 +11,8 @@ public final class MinecraftNativeImageCapture {
         pixels.setRGB(0, 0, image.width(), image.height(), image.argb(), 0, image.width());
         if (!javax.imageio.ImageIO.write(pixels, "png", path.toFile())) throw new java.io.IOException("PNG encoder is unavailable");
     }
-    public static int width(Minecraft client) { return client.displayWidth; }
-    public static int height(Minecraft client) { return client.displayHeight; }
+    public static int width(Minecraft client) { return net.minecraft.client.renderer.OpenGlHelper.isFramebufferEnabled() ? client.getFramebuffer().framebufferTextureWidth : client.displayWidth; }
+    public static int height(Minecraft client) { return net.minecraft.client.renderer.OpenGlHelper.isFramebufferEnabled() ? client.getFramebuffer().framebufferTextureHeight : client.displayHeight; }
     public static CompletableFuture<GuideImageBitmap> capture(Minecraft client) {
         try {
             int texture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
