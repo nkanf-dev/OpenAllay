@@ -117,7 +117,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     private void refreshObservation() {
         if (observationActions == null || observationCapturing) return;
         try {
-            new ClientObservationInputCoordinator(observationActions, minecraft::execute).refresh(state, session);
+            new ClientObservationInputCoordinator(observationActions, action -> MinecraftClientWindow.execute(minecraft, action)).refresh(state, session);
         } catch (RuntimeException unavailable) {
             notice = GuideUiNotice.warning(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.observation.capture_failed")));
         }
@@ -128,8 +128,8 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         if (observationActions == null || observationCapturing) return;
         observationCapturing = true;
         try {
-            new ClientObservationInputCoordinator(observationActions, minecraft::execute).attachCurrentFrame(state, session)
-                    .whenComplete((applied, failure) -> minecraft.execute(() -> {
+            new ClientObservationInputCoordinator(observationActions, action -> MinecraftClientWindow.execute(minecraft, action)).attachCurrentFrame(state, session)
+                    .whenComplete((applied, failure) -> MinecraftClientWindow.execute(minecraft, () -> {
                         observationCapturing = false;
                         if (attachment == null) return;
                         if (failure != null) notice = GuideUiNotice.warning(
@@ -167,11 +167,11 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         if (anchor.isPresent()) {
             label = MinecraftComponents.empty();
             for (var chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
-                if (!MinecraftComponents.getString(label).isEmpty()) label = label.copy().append(" · ");
-                label = label.copy().append(MinecraftComponents.translatable(chip.key(), chip.value()));
+                if (!MinecraftComponents.getString(label).isEmpty()) label = MinecraftComponents.append(MinecraftComponents.copy(label), " · ");
+                label = MinecraftComponents.append(MinecraftComponents.copy(label), MinecraftComponents.translatable(chip.key(), chip.value()));
             }
-            if (anchor.orElseThrow().image().isPresent()) label = label.copy().append(" · ")
-                    .append(MinecraftComponents.translatable("screen.openallay.observation.frame"));
+            if (anchor.orElseThrow().image().isPresent()) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "),
+                    MinecraftComponents.translatable("screen.openallay.observation.frame"));
         }
         int labelWidth = Math.max(0, observationBounds.width() - 66);
         graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(label), labelWidth),
@@ -223,7 +223,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         if (!composer.getValue().equals(state.readText(session))) dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, state.readText(session), true);
         composer.setValueListener(value -> state.setText(session, value));
         composer.widget().guideVisible(readingLayout.footerFits());
-        addGuideWidget(composer.widget());
+        addGuideWidgetHandle(composer.widget());
         int actionY = readingLayout.actions().y();
         int actionWidth = Math.max(1, (inner - 12) / (voice != null && voice.enabled() ? 4 : 3));
         intentAction = addGuideWidget(OpenAllayButton.create(MinecraftComponents.empty(), button -> {
@@ -261,9 +261,9 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             if (mic != null) mic.visible = false;
             // Native children still retain the draft. At physically impossible sizes none can
             // paint or take focus outside the card, and Escape still returns immediately.
-            children().forEach(child -> { if (child instanceof GuideNativeButton button) button.visible = false; });
+            guideWidgetChildren().forEach(child -> child.guideVisible(false));
         }
-        setFocused(null);
+        clearGuideWidgetFocus();
         project();
     }
 
@@ -281,7 +281,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     @Override public void tick() {
         presentationTicks++;
         results.tick();
-        if (state.closed() || minecraft.player == null || minecraft.level == null) { onClose(); return; }
+        if (state.closed() || !MinecraftClientWindow.playerPresent(minecraft) || !MinecraftClientWindow.worldPresent(minecraft)) { onClose(); return; }
         String selected = service.snapshot().selectedSession();
         if (!session.equals(selected)) {
             session = selected;
@@ -371,7 +371,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         if (text.isBlank() && observedImages.isEmpty() && (!intent.editing() || state.images().empty())) return;
         GuideClientUiState.Insertion captured = state.captureInsertion(session);
         SlashCommandDispatcher.Dispatch dispatch = dispatchDraft(text, intent,
-                ordinaryText -> SlashCommandDispatcher.dispatch(ordinaryText, service, completion -> minecraft.execute(() -> {
+                ordinaryText -> SlashCommandDispatcher.dispatch(ordinaryText, service, completion -> MinecraftClientWindow.execute(minecraft, () -> {
                     if (state.closed()) return;
                     if (completion.successful()) state.clearAcceptedText(captured, text);
                     if (attachment == null || !captured.session().equals(session)) return;
@@ -419,7 +419,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                     + " · " + MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.hud.attachments_retained")));
             return;
         }
-        future.whenComplete((result, failure) -> minecraft.execute(() -> {
+        future.whenComplete((result, failure) -> MinecraftClientWindow.execute(minecraft, () -> {
             try {
                 if (state.closed()) return;
                 boolean accepted = failure == null && submissionAccepted(intent.editing(), result);
@@ -487,16 +487,16 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     @Override public boolean guideKeyPressed(GuideInputKey event) {
         GuideKeyInput input = GuideKeyInput.from(event);
         if (input.intent() == GuideKeyIntent.ESCAPE) { onClose(); return true; }
-        if (composer != null && composer.widget().isFocused() && input.intent() == GuideKeyIntent.ENTER && !input.shift()) {
+        if (composer != null && guideWidgetFocused(composer.widget()) && input.intent() == GuideKeyIntent.ENTER && !input.shift()) {
             submit(); return true;
         }
-        if (voice != null && voice.enabled() && (composer == null || !composer.widget().isFocused())
-                && !OpenAllayKeyMappings.VOICE_PTT.isUnbound() && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
+        if (voice != null && voice.enabled() && (composer == null || !guideWidgetFocused(composer.widget()))
+                && !dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.VOICE_PTT) && GuideNativeInput.matches(OpenAllayKeyMappings.VOICE_PTT, event)) {
             pttHeld = true;
             voice.pressExternalPtt(); // Screen physical mappings are released natively; own release below.
             return true;
         }
-        if (composer == null || !composer.widget().isFocused()) {
+        if (composer == null || !guideWidgetFocused(composer.widget())) {
             switch (input.intent()) {
                 case PAGE_UP -> { scrollResults(() -> results.scroll().page(-1)); return true; }
                 case PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1)); return true; }
@@ -560,7 +560,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     private boolean composerContains(double x, double y) {
         if (composer == null) return false;
         GuideUiLayout.Rect input = new GuideUiLayout.Rect(
-                dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer.widget()), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer.widget()), composer.widget().getWidth(), composer.widget().getHeight());
+                composer.widget().getX(), composer.widget().getY(), composer.widget().getWidth(), composer.widget().getHeight());
         return input.contains(x, y) && composer.widget().isMouseOver(x, y);
     }
     @Override public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {

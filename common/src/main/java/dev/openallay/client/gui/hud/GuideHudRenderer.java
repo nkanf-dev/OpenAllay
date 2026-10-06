@@ -32,9 +32,9 @@ public final class GuideHudRenderer {
     public GuideHudResultRenderer.Receipt resultReceipt() { return results.receipt(); }
 
     public void extractRenderState(GuideGraphics graphics, GuideHudView view) {
-        var context = new GuideHudVisibility.Context(minecraft.level != null, minecraft.player != null,
+        var context = new GuideHudVisibility.Context(MinecraftClientWindow.worldPresent(minecraft), MinecraftClientWindow.playerPresent(minecraft),
                 MinecraftClientWindow.hudHidden(minecraft), MinecraftClientWindow.debugScreenVisible(minecraft),
-                MinecraftClientWindow.screen(minecraft) != null, MinecraftClientWindow.overlay(minecraft) != null);
+                MinecraftClientWindow.screen(minecraft) != null, MinecraftClientWindow.overlayPresent(minecraft));
         if (MinecraftClientWindow.screen(minecraft) instanceof GuideHudEditorScreen
                 || MinecraftClientWindow.screen(minecraft) instanceof GuideChatLiteScreen) { results.releaseNativeViews(); return; }
         if (GuideHudVisibility.isVisible(view.hud(), context)) draw(graphics, view, view.hud());
@@ -47,13 +47,13 @@ public final class GuideHudRenderer {
 
     private void draw(GuideGraphics graphics, GuideHudView view, GuideUiConfig.Hud hud) {
         GuideHudLayout.Rect rect = GuideHudLayout.calculate(graphics.guiWidth(), graphics.guiHeight(), hud);
-        Font font = minecraft.font;
+        Font font = MinecraftClientWindow.font(minecraft);
         int contentWidth = rect.contentWidth();
         int contentHeight = hud.collapsed() ? Math.min(24, rect.contentHeight()) : rect.contentHeight();
         int available = Math.max(0, contentHeight - 52);
         int bodyHeight = hud.maxReplyLines() == 0 ? available : Math.min(available, hud.maxReplyLines() * 11);
         GuideUiLayout.Rect body = new GuideUiLayout.Rect(8, 36, Math.max(1, contentWidth - 16), bodyHeight);
-        long ticks = minecraft.level == null ? 0 : minecraft.level.getGameTime();
+        long ticks = MinecraftClientWindow.gameTime(minecraft);
         Component footer = null;
         graphics.pushPose();
         try {
@@ -96,8 +96,8 @@ public final class GuideHudRenderer {
                     }
                 }
                 if (contentHeight >= 54) {
-                    footer = readHint(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(),
-                            OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage());
+                    footer = readHint(dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.INTERACT_HUD),
+                            dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.INTERACT_HUD));
                     graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(footer), Math.max(1, contentWidth - 16)),
                             8, contentHeight - 12, OpenAllayWidgetTheme.MUTED);
                 }
@@ -105,15 +105,15 @@ public final class GuideHudRenderer {
         } finally { graphics.popPose(); }
         // Native hover is available only when another screen has already released the mouse.
         // This passive renderer never changes input ownership to make its footer interactive.
-        if (footer != null && !minecraft.mouseHandler.isMouseGrabbed()) {
-            int mouseX = (int) dev.openallay.client.context.MinecraftMouseCoordinates.x(minecraft.mouseHandler, minecraft.getWindow());
-            int mouseY = (int) dev.openallay.client.context.MinecraftMouseCoordinates.y(minecraft.mouseHandler, minecraft.getWindow());
+        if (footer != null && !dev.openallay.client.context.MinecraftMouseCoordinates.grabbed(minecraft)) {
+            int mouseX = (int) dev.openallay.client.context.MinecraftMouseCoordinates.x(minecraft);
+            int mouseY = (int) dev.openallay.client.context.MinecraftMouseCoordinates.y(minecraft);
             double localX = (mouseX - rect.x()) / rect.scale();
             double localY = (mouseY - rect.y()) / rect.scale();
             if (localX >= 8 && localX < contentWidth - 8 && localY >= contentHeight - 14 && localY < contentHeight) {
-                Component tooltip = readHintTooltip(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(),
-                        OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage(),
-                        OpenAllayKeyMappings.OPEN_GUIDE.isUnbound() ? null : OpenAllayKeyMappings.OPEN_GUIDE.getTranslatedKeyMessage());
+                Component tooltip = readHintTooltip(dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.INTERACT_HUD),
+                        dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.INTERACT_HUD),
+                        dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.OPEN_GUIDE) ? null : dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.OPEN_GUIDE));
                 graphics.setTooltipForNextFrame(font,
                         GuideNativeFont.split(font, tooltip, Math.max(1, Math.min(260, graphics.guiWidth() - 24))),
                         GuideTooltipPlacement.DEFAULT, mouseX, mouseY, false);

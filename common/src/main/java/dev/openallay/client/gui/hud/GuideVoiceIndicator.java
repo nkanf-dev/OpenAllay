@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.OpenAllayWidgetTheme;
 import dev.openallay.client.voice.VoiceRuntime;
@@ -25,11 +27,11 @@ public final class GuideVoiceIndicator {
         if (!status.indicatorVisible()) return;
         VoiceStatusPresentation.Notice feedback = VoiceStatusPresentation.describe(status);
         int panelWidth = Math.min(Math.max(1, graphics.guiWidth() - 12), status.active() ? 280 : 360);
-        CacheKey key = new CacheKey(feedback, panelWidth, minecraft.font, GuideNativeFont.languageIdentity());
+        CacheKey key = new CacheKey(feedback, panelWidth, MinecraftClientWindow.font(minecraft), GuideNativeFont.languageIdentity());
         if (!key.equals(cached)) {
             cached = key;
-            message = wrap(minecraft.font, feedback.translationKey(), panelWidth - 12);
-            action = wrap(minecraft.font, feedback.actionTranslationKey(), panelWidth - 12);
+            message = wrap(MinecraftClientWindow.font(minecraft), feedback.translationKey(), panelWidth - 12);
+            action = wrap(MinecraftClientWindow.font(minecraft), feedback.actionTranslationKey(), panelWidth - 12);
         }
         int actionLines = status.active() ? 0 : Math.min(2, action.size());
         int messageLines = Math.min(2, message.size());
@@ -38,10 +40,10 @@ public final class GuideVoiceIndicator {
         graphics.fill(x, 6, x + panelWidth, 6 + panelHeight, OpenAllayWidgetTheme.CHARCOAL);
         graphics.outline(x, 6, panelWidth, panelHeight,
                 feedback.error() || status.active() ? OpenAllayWidgetTheme.AMBER : OpenAllayWidgetTheme.MINT);
-        for (int line = 0; line < messageLines; line++) graphics.text(minecraft.font, message.get(line), x + 6, 11 + line * 10, OpenAllayWidgetTheme.WHITE);
-        for (int line = 0; line < actionLines; line++) graphics.text(minecraft.font, action.get(line), x + 6,
+        for (int line = 0; line < messageLines; line++) graphics.text(MinecraftClientWindow.font(minecraft), message.get(line), x + 6, 11 + line * 10, OpenAllayWidgetTheme.WHITE);
+        for (int line = 0; line < actionLines; line++) graphics.text(MinecraftClientWindow.font(minecraft), action.get(line), x + 6,
                 11 + (messageLines + line) * 10, OpenAllayWidgetTheme.MUTED);
-        if (status.active()) graphics.text(minecraft.font, status.elapsedMillis() / 1000 + "s",
+        if (status.active()) graphics.text(MinecraftClientWindow.font(minecraft), status.elapsedMillis() / 1000 + "s",
                 x + panelWidth - 28, 11, OpenAllayWidgetTheme.AMBER);
     }
 

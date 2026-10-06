@@ -124,7 +124,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         int next = Math.max(0, Math.min(form.maximumScroll(), formScroll + amount));
         if (next != formScroll) {
             formScroll = next;
-            setDragging(false);
+            guideDragging(false);
             guideRebuildWidgets();
         }
     }
@@ -204,9 +204,9 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
             returnToOwner(false);
             return;
         }
-        if (!minecraft.isWindowActive()) {
+        if (!MinecraftClientWindow.focused(minecraft)) {
             interaction.cancel();
-            setDragging(false);
+            guideDragging(false);
             GuideNativeFocus.clear(this);
         }
     }
@@ -214,14 +214,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     @Override
     protected void resizeGuide(int width, int height) {
         interaction.cancel();
-        setDragging(false);
+        guideDragging(false);
         resizeGuideWidgets(width, height);
     }
 
     @Override
     protected void guideRemoved() {
         interaction.cancel();
-        setDragging(false);
+        guideDragging(false);
         draft.cancel();
         // The native Screen transition owns cursor release/grab and the replacement Screen.
         super.guideRemoved();
@@ -246,7 +246,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     @Override
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {
         if (interaction.active()) {
-            if (GuideNativeInput.isLeftClick(event) && ownerValid.getAsBoolean() && minecraft.isWindowActive()) {
+            if (GuideNativeInput.isLeftClick(event) && ownerValid.getAsBoolean() && MinecraftClientWindow.focused(minecraft)) {
                 interaction.move(width, height, event.x(), event.y());
             } else {
                 interaction.cancel();

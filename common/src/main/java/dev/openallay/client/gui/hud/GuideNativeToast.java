@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.MinecraftClientWindow;
+
 import dev.openallay.client.gui.OpenAllayWidgetTheme;
 import dev.openallay.client.presentation.GuideNotificationPort;
 import java.util.ArrayList;
@@ -122,11 +124,11 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         }
         var summary = MinecraftComponents.empty();
         if (notification.cardCount() > 1) {
-            if (!summary.getString().isBlank()) MinecraftComponents.append(summary, " · ");
+            if (!MinecraftComponents.getString(summary).isBlank()) MinecraftComponents.append(summary, " · ");
             MinecraftComponents.append(summary, MinecraftComponents.translatable("screen.openallay.notification.more_cards", notification.cardCount() - 1));
         }
         if (notification.additionalTasks() > 0) {
-            if (!summary.getString().isBlank()) MinecraftComponents.append(summary, " · ");
+            if (!MinecraftComponents.getString(summary).isBlank()) MinecraftComponents.append(summary, " · ");
             MinecraftComponents.append(summary, MinecraftComponents.translatable("screen.openallay.notification.more_tasks", notification.additionalTasks()));
         }
         // 26.2 ToastManager has no native click target. This is the existing generic Guide key only.
@@ -136,8 +138,8 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     }
 
     private void refreshLayout(Font font) {
-        Component key = dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE.isUnbound() ? null
-                : dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE.getTranslatedKeyMessage();
+        Component key = dev.openallay.client.gui.GuideNativeKeyMappings.unbound(dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE) ? null
+                : dev.openallay.client.gui.GuideNativeKeyMappings.display(dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE);
         Display display = display(notification, key);
         var language = GuideNativeFont.languageIdentity();
         if (font == cachedFont && language == cachedLanguage && display.equals(cachedDisplay)) return;
@@ -147,21 +149,21 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         width = availableWidth;
         int textWidth = Math.max(1, width - 20);
         int hintWidth = Math.min(textWidth, GuideNativeFont.width(font, display.hint()));
-        int summaryWidth = display.hint().getString().isBlank() ? textWidth : textWidth - hintWidth - 8;
+        int summaryWidth = MinecraftComponents.getString(display.hint()).isBlank() ? textWidth : textWidth - hintWidth - 8;
         layout = new Layout(wrapped(font, MinecraftComponents.style(MinecraftComponents.copy(display.title()), net.minecraft.ChatFormatting.BOLD), textWidth, 1),
-                wrapped(font, display.description(), textWidth, display.secondary().getString().isBlank() ? 2 : 1),
+                wrapped(font, display.description(), textWidth, MinecraftComponents.getString(display.secondary()).isBlank() ? 2 : 1),
                 wrapped(font, display.secondary(), textWidth, 1),
                 summaryWidth > 8 ? wrapped(font, display.summary(), summaryWidth, 1) : List.of(),
                 wrapped(font, display.hint(), Math.max(1, hintWidth), 1), width - 10 - hintWidth);
     }
 
     private static List<GuideTextLine> wrapped(Font font, Component text, int width, int maximumLines) {
-        if (text.getString().isBlank()) return List.of();
+        if (MinecraftComponents.getString(text).isBlank()) return List.of();
         List<GuideTextLine> all = GuideNativeFont.split(font, text, width);
         if (all.size() <= maximumLines) return all;
         List<GuideTextLine> visible = new ArrayList<>(all.subList(0, maximumLines));
         StringBuilder last = new StringBuilder(visible.get(visible.size() - 1).plainText());
-        String ending = GuideNativeFont.substrByWidth(font, MinecraftComponents.literal(last.toString()), Math.max(1, width - GuideNativeFont.width(font, "…"))).getString();
+        String ending = MinecraftComponents.getString(GuideNativeFont.substrByWidth(font, MinecraftComponents.literal(last.toString()), Math.max(1, width - GuideNativeFont.width(font, "…"))));
         visible.set(visible.size() - 1, GuideNativeFont.visual(MinecraftComponents.style(MinecraftComponents.literal(ending + "…"), text.getStyle())));
         return List.copyOf(visible);
     }
@@ -180,7 +182,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         // Only a completed native extraction is a graphical receipt. Reads and lifecycle calls cannot fabricate frames.
         extracted = new ExtractSnapshot(++extractedFrames, notification.connectionGeneration(), notification.actorId(),
                 notification.sessionOwner(), notification.sessionId(), notification.requestId(),
-                cachedDisplay.title().getString(), cachedDisplay.description().getString(), cachedDisplay.hint().getString(),
+                MinecraftComponents.getString(cachedDisplay.title()), MinecraftComponents.getString(cachedDisplay.description()), MinecraftComponents.getString(cachedDisplay.hint()),
                 width(), height(), guideSlotCount(), layout.title().size(), layout.description().size());
     }
 
