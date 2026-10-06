@@ -164,6 +164,7 @@ def export_abi(work,reports,data,groups,request):
     for name in request['lateNativeClasses']:capture_record(name,host,'late-native',request.get('lateNativeBodies',{}).get(name,()))
     for name in request['negativeClasses']:capture_record(name,api_cp,'negative',expected_absent=True)
     for name,members in request['conditionalBodies'].items():capture_record(name,scanner,'isolated-conditional',members)
+    for name in request.get('fullPublicationClasses',[]):capture_record(name,scanner,'full-forge-publication')
     write_json(reports/'abi-index.json',{'source':os.environ['GITHUB_SHA'],'records':records,'criticalFindings':failures,'publicationDeclarations':len(request['publicationClasses']),'lateNativeDeclarations':len(request['lateNativeClasses']),'oldCensusRepeated':False,'normalFgHost':main_host,'sameCoordinateAuxiliaryArtifacts':[a for a in host_matches if a['path']!=main_host['path']],'primaryOwnerChecks':{'Minecraft':primary_owner,'Screen':screen_owner},'rawPublicationPinsVerified':True,'fgDeobfAssumed':False,'gameExecuted':False})
     if failures:raise ValueError('critical requested ABI findings: '+str(len(failures)))
 
@@ -237,6 +238,8 @@ def main():
             pending={'me.shedaniel.rei.api.common.util.EntryStacks','me.shedaniel.rei.api.client.view.ViewSearchBuilder','me.shedaniel.architectury.fluid.FluidStack'}
             request['publicationClasses']=[name for name in request['publicationClasses'] if name in pending]
             request['lateNativeClasses']=[];request['negativeClasses']=[]
+            request['fullPublicationClasses']=request['publicationClasses']+['me.shedaniel.rei.forge.REIPlugin','me.shedaniel.rei.api.common.util.Identifiable','me.shedaniel.rei.api.common.display.Display','me.shedaniel.rei.api.common.entry.type.VanillaEntryTypes']
+            request['fullPublicationClasses']=[n for n in request['fullPublicationClasses'] if n.startswith('me.shedaniel.rei.')]
             result['passedNamespaceToolReplayed']=False
         # Independent new evidence stays valuable if tool compile/fixture fails; record both outcomes.
         failures=[]

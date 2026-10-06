@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: forge16165-focused-tooling-${{ github.ref }}
+  group: forge16165-focused-tooling-${{ github.ref }}-${{ inputs.mode }}
   cancel-in-progress: false
 jobs:
   focused-tooling-publication:
