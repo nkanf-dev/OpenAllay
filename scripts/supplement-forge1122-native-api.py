@@ -9,6 +9,18 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraft.client.gui.GuiIngame',
+    'net.minecraft.util.text.Style',
+    'net.minecraftforge.fml.client.config.GuiSlider',
+    'net.minecraft.client.gui.toasts.GuiToast$ToastInstance',
+    'net.minecraft.world.WorldSettings',
+    'net.minecraft.world.storage.ISaveFormat',
+    'net.minecraft.command.CommandHandler',
+    'net.minecraft.command.ICommandManager',
+    'net.minecraft.world.storage.WorldInfo',
+    'net.minecraft.world.GameRules',
+    'org.lwjgl.input.Cursor',
+    'net.minecraftforge.client.event.GuiScreenEvent$KeyboardInputEvent$Post',
     'net.minecraft.util.math.MathHelper',
     'net.minecraft.client.gui.GuiYesNo','net.minecraft.client.gui.GuiWorldSelection',
     'net.minecraft.client.gui.chat.NarratorChatListener','net.minecraft.client.gui.GuiSubtitleOverlay',
@@ -93,10 +105,11 @@ CLASSES = (
 
 )
 BYTECODE = {
+    'net.minecraft.client.gui.toasts.GuiToast$ToastInstance': ('render',),
     'net.minecraft.client.renderer.RenderItem': ('renderItemAndEffectIntoGUI','renderItemOverlayIntoGUI'),
     'net.minecraftforge.fml.client.config.GuiUtils': ('drawHoveringText','preItemToolTip','postItemToolTip'),
 }
-BODIES = ('net.minecraft.util.ScreenShotHelper','net.minecraft.client.renderer.EntityRenderer','net.minecraft.client.renderer.texture.TextureManager','net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
+BODIES = ('net.minecraft.client.gui.toasts.GuiToast','net.minecraft.util.ScreenShotHelper','net.minecraft.client.renderer.EntityRenderer','net.minecraft.client.renderer.texture.TextureManager','net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
     'net.minecraft.tileentity.TileEntityChest','net.minecraft.tileentity.TileEntityShulkerBox')
 
 def sha(path):
