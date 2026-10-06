@@ -9,6 +9,37 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraftforge.common.crafting.IShapedRecipe',
+    'net.minecraft.item.crafting.IRecipe',
+    'net.minecraft.item.crafting.ShapedRecipes',
+    'net.minecraft.stats.RecipeBook',
+    'net.minecraft.item.Item',
+    'net.minecraft.potion.Potion',
+    'net.minecraft.potion.PotionType',
+    'net.minecraft.potion.PotionEffect',
+    'net.minecraft.entity.EntityList$EntityEggInfo',
+    'net.minecraftforge.fml.common.registry.EntityEntry',
+    'net.minecraft.nbt.NBTTagList',
+    'net.minecraft.nbt.NBTTagByteArray',
+    'net.minecraft.nbt.NBTTagIntArray',
+    'net.minecraft.nbt.NBTTagLongArray',
+    'net.minecraft.nbt.NBTTagByte',
+    'net.minecraft.nbt.NBTTagShort',
+    'net.minecraft.nbt.NBTTagInt',
+    'net.minecraft.nbt.NBTTagLong',
+    'net.minecraft.nbt.NBTTagFloat',
+    'net.minecraft.nbt.NBTTagDouble',
+    'net.minecraft.client.resources.IResource',
+    'net.minecraft.client.gui.GuiControls',
+    'net.minecraft.client.multiplayer.WorldClient',
+    'net.minecraft.client.renderer.texture.TextureUtil',
+    'net.minecraft.client.shader.Framebuffer',
+    'net.minecraft.util.math.RayTraceResult',
+    'net.minecraft.client.renderer.EntityRenderer',
+    'net.minecraft.client.gui.inventory.GuiContainer',
+    'net.minecraft.inventory.Container',
+    'net.minecraft.world.biome.Biome',
+
     'net.minecraft.client.renderer.vertex.DefaultVertexFormats','org.lwjgl.opengl.GL11',
     'net.minecraft.client.settings.GameSettings','net.minecraft.client.settings.KeyBinding',
     'net.minecraft.util.text.ITextComponent',
@@ -64,7 +95,7 @@ BYTECODE = {
     'net.minecraft.client.renderer.RenderItem': ('renderItemAndEffectIntoGUI','renderItemOverlayIntoGUI'),
     'net.minecraftforge.fml.client.config.GuiUtils': ('drawHoveringText','preItemToolTip','postItemToolTip'),
 }
-BODIES = ('net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
+BODIES = ('net.minecraft.util.ScreenShotHelper','net.minecraft.client.renderer.EntityRenderer','net.minecraft.client.renderer.texture.TextureManager','net.minecraft.world.IBlockAccess','net.minecraft.block.BlockFence','net.minecraft.block.BlockPane','net.minecraft.block.BlockStairs','net.minecraft.util.datafix.DataFixer', 'net.minecraft.tileentity.TileEntityLockableLoot',
     'net.minecraft.tileentity.TileEntityChest','net.minecraft.tileentity.TileEntityShulkerBox')
 
 def sha(path):
