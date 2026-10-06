@@ -37,6 +37,7 @@ public final class LaunchWrapperJava17Bridge {
         if (Boolean.getBoolean("openallay.pack200.enabled")) Pack200Bridge.install(instrumentation);
         if (Boolean.getBoolean("openallay.objectholder.enabled")) ObjectHolderBridge.install(instrumentation);
         if (Boolean.getBoolean("openallay.capability.enabled")) CapabilityBridge.install(instrumentation);
+        if (System.getProperty("openallay.dimension.capture")!=null) DimensionEnumPhaseCapture.install(instrumentation);
         instrumentation.addTransformer(new ClassFileTransformer() {
             public byte[] transform(ClassLoader loader, String name, Class<?> redefining,
                                     ProtectionDomain domain, byte[] bytes) {

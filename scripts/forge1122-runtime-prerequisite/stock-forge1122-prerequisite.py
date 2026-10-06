@@ -385,7 +385,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
             "-Dopenallay.e2e.appliedBindingsReceipt="+str(output/"applied-bindings.json")]
     if world_sdk:
         name="openallay-builder-forge1122-sdk-"+str(os.getpid())
-        component_flags += ["-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
+        component_flags += ["-Dopenallay.dimension.capture="+str(output/"dimension-phase"),"-Dopenallay.e2e.enabled=true","-Dopenallay.e2e.scenario=native-world-sdk",
             "-Dopenallay.e2e.question=Native WorldSession SDK acceptance",
             "-Dopenallay.e2e.report="+str(output/"world-sdk-report.json"),
             "-Dopenallay.e2e.createWorld="+name,"-Dopenallay.e2e.shutdown=true","-Dopenallay.e2e.timeoutSeconds=300"]
@@ -488,7 +488,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         passed=report.get("outcome")=="COMPLETED" and bool(checks) and all(c.get("status")=="PASS" for c in checks)
         clean=receipt["termination"]["finalExitCode"]==0 and not receipt["termination"]["signals"]
         oracle_path=output/"applied-bindings.json";oracle=json.loads(oracle_path.read_text()) if oracle_path.is_file() else {}
-        required=passed and clean and (not binding_probe or oracle.get("accepted") is True)
+        required=passed and clean and (not binding_probe or oracle.get("accepted") is True) and not (output/"dimension-phase").exists()
         runtime.write_json(output/"world-sdk-acceptance.json",{"accepted":required,"reportCompleted":passed,
             "cleanUnsignalledExit0":clean,"actualAppliedBindings":oracle.get("accepted",False),"worldSdkCheckCount":len(checks)})
         if required and receipt["status"] not in ("fatal-component-proof-incomplete","fatal-applied-binding-proof"):
