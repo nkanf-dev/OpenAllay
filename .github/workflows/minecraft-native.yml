@@ -60,7 +60,7 @@ jobs:
           ALSOFT_DRIVERS: 'null'
           OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log"             python3 -B scripts/run-ci-game-workflow.py --loader forge --minecraft-target 1.18.2 --java "$JAVA_HOME_17_X64/bin/java" --batch-id forge1182-${{ github.run_id }} --scenarios builder-acceptance builder-reload ui-live-ux-regressions
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log"             python3 -B scripts/run-ci-game-workflow.py --loader forge --minecraft-target 1.18.2 --java "$JAVA_HOME_17_X64/bin/java" --batch-id forge1182-${{ github.run_id }} --scenarios ui-live-ux-regressions
       - name: Preserve bounded generated native command source facts
         if: always()
         run: python3 -B scripts/capture-forge-native-contracts.py

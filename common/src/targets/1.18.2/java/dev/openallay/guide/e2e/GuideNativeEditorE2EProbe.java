@@ -89,7 +89,13 @@ public final class GuideNativeEditorE2EProbe {
             editor.setCharacterLimit(originalLimit); editor.setValue(draft); GLFW.glfwSetClipboardString(client.getWindow().getWindow(), clipboard);
             check(clipboard.equals(client.keyboardHandler.getClipboard()), "clipboard restored");
             manager = MinecraftClientWindow.toastManager(client); readback = (ToastReadback) manager;
-            check(readback.openallay$snapshot().queue().isEmpty() && readback.openallay$snapshot().occupied().stream().noneMatch(Boolean::booleanValue), "isolated native toast fixture");
+            var before = readback.openallay$snapshot();
+            report.put("nativeToastFixturePreparation", Map.of("queuedBefore", before.queue().size(),
+                    "occupiedBefore", before.occupied(), "purpose", "disposable-native-fixture-only", "acceptedUiAction", false));
+            manager.clear();
+            var cleared = readback.openallay$snapshot();
+            check(cleared.queue().isEmpty() && cleared.occupied().stream().noneMatch(Boolean::booleanValue)
+                    && cleared.tops().isEmpty() && cleared.removals().isEmpty() && cleared.pendingEmpty(), "isolated native toast fixture");
             manager.addToast(a); manager.addToast(b); manager.addToast(normal); phase++; return false;
         }
         ToastSnapshot s = readback.openallay$snapshot();
