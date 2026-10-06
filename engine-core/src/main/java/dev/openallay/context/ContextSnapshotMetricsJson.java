@@ -12,10 +12,9 @@ public final class ContextSnapshotMetricsJson {
     private final Gson gson;
 
     public ContextSnapshotMetricsJson(Gson source) {
-        gson = EngineJson.withInstant(java.util.Objects.requireNonNull(source, "source")).newBuilder()
+        gson = EngineJson.derive(source, builder -> builder
                 .registerTypeHierarchyAdapter(Optional.class, (JsonSerializer<Optional<?>>) (value, type, context) ->
-                        value.isPresent() ? context.serialize(value.orElseThrow()) : JsonNull.INSTANCE)
-                .create();
+                        value.isPresent() ? context.serialize(value.orElseThrow()) : JsonNull.INSTANCE));
     }
 
     public long bytes(Object value) {

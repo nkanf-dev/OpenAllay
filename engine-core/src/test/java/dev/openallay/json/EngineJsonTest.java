@@ -15,13 +15,14 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 final class EngineJsonTest {
     private record Detached(UUID id, Instant capturedAt, List<Instant> history) {}
 
     @Test void typedTimestampKeepsSecondsAndNanosAndRoundTripsNestedRecords() {
-        Gson gson = EngineJson.withInstant(new Gson());
+        Gson gson = EngineJson.create();
         for (Instant time : List.of(Instant.EPOCH, Instant.ofEpochSecond(-1, 999_999_999),
                 Instant.parse("2026-10-04T11:27:00.125Z"), Instant.MIN, Instant.MAX)) {
             String encoded = gson.toJson(time);
@@ -37,7 +38,7 @@ final class EngineJsonTest {
     }
 
     @Test void timestampRequiresTheExactCurrentIntegerShape() {
-        Gson gson = EngineJson.withInstant(new Gson());
+        Gson gson = EngineJson.create();
         for (String invalid : List.of(
                 "\"1970-01-01T00:00:00Z\"", "0", "[]", "{}",
                 "{\"seconds\":0}", "{\"nanos\":0}",
@@ -73,9 +74,10 @@ final class EngineJsonTest {
                 return type.getRawType() == Instant.class ? (TypeAdapter<T>) custom.nullSafe() : null;
             }
         };
-        Gson source = new GsonBuilder().serializeNulls().disableHtmlEscaping()
-                .registerTypeAdapterFactory(factory).create();
-        Gson gson = EngineJson.withInstant(source);
+        Consumer<GsonBuilder> configuration = builder -> builder.serializeNulls().disableHtmlEscaping()
+                .registerTypeAdapterFactory(factory);
+        Gson source = EngineJson.create(configuration);
+        Gson gson = EngineJson.derive(source, builder -> {});
         assertNotSame(source, gson);
         assertSame(gson, EngineJson.withInstant(gson));
         var value = new Detached(UUID.randomUUID(), Instant.ofEpochSecond(-1, 7), List.of(Instant.EPOCH));
@@ -86,14 +88,15 @@ final class EngineJsonTest {
     }
 
     @Test void defaultBindingRetainsBuilderOptionsWithoutChangingTheSourceGson() {
-        Gson source = new GsonBuilder().serializeNulls().setPrettyPrinting().disableHtmlEscaping().create();
-        Gson gson = EngineJson.withInstant(source);
-        var tree = JsonParser.parseString(gson.toJson(new Detached(null, Instant.EPOCH, List.of()))).getAsJsonObject();
+        Gson source = EngineJson.create(builder -> builder.serializeNulls().setPrettyPrinting().disableHtmlEscaping());
+        Gson gson = EngineJson.derive(source, builder -> {});
+        var tree = new JsonParser().parse(gson.toJson(new Detached(null, Instant.EPOCH, List.of()))).getAsJsonObject();
         assertTrue(tree.get("id").isJsonNull());
-        assertEquals(JsonParser.parseString("{\"seconds\":0,\"nanos\":0}"), tree.get("capturedAt"));
+        assertEquals(new JsonParser().parse("{\"seconds\":0,\"nanos\":0}"), tree.get("capturedAt"));
         assertTrue(gson.toJson(Instant.EPOCH).contains("\n"));
         assertEquals("\"<&>\"", gson.toJson("<&>"));
         assertNotSame(source, gson);
+        assertEquals(source.toJson(Instant.EPOCH), gson.toJson(Instant.EPOCH));
         assertSame(gson, EngineJson.withInstant(gson));
     }
 }

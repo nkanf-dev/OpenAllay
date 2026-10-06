@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import dev.openallay.json.JsonTrees;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -16,7 +16,7 @@ import java.util.UUID;
 
 /** Current detached input-reference shape, with explicit typed timestamp serialization. */
 public final class ClientObservationAnchorJson {
-    private static final Gson GSON = EngineJson.withInstant(new Gson()).newBuilder().serializeNulls().create();
+    private static final Gson GSON = EngineJson.derive(EngineJson.create(), com.google.gson.GsonBuilder::serializeNulls);
 
     private ClientObservationAnchorJson() {}
 
@@ -56,7 +56,7 @@ public final class ClientObservationAnchorJson {
     private static void exact(JsonElement supplied, JsonElement typed) {
         if (supplied == null) throw new IllegalArgumentException("Missing input observation metadata");
         if (typed.isJsonObject()) {
-            if (!supplied.isJsonObject() || !supplied.getAsJsonObject().keySet().equals(typed.getAsJsonObject().keySet())) {
+            if (!supplied.isJsonObject() || !JsonTrees.keys(supplied.getAsJsonObject()).equals(JsonTrees.keys(typed.getAsJsonObject()))) {
                 throw new IllegalArgumentException("Input metadata fields do not match the current shape");
             }
             for (var entry : typed.getAsJsonObject().entrySet()) {
@@ -95,7 +95,7 @@ public final class ClientObservationAnchorJson {
             finally { out.setSerializeNulls(previous); }
         }
         @Override public Optional<ClientObservationAnchor> read(JsonReader in) throws IOException {
-            return decode(JsonParser.parseReader(in));
+            return decode(JsonTrees.parse(in));
         }
     }
 }

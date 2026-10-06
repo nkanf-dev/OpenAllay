@@ -3,6 +3,7 @@ package dev.openallay.json;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonParseException;
 import com.google.gson.TypeAdapter;
@@ -36,12 +37,13 @@ final class RecordJsonAdapter<T> extends TypeAdapter<T> {
     }
 
     /** Existing exclusions run before these sentinels. Every reached field is suppressed,
-     * so a probe never opens private timestamp or record fields.
+     * so a probe never opens private timestamp or record fields. The owner supplies a fresh
+     * unbound builder for every probe; no adapter cache or sentinel state is reused.
      */
-    static Fields fields(Gson source, TypeToken<?> type) {
+    static Fields fields(GsonBuilder unbound, TypeToken<?> type) {
         Set<String> write = new HashSet<>();
         Set<String> read = new HashSet<>();
-        source.newBuilder().addSerializationExclusionStrategy(sentinel(type.getRawType(), write))
+        unbound.addSerializationExclusionStrategy(sentinel(type.getRawType(), write))
                 .addDeserializationExclusionStrategy(sentinel(type.getRawType(), read))
                 .create().getAdapter(type);
         return new Fields(Set.copyOf(write), Set.copyOf(read));

@@ -19,7 +19,7 @@ configurations {
 }
 dependencies {
     upstreamSources("dev.latvian.mods:rhino:${rhino_version}:sources@jar")
-    api('com.google.code.gson:gson:2.8.9')
+    api('com.google.code.gson:gson:2.8.0')
     implementation('com.google.guava:guava:31.1-jre')
     compileOnly('org.jetbrains:annotations:24.1.0')
 }

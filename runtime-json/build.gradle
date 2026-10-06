@@ -17,7 +17,7 @@ tasks.withType(Jar).configureEach {
     reproducibleFileOrder = true
 }
 dependencies {
-    api('com.google.code.gson:gson:2.8.9')
+    api('com.google.code.gson:gson:2.8.0')
 }
 
 tasks.register('verifyProductionDependencies') {
