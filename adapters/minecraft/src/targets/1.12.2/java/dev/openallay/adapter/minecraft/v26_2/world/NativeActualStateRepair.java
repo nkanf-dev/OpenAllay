@@ -23,8 +23,10 @@ final class NativeActualStateRepair {
     }
     /** Native getPropertyKeys promises Collection, not Set.equals or view identity. */
     private static boolean samePropertyDomain(IBlockState first,IBlockState second) {
-        java.util.Collection<IProperty<?>> firstKeys=first.getPropertyKeys();
-        java.util.Collection<IProperty<?>> secondKeys=second.getPropertyKeys();
+        return samePropertyIdentities(first.getPropertyKeys(),second.getPropertyKeys());
+    }
+    static boolean samePropertyIdentities(java.util.Collection<IProperty<?>> firstKeys,
+            java.util.Collection<IProperty<?>> secondKeys) {
         if(firstKeys.size()!=secondKeys.size())return false;
         java.util.Set<IProperty<?>> identities=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         for(IProperty<?> property:firstKeys)if(property==null || !identities.add(property))return false;
