@@ -86,7 +86,7 @@ public final class GuideNativeEditorE2EProbe {
             report.put("nativeEditorCallbacks", Map.of("paint", painted(), "text", editor.getValue(),
                     "clipboardCopyCutPaste", true, "undoRedo", true, "externalReplacement", true,
                     "proof", "committed-character callbacks; no hardware IME claim"));
-            editor.setCharacterLimit(originalLimit); editor.setValue(draft); client.keyboardHandler.setClipboard(clipboard);
+            editor.setCharacterLimit(originalLimit); editor.setValue(draft); GLFW.glfwSetClipboardString(client.getWindow().getWindow(), clipboard);
             check(clipboard.equals(client.keyboardHandler.getClipboard()), "clipboard restored");
             manager = MinecraftClientWindow.toastManager(client); readback = (ToastReadback) manager;
             check(readback.openallay$snapshot().queue().isEmpty() && readback.openallay$snapshot().occupied().stream().noneMatch(Boolean::booleanValue), "isolated native toast fixture");
@@ -136,7 +136,7 @@ public final class GuideNativeEditorE2EProbe {
     void close() {
         if (!active) return;
         editor.resize(width, height, x, y); editor.setCharacterLimit(originalLimit); editor.setValue(draft);
-        client.keyboardHandler.setClipboard(clipboard);
+        GLFW.glfwSetClipboardString(client.getWindow().getWindow(), clipboard);
         report.put("nativeEditorClipboardRestored", clipboard.equals(client.keyboardHandler.getClipboard()));
         report.put("nativeEditorStateRestored", editor.getValue().equals(draft)
                 && widget.e2eCharacterLimit() == originalLimit && widget.getWidth() == width

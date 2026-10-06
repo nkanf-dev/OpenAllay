@@ -80,6 +80,7 @@ def capture(game_jar, javap, output, project, target):
     classes = dict(CLASSES)
     if target == "1.18.2":
         classes["net.minecraft.client.player.LocalPlayer"] = ("chat",)
+        classes["net.minecraft.client.KeyboardHandler"] = ("getClipboard", "setClipboard")
         classes.update(TOAST_CLASSES)
         receipt["toastGeometry"] = "functional-pending: inspect manager admission/32px placement/removal before game acceptance"
     with zipfile.ZipFile(game_jar) as archive:
