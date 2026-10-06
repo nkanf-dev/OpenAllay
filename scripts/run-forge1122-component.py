@@ -52,7 +52,7 @@ def main():
                 if name=='META-INF/MANIFEST.MF' or name=='mcmod.info' or name=='META-INF/mods.toml' or name.endswith(('.SF','.RSA','.DSA')):disposition='excluded-original-container-metadata'
                 elif name.startswith('META-INF/services/'):
                     services.setdefault(name,[]).extend(data.decode().splitlines());disposition='merged-real-service-declarations'
-                elif not name.endswith('.class') and (name.startswith('META-INF/') or 'LICENSE' in name.upper() or 'NOTICE' in name.upper()) and not name.startswith('META-INF/openallay'):
+                elif not name.endswith('.class') and ('LICENSE' in Path(name).name.upper() or 'NOTICE' in Path(name).name.upper()):
                     destination='META-INF/licenses/'+record['role']+'/'+name.replace('/','_')
                 if disposition=='copied':
                     if destination in owned:
