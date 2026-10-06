@@ -2,7 +2,6 @@ package dev.openallay.client.observation;
 
 import dev.openallay.client.gui.MinecraftClientWindow;
 
-import com.mojang.blaze3d.platform.NativeImage;
 import dev.openallay.client.context.ClientFocusCapture;
 import dev.openallay.context.DataAuthority;
 import dev.openallay.context.DataCompleteness;
@@ -27,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 
 /** Next native frame capture. It never replaces a Screen or changes game input state. */
 public final class MinecraftClientViewCapture implements AutoCloseable {
@@ -101,7 +99,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         }
     }
 
-    public static boolean owns(Screen screen) {
+    public static boolean owns(Object screen) {
         return screen != null && screen.getClass().getName().startsWith("dev.openallay.client.");
     }
 
@@ -115,22 +113,21 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             if (target == WorldViewRequest.Target.GAME_UI && owns(MinecraftClientWindow.screen(client))) {
                 throw unavailable("OpenAllay is foreground; no native game UI is currently displayed");
             }
-            var nativeTarget = MinecraftClientWindow.mainRenderTarget(client);
             var limits = observations.imageLimits(actor);
-            if (nativeTarget.width <= 0 || nativeTarget.height <= 0
-                    || nativeTarget.width > limits.maxDimension() || nativeTarget.height > limits.maxDimension()
-                    || (long) nativeTarget.width * nativeTarget.height > limits.maxPixels()) {
+            if (MinecraftNativeImageCapture.width(client) <= 0 || MinecraftNativeImageCapture.height(client) <= 0
+                    || MinecraftNativeImageCapture.width(client) > limits.maxDimension() || MinecraftNativeImageCapture.height(client) > limits.maxDimension()
+                    || (long) MinecraftNativeImageCapture.width(client) * MinecraftNativeImageCapture.height(client) > limits.maxPixels()) {
                 throw new JavascriptExecutionException("view_image_too_large", "Native frame exceeds image dimensions or pixel limits");
             }
             Instant capturedAt = Instant.now();
             WorldFocusObservation focus = ClientFocusCapture.capture(client, platform, capturedAt);
             var camera = MinecraftCameraFacts.rendered(client, focus.camera());
-            Frame frame = new Frame(UUID.randomUUID().toString(), capturedAt, target, nativeTarget.width,
-                    nativeTarget.height, MinecraftCameraFacts.guiScale(client),
+            Frame frame = new Frame(UUID.randomUUID().toString(), capturedAt, target, MinecraftNativeImageCapture.width(client),
+                    MinecraftNativeImageCapture.height(client), MinecraftCameraFacts.guiScale(client),
                     camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !MinecraftClientWindow.hudHidden(client),
                     target == WorldViewRequest.Target.GAME_UI && (MinecraftClientWindow.screen(client) != null || MinecraftClientWindow.overlay(client) != null));
             selected.forEach(value -> value.submitted = true);
-            MinecraftNativeImageCapture.capture(nativeTarget).whenComplete((image, failure) -> {
+            MinecraftNativeImageCapture.capture(client).whenComplete((image, failure) -> {
                 if (failure != null) selected.forEach(value -> value.result.completeExceptionally(failure));
                 else nativeReady(frame, selected, image);
             });
@@ -140,7 +137,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
     }
 
     /** The readback future transfers image ownership here; this handler must never throw. */
-    private void nativeReady(Frame frame, List<Pending> selected, NativeImage image) {
+    private void nativeReady(Frame frame, List<Pending> selected, GuideImageBitmap image) {
         try {
             if (selected.stream().noneMatch(value -> available(value))) { image.close(); return; }
             dev.openallay.concurrent.NamedThreads.startDaemon("openallay-native-view-encode", () -> encode(frame, selected, image));
@@ -150,14 +147,14 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         }
     }
 
-    private void encode(Frame frame, List<Pending> selected, NativeImage image) {
+    private void encode(Frame frame, List<Pending> selected, GuideImageBitmap image) {
         try {
             int width;
             int height;
             int[] pixels;
             try (image) {
-                width = image.getWidth();
-                height = image.getHeight();
+                width = image.width();
+                height = image.height();
                 pixels = MinecraftImagePixels.argb(image);
             }
             if (selected.stream().noneMatch(this::available)) return;

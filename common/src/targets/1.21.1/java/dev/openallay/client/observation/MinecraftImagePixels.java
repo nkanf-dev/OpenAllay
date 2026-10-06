@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 /** 1.21/1.21.1's RGBA-named API exposes packed ABGR; consumers use packed ARGB. */
 public final class MinecraftImagePixels {
     private MinecraftImagePixels() {}
+    public static int[] argb(GuideImageBitmap image) { return image.argb(); }
     private static int swapRedBlue(int color) {
         return (color & 0xFF00FF00) | ((color & 0x00FF0000) >>> 16) | ((color & 0x000000FF) << 16);
     }

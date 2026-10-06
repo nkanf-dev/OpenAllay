@@ -13,8 +13,11 @@ import net.minecraft.client.Screenshot;
  */
 public final class MinecraftNativeImageCapture {
     private MinecraftNativeImageCapture() {}
+    public static int width(net.minecraft.client.Minecraft client) { return dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client).width; }
+    public static int height(net.minecraft.client.Minecraft client) { return dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client).height; }
 
-    public static CompletableFuture<NativeImage> capture(RenderTarget target) {
+    public static CompletableFuture<GuideImageBitmap> capture(net.minecraft.client.Minecraft client) {
+        RenderTarget target = dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client);
         try {
             return CompletableFuture.completedFuture(Screenshot.takeScreenshot(Objects.requireNonNull(target, "target")));
         } catch (Throwable failure) {

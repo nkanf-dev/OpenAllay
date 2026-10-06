@@ -54,8 +54,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 
 public final class ClientContextCapture {
     private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
@@ -336,16 +334,17 @@ public final class ClientContextCapture {
                 .sorted()
                 .toList().toString());
 
-        if (client.hitResult != null) {
-            add(values, "target", "type", client.hitResult.getType().name().toLowerCase(Locale.ROOT));
-            if (client.hitResult instanceof BlockHitResult blockHit) {
-                var state = client.level.getBlockState(blockHit.getBlockPos());
+        var hit = dev.openallay.client.observation.MinecraftHitFacts.hit(client);
+        if (hit != null) {
+            add(values, "target", "type", dev.openallay.client.observation.MinecraftHitFacts.kind(hit));
+            if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("block")) {
+                var state = client.level.getBlockState(dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit));
                 add(values, "target", "block_id",
                         MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString());
-                add(values, "target", "block_position", blockHit.getBlockPos().toShortString());
-            } else if (client.hitResult instanceof EntityHitResult entityHit) {
+                add(values, "target", "block_position", MinecraftClientContextFacts.blockPosition(dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit)));
+            } else if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("entity")) {
                 add(values, "target", "entity_type",
-                        MinecraftNativeRegistries.ENTITY_TYPE.getKey(entityHit.getEntity().getType()).toString());
+                        dev.openallay.client.observation.MinecraftHitFacts.entityType(dev.openallay.client.observation.MinecraftHitFacts.entity(hit)));
             }
         }
         if (client.getConnection() != null) {

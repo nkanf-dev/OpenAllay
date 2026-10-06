@@ -21,9 +21,6 @@ import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /** Reads only public native focus data and a live slot hit-test, without changing client UI state. */
@@ -60,6 +57,8 @@ public final class ClientFocusCapture {
         details.put("minecraft:dimension", dimension);
         details.put("minecraft:camera_source", "minecraft:main_camera");
         details.put("minecraft:target_source", "minecraft:client_hit_result");
+        String hitAvailability = dev.openallay.client.observation.MinecraftHitFacts.availability();
+        if (!hitAvailability.isEmpty()) details.put("minecraft:hit_availability", hitAvailability);
         details.put("minecraft:component_scope", dev.openallay.context.minecraft.MinecraftItemDataFacts.persistentScope());
         details.put("minecraft:menu_scope", "identity_carried_and_slot_count;slot_contents_not_scanned");
         if (overlay) {
@@ -94,36 +93,35 @@ public final class ClientFocusCapture {
     }
 
     private static WorldFocusObservation.Target target(Minecraft client) {
-        HitResult hit = client.hitResult;
+        var hit = dev.openallay.client.observation.MinecraftHitFacts.hit(client);
         if (hit == null) {
             return new WorldFocusObservation.Target("none", null, null, null);
         }
-        WorldFocusObservation.Position position = position(hit.getLocation());
+        WorldFocusObservation.Position position = position(dev.openallay.client.observation.MinecraftHitFacts.location(hit));
         // Native MISS is itself a BlockHitResult; test the kind before interpreting block data.
-        if (hit.getType() == HitResult.Type.MISS) {
+        if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("miss")) {
             return new WorldFocusObservation.Target("miss", position, null, null);
         }
-        if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult blockHit) {
-            BlockPos blockPos = blockHit.getBlockPos();
+        if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("block")) {
+            BlockPos blockPos = dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit);
             var state = client.level.getBlockState(blockPos);
             TreeMap<String, String> properties = new TreeMap<>();
             properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
-            var fluid = state.getFluidState();
             return new WorldFocusObservation.Target(
                     "block",
                     position,
                     new WorldFocusObservation.Block(
                             MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString(),
                             blockPosition(blockPos),
-                            blockHit.getDirection().getName(),
-                            blockHit.isInside(),
-                            dev.openallay.client.observation.MinecraftHitFacts.worldBorderHit(client, blockHit),
+                            dev.openallay.client.observation.MinecraftHitFacts.direction(hit).getName(),
+                            dev.openallay.client.observation.MinecraftHitFacts.inside(hit),
+                            dev.openallay.client.observation.MinecraftHitFacts.worldBorderHit(client, hit),
                             properties,
-                            fluid.isEmpty() ? "" : MinecraftNativeRegistries.FLUID.getKey(fluid.getType()).toString()),
+                            dev.openallay.client.observation.MinecraftHitFacts.fluid(state)),
                     null);
         }
-        if (hit.getType() == HitResult.Type.ENTITY && hit instanceof EntityHitResult entityHit) {
-            var entity = entityHit.getEntity();
+        if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("entity")) {
+            var entity = dev.openallay.client.observation.MinecraftHitFacts.entity(hit);
             return new WorldFocusObservation.Target(
                     "entity",
                     position,
@@ -131,7 +129,7 @@ public final class ClientFocusCapture {
                     new WorldFocusObservation.Entity(
                             entity.getUUID(),
                             entity.getId(),
-                            MinecraftNativeRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(),
+                            dev.openallay.client.observation.MinecraftHitFacts.entityType(entity),
                             entity.getName().getString(),
                             position(entity.position()),
                             blockPosition(entity.blockPosition()),
@@ -220,20 +218,9 @@ public final class ClientFocusCapture {
         boolean available = false;
         String diagnostic;
         try {
-            var encoded = dev.openallay.context.minecraft.MinecraftItemDataFacts
-                    .persistentData(stack, client.level.registryAccess());
-            var result = encoded.result();
-            if (result.isEmpty()) {
-                // A partial codec result is not a complete persistent component map.
-                diagnostic = shortDiagnostic("component_codec_error: "
-                        + encoded.error().map(error -> error.message()).orElse("No complete result"));
-            } else if (!result.get().isJsonObject()) {
-                diagnostic = "component_codec_error: Expected a JSON object";
-            } else {
-                components = result.get().getAsJsonObject();
-                available = true;
-                diagnostic = "";
-            }
+            components = MinecraftFocusItemData.persistentData(client, stack);
+            available = true;
+            diagnostic = "";
         } catch (RuntimeException failure) {
             diagnostic = shortDiagnostic("component_codec_error: " + failure.getClass().getSimpleName()
                     + (failure.getMessage() == null ? "" : ": " + failure.getMessage()));

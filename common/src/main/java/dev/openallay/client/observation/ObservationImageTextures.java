@@ -1,6 +1,5 @@
 package dev.openallay.client.observation;
 
-import com.mojang.blaze3d.platform.NativeImage;
 import dev.openallay.client.gui.clipboard.ClipboardImageEncoder;
 import dev.openallay.guide.GuideService;
 import dev.openallay.model.image.ImageReference;
@@ -66,11 +65,11 @@ public final class ObservationImageTextures implements AutoCloseable {
                     ClipboardImageEncoder.Preview preview = new ClipboardImageEncoder.Preview(width, height, sampledPixels);
                     client.execute(() -> {
                         if (!current(reference, loading, capturedGeneration)) return;
-                        NativeImage image = new NativeImage(preview.width(), preview.height(), false);
+                        var image = MinecraftImageTextures.create(preview.width(), preview.height());
                         try {
                             int[] pixels = preview.argb();
                             for (int y = 0; y < preview.height(); y++) {
-                                for (int x = 0; x < preview.width(); x++) MinecraftImagePixels.setArgb(image, x, y, pixels[y * preview.width() + x]);
+                                for (int x = 0; x < preview.width(); x++) MinecraftImageTextures.setArgb(image, x, y, pixels[y * preview.width() + x]);
                             }
                             String texture = "openallay:observation/" + owner + "/" + reference.sha256();
                             MinecraftImageTextures.register(client.getTextureManager(), texture, () -> "OpenAllay observation", image);
