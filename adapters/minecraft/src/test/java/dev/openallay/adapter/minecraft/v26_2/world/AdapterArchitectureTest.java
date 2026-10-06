@@ -78,7 +78,7 @@ class AdapterArchitectureTest {
     @Test void buildDoesNotDependOnCoreDomainOrBundleGameLibraries() throws IOException {
         String build = Files.readString(Path.of(System.getProperty("minecraft26Adapter.buildFile")));
         assertTrue(build.contains("id 'java-library'"));
-        assertTrue(build.contains("id 'net.neoforged.moddev'"));
+        assertTrue(build.contains("pluginManager.apply(legacyNativeGame ? 'net.neoforged.moddev.legacyforge' : 'net.neoforged.moddev')"));
         assertTrue(build.contains("compileOnly(project(':extension-api'))"));
         assertTrue(build.contains("options.release = Integer.parseInt(java_version)"));
         assertTrue(build.contains("compileOnly(project(':runtime-json'))"));
@@ -104,8 +104,14 @@ class AdapterArchitectureTest {
                 "NativeBlockEntityTags.containerTransformId", "NativeBlockEntityTags.hasOnlyContainerFields",
                 "NativeBlockEntityData.load", "NativeBlockEntityData.save",
                 "materialPalette()", "encodeState(decode(entry.getValue().toString()))", "level.setBlock(", "level.removeBlockEntity",
-                "level.setBlockEntity", "level.blockEntityChanged", "level.sendBlockUpdated", "private static final int WRITE_FLAGS = 18;"))
+                "NativeBlockEntityLifecycle.install", "NativeBlockEntityLifecycle.markDirty", "level.sendBlockUpdated", "private static final int WRITE_FLAGS = 18;"))
             assertTrue(codec.contains(call), "Missing native behavior: " + call);
+        String lifecycle = Files.readString(source.resolve("NativeBlockEntityLifecycle.java"));
+        String dirty = Files.readString(source.resolve("NativeChunkDirty.java"));
+        assertTrue(lifecycle.contains("level.setBlockEntity(entity)"));
+        assertTrue(lifecycle.contains("NativeChunkDirty.mark(level, pos)"));
+        assertTrue(dirty.contains("level.getChunkAt(pos).markUnsaved()"));
+        assertTrue(codec.indexOf("NativeBlockEntityLifecycle.markDirty") < codec.indexOf("level.setBlock("));
         String session = Files.readString(source.resolve("NativeWorldSession.java"));
         String binding = Files.readString(source.resolve("NativeWorldBinding.java"));
         for (String call : List.of("getChunkNow", "NativeTerrainHeightmap.isPrimed", "getBlockEntitiesPos", "updateFromNeighbourShapes",
