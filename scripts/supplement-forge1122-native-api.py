@@ -9,6 +9,8 @@ import subprocess
 import zipfile
 
 CLASSES = (
+    'net.minecraft.client.resources.LanguageManager',
+    'net.minecraft.client.resources.Language',
     'net.minecraftforge.fml.common.eventhandler.EventPriority',
     'net.minecraft.client.gui.GuiIngame',
     'net.minecraft.util.text.Style',
