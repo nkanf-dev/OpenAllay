@@ -187,6 +187,12 @@ def classpath_libraries(metadata, root, launch):
                                     Path("/nonexistent"), allow_gradle=False)
 
 
+def pinned_pack200_java8(info):
+    # Genuine Java8 reports 1.8, not 8. Reject runtime17 or any other build-only JDK.
+    return (re.search(r'version "1\.8\.0_482"', info) is not None
+            and "Temurin" in info and "build 1.8.0_482-b08" in info)
+
+
 def prepare_pack200(args, output, java, cp, runtime):
     # Build-only JDK8 conversion of exact official Forge resource. Runtime stays Java17.
     import lzma
@@ -198,9 +204,7 @@ def prepare_pack200(args, output, java, cp, runtime):
     checked = subprocess.run([str(java8), "-version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              text=True, timeout=15, check=False)
     java8_info = checked.stdout.strip()
-    # Genuine Java8 reports 1.8, not 8; the shared modern-version helper rejects this syntax.
-    runtime.require(checked.returncode == 0 and re.search(r'version "1\.8\.0_482"', java8_info)
-                    and "Temurin" in java8_info and "build 1.8.0_482-b08" in java8_info,
+    runtime.require(checked.returncode == 0 and pinned_pack200_java8(java8_info),
                     "Use exact pinned build-only Temurin8u482-b08")
     with zipfile.ZipFile(forge) as archive:
         compressed = archive.read("binpatches.pack.lzma")

@@ -19,6 +19,14 @@ class Boundaries(unittest.TestCase):
         self.metadata = [json.loads((PACKET / name).read_text()) for name in
                          ("install_profile.json", "version.json", "minecraft-1.12.2.json")]
 
+    def test_exact_genuine_java8_build_version_syntax(self):
+        info = ('openjdk version "1.8.0_482"\n'
+                'OpenJDK Runtime Environment (Temurin)(build 1.8.0_482-b08)')
+        self.assertTrue(probe.pinned_pack200_java8(info))
+        for wrong in (info.replace("1.8.0_482", "17.0.18"),
+                      info.replace("b08", "b07"), info.replace("Temurin", "Other")):
+            self.assertFalse(probe.pinned_pack200_java8(wrong))
+
     def test_official_identity(self):
         self.assertIn("org.ow2.asm:asm-debug-all:5.2", probe.validate_metadata(*self.metadata))
         self.assertEqual([], probe.FLAGS)
