@@ -17,6 +17,21 @@ import com.mojang.blaze3d.systems.RenderSystem;
 public final class MinecraftImageTextures {
     private static final Map<TextureManager, Map<ResourceLocation, OwnedTexture>> OWNERS = new IdentityHashMap<>();
     private MinecraftImageTextures() {}
+
+    public static GuideImageBitmap create(int width, int height) { return GuideImageBitmaps.create(width, height); }
+    public static void setArgb(GuideImageBitmap image, int x, int y, int argb) { GuideImageBitmaps.setArgb(image, x, y, argb); }
+    public static void register(TextureManager manager, String texture, Supplier<String> label, GuideImageBitmap image) {
+        var pixels = GuideImageBitmaps.take(image);
+        try { register(manager, texture, label, pixels); }
+        catch (RuntimeException | Error failure) {
+            if (!(failure instanceof GuideImageRegistrationException)) {
+                try { pixels.close(); }
+                catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+            }
+            throw failure;
+        }
+    }
+
     private static void ownerThread() {
         if (!RenderSystem.isOnRenderThread()) throw new IllegalStateException("Texture ownership requires the render thread");
     }

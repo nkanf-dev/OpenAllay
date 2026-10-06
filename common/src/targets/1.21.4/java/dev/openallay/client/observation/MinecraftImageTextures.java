@@ -10,6 +10,21 @@ import net.minecraft.client.renderer.texture.TextureManager;
 public final class MinecraftImageTextures {
     private MinecraftImageTextures() {}
 
+    public static GuideImageBitmap create(int width, int height) { return GuideImageBitmaps.create(width, height); }
+    public static void setArgb(GuideImageBitmap image, int x, int y, int argb) { GuideImageBitmaps.setArgb(image, x, y, argb); }
+    public static void register(TextureManager manager, String texture, Supplier<String> label, GuideImageBitmap image) {
+        var pixels = GuideImageBitmaps.take(image);
+        try { register(manager, texture, label, pixels); }
+        catch (RuntimeException | Error failure) {
+            if (!(failure instanceof GuideImageRegistrationException)) {
+                try { pixels.close(); }
+                catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+            }
+            throw failure;
+        }
+    }
+
+
     /** The old GL constructor has no debug label. Successful registration transfers image ownership. */
     public static void register(
             TextureManager manager, String texture, Supplier<String> label, NativeImage image) {

@@ -6,7 +6,6 @@ import dev.openallay.platform.minecraft.MinecraftResourceIds;
 
 import com.google.gson.JsonObject;
 import com.google.gson.Gson;
-import com.mojang.blaze3d.platform.NativeImage;
 import dev.openallay.client.gui.clipboard.ClipboardImageEncoder;
 import dev.openallay.client.observation.ClientObservationInputCoordinator;
 import dev.openallay.client.observation.GuideObservationInputActions;
@@ -2956,10 +2955,10 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         for (ComposerImageDraft.Attachment image : images) {
             if (image.preview() == null || imageTextures.containsKey(image.id())) continue;
             ClipboardImageEncoder.Preview preview = image.preview();
-            NativeImage bitmap = new NativeImage(preview.width(), preview.height(), false);
+            var bitmap = MinecraftImageTextures.create(preview.width(), preview.height());
             int[] pixels = preview.argb();
             for (int y = 0; y < preview.height(); y++) {
-                for (int x = 0; x < preview.width(); x++) dev.openallay.client.observation.MinecraftImagePixels.setArgb(bitmap, x, y, pixels[y * preview.width() + x]);
+                for (int x = 0; x < preview.width(); x++) MinecraftImageTextures.setArgb(bitmap, x, y, pixels[y * preview.width() + x]);
             }
             String texture = "openallay:composer/" + imageDraftOwner + "/" + image.id();
             MinecraftImageTextures.register(minecraft.getTextureManager(), texture, () -> "OpenAllay draft image", bitmap);
