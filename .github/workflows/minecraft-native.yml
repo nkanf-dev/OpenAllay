@@ -1,16 +1,15 @@
-name: Mature ecosystem affected native acceptance
+name: Stock Forge36 Java17 client prerequisite
 on:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: mature-forge-native-${{ github.ref }}
+  group: stock-forge36-java17-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  native:
-    name: Fabric 26.2 affected shared-native UI acceptance
+  stock-client:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -18,66 +17,35 @@ jobs:
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: temurin
-          java-version: |
-            17
-            21
-            25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
-        with:
-          cache-provider: basic
-          cache-read-only: true
-      - name: Prepare the exact independent universal Builder source
-        run: python3 -B scripts/prepare-distribution.py
-      - name: Package the affected bundled Fabric product without repeating shared feature suites
-        shell: bash
-        run: |
-          ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :fabric:assemble
-          python3 -B scripts/verify-native-target-package.py --target 26.2 --bundled-builder --loader fabric
-          python3 -B scripts/stage-ci-client-production.py --minecraft-target 26.2 --loader fabric
-      - name: Retain the exact packaged product bytes
-        if: ${{ always() && hashFiles('fabric/build/libs/openallay-fabric-26.2-0.4.2.jar') != '' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: modern-representative-production-26.2-${{ github.sha }}-${{ github.run_attempt }}
-          retention-days: 7
-          if-no-files-found: error
-          path: |
-            build/ci-client-production/
-            fabric/build/libs/openallay-fabric-26.2-0.4.2.jar
-      - name: Install the isolated headless display and compact evidence tools
+          java-version: '17.0.18+8'
+      - name: Validate frozen prerequisite source only
+        run: python3 -B scripts/forge16165-prerequisite/stock-forge36-prerequisite.py --repo "$PWD" --metadata-only
+      - name: Install isolated display and capture tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1 webp
-          python3 -m venv build/ci-tools
-          build/ci-tools/bin/python -m pip install Pillow==11.3.0
-      - name: Provision the normal official Fabric client and verified assets
-        run: |
-          python3 -B scripts/prepare-ci-minecraft-runtime.py --loader fabric --minecraft-target 26.2 --java "$JAVA_HOME_25_X64/bin/java" --minecraft-root "$PWD/build/e2e/runtime/26.2/minecraft" > build/ci-runtime-receipt.json
-          python3 -B scripts/run-packaged-builder-acceptance.py --prepare-assets --minecraft-target 26.2 --minecraft-root "$PWD/build/e2e/runtime/26.2/minecraft" --assets-root "$PWD/build/e2e/runtime/26.2/assets"
-      - name: Run actual Builder, original-world reload and changed native UI behavior
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/stock-ci-tools
+          build/stock-ci-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Install actual official Forge36 and boot unmodified client once
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
           ALSOFT_DRIVERS: 'null'
-          OPENALLAY_E2E_SOURCE_REVISION: ${{ github.sha }}
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/ci-xvfb.log"             python3 -B scripts/run-ci-game-workflow.py --loader fabric --minecraft-target 26.2 --java "$JAVA_HOME_25_X64/bin/java" --batch-id modern262-${{ github.run_id }} --scenarios ui-live-ux-regressions
-      - name: Compress evidence from actually prepared client phases
-        if: ${{ always() && hashFiles('build/e2e/ci-client/fabric/**/summary.json') != '' }}
-        run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader fabric --batch-id modern262-${{ github.run_id }}
-      - name: Retain actual outcomes and compact native diagnostics
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/stock-xvfb.log" build/stock-ci-tools/bin/python -B scripts/forge16165-prerequisite/stock-forge36-prerequisite.py --repo "$PWD" --java "$JAVA_HOME/bin/java" --java-release '17.0.18+8' --minecraft-root "$PWD/build/e2e/runtime/forge16165-stock/minecraft" --output "$PWD/build/e2e/forge16165-stock-client"
+      - name: Retain exact installer and client outcome
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: modern-representative-native-26.2-${{ github.sha }}-${{ github.run_attempt }}
+          name: forge16165-stock-java17-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7
           if-no-files-found: ignore
           path: |
-            build/forge-native-contracts/
-            build/ci-runtime-receipt.json
-            build/ci-xvfb.log
-            build/e2e/runtime/26.2/minecraft/.provision/*.json
-            build/e2e/ci-client/fabric/modern262-${{ github.run_id }}/summary.json
-            build/e2e/ci-client/fabric/modern262-${{ github.run_id }}/*.log
-            build/e2e/ci-client-compact/fabric/modern262-${{ github.run_id }}/
-            build/reports/problems/
-            fabric/build/reports/
+            build/stock-xvfb.log
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.json
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+            build/e2e/runtime/forge16165-stock/assets/verified.json
+            build/e2e/forge16165-stock-client/*.json
+            build/e2e/forge16165-stock-client/*.log
+            build/e2e/forge16165-stock-client/*.png
+            build/e2e/forge16165-stock-client/game/logs/
+            build/e2e/forge16165-stock-client/game/crash-reports/
