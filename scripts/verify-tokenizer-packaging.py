@@ -51,7 +51,7 @@ def verify(path: Path, loader: str) -> dict:
             require(item["version"]["artifactVersion"] == VERSION, "Wrong JTokkit JarJar version")
         require(nested_path in registered, "JTokkit is not registered with the loader")
         content = outer.read(nested_path)
-        if loader == "neoforge":
+        if loader in ("forge", "neoforge"):
             # Fabric Loom adds synthetic fabric.mod.json, so its nested JAR hash changes.
             require(hashlib.sha256(content).hexdigest() == JAR_SHA256,
                     "Nested JTokkit differs from the pinned Maven artifact")

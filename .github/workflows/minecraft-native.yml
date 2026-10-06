@@ -1,15 +1,32 @@
-name: Mainstream Forge shared JSON ABI verification
+name: Build release packages
 on:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: mainstream-json-${{ github.ref }}
+  group: release-packages-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  json-abi:
+  plan:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.groups.outputs.groups }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - id: groups
+        run: python3 -B scripts/build-minecraft-artifacts.py groups --github-output "$GITHUB_OUTPUT"
+  build-packages:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.groups) }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -25,18 +42,48 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: true
-      - name: Verify old public Gson ABI and configured engine semantics
-        run: ./gradlew --configure-on-demand --stacktrace -PminecraftTarget=1.19.2 :engine-core:compileTestJava :engine-core:test --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.model.live.LiveModelContinuationDiagnosticTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest --tests dev.openallay.world.WorldFocusObservationTest --tests dev.openallay.json.EngineJsonHierarchyTest -PjsonVerificationGsonVersion=2.8.0
-      - name: Verify the same compiled source against the modern host Gson
-        run: ./gradlew --configure-on-demand --stacktrace -PminecraftTarget=1.19.2 :engine-core:compileTestJava :engine-core:test --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.model.live.LiveModelContinuationDiagnosticTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest --tests dev.openallay.world.WorldFocusObservationTest --tests dev.openallay.json.EngineJsonHierarchyTest -PjsonVerificationGsonVersion=2.14.0
-      - name: Preserve focused results and full diagnostics
+      - name: Prepare exact bundled Extension source
+        run: python3 -B scripts/prepare-distribution.py
+      - name: Compile and package selected native group
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_FAMILIES: ${{ matrix.families }}
+        run: python3 -B scripts/build-minecraft-artifacts.py build-and-stage release-group --target "$RELEASE_TARGET" --families "$RELEASE_FAMILIES"
+      - name: Preserve new packages and source-bound package receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mainstream-json-abi-${{ github.sha }}-${{ github.run_attempt }}
+          name: release-packages-${{ matrix.target }}-${{ github.sha }}
           retention-days: 14
+          if-no-files-found: warn
+          path: release-group/
+      - name: Preserve compiler diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-build-diagnostics-${{ matrix.target }}-${{ github.sha }}
+          retention-days: 7
           if-no-files-found: ignore
           path: |
-            engine-core/build/test-results/
-            engine-core/build/reports/tests/
+            build/release-build-logs/
             build/reports/problems/
+  stage:
+    needs: build-packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: release-packages-*
+          path: build/release-groups
+      - name: Bind all current packages to compile-package evidence
+        run: python3 -B scripts/build-minecraft-artifacts.py merge-staged build/release-groups release
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-staged-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: release/

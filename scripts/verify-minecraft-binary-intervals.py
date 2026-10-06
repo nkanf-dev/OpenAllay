@@ -120,16 +120,23 @@ def package_guard(path, family, version, root=ROOT, *, accepted_original_runtime
                     "Candidate Fabric loader dependency differs from the real build profile")
             require(metadata["depends"]["java"] == ">=" + profile["java_version"], "Candidate Java metadata differs")
         else:
-            descriptor = "META-INF/mods.toml" if family["buildTarget"] in ("1.20.1", "1.20.2", "1.20.3", "1.20.4") else "META-INF/neoforge.mods.toml"
+            descriptor = "META-INF/mods.toml" if family["loader"] == "forge" or family["buildTarget"] in ("1.20.1", "1.20.2", "1.20.3", "1.20.4") else "META-INF/neoforge.mods.toml"
             metadata = archive.read(descriptor).decode()
             blocks = metadata.split("[[dependencies.openallay]]")[1:]
-            loader = "forge" if family["buildTarget"] == "1.20.1" else "neoforge"
+            actual_forge = family["loader"] == "forge"
+            loader = "forge" if actual_forge or family["buildTarget"] == "1.20.1" else "neoforge"
+            loader_range = ("[" + profile["forge_version"].removeprefix(family["buildTarget"] + "-") + ",)"
+                            if actual_forge else "[47.1.0,)" if family["buildTarget"] == "1.20.1"
+                            else "[" + profile["neoforge_version"] + ",)")
             rows = [dict(re.findall(r'(?m)^\s*(modId|versionRange)\s*=\s*"([^"\n]+)"', block.split("[[", 1)[0])) for block in blocks]
             loader_rows = [row for row in rows if row.get("modId") == loader]
-            require(len(loader_rows) == 1 and loader_rows[0]["versionRange"] == ("[47.1.0,)" if family["buildTarget"] == "1.20.1" else "[" + profile["neoforge_version"] + ",)"),
-                    "Candidate NeoForge dependency differs from the real build profile")
+            require(len(loader_rows) == 1 and loader_rows[0]["versionRange"] == loader_range,
+                    "Native loader dependency differs from the real build profile")
             loader_fields = re.findall(r'(?m)^\s*loaderVersion\s*=\s*"([^"\n]+)"', metadata)
-            require(loader_fields == [profile["neoforge_loader_version_range"]], "Candidate FML loader range differs")
+            require(loader_fields == [profile["forge_loader_version_range" if actual_forge else "neoforge_loader_version_range"]],
+                    "Native FML loader range differs")
+            require(not any(row.get("modId") == ("neoforge" if loader == "forge" else "forge") for row in rows),
+                    "Competing native loader dependency")
         # Parse every real Mixin binding and require its packaged class and referenced refmap.
         for name in names:
             if name.endswith(".mixins.json"):

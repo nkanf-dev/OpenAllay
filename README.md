@@ -10,7 +10,7 @@ to work through the task and bring useful answers back into the game.
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
 
 [Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[Quick start](#quick-start) · [0.4.2 release notes](docs/releases/0.4.2.md) ·
+[Quick start](#quick-start) · [0.4.3 release notes](docs/releases/0.4.3.md) ·
 [Community](#community-and-development) ·
 [Mature Forge backport verification](docs/verification/mature-forge-ecosystems.md)
 
@@ -23,19 +23,20 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.4.2** supports **23 Minecraft versions from 1.20.1 through 26.3**
-on **Fabric and NeoForge**. Download the JAR that lists your exact Minecraft
-version and loader from [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.2).
+OpenAllay **0.4.3** supports **25 Minecraft versions**: Forge on **1.18.2 and
+1.19.2**, plus Fabric and NeoForge on **1.20.1 through 26.3**. Download the JAR
+that lists your exact Minecraft version and loader from
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.3).
 Some files cover multiple versions. Fabric also needs the matching **Fabric API**.
 
 | Minecraft version | Java version |
 | --- | --- |
-| 1.20.1–1.20.4 | 17 |
+| 1.18.2, 1.19.2 and 1.20.1–1.20.4 | 17 |
 | 1.20.5–1.20.6 and 1.21–1.21.11 | 21 |
 | 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | 25 |
 
 Minecraft **26.2 / Java 25** remains the development mainline. See the
-[release compatibility table](docs/native-binary-artifacts.md#published-042-files)
+[release compatibility table](docs/native-binary-artifacts.md#release-043-files)
 for the exact versions covered by each download.
 
 1. Put the JAR in your instance's `mods` folder and start Minecraft.
@@ -76,7 +77,7 @@ mods and their integrations; none of these mods is required to use OpenAllay.
 
 ## Build in your world
 
-The **Minecraft Builder** Extension comes with both loader downloads. Describe
+The **Minecraft Builder** Extension comes with every loader download. Describe
 what you want to build, then use geometry, terrain tools, building presets, and
 saved structure templates to bring it into your active single-player world.
 Templates support rotation and mirroring. Block undo checks for later edits and

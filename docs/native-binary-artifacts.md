@@ -1,5 +1,39 @@
 # Native binary release artifacts
 
+## Release 0.4.3 files
+
+OpenAllay 0.4.3 adds Forge 1.18.2 and 1.19.2 and includes the model setup,
+text input and HUD fixes. The release contains **33 JARs** covering **25 Minecraft
+versions** and **48 version/loader pairs**. Choose the exact version and loader.
+Fabric requires the matching Fabric API.
+
+| Exact Minecraft versions | Loader | Java | Published JARs |
+| --- | --- | --- | --- |
+| `1.18.2` | Forge | 17 | `openallay-forge-1.18.2-0.4.3.jar` |
+| `1.19.2` | Forge | 17 | `openallay-forge-1.19.2-0.4.3.jar` |
+| `1.20.1` | Fabric + NeoForge | 17 | `openallay-fabric-1.20.1-0.4.3.jar`<br>`openallay-neoforge-1.20.1-0.4.3.jar` |
+| `1.20.2` | Fabric + NeoForge | 17 | `openallay-fabric-1.20.2-0.4.3.jar`<br>`openallay-neoforge-1.20.2-0.4.3.jar` |
+| `1.20.3`, `1.20.4` | Fabric | 17 | `openallay-fabric-1.20.3-through-1.20.4-0.4.3.jar` |
+| `1.20.3` | NeoForge | 17 | `openallay-neoforge-1.20.3-0.4.3.jar` |
+| `1.20.4` | NeoForge | 17 | `openallay-neoforge-1.20.4-0.4.3.jar` |
+| `1.20.5`, `1.20.6` | Fabric + NeoForge | 21 | `openallay-fabric-1.20.5-through-1.20.6-0.4.3.jar`<br>`openallay-neoforge-1.20.5-through-1.20.6-0.4.3.jar` |
+| `1.21`, `1.21.1` | Fabric + NeoForge | 21 | `openallay-fabric-1.21-through-1.21.1-0.4.3.jar`<br>`openallay-neoforge-1.21-through-1.21.1-0.4.3.jar` |
+| `1.21.2`, `1.21.3` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.2-through-1.21.3-0.4.3.jar`<br>`openallay-neoforge-1.21.2-through-1.21.3-0.4.3.jar` |
+| `1.21.4` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.4-0.4.3.jar`<br>`openallay-neoforge-1.21.4-0.4.3.jar` |
+| `1.21.5` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.5-0.4.3.jar`<br>`openallay-neoforge-1.21.5-0.4.3.jar` |
+| `1.21.6` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.6-0.4.3.jar`<br>`openallay-neoforge-1.21.6-0.4.3.jar` |
+| `1.21.7`, `1.21.8` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.7-through-1.21.8-0.4.3.jar`<br>`openallay-neoforge-1.21.7-through-1.21.8-0.4.3.jar` |
+| `1.21.9`, `1.21.10` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.9-through-1.21.10-0.4.3.jar`<br>`openallay-neoforge-1.21.9-through-1.21.10-0.4.3.jar` |
+| `1.21.11` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.11-0.4.3.jar`<br>`openallay-neoforge-1.21.11-0.4.3.jar` |
+| `26.1`, `26.1.1`, `26.1.2` | Fabric + NeoForge | 25 | `openallay-fabric-26.1-through-26.1.2-0.4.3.jar`<br>`openallay-neoforge-26.1-through-26.1.2-0.4.3.jar` |
+| `26.2` | Fabric + NeoForge | 25 | `openallay-fabric-26.2-0.4.3.jar`<br>`openallay-neoforge-26.2-0.4.3.jar` |
+| `26.3` | Fabric + NeoForge | 25 | `openallay-fabric-26.3-0.4.3.jar`<br>`openallay-neoforge-26.3-0.4.3.jar` |
+
+The 0.4.3 files are rebuilt from the current source. Each build records its source,
+loader, target, artifact hash and package checks. Previous native execution
+records retain their original source and JAR identities. The 0.4.2 release and
+its original-byte publication records remain unchanged below.
+
 ## Published 0.4.2 files
 
 [OpenAllay 0.4.2](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.2)

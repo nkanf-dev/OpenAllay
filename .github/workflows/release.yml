@@ -1,94 +1,78 @@
 name: Release
-'on':
+on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing annotated release tag; original artifact builds stay unchanged
+        description: Annotated tag bound to the package build source
         required: true
-        default: v0.4.2
+        default: v0.4.3
         type: string
-  push:
-    tags:
-    - v*
+      build_run_id:
+        description: Successful release package build run
+        required: true
+        type: string
+      build_source_sha:
+        description: Exact package build source commit
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.release_tag }}
   cancel-in-progress: false
 jobs:
   publish:
-    name: Publish verified unchanged ${{ inputs.release_tag || github.ref_name }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    env:
-      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
-      OPENALLAY_MINECRAFT_TARGET: '26.2'
-      OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY: build/release-receipts
+    timeout-minutes: 30
     permissions:
       contents: write
       actions: read
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      OPENALLAY_MINECRAFT_TARGET: '26.2'
+      OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY: release/build-receipts
     steps:
-    - name: Check out annotated tag history
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      with:
-        fetch-depth: 0
-        fetch-tags: true
-        persist-credentials: false
-    - name: Validate tag and release vacancy
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: ./scripts/verify-release-tag.sh "$RELEASE_TAG"
-    - name: Validate Modrinth credential
-      env:
-        MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-      run: test -n "${MODRINTH_TOKEN}"
-    - name: Resolve the original accepted files once and retain the same immutable cache
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        python3 -B scripts/fill-original-selection-entries.py --root "$PWD" --draft distribution/accepted-release-artifacts.inputs.json --cache build/accepted-originals --output distribution/accepted-release-artifacts.json --member-receipt build/accepted-original-members.json
-    - name: Stage the original bytes and bind existing proof to final release paths
-      run: |-
-        python3 -B scripts/promote-accepted-artifacts.py stage > release-publication-records.json
-        python3 -B scripts/build-minecraft-artifacts.py publication-records release --receipt-directory build/release-receipts > release-publication-records.json
-    - name: Retain final-byte receipts and publication records
-      if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: release-receipts-${{ github.sha }}-${{ github.run_attempt }}
-        retention-days: 7
-        if-no-files-found: warn
-        path: |-
-          build/release-receipts/
-          release-publication-records.json
-          build/accepted-original-members.json
-          distribution/accepted-release-artifacts.json
-    - name: Generate release notes
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: python3 scripts/generate-release-notes.py "$RELEASE_TAG" --repository "${GITHUB_REPOSITORY}" --output
-        release-notes.md
-    - name: Publish Fabric and NeoForge to Modrinth
-      env:
-        MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-      run: ./scripts/publish-modrinth.sh "$RELEASE_TAG" release
-    - name: Publish GitHub release
-      env:
-        GH_TOKEN: ${{ github.token }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        release_flags=()
-        if [[ "$RELEASE_TAG" == *-* ]]; then
-          release_flags+=(--prerelease)
-        fi
-        gh release create "$RELEASE_TAG" \
-          release/openallay-*.jar \
-          release/SHA256SUMS \
-          release/accepted-originals.json \
-          release-publication-records.json \
-          --fail-on-no-commits \
-          --notes-file release-notes.md \
-          --title "OpenAllay ${GITHUB_REF_NAME}" \
-          --verify-tag \
-          "${release_flags[@]}"
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: ${{ inputs.release_tag }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Verify release tag and source-bound successful package run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          BUILD_SOURCE_SHA: ${{ inputs.build_source_sha }}
+        run: python3 -B scripts/verify-release-package-source.py
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run_id }}
+          name: release-staged-${{ inputs.build_source_sha }}
+          path: release
+      - name: Check retained compile-package receipts against final publication paths
+        run: python3 -B scripts/build-minecraft-artifacts.py publication-records release --build-receipt-directory release/build-receipts > release-publication-records.json
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/generate-release-notes.py "$RELEASE_TAG" --repository "$GITHUB_REPOSITORY" --output release-notes.md
+      - name: Publish all selected loaders to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./scripts/publish-modrinth.sh "$RELEASE_TAG" release
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/publish-current-github-release.py
+      - name: Preserve exact publication records
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-publication-${{ inputs.release_tag }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            release-publication-records.json
+            release/build-receipts/
+            release/SHA256SUMS
+            release-notes.md

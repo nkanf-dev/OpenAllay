@@ -7,9 +7,11 @@ from pathlib import Path
 import re
 import stat
 import sys
+from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
-LOADERS = ("fabric", "neoforge")
+LOADERS = ("fabric", "forge", "neoforge")
+DEFAULT_LOADERS = ("fabric", "neoforge")
 MAX_JSON_BYTES = 1024 * 1024
 MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 MAX_EVIDENCE_BYTES = 16 * 1024 * 1024
@@ -114,20 +116,22 @@ def read_catalog(path):
     order = catalog["targetOrder"]
     require(type(order) is list and order and len(order) <= 128, "Expected bounded external target order")
     keys = [target_key(target) for target in order]
-    require(keys == sorted(set(keys)) and keys[0] >= target_key("1.20.1") and "26.2" in order, "External target order must be unique, ascending, and within this phase")
+    require(keys == sorted(set(keys)) and keys[0] >= target_key("1.18.2") and "26.2" in order, "External target order must be unique, ascending, and within this phase")
     accepted = catalog["acceptedFamilies"]
     candidates = catalog["candidateIntervals"]
     require(type(accepted) is list and 0 < len(accepted) <= 128 and type(candidates) is list and len(candidates) <= 128, "Expected bounded family/candidate lists")
     ids, coverage = set(), set()
     for family in accepted:
         validate_family(family, order)
+        require(all(family["loader"] in target_loaders(ROOT, target)["loaders"]
+                    for target in family["supportedTargets"]), "Family must use actual native target loaders")
         require(family["id"] not in ids, "Duplicate family id")
         ids.add(family["id"])
         for target in family["supportedTargets"]:
             key = (family["loader"], target)
             require(key not in coverage, "Overlapping accepted families for loader/target")
             coverage.add(key)
-    require(all((loader, "26.2") in coverage for loader in LOADERS), "Keep the current default family for both loaders")
+    require(all((loader, "26.2") in coverage for loader in DEFAULT_LOADERS), "Keep the current default family for both loaders")
     candidate_ids = set()
     for candidate in candidates:
         shape(candidate, {"loaders", "buildTarget", "targets", "publishing"}, "Candidate interval")
@@ -136,6 +140,8 @@ def read_catalog(path):
         require(type(loaders) is list and loaders and all(type(loader) is str and loader in LOADERS for loader in loaders)
                 and len(set(loaders)) == len(loaders), "Candidate loaders must be distinct known loaders")
         interval(candidate["targets"], order)
+        require(all(loader in target_loaders(ROOT, target)["loaders"]
+                    for loader in loaders for target in candidate["targets"]), "Candidate must use actual native target loaders")
         require(candidate["buildTarget"] in candidate["targets"], "Candidate buildTarget must be inside its interval")
         for loader in loaders:
             candidate_id = family_for(loader, candidate["buildTarget"], candidate["targets"])["id"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check compiled shared-engine identity in two native target packages, not game support."""
+"""Check compiled shared-engine identity in actual native target packages, not game support."""
 import argparse
 from collections import Counter
 import hashlib

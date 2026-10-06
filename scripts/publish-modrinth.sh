@@ -27,10 +27,14 @@ minecraft_version=$(python3 "$repository/scripts/minecraft-target.py" \
 
 # Verify every selected artifact before any API activity. A receipt checks final
 # staged-byte consistency; reviewed source catalog entries remain the admission.
+# Compile/package receipts describe new release builds, never a new game run.
 distribution=${2:-release}
 publication_arguments=(publication-records "$distribution")
 if [[ -n "${OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY:-}" ]]; then
   publication_arguments+=(--receipt-directory "$OPENALLAY_MINECRAFT_RECEIPT_DIRECTORY")
+fi
+if [[ -n "${OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY:-}" ]]; then
+  publication_arguments+=(--build-receipt-directory "$OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY")
 fi
 publication_records=$(python3 "$repository/scripts/build-minecraft-artifacts.py" "${publication_arguments[@]}")
 
@@ -76,7 +80,7 @@ payload = {
     "description": "A modern Minecraft Agent with Skills, Extensions, and data-driven game analysis.",
     "body": body,
     "categories": ["utility"],
-    "additional_categories": ["fabric", "neoforge"],
+    "additional_categories": ["fabric", "forge", "neoforge"],
     "client_side": "required",
     "server_side": "optional",
     "license_id": "MIT",
@@ -130,7 +134,7 @@ payload = {
     "description": "A modern Minecraft Agent with Skills, Extensions, and data-driven game analysis.",
     "body": body,
     "categories": ["utility"],
-    "additional_categories": ["fabric", "neoforge"],
+    "additional_categories": ["fabric", "forge", "neoforge"],
     "client_side": "required",
     "server_side": "optional",
     "source_url": "https://github.com/nkanf-dev/OpenAllay",

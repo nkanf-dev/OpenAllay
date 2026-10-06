@@ -10,7 +10,7 @@
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — 你的 Minecraft AI 伙伴。探索、建造、创造。">
 
 [GitHub 下载](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[快速上手](#快速上手) · [0.4.2 更新说明](docs/releases/0.4.2.md) ·
+[快速上手](#快速上手) · [0.4.3 更新说明](docs/releases/0.4.3.md) ·
 [社区与开发](#社区与开发) ·
 [成熟 Forge 生态回移验证记录](docs/verification/mature-forge-ecosystems.md)
 
@@ -23,20 +23,20 @@
 
 ## 快速上手
 
-OpenAllay **0.4.2** 支持 **从 Minecraft 1.20.1 到 26.3 的 23 个版本**，
-适用于 **Fabric 和 NeoForge**。请在
-[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.2)
+OpenAllay **0.4.3** 支持 **25 个 Minecraft 版本**：**1.18.2 和 1.19.2 使用 Forge**，
+**1.20.1 到 26.3 使用 Fabric 或 NeoForge**。请在
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.3)
 选择标有你的准确 Minecraft 版本及加载器的 JAR。部分文件可用于多个版本。
 Fabric 还需要安装匹配的 **Fabric API**。
 
 | Minecraft 版本 | Java 版本 |
 | --- | --- |
-| 1.20.1–1.20.4 | 17 |
+| 1.18.2、1.19.2，以及 1.20.1–1.20.4 | 17 |
 | 1.20.5–1.20.6，以及 1.21–1.21.11 | 21 |
 | 26.1、26.1.1、26.1.2、26.2、26.3 | 25 |
 
 **Minecraft 26.2 / Java 25** 仍是开发主线。各下载文件覆盖的准确版本，见
-[发布兼容表](docs/native-binary-artifacts.md#published-042-files)。
+[发布兼容表](docs/native-binary-artifacts.md#release-043-files)。
 
 1. 把 JAR 放入游戏实例的 `mods` 文件夹，启动 Minecraft。
 2. 进入世界，按 **K**，或输入 `/guide`。
@@ -73,7 +73,7 @@ Fabric 还需要安装匹配的 **Fabric API**。
 
 ## 在你的世界里建造
 
-Fabric 和 NeoForge 下载包都包含 **Minecraft Builder** 扩展。
+每个加载器的下载包都包含 **Minecraft Builder** 扩展。
 说出你想建什么，再通过几何体、地形工具、建筑预设和结构模板，
 把想法落到当前单人世界里。模板支持旋转与镜像；方块撤销会检查后续改动，
 遇到冲突时报告，而不是直接覆盖。

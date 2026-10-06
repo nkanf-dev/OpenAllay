@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Build/stage reviewed native artifact families. Offline checks are not game acceptance."""
 import argparse
+from collections import Counter
 from importlib.util import module_from_spec, spec_from_file_location
 from io import BytesIO
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -11,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -45,7 +48,7 @@ def version():
 def select(data, target, family_ids=None):
     if family_ids is None:
         # Exact-target development must not silently advertise an accepted range.
-        families = [artifacts.resolve(data, target, loader) for loader in artifacts.LOADERS]
+        families = [artifacts.resolve(data, target, loader) for loader in target_loaders(ROOT, target)["loaders"]]
         require(all(family["supportedTargets"] == [target] for family in families),
                 "An interval requires explicit accepted family IDs")
     else:
@@ -84,6 +87,8 @@ def metadata(path, family, release_version):
             require(any(directory + dependency in entries for directory in ("META-INF/jars/", "META-INF/jarjar/")),
                     "Required product dependency missing: " + dependency)
         if family["loader"] == "fabric":
+            require(not any(name in entries for name in ("META-INF/mods.toml", "META-INF/neoforge.mods.toml")),
+                    "Fabric product cannot declare an FML loader")
             value = json.loads(archive.read("fabric.mod.json"))
             require(value["id"] == "openallay" and value["name"] == "OpenAllay"
                     and value["version"] == release_version and value["environment"] == "*",
@@ -91,21 +96,22 @@ def metadata(path, family, release_version):
             require(value["depends"]["minecraft"] == described["fabricMinecraftPredicate"],
                     "Fabric Minecraft predicate differs from exact accepted family")
         else:
+            require("fabric.mod.json" not in entries, "FML product cannot declare Fabric")
             descriptors = [entry for entry in ("META-INF/mods.toml", "META-INF/neoforge.mods.toml") if entry in entries]
-            expected = "META-INF/mods.toml" if family["buildTarget"] in ("1.20.1", "1.20.2", "1.20.3", "1.20.4") else "META-INF/neoforge.mods.toml"
+            expected = "META-INF/mods.toml" if family["loader"] == "forge" or family["buildTarget"] in ("1.20.1", "1.20.2", "1.20.3", "1.20.4") else "META-INF/neoforge.mods.toml"
             require(descriptors == [expected], "Wrong or competing native loader descriptor")
             value = archive.read(expected).decode("utf-8")
             mods = value.split("[[mods]]", 1)[1].split("[[dependencies.", 1)[0]
             fields = dict(re.findall(r'(?m)^\s*(modId|displayName|version)\s*=\s*"([^"]+)"', mods))
             require(fields == {"modId": "openallay", "displayName": "OpenAllay", "version": release_version},
-                    "NeoForge product identity differs")
+                    "FML product identity differs")
             dependencies = []
             for block in value.split("[[dependencies.openallay]]")[1:]:
                 fields = dict(re.findall(r'(?m)^\s*(modId|versionRange)\s*=\s*"([^"]+)"', block.split("[[", 1)[0]))
                 if fields.get("modId") == "minecraft":
                     dependencies.append(fields)
             require(len(dependencies) == 1 and dependencies[0].get("versionRange") == described["minecraftMavenRange"],
-                    "NeoForge Minecraft range differs from exact accepted family")
+                    "FML Minecraft range differs from exact accepted family")
 
 
 def builder_support(path, family, lock):
@@ -120,23 +126,73 @@ def builder_support(path, family, lock):
     # alone do not admit candidates or prove same-JAR runtime compatibility.
 
 
-def verify(families, directory=None):
+def sqlite_package(path, loader):
+    """Inspect final nested SQLite bytes without testClasses or a JVM probe."""
+    expected = "sqlite-jdbc-" + native.read_properties(ROOT / "gradle.properties")["sqlite_jdbc_version"] + ".jar"
+    directory = "META-INF/jars/" if loader == "fabric" else "META-INF/jarjar/"
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        matches = [name for name in names if name.endswith(".jar") and Path(name).name.startswith("sqlite-jdbc-")]
+        require(matches == [directory + expected], "Exactly the pinned SQLite dependency must be nested")
+        if loader == "fabric":
+            registered = [item["file"] for item in json.loads(archive.read("fabric.mod.json")).get("jars", [])]
+        else:
+            jars = json.loads(archive.read("META-INF/jarjar/metadata.json"))["jars"]
+            registered = [item["path"] for item in jars]
+            rows = [item for item in jars if item["path"] == matches[0]]
+            require(len(rows) == 1 and rows[0]["identifier"] == {"group": "org.xerial", "artifact": "sqlite-jdbc"}
+                    and rows[0]["version"]["artifactVersion"] == expected[len("sqlite-jdbc-"):-4],
+                    "SQLite JarJar coordinate differs")
+        require(registered.count(matches[0]) == 1, "SQLite needs exactly one native loader registration")
+        content = archive.read(matches[0])
+    with zipfile.ZipFile(BytesIO(content)) as nested:
+        names = nested.namelist()
+        require(len(names) == len(set(names)) and nested.testzip() is None, "Invalid SQLite dependency archive")
+        require("org/sqlite/JDBC.class" in names, "SQLite provider class missing")
+        providers = nested.read("META-INF/services/java.sql.Driver").decode("utf-8").splitlines()
+        require([line.strip() for line in providers if line.strip() and not line.lstrip().startswith("#")] == ["org.sqlite.JDBC"],
+                "SQLite JDBC provider differs")
+        for platform in ("Linux/x86_64", "Linux/aarch64", "Mac/x86_64", "Mac/aarch64", "Windows/x86_64", "Windows/aarch64"):
+            require(any(name.startswith("org/sqlite/native/" + platform + "/") and not name.endswith("/") for name in names),
+                    "SQLite native platform missing: " + platform)
+        payload = {name: hashlib.sha256(nested.read(name)).hexdigest() for name in sorted(names)
+                   if not name.endswith("/") and (name.startswith("org/sqlite/") or name == "META-INF/services/java.sql.Driver")}
+    return {"artifactSha256": hashlib.sha256(content).hexdigest(), "payloadSha256": hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
+
+
+def verify(families, directory=None, engine_manifest=None):
     release_version = version()
     expected = [artifacts.describe(family, release_version)["filename"] for family in families]
     if directory is not None:
         require(directory.is_dir(), "Missing staged release directory")
         require(sorted(path.name for path in directory.glob("*.jar")) == sorted(expected),
                 "Staged release must contain exactly the selected accepted artifacts")
-    engine = native.engine_files(ROOT)
+    engine = native.engine_files(ROOT) if engine_manifest is None else None
+    expected_engine = ({name: hashlib.sha256(content).hexdigest() for name, content in engine.items()}
+                       if engine_manifest is None else engine_manifest)
+    require(type(expected_engine) is dict and expected_engine and all(
+        type(name) is str and not name.startswith("/") and ".." not in name.split("/")
+        and artifacts.hash_text(digest) for name, digest in expected_engine.items()), "Invalid compiled engine manifest")
+    require("dev/openallay/guide/GuideService.class" in expected_engine
+            and "dev/openallay/FeatureServices.class" in expected_engine, "Compiled engine manifest missing required owners")
     lock = builder.prepare.load_manifest(ROOT / "distribution/extensions.lock.json")
     builder_bytes = None
     records = []
+    sqlite_payload = None
     for family, filename in zip(families, expected):
         path = (directory / filename if directory is not None else ROOT / family["loader"] / "build/libs" / filename).resolve(strict=True)
         metadata(path, family, release_version)
         with zipfile.ZipFile(path) as archive:
-            for name, content in engine.items():
-                require(archive.read(name) == content, "Shared engine was changed or omitted: " + name)
+            for name, digest in expected_engine.items():
+                require(hashlib.sha256(archive.read(name)).hexdigest() == digest,
+                        "Shared engine was changed or omitted: " + name)
+            profile = native.read_properties(ROOT / "gradle/minecraft-targets" / (family["buildTarget"] + ".properties"))
+            for name in archive.namelist():
+                if name.endswith(".class"):
+                    content = archive.read(name)
+                    require(len(content) >= 8 and content[:4] == b"\xca\xfe\xba\xbe" and 45 <= int.from_bytes(content[6:8], "big") <= int(profile["java_version"]) + 44,
+                            "Product class exceeds target Java: " + name)
         builder.verify_package(path, family["loader"], lock)
         builder_support(path, family, lock)
         with zipfile.ZipFile(path) as archive:
@@ -144,15 +200,132 @@ def verify(families, directory=None):
         require(builder_bytes is None or content == builder_bytes, "All families must bundle identical universal Builder bytes")
         builder_bytes = content
         tokenizer.verify(path, family["loader"])
-        environment = dict(os.environ, OPENALLAY_MINECRAFT_TARGET=family["buildTarget"])
-        subprocess.run([str(ROOT / "scripts/verify-sqlite-packaging.sh"), family["loader"], str(path)],
-                       cwd=ROOT, env=environment, check=True, stdout=sys.stderr)
+        sqlite = sqlite_package(path, family["loader"])
+        require(sqlite_payload is None or sqlite["payloadSha256"] == sqlite_payload,
+                "All accepted families must bundle identical SQLite provider/native payloads")
+        sqlite_payload = sqlite["payloadSha256"]
+        interval = module("accepted_package_guard", "verify-minecraft-binary-intervals.py")
+        interval.package_guard(path, family, release_version, ROOT)
+        if engine is not None:
+            native.verify(path, family["loader"], family["buildTarget"], int(profile["java_version"]),
+                          engine, bundled_builder=True, family=family)
         records.append({**artifacts.describe(family, release_version), "artifactPath": str(path),
                         "artifactSha256": artifacts.file_hash(path, artifacts.MAX_ARTIFACT_BYTES)})
     return records
 
 
-def publication_records(families, directory, receipt_directory=None):
+def source_identity():
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    require(re.fullmatch(r"[0-9a-f]{40}", sha) is not None, "Exact source commit required")
+    require(not subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, text=True).strip(),
+            "Release build/publisher requires unchanged tracked source")
+    require(os.environ.get("GITHUB_SHA", sha) == sha, "Workflow source differs from checked-out source")
+    return sha
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def forge_runtime_hashes(path):
+    """Record separately compiled SDK/Rhino bytes; verify Java17-compatible nesting."""
+    result = {}
+    with zipfile.ZipFile(path) as archive:
+        for name in archive.namelist():
+            if name.startswith("META-INF/jarjar/") and name.endswith(".jar"):
+                with zipfile.ZipFile(BytesIO(archive.read(name))) as nested:
+                    for entry in nested.namelist():
+                        if entry.endswith(".class"):
+                            blob = nested.read(entry)
+                            require(len(blob) >= 8 and blob[:4] == b"\xca\xfe\xba\xbe" and 45 <= int.from_bytes(blob[6:8], "big") <= 61,
+                                    "Nested Forge dependency exceeds Java17: " + name + "!" + entry)
+        jars = json.loads(archive.read("META-INF/jarjar/metadata.json"))["jars"]
+        for artifact, prefix, major in (("extension-api", "dev/openallay/api/", 52),
+                                        ("runtime-rhino", "dev/latvian/mods/rhino/", 61)):
+            rows = [row for row in jars if row["identifier"] == {"group": "dev.openallay", "artifact": artifact}]
+            require(len(rows) == 1, "Shared Forge runtime has competing owners: " + artifact)
+            row = rows[0]
+            expected_version = (builder.SDK_VERSION if artifact == "extension-api"
+                                else native.read_properties(ROOT / "gradle.properties")["rhino_version"])
+            require(row["version"]["artifactVersion"] == expected_version, "Shared Forge runtime version differs")
+            require(row["version"]["range"] == "[" + row["version"]["artifactVersion"] + "]",
+                    "Shared Forge runtime needs its atomic singleton range")
+            content = archive.read(row["path"])
+            result[artifact] = hashlib.sha256(content).hexdigest()
+            with zipfile.ZipFile(BytesIO(content)) as nested:
+                names = nested.namelist()
+                require(len(names) == len(set(names)) and nested.testzip() is None, "Corrupt shared Forge runtime")
+                classes = [name for name in names if name.endswith(".class") and name.startswith(prefix)]
+                require(classes, "Missing shared Forge runtime classes")
+                for name in classes:
+                    blob = nested.read(name)
+                    require(len(blob) >= 8 and blob[:4] == b"\xca\xfe\xba\xbe" and int.from_bytes(blob[6:8], "big") == major,
+                            "Shared Forge runtime ABI differs: " + name)
+    return result
+
+
+BUILD_RECEIPT_FIELDS = {"kind", "outcome", "sourceSha", "version", "sourceRunId", "sourceRunAttempt",
+                        "family", "artifactSha256", "engineManifestSha256", "commands", "sqlite", "sharedRuntimes"}
+
+
+def verify_build_receipts(families, directory, receipt_directory):
+    """Verify new compiled release bytes. This receipt class carries no game result."""
+    require(receipt_directory.is_dir(), "Missing compile/package build receipts")
+    require(sorted(path.name for path in receipt_directory.glob("*.json")) ==
+            sorted(["engine-manifest.json"] + [family["id"] + ".json" for family in families]),
+            "Build receipts must match exactly the selected accepted families")
+    engine_path = receipt_directory / "engine-manifest.json"
+    engine_sha = artifacts.file_hash(engine_path, artifacts.MAX_JSON_BYTES)
+    engine = artifacts.read_json(engine_path)
+    source = source_identity()
+    release_version = version()
+    receipts = []
+    for family in families:
+        receipt = artifacts.read_json(receipt_directory / (family["id"] + ".json"))
+        artifacts.shape(receipt, BUILD_RECEIPT_FIELDS, "Compile/package release receipt")
+        require(receipt["kind"] == "compile-package" and receipt["outcome"] == "passed",
+                "A compile/package release receipt is required; runtime receipts are a separate class")
+        require(receipt["sourceSha"] == source and receipt["version"] == release_version
+                and receipt["family"] == family and receipt["engineManifestSha256"] == engine_sha,
+                "Release receipt source/version/family/engine identity differs")
+        require(type(receipt["sourceRunId"]) is str and re.fullmatch(r"[1-9][0-9]*", receipt["sourceRunId"])
+                and type(receipt["sourceRunAttempt"]) is str and re.fullmatch(r"[1-9][0-9]*", receipt["sourceRunAttempt"]),
+                "New release receipts must originate in an actual remote workflow run")
+        commands = receipt["commands"]
+        require(type(commands) is list and commands, "Missing checked-in native wrapper build provenance")
+        for row in commands:
+            artifacts.shape(row, {"command", "runtime"}, "Native build command")
+            command = row["command"]
+            require(type(command) is list and command and all(type(value) is str for value in command), "Invalid native build command")
+            require(row["runtime"] in ("root", "java21") and command[0] in ("gradlew", "native-builds/early-neoforge/gradlew"),
+                    "Build command must use a checked-in wrapper")
+            require(not any(value.split(":")[-1] in ("test", "build", "check", "runClient", "runServer") for value in command),
+                    "Release receipt must describe compilation/packaging, not repeated game/test gates")
+        root_commands = [row["command"] for row in commands if row["runtime"] == "root"]
+        require(len(root_commands) == 1 and "-PminecraftTarget=" + family["buildTarget"] in root_commands[0]
+                and "-PtestBundledExtensions=false" in root_commands[0]
+                and any(value.startswith("-PminecraftArtifact=") and family["id"] in value.split("=", 1)[1].split(",")
+                        for value in root_commands[0]), "Receipt command does not select this exact accepted family")
+        selection = next(value.split("=", 1)[1] for value in root_commands[0] if value.startswith("-PminecraftArtifact="))
+        require(commands == command_receipt(family["buildTarget"], select(catalog(), family["buildTarget"], selection)),
+                "Receipt commands differ from the checked-in native compiler plan")
+        receipts.append(receipt)
+    records = verify(families, directory, engine_manifest=engine)
+    for family, record, receipt in zip(families, records, receipts):
+        path = Path(record["artifactPath"])
+        require(record["artifactSha256"] == artifacts.hash_text(receipt["artifactSha256"]), "New release artifact changed after build")
+        require(sqlite_package(path, family["loader"]) == receipt["sqlite"], "Nested SQLite bytes changed after package checks")
+        require((forge_runtime_hashes(path) if family["loader"] == "forge" else {}) == receipt["sharedRuntimes"],
+                "Separately compiled shared runtime bytes changed after build")
+    return records
+
+
+def publication_records(families, directory, receipt_directory=None, build_receipt_directory=None):
+    require(receipt_directory is None or build_receipt_directory is None, "Runtime and build receipt modes cannot compete")
+    if build_receipt_directory is not None:
+        require(not (directory / "accepted-originals.json").exists(), "New build release cannot promote old accepted bytes")
+        return verify_build_receipts(families, directory, build_receipt_directory)
     original_selection = directory / "accepted-originals.json"
     if original_selection.exists():
         require(receipt_directory is not None, "Original accepted publication needs existing final-path receipts")
@@ -166,32 +339,91 @@ def publication_records(families, directory, receipt_directory=None):
         family = artifacts.resolve(data, record["buildTarget"], record["loader"])
         if family["supportedTargets"] != ["26.2"]:
             require(receipt_directory is not None, "New accepted families require retained final-artifact runtime receipts")
-            # This is consistency only. Admission is a reviewed acceptedFamilies source edit.
             artifacts.verify_receipt(family, receipt_directory / (family["id"] + ".json"),
                                      Path(record["artifactPath"]), record["artifactSha256"])
     return records
 
 
-def build_and_stage(directory):
+def command_receipt(target, families):
+    result = []
+    for command, runtime in compiler.commands(ROOT, target, loaders=tuple(family["loader"] for family in families),
+                                               artifact_ids=",".join(family["id"] for family in families)):
+        result.append({"command": ["." if value == str(ROOT) else value.replace(str(ROOT) + "/", "") for value in command], "runtime": runtime})
+    return result
+
+
+def build_and_stage(directory, target=None, family_ids=None):
     require(not directory.exists(), "Refusing to overwrite an existing release directory")
+    require((target is None) == (family_ids is None), "Select target and families together, or build all accepted groups")
+    source = source_identity()
+    run, attempt = os.environ.get("GITHUB_RUN_ID"), os.environ.get("GITHUB_RUN_ATTEMPT")
+    require(type(run) is str and re.fullmatch(r"[1-9][0-9]*", run)
+            and type(attempt) is str and re.fullmatch(r"[1-9][0-9]*", attempt), "New release builds require remote workflow provenance")
     data = catalog()
+    selected_groups = groups(data) if target is None else [(target, select(data, target, family_ids))]
+    selected = [family for _, families in selected_groups for family in families]
     directory.mkdir(parents=True)
-    # Full shared/native feature and pinned Builder tests run once on the mainline.
-    # Native assemblies below reuse that tested Builder, with final byte/identity gates.
-    subprocess.run([str(ROOT / "gradlew"), "--max-workers=2", "-PminecraftTarget=26.2",
-                    "-PtestBundledExtensions=true", ":extension-api:test", ":common:test", ":fabric:test", ":neoforge:test",
-                    ":stageBundledExtensions"], cwd=ROOT, check=True)
-    for target, families in groups(data):
+    receipt_directory = directory / "build-receipts"
+    expected_engine = None
+    for target, families in selected_groups:
         selection = ",".join(family["id"] for family in families)
-        # The existing compiler owns early NeoForge's actual isolated Java21 route.
-        # No clean between families, no per-minor feature matrix, no candidate admission.
-        compiler.compile_target(ROOT, target, loaders=tuple(family["loader"] for family in families),
-                                artifact_ids=selection)
-        for record in verify(families):
-            shutil.copyfile(record["artifactPath"], directory / record["filename"])
-    records = verify(data["acceptedFamilies"], directory)
+        # Compile actual accepted native families. The Builder dependency delegates
+        # assemble+verifyUniversalPackage because testBundledExtensions stays false.
+        compiler.compile_target(ROOT, target, loaders=tuple(family["loader"] for family in families), artifact_ids=selection)
+        engine = {name: hashlib.sha256(content).hexdigest() for name, content in native.engine_files(ROOT).items()}
+        require(expected_engine is None or engine == expected_engine, "Compiled engine differs across accepted native groups")
+        expected_engine = engine
+        write_json(receipt_directory / "engine-manifest.json", engine)
+        engine_sha = artifacts.file_hash(receipt_directory / "engine-manifest.json", artifacts.MAX_JSON_BYTES)
+        for family, record in zip(families, verify(families)):
+            path = Path(record["artifactPath"])
+            destination = directory / record["filename"]
+            shutil.copyfile(path, destination)
+            require(artifacts.file_hash(destination, artifacts.MAX_ARTIFACT_BYTES) == record["artifactSha256"], "Staged release bytes changed")
+            write_json(receipt_directory / (family["id"] + ".json"), {
+                "kind": "compile-package", "outcome": "passed", "sourceSha": source, "version": version(),
+                "sourceRunId": run, "sourceRunAttempt": attempt, "family": family,
+                "artifactSha256": record["artifactSha256"], "engineManifestSha256": engine_sha,
+                "commands": command_receipt(target, families), "sqlite": sqlite_package(path, family["loader"]),
+                "sharedRuntimes": forge_runtime_hashes(path) if family["loader"] == "forge" else {}})
+    records = verify_build_receipts(selected, directory, receipt_directory)
+    checksums(directory, records)
+    return records
+
+
+def checksums(directory, records):
     (directory / "SHA256SUMS").write_text("".join(record["artifactSha256"] + "  " + record["filename"] + "\n"
-                                                  for record in records), encoding="utf-8")
+                                               for record in records), encoding="utf-8")
+
+
+def merge_staged(groups_directory, directory):
+    """Assemble independently compiled groups without rebuilding or launching Java."""
+    require(not directory.exists(), "Preserve any previous release stage")
+    directory.mkdir(parents=True)
+    receipts = directory / "build-receipts"
+    receipts.mkdir()
+    data = catalog()
+    observed = set()
+    engine_bytes = None
+    for group in sorted(groups_directory.iterdir()):
+        require(group.is_dir() and not group.is_symlink(), "Expected retained group stage directories")
+        ids = {path.stem for path in (group / "build-receipts").glob("*.json") if path.name != "engine-manifest.json"}
+        families = [family for family in data["acceptedFamilies"] if family["id"] in ids]
+        require(ids and len(families) == len(ids) and not observed.intersection(ids), "Unknown or repeated accepted group families")
+        require(len({family["buildTarget"] for family in families}) == 1, "A group stage must have one actual build target")
+        verify_build_receipts(families, group, group / "build-receipts")
+        content = (group / "build-receipts/engine-manifest.json").read_bytes()
+        require(engine_bytes is None or content == engine_bytes, "Independent groups changed shared engine bytes")
+        engine_bytes = content
+        for family in families:
+            filename = artifacts.describe(family, version())["filename"]
+            shutil.copyfile(group / filename, directory / filename)
+            shutil.copyfile(group / "build-receipts" / (family["id"] + ".json"), receipts / (family["id"] + ".json"))
+        observed.update(ids)
+    require(observed == {family["id"] for family in data["acceptedFamilies"]}, "Merged release must contain every accepted family exactly once")
+    (receipts / "engine-manifest.json").write_bytes(engine_bytes)
+    records = verify_build_receipts(data["acceptedFamilies"], directory, receipts)
+    checksums(directory, records)
     return records
 
 
@@ -204,6 +436,13 @@ def main(argv=None):
     selection.add_argument("--version", required=True)
     build = commands.add_parser("build-and-stage")
     build.add_argument("directory", type=Path)
+    build.add_argument("--target")
+    build.add_argument("--families")
+    grouping = commands.add_parser("groups", help="Exact compile-only build groups for admitted families")
+    grouping.add_argument("--github-output", type=Path, help="Append the exact compact group list to the workflow output file")
+    merging = commands.add_parser("merge-staged", help="Merge retained compile/package stages without rebuilding")
+    merging.add_argument("groups_directory", type=Path)
+    merging.add_argument("directory", type=Path)
     verification = commands.add_parser("verify")
     verification.add_argument("directory", type=Path, nargs="?")
     verification.add_argument("--target", default="26.2")
@@ -211,6 +450,7 @@ def main(argv=None):
     publishing = commands.add_parser("publication-records")
     publishing.add_argument("directory", type=Path)
     publishing.add_argument("--receipt-directory", type=Path)
+    publishing.add_argument("--build-receipt-directory", type=Path)
     args = parser.parse_args(argv)
     try:
         data = catalog()
@@ -218,9 +458,17 @@ def main(argv=None):
             result = {family["loader"]: artifacts.describe(family, args.version)
                       for family in select(data, args.target, args.families)}
         elif args.command == "build-and-stage":
-            result = build_and_stage(args.directory.resolve())
+            result = build_and_stage(args.directory.resolve(), args.target, args.families)
+        elif args.command == "groups":
+            result = [{"target": target, "families": ",".join(family["id"] for family in families)}
+                      for target, families in groups(data)]
+            if args.github_output is not None:
+                with args.github_output.open("a", encoding="utf-8") as output:
+                    output.write("groups=" + json.dumps(result, separators=(",", ":")) + "\n")
+        elif args.command == "merge-staged":
+            result = merge_staged(args.groups_directory.resolve(), args.directory.resolve())
         elif args.command == "publication-records":
-            result = publication_records(data["acceptedFamilies"], args.directory.resolve(), args.receipt_directory)
+            result = publication_records(data["acceptedFamilies"], args.directory.resolve(), args.receipt_directory, args.build_receipt_directory)
         else:
             families = data["acceptedFamilies"] if args.directory is not None and args.families is None else select(data, args.target, args.families)
             result = verify(families, args.directory.resolve() if args.directory is not None else None)

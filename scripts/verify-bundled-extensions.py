@@ -42,7 +42,7 @@ PROVENANCE_FIELDS = {"source", "project", "version", "extensionId", "openAllayAp
 SOURCE_FIELDS = {"repository", "revision", "dirty", "pinned"}
 FORBIDDEN_PREFIXES = ("net/minecraft/", "net/minecraftforge/", "net/fabricmc/", "net/neoforged/",
     "cpw/mods/", "org/spongepowered/asm/", "baritone/", "com/google/gson/", "META-INF/versions/", "dev/openallay/builder/fabric/",
-    "dev/openallay/builder/neoforge/")
+    "dev/openallay/builder/neoforge/", "dev/openallay/builder/forge/")
 FORBIDDEN_ENTRIES = {"fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF/mods.toml",
     "mcmod.info", "module-info.class"}
 # This verifier checks the currently pinned independently released Builder package,
@@ -102,6 +102,22 @@ def support_range(value: object, name: str) -> str:
     return value
 
 
+def framework_supported(declaration: str, current: str) -> bool:
+    """Check stable framework releases against the pinned public Maven range."""
+    def release(value):
+        require(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value) is not None,
+                "Pinned Builder framework range requires stable release bounds")
+        return tuple(int(part) for part in value.split("."))
+    version = release(current)
+    if declaration[0] not in "[(":
+        return version == release(declaration)
+    if "," not in declaration:
+        return version == release(declaration[1:-1])
+    lower, upper = (part.strip() for part in declaration[1:-1].split(","))
+    return ((not lower or version > release(lower) or (declaration[0] == "[" and version == release(lower)))
+            and (not upper or version < release(upper) or (declaration[-1] == "]" and version == release(upper))))
+
+
 def verify_manifest(content: bytes, lock: dict) -> dict:
     descriptor = prepare.decode_json(content)
     require(isinstance(descriptor, dict), "Expected universal manifest object")
@@ -134,6 +150,12 @@ def verify_manifest(content: bytes, lock: dict) -> dict:
         string(target["loader"], "loader")
         require(re.fullmatch(r"[a-z][a-z0-9_.-]*", target["loader"]) is not None, "Invalid loader ID")
         require(target["openAllayApiVersionRange"] == SDK_SUPPORT_RANGE, "Wrong Builder SDK support range")
+        # The pinned public Builder declaration must include this framework
+        # release. SDK/framework compatibility does not admit native game targets.
+        framework = dict(line.split("=", 1) for line in (ROOT / "gradle.properties").read_text().splitlines()
+                         if line.startswith("version="))["version"]
+        require(framework_supported(target["openAllayVersionRange"], framework),
+                "Builder framework support range excludes the current release")
         encoded_targets.append(tuple(target[field] for field in sorted(TARGET_FIELDS)))
     require(len(encoded_targets) == len(set(encoded_targets)), "Duplicate support target")
     intended_targets = read_target_loaders(ROOT)
