@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122]
 permissions:
   contents: read
 concurrency:
@@ -484,3 +484,30 @@ jobs:
             common/build/reports/tests/
             adapters/minecraft/build/test-results/
             adapters/minecraft/build/reports/tests/
+
+  native1122-retained-reobf:
+    if: inputs.mode == 'reobf1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Normal FG3 reobf only; preserve accepted Java17 native input
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/run-forge1122-reobf-only.py
+      - name: Retain normal reobf custody and product native jar
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-reobf-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-reobf-report/
+            native-builds/forge1122-reobf/build/createMcpToSrg/output.srg
+            native-builds/forge1122-reobf/build/reobfJar/log.txt
+            ${{ runner.temp }}/forge1122-reobf/

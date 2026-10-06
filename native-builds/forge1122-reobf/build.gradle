@@ -1,0 +1,75 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+buildscript {
+    repositories { maven { url='https://maven.minecraftforge.net/' }; mavenCentral() }
+    configurations.classpath.resolutionStrategy.force 'net.minecraftforge:artifactural:1.0.13'
+    dependencies { classpath 'net.minecraftforge.gradle:ForgeGradle:3.0.197' }
+}
+if (gradle.gradleVersion!='5.6.4' || System.getProperty('java.specification.version')!='1.8')
+    throw new GradleException('Reobf-only tooling exact Gradle5.6.4/Java8 required')
+
+// Same genuine FG3 plugin; this mode never resolves a named game jar or compiles source.
+apply plugin: 'net.minecraftforge.gradle'
+def request = new JsonSlurper().parse(file(project.property('reobfOnlyRequest')))
+def output = file(request.output).canonicalFile
+def input = file(request.rawJar).canonicalFile
+def mixins = file(request.mixinSrg).canonicalFile
+def sha = { File f ->
+    def d=MessageDigest.getInstance('SHA-256'); f.withInputStream { s -> byte[] b=new byte[65536]; int n
+        while ((n=s.read(b))!=-1) d.update(b,0,n) }; d.digest().encodeHex().toString()
+}
+if (request.keySet()!= (['rawJar','rawJarSha256','mixinSrg','mixinSrgSha256','mcpToSrgSha256','output','nativeSourceRevision'] as Set) ||
+    !input.isFile() || sha(input)!=request.rawJarSha256 || !mixins.isFile() || sha(mixins)!=request.mixinSrgSha256)
+    throw new GradleException('Exact retained native raw/AP custody required')
+if (output.toPath().startsWith(input.toPath()) || input.toPath().startsWith(output.toPath()) ||
+    mixins.toPath().startsWith(output.toPath())) throw new GradleException('Reobf output overlaps retained input')
+minecraft { mappings channel:'snapshot',version:'20171003-1.12' }
+dependencies { minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2864' }
+configurations.all { resolutionStrategy.force 'net.minecraftforge:legacydev:0.2.3.1' }
+sourceSets.main.java.setSrcDirs([]); sourceSets.main.resources.setSrcDirs([])
+tasks.withType(JavaCompile).all { enabled=false }
+['processResources','runClient','runServer','downloadAssets','extractNatives'].each { name -> tasks.matching {it.name==name}.all {enabled=false} }
+// Use real FG GenerateSRG task output. No named-artifact/classpath resolution needed.
+tasks.getByName('createMcpToSrg').setFormat('SRG')
+tasks.getByName('createMcpToSrg').setOutput(file('build/createMcpToSrg/output.srg'))
+def mutable = new File(output,'openallay-forge1122-native-reobf.jar')
+task stageRetainedNative {
+    doLast {
+        if (output.exists()) throw new GradleException('Fresh reobf-only output required')
+        output.mkdirs()
+        mutable.bytes=input.bytes
+        if (sha(mutable)!=request.rawJarSha256) throw new GradleException('Retained staging changed native bytes')
+        new File(output,'before-input.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(request))+'\n','UTF-8')
+    }
+}
+// The normal FG plugin registers reobfJar after evaluation and calls the standard tool.
+// Jar is disabled because its exact supplied input is copied, not fabricated or recompiled.
+tasks.jar.enabled=false
+afterEvaluate {
+ tasks.getByName('reobfJar').with {
+    setTool('net.md-5:SpecialSource:1.11.4:shaded')
+    setInput(mutable)
+    setClasspath(null)
+    extraMapping(mixins)
+    dependsOn stageRetainedNative
+    doFirst {
+        def mapping=tasks.createMcpToSrg.outputs.files.singleFile
+        if (sha(mapping)!=request.mcpToSrgSha256) throw new GradleException('Regenerated exact native mapping digest differs')
+        if (sha(getToolJar())!='e2cab24b1c12400ad73b15972bb21e4273a0dc7081c8b3c136ddfdd824c78518')
+            throw new GradleException('SpecialSource1.11.4 tool digest differs')
+        // SpecialSource --live has no source-owned lookup classpath here; mapping carries exact member descriptors.
+    }
+    doLast {
+        def mapping=tasks.createMcpToSrg.outputs.files.singleFile
+        new File(output,'reobf-only-receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
+            kind:'normal-FG3-reobf-only', nativeSourceRevision:request.nativeSourceRevision,
+            forgeGradle:'3.0.197', gradle:gradle.gradleVersion,toolJava:System.getProperty('java.version'),
+            toolCoordinate:getTool(),toolSha256:sha(getToolJar()),mappingSha256:sha(mapping),mixinSrgSha256:sha(mixins),
+            before:[path:input.absolutePath,sha256:sha(input)],after:[path:mutable.absolutePath,sha256:sha(mutable)],
+            applicationCompile:false,namespaceReplayed:false,gameLaunch:false]))+'\n','UTF-8')
+    }
+}
+
+}
