@@ -105,6 +105,41 @@
       "origin": "adapters/minecraft/src/targets/1.16.5/java/dev/openallay/adapter/minecraft/v26_2/world/NativeWorldHeight.java",
       "sha256": "b14c1ed0af4b17a4b5e5a3e6704fe1fbe62f74f20bbf9a1fbc0b52daa486ebec",
       "reason": "Superseded by the typed 1.12 WorldBinding; no remaining canonical caller after binding refactor"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/command/ForgeClientCommandSource.java",
+      "origin": "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeClientCommandSource.java",
+      "sha256": "de067f2a5f0837a82be52e4ef6c5f79798823172d1cfc0315c13fdeda10e79dc",
+      "reason": "Superseded by native 1.12 ICommand/ClientCommandHandler guide command projection and completion; obsolete Brigadier tree bindings not used"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/command/ForgeClientGuideCommands.java",
+      "origin": "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/ForgeClientGuideCommands.java",
+      "sha256": "3d2b6a807c437706f641461a8c3715f4f389122f37ec17d4aa96aec469a18093",
+      "reason": "Superseded by native 1.12 ICommand/ClientCommandHandler guide command projection and completion; obsolete Brigadier tree bindings not used"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/command/mixin/ForgeChatCompletionMixin.java",
+      "origin": "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/mixin/ForgeChatCompletionMixin.java",
+      "sha256": "ece073060a0cc147239754f1cbb9419400657dd3167a5946b5e9daf08076b42b",
+      "reason": "Superseded by native 1.12 ICommand/ClientCommandHandler guide command projection and completion; obsolete Brigadier tree bindings not used"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/command/mixin/ForgeCommandSuggestionsMixin.java",
+      "origin": "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/mixin/ForgeCommandSuggestionsMixin.java",
+      "sha256": "7a1deddf33bcf555e95b1c1cb5d872f9ab752720cce731cc4a79ca7c7ef747d4",
+      "reason": "Superseded by native 1.12 ICommand/ClientCommandHandler guide command projection and completion; obsolete Brigadier tree bindings not used"
+    },
+    {
+      "owner": "fml",
+      "logicalPath": "dev/openallay/neoforge/command/mixin/ForgeCommandTreeMixin.java",
+      "origin": "forge/src/targets/1.16.5/java/dev/openallay/neoforge/command/mixin/ForgeCommandTreeMixin.java",
+      "sha256": "a12ad4bae4a334062bbc07bf218c2478869823f0e5e543be72478597178eb310",
+      "reason": "Superseded by native 1.12 ICommand/ClientCommandHandler guide command projection and completion; obsolete Brigadier tree bindings not used"
     }
   ]
 }

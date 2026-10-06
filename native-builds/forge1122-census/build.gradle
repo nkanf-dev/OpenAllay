@@ -74,8 +74,9 @@ task exportSourceSelection {
         def retiredFiles=[] as Set
         retirement.java.each { row ->
             if (row.keySet() != (['owner','logicalPath','origin','sha256','reason'] as Set) ||
-                    row.owner!='adapter' || !(row.reason instanceof String) || row.reason.empty ||
-                    !row.logicalPath.startsWith('dev/openallay/adapter/minecraft/v26_2/world/Native') ||
+                    !(row.owner in ['adapter','fml']) || !(row.reason instanceof String) || row.reason.empty ||
+                    !(row.owner=='adapter' && row.logicalPath.startsWith('dev/openallay/adapter/minecraft/v26_2/world/Native') ||
+                      row.owner=='fml' && row.logicalPath.startsWith('dev/openallay/neoforge/command/')) ||
                     row.origin.contains('/targets/1.12.2/')) throw new GradleException('Invalid obsolete native helper disposition')
             // Audit only the already-materialized owner snapshot. Never query a filtered set from a predicate.
             def matches=raw.findAll {
