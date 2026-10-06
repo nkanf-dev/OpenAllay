@@ -32,9 +32,7 @@
   "chest_north_single": {
     "id": "minecraft:chest",
     "properties": {
-      "facing": "north",
-      "type": "single",
-      "waterlogged": "false"
+      "facing": "north"
     }
   },
   "cobblestone": {
