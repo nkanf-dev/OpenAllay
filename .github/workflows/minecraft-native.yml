@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder]
 permissions:
   contents: read
 concurrency:
@@ -185,3 +185,25 @@ jobs:
             build/e2e/forge16165-product-world/game/logs/
             build/e2e/forge16165-product-world/game/crash-reports/
             build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+
+  builder-candidate:
+    if: inputs.mode == 'builder'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - name: Build only the changed Builder candidate declaration
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/build-forge16165-builder-candidate.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: forge16165-builder-candidate-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge16165-builder-candidate/builder-candidate.jar
+            build/forge16165-builder-candidate/builder-candidate.json
