@@ -4,7 +4,6 @@ import dev.openallay.client.gui.MinecraftClientWindow;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.platform.InputConstants;
 import dev.openallay.client.gui.OpenAllayKeyMappings;
 import dev.openallay.client.gui.OpenAllayScreen;
 import dev.openallay.client.gui.OpenAllaySettingsScreen;
@@ -83,9 +82,9 @@ final class GuideGraphicalRegressionProbe {
     private final List<Map<String, Object>> checkpoints = new ArrayList<>();
     private final List<Map<String, Object>> actions = new ArrayList<>();
     private final Map<String, CompletableFuture<Map<String, Object>>> frames = new LinkedHashMap<>();
-    private final InputConstants.Key originalInteractKey;
+    private final Runnable restoreInteractKey;
     private final String originalInteractBinding;
-    private final InputConstants.Key originalPttKey;
+    private final Runnable restorePttKey;
     private final String originalPttBinding;
     private GuideRequestSnapshot latestRequest;
     private GuideRequestSnapshot toastRequest;
@@ -174,10 +173,10 @@ final class GuideGraphicalRegressionProbe {
         originalWindowHeight = client.getWindow().getHeight();
         originalGuiScale = dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options);
         report.put("windowBefore", Map.of("width", originalWindowWidth, "height", originalWindowHeight, "guiScale", originalGuiScale));
-        originalPttBinding = OpenAllayKeyMappings.VOICE_PTT.saveString();
-        originalPttKey = InputConstants.getKey(originalPttBinding);
-        originalInteractBinding = OpenAllayKeyMappings.INTERACT_HUD.saveString();
-        originalInteractKey = InputConstants.getKey(originalInteractBinding);
+        originalPttBinding = GuideProbeKeyBindings.description(OpenAllayKeyMappings.VOICE_PTT);
+        restorePttKey = GuideProbeKeyBindings.restoration(OpenAllayKeyMappings.VOICE_PTT);
+        originalInteractBinding = GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD);
+        restoreInteractKey = GuideProbeKeyBindings.restoration(OpenAllayKeyMappings.INTERACT_HUD);
         report.put("loader", loader);
         report.put("gameVersion", gameVersion);
         report.put("modVersion", modVersion);
@@ -216,9 +215,9 @@ final class GuideGraphicalRegressionProbe {
                 requireLoopbackFixture();
                 require("zh_cn".equals(client.options.languageCode), "Chinese language must be prepared before launch");
                 MinecraftClientWindow.setWindowed(client, 850, 480);
-                OpenAllayKeyMappings.INTERACT_HUD.setKey(GuideNativeInput.keyboardType().getOrCreate(dev.openallay.client.gui.GuideInputCodes.KEY_F8));
+                GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8);
                 KeyMapping.resetMapping();
-                report.put("interactKeyDuring", OpenAllayKeyMappings.INTERACT_HUD.saveString());
+                report.put("interactKeyDuring", GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD));
                 report.put("world", client.getSingleplayerServer().getWorldData().getLevelName());
                 report.put("commandsAllowed", GuideProbeWorldSettings.commandsAllowed(client.getSingleplayerServer()));
                 require(!GuideProbeWorldSettings.commandsAllowed(client.getSingleplayerServer()), "Disposable world commands must be off");
@@ -856,11 +855,11 @@ final class GuideGraphicalRegressionProbe {
                 var voice = dev.openallay.client.voice.VoiceConfigStore.decode(readCurrentConfig("voice.json"));
                 require(!voice.enabled(), "Native GUI scenario must not open a microphone");
                 report.put("voiceConfig", gson.toJsonTree(voice));
-                require("key.keyboard.f8".equals(OpenAllayKeyMappings.INTERACT_HUD.saveString()),
+                require("key.keyboard.f8".equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD)),
                         "Fresh native profile must retain the new F8 default without a harness override");
                 liveHeaderName = settings.snapshot().display().assistantName();
                 MinecraftClientWindow.setWindowed(client, 850, 480);
-                OpenAllayKeyMappings.VOICE_PTT.setKey(GuideNativeInput.keyboardType().getOrCreate(dev.openallay.client.gui.GuideInputCodes.KEY_V));
+                GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.VOICE_PTT, dev.openallay.client.gui.GuideInputCodes.KEY_V);
                 KeyMapping.resetMapping();
                 openGuide.accept(service);
                 advance();
@@ -1086,14 +1085,14 @@ final class GuideGraphicalRegressionProbe {
                 if (++stageWait < 22) return; // 264 real client ticks, longer than the removed carousel interval.
                 report.put("passiveHudLatestStable", receipt);
                 checkpoint("live-10-passive-hud-latest-48-no-carousel", false);
-                OpenAllayKeyMappings.INTERACT_HUD.setKey(InputConstants.UNKNOWN);
+                GuideProbeKeyBindings.unbind(OpenAllayKeyMappings.INTERACT_HUD);
                 KeyMapping.resetMapping(); advance();
             }
             case 25 -> {
                 report.put("explicitUnboundKeyLabel", OpenAllayKeyMappings.INTERACT_HUD.getTranslatedKeyMessage().getString());
                 require(OpenAllayKeyMappings.INTERACT_HUD.isUnbound(), "Explicit unbound key was silently reset");
                 checkpoint("live-11-passive-hud-explicit-unbound-hint", false);
-                OpenAllayKeyMappings.INTERACT_HUD.setKey(GuideNativeInput.keyboardType().getOrCreate(dev.openallay.client.gui.GuideInputCodes.KEY_F8));
+                GuideProbeKeyBindings.keyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8);
                 KeyMapping.resetMapping();
                 KeyMapping.click(GuideNativeInput.keyboardType().getOrCreate(dev.openallay.client.gui.GuideInputCodes.KEY_F8));
                 recordAction("native-keymapping-click", "INTERACT_HUD/default-F8"); advance();
@@ -1563,7 +1562,7 @@ final class GuideGraphicalRegressionProbe {
         var window = client.getWindow();
         double nativeX = guiX * window.getScreenWidth() / window.getGuiScaledWidth();
         double nativeY = guiY * window.getScreenHeight() / window.getGuiScaledHeight();
-        GuideProbeNativeCursor.move(window, nativeX, nativeY);
+        GuideProbeNativeCursor.move(client, nativeX, nativeY);
         actions.add(Map.of("type", "native-" + GuideProbeNativeCursor.backend() + "-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
                 "windowX", nativeX, "windowY", nativeY, "screenWidth", window.getScreenWidth(),
                 "screenHeight", window.getScreenHeight(), "source", "OS-programmatic-cursor-request"));
@@ -1593,7 +1592,7 @@ final class GuideGraphicalRegressionProbe {
     private void recordNativeHoverDiagnostic(String phase) {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
         var window = client.getWindow();
-        double[] nativeCursor = GuideProbeNativeCursor.position(window);
+        double[] nativeCursor = GuideProbeNativeCursor.position(client);
         var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
         Map<String, Object> diagnostic = new LinkedHashMap<>();
         diagnostic.put("phase", phase);
@@ -2071,12 +2070,12 @@ final class GuideGraphicalRegressionProbe {
         MinecraftClientWindow.setWindowed(client, originalWindowWidth, originalWindowHeight);
         report.put("windowRestorationRequested", Map.of("width", originalWindowWidth, "height", originalWindowHeight,
                 "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options), "originalGuiScaleRestored", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options) == originalGuiScale));
-        OpenAllayKeyMappings.VOICE_PTT.setKey(originalPttKey);
-        report.put("pttKeyRestored", originalPttBinding.equals(OpenAllayKeyMappings.VOICE_PTT.saveString()));
-        OpenAllayKeyMappings.INTERACT_HUD.setKey(originalInteractKey);
+        restorePttKey.run();
+        report.put("pttKeyRestored", originalPttBinding.equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.VOICE_PTT)));
+        restoreInteractKey.run();
         KeyMapping.resetMapping();
-        report.put("interactKeyAfter", OpenAllayKeyMappings.INTERACT_HUD.saveString());
-        report.put("interactKeyRestored", originalInteractBinding.equals(OpenAllayKeyMappings.INTERACT_HUD.saveString()));
+        report.put("interactKeyAfter", GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD));
+        report.put("interactKeyRestored", originalInteractBinding.equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD)));
     }
 
     /** Retain nested native causes within fixed report-size bounds. */
