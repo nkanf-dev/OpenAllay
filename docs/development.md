@@ -7,6 +7,9 @@ Minecraft 26.2 and Java 25 remain the feature-development mainline, not the only
 release target. Public Extension API 0.4.0 and Builder 0.4.0 have independent
 version coordinates. `gradle/minecraft-artifacts.json` records the accepted
 release families.
+The mature-ecosystem task branch adds accepted Forge 1.19.2 and 1.18.2 native
+integrations. Their original artifact proofs and older-anchor decisions are in
+[the backport verification record](verification/mature-forge-ecosystems.md).
 Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
 
 See the [0.4.2 release notes](releases/0.4.2.md) for the current product changes.

@@ -11,7 +11,8 @@
 
 [GitHub 下载](https://github.com/nkanf-dev/OpenAllay/releases) ·
 [快速上手](#快速上手) · [0.4.2 更新说明](docs/releases/0.4.2.md) ·
-[社区与开发](#社区与开发)
+[社区与开发](#社区与开发) ·
+[成熟 Forge 生态回移验证记录](docs/verification/mature-forge-ecosystems.md)
 
 | | 让它融入你的玩法 |
 | --- | --- |

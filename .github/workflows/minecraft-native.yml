@@ -1,36 +1,54 @@
-name: Retained modern native evidence validation
+name: Preserve accepted mature native products
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: retained-modern-native-${{ github.ref }}
+  group: preserve-mature-products-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  retained-evidence:
+  preserve-originals:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
-      - name: Retrieve unchanged original native evidence
+      - name: Retrieve original building/reload/commands/UI
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: 37388892087
+          artifact-ids: 11380706080
+          path: build/original-product-imports/11380706080
+      - name: Retrieve original building/reload/commands
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: 37397120987
+          artifact-ids: 11383755758
+          path: build/original-product-imports/11383755758
+      - name: Retrieve original UI/editor/native-toasts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          github-token: ${{ github.token }}
+          run-id: 37398771932
+          artifact-ids: 11383699840
+          path: build/original-product-imports/11383699840
+      - name: Retrieve original affected modern UI with correction receipt
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
           github-token: ${{ github.token }}
           run-id: 37401212610
-          artifact-ids: 11385476370
-          path: build/original-modern-evidence
-      - name: Revalidate original report and lossless frame receipts without a game or rebuild
-        run: |
-          python3 -B scripts/revalidate-compacted-native-ui.py build/original-modern-evidence/build/e2e/ci-client-compact/fabric/modern262-37401212610/run-1 > build/retained-modern-validation.json
-          python3 -B -c 'import json; p=json.load(open("build/retained-modern-validation.json")); assert p["outcome"] == "PASSED"; assert p["originalJar"]["sha256"] == "98aece007f0b4177276160f4db87b1db38c78338253e5d14079bb1c8cfcbc6af"; assert p["sourceIdentity"]["revision"] == "9396684bd95f48bdfbc7cf9c6db5d261247cc6e6"; assert p["nativeFrames"] == 17; assert p["gameRelaunched"] is False and p["productRebuilt"] is False'
-      - name: Retain correction proof with original provenance
-        if: always()
+          artifact-ids: 11384878871
+          path: build/original-product-imports/11384878871
+      - name: Check exact accepted hashes and preserve original provenance
+        run: python3 -B scripts/preserve-accepted-mature-products.py
+      - name: Retain original products without a rebuild or release
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: retained-modern-correction-${{ github.sha }}-${{ github.run_attempt }}
-          retention-days: 7
+          name: accepted-mature-native-products-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 90
           if-no-files-found: error
-          path: build/retained-modern-validation.json
+          path: build/preserved-mature-products/

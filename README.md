@@ -11,7 +11,8 @@ to work through the task and bring useful answers back into the game.
 
 [Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
 [Quick start](#quick-start) · [0.4.2 release notes](docs/releases/0.4.2.md) ·
-[Community](#community-and-development)
+[Community](#community-and-development) ·
+[Mature Forge backport verification](docs/verification/mature-forge-ecosystems.md)
 
 | | Make it part of your game |
 | --- | --- |
