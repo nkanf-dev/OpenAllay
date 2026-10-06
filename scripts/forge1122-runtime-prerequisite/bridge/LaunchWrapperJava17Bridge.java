@@ -35,6 +35,7 @@ public final class LaunchWrapperJava17Bridge {
         if (!INPUT_JAR_SHA256.equals(sha(Files.readAllBytes(officialJar.toPath()))))
             throw new IllegalStateException("Official LaunchWrapper1.12 JAR differs");
         if (Boolean.getBoolean("openallay.pack200.enabled")) Pack200Bridge.install(instrumentation);
+        if (Boolean.getBoolean("openallay.objectholder.enabled")) ObjectHolderBridge.install(instrumentation);
         instrumentation.addTransformer(new ClassFileTransformer() {
             public byte[] transform(ClassLoader loader, String name, Class<?> redefining,
                                     ProtectionDomain domain, byte[] bytes) {

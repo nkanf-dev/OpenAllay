@@ -230,9 +230,9 @@ def prepare_pack200(args, output, java, cp, runtime):
     # A real explicit helper library, resolved by unchanged stock LaunchClassLoader.
     helper_classes = output / "pack200-helper-classes"
     helper_classes.mkdir()
-    helper_source = PACKET / "bridge/pack200/Pack200Runtime.java"
+    helper_sources = sorted((PACKET / "bridge/pack200").glob("*.java"))
     with (output / "pack200-helper-compile.log").open("w") as log:
-        subprocess.run([str(java.parent / "javac"), "--release", "8", "-d", str(helper_classes), str(helper_source)],
+        subprocess.run([str(java.parent / "javac"), "--release", "8", "-d", str(helper_classes)] + [str(p) for p in helper_sources],
                        check=True, stdout=log, stderr=subprocess.STDOUT)
     helper = output / "pack200-runtime-helper.jar"
     subprocess.run([str(java.parent / "jar"), "cf", str(helper), "-C", str(helper_classes), "."], check=True)
@@ -275,7 +275,15 @@ def prepare_launchwrapper_bridge(args, output, java, cp, runtime):
     test_cp = os.pathsep.join([str(agent)] + [str(path) for _, path in cp])
     test_main = "dev.openallay.runtime.forge1122.LaunchWrapperJava17BridgeTest"
     clean_env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
-    if args.title_only:
+    if args.objectholder_bridge:
+        forge=next(path for name,path in cp if name=="net.minecraftforge:forge:1.12.2-14.23.5.2864")
+        with (output / "objectholder-tests.log").open("w") as log:
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.ObjectHolderBridgeTest",str(forge)],
+                           check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+            fields=output / "objectholder-test-empty-fields.tsv";fields.write_text("")
+            subprocess.run([str(java),"-cp",test_cp,"dev.openallay.runtime.forge1122.pack200.ObjectHolderRuntime",str(fields)],
+                           check=True,env=clean_env,stdout=log,stderr=subprocess.STDOUT)
+    elif args.title_only:
         runtime.write_json(output / "bridge-tests-reused.json", json.loads((PACKET / "prior-bridge-tests.json").read_text()))
     elif args.pack200_bridge:
         forge = next(path for name, path in cp if name == "net.minecraftforge:forge:1.12.2-14.23.5.2864")
@@ -333,8 +341,15 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
     if any("${" in item for item in game_args):
         raise ValueError("Unresolved legacy launcher argument")
     bridge_flags = prepare_launchwrapper_bridge(args, output, java, cp, runtime) if args.launchwrapper_bridge else []
+    objectholder_flags = (["-Dopenallay.objectholder.enabled=true",
+        "-Dopenallay.objectholder.client=" + str(root / "versions/1.12.2/1.12.2.jar"),
+        "-Dopenallay.objectholder.fields=" + str(output / "objectholder-fields.tsv"),
+        "-Dopenallay.objectholder.writes=" + str(output / "objectholder-writes.tsv"),
+        "-Dopenallay.objectholder.metadata=" + str(output / "objectholder-metadata.tsv"),
+        "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
+        if args.objectholder_bridge else [])
     command = [str(java), "-Xms256M", "-Xmx1536M",
-               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
+               "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
     if args.title_only:
         env["LC_ALL"] = "C"
@@ -379,6 +394,10 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
                    "unsupportedClassVersion": "UnsupportedClassVersionError" in text,
                    "asmParseFailure": "ClassReader" in text and "IllegalArgumentException" in text,
                    "engineLoaded": False, "sdkAndBuilderTarget": 8, "futureEngineAndRhinoTarget": 17}
+    if args.objectholder_bridge:
+        writes=output / "objectholder-writes.tsv"
+        diagnostics["objectHolderPopulatedReadbackCount"] = len(writes.read_text().splitlines()) if writes.exists() else 0
+        diagnostics["objectHolderRegistryApplied"] = "Holder lookups applied" in text
     runtime.write_json(output / "diagnostics.json", diagnostics)
     # A window or screenshot alone is not a title-success claim.
     return 0 if receipt["status"] == "captured-awaiting-title-review" else 1
@@ -386,6 +405,7 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--objectholder-bridge", action="store_true", help="Exact real holder-field instrumentation plus genuine Field.set")
     parser.add_argument("--title-only", action="store_true", help="Use real xrandr display harness; reuse exact already-passed bridge source tests")
     parser.add_argument("--pack200-bridge", action="store_true", help="Opt-in genuine build-JDK8 Pack200 conversion, runtime17 entry seam")
     parser.add_argument("--launchwrapper-bridge", action="store_true", help="Opt-in exact LaunchWrapper1.12 URL seam instrumentation; stock libraries stay unchanged")
@@ -396,6 +416,8 @@ def main():
     parser.add_argument("--minecraft-root", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.objectholder_bridge:
+        args.title_only = True
     if args.title_only:
         args.pack200_bridge = True
         prior = json.loads((PACKET / "prior-bridge-tests.json").read_text())

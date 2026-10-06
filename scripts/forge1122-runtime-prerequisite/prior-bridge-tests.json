@@ -8,8 +8,9 @@
   "sources": {
     "bridge/Pack200Bridge.java": "e0540a9643c0a7739757575b3c7636e57cd742a34c462dcf54790a4a3a190f78",
     "bridge/LaunchWrapperJava17BridgeTest.java": "c82a0b4863f9ed13c4148e8abac0c863158791842ee4c1b45e91fd01803f1d13",
-    "bridge/LaunchWrapperJava17Bridge.java": "b8a8a536cb25af89bbdcf6a22b78ec13f8b0e8223477e031e50c0586337650b7",
+    "bridge/LaunchWrapperJava17Bridge.java": "41d79891e064d36942462447c208422b52a7aa5e92c91d9615b5de69755ed3aa",
     "bridge/Pack200BridgeTest.java": "fe1eca7a8ffca251698f16829b7a10c617e73b27203279afaed6be9fe667e5be",
     "bridge/pack200/Pack200Runtime.java": "4647f5aa9d93642c1784fad9cc8fc724df5c97f329f7ebf3da9845a353ded9e4"
-  }
+  },
+  "additionalSourceReason": "prior Launch/Pack200 implementations unchanged; new exact ObjectHolder transformer install registration only"
 }

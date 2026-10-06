@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, stock1122-objectholder]
 permissions:
   contents: read
 concurrency:
@@ -318,17 +318,17 @@ jobs:
             build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
 
   stock1122-java17-prerequisite:
-    if: inputs.mode == 'stock1122' || inputs.mode == 'stock1122-bridge' || inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title'
+    if: inputs.mode == 'stock1122' || inputs.mode == 'stock1122-bridge' || inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title' || inputs.mode == 'stock1122-objectholder'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
-        if: inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title'
+        if: inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title' || inputs.mode == 'stock1122-objectholder'
         with: {distribution: temurin, java-version: '8.0.482+8'}
       - name: Capture immutable build-only JDK8 path before runtime JDK17 setup
-        if: inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title'
+        if: inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title' || inputs.mode == 'stock1122-objectholder'
         run: printf 'OPENALLAY_PACK200_JAVA8_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '17.0.18+8'}
@@ -345,7 +345,7 @@ jobs:
           --repo "$PWD" --java "$JAVA_HOME/bin/java" --java-release '17.0.18+8'
           --minecraft-root "$PWD/build/e2e/runtime/forge1122-stock/minecraft"
           --output "$PWD/build/e2e/forge1122-stock"
-          ${{ inputs.mode == 'stock1122-title' && '--title-only' || inputs.mode == 'stock1122-pack200' && '--pack200-bridge' || inputs.mode == 'stock1122-bridge' && '--launchwrapper-bridge' || '' }}
+          ${{ inputs.mode == 'stock1122-objectholder' && '--objectholder-bridge' || inputs.mode == 'stock1122-title' && '--title-only' || inputs.mode == 'stock1122-pack200' && '--pack200-bridge' || inputs.mode == 'stock1122-bridge' && '--launchwrapper-bridge' || '' }}
       - name: Retain only stock startup and source evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -357,6 +357,8 @@ jobs:
             build/e2e/forge1122-stock/*.json
             build/e2e/forge1122-stock/*.log
             build/e2e/forge1122-stock/*.png
+            build/e2e/forge1122-stock/*.tsv
+            build/e2e/forge1122-stock/*.jsonl
             build/e2e/forge1122-stock/bridge-tests.log
             build/e2e/forge1122-stock/game/logs/
             build/e2e/forge1122-stock/game/crash-reports/
