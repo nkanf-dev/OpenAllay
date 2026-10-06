@@ -370,12 +370,16 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         "-Dopenallay.objectholder.invalid=" + str(output / "objectholder-invalid.tsv"),
         "-Dopenallay.objectholder.transformReceipt=" + str(output / "objectholder-transform.jsonl")]
         if args.objectholder_bridge else [])
+    binding_probe=getattr(args,"applied_bindings",False)
     component_flags = (["-Dopenallay.capability.enabled=true",
         "-Dopenallay.capability.writes="+str(output/"capability-writes.tsv"),
         "-Dopenallay.capability.transformReceipt="+str(output/"capability-transform.json"),
         "-Dopenallay.capability.rejected="+str(output/"capability-rejected"),
         "-Dopenallay.component.receipt="+str(output/"coremod-component.json")]
         if component else [])
+    if binding_probe:
+        component_flags += ["-Dopenallay.e2e.appliedBindings=true",
+            "-Dopenallay.e2e.appliedBindingsReceipt="+str(output/"applied-bindings.json")]
     command = [str(java), "-Xms256M", "-Xmx1536M",
                "-Xlog:class+load=info:file=" + str(output / "class-load.log")] + bridge_flags + pack200_flags + objectholder_flags + component_flags + (["-Dopenallay.objectholder.phaseDiagnostic=true"] if args.objectholder_phase_diagnostic else []) + (["-Dorg.lwjgl.util.Debug=true"] if args.title_only else []) + jvm + [MAIN] + game_args
     env = {k:v for k,v in os.environ.items() if k not in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS")}
@@ -432,6 +436,12 @@ def boot(args, root, java, assets, runtime, launch, expected, vanilla, version):
         receipt["accepted"]=False
         receipt["phaseDiagnostic"]=args.objectholder_phase_diagnostic
         runtime.write_json(output / "receipt.json",receipt)
+    if binding_probe:
+        path=output/"applied-bindings.json"
+        oracle=json.loads(path.read_text()) if path.is_file() else {"accepted":False,"cause":"actual binding receipt absent"}
+        if not oracle.get("accepted",False):
+            receipt["status"]="fatal-applied-binding-proof";receipt["accepted"]=False
+            runtime.write_json(output/"receipt.json",receipt)
     if component:
         classloads=(output/"class-load.log").read_text(errors="replace")
         caps=output/"capability-writes.tsv"

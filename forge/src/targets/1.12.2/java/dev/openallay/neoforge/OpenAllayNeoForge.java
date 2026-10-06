@@ -24,6 +24,8 @@ public final class OpenAllayNeoForge {
     public void preInitialize(FMLPreInitializationEvent event) {
         NeoForgeNativeLoaderFacts.install(event.getModConfigurationDirectory().toPath());
         NeoForgeNativeModBus.install(MinecraftForge.EVENT_BUS);
+        if (Boolean.getBoolean("openallay.e2e.appliedBindings") && NeoForgeNativeEnvironment.isClient())
+            MinecraftForge.EVENT_BUS.register(new Forge1122AppliedBindingOracle());
         OpenAllayRuntime runtime = OpenAllayBootstrap.initialize();
         NeoForgeBridgePayloads.register(runtime);
         NeoForgeDevelopmentCommands.register(runtime);
