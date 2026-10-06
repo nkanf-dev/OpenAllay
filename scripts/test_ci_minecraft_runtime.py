@@ -89,7 +89,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_all_prepared_exact_target_profiles_are_read_through_one_authority(self):
         targets = runtime.minecraft_targets()
-        self.assertEqual(24, len(targets))
+        self.assertEqual(25, len(targets))
         self.assertIn("1.20.1", targets)
         self.assertIn("1.21.1", targets)
         self.assertIn("26.3", targets)
@@ -213,6 +213,63 @@ class RuntimeTests(unittest.TestCase):
                     corrupt = True
                     with self.assertRaisesRegex(ValueError, "client mappings differ"):
                         runtime.prepare_neoforge(root, self.root / "java", pins)
+
+    def test_forge18182_embedded_native_version_is_exact_bounded_external_fact(self):
+        import zipfile
+        pins = runtime.read_pins(runtime.REPO, "1.18.2", "forge")
+        jar = self.root / "verified-client-mock.jar"
+        def write(value, name="version.json"):
+            with zipfile.ZipFile(jar, "w") as archive:
+                archive.writestr(name, json.dumps(value))
+        value = {"id": "1.18.2", "world_version": 2975}
+        write(value)
+        receipt = runtime.forge_18182_native_version(jar, pins)
+        self.assertEqual(2975, receipt["nativeDataVersion"])
+        self.assertEqual("version.json", receipt["nativeVersionMember"])
+        self.assertEqual("1.18.2", receipt["nativeVersionId"])
+        self.assertEqual(hashlib.sha256(json.dumps(value).encode()).hexdigest(), receipt["nativeVersionSha256"])
+        for value in ({"id": "1.19.2", "world_version": 2975}, {"id": "1.18.2", "world_version": 3120},
+                      {"id": "1.18.2", "world_version": True}, {"id": "1.18.2", "data_version": 2975}):
+            write(value)
+            with self.assertRaisesRegex(ValueError, "native DataVersion differs"):
+                runtime.forge_18182_native_version(jar, pins)
+        write({"id": "1.18.2", "world_version": 2975}, "installer/version.json")
+        with self.assertRaisesRegex(ValueError, "bounded embedded"):
+            runtime.forge_18182_native_version(jar, pins)
+        write({"padding": "x" * 16385})
+        with self.assertRaisesRegex(ValueError, "bounded embedded"):
+            runtime.forge_18182_native_version(jar, pins)
+
+    def test_actual_forge18182_official_metadata_and_source_pin_shape(self):
+        from minecraft_target_loaders import fml_runtime_identity, runtime_pin_fields
+        pins = runtime.read_pins(runtime.REPO, "1.18.2", "forge")
+        self.assertEqual("17", pins["java_version"])
+        self.assertEqual("1.18.2-40.3.0", pins["forge_version"])
+        self.assertEqual(("minecraft_version", "java_version", "forge_version"), runtime_pin_fields("forge"))
+        identity = fml_runtime_identity(pins, "forge")
+        self.assertEqual("net.minecraftforge", identity["group"])
+        fixture = Path(__file__).with_name("fixtures") / "forge-1.18.2-40.3.0"
+        install = runtime.json_bytes((fixture / "install_profile.json").read_bytes())
+        version = runtime.json_bytes((fixture / "version.json").read_bytes())
+        self.assertEqual("1.18.2-forge-40.3.0", version["id"])
+        self.assertEqual("1.18.2", version["inheritsFrom"])
+        self.assertEqual("cpw.mods.bootstraplauncher.BootstrapLauncher", version["mainClass"])
+        self.assertEqual(6, len(runtime.client_processors(install)))
+        outputs = runtime.processor_outputs(self.mcroot, install)
+        self.assertEqual({"MAPPINGS", "MOJMAPS", "MERGED_MAPPINGS", "MC_SLIM", "MC_EXTRA", "MC_SRG", "PATCHED"}, set(outputs))
+        self.assertIn("1.18.2-20220404.173914", str(outputs["MOJMAPS"]))
+        game = version["arguments"]["game"]
+        self.assertEqual("20220404.173914", game[game.index("--fml.mcpVersion") + 1])
+        self.assertEqual("forgeclient", game[game.index("--launchTarget") + 1])
+        self.assertEqual("net.minecraftforge", game[game.index("--fml.forgeGroup") + 1])
+        runtime.official_url(identity["maven"] + runtime.maven_path("net.minecraftforge:forge:" + pins["forge_version"] + ":installer"))
+        for loader in ("fabric", "neoforge"):
+            with self.assertRaisesRegex(ValueError, "actual source target"):
+                runtime.read_pins(runtime.REPO, "1.18.2", loader)
+        unknown = json.loads(json.dumps(install))
+        next(processor for processor in unknown["processors"] if "sides" not in processor or "client" in processor["sides"])["args"].append("--skip-gates")
+        with self.assertRaisesRegex(ValueError, "Unknown official client processor"):
+            runtime.processor_outputs(self.mcroot, unknown)
 
     def test_actual_forge1192_official_metadata_and_source_pin_shape(self):
         from minecraft_target_loaders import fml_runtime_identity, runtime_pin_fields

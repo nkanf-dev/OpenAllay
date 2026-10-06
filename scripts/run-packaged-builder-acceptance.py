@@ -506,6 +506,21 @@ def read_runtime_provision(minecraft_root, loader, repo=REPO, minecraft_target="
         raise ValueError("Forge runtime receipt does not match the actual source loader selection")
     if not isinstance(receipt.get("files"), dict):
         raise ValueError("Isolated runtime provision manifest has no file hashes")
+    if loader == "forge" and minecraft_target == "1.18.2":
+        client = minecraft_root / "versions/1.18.2/1.18.2.jar"
+        verify_runtime_record(client, minecraft_root, receipt["files"])
+        with zipfile.ZipFile(client) as archive:
+            members = [info for info in archive.infolist() if info.filename == "version.json"]
+            if len(members) != 1 or not 0 < members[0].file_size <= 16384:
+                raise ValueError("Forge 1.18.2 requires its bounded official client version member")
+            data = archive.read(members[0])
+        version = verifier.prepare.decode_json(data.decode("utf-8"))
+        if (version.get("id") != "1.18.2" or type(version.get("world_version")) is not int
+                or version["world_version"] != 2975
+                or type(receipt.get("nativeDataVersion")) is not int or receipt["nativeDataVersion"] != 2975
+                or receipt.get("nativeVersionMember") != "version.json" or receipt.get("nativeVersionId") != "1.18.2"
+                or receipt.get("nativeVersionSha256") != hashlib.sha256(data).hexdigest()):
+            raise ValueError("Forge 1.18.2 runtime native version receipt differs from the verified official client")
     return {"path": str(receipt_path), "sha256": digest(receipt_path),
             "files": receipt["files"], "fabricApi": receipt.get("fabricApi"), "profile": receipt.get("profile")}
 
@@ -1001,9 +1016,48 @@ def validate_ui_capture(manifest):
                 raise ValueError("Manual native graphical report lacks actual export")
         else:
             validate_live_ux_receipts(report)
+    if (manifest["scenario"] == "ui-live-ux-regressions"
+            and report.get("gameVersion") == "1.18.2" and report.get("loader") == "forge"):
+        validate_18182_native_primitives(report)
     else:
         validate_final_screenshot(manifest)
     return report
+
+
+def validate_18182_native_primitives(report):
+    """Require real native widget paints and native toast manager outcomes, not model state alone."""
+    reflow = report.get("nativeEditorReflow", {})
+    narrow, wide = reflow.get("narrow", {}), reflow.get("wide", {})
+    if (not reflow.get("widgetIdentity") or narrow.get("frame", 0) <= 0
+            or wide.get("frame", 0) <= narrow.get("frame", 0)
+            or narrow.get("width") != 40 or wide.get("width", 0) <= 40
+            or narrow.get("lines", 0) <= wide.get("lines", 0)
+            or wide.get("focused") is not True
+            or any(narrow.get(key) != wide.get(key) for key in ("cursor", "start", "end"))):
+        raise ValueError("Old native editor reflow lost paint, selection, caret, or focus")
+    callbacks = report.get("nativeEditorCallbacks", {})
+    paint = callbacks.get("paint", {})
+    if (callbacks.get("text") != "replacement" or paint.get("start") != 0 or paint.get("end") != 7
+            or paint.get("frame", 0) <= wide.get("frame", 0)
+            or not all(callbacks.get(key) is True for key in ("clipboardCopyCutPaste", "undoRedo", "externalReplacement"))
+            or report.get("nativeEditorClipboardRestored") is not True
+            or report.get("nativeEditorStateRestored") is not True):
+        raise ValueError("Old native editor callback or original-state restoration evidence is missing")
+    mixed = report.get("nativeToastMixed", {})
+    tail = report.get("nativeToastTailWait", {})
+    reuse = report.get("nativeToastReuse", {})
+    clear = report.get("nativeToastClear", {})
+    if (mixed.get("occupied") != [True] * 5 or mixed.get("queuedCount") != 0
+            or mixed.get("actualNativeTops", [])[:3] != [0, 64, 128]
+            or len(mixed.get("frames", [])) != 5 or not all(value > 0 for value in mixed["frames"][:3])
+            or tail.get("occupied") != [True, True, True, True, False] or tail.get("queuedCount") != 2
+            or tail.get("frames", [])[3:] != [0, 0]
+            or reuse.get("queuedCount") != 0 or reuse.get("actualNativeTops", [])[3:] != [0, 128]
+            or len(reuse.get("frames", [])) != 5 or not all(value > 0 for value in reuse["frames"][3:])
+            or reuse.get("ownedCompletions", [None])[0] != 1
+            or clear.get("occupied") != [False] * 5 or clear.get("queuedCount") != 0
+            or clear.get("pendingEmpty") is not True or clear.get("actualNativeTops") != [-1] * 5):
+        raise ValueError("Native two-slot toast placement, FIFO wait, reuse, or clearing differs")
 
 
 def validate_live_ux_receipts(report):

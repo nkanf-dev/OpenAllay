@@ -4,7 +4,7 @@
 Reads only packaged acceptance reports, production traces, templates and journals.
 It does not launch Minecraft, call a provider, inspect save chunks or modify files.
 For acceptance, reads ONLY the exact native Builder identity SavedData for
-26.2 or Forge 1.19.2 under the original disposable world. No chunks or other saves.
+26.2 or Forge 1.18.2/1.19.2 under the original disposable world. No chunks or other saves.
 Printed JSON is derived evidence, not a model-authored acceptance claim.
 """
 
@@ -562,16 +562,16 @@ FAILURES = (("invalid_native_input", "Builder native operation failed; inspect t
 
 
 def native_world_identity(game, manifest):
-    """Exact native producer path for two explicitly bound targets; no search/fallback."""
+    """Exact native producer paths for explicitly bound targets; no search/fallback."""
     target = manifest.get("minecraft")
     if target == "26.2":
         # 26.2 stores even the overworld under its Identifier path.
         relative = "dimensions/minecraft/overworld/data/openallay_builder/world_identity.dat"
-    elif target == "1.19.2" and manifest.get("loader") == "forge":
-        # Inherited NativeWorldIdentity STORAGE_ID plus 1.19.2's overworld data folder.
+    elif target in ("1.18.2", "1.19.2") and manifest.get("loader") == "forge":
+        # Inherited NativeWorldIdentity STORAGE_ID and native overworld data folder.
         relative = "data/openallay_builder_world_identity.dat"
     else:
-        raise ValueError("Bounded native identity parser supports verified 26.2 and Forge 1.19.2 only")
+        raise ValueError("Bounded native identity parser supports verified 26.2 and Forge 1.18.2/1.19.2 only")
     require(re.fullmatch(r"openallay-builder-[a-zA-Z0-9_.-]+", manifest["world"]), "Invalid disposable world name")
     path = under(game / "saves" / manifest["world"] / relative, game)
     compressed = read_bytes(path, 65536)
@@ -619,8 +619,9 @@ def native_world_identity(game, manifest):
     fields(identity, ("data", "DataVersion"))
     fields(identity["data"], ("uuid",))
     integer(identity["DataVersion"])
-    if target == "1.19.2":
-        require(identity["DataVersion"] == 3120, "Native identity DataVersion differs from Minecraft 1.19.2")
+    if target in ("1.18.2", "1.19.2"):
+        expected_version = {"1.18.2": 2975, "1.19.2": 3120}[target]
+        require(identity["DataVersion"] == expected_version, "Native identity DataVersion differs from Minecraft " + target)
     return canonical_uuid(identity["data"]["uuid"]), path, identity["DataVersion"]
 
 
@@ -806,7 +807,7 @@ def validate_fixture_receipts(phase):
 
 
 def validate_native_command_warmup(report, native, manifest, actor):
-    if manifest.get("minecraft") != "1.19.2" or manifest.get("loader") != "forge":
+    if manifest.get("minecraft") not in ("1.18.2", "1.19.2") or manifest.get("loader") != "forge":
         return
     warmup = report.get("nativeCommandWarmup")
     require(isinstance(warmup, dict) and warmup == native.get("nativeCommandWarmup"),
@@ -821,6 +822,11 @@ def validate_native_command_warmup(report, native, manifest, actor):
             and warmup.get("initialUnrestrictedSetting") is manifest.get("unrestrictedOptIn", False)
             and warmup.get("restoredUnrestrictedSetting") is warmup.get("initialUnrestrictedSetting"),
             "Native command warmup changed Builder authority baseline")
+    if manifest.get("minecraft") == "1.18.2":
+        require(warmup.get("submissionOwner") == "MinecraftNativeCommandSubmission"
+                and warmup.get("messageProof") == "actor-bound-native-command-token-feedback"
+                and warmup.get("cryptographicSignatureProof") is False,
+                "Pre-signing native command receipt must bind submission and token feedback")
     token = warmup.get("token")
     require(isinstance(token, str) and re.fullmatch(r"openallay_native_command_[a-f0-9]{32}", token),
             "Native command token identity differs")

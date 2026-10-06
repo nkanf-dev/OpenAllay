@@ -23,6 +23,14 @@ public final class GuideNativeMultilineEditor extends GuideNativeWidget implemen
     private long lastClick;
     private int lastClickIndex = -1;
     private char pendingHighSurrogate;
+    private int characterLimit = Integer.MAX_VALUE;
+    public int e2eCharacterLimit() { return characterLimit; }
+    private long paintedFrames;
+    private ProbeReceipt painted;
+    public record ProbeReceipt(long frame, int cursor, int start, int end, int lines,
+            int width, int caretX, int caretY, boolean focused) {}
+    /** Cached actual paint facts; does not advance input or render. */
+    public ProbeReceipt e2eReceipt() { return painted; }
 
     public GuideNativeMultilineEditor(Font font, int x, int y, int width, int height,
             Component placeholder, Component narration) {
@@ -38,7 +46,7 @@ public final class GuideNativeMultilineEditor extends GuideNativeWidget implemen
         text.setValue(value);
         changed();
     }
-    @Override public void setCharacterLimit(int limit) { text.characterLimit(limit); changed(); }
+    @Override public void setCharacterLimit(int limit) { text.characterLimit(limit); characterLimit = limit; changed(); }
     @Override public void setValueListener(Consumer<String> listener) { text.listener(listener); }
     @Override public void resize(int width, int height, int x, int y) {
         int contentWidth = GuideComposerGeometry.contentWidth(width, PADDING * 2);
@@ -125,14 +133,14 @@ public final class GuideNativeMultilineEditor extends GuideNativeWidget implemen
     @Override public boolean keyPressed(int key, int scancode, int modifiers) {
         if (!isFocused() || !active || !visible) return false;
         pendingHighSurrogate = 0;
-        boolean shift = Screen.hasShiftDown();
-        boolean control = Screen.hasControlDown();
-        if (Screen.isSelectAll(key)) text.selectAll();
-        else if (Screen.isCopy(key)) Minecraft.getInstance().keyboardHandler.setClipboard(text.selected());
-        else if (Screen.isCut(key)) {
+        boolean shift = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
+        boolean control = (modifiers & (Minecraft.ON_OSX ? GLFW.GLFW_MOD_SUPER : GLFW.GLFW_MOD_CONTROL)) != 0;
+        if (control && key == GLFW.GLFW_KEY_A) text.selectAll();
+        else if (control && key == GLFW.GLFW_KEY_C) Minecraft.getInstance().keyboardHandler.setClipboard(text.selected());
+        else if (control && key == GLFW.GLFW_KEY_X) {
             Minecraft.getInstance().keyboardHandler.setClipboard(text.selected());
             text.insert("");
-        } else if (Screen.isPaste(key)) text.insert(Minecraft.getInstance().keyboardHandler.getClipboard());
+        } else if (control && key == GLFW.GLFW_KEY_V) text.insert(Minecraft.getInstance().keyboardHandler.getClipboard());
         else if (control && key == GLFW.GLFW_KEY_Z) { if (shift) text.redo(); else text.undo(); }
         else if (control && key == GLFW.GLFW_KEY_Y) text.redo();
         else switch (key) {
@@ -204,6 +212,12 @@ public final class GuideNativeMultilineEditor extends GuideNativeWidget implemen
                     / (text.lines().size() * lineHeight())));
             int top = y + PADDING + (int) ((viewportHeight() - thumb) * scroll / maximumScroll());
             graphics.fill(x + width - 3, top, x + width - 1, top + thumb, 0xFF909090);
+        }
+        if (Boolean.getBoolean("openallay.e2e.enabled")) {
+            GuideMultilineTextState.Line caret = text.lines().get(text.cursorLine());
+            painted = new ProbeReceipt(++paintedFrames, text.cursor(), text.selectionStart(), text.selectionEnd(),
+                    text.lines().size(), width, x + PADDING + font.width(text.value().substring(caret.start(), text.cursor())),
+                    y + PADDING + text.cursorLine() * lineHeight() - (int) scroll, isFocused());
         }
     }
     @Override protected void narrateGuideWidget(NarrationElementOutput output) {

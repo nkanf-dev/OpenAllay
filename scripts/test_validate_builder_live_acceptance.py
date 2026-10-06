@@ -641,6 +641,70 @@ class DurableAcceptanceAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate native identity NBT"):
             self.audit()
 
+    def forge_18182_identity(self):
+        self.forge_identity()
+        self.identity_path.write_bytes(gzip.compress(identity_nbt(self.world_id, 2975), mtime=0))
+        self.mutate(self.directory / "launch.json", lambda value: value.update(minecraft="1.18.2"))
+        self.mutate(self.template_path, lambda value: value.update(gameVersion="1.18.2", dataVersion=2975))
+        def bind(value):
+            for receipt in (value["nativeCommandWarmup"], value["nativeAcceptance"]["nativeCommandWarmup"]):
+                receipt.update(submissionOwner="MinecraftNativeCommandSubmission",
+                               messageProof="actor-bound-native-command-token-feedback",
+                               cryptographicSignatureProof=False)
+        self.mutate(self.directory / "report.json", bind)
+
+    def test_forge_18182_full_acceptance_and_exact_original_reload(self):
+        self.forge_18182_identity()
+        directory = self.reload_phase()
+        self.mutate(directory / "launch.json", lambda value: value.update(minecraft="1.18.2", loader="forge"))
+        proof = validator.validate_acceptance(self.directory, self.repo, reload_directory=directory)
+        self.assertEqual(str(self.identity_path), proof["identity"])
+        self.assertEqual(2975, proof["nativeDataVersion"])
+        self.assertEqual(self.actor, proof["actorUuid"])
+        self.assertEqual(self.world_id, proof["worldId"])
+        self.assertEqual(14, len(proof["journalRows"]))
+        self.assertEqual(85, proof["landmarkCount"])
+        self.assertEqual(hashlib.sha256(self.template_path.read_bytes()).hexdigest(), proof["templateSha256"])
+        self.assertIn("reloadReportSha256", proof)
+
+    def test_forge_18182_identity_alias_other_loader_wrong_uuid_and_version_refuse(self):
+        self.forge_18182_identity()
+        original = self.identity_path.read_bytes()
+        self.identity_path.unlink()
+        self.identity_path.with_name("world_identity.dat").write_bytes(original)
+        with self.assertRaisesRegex(ValueError, "Missing"):
+            self.audit()
+        self.identity_path.write_bytes(original)
+        for loader in ("fabric", "neoforge", None):
+            self.mutate(self.directory / "launch.json", lambda value: value.update(loader=loader))
+            with self.assertRaisesRegex(ValueError, "supports verified"):
+                self.audit()
+        self.mutate(self.directory / "launch.json", lambda value: value.update(loader="forge"))
+        self.identity_path.write_bytes(gzip.compress(identity_nbt(str(uuid.UUID(int=700)), 2975)))
+        with self.assertRaises(ValueError):
+            self.audit()
+        self.identity_path.write_bytes(gzip.compress(identity_nbt(self.world_id, 3120)))
+        self.mutate(self.template_path, lambda value: value.update(dataVersion=3120))
+        with self.assertRaisesRegex(ValueError, "DataVersion differs"):
+            self.audit()
+
+    def test_forge_18182_original_reload_target_actor_anchor_and_template_remain_exact(self):
+        self.forge_18182_identity()
+        directory = self.reload_phase()
+        self.mutate(directory / "launch.json", lambda value: value.update(minecraft="1.18.2", loader="forge"))
+        launch = validator.read_json(directory / "launch.json")
+        for mutation in (lambda value: value.update(minecraft="1.19.2"),
+                         lambda value: value.update(loader="neoforge"),
+                         lambda value: value.update(gameDirectory=str(directory / "game"))):
+            write_json(directory / "launch.json", launch)
+            self.mutate(directory / "launch.json", mutation)
+            with self.assertRaises(ValueError):
+                validator.validate_acceptance(self.directory, self.repo, reload_directory=directory)
+        write_json(directory / "launch.json", launch)
+        self.mutate(directory / "report.json", lambda value: value["nativeAcceptance"].update(independentAnchor={"x": 999, "y": -61, "z": 8}))
+        with self.assertRaises(ValueError):
+            validator.validate_acceptance(self.directory, self.repo, reload_directory=directory)
+
     def forge_identity(self):
         # Synthetic 1.19.2 SavedData at the producer's single exact path.
         self.identity_path.unlink()
@@ -754,3 +818,24 @@ class NativeCommandWarmupTests(unittest.TestCase):
             invalid = copy.deepcopy(warmup); invalid["commands"]["signed"][key] = value
             with self.assertRaises(ValueError):
                 validator.validate_native_command_warmup({"nativeCommandWarmup": invalid}, {"nativeCommandWarmup": invalid}, manifest, actor)
+
+    def test_forge_18182_submission_is_token_feedback_not_signature_proof(self):
+        actor, warmup = self.valid()
+        warmup.update(submissionOwner="MinecraftNativeCommandSubmission",
+                      messageProof="actor-bound-native-command-token-feedback", cryptographicSignatureProof=False)
+        manifest = {"minecraft": "1.18.2", "loader": "forge", "unrestrictedOptIn": False}
+        validator.validate_native_command_warmup({"nativeCommandWarmup": warmup}, {"nativeCommandWarmup": warmup}, manifest, actor)
+        for key, value in (("cryptographicSignatureProof", True), ("submissionOwner", "server.execute"),
+                           ("messageProof", "signature"), ("javascriptSettingRestored", False),
+                           ("restoredUnrestrictedSetting", True), ("cheatsOffAfter", False),
+                           ("offOwnerCaptureRejected", False), ("cancelledReuseRejected", False),
+                           ("closedCapabilityRemoved", False), ("closedBridgeRemoved", False)):
+            invalid = copy.deepcopy(warmup); invalid[key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                validator.validate_native_command_warmup({"nativeCommandWarmup": invalid}, {"nativeCommandWarmup": invalid}, manifest, actor)
+        for key, value in (("actorId", "different"), ("sequence", 1.5), ("messages", ["unrelated"])):
+            invalid = copy.deepcopy(warmup); invalid["commands"]["signed"][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                validator.validate_native_command_warmup({"nativeCommandWarmup": invalid}, {"nativeCommandWarmup": invalid}, manifest, actor)
+        with self.assertRaises(ValueError):
+            validator.validate_native_command_warmup({}, {}, manifest, actor)

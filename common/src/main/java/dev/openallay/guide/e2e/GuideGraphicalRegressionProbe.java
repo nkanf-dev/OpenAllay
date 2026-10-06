@@ -77,6 +77,7 @@ final class GuideGraphicalRegressionProbe {
     private final BiFunction<String, UUID, java.util.Optional<String>> traceLookup;
     private final Consumer<Map<String, Object>> completed;
     private final Minecraft client = Minecraft.getInstance();
+    private final GuideNativeEditorE2EProbe nativePrimitiveProbe;
     private final Instant started = Instant.now();
     private final Map<String, Object> report = new LinkedHashMap<>();
     private final List<Map<String, Object>> checkpoints = new ArrayList<>();
@@ -156,6 +157,7 @@ final class GuideGraphicalRegressionProbe {
             BiFunction<String, UUID, java.util.Optional<String>> traceLookup,
             Consumer<Map<String, Object>> completed) {
         this.config = config;
+        nativePrimitiveProbe = GuideNativeEditorE2EProbe.create(client, loader, gameVersion, report);
         this.service = service;
         this.settings = settings;
         this.gson = gson;
@@ -874,6 +876,12 @@ final class GuideGraphicalRegressionProbe {
                 advance();
             }
             case 2 -> {
+                if (nativePrimitiveProbe != null && nativePrimitiveProbe.started()) {
+                    if (!nativePrimitiveProbe.tick(guide(), composer())) return;
+                    dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), config.question(), true);
+                    advance();
+                    return;
+                }
                 require(guide().getFocused() != composer().widget(), "Resize/rebuild incorrectly refocused blurred composer");
                 require("x".equals(composer().getValue()), "Resize lost player draft");
                 clickAt(guide(), dev.openallay.client.gui.GuideNativeWidgetGeometry.x(composer().widget()) + 8, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer().widget()) + 8, "composer-focus");
@@ -894,6 +902,10 @@ final class GuideGraphicalRegressionProbe {
                         "resizeRemainsBlurred", true, "typedPttKeyEditsText", true,
                         "voiceDisabledNoCapture", true));
                 checkpoint("live-02-blur-resize-typed-ptt", true);
+                if (nativePrimitiveProbe != null) {
+                    nativePrimitiveProbe.begin(guide(), composer());
+                    return;
+                }
                 dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), config.question(), true);
                 advance();
             }
@@ -2054,6 +2066,7 @@ final class GuideGraphicalRegressionProbe {
     }
 
     private void restoreKey() {
+        if (nativePrimitiveProbe != null) nativePrimitiveProbe.close();
         dev.openallay.platform.minecraft.MinecraftOptions.guiScale(client.options, originalGuiScale);
         MinecraftClientWindow.setWindowed(client, originalWindowWidth, originalWindowHeight);
         report.put("windowRestorationRequested", Map.of("width", originalWindowWidth, "height", originalWindowHeight,

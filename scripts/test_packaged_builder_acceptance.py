@@ -16,7 +16,7 @@ spec.loader.exec_module(launcher)
 
 class PackagedBuilderLauncherTests(unittest.TestCase):
     def test_target_catalog_cli_and_java_pins_are_exact_and_per_call(self):
-        self.assertEqual(24, len(launcher.minecraft_targets()))
+        self.assertEqual(25, len(launcher.minecraft_targets()))
         for target, java in (("1.20.1", "17"), ("1.21.1", "21"), ("26.3", "25"), ("26.2", "25")):
             args = launcher.parser().parse_args(["fabric", "--minecraft-target", target])
             self.assertEqual(target, args.minecraft_target)
@@ -72,7 +72,7 @@ class PackagedBuilderLauncherTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory) / "repo"
             for target in launcher.minecraft_targets():
-                selected_loader = "forge" if target == "1.19.2" else "fabric"
+                selected_loader = launcher.target_loaders(launcher.REPO, target)["loaders"][0]
                 artifact = self.artifact(repo, loader=selected_loader, minecraft_target=target)
                 identity = launcher.packaged_artifact(artifact, selected_loader, repo=repo, minecraft_target=target)
                 self.assertEqual(target, identity["minecraft"])
@@ -105,7 +105,8 @@ def read_json(path):
 
     def official_launch_contract(self, target):
         path = MODULE_PATH.parent / "fixtures/minecraft-launch" / (target + ".json")
-        expected = {"1.20.1": "d47ff966c68b13fac17d214eea8acfe45b1f08a15c432cdd2136e36c3d315de3",
+        expected = {"1.18.2": "3d7c7555a01f4d2af4f1de2b50037c6bb57dea936ef6084e631f2ef5dbd923aa",
+                    "1.20.1": "d47ff966c68b13fac17d214eea8acfe45b1f08a15c432cdd2136e36c3d315de3",
                     "1.21.1": "1ed901815b195cc714f36aee0fa4a8ee2bcf6d42154e6fbb346003cfc34d1b0d"}
         self.assertEqual(expected[target], launcher.digest(path))
         return json.loads(path.read_text())
@@ -137,6 +138,9 @@ def read_json(path):
         client = mcroot / "versions" / target / (target + ".jar")
         client.parent.mkdir(parents=True)
         client.write_bytes(b"unit fixture client; not executable Minecraft")
+        if target == "1.18.2":
+            with zipfile.ZipFile(client, "w") as archive:
+                archive.writestr("version.json", json.dumps({"id": "1.18.2", "world_version": 2975}))
         contract["vanilla"]["downloads"] = {"client": {"size": client.stat().st_size,
                                                        "sha1": launcher.digest_with(client, "sha1")}}
         metadata = contract[loader]
@@ -154,6 +158,14 @@ def read_json(path):
                     artifact.update({"sha1": launcher.digest_with(binary, "sha1"), "size": binary.stat().st_size})
                 else:
                     library.update({"sha1": launcher.digest_with(binary, "sha1"), "size": binary.stat().st_size})
+        for library in contract["vanilla"]["libraries"]:
+            for classifier, native in library.get("downloads", {}).get("classifiers", {}).items():
+                binary = mcroot / "libraries" / native["path"]
+                binary.parent.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(binary, "w") as archive:
+                    archive.writestr("META-INF/MANIFEST.MF", "mock native classifier")
+                    archive.writestr("mock-" + classifier + ".so", "offline fixture; not an executable native")
+                native.update(sha1=launcher.digest_with(binary, "sha1"), size=binary.stat().st_size)
         profile_path = mcroot / "versions" / metadata["id"] / (metadata["id"] + ".json")
         profile_path.parent.mkdir(parents=True)
         launcher.write_json(profile_path, metadata)
@@ -202,6 +214,11 @@ def read_json(path):
         if loader == "forge":
             receipt["sourceLoaderMap"] = "gradle/minecraft-target-loaders.json"
             receipt["sourceLoaderMapSha256"] = launcher.digest(repo / receipt["sourceLoaderMap"])
+        if target == "1.18.2":
+            with zipfile.ZipFile(client) as archive:
+                member = archive.read("version.json")
+            receipt.update(nativeDataVersion=2975, nativeVersionMember="version.json",
+                           nativeVersionId="1.18.2", nativeVersionSha256=launcher.hashlib.sha256(member).hexdigest())
         receipt_path = mcroot / ".provision" / (loader + "-runtime.json")
         receipt_path.parent.mkdir(exist_ok=True)
         self.refresh_runtime_receipt(mcroot, receipt_path, receipt)
@@ -289,6 +306,45 @@ def read_json(path):
                         for key in ("PATCHED", "MC_SRG", "MC_EXTRA"):
                             relative = "libraries/" + launcher.maven_path(contract["install"]["data"][key]["client"][1:-1]).as_posix()
                             self.assertIn(relative, json.loads(receipt.read_text())["files"])
+
+    def test_actual_forge18182_profile_arguments_and_persisted_resume_main_class(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            artifact = self.artifact(repo, loader="forge", minecraft_target="1.18.2")
+            mcroot, cache, java, receipt, contract = self.official_arguments_environment(repo, "1.18.2", "forge")
+            args = launcher.parser().parse_args(["forge", "--minecraft-target", "1.18.2", "--run-id", "forge-owned",
+                "--minecraft-root", str(mcroot), "--gradle-cache", str(cache), "--java", str(java), "--jar", str(artifact)])
+            with patch.object(launcher, "system_name", return_value="linux"), \
+                    patch.object(launcher.platform, "machine", return_value="x86_64"), \
+                    patch.object(launcher.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout='openjdk version "17.0.1"')):
+                output, manifest = launcher.prepare(args, repo)
+            main = "cpw.mods.bootstraplauncher.BootstrapLauncher"
+            self.assertEqual(main, manifest["mainClass"])
+            self.assertEqual(main, launcher.resume_main_class(manifest, repo))
+            self.assertEqual(contract["forge"]["arguments"]["game"], manifest["command"][-len(contract["forge"]["arguments"]["game"]):])
+            self.assertNotIn("net.neoforged.fml.startup.Client", manifest["command"])
+            self.assertNotIn("--quickPlaySingleplayer", manifest["command"])
+            self.assertIn("--fml.mcpVersion", manifest["command"])
+            self.assertIn("20220404.173914", manifest["command"])
+            self.assertEqual("1.18", contract["vanilla"]["assetIndex"]["id"])
+            self.assertEqual("17", launcher.runtime_pins("1.18.2", repo)["java_version"])
+            self.assertEqual("1.18.2-forge-40.3.0", contract["forge"]["id"])
+            self.assertTrue(manifest["nativeFiles"])
+            baseline = json.loads(receipt.read_text())
+            for field, value in (("nativeDataVersion", 3120), ("nativeVersionId", "1.19.2"),
+                                 ("nativeVersionSha256", "0" * 64), ("nativeVersionMember", "version-alias.json")):
+                invalid = dict(baseline); invalid[field] = value
+                launcher.write_json(receipt, invalid)
+                with self.assertRaisesRegex(ValueError, "native version receipt differs"):
+                    launcher.read_runtime_provision(mcroot, "forge", repo, "1.18.2")
+            launcher.write_json(receipt, baseline)
+            self.assertEqual([], list((output / "game/saves").iterdir()))
+            self.assertEqual({"minecraft_version", "java_version", "forge_version"}, set(json.loads(receipt.read_text())["pins"]))
+            for changed in (dict(manifest, mainClass="net.neoforged.fml.startup.Client"),
+                            {key: value for key, value in manifest.items() if key != "mainClass"}):
+                with self.assertRaisesRegex(ValueError, "persisted actual"):
+                    launcher.resume_main_class(changed, repo)
 
     def test_actual_forge1192_profile_arguments_and_persisted_resume_main_class(self):
         from types import SimpleNamespace
@@ -531,7 +587,7 @@ def read_json(path):
                       "support": {"targets": [{"loader": target, "minecraftVersionRange": game,
                                                 "openAllayVersionRange": "[0.4.1,)",
                                                 "openAllayApiVersionRange": "[0.4.0,0.5.0)"}
-                                               for game in launcher.minecraft_targets() for target in (("forge",) if game == "1.19.2" else ("fabric", "neoforge"))],
+                                               for game in launcher.minecraft_targets() for target in launcher.target_loaders(launcher.REPO, game)["loaders"]],
                                   "minimumJavaVersion": 8,
                                   "requiredHostFeatures": ["minecraft:world-access"], "validatedTargetIds": []},
                       "requirements": {"capabilities": [], "extensions": [], "skills": []}}

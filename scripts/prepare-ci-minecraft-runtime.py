@@ -596,6 +596,25 @@ def prepare_fabric(root, java, pins):
     return profile_id, api_path, files
 
 
+def forge_18182_native_version(client, pins):
+    """Bound the external game data version to the already hash-verified official client."""
+    require(pins.get("minecraft_version") == "1.18.2" and pins.get("forge_version") == "1.18.2-40.3.0",
+            "Expected exact Forge 1.18.2 native version binding")
+    with zipfile.ZipFile(client) as archive:
+        members = [info for info in archive.infolist() if info.filename == "version.json"]
+        require(len(members) == 1 and 0 < members[0].file_size <= 16384,
+                "Official client requires one bounded embedded version.json")
+        data = archive.read(members[0])
+    version = json_bytes(data)
+    require(version.get("id") == "1.18.2" and type(version.get("world_version")) is int
+            and version["world_version"] == 2975,
+            "Official client native DataVersion differs from Minecraft 1.18.2")
+    return {"nativeDataVersion": version["world_version"],
+            "nativeVersionMember": "version.json",
+            "nativeVersionId": version["id"],
+            "nativeVersionSha256": hashlib.sha256(data).hexdigest()}
+
+
 def prepare_fml(root, java, pins, loader):
     identity = fml_runtime_identity(pins, loader)
     version, artifact, profile_id = identity["version"], identity["artifact"], identity["profile"]
@@ -680,6 +699,7 @@ def provision(args, repo=REPO):
     require(client.stat().st_size == vanilla["downloads"]["client"]["size"]
             and file_hash(client, "sha1") == vanilla["downloads"]["client"]["sha1"],
             "Official installer changed the verified vanilla input JAR")
+    native_version = forge_18182_native_version(client, pins) if args.loader == "forge" and target == "1.18.2" else {}
     unique_files = sorted(set(files + loader_files + [root / ".provision/version_manifest_v2.json"]))
     receipt = {"loader": args.loader, "minecraft": pins["minecraft_version"], "javaRequired": int(pins["java_version"]),
                "java": str(java), "javaInfo": java_info, "minecraftRoot": str(root), "profile": profile_id,
@@ -696,6 +716,7 @@ def provision(args, repo=REPO):
                "installerNetworkPolicy": ("official-mojang-mappings" if args.loader in ("forge", "neoforge")
                     and "MOJMAPS" in json_bytes((root / ".provision" / (args.loader + "-install_profile.json")).read_bytes()).get("data", {})
                     else "offline" if args.loader in ("forge", "neoforge") else "official-fabric-installer")}
+    receipt.update(native_version)
     if args.loader == "forge":
         receipt["sourceLoaderMap"] = "gradle/minecraft-target-loaders.json"
         receipt["sourceLoaderMapSha256"] = file_hash(Path(repo) / receipt["sourceLoaderMap"])

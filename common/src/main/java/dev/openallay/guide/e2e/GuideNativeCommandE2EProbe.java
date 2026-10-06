@@ -34,6 +34,9 @@ final class GuideNativeCommandE2EProbe {
         receipt.addProperty("route", "registered-run-javascript/commands.run/MinecraftCommandCapture/native-player-command");
         receipt.addProperty("feedbackOwner", "Forge-ClientChatReceivedEvent-System-and-Player");
         receipt.addProperty("worldAuthorityChanged", false);
+        receipt.addProperty("submissionOwner", "MinecraftNativeCommandSubmission");
+        receipt.addProperty("messageProof", "actor-bound-native-command-token-feedback");
+        receipt.addProperty("cryptographicSignatureProof", false);
         RunJavascriptTool tool;
         ToolInvocationContext context;
         try {
@@ -82,10 +85,10 @@ final class GuideNativeCommandE2EProbe {
                 var helpNode = commands.describe('help');
                 var messageNode = commands.describe('me <action>');
                 var help = commands.run('/help me');
-                var signed = commands.run('/me %s');
+                var message = commands.run('/me %s');
                 var error = commands.run('/help %s_missing');
                 return JSON.stringify({helpNode: helpNode.path, messageNode: messageNode.path,
-                  help: help, signed: signed, error: error});
+                  help: help, signed: message, error: error});
                 """.formatted(token, token);
         // The real Tool owns its bounded command waits and its existing daemon worker.
         // Neither the client nor server owner thread waits on this future.
@@ -163,7 +166,7 @@ final class GuideNativeCommandE2EProbe {
     static void requireResults(JsonObject commands, UUID actor, String token) {
         if (!"help".equals(commands.get("helpNode").getAsString())
                 || !"me <action>".equals(commands.get("messageNode").getAsString()))
-            throw new IllegalStateException("Expected non-op help and signed-message command paths are missing");
+            throw new IllegalStateException("Expected non-op help and message command paths are missing");
         for (String name : List.of("help", "signed", "error")) {
             JsonObject result = commands.getAsJsonObject(name);
             if (!actor.toString().equals(result.get("actorId").getAsString())
@@ -184,7 +187,7 @@ final class GuideNativeCommandE2EProbe {
                 || anyMessage(error.getAsJsonArray("messages"), "/me ")
                 || help.get("sequence").getAsLong() + 1 != signed.get("sequence").getAsLong()
                 || signed.get("sequence").getAsLong() + 1 != error.get("sequence").getAsLong())
-            throw new IllegalStateException("Native help/signed-token/error feedback differs from submitted commands");
+            throw new IllegalStateException("Native help/message-token/error feedback differs from submitted commands");
     }
 
     private static boolean anyMessage(JsonArray messages, String text) {

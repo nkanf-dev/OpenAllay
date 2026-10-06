@@ -29,6 +29,18 @@ public abstract class ToastInstanceCompletionMixin {
                 ? owned.nativeSlotHeight() : renderedToast.height();
     }
 
+    @Inject(method = "render(IILcom/mojang/blaze3d/vertex/PoseStack;)Z",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/toasts/Toast;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/gui/components/toasts/ToastComponent;J)Lnet/minecraft/client/gui/components/toasts/Toast$Visibility;"),
+            require = 1, expect = 1, allow = 1)
+    private void openallay$observeActualPlacement(int guiWidth, int nativeIndex, PoseStack graphics,
+                                                CallbackInfoReturnable<Boolean> callback) {
+        if (!Boolean.getBoolean("openallay.e2e.enabled")) return;
+        com.mojang.math.Vector4f origin = new com.mojang.math.Vector4f(0, 0, 0, 1);
+        origin.transform(graphics.last().pose());
+        ((dev.openallay.guide.e2e.GuideNativeEditorE2EProbe.ToastReadback) this$0)
+                .openallay$observePaint(toast, origin.y());
+    }
+
     @Inject(method = "render(IILcom/mojang/blaze3d/vertex/PoseStack;)Z", at = @At("RETURN"),
             require = 1, expect = 1, allow = 1)
     private void openallay$stageRemoval(int guiWidth, int nativeIndex, PoseStack graphics,

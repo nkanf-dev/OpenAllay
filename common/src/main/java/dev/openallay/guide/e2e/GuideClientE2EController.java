@@ -295,7 +295,8 @@ public final class GuideClientE2EController {
                     failWithoutRequest("native_anchor_failed", failure.toString());
                     return;
                 }
-                if (config.scenario().equals("builder-acceptance") && "1.19.2".equals(gameVersion)
+                if (config.scenario().equals("builder-acceptance")
+                        && ("1.18.2".equals(gameVersion) || "1.19.2".equals(gameVersion))
                         && "forge".equals(loader)) {
                     if (nativeCommandRuntime == null || nativeCommandContexts == null) {
                         failWithoutRequest("native_command_owner_unavailable", "Actual product command owners are unavailable");

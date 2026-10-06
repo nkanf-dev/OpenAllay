@@ -5,6 +5,12 @@ import dev.openallay.client.gui.hud.GuideToastSlotManager;
 import dev.openallay.client.gui.hud.GuideToastSlotReservations;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.IdentityHashMap;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Final;
+import dev.openallay.guide.e2e.GuideNativeEditorE2EProbe;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.components.toasts.ToastComponent;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,12 +23,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Extends native admission only; the native five-element instance array remains sparse. */
 @Mixin(ToastComponent.class)
-public abstract class ToastComponentSlotMixin implements GuideToastSlotManager {
+public abstract class ToastComponentSlotMixin implements GuideToastSlotManager, GuideNativeEditorE2EProbe.ToastReadback {
     @Unique private final GuideToastSlotReservations<Toast> openallay$slots =
             new GuideToastSlotReservations<>(new Toast[5]);
     @Unique private int openallay$nativeIndex;
     @Unique private int openallay$pendingSlot = -1;
     @Unique private Toast openallay$pendingRemoval;
+    @Shadow @Final private Deque<Toast> queued;
+    @Unique private final Map<Toast, Float> openallay$tops = new IdentityHashMap<>();
+    @Unique private final Map<Toast, Integer> openallay$removals = new IdentityHashMap<>();
+    @Override public void openallay$observePaint(Toast toast, float top) {
+        if (Boolean.getBoolean("openallay.e2e.enabled")) openallay$tops.put(toast, top);
+    }
+    @Override public GuideNativeEditorE2EProbe.ToastSnapshot openallay$snapshot() {
+        List<Boolean> occupied = java.util.stream.IntStream.range(0, 5)
+                .mapToObj(slot -> !openallay$slots.canReserve(slot, 1)).toList();
+        return new GuideNativeEditorE2EProbe.ToastSnapshot(List.copyOf(queued), occupied,
+                Map.copyOf(openallay$tops), Map.copyOf(openallay$removals), openallay$pendingRemoval == null);
+    }
 
     // Native local 2 is initialized at 15; its first LOAD (ordinal 0) is loop condition bytecode 16.
     @ModifyVariable(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;)V",
@@ -72,14 +90,17 @@ public abstract class ToastComponentSlotMixin implements GuideToastSlotManager {
         int firstSlot = openallay$pendingSlot;
         openallay$pendingRemoval = null;
         openallay$pendingSlot = -1;
-        if (openallay$slots.release(removed, firstSlot) && removed instanceof GuideNativeToastBinding owned) {
-            owned.onFinishedRendering();
+        if (openallay$slots.release(removed, firstSlot)) {
+            if (Boolean.getBoolean("openallay.e2e.enabled")) openallay$removals.merge(removed, 1, Integer::sum);
+            if (removed instanceof GuideNativeToastBinding owned) owned.onFinishedRendering();
         }
     }
 
     @Inject(method = "clear()V", at = @At("RETURN"), require = 1, expect = 1, allow = 1)
     private void openallay$nativeClear(CallbackInfo callback) {
         openallay$slots.clear();
+        openallay$tops.clear();
+        openallay$removals.clear();
         openallay$pendingRemoval = null;
         openallay$pendingSlot = -1;
     }
