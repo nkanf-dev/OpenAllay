@@ -5,7 +5,7 @@ on:
       mode:
         type: choice
         default: tooling
-        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122]
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122]
 permissions:
   contents: read
 concurrency:
@@ -354,3 +354,32 @@ jobs:
             build/e2e/forge1122-stock/game/crash-reports/
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.json
             build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
+
+  native1122-census:
+    if: inputs.mode == 'census1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '17.0.18+8'
+      - name: Preserve exact metadata JDK17 path
+        run: echo "CENSUS_JAVAP=$JAVA_HOME/bin/javap" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '8.0.482+8'
+      - name: Export one normal FG3 named input island; inventory only
+        run: python3 -B scripts/run-forge1122-native-census.py --workspace "$RUNNER_TEMP/forge1122-tool" --output "$RUNNER_TEMP/forge1122-census" --javap "$CENSUS_JAVAP"
+      - name: Retain bounded text evidence, not game binaries or caches
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-native-census-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/forge1122-census/

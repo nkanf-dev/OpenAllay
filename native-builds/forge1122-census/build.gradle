@@ -1,0 +1,112 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+buildscript {
+    repositories { maven { url = 'https://maven.minecraftforge.net/' }; mavenCentral() }
+    configurations.classpath.resolutionStrategy.force 'net.minecraftforge:artifactural:1.0.13'
+    dependencies { classpath 'net.minecraftforge.gradle:ForgeGradle:3.0.197' }
+}
+apply plugin: 'net.minecraftforge.gradle'
+if (gradle.gradleVersion != '5.6.4' || System.getProperty('java.specification.version') != '1.8')
+    throw new GradleException('Census tooling requires Gradle5.6.4 daemon Java8; application Java17 unchanged')
+if (!hasProperty('canonicalSourceRoot') || !hasProperty('censusOutput'))
+    throw new GradleException('Explicit canonicalSourceRoot and external censusOutput required')
+def source = file(property('canonicalSourceRoot')).canonicalFile
+def output = file(property('censusOutput')).canonicalFile
+if (output.toPath().startsWith(source.toPath())) throw new GradleException('Evidence output must be outside canonical source')
+minecraft { mappings channel: 'snapshot', version: '20171003-1.12' }
+repositories { mavenCentral() }
+dependencies { minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2864' }
+configurations.all { resolutionStrategy.force 'net.minecraftforge:legacydev:0.2.3.1' }
+// Empty application source set. Normal FG may compile its patched game artifact remotely.
+// This island never compiles OpenAllay, packages a mod or launches a game.
+sourceSets.main.java.setSrcDirs([])
+sourceSets.main.resources.setSrcDirs([])
+tasks.withType(JavaCompile).all { enabled = false }
+['jar','reobfJar','runClient','runServer','downloadAssets','extractNatives'].each { name ->
+    tasks.matching { it.name == name }.all { enabled = false }
+}
+apply from: new File(source, 'gradle/minecraft-source-selection.gradle')
+def ancestors = new JsonSlurper().parse(new File(source,
+        'native-builds/forge16165/source-selection.json')).sourceFamilies + ['1.16.5','1.12.2']
+def roots = [:]
+['common':'common','adapter':'adapters/minecraft','fml':'neoforge'].each { owner, path ->
+    ['java','resources'].each { kind ->
+        def ordered = [new File(source,"${path}/src/main/${kind}")]
+        ordered.addAll(ancestors.collect { new File(source,"${path}/src/targets/${it}/${kind}") })
+        if (owner == 'fml') ordered.addAll(ancestors.collect { new File(source,"forge/src/targets/${it}/${kind}") })
+        roots[owner+':'+kind] = ordered
+    }
+}
+def sha = { File f ->
+    def digest = MessageDigest.getInstance('SHA-256')
+    f.withInputStream { stream -> byte[] buffer = new byte[65536]; int n
+        while ((n=stream.read(buffer)) != -1) digest.update(buffer,0,n) }
+    digest.digest().encodeHex().toString()
+}
+def write = { String name, Object value ->
+    output.mkdirs(); new File(output,name).setText(JsonOutput.prettyPrint(JsonOutput.toJson(value))+'\n','UTF-8')
+}
+def origins = { sets ->
+    sets.collectMany { key, set -> selectedMinecraftSourceOrigins(set,roots[key],key.split(':')[0]) }
+        .collect { [owner:it.owner,logicalPath:it.logicalPath,path:it.file.canonicalPath,sha256:sha(it.file)] }
+        .sort { a,b -> (a.owner+':'+a.logicalPath) <=> (b.owner+':'+b.logicalPath) }
+}
+task exportSourceSelection {
+    doLast {
+        def sets = roots.collectEntries { key, ordered ->
+            def set = objects.sourceDirectorySet('census-'+key,key)
+            if (key.endsWith(':java')) set.include('**/*.java')
+            configureMinecraftSourceRoots(set,ordered)
+            if (key == 'fml:resources') set.exclude('META-INF/neoforge.mods.toml')
+            [(key):set]
+        }
+        def j = sets.findAll { it.key.endsWith(':java') }
+        def r = sets.findAll { it.key.endsWith(':resources') }
+        validateSelectedMinecraftJava(j.values()); validateSelectedMinecraftResources(r.values())
+        def raw = origins(j)
+        def common = selectConfiguredMinecraftMixins(sets['common:java'],[sets['common:resources']])
+        def fml = selectConfiguredMinecraftMixins(sets['fml:java'],[sets['fml:resources'],sets['common:resources']],common)
+        def adapter = selectConfiguredMinecraftMixins(sets['adapter:java'],[sets['adapter:resources']])
+        validateSelectedMinecraftJava(j.values())
+        write('source-selection.json',[target:'1.12.2',forge:'14.23.5.2864',
+            disposition:'candidate owners only; API inventory decides typed leaf delta',
+            neutralSelectorSha256:sha(new File(source,'gradle/minecraft-source-selection.gradle')),
+            roots:roots.collectEntries { k,v -> [(k):v*.canonicalPath] },
+            java:origins(j),rawJava:raw,resources:origins(r),
+            configuredMixins:(common.configs+fml.configs+adapter.configs).unique().collect {
+                [path:it.canonicalPath,sha256:sha(it)] },
+            excludedMixins:(common.excluded+fml.excluded+adapter.excluded).unique()*.canonicalPath])
+    }
+}
+task exportNativeInputs {
+    dependsOn exportSourceSelection, 'extractSrg', 'createSrgToMcp', 'createMcpToSrg'
+    doLast {
+        def cp = configurations.compileClasspath
+        def records = cp.resolvedConfiguration.resolvedArtifacts.collect { a ->
+            [coordinate:a.moduleVersion.id.toString(),classifier:a.classifier ?: '',
+                extension:a.extension,path:a.file.canonicalPath,sha256:sha(a.file),bytes:a.file.length()]
+        }.sort { it.coordinate+':'+it.classifier }
+        def named = records.findAll { it.coordinate.startsWith('net.minecraftforge:forge:1.12.2-14.23.5.2864_mapped_snapshot_20171003-1.12') && it.classifier == '' }
+        if (named.size()!=1) throw new GradleException('Exactly one real FG named game artifact required')
+        def dep = dependencies.create(named.first().coordinate+':sources@jar')
+        def mappedSources = configurations.detachedConfiguration(dep)
+        mappedSources.transitive = false
+        def sources = mappedSources.singleFile
+        def mappingOutputs = ['extractSrg','createSrgToMcp','createMcpToSrg'].collect { name ->
+            def f = tasks.getByName(name).outputs.files.singleFile
+            [task:name,path:f.canonicalPath,sha256:sha(f)]
+        }
+        def plugin = buildscript.configurations.classpath.resolvedConfiguration.resolvedArtifacts.collect { a ->
+            [coordinate:a.moduleVersion.id.toString(),classifier:a.classifier ?: '',
+                path:a.file.canonicalPath,sha256:sha(a.file)]
+        }
+        write('native-inputs.json',[minecraft:'1.12.2',forge:'14.23.5.2864',forgeGradle:'3.0.197',
+            gradle:gradle.gradleVersion,toolJava:System.getProperty('java.version'),
+            mappings:'snapshot_20171003-1.12',mcpConfig:project.ext.MCP_VERSION,
+            compileClasspath:records,classpath:cp.files*.canonicalPath,
+            namedGame:named.first(),namedSources:[path:sources.canonicalPath,sha256:sha(sources)],
+            mappingOutputs:mappingOutputs,pluginArtifacts:plugin])
+    }
+}
