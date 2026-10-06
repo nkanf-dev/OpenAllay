@@ -1340,7 +1340,7 @@ final class GuideGraphicalRegressionProbe {
                     require(custody.join() instanceof ToolResult.Success<Boolean> success && Boolean.TRUE.equals(success.value()),
                             "Reopened Guide observation producer custody failed");
                     require(readField(screen, "attachment") != null && screen.width > 0 && screen.height > 0
-                            && screen.children().stream().anyMatch(child -> child == readField(screen, "composer"))
+                            && screen.children().stream().anyMatch(child -> child == ((GuideMultilineEditor) readField(screen, "composer")).widget())
                             && findButton(screen, "screen.openallay.settings.short", true) != null,
                             "Reopened Guide native extraction has no initialized owned composer/Settings widgets");
                     return true;
