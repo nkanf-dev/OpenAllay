@@ -84,6 +84,11 @@ public final class CanonicalSwitchPortFixture {
         Files.writeString(objectConcat.resolve("ObjectConcat.java"),"class ObjectConcat { Object left(){return new Object(){public String toString(){throw new AssertionError();}};}String test(int value){return left()+(switch(value){case 0->\"x\";default->\"y\";});}}");
         Path objectSelected=root.resolve("objectconcat.txt");Files.writeString(objectSelected,"ObjectConcat.java\n");Path objectRefused=root.resolve("objectconcat-refused");
         CanonicalSwitchPort.main(new String[]{objectConcat.toString(),"",objectSelected.toString(),objectRefused.toString()});check(Files.readString(objectRefused.resolve("owner-status.tsv")).contains("\tREJECTED\t1\t"),"ObjecttoString order failclosed");
+        Path fields=root.resolve("fields");Files.createDirectory(fields);
+        Files.writeString(fields.resolve("FieldSwitch.java"),"class FieldSwitch {static class Value{int field;}Value call(int argument){return null;}int test(int selector){return call(switch(selector){case 0->1;default->2;}).field;}}");
+        Path fieldSelection=root.resolve("fields.txt");Files.writeString(fieldSelection,"FieldSwitch.java\n");Path fieldRefused=root.resolve("fields-refused");
+        CanonicalSwitchPort.main(new String[]{fields.toString(),"",fieldSelection.toString(),fieldRefused.toString()});
+        String fieldStatus=Files.readString(fieldRefused.resolve("owner-status.tsv"));check(fieldStatus.contains("\tREJECTED\t1\t"),"Actualfield dereference flow remains failclosed");check(!Files.exists(fieldRefused.resolve("post/FieldSwitch.java")),"No partialfieldowner");
         System.out.println("PASS publicswitch genuinecompiler original17=release8=truejavac8;6switches selectoronce/yield/throw/null/labeledbreak/continue/enumICCE;embeddedflow failclosed");
     }
 }
