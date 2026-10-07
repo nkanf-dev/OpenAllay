@@ -7,7 +7,7 @@ final class RegexpErrorAstSwitchTest {
     @Test void regexpLegacyAliasesRetainNamesValuesAndMutableAttributes() {
         Context cx = new ContextFactory().enter(); Scriptable scope = cx.initStandardObjects();
         Object result = cx.evaluateString(scope,
-            "/(a)(b)/.exec('zabq');[RegExp.lastMatch,RegExp['$&'],RegExp.lastParen,RegExp['$+'],RegExp.leftContext,RegExp['$`'],RegExp.rightContext,RegExp["$'"],RegExp.$1,RegExp.$2].join('|');",
+            "/(a)(b)/.exec('zabq');[RegExp.lastMatch,RegExp['$&'],RegExp.lastParen,RegExp['$+'],RegExp.leftContext,RegExp['$`'],RegExp.rightContext,RegExp[\"$'\"],RegExp.$1,RegExp.$2].join('|');",
             "regex.js", 1, null);
         assertEquals("ab|ab|b|b|z|z|q|q|a|b", ScriptRuntime.toString(cx, result));
         Object writable = cx.evaluateString(scope,
