@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8]
         default: skills
         required: true
 permissions:
@@ -424,3 +424,40 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: engine-core/build/test-results/
+
+  full-query-java8:
+    if: inputs.scope == 'full-query-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: true}
+      - name: Preserve exact original canonical owner input for the behavior oracle
+        run: "python3 -c 'from pathlib import Path; import subprocess; root=Path(\"build/query-original-inputs\"); root.mkdir(parents=True,exist_ok=False); files=['\"'\"'engine-core/src/main/java/dev/openallay/tool/query/RegistryQueryEngine.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/tool/query/QueryOperation.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RegistryEntrySnapshot.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RegistrySnapshot.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/ContextValidation.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataAuthority.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataCompleteness.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueType.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Collections.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Strings.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/agent/tool/ToolDescription.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/agent/tool/ToolOptional.java'\"'\"', '\"'\"'runtime-json/src/main/java/dev/openallay/json/JsonTrees.java'\"'\"']; '\"'\"'a2eff926602ca8e8bf94fde01a03dca53ec3bef6'\"'\"'\nfor name in files:\n p=root/name; p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(subprocess.check_output([\"git\",\"show\",\"a2eff926602ca8e8bf94fde01a03dca53ec3bef6:\"+name]))'"
+      - name: Run the original canonical modern query oracle
+        run: ./gradlew --no-daemon -p engine-core/src/queryJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" originalQueryOwnerOracle -PoriginalQuerySourceRoot="$PWD/build/query-original-inputs" -PjsonVerificationGsonVersion=2.8.0
+      - name: Compare the whole canonical Java 8 query owner with the original oracle
+        run: ./gradlew --no-daemon -p engine-core/src/queryJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" java8QueryOwnerTest -PoriginalQueryReport="$PWD/engine-core/src/queryJava8Test/gradle/build/query-original-modern.txt" -PjsonVerificationGsonVersion=2.8.0
+      - name: Verify the same whole query owner on Java 8 with current Gson
+        run: ./gradlew --no-daemon -p engine-core/src/queryJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" java8QueryOwnerTest -PoriginalQueryReport="$PWD/engine-core/src/queryJava8Test/gradle/build/query-original-modern.txt" -PjsonVerificationGsonVersion=2.13.2
+      - name: Verify actual canonical query, evidence and script consumers
+        run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.JavascriptTypedResultTest --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.script.host.ExplicitHostValueTest --tests dev.openallay.script.schema.ExplicitHostSchemaTest --tests dev.openallay.json.ExplicitValueSchemaTest
+      - name: Retain original owner and genuine Java 8 oracle outputs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-full-query-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            engine-core/src/queryJava8Test/gradle/build/
+            engine-core/build/test-results/
