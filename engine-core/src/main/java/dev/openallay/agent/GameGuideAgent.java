@@ -70,10 +70,12 @@ public final class GameGuideAgent {
     }
 
     private static void emitModelUsage(Consumer<AgentEvent> events, ModelEvent event) {
-        if (event instanceof ModelEvent.UsageObserved usage) {
+        if (event instanceof ModelEvent.UsageObserved) {
+            ModelEvent.UsageObserved usage = (ModelEvent.UsageObserved) event;
             events.accept(new AgentEvent.ModelUsageObserved(
                     usage.callId(), usage.modelIdentifier(), usage.usage()));
-        } else if (event instanceof ModelEvent.UsageStarted started) {
+        } else if (event instanceof ModelEvent.UsageStarted) {
+            ModelEvent.UsageStarted started = (ModelEvent.UsageStarted) event;
             events.accept(new AgentEvent.ModelUsageStarted(started.callId(), started.modelIdentifier()));
         }
     }
@@ -105,7 +107,9 @@ public final class GameGuideAgent {
                 rawRequest.userInput(), tools.skillSystemPrompt(rawRequest.systemPrompt()),
                 rawRequest.context(), rawRequest.stream(), rawRequest.images());
         Consumer<AgentEvent> events = rawEvents;
-        if (reservation instanceof ToolResult.Failure<AgentSessionStore.Lease> failure) {
+        if (reservation instanceof ToolResult.Failure) {
+            @SuppressWarnings("unchecked") ToolResult.Failure<AgentSessionStore.Lease> failure =
+                    (ToolResult.Failure<AgentSessionStore.Lease>) reservation;
             events.accept(new AgentEvent.Failed(failure.code(), failure.message()));
             return CompletableFuture.completedFuture(new AgentResult(
                     AgentState.FAILED, null, failure.code(), failure.message(), null));
@@ -116,7 +120,7 @@ public final class GameGuideAgent {
         try {
             transition(AgentState.PREPARING, trace, events);
             lease.cancellation().throwIfCancelled();
-            List<ModelMessage> originalHistory = List.copyOf(lease.history());
+            List<ModelMessage> originalHistory = dev.openallay.util.Java8Collections.listCopyOf(lease.history());
             tools.prepareSystem(request.systemPrompt(), lease.retainedSkills());
             List<ModelMessage> restoredView = compactor == null ? originalHistory
                     : compactor.prepareModelView(originalHistory);
@@ -127,7 +131,7 @@ public final class GameGuideAgent {
             messages.add(question);
             List<ModelMessage> complete = new ArrayList<>(originalHistory);
             complete.add(question);
-            List<ModelMessage> completeMessages = List.copyOf(complete);
+            List<ModelMessage> completeMessages = dev.openallay.util.Java8Collections.listCopyOf(complete);
             tools.prepareContext(request.context().correlationId(), messages, lease.retainedSkills());
             String preparedPrompt = systemPrompt(request);
             sessions.recordContext(lease, messages, completeMessages);
@@ -142,31 +146,29 @@ public final class GameGuideAgent {
                             tools.definitions());
                     if (reused.isPresent()) {
                         transition(AgentState.MODEL_WAIT, trace, events);
-                        return loop(
+                        return dev.openallay.util.Java8Futures.exceptionallyAsync(loop(
                                         request,
                                         lease,
-                                        reused.orElseThrow().messages(),
+                                        reused.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).messages(),
                                         completeMessages,
-                                        Math.max(0, reused.orElseThrow().messages().size() - 1),
-                                        Map.of(),
+                                        Math.max(0, reused.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).messages().size() - 1),
+                                        dev.openallay.util.Java8Collections.mapOf(),
                                         trace,
-                                        events)
-                                .exceptionallyAsync(throwable ->
+                                        events), throwable ->
                                         fail(request, lease, trace, events, throwable));
                     }
                 }
             }
             transition(AgentState.MODEL_WAIT, trace, events);
-            return loop(
+            return dev.openallay.util.Java8Futures.exceptionallyAsync(loop(
                             request,
                             lease,
                             messages,
                             completeMessages,
                             protectedFromIndex,
-                            Map.of(),
+                            dev.openallay.util.Java8Collections.mapOf(),
                             trace,
-                            events)
-                    .exceptionallyAsync(throwable -> fail(request, lease, trace, events, throwable));
+                            events), throwable -> fail(request, lease, trace, events, throwable));
         } catch (RuntimeException failure) {
             return CompletableFuture.supplyAsync(() -> fail(request, lease, trace, events, failure));
         }
@@ -298,7 +300,7 @@ public final class GameGuideAgent {
                     lease.cancellation().throwIfCancelled();
                     dev.openallay.model.ModelTurn turn = new dev.openallay.model.ModelTurn(
                             rawTurn.providerId(), rawTurn.model(),
-                            rawTurn.content().stream().filter(content -> !(content instanceof ModelContent.Reasoning)).toList(),
+                            dev.openallay.util.Java8Collections.toList(rawTurn.content().stream().filter(content -> !(content instanceof ModelContent.Reasoning))),
                             rawTurn.stopReason(), rawTurn.usage());
                     trace.modelTurn(turn);
                     List<ModelMessage> nextMessages = new ArrayList<>(projectedMessages);
@@ -309,7 +311,7 @@ public final class GameGuideAgent {
                         sessions.sealSteers(lease);
                         nextMessages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(nextMessages));
                         nextCompleteMessages = new ArrayList<>(dev.openallay.agent.context.ModelContextCodec.safe(nextCompleteMessages));
-                        if (turn.text().isBlank()) {
+                        if (dev.openallay.util.Java8Strings.isBlank(turn.text())) {
                             throw new ModelClientException(new dev.openallay.model.ModelFailure(
                                     "model_protocol_error",
                                     "Model returned neither tool use nor final text",
@@ -437,7 +439,7 @@ public final class GameGuideAgent {
                 java.util.Optional<dev.openallay.agent.context.ContextProjection> fitted = compactor.fitResults(
                         candidate -> promptForProjection(request, lease, candidate),
                         actual, tools.definitions(), freshResults);
-                if (fitted.isPresent()) updated = new ArrayList<>(fitted.orElseThrow().messages());
+                if (fitted.isPresent()) updated = new ArrayList<>(fitted.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).messages());
             }
             List<ModelContent> initialResults = updated.get(updated.size() - 1).content();
             List<ModelMessage> updatedComplete = new ArrayList<>(completeMessages);
@@ -446,7 +448,7 @@ public final class GameGuideAgent {
             capturedContext.set(sessions.recordContext(lease, updated, updatedComplete));
             // Capture only safe progress here. Observers and terminal cleanup run later.
             return new ToolOutcome(
-                    updated, updatedComplete, Map.copyOf(updatedCallOutcomes), List.copyOf(results));
+                    updated, updatedComplete, dev.openallay.util.Java8Collections.mapCopyOf(updatedCallOutcomes), dev.openallay.util.Java8Collections.listCopyOf(results));
         });
         for (PendingToolCall item : pending) {
             lease.cancellation().onCancel(() -> cancelToolResult(item));
@@ -488,11 +490,11 @@ public final class GameGuideAgent {
                 execution = tools.execute(
                         item.call.name(), item.call.input(), request.context(), lease.cancellation());
                 if (execution == null) {
-                    execution = CompletableFuture.failedFuture(new IllegalStateException(
+                    execution = dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException(
                             "Tool executor completed without a result"));
                 }
             } catch (RuntimeException failure) {
-                execution = CompletableFuture.failedFuture(failure);
+                execution = dev.openallay.util.Java8Futures.failedFuture(failure);
             }
             item.execution.set(execution);
             if (lease.cancellation().isCancelled()) {
@@ -572,7 +574,8 @@ public final class GameGuideAgent {
             code = "agent_cancelled";
             message = "Agent request was cancelled";
             state = AgentState.CANCELLED;
-        } else if (cause instanceof ModelClientException exception) {
+        } else if (cause instanceof ModelClientException) {
+            ModelClientException exception = (ModelClientException) cause;
             code = exception.failure().code();
             message = exception.failure().message();
             state = code.equals("agent_cancelled") ? AgentState.CANCELLED : AgentState.FAILED;
@@ -585,7 +588,7 @@ public final class GameGuideAgent {
         trace.failure(code, message);
         List<ModelMessage> retained = new ArrayList<>(lease.progress().projected());
         List<ModelMessage> original = new ArrayList<>(lease.progress().original());
-        ModelMessage failureNote = new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
+        ModelMessage failureNote = new ModelMessage(ModelRole.ASSISTANT, dev.openallay.util.Java8Collections.listOf(new ModelContent.Text(
                 "[OpenAllay request ended: " + code + "] " + message)));
         retained.add(failureNote);
         original.add(failureNote);
@@ -619,14 +622,14 @@ public final class GameGuideAgent {
         ModelMessage projectedLast = projected.get(projected.size() - 1);
         if (originalLast.content().stream().allMatch(ModelContent.ToolResult.class::isInstance)
                 && projectedLast.content().stream().allMatch(ModelContent.ToolResult.class::isInstance)) {
-            List<String> originalIds = originalLast.content().stream()
-                    .map(ModelContent.ToolResult.class::cast).map(ModelContent.ToolResult::toolUseId).toList();
-            List<String> projectedIds = projectedLast.content().stream()
-                    .map(ModelContent.ToolResult.class::cast).map(ModelContent.ToolResult::toolUseId).toList();
+            List<String> originalIds = dev.openallay.util.Java8Collections.toList(originalLast.content().stream()
+                    .map(ModelContent.ToolResult.class::cast).map(ModelContent.ToolResult::toolUseId));
+            List<String> projectedIds = dev.openallay.util.Java8Collections.toList(projectedLast.content().stream()
+                    .map(ModelContent.ToolResult.class::cast).map(ModelContent.ToolResult::toolUseId));
             if (originalIds.equals(projectedIds)) {
                 ArrayList<ModelMessage> captured = new ArrayList<>(original);
                 captured.set(captured.size() - 1, projectedLast);
-                return List.copyOf(captured);
+                return dev.openallay.util.Java8Collections.listCopyOf(captured);
             }
         }
         return original;
@@ -641,7 +644,7 @@ public final class GameGuideAgent {
 
     private String systemPrompt(AgentRequest request) {
         String facts = tools.skillManifest(request.context().correlationId());
-        return facts.isBlank() ? request.systemPrompt() : request.systemPrompt() + "\n" + facts;
+        return dev.openallay.util.Java8Strings.isBlank(facts) ? request.systemPrompt() : request.systemPrompt() + "\n" + facts;
     }
 
     private String canonical(JsonElement value) {
@@ -665,11 +668,11 @@ public final class GameGuideAgent {
         Throwable cause = throwable == null
                 ? new IllegalStateException("Tool executor completed without a result")
                 : unwrap(throwable);
-        String code = cause instanceof ModelClientException exception
-                ? exception.failure().code() : "tool_failure";
-        String detail = cause instanceof ModelClientException exception
-                ? exception.failure().message() : cause.getMessage();
-        if (detail == null || detail.isBlank()) detail = cause.getClass().getSimpleName();
+        String code = cause instanceof ModelClientException
+                ? ((ModelClientException) cause).failure().code() : "tool_failure";
+        String detail = cause instanceof ModelClientException
+                ? ((ModelClientException) cause).failure().message() : cause.getMessage();
+        if (detail == null || dev.openallay.util.Java8Strings.isBlank(detail)) detail = cause.getClass().getSimpleName();
         return new AgentToolResult(toolId, normalizedFailure(code, detail), true);
     }
 
@@ -689,11 +692,44 @@ public final class GameGuideAgent {
         return current;
     }
 
-    private record ToolOutcome(
-            List<ModelMessage> messages,
-            List<ModelMessage> completeMessages,
-            Map<String, String> callOutcomes,
-            List<ModelContent> results) {}
+    @dev.openallay.value.ValueType(ToolOutcome.ValueSchemaProvider.class)
+private static final class ToolOutcome {
+    private final List<ModelMessage> messages;
+    private final List<ModelMessage> completeMessages;
+    private final Map<String, String> callOutcomes;
+    private final List<ModelContent> results;
+    private ToolOutcome(List<ModelMessage> messages, List<ModelMessage> completeMessages, Map<String, String> callOutcomes, List<ModelContent> results) {
+        this.messages = messages;
+        this.completeMessages = completeMessages;
+        this.callOutcomes = callOutcomes;
+        this.results = results;
+    }
+    public List<ModelMessage> messages() { return messages; }
+    public List<ModelMessage> completeMessages() { return completeMessages; }
+    public Map<String, String> callOutcomes() { return callOutcomes; }
+    public List<ModelContent> results() { return results; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ToolOutcome)) return false;
+        ToolOutcome that = (ToolOutcome) other;
+        return java.util.Objects.equals(messages, that.messages) && java.util.Objects.equals(completeMessages, that.completeMessages) && java.util.Objects.equals(callOutcomes, that.callOutcomes) && java.util.Objects.equals(results, that.results);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(messages);
+        hash = 31 * hash + java.util.Objects.hashCode(completeMessages);
+        hash = 31 * hash + java.util.Objects.hashCode(callOutcomes);
+        hash = 31 * hash + java.util.Objects.hashCode(results);
+        return hash;
+    }
+    @Override public String toString() { return "ToolOutcome[messages=" + messages + ", completeMessages=" + completeMessages + ", callOutcomes=" + callOutcomes + ", results=" + results + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ToolOutcome> schema() {
+            return new dev.openallay.value.ValueSchema<>(ToolOutcome.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ToolOutcome>>asList(new dev.openallay.value.ValueSchema.Component<>(ToolOutcome.class, "messages", ToolOutcome::messages), new dev.openallay.value.ValueSchema.Component<>(ToolOutcome.class, "completeMessages", ToolOutcome::completeMessages), new dev.openallay.value.ValueSchema.Component<>(ToolOutcome.class, "callOutcomes", ToolOutcome::callOutcomes), new dev.openallay.value.ValueSchema.Component<>(ToolOutcome.class, "results", ToolOutcome::results)), arguments -> new ToolOutcome((List) arguments[0], (List) arguments[1], (Map) arguments[2], (List) arguments[3]));
+        }
+    }
+}
 
     private static final class PendingToolCall {
         private final ModelContent.ToolUse call;
