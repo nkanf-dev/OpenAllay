@@ -50,9 +50,17 @@ public final class CanonicalSwitchPort {
                 prefix.setLength(0);prefix.append(type).append(' ').append(temporary).append(";\nif (").append(condition).append(") {\n").append(trueBranch).append("} else {\n").append(falseBranch).append("}\n");
                 evaluation="";child=parent;cursor=cursor.getParentPath();continue;
             }
+            if(parent instanceof MemberSelectTree member && member.getExpression()==child){
+                if(trees.getElement(cursor) instanceof javax.lang.model.element.VariableElement)throw new IllegalArgumentException("Embedded instance field access needs dereference timing proof");
+                child=parent;cursor=cursor.getParentPath();continue;
+            }
             List<? extends ExpressionTree> previous=List.of();
             if(parent instanceof MethodInvocationTree call){
-                int argument=call.getArguments().indexOf(child);if(argument<0)throw new IllegalArgumentException("Switch in invocation receiver/typearguments requires separate timing proof");
+                int argument=call.getArguments().indexOf(child);
+                if(argument<0){
+                    if(call.getMethodSelect()==child && child instanceof MemberSelectTree){child=parent;cursor=cursor.getParentPath();continue;}
+                    throw new IllegalArgumentException("Switch in invocation receiver/typearguments requires separate timing proof");
+                }
                 List<ExpressionTree> operands=new ArrayList<>();Element method=trees.getElement(cursor);
                 if(!(method instanceof ExecutableElement executable))throw new IllegalArgumentException("Invocation method has no attributed executable");
                 if(call.getMethodSelect() instanceof MemberSelectTree member){TreePath receiverPath=new TreePath(new TreePath(cursor,call.getMethodSelect()),member.getExpression());Element qualifier=trees.getElement(receiverPath);if(!(qualifier instanceof TypeElement))operands.add(member.getExpression());}
