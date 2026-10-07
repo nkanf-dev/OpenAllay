@@ -1,0 +1,28 @@
+import java.security.MessageDigest
+plugins { id 'java' }
+def repo=file('../../../..')
+def base=new File(repo,'build-logic/src/attributedRecordTest')
+def compiler=javaToolchains.compilerFor { languageVersion=JavaLanguageVersion.of(21) }
+def modern=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(21) }
+def java8=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(8) }
+def sha={File f->MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString()}
+sourceSets.main.java.setSrcDirs([new File(repo,'build-logic/src/main/java'),new File(base,'tool')])
+sourceSets.main.java.setIncludes(['dev/openallay/build/RecordValueSourceConverter.java','dev/openallay/build/AttributedRecordProof.java','dev/openallay/build/AttributedRecordNegative.java'])
+tasks.named('compileJava',JavaCompile){javaCompiler=compiler;options.release=17}
+def support=[new File(repo,'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'),new File(repo,'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'),new File(repo,'engine-core/src/main/java/dev/openallay/value/ValueType.java'),new File(repo,'engine-core/src/main/java/dev/openallay/value/RecordMetadata.java'),new File(repo,'engine-core/src/main/java/dev/openallay/util/Java8Collections.java')]
+def values=new File(base,'inputs/dev/openallay/json/AttributedRecordFixtures.java')
+def reporter=new File(base,'reporter/dev/openallay/json/AttributedRecordReport.java')
+tasks.register('negativeProof',JavaExec){dependsOn('classes');mainClass='dev.openallay.build.AttributedRecordNegative';classpath=sourceSets.main.runtimeClasspath;javaLauncher=modern}
+tasks.register('compileOriginal',JavaCompile){source=files(support,values,reporter);classpath=files();destinationDirectory=layout.buildDirectory.dir('original-classes');javaCompiler=compiler;options.release=17}
+tasks.register('attributeAndConvert',JavaExec){
+ dependsOn('classes','compileOriginal','negativeProof');mainClass='dev.openallay.build.AttributedRecordProof';classpath=sourceSets.main.runtimeClasspath;javaLauncher=modern
+ doFirst{
+  def request=layout.buildDirectory.file('request.tsv').get().asFile;request.parentFile.mkdirs()
+  request.text=['dev/openallay/json/AttributedRecordFixtures.java',sha(values),'AttributedRecordFixtures.UriArtifact,AttributedRecordFixtures.NonGetter,AttributedRecordFixtures.GenuineGetter,AttributedRecordFixtures.Boxed'].join('\t')+'\n'
+  args(new File(base,'inputs').absolutePath,tasks.named('compileOriginal').get().destinationDirectory.get().asFile.absolutePath,request.absolutePath,layout.buildDirectory.dir('attributed-output').get().asFile.absolutePath)
+ }
+}
+tasks.register('compileConverted',JavaCompile){dependsOn('attributeAndConvert');source=files(support,reporter,layout.buildDirectory.file('attributed-output/post/dev/openallay/json/AttributedRecordFixtures.java'));classpath=files();destinationDirectory=layout.buildDirectory.dir('converted-classes');javaCompiler=compiler;options.release=8}
+tasks.register('originalOracle',JavaExec){dependsOn('compileOriginal');mainClass='dev.openallay.json.AttributedRecordReport';classpath=files(tasks.named('compileOriginal').flatMap{it.destinationDirectory});javaLauncher=modern;doFirst{standardOutput=new ByteArrayOutputStream()};doLast{layout.buildDirectory.file('original-report.txt').get().asFile.bytes=standardOutput.toByteArray()}}
+tasks.register('java8Oracle',JavaExec){dependsOn('compileConverted');mainClass='dev.openallay.json.AttributedRecordReport';classpath=files(tasks.named('compileConverted').flatMap{it.destinationDirectory});javaLauncher=java8;args('java8');doFirst{standardOutput=new ByteArrayOutputStream()};doLast{layout.buildDirectory.file('converted-report.txt').get().asFile.bytes=standardOutput.toByteArray()}}
+tasks.register('attributedRecordTest'){dependsOn('originalOracle','java8Oracle');doLast{if(!Arrays.equals(layout.buildDirectory.file('original-report.txt').get().asFile.bytes,layout.buildDirectory.file('converted-report.txt').get().asFile.bytes))throw new GradleException('Original modern vs attributed converted genuine8 differs');logger.lifecycle('PASS attributed signature/override record oracle') }}

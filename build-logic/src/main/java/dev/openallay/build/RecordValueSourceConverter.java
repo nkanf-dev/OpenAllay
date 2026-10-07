@@ -61,6 +61,32 @@ public final class RecordValueSourceConverter {
     }
 
     public static String convert(Path input, String text, Set<String> selected) throws Exception {
+        return convert(input, text, selected, null);
+    }
+
+    /** Authenticated public compiler decisions; parse-only callers remain fail closed. */
+    public static final class AttributedProof {
+        private final String rawSha256;
+        private final Map<Integer, Boolean> canonicalConstructors;
+        private final Map<Integer, Boolean> componentOverrides;
+        private final Map<Integer, String> methodHeaders;
+        public AttributedProof(String rawSha256, Map<Integer, Boolean> canonicalConstructors,
+                Map<Integer, Boolean> componentOverrides, Map<Integer, String> methodHeaders) {
+            this.rawSha256 = Objects.requireNonNull(rawSha256);
+            this.canonicalConstructors = Map.copyOf(canonicalConstructors);
+            this.componentOverrides = Map.copyOf(componentOverrides);
+            this.methodHeaders = Map.copyOf(methodHeaders);
+            if (!this.methodHeaders.keySet().containsAll(this.canonicalConstructors.keySet())
+                    || !this.methodHeaders.keySet().containsAll(this.componentOverrides.keySet())) {
+                fail("Attributed method signature frontier differs");
+            }
+        }
+    }
+
+    public static String convert(Path input, String text, Set<String> selected, AttributedProof proof) throws Exception {
+        if (proof != null && !proof.rawSha256.equals(sha(text.getBytes(StandardCharsets.UTF_8)))) {
+            fail("Attributed record proof source preimage differs");
+        }
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) throw new IllegalStateException("Full tooling JDK required");
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
@@ -89,7 +115,7 @@ public final class RecordValueSourceConverter {
                         int end = position(positions.getEndPosition(unit, tree));
                         changes.add(new Change(start, end, lower(tree, start, end, unit, positions, text, newline,
                                 getCurrentPath().getParentPath().getLeaf() instanceof ClassTree,
-                                getCurrentPath().getParentPath().getLeaf().getKind() == Tree.Kind.INTERFACE)));
+                                getCurrentPath().getParentPath().getLeaf().getKind() == Tree.Kind.INTERFACE, proof)));
                         return null;
                     }
                     return super.visitClass(tree, path);
@@ -107,7 +133,7 @@ public final class RecordValueSourceConverter {
     }
 
     private static String lower(ClassTree tree, int start, int end, CompilationUnitTree unit,
-            SourcePositions positions, String source, String newline, boolean nested, boolean interfaceMember) {
+            SourcePositions positions, String source, String newline, boolean nested, boolean interfaceMember, AttributedProof proof) {
         String name = tree.getSimpleName().toString();
         int body = bodyStart(source, start, end);
         List<Component> components = new ArrayList<>(); List<String> members = new ArrayList<>();
@@ -134,6 +160,12 @@ public final class RecordValueSourceConverter {
             }
             if (member instanceof ClassTree child && child.getSimpleName().contentEquals("ValueSchemaProvider")) fail("Value schema provider collision");
             if (member instanceof MethodTree method) {
+                if (proof != null && proof.methodHeaders.containsKey(from)) {
+                    if (method.getBody() == null || !source.substring(from,
+                            position(positions.getStartPosition(unit, method.getBody()))).equals(proof.methodHeaders.get(from))) {
+                        fail("Attributed method signature/source offset differs");
+                    }
+                }
                 if (method.getName().contentEquals("<init>")) {
                     String head = source.substring(from, position(positions.getStartPosition(unit, method.getBody())));
                     if (!head.contains("(")) {
@@ -142,7 +174,9 @@ public final class RecordValueSourceConverter {
                     }
                     if (method.getParameters().size() == components.size()
                             && names(method.getParameters()).equals(components.stream().map(Component::name).toList())
-                            && canonicalParameterTypes(method.getParameters(), components, source, unit, positions)) canonical = true;
+                            && (proof != null && proof.canonicalConstructors.containsKey(from)
+                                    ? proof.canonicalConstructors.get(from)
+                                    : canonicalParameterTypes(method.getParameters(), components, source, unit, positions))) canonical = true;
                 } else if (method.getParameters().isEmpty()) {
                     accessors.add(method.getName().toString());
                     if (components.stream().anyMatch(c -> c.name().contentEquals(method.getName()))) {
@@ -155,13 +189,15 @@ public final class RecordValueSourceConverter {
                                 || method.getBody() == null) {
                             fail("Unsupported component accessor signature");
                         }
-                        if (!tree.getImplementsClause().isEmpty() && !sameUnitMarkerInterfaces(tree, unit)) {
+                        boolean attributedAccessor = proof != null && proof.componentOverrides.containsKey(from);
+                        if (!tree.getImplementsClause().isEmpty() && !sameUnitMarkerInterfaces(tree, unit) && !attributedAccessor) {
                             fail("Non-marker or external interface component accessor needs attributed override policy");
                         }
                         String kept = source.substring(from, to);
                         for (AnnotationTree annotation : method.getModifiers().getAnnotations()) {
-                            if (annotation.getAnnotationType().toString().equals("Override")
-                                    || annotation.getAnnotationType().toString().equals("java.lang.Override")) {
+                            if ((!attributedAccessor || !proof.componentOverrides.get(from))
+                                    && (annotation.getAnnotationType().toString().equals("Override")
+                                    || annotation.getAnnotationType().toString().equals("java.lang.Override"))) {
                                 int annotationFrom = position(positions.getStartPosition(unit, annotation)) - from;
                                 int annotationTo = position(positions.getEndPosition(unit, annotation)) - from;
                                 kept = kept.substring(0, annotationFrom) + kept.substring(annotationTo);
