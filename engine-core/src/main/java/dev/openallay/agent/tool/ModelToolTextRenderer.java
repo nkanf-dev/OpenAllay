@@ -31,7 +31,7 @@ final class ModelToolTextRenderer {
 
     private static void append(
             StringBuilder output, JsonElement value, int indent, String listPrefix) {
-        String padding = " ".repeat(indent);
+        String padding = dev.openallay.util.Java8Strings.repeat(" ", indent);
         if (value == null || value.isJsonNull() || value.isJsonPrimitive()) {
             output.append(padding);
             if (listPrefix != null) {
@@ -67,7 +67,7 @@ final class ModelToolTextRenderer {
             if (!first) {
                 output.append('\n');
             }
-            output.append(" ".repeat(first && listPrefix == null ? indent : childIndent))
+            output.append(dev.openallay.util.Java8Strings.repeat(" ", first && listPrefix == null ? indent : childIndent))
                     .append(dev.openallay.tool.result.JsonResultProjection.fieldLabel(entry.getKey()))
                     .append(':');
             JsonElement child = entry.getValue();
@@ -102,7 +102,7 @@ final class ModelToolTextRenderer {
             if (index > 0) {
                 output.append('\n');
             }
-            output.append(" ".repeat(indent)).append(lines[index]);
+            output.append(dev.openallay.util.Java8Strings.repeat(" ", indent)).append(lines[index]);
         }
     }
 

@@ -117,7 +117,7 @@ public final class ModelToolResultProjection {
                 excerpt.append(line);
                 offset = end;
             }
-            return new JsonPrimitive(excerpt.isEmpty() ? receipt
+            return new JsonPrimitive(excerpt.length() == 0 ? receipt
                     : receipt + "\nverbatim complete-line excerpt (past transcript only):\n" + excerpt);
         }
         return new JsonPrimitive(JsonResultProjection.project(value, (String) null,

@@ -15,7 +15,7 @@ public interface ContextTokenEstimator {
 
     /** Counts plain text in the same units as this estimator's message budget. */
     default int estimateText(String text) {
-        return estimate("", List.of(ModelMessage.userText(text)), List.of());
+        return estimate("", dev.openallay.util.Java8Collections.listOf(ModelMessage.userText(text)), dev.openallay.util.Java8Collections.listOf());
     }
 
     /** No image cost is inferred from byte size, dimensions or provider protocol. */

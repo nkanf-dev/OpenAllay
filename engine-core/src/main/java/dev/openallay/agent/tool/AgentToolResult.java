@@ -19,13 +19,13 @@ public final class AgentToolResult {
 
     public AgentToolResult(String toolId, JsonObject normalized, boolean failure,
             dev.openallay.tool.ModelResultSource source) {
-        this(toolId, normalized, failure, source, java.util.List.of());
+        this(toolId, normalized, failure, source, dev.openallay.util.Java8Collections.listOf());
     }
 
     public AgentToolResult(String toolId, JsonObject normalized, boolean failure,
             dev.openallay.tool.ModelResultSource source,
             java.util.List<dev.openallay.model.image.ImageReference> images) {
-        this.images = java.util.List.copyOf(images);
+        this.images = dev.openallay.util.Java8Collections.listCopyOf(images);
         dev.openallay.model.image.ModelImages.unique(this.images);
         if (failure && !this.images.isEmpty()) {
             throw new IllegalArgumentException("Failed tool results cannot publish images");
@@ -67,7 +67,9 @@ public final class AgentToolResult {
     }
 
     @Override public boolean equals(Object other) {
-        return other instanceof AgentToolResult result && Objects.equals(toolId, result.toolId)
+        if (!(other instanceof AgentToolResult)) return false;
+        AgentToolResult result = (AgentToolResult) other;
+        return Objects.equals(toolId, result.toolId)
                 && normalized.equals(result.normalized) && failure == result.failure && images.equals(result.images);
     }
     @Override public int hashCode() { return Objects.hash(toolId, normalized, failure, images); }

@@ -27,7 +27,7 @@ public final class ObservingModelClient implements ModelClient {
     @Override
     public CompletableFuture<ModelTurn> complete(ModelRequest request, Consumer<ModelEvent> events,
             CancellationSignal cancellation) {
-        if (cancellation.isCancelled()) return CompletableFuture.failedFuture(new ModelClientException(
+        if (cancellation.isCancelled()) return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(
                 new ModelFailure("agent_cancelled", "Agent request was cancelled", null)));
         Attempt attempt = new Attempt(events);
         if (!delegate.reportsAttemptStarted()) attempt.start();
@@ -36,7 +36,7 @@ public final class ObservingModelClient implements ModelClient {
             raw = Objects.requireNonNull(delegate.complete(request, attempt::accept, cancellation), "future");
         } catch (Throwable failure) {
             attempt.seal(null);
-            return CompletableFuture.failedFuture(failure);
+            return dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         // Seal before publishing completion to the retry loop or Agent. MessageComplete is not
         // authoritative: decoders can report it more than once or fail after reporting usage.
@@ -71,8 +71,8 @@ public final class ObservingModelClient implements ModelClient {
         private synchronized void accept(ModelEvent event) {
             if (sealed) return;
             if (event instanceof ModelEvent.AttemptStarted) start();
-            if (event instanceof ModelEvent.UsageUpdate update && update.usage() != null) {
-                latest = update.usage();
+            if (event instanceof ModelEvent.UsageUpdate && ((ModelEvent.UsageUpdate) event).usage() != null) {
+                latest = ((ModelEvent.UsageUpdate) event).usage();
             }
             events.accept(event);
         }

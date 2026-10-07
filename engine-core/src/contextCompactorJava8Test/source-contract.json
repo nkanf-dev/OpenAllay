@@ -265,6 +265,11 @@
           "old": "!result.length() == 0",
           "new": "result.length() != 0",
           "count": 1
+        },
+        {
+          "old": " fields = dev.openallay.util.Java8Collections.listCopyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview); ",
+          "new": " fields = dev.openallay.util.Java8Collections.listCopyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview);",
+          "count": 1
         }
       ]
     },
@@ -752,5 +757,6 @@
   },
   "runner_sha256": "7d39bbc14ac02490909a0dce8d1683d3d890db597eeec8965975b882f6fadebb",
   "format_policy": "Onlyblankline trailingwhitespacecleanup afteractualconverter+literalmechanicalops. Summarytextblock exactdedentednewlines retained. No hashinputnormalization.",
-  "authority_policy": "Budget/losslabel/noinventedevidence, immutableoriginalcontext, summary-onlyobservedmodel attemptreceipt andcancellation/latepublication fences remainactualoriginalalgorithms."
+  "authority_policy": "Budget/losslabel/noinventedevidence, immutableoriginalcontext, summary-onlyobservedmodel attemptreceipt andcancellation/latepublication fences remainactualoriginalalgorithms.",
+  "exact_format_correction": "OnlyProjection compactconstructor generatednonblankline trailingoneASCIIspace removed count1 afterrecordedAPIlowering; nobroadnonblanktrimming."
 }
