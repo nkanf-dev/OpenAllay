@@ -202,3 +202,33 @@ def toolSchemaTestVectors = objects.sourceDirectorySet('toolSchemaTestVectors', 
 toolSchemaTestVectors.srcDir('src/toolSchemaJava8Test/java')
 toolSchemaTestVectors.include('dev/openallay/tool/ToolSchemaJava8Fixture.java')
 sourceSets.test.java.source(toolSchemaTestVectors)
+
+// Public-compiler source attribution uses the real current production classpath.
+// This export never adds test runtime dependencies or an old engine JAR.
+tasks.register('exportCanonicalVarCompileClasspath') {
+    dependsOn(tasks.named('compileJava'))
+    dependsOn(mergePrivateMaven)
+    def destination = providers.gradleProperty('canonicalVarClasspathOutput')
+    doLast {
+        if (!destination.isPresent()) throw new GradleException('Set -PcanonicalVarClasspathOutput to a fresh external JSON path')
+        def target = rootProject.file(destination.get())
+        if (target.exists()) throw new GradleException("Refuse to overwrite attribution metadata: ${target}")
+        def resolved = files(sourceSets.main.compileClasspath, privateMavenOutput,
+                jsonSupport.sourceSets.main.output.classesDirs).files.collect { it.canonicalFile }
+        resolved.each { artifact ->
+            if (!artifact.exists()) throw new GradleException("Missing genuine compiler classpath entry: ${artifact}")
+        }
+        def sources = sourceSets.main.allJava.files.collect { it.canonicalPath }.sort()
+        target.parentFile.mkdirs()
+        target.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+                sourceRoot: file('src/main/java').canonicalPath,
+                sources: sources,
+                compileClasspath: resolved.collect { it.canonicalPath },
+                classpath: resolved.collect { it.canonicalPath }.join(File.pathSeparator),
+                release: tasks.named('compileJava').get().options.release.get(),
+                sourceClosure: 'all current canonical engine-core production Java sources',
+                producer: ':engine-core:compileJava'
+        ])) + '\n', 'UTF-8')
+        println("Canonical CORE compile classpath exported: ${target}")
+    }
+}

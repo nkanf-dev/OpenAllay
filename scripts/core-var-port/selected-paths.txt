@@ -1,0 +1,15 @@
+dev/openallay/agent/tool/LocalAgentToolExecutor.java
+dev/openallay/bridge/CorrelationRegistry.java
+dev/openallay/bridge/client/ClientBridgeSession.java
+dev/openallay/bridge/client/ClientToolExecutionEndpoint.java
+dev/openallay/bridge/client/RemoteToolExecutor.java
+dev/openallay/bridge/protocol/ServerAgentEventCodec.java
+dev/openallay/bridge/protocol/ServerAgentSteerPayload.java
+dev/openallay/bridge/server/PlayerClientToolRouter.java
+dev/openallay/bridge/server/ServerBridgeSession.java
+dev/openallay/capability/ClientCapabilitySnapshot.java
+dev/openallay/guide/GuideService.java
+dev/openallay/guide/GuideStateReducer.java
+dev/openallay/guide/GuideUsageTracker.java
+dev/openallay/guide/PayloadGuideRemoteEndpoint.java
+dev/openallay/guide/ui/GuideEvidencePresentation.java

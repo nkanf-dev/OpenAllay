@@ -20,45 +20,7 @@ public final class RhinoVarPort {
         }
     }
     static String denotable(TypeMirror type) {
-        return type.accept(new SimpleTypeVisitor8<String, Void>() {
-            @Override protected String defaultAction(TypeMirror t, Void unused) {
-                throw new IllegalArgumentException("Unsupported inferred type " + t.getKind() + ": " + t);
-            }
-            @Override public String visitPrimitive(PrimitiveType t, Void unused) { return t.toString(); }
-            @Override public String visitArray(ArrayType t, Void unused) { return denotable(t.getComponentType()) + "[]"; }
-            @Override public String visitDeclared(DeclaredType t, Void unused) {
-                TypeElement element = (TypeElement) t.asElement();
-                String name = element.getQualifiedName().toString();
-                if (name.isEmpty() || element.getNestingKind() == NestingKind.ANONYMOUS || element.getNestingKind() == NestingKind.LOCAL) {
-                    throw new IllegalArgumentException("Non-denotable declaration: " + t);
-                }
-                StringBuilder result = new StringBuilder();
-                if (t.getEnclosingType().getKind() == TypeKind.DECLARED && !element.getModifiers().contains(Modifier.STATIC)) {
-                    result.append(denotable(t.getEnclosingType())).append('.').append(element.getSimpleName());
-                } else { result.append(name); }
-                if (!t.getTypeArguments().isEmpty()) {
-                    result.append('<');
-                    for (int i = 0; i < t.getTypeArguments().size(); i++) {
-                        if (i > 0) result.append(", ");
-                        result.append(denotable(t.getTypeArguments().get(i)));
-                    }
-                    result.append('>');
-                }
-                return result.toString();
-            }
-            @Override public String visitTypeVariable(TypeVariable t, Void unused) {
-                String name = t.asElement().getSimpleName().toString();
-                if (!name.matches("[A-Za-z_$][A-Za-z0-9_$]*") || name.startsWith("capture")) {
-                    throw new IllegalArgumentException("Captured variable: " + t);
-                }
-                return name;
-            }
-            @Override public String visitWildcard(WildcardType t, Void unused) {
-                if (t.getExtendsBound() != null) return "? extends " + denotable(t.getExtendsBound());
-                if (t.getSuperBound() != null) return "? super " + denotable(t.getSuperBound());
-                return "?";
-            }
-        }, null);
+        return dev.openallay.build.AttributedVarTypes.denotable(type);
     }
     public static void main(String[] args) throws Exception {
         if (args.length != 4) throw new IllegalArgumentException("generatedJavaRoot classpath selectedPaths outputTSV");

@@ -26,7 +26,7 @@ subprocess.run([sys.executable, str(root / "scripts/prepare-rhino-sources.py"), 
     str(manifest_path), str(hunks_path), str(prepared)], check=True)
 classes = args.output / "tool-classes"; classes.mkdir()
 source = root / "scripts/rhino-language-port/RhinoVarPort.java"
-subprocess.run([str(args.javac), "--release", "17", "-d", str(classes), str(source), str(root / "scripts/rhino-language-port/RhinoVarPortFixture.java")], check=True)
+subprocess.run([str(args.javac), "--release", "17", "-d", str(classes), str(source), str(root / "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java"), str(root / "scripts/rhino-language-port/RhinoVarPortFixture.java")], check=True)
 subprocess.run([str(args.java), "-cp", str(classes), "dev.openallay.tools.rhino.RhinoVarPortFixture"], check=True)
 selected = root / "scripts/rhino-language-port/selected-var-paths.txt"
 sites_file = args.output / "attributed-var-sites.tsv"
