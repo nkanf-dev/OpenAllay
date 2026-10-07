@@ -1367,12 +1367,13 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify actual Context conversion binding and weight consumers
+    - name: Verify baseline-corrected Context and generic type bindings
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.ContextConversionBindingTest
+        --tests dev.latvian.mods.rhino.ContextConversionBindingTest --tests dev.latvian.mods.rhino.type.GenericBindingTypeTest
+        --tests dev.latvian.mods.rhino.GenericBindingInteropTest
 
         ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
-        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
+        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
