@@ -6,7 +6,7 @@ def modern = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.
 def java8 = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
 def sourceRoot = new File(repo, 'build-logic/src/recordConversionTest')
 def output = layout.buildDirectory.dir('converted-fixture')
-def selected = 'RecordFixtureValues.Empty,RecordFixtureValues.Numbers,RecordFixtureValues.Normalized,RecordFixtureValues.Generic,RecordFixtureValues.OverrideValue,RecordFixtureValues.Custom,RecordFixtureValues.MarkerCopy'
+def selected = 'RecordFixtureValues.Empty,RecordFixtureValues.Numbers,RecordFixtureValues.Normalized,RecordFixtureValues.Generic,RecordFixtureValues.OverrideValue,RecordFixtureValues.Custom,RecordFixtureValues.MarkerCopy,RecordFixtureValues.InterfaceOwner.MemberValue,RecordFixtureValues.PrivateValue'
 def sha = { File file -> MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex().toString() }
 sourceSets.main.java.setSrcDirs([new File(repo, 'build-logic/src/main/java'), new File(sourceRoot, 'tool')])
 sourceSets.main.java.setIncludes(['dev/openallay/build/RecordValueSourceConverter.java', 'dev/openallay/build/RecordConversionNegativeFixture.java'])
@@ -31,7 +31,8 @@ tasks.register('convertFixture', JavaExec) {
 }
 def support = [new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueType.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'),
-        new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java', 'engine-core/src/main/java/dev/openallay/value/RecordMetadata.java'),
+        new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'),
+        new File(repo, 'engine-core/src/main/java/dev/openallay/value/RecordMetadata.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/util/Java8Collections.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/agent/tool/ToolDescription.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/agent/tool/ToolOptional.java')]

@@ -64,6 +64,13 @@ public final class RecordConversionReport {
             ValueSchema<RecordFixtureValues.MarkerCopy> markerSchema = ValueSchemas.of(RecordFixtureValues.MarkerCopy.class);
             check(markerSchema.components().get(0).read(markerCopy) != markerSchema.components().get(0).read(markerCopy), "marker schema uses copy accessor");
         }
+        RecordFixtureValues.InterfaceOwner.MemberValue interfaceValue =
+                new RecordFixtureValues.InterfaceOwner.MemberValue(9);
+        check(java.lang.reflect.Modifier.isPublic(interfaceValue.getClass().getModifiers()), "interface member public class ABI");
+        check(java.lang.reflect.Modifier.isPublic(interfaceValue.getClass().getConstructor(int.class).getModifiers()), "interface member public constructor ABI");
+        Object privateValue = RecordFixtureValues.privateValue("private");
+        check(java.lang.reflect.Modifier.isPrivate(privateValue.getClass().getModifiers()), "private class member visibility retained");
+        check(java.lang.reflect.Modifier.isPrivate(privateValue.getClass().getDeclaredConstructor(String.class).getModifiers()), "private constructor visibility retained");
         // Oracle output has no VM identity hashes, so exact bytes compare across17/8.
         System.out.println(empty.toString());
         System.out.println(numbers.toString());
@@ -72,6 +79,8 @@ public final class RecordConversionReport {
         System.out.println(generic.toString());
         System.out.println(custom.toString());
         System.out.println(markerCopy.toString());
+        System.out.println(interfaceValue.toString());
+        System.out.println(privateValue.toString());
         System.out.println("PASS record conversion vectors");
     }
     private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }

@@ -88,7 +88,8 @@ public final class RecordValueSourceConverter {
                         int start = position(positions.getStartPosition(unit, tree));
                         int end = position(positions.getEndPosition(unit, tree));
                         changes.add(new Change(start, end, lower(tree, start, end, unit, positions, text, newline,
-                                getCurrentPath().getParentPath().getLeaf() instanceof ClassTree)));
+                                getCurrentPath().getParentPath().getLeaf() instanceof ClassTree,
+                                getCurrentPath().getParentPath().getLeaf().getKind() == Tree.Kind.INTERFACE)));
                         return null;
                     }
                     return super.visitClass(tree, path);
@@ -106,7 +107,7 @@ public final class RecordValueSourceConverter {
     }
 
     private static String lower(ClassTree tree, int start, int end, CompilationUnitTree unit,
-            SourcePositions positions, String source, String newline, boolean nested) {
+            SourcePositions positions, String source, String newline, boolean nested, boolean interfaceMember) {
         String name = tree.getSimpleName().toString();
         int body = bodyStart(source, start, end);
         List<Component> components = new ArrayList<>(); List<String> members = new ArrayList<>();
@@ -176,7 +177,7 @@ public final class RecordValueSourceConverter {
         String typeParameters = tree.getTypeParameters().isEmpty() ? "" : "<" + String.join(", ", tree.getTypeParameters().stream().map(Object::toString).toList()) + ">";
         String generics = tree.getTypeParameters().isEmpty() ? "" : "<" + String.join(", ", tree.getTypeParameters().stream().map(v -> v.getName().toString()).toList()) + ">";
         Set<javax.lang.model.element.Modifier> modifiers = tree.getModifiers().getFlags();
-        String visibility = modifiers.contains(javax.lang.model.element.Modifier.PUBLIC) ? "public "
+        String visibility = interfaceMember || modifiers.contains(javax.lang.model.element.Modifier.PUBLIC) ? "public "
                 : modifiers.contains(javax.lang.model.element.Modifier.PRIVATE) ? "private "
                 : modifiers.contains(javax.lang.model.element.Modifier.PROTECTED) ? "protected " : "";
         StringBuilder result = new StringBuilder();

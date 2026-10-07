@@ -7,6 +7,11 @@ import java.util.List;
 /** Original modern records are fixture inputs, not a production engine copy. */
 public final class RecordFixtureValues {
     private RecordFixtureValues() {}
+    public interface InterfaceOwner {
+        record MemberValue(int count) {}
+    }
+    private record PrivateValue(String value) {}
+    public static Object privateValue(String value) { return new PrivateValue(value); }
     public interface Marker {}
     public record MarkerCopy(List<String> input) implements Marker {
         public MarkerCopy { input = dev.openallay.util.Java8Collections.listCopyOf(input); }
