@@ -12,22 +12,43 @@ public enum JavascriptHostValueType {
         if (this == NULL) return value.isJsonNull();
         if (!value.isJsonPrimitive()) return false;
         com.google.gson.JsonPrimitive primitive = value.getAsJsonPrimitive();
-        return switch (this) {
-            case STRING -> primitive.isString();
-            case BOOLEAN -> primitive.isBoolean();
-            case INTEGER, NUMBER -> {
-                if (!primitive.isNumber()) yield false;
+        {
+boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((this)) {
+case STRING:
+{
+$oaSwitch0_exit_result = primitive.isString(); break $oaSwitch0_exit;
+}
+case BOOLEAN:
+{
+$oaSwitch0_exit_result = primitive.isBoolean(); break $oaSwitch0_exit;
+}
+case INTEGER:
+case NUMBER:
+{
+{
+                if (!primitive.isNumber()) { $oaSwitch0_exit_result = false; break $oaSwitch0_exit; }
                 double number = primitive.getAsDouble();
-                if (!Double.isFinite(number)) yield false;
-                if (this == NUMBER) yield true;
+                if (!Double.isFinite(number)) { $oaSwitch0_exit_result = false; break $oaSwitch0_exit; }
+                if (this == NUMBER) { $oaSwitch0_exit_result = true; break $oaSwitch0_exit; }
                 try {
                     java.math.BigInteger integer = primitive.getAsBigDecimal().toBigIntegerExact();
-                    yield integer.abs().compareTo(java.math.BigInteger.valueOf(9_007_199_254_740_991L)) <= 0;
+                    { $oaSwitch0_exit_result = integer.abs().compareTo(java.math.BigInteger.valueOf(9_007_199_254_740_991L)) <= 0; break $oaSwitch0_exit; }
                 } catch (ArithmeticException | NumberFormatException invalid) {
-                    yield false;
+                    { $oaSwitch0_exit_result = false; break $oaSwitch0_exit; }
                 }
             }
-            case JSON, NULL -> false;
-        };
+}
+case JSON:
+case NULL:
+{
+$oaSwitch0_exit_result = false; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 }

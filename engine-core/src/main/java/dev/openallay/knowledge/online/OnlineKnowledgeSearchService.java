@@ -87,11 +87,26 @@ String code = (($oaPattern0_holder.value = failure) instanceof dev.openallay.kno
     }
 
     private static String playerSafeMessage(String code) {
-        return switch (code) {
-            case "online_http_status" -> "The public knowledge source returned an error";
-            case "online_parse_failed" -> "The public knowledge source response could not be read";
-            default -> "The public knowledge source is temporarily unavailable";
-        };
+        {
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((code)) {
+case "online_http_status":
+{
+$oaSwitch0_exit_result = "The public knowledge source returned an error"; break $oaSwitch0_exit;
+}
+case "online_parse_failed":
+{
+$oaSwitch0_exit_result = "The public knowledge source response could not be read"; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = "The public knowledge source is temporarily unavailable"; break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static Throwable unwrap(Throwable failure) {

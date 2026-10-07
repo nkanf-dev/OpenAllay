@@ -7,25 +7,44 @@ import java.util.Locale;
 public final class BenchmarkVerifier {
     public Verification verify(BenchmarkCase testCase, BenchmarkOutcome outcome) {
         BenchmarkCase.Verifier verifier = testCase.verifier();
-        return switch (verifier.kind()) {
-            case NON_EMPTY_RESULT -> outcome.canonicalResult().isJsonNull()
+        {
+dev.openallay.benchmark.BenchmarkVerifier.Verification $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((verifier.kind())) {
+case NON_EMPTY_RESULT:
+{
+$oaSwitch0_exit_result = outcome.canonicalResult().isJsonNull()
                     ? Verification.failure("canonical result is empty")
-                    : Verification.success();
-            case ANSWER_CONTAINS -> answerContains(
+                    : Verification.success(); break $oaSwitch0_exit;
+}
+case ANSWER_CONTAINS:
+{
+$oaSwitch0_exit_result = answerContains(
                             outcome.canonicalResult(), verifier.contains())
                     ? Verification.success()
-                    : Verification.failure("final answer does not contain expected value");
-            case EFFECT_CONTAINS -> outcome.observedEffects().stream()
+                    : Verification.failure("final answer does not contain expected value"); break $oaSwitch0_exit;
+}
+case EFFECT_CONTAINS:
+{
+$oaSwitch0_exit_result = outcome.observedEffects().stream()
                     .anyMatch(effect -> contains(effect, verifier.contains()))
                     ? Verification.success()
-                    : Verification.failure("observed effects do not contain expected value");
-            case JSON_PATH_EQUALS -> {
+                    : Verification.failure("observed effects do not contain expected value"); break $oaSwitch0_exit;
+}
+case JSON_PATH_EQUALS:
+{
+{
                 JsonElement actual = resolve(outcome.canonicalResult(), verifier.path());
-                yield actual != null && actual.equals(verifier.expected())
+                { $oaSwitch0_exit_result = actual != null && actual.equals(verifier.expected())
                         ? Verification.success()
-                        : Verification.failure("canonical path did not equal expected value");
+                        : Verification.failure("canonical path did not equal expected value"); break $oaSwitch0_exit; }
             }
-        };
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static JsonElement resolve(JsonElement root, String path) {

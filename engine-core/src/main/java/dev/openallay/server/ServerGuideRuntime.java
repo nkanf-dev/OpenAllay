@@ -39,10 +39,23 @@ public dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapabili
         return config.imageCapability();
     }
 public int requestBodyLimit() {
-        return switch (config.protocol()) {
-            case ANTHROPIC_MESSAGES -> dev.openallay.bridge.protocol.BridgeProtocol.MAX_ANTHROPIC_REQUEST_BYTES;
-            case OPENAI_CHAT -> dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES;
-        };
+        {
+int $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((config.protocol())) {
+case ANTHROPIC_MESSAGES:
+{
+$oaSwitch1_exit_result = dev.openallay.bridge.protocol.BridgeProtocol.MAX_ANTHROPIC_REQUEST_BYTES; break $oaSwitch1_exit;
+}
+case OPENAI_CHAT:
+{
+$oaSwitch1_exit_result = dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES; break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 public static ToolResult<ServerGuideRuntime> create(
             FeatureServices runtime,
@@ -99,10 +112,21 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
             return new ToolResult.Failure<>("model_disabled", "Server model is disabled");
         }
         Gson gson = dev.openallay.json.EngineJson.create();
-        ModelClient raw = switch (config.protocol()) {
-            case ANTHROPIC_MESSAGES -> new AnthropicMessagesClient(config, gson);
-            case OPENAI_CHAT -> new OpenAiChatClient(config, gson);
-        };
+        dev.openallay.model.ModelClient $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((config.protocol())) {
+case ANTHROPIC_MESSAGES:
+{
+$oaSwitch0_exit_result = new AnthropicMessagesClient(config, gson); break $oaSwitch0_exit;
+}
+case OPENAI_CHAT:
+{
+$oaSwitch0_exit_result = new OpenAiChatClient(config, gson); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+ModelClient raw = $oaSwitch0_exit_result;
         ModelRequestScheduler scheduled = new ModelRequestScheduler(
                 dev.openallay.model.ObservingModelClient.observe(raw, config.model()));
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);

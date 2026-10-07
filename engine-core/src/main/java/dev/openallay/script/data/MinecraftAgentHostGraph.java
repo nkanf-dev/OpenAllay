@@ -490,15 +490,44 @@ public final class MinecraftAgentHostGraph {
     }
 
     private static String pluralize(String kind) {
-        return switch (kind) {
-            case "item" -> "items";
-            case "block" -> "blocks";
-            case "fluid" -> "fluids";
-            case "effect", "mob_effect" -> "effects";
-            case "enchantment" -> "enchantments";
-            case "entity", "entity_type" -> "entities";
-            default -> kind.endsWith("s") ? kind : kind + "s";
-        };
+        {
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((kind)) {
+case "item":
+{
+$oaSwitch0_exit_result = "items"; break $oaSwitch0_exit;
+}
+case "block":
+{
+$oaSwitch0_exit_result = "blocks"; break $oaSwitch0_exit;
+}
+case "fluid":
+{
+$oaSwitch0_exit_result = "fluids"; break $oaSwitch0_exit;
+}
+case "effect":
+case "mob_effect":
+{
+$oaSwitch0_exit_result = "effects"; break $oaSwitch0_exit;
+}
+case "enchantment":
+{
+$oaSwitch0_exit_result = "enchantments"; break $oaSwitch0_exit;
+}
+case "entity":
+case "entity_type":
+{
+$oaSwitch0_exit_result = "entities"; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = kind.endsWith("s") ? kind : kind + "s"; break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static Type type(String name) {

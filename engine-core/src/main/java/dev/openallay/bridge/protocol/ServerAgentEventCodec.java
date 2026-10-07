@@ -92,44 +92,116 @@ Object body = (($oaPattern5_holder.value = event) instanceof dev.openallay.agent
             throw new IllegalArgumentException("Malformed server Agent event JSON", failure);
         }
 
-        AgentEvent event = switch (payload.eventType()) {
-            case "state" -> new AgentEvent.StateChanged(read(body, dev.openallay.util.Java8Collections.setOf("state"), AgentEvent.StateChanged.class).state());
-            case "context_compacted" ->
-                    new AgentEvent.ContextCompacted(checkpoints.decode(body.toString()));
-            case "context_updated" -> readContext(body);
-            case "context_finalized" -> readFinalized(body);
-            case "steer_applied" -> readSteerApplied(body);
-            case "steer_rejected" -> new AgentEvent.SteerRejected(readMessageId(body, dev.openallay.util.Java8Collections.setOf("messageId")));
-            case "text_delta" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.TextDelta.class));
-            case "reasoning_delta" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.ReasoningDelta.class));
-            case "tool_use_complete" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf("id", "name", "input"), ModelEvent.ToolUseComplete.class));
-            case "request_released" -> read(body, dev.openallay.util.Java8Collections.setOf(), AgentEvent.RequestReleased.class);
-            case "model_usage_started" -> readUsageStarted(body);
-            case "model_usage_observed" -> readUsageObserved(body);
-            case "usage" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf("usage"), ModelEvent.UsageUpdate.class));
-            case "model_attempt_started" -> new AgentEvent.ModelProgress(
-                    readAttemptStarted(body));
-            case "model_response_started" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf(), ModelEvent.ResponseStarted.class));
-            case "rate_limited" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class));
-            case "model_complete" -> new AgentEvent.ModelProgress(
-                    read(body, dev.openallay.util.Java8Collections.setOf("stopReason"), ModelEvent.MessageComplete.class));
-            case "model_failure" -> new AgentEvent.ModelProgress(readModelFailure(body));
-            case "tool_started" -> readToolStarted(body);
-            case "tool_completed" -> read(
+        dev.openallay.agent.AgentEvent $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((payload.eventType())) {
+case "state":
+{
+$oaSwitch0_exit_result = new AgentEvent.StateChanged(read(body, dev.openallay.util.Java8Collections.setOf("state"), AgentEvent.StateChanged.class).state()); break $oaSwitch0_exit;
+}
+case "context_compacted":
+{
+$oaSwitch0_exit_result = new AgentEvent.ContextCompacted(checkpoints.decode(body.toString())); break $oaSwitch0_exit;
+}
+case "context_updated":
+{
+$oaSwitch0_exit_result = readContext(body); break $oaSwitch0_exit;
+}
+case "context_finalized":
+{
+$oaSwitch0_exit_result = readFinalized(body); break $oaSwitch0_exit;
+}
+case "steer_applied":
+{
+$oaSwitch0_exit_result = readSteerApplied(body); break $oaSwitch0_exit;
+}
+case "steer_rejected":
+{
+$oaSwitch0_exit_result = new AgentEvent.SteerRejected(readMessageId(body, dev.openallay.util.Java8Collections.setOf("messageId"))); break $oaSwitch0_exit;
+}
+case "text_delta":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.TextDelta.class)); break $oaSwitch0_exit;
+}
+case "reasoning_delta":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.ReasoningDelta.class)); break $oaSwitch0_exit;
+}
+case "tool_use_complete":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("id", "name", "input"), ModelEvent.ToolUseComplete.class)); break $oaSwitch0_exit;
+}
+case "request_released":
+{
+$oaSwitch0_exit_result = read(body, dev.openallay.util.Java8Collections.setOf(), AgentEvent.RequestReleased.class); break $oaSwitch0_exit;
+}
+case "model_usage_started":
+{
+$oaSwitch0_exit_result = readUsageStarted(body); break $oaSwitch0_exit;
+}
+case "model_usage_observed":
+{
+$oaSwitch0_exit_result = readUsageObserved(body); break $oaSwitch0_exit;
+}
+case "usage":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("usage"), ModelEvent.UsageUpdate.class)); break $oaSwitch0_exit;
+}
+case "model_attempt_started":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    readAttemptStarted(body)); break $oaSwitch0_exit;
+}
+case "model_response_started":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf(), ModelEvent.ResponseStarted.class)); break $oaSwitch0_exit;
+}
+case "rate_limited":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class)); break $oaSwitch0_exit;
+}
+case "model_complete":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("stopReason"), ModelEvent.MessageComplete.class)); break $oaSwitch0_exit;
+}
+case "model_failure":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(readModelFailure(body)); break $oaSwitch0_exit;
+}
+case "tool_started":
+{
+$oaSwitch0_exit_result = readToolStarted(body); break $oaSwitch0_exit;
+}
+case "tool_completed":
+{
+$oaSwitch0_exit_result = read(
                     body,
                     dev.openallay.util.Java8Collections.setOf("invocationId", "toolId", "failure", "normalized"),
-                    AgentEvent.ToolCompleted.class);
-            case "final_text" -> read(body, dev.openallay.util.Java8Collections.setOf("text"), AgentEvent.FinalText.class);
-            case "failed" -> read(body, dev.openallay.util.Java8Collections.setOf("code", "message"), AgentEvent.Failed.class);
-            default -> throw new IllegalArgumentException(
+                    AgentEvent.ToolCompleted.class); break $oaSwitch0_exit;
+}
+case "final_text":
+{
+$oaSwitch0_exit_result = read(body, dev.openallay.util.Java8Collections.setOf("text"), AgentEvent.FinalText.class); break $oaSwitch0_exit;
+}
+case "failed":
+{
+$oaSwitch0_exit_result = read(body, dev.openallay.util.Java8Collections.setOf("code", "message"), AgentEvent.Failed.class); break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException(
                     "Unknown server Agent event type " + payload.eventType());
-        };
+}
+}
+}
+AgentEvent event = $oaSwitch0_exit_result;
         boolean expectedTerminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
         if (payload.terminal() != expectedTerminal) {
             throw new IllegalArgumentException("Server Agent event terminal flag is inconsistent");

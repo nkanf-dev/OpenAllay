@@ -449,18 +449,52 @@ if ((($oaPattern12_holder.value = raw) instanceof java.lang.Class && (($oaPatter
 
     private Class<?> resolveName(String name, ClassLoader loader, boolean initialize)
             throws ClassNotFoundException {
-        Class<?> primitive = switch (name) {
-            case "boolean" -> boolean.class;
-            case "byte" -> byte.class;
-            case "short" -> short.class;
-            case "char" -> char.class;
-            case "int" -> int.class;
-            case "long" -> long.class;
-            case "float" -> float.class;
-            case "double" -> double.class;
-            case "void" -> void.class;
-            default -> null;
-        };
+        java.lang.Class<?> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((name)) {
+case "boolean":
+{
+$oaSwitch0_exit_result = boolean.class; break $oaSwitch0_exit;
+}
+case "byte":
+{
+$oaSwitch0_exit_result = byte.class; break $oaSwitch0_exit;
+}
+case "short":
+{
+$oaSwitch0_exit_result = short.class; break $oaSwitch0_exit;
+}
+case "char":
+{
+$oaSwitch0_exit_result = char.class; break $oaSwitch0_exit;
+}
+case "int":
+{
+$oaSwitch0_exit_result = int.class; break $oaSwitch0_exit;
+}
+case "long":
+{
+$oaSwitch0_exit_result = long.class; break $oaSwitch0_exit;
+}
+case "float":
+{
+$oaSwitch0_exit_result = float.class; break $oaSwitch0_exit;
+}
+case "double":
+{
+$oaSwitch0_exit_result = double.class; break $oaSwitch0_exit;
+}
+case "void":
+{
+$oaSwitch0_exit_result = void.class; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = null; break $oaSwitch0_exit;
+}
+}
+}
+Class<?> primitive = $oaSwitch0_exit_result;
         if (primitive != null) return primitive;
         if (name.endsWith("[]")) {
             Class<?> component = resolveName(name.substring(0, name.length() - 2), loader, false);

@@ -107,12 +107,34 @@ public final class RecipeCatalogMerger {
     }
 
     private static int authorityRank(DataAuthority authority) {
-        return switch (authority) {
-            case SERVER_AUTHORITATIVE -> 0;
-            case CLIENT_VISIBLE -> 1;
-            case INTEGRATION_API -> 2;
-            case RESOURCE_ASSET -> 3;
-            case DETERMINISTIC_TEST -> 4;
-        };
+        {
+int $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((authority)) {
+case SERVER_AUTHORITATIVE:
+{
+$oaSwitch0_exit_result = 0; break $oaSwitch0_exit;
+}
+case CLIENT_VISIBLE:
+{
+$oaSwitch0_exit_result = 1; break $oaSwitch0_exit;
+}
+case INTEGRATION_API:
+{
+$oaSwitch0_exit_result = 2; break $oaSwitch0_exit;
+}
+case RESOURCE_ASSET:
+{
+$oaSwitch0_exit_result = 3; break $oaSwitch0_exit;
+}
+case DETERMINISTIC_TEST:
+{
+$oaSwitch0_exit_result = 4; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 }

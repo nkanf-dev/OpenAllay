@@ -157,11 +157,29 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
     }
 
     private static int viewerRank(String viewerId) {
-        return switch (viewerId) {
-            case "viewer:jei" -> 0;
-            case "viewer:rei" -> 1;
-            case "viewer:emi" -> 2;
-            default -> 100;
-        };
+        {
+int $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((viewerId)) {
+case "viewer:jei":
+{
+$oaSwitch0_exit_result = 0; break $oaSwitch0_exit;
+}
+case "viewer:rei":
+{
+$oaSwitch0_exit_result = 1; break $oaSwitch0_exit;
+}
+case "viewer:emi":
+{
+$oaSwitch0_exit_result = 2; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = 100; break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 }

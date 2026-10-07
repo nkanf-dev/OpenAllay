@@ -227,18 +227,43 @@ if ((($oaPattern2_holder.value = payload) instanceof dev.openallay.bridge.protoc
 
             java.util.ArrayDeque<Set<String>> objects = new java.util.ArrayDeque<>();
             do {
-                switch (reader.peek()) {
-                    case BEGIN_OBJECT -> { reader.beginObject(); objects.push(new java.util.HashSet<>()); }
-                    case BEGIN_ARRAY -> { reader.beginArray(); objects.push(dev.openallay.util.Java8Collections.setOf()); }
-                    case NAME -> {
+                switch ((reader.peek())) {
+case BEGIN_OBJECT:
+{
+{ reader.beginObject(); objects.push(new java.util.HashSet<>()); }
+break;
+}
+case BEGIN_ARRAY:
+{
+{ reader.beginArray(); objects.push(dev.openallay.util.Java8Collections.setOf()); }
+break;
+}
+case NAME:
+{
+{
                         if (!objects.peek().add(reader.nextName())) {
                             throw new IllegalArgumentException("Duplicate bridge JSON field");
                         }
                     }
-                    case END_OBJECT -> { reader.endObject(); objects.pop(); }
-                    case END_ARRAY -> { reader.endArray(); objects.pop(); }
-                    default -> reader.skipValue();
-                }
+break;
+}
+case END_OBJECT:
+{
+{ reader.endObject(); objects.pop(); }
+break;
+}
+case END_ARRAY:
+{
+{ reader.endArray(); objects.pop(); }
+break;
+}
+default:
+{
+reader.skipValue();
+break;
+}
+}
+
             } while (!objects.isEmpty());
             if (reader.peek() != JsonToken.END_DOCUMENT) throw new IllegalArgumentException("Trailing bridge JSON");
         } catch (IOException malformed) {
@@ -264,30 +289,70 @@ if ((($oaPattern2_holder.value = payload) instanceof dev.openallay.bridge.protoc
             }
             JsonObject value = block.getAsJsonObject();
             requireText(value.get("kind"));
-            Set<String> fields = switch (value.get("kind").getAsString()) {
-                case "TEXT" -> dev.openallay.util.Java8Collections.setOf("kind", "text");
-                case "IMAGE" -> dev.openallay.util.Java8Collections.setOf("kind", "image", "originToolUseId");
-                case "TOOL_USE" -> dev.openallay.util.Java8Collections.setOf("kind", "toolUseId", "toolName", "json");
-                case "TOOL_RESULT" -> dev.openallay.util.Java8Collections.setOf("kind", "toolUseId", "json", "error", "images");
-                default -> throw new IllegalArgumentException("Unknown Server Agent history content kind");
-            };
+            java.util.Set<java.lang.String> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((value.get("kind").getAsString())) {
+case "TEXT":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "text"); break $oaSwitch0_exit;
+}
+case "IMAGE":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "image", "originToolUseId"); break $oaSwitch0_exit;
+}
+case "TOOL_USE":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "toolUseId", "toolName", "json"); break $oaSwitch0_exit;
+}
+case "TOOL_RESULT":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "toolUseId", "json", "error", "images"); break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException("Unknown Server Agent history content kind");
+}
+}
+}
+Set<String> fields = $oaSwitch0_exit_result;
             exactObject(value, fields);
             for (String field : fields) {
-                switch (field) {
-                    case "image" -> validateImageReference(value.get(field));
-                    case "originToolUseId" -> {
+                switch ((field)) {
+case "image":
+{
+validateImageReference(value.get(field));
+break;
+}
+case "originToolUseId":
+{
+{
                         if (!value.get(field).isJsonNull()) requireText(value.get(field));
                     }
-                    case "images" -> {
+break;
+}
+case "images":
+{
+{
                         JsonElement images = value.get(field);
                         if (images == null || !images.isJsonArray()) {
                             throw new IllegalArgumentException("Tool result images must be an array");
                         }
                         for (JsonElement image : images.getAsJsonArray()) validateImageReference(image);
                     }
-                    case "error" -> requireBoolean(value.get(field));
-                    default -> requireText(value.get(field));
-                }
+break;
+}
+case "error":
+{
+requireBoolean(value.get(field));
+break;
+}
+default:
+{
+requireText(value.get(field));
+break;
+}
+}
+
             }
         }
     }

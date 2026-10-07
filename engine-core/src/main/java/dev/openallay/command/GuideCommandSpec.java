@@ -68,23 +68,84 @@ public static final class Route {
     public static int dispatch(
             GuideCommandFacade guide, Action action, String value,
             Supplier<UUID> actor, Consumer<GuideNotice> notices) {
-        switch (action) {
-            case OPEN -> guide.open(actor.get(), notices);
-            case CANCEL -> guide.cancel(actor.get(), notices);
-            case RETRY -> guide.retry(actor.get(), notices);
-            case CLEAR -> guide.clear(actor.get(), notices);
-            case STATUS -> guide.status(actor.get(), notices);
-            case SKILLS -> guide.skills(notices);
-            case SOURCES -> guide.sources(notices);
-            case MODEL_LIST -> guide.models(actor.get(), notices);
-            case MODEL_PROFILE -> guide.modelProfile(actor.get(), value, notices);
-            case MODEL_CLIENT -> guide.model(actor.get(), GuideModelMode.CLIENT, notices);
-            case MODEL_SERVER -> guide.model(actor.get(), GuideModelMode.SERVER, notices);
-            case SESSION_LIST -> guide.sessions(actor.get(), notices);
-            case SESSION_SELECT -> guide.select(actor.get(), value, notices);
-            case SESSION_CLOSE -> guide.close(actor.get(), value, notices);
-            case ASK -> guide.ask(actor.get(), value, notices);
-        }
+        switch ((action)) {
+case OPEN:
+{
+guide.open(actor.get(), notices);
+break;
+}
+case CANCEL:
+{
+guide.cancel(actor.get(), notices);
+break;
+}
+case RETRY:
+{
+guide.retry(actor.get(), notices);
+break;
+}
+case CLEAR:
+{
+guide.clear(actor.get(), notices);
+break;
+}
+case STATUS:
+{
+guide.status(actor.get(), notices);
+break;
+}
+case SKILLS:
+{
+guide.skills(notices);
+break;
+}
+case SOURCES:
+{
+guide.sources(notices);
+break;
+}
+case MODEL_LIST:
+{
+guide.models(actor.get(), notices);
+break;
+}
+case MODEL_PROFILE:
+{
+guide.modelProfile(actor.get(), value, notices);
+break;
+}
+case MODEL_CLIENT:
+{
+guide.model(actor.get(), GuideModelMode.CLIENT, notices);
+break;
+}
+case MODEL_SERVER:
+{
+guide.model(actor.get(), GuideModelMode.SERVER, notices);
+break;
+}
+case SESSION_LIST:
+{
+guide.sessions(actor.get(), notices);
+break;
+}
+case SESSION_SELECT:
+{
+guide.select(actor.get(), value, notices);
+break;
+}
+case SESSION_CLOSE:
+{
+guide.close(actor.get(), value, notices);
+break;
+}
+case ASK:
+{
+guide.ask(actor.get(), value, notices);
+break;
+}
+}
+
         return 1;
     }
 }

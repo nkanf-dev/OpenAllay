@@ -73,27 +73,43 @@ if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResul
 
     public static int dispatch(
             DevelopmentCommandHandler handler, Action action, String value, Source source) {
-        return switch (action) {
-            case TOOLS -> {
+        {
+int $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((action)) {
+case TOOLS:
+{
+{
                 handler.listTools().forEach(source::success);
-                yield 1;
+                { $oaSwitch0_exit_result = 1; break $oaSwitch0_exit; }
             }
-            case INVOKE -> {
+}
+case INVOKE:
+{
+{
                 source.success(handler.invoke(value));
-                yield 1;
+                { $oaSwitch0_exit_result = 1; break $oaSwitch0_exit; }
             }
-            case REPLAY -> {
+}
+case REPLAY:
+{
+{
                 ToolResult<ReplayReport> result = source.replay(value);
                 final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.trace.replay.ReplayReport> value; ToolResult.Success<ReplayReport> bound; }
 final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
 if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<ReplayReport>) $oaPattern1_holder.value) != null))) {
                     $oaPattern1_holder.bound.value().chatLines().forEach(source::success);
-                    yield $oaPattern1_holder.bound.value().passed() ? 1 : 0;
+                    { $oaSwitch0_exit_result = $oaPattern1_holder.bound.value().passed() ? 1 : 0; break $oaSwitch0_exit; }
                 }
                 ToolResult.Failure<ReplayReport> failure = (ToolResult.Failure<ReplayReport>) result;
                 source.failure("FAILURE " + failure.code() + ": " + failure.message());
-                yield 0;
+                { $oaSwitch0_exit_result = 0; break $oaSwitch0_exit; }
             }
-        };
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 }

@@ -121,12 +121,29 @@ if ((($oaPattern1_holder.value = decoded) instanceof dev.openallay.tool.ToolResu
 
     private static String missingContext(AgentTrace trace, ToolInvocationContext context) {
         for (ContextCapability capability : trace.requiredContext()) {
-            boolean present = switch (capability) {
-                case REGISTRIES -> context.registries().isPresent();
-                case RECIPES -> context.recipes().isPresent();
-                case PLAYER -> context.player().isPresent();
-                case OBSERVABLE_GAME_STATE -> context.observableGameState().isPresent();
-            };
+            boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((capability)) {
+case REGISTRIES:
+{
+$oaSwitch0_exit_result = context.registries().isPresent(); break $oaSwitch0_exit;
+}
+case RECIPES:
+{
+$oaSwitch0_exit_result = context.recipes().isPresent(); break $oaSwitch0_exit;
+}
+case PLAYER:
+{
+$oaSwitch0_exit_result = context.player().isPresent(); break $oaSwitch0_exit;
+}
+case OBSERVABLE_GAME_STATE:
+{
+$oaSwitch0_exit_result = context.observableGameState().isPresent(); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+boolean present = $oaSwitch0_exit_result;
             if (!present) {
                 return "missing_context: " + capability.name().toLowerCase();
             }

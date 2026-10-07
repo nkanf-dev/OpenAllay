@@ -387,35 +387,64 @@ if (!((($oaPattern0_holder.value = opened) instanceof dev.openallay.tool.ToolRes
     }
 
     protected final void receive(String kind, String json) {
-        switch (kind) {
-            case "capabilities" -> {
+        switch ((kind)) {
+case "capabilities":
+{
+{
                 capabilities.replace(codec.decode(json, CapabilityPayload.class));
                 capabilityListeners.forEach(Runnable::run);
             }
-            case "tool_result" -> remoteTools.receive(
+break;
+}
+case "tool_result":
+{
+remoteTools.receive(
                     codec.decode(json, RemoteToolResultChunkPayload.class));
-            case "client_tool_call" -> {
+break;
+}
+case "client_tool_call":
+{
+{
                 ClientToolExecutionEndpoint endpoint = clientTools;
                 if (endpoint != null) {
                     endpoint.handle(codec.decode(json, ClientToolCallPayload.class));
                 }
             }
-            case "client_tool_cancel" -> {
+break;
+}
+case "client_tool_cancel":
+{
+{
                 ClientToolExecutionEndpoint endpoint = clientTools;
                 if (endpoint != null) {
                     endpoint.cancel(codec.decode(json, ClientToolCancelPayload.class));
                 }
             }
-            case "agent_event" -> receiveAgentEvent(
+break;
+}
+case "agent_event":
+{
+receiveAgentEvent(
                     codec.decode(json, ServerAgentEventPayload.class));
-            case "agent_event_chunk" -> {
+break;
+}
+case "agent_event_chunk":
+{
+{
                 ServerAgentEventChunkPayload chunk =
                         codec.decode(json, ServerAgentEventChunkPayload.class);
                 receiveAgentEventChunk(chunk);
             }
-            default -> dev.openallay.OpenAllayConstants.LOGGER.warn(
+break;
+}
+default:
+{
+dev.openallay.OpenAllayConstants.LOGGER.warn(
                     "Ignored unknown client bridge packet {}", kind);
-        }
+break;
+}
+}
+
     }
 
     private void receiveAgentEventChunk(ServerAgentEventChunkPayload chunk) {

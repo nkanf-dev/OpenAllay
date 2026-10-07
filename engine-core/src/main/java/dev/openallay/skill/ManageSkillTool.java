@@ -128,11 +128,25 @@ public static final class Output {
                     "invalid_tool_arguments", "operation is required");
         }
         try {
-            AgentSkillManager.Result result = switch (input.operation()) {
-                case CREATE -> manager.create(input.name(), input.markdown(), input.references());
-                case UPDATE -> manager.update(input.name(), input.markdown(), input.references());
-                case DELETE -> manager.delete(input.name());
-            };
+            dev.openallay.skill.AgentSkillManager.Result $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((input.operation())) {
+case CREATE:
+{
+$oaSwitch0_exit_result = manager.create(input.name(), input.markdown(), input.references()); break $oaSwitch0_exit;
+}
+case UPDATE:
+{
+$oaSwitch0_exit_result = manager.update(input.name(), input.markdown(), input.references()); break $oaSwitch0_exit;
+}
+case DELETE:
+{
+$oaSwitch0_exit_result = manager.delete(input.name()); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+AgentSkillManager.Result result = $oaSwitch0_exit_result;
             return new ToolResult.Success<>(new Output(
                     result.operation().name().toLowerCase(java.util.Locale.ROOT),
                     result.name(),

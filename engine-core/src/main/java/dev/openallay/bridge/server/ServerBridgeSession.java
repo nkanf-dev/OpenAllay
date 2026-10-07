@@ -99,17 +99,31 @@ public final class ServerBridgeSession {
     public void receive(UUID actor, String kind, String json) {
         java.util.Objects.requireNonNull(actor, "actor");
         try {
-            switch (kind) {
-                case "tool_call" -> remoteTools.handle(
+            switch ((kind)) {
+case "tool_call":
+{
+remoteTools.handle(
                         actor, codec.decode(json, RemoteToolCallPayload.class));
-                case "tool_cancel" -> remoteTools.cancel(
+break;
+}
+case "tool_cancel":
+{
+remoteTools.cancel(
                         actor, codec.decode(json, RemoteCancelPayload.class));
-                case "tool_request_close" -> remoteTools.closeRequest(
+break;
+}
+case "tool_request_close":
+{
+remoteTools.closeRequest(
                         actor,
                         codec.decode(
                                 json,
                                 dev.openallay.bridge.protocol.RemoteToolRequestClosePayload.class));
-                case "agent_request_chunk" -> {
+break;
+}
+case "agent_request_chunk":
+{
+{
                     if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
                         ServerAgentRequestChunkPayload chunk = codec.decode(
                                 json, ServerAgentRequestChunkPayload.class);
@@ -131,10 +145,22 @@ public final class ServerBridgeSession {
                         });
                     }
                 }
-                case "agent_steer_chunk" -> receiveSteerChunk(actor, json);
-                case "agent_steer" -> receiveSteer(
+break;
+}
+case "agent_steer_chunk":
+{
+receiveSteerChunk(actor, json);
+break;
+}
+case "agent_steer":
+{
+receiveSteer(
                         actor, codec.decode(json, ServerAgentSteerPayload.class));
-                case "agent_cancel" -> {
+break;
+}
+case "agent_cancel":
+{
+{
                     if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
                         UUID requestId = codec.decode(
                                 json, ServerAgentCancelPayload.class).requestId();
@@ -149,7 +175,11 @@ public final class ServerBridgeSession {
                         }
                     }
                 }
-                case "client_tool_result" -> {
+break;
+}
+case "client_tool_result":
+{
+{
                     if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
                         success.value().clientTools().receive(
                                 actor,
@@ -158,8 +188,14 @@ public final class ServerBridgeSession {
                                         dev.openallay.bridge.protocol.ClientToolResultChunkPayload.class));
                     }
                 }
-                default -> throw new IllegalArgumentException("Unknown bridge packet " + kind);
-            }
+break;
+}
+default:
+{
+throw new IllegalArgumentException("Unknown bridge packet " + kind);
+}
+}
+
         } catch (RuntimeException failure) {
                 if ("agent_request_chunk".equals(kind)) {
                     BridgeFrameCorrelation.read(json).ifPresent(requestId -> {
