@@ -46,24 +46,56 @@ public final class GuideUiProgress {
     public Instant deadlineAt() { return deadlineAt; }
 public static GuideUiProgress from(GuideRequestProgress progress) {
         Objects.requireNonNull(progress, "progress");
-        return new GuideUiProgress(
-                progress.phase(),
-                switch (progress.phase()) {
-                    case PREPARING -> "screen.openallay.progress.preparing";
-                    case CONTEXT_LOADING -> "screen.openallay.progress.context_loading";
-                    case COMPACTING -> "screen.openallay.progress.compacting";
-                    case ENDPOINT_WAIT -> "screen.openallay.progress.endpoint_wait";
-                    case MODEL_WAIT -> "screen.openallay.progress.model_wait";
-                    case RESPONSE_STREAMING -> "screen.openallay.progress.streaming";
-                    case TOOL_WAIT -> "screen.openallay.progress.tool_wait";
-                    case COMPLETING -> "screen.openallay.progress.completing";
-                },
+        {
+final dev.openallay.guide.GuideRequestPhase $oaSwitch0_exit_result_prior0 = progress.phase();
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((progress.phase())) {
+case PREPARING:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.preparing"; break $oaSwitch0_exit;
+}
+case CONTEXT_LOADING:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.context_loading"; break $oaSwitch0_exit;
+}
+case COMPACTING:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.compacting"; break $oaSwitch0_exit;
+}
+case ENDPOINT_WAIT:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.endpoint_wait"; break $oaSwitch0_exit;
+}
+case MODEL_WAIT:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.model_wait"; break $oaSwitch0_exit;
+}
+case RESPONSE_STREAMING:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.streaming"; break $oaSwitch0_exit;
+}
+case TOOL_WAIT:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.tool_wait"; break $oaSwitch0_exit;
+}
+case COMPLETING:
+{
+$oaSwitch0_exit_result = "screen.openallay.progress.completing"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return new GuideUiProgress(
+                $oaSwitch0_exit_result_prior0,
+                $oaSwitch0_exit_result,
                 progress.requestStartedAt(),
                 progress.phaseStartedAt(),
                 progress.lastProgressAt(),
                 progress.attempt(),
                 progress.retryAt(),
                 progress.deadlineAt());
+}
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

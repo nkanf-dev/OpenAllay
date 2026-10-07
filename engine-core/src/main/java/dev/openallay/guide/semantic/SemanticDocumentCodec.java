@@ -144,19 +144,31 @@ if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.semantic.
             JsonObject object = object(value, "semantic block");
             String type = string(object, "type");
             String nodeId = string(object, "nodeId");
-            decoded.add(switch (type) {
-                case "paragraph" -> {
+            {
+final java.util.List<dev.openallay.guide.semantic.SemanticBlock> $oaSwitch1_exit_result_prior0 = decoded;
+dev.openallay.guide.semantic.SemanticBlock $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((type)) {
+case "paragraph":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "content"), "paragraph");
-                    yield new SemanticBlock.Paragraph(
-                            nodeId, decodeInlines(array(object, "content")));
+                    { $oaSwitch1_exit_result = new SemanticBlock.Paragraph(
+                            nodeId, decodeInlines(array(object, "content"))); break $oaSwitch1_exit; }
                 }
-                case "heading" -> {
+}
+case "heading":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "level", "content"), "heading");
-                    yield new SemanticBlock.Heading(
+                    { $oaSwitch1_exit_result = new SemanticBlock.Heading(
                             nodeId, integer(object, "level"),
-                            decodeInlines(array(object, "content")));
+                            decodeInlines(array(object, "content"))); break $oaSwitch1_exit; }
                 }
-                case "list" -> {
+}
+case "list":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "ordered", "start", "items"), "list");
                     List<List<SemanticBlock>> items = new ArrayList<>();
                     for (JsonElement item : array(object, "items")) {
@@ -165,40 +177,62 @@ if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.semantic.
                         }
                         items.add(decodeBlocks(item.getAsJsonArray()));
                     }
-                    yield new SemanticBlock.ListBlock(
-                            nodeId, bool(object, "ordered"), integer(object, "start"), items);
+                    { $oaSwitch1_exit_result = new SemanticBlock.ListBlock(
+                            nodeId, bool(object, "ordered"), integer(object, "start"), items); break $oaSwitch1_exit; }
                 }
-                case "quote" -> {
+}
+case "quote":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "content"), "quote");
-                    yield new SemanticBlock.Quote(nodeId, decodeBlocks(array(object, "content")));
+                    { $oaSwitch1_exit_result = new SemanticBlock.Quote(nodeId, decodeBlocks(array(object, "content"))); break $oaSwitch1_exit; }
                 }
-                case "code" -> {
+}
+case "code":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "info", "code"), "code block");
-                    yield new SemanticBlock.CodeBlock(
-                            nodeId, string(object, "info"), string(object, "code"));
+                    { $oaSwitch1_exit_result = new SemanticBlock.CodeBlock(
+                            nodeId, string(object, "info"), string(object, "code")); break $oaSwitch1_exit; }
                 }
-                case "table" -> {
+}
+case "table":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "header", "rows"), "table");
                     List<SemanticBlock.TableRow> rows = new ArrayList<>();
                     for (JsonElement row : array(object, "rows")) {
                         rows.add(decodeRow(object(row, "table row")));
                     }
-                    yield new SemanticBlock.Table(
+                    { $oaSwitch1_exit_result = new SemanticBlock.Table(
                             nodeId,
                             decodeRow(object(object.get("header"), "table header")),
-                            rows);
+                            rows); break $oaSwitch1_exit; }
                 }
-                case "thematic_break" -> {
+}
+case "thematic_break":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId"), "thematic break");
-                    yield new SemanticBlock.ThematicBreak(nodeId);
+                    { $oaSwitch1_exit_result = new SemanticBlock.ThematicBreak(nodeId); break $oaSwitch1_exit; }
                 }
-                case "component" -> {
+}
+case "component":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "component"), "component block");
-                    yield new SemanticBlock.Component(
-                            nodeId, decodeComponent(object(object.get("component"), "component")));
+                    { $oaSwitch1_exit_result = new SemanticBlock.Component(
+                            nodeId, decodeComponent(object(object.get("component"), "component"))); break $oaSwitch1_exit; }
                 }
-                default -> throw new IllegalArgumentException("unknown semantic block type " + type);
-            });
+}
+default:
+{
+throw new IllegalArgumentException("unknown semantic block type " + type);
+}
+}
+}
+$oaSwitch1_exit_result_prior0.add($oaSwitch1_exit_result);
+}
         }
         return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
@@ -262,36 +296,64 @@ if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic
             JsonObject object = object(value, "semantic inline");
             String type = string(object, "type");
             String nodeId = string(object, "nodeId");
-            decoded.add(switch (type) {
-                case "text" -> {
+            {
+final java.util.List<dev.openallay.guide.semantic.SemanticInline> $oaSwitch0_exit_result_prior0 = decoded;
+dev.openallay.guide.semantic.SemanticInline $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((type)) {
+case "text":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "text"), "text inline");
-                    yield new SemanticInline.Text(nodeId, string(object, "text"));
+                    { $oaSwitch0_exit_result = new SemanticInline.Text(nodeId, string(object, "text")); break $oaSwitch0_exit; }
                 }
-                case "emphasis" -> {
+}
+case "emphasis":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "children"), "emphasis inline");
-                    yield new SemanticInline.Emphasis(
-                            nodeId, decodeInlines(array(object, "children")));
+                    { $oaSwitch0_exit_result = new SemanticInline.Emphasis(
+                            nodeId, decodeInlines(array(object, "children"))); break $oaSwitch0_exit; }
                 }
-                case "strong" -> {
+}
+case "strong":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "children"), "strong inline");
-                    yield new SemanticInline.Strong(
-                            nodeId, decodeInlines(array(object, "children")));
+                    { $oaSwitch0_exit_result = new SemanticInline.Strong(
+                            nodeId, decodeInlines(array(object, "children"))); break $oaSwitch0_exit; }
                 }
-                case "code" -> {
+}
+case "code":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "text"), "code inline");
-                    yield new SemanticInline.Code(nodeId, string(object, "text"));
+                    { $oaSwitch0_exit_result = new SemanticInline.Code(nodeId, string(object, "text")); break $oaSwitch0_exit; }
                 }
-                case "break" -> {
+}
+case "break":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "hard"), "break inline");
-                    yield new SemanticInline.Break(nodeId, bool(object, "hard"));
+                    { $oaSwitch0_exit_result = new SemanticInline.Break(nodeId, bool(object, "hard")); break $oaSwitch0_exit; }
                 }
-                case "reference" -> {
+}
+case "reference":
+{
+{
                     exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "reference"), "reference inline");
-                    yield new SemanticInline.Reference(
-                            nodeId, decodeReference(object(object.get("reference"), "reference")));
+                    { $oaSwitch0_exit_result = new SemanticInline.Reference(
+                            nodeId, decodeReference(object(object.get("reference"), "reference"))); break $oaSwitch0_exit; }
                 }
-                default -> throw new IllegalArgumentException("unknown semantic inline type " + type);
-            });
+}
+default:
+{
+throw new IllegalArgumentException("unknown semantic inline type " + type);
+}
+}
+}
+$oaSwitch0_exit_result_prior0.add($oaSwitch0_exit_result);
+}
         }
         return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
@@ -513,8 +575,13 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
         String fallback = string(object, "fallbackText");
         String narration = string(object, "narration");
         JsonObject properties = object(object.get("properties"), "component properties");
-        return switch (type) {
-            case "item_row" -> {
+        {
+dev.openallay.guide.semantic.RichComponent $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((type)) {
+case "item_row":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("items"), "item row properties");
                 List<RichComponent.Item> items = new ArrayList<>();
                 for (JsonElement value : array(properties, "items")) {
@@ -524,15 +591,21 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                             string(item, "itemId"), longValue(item, "count"),
                             string(item, "label"), string(item, "originInvocationId")));
                 }
-                yield new RichComponent.ItemRow(nodeId, items, fallback, narration);
+                { $oaSwitch2_exit_result = new RichComponent.ItemRow(nodeId, items, fallback, narration); break $oaSwitch2_exit; }
             }
-            case "recipe_grid" -> {
+}
+case "recipe_grid":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("sourceId", "generation", "recipeId", "originInvocationId", "label"), "recipe grid properties");
-                yield new RichComponent.RecipeGrid(
+                { $oaSwitch2_exit_result = new RichComponent.RecipeGrid(
                         nodeId, recipe(properties), string(properties, "originInvocationId"),
-                        string(properties, "label"), fallback, narration);
+                        string(properties, "label"), fallback, narration); break $oaSwitch2_exit; }
             }
-            case "ingredient_check" -> {
+}
+case "ingredient_check":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("ingredients"), "ingredient check properties");
                 List<RichComponent.Ingredient> ingredients = new ArrayList<>();
                 for (JsonElement value : array(properties, "ingredients")) {
@@ -543,17 +616,23 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                             longValue(item, "available"), string(item, "label"),
                             string(item, "originInvocationId")));
                 }
-                yield new RichComponent.IngredientCheck(nodeId, ingredients, fallback, narration);
+                { $oaSwitch2_exit_result = new RichComponent.IngredientCheck(nodeId, ingredients, fallback, narration); break $oaSwitch2_exit; }
             }
-            case "craftability_summary" -> {
+}
+case "craftability_summary":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("sourceId", "generation", "recipeId", "originInvocationId", "craftable", "conclusive", "requestedCrafts", "maximumCrafts"), "craftability properties");
-                yield new RichComponent.CraftabilitySummary(
+                { $oaSwitch2_exit_result = new RichComponent.CraftabilitySummary(
                         nodeId, recipe(properties), string(properties, "originInvocationId"),
                         bool(properties, "craftable"), bool(properties, "conclusive"),
                         longValue(properties, "requestedCrafts"),
-                        longValue(properties, "maximumCrafts"), fallback, narration);
+                        longValue(properties, "maximumCrafts"), fallback, narration); break $oaSwitch2_exit; }
             }
-            case "progress_steps" -> {
+}
+case "progress_steps":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("steps"), "progress properties");
                 List<RichComponent.Step> steps = new ArrayList<>();
                 for (JsonElement value : array(properties, "steps")) {
@@ -564,9 +643,12 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                             enumValue(RichComponent.StepState.class,
                                     string(step, "state"), "step state")));
                 }
-                yield new RichComponent.ProgressSteps(nodeId, steps, fallback, narration);
+                { $oaSwitch2_exit_result = new RichComponent.ProgressSteps(nodeId, steps, fallback, narration); break $oaSwitch2_exit; }
             }
-            case "source_summary" -> {
+}
+case "source_summary":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("sources"), "source summary properties");
                 List<RichComponent.Source> sources = new ArrayList<>();
                 for (JsonElement value : array(properties, "sources")) {
@@ -576,17 +658,23 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                             string(source, "sourceId"), string(source, "label"),
                             string(source, "originInvocationId")));
                 }
-                yield new RichComponent.SourceSummary(nodeId, sources, fallback, narration);
+                { $oaSwitch2_exit_result = new RichComponent.SourceSummary(nodeId, sources, fallback, narration); break $oaSwitch2_exit; }
             }
-            case "status_badge" -> {
+}
+case "status_badge":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("state", "label"), "status badge properties");
-                yield new RichComponent.StatusBadge(
+                { $oaSwitch2_exit_result = new RichComponent.StatusBadge(
                         nodeId,
                         enumValue(RichComponent.BadgeState.class,
                                 string(properties, "state"), "badge state"),
-                        string(properties, "label"), fallback, narration);
+                        string(properties, "label"), fallback, narration); break $oaSwitch2_exit; }
             }
-            case "choice_group" -> {
+}
+case "choice_group":
+{
+{
                 exact(properties, dev.openallay.util.Java8Collections.setOf("prompt", "choices"), "choice group properties");
                 List<RichComponent.Choice> choices = new ArrayList<>();
                 for (JsonElement value : array(properties, "choices")) {
@@ -595,11 +683,18 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                     choices.add(new RichComponent.Choice(
                             string(choice, "id"), string(choice, "label")));
                 }
-                yield new RichComponent.ChoiceGroup(
-                        nodeId, string(properties, "prompt"), choices, fallback, narration);
+                { $oaSwitch2_exit_result = new RichComponent.ChoiceGroup(
+                        nodeId, string(properties, "prompt"), choices, fallback, narration); break $oaSwitch2_exit; }
             }
-            default -> throw new IllegalArgumentException("unknown rich component type " + type);
-        };
+}
+default:
+{
+throw new IllegalArgumentException("unknown rich component type " + type);
+}
+}
+}
+return $oaSwitch2_exit_result;
+}
     }
 
     private static JsonObject item(RichComponent.Item value) {

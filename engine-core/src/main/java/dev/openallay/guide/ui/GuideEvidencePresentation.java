@@ -137,12 +137,30 @@ public static Identity from(GuideSource source) {
             // Position and operation size are retained in the individual UI records below.
             // Capture ranges use the same validated extent rule as core source aggregation.
             // Unknown detail keys remain in identity, so unrelated scopes cannot silently merge.
-            scope.keySet().removeIf(key -> switch (key) {
-                case "minecraft:position", "minecraft:x", "minecraft:y", "minecraft:z",
-                        "openallay_builder:position", "openallay_builder:x", "openallay_builder:y",
-                        "openallay_builder:z", "openallay_builder:count" -> true;
-                default -> false;
-            });
+            scope.keySet().removeIf(key -> {
+boolean $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((key)) {
+case "minecraft:position":
+case "minecraft:x":
+case "minecraft:y":
+case "minecraft:z":
+case "openallay_builder:position":
+case "openallay_builder:x":
+case "openallay_builder:y":
+case "openallay_builder:z":
+case "openallay_builder:count":
+{
+$oaSwitch1_exit_result = true; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = false; break $oaSwitch1_exit;
+}
+}
+}
+return $oaSwitch1_exit_result;
+});
             return new Identity(source.toolId(), evidence.authority(), evidence.completeness(),
                     evidence.sourceId(), evidence.provenance(), evidence.gameVersion(),
                     evidence.loader(), scope);
@@ -175,40 +193,108 @@ public static Identity from(GuideSource source) {
 }
 public static GuideEvidencePresentation from(GuideSource source) {
         dev.openallay.context.EvidenceMetadata evidence = Objects.requireNonNull(source, "source").evidence();
-        String sourceName = switch (evidence.sourceId()) {
-            case "minecraft:client_player", "minecraft:server_player",
-                    "minecraft:player_ui", "openallay:inventory" -> "player";
-            case "minecraft:client_registry", "minecraft:registry" -> "registry";
-            case "minecraft:recipe_manager", "openallay:recipe_catalog" -> "recipes";
-            case "minecraft:client_recipe_book" -> "recipe_book";
-            case "viewer:jei" -> "jei";
-            case "viewer:rei" -> "rei";
-            case "patchouli:resources" -> "resources";
-            case "openallay_builder:write-readback", "openallay_builder:undo-readback",
-                    "openallay_builder:read", "openallay_builder:read-region",
-                    "openallay_builder:connection-repair", "openallay_builder:scan-ground" -> "builder";
-            case "minecraft:client_blocks", "minecraft:server_blocks",
-                    "minecraft:client_entities", "minecraft:server_entities",
-                    "minecraft:client_entity", "minecraft:server_entity" -> "world";
-            default -> evidence.sourceId().startsWith("patchouli:") ? "guide"
+        java.lang.String $oaSwitch3_exit_result;
+$oaSwitch3_exit: {
+switch ((evidence.sourceId())) {
+case "minecraft:client_player":
+case "minecraft:server_player":
+case "minecraft:player_ui":
+case "openallay:inventory":
+{
+$oaSwitch3_exit_result = "player"; break $oaSwitch3_exit;
+}
+case "minecraft:client_registry":
+case "minecraft:registry":
+{
+$oaSwitch3_exit_result = "registry"; break $oaSwitch3_exit;
+}
+case "minecraft:recipe_manager":
+case "openallay:recipe_catalog":
+{
+$oaSwitch3_exit_result = "recipes"; break $oaSwitch3_exit;
+}
+case "minecraft:client_recipe_book":
+{
+$oaSwitch3_exit_result = "recipe_book"; break $oaSwitch3_exit;
+}
+case "viewer:jei":
+{
+$oaSwitch3_exit_result = "jei"; break $oaSwitch3_exit;
+}
+case "viewer:rei":
+{
+$oaSwitch3_exit_result = "rei"; break $oaSwitch3_exit;
+}
+case "patchouli:resources":
+{
+$oaSwitch3_exit_result = "resources"; break $oaSwitch3_exit;
+}
+case "openallay_builder:write-readback":
+case "openallay_builder:undo-readback":
+case "openallay_builder:read":
+case "openallay_builder:read-region":
+case "openallay_builder:connection-repair":
+case "openallay_builder:scan-ground":
+{
+$oaSwitch3_exit_result = "builder"; break $oaSwitch3_exit;
+}
+case "minecraft:client_blocks":
+case "minecraft:server_blocks":
+case "minecraft:client_entities":
+case "minecraft:server_entities":
+case "minecraft:client_entity":
+case "minecraft:server_entity":
+{
+$oaSwitch3_exit_result = "world"; break $oaSwitch3_exit;
+}
+default:
+{
+$oaSwitch3_exit_result = evidence.sourceId().startsWith("patchouli:") ? "guide"
                     : evidence.sourceId().startsWith("minecraft:world") ? "world"
-                    : "unknown";
-        };
-        return new GuideEvidencePresentation(
-                "screen.openallay.evidence.source." + sourceName,
-                "screen.openallay.evidence.authority." + switch (evidence.authority()) {
-                    case CLIENT_VISIBLE -> "client_visible";
-                    case SERVER_AUTHORITATIVE -> "server_authoritative";
-                    case RESOURCE_ASSET -> "resource_asset";
-                    case INTEGRATION_API -> "integration_api";
-                    case DETERMINISTIC_TEST -> "test";
-                },
+                    : "unknown"; break $oaSwitch3_exit;
+}
+}
+}
+String sourceName = $oaSwitch3_exit_result;
+        {
+final java.lang.String $oaSwitch2_exit_result_prior1 = "screen.openallay.evidence.source." + sourceName;
+final java.lang.String $oaSwitch2_exit_result_prior0 = "screen.openallay.evidence.authority.";
+java.lang.String $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((evidence.authority())) {
+case CLIENT_VISIBLE:
+{
+$oaSwitch2_exit_result = "client_visible"; break $oaSwitch2_exit;
+}
+case SERVER_AUTHORITATIVE:
+{
+$oaSwitch2_exit_result = "server_authoritative"; break $oaSwitch2_exit;
+}
+case RESOURCE_ASSET:
+{
+$oaSwitch2_exit_result = "resource_asset"; break $oaSwitch2_exit;
+}
+case INTEGRATION_API:
+{
+$oaSwitch2_exit_result = "integration_api"; break $oaSwitch2_exit;
+}
+case DETERMINISTIC_TEST:
+{
+$oaSwitch2_exit_result = "test"; break $oaSwitch2_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return new GuideEvidencePresentation(
+                $oaSwitch2_exit_result_prior1,
+                $oaSwitch2_exit_result_prior0 + $oaSwitch2_exit_result,
                 "screen.openallay.detail.tool.coverage." + switch (evidence.completeness()) {
                     case COMPLETE -> "complete";
                     case PARTIAL -> "partial";
                     case UNKNOWN -> "unknown";
                 },
                 evidence.capturedAt());
+}
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
