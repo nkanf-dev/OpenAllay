@@ -4,8 +4,7 @@ import dev.openallay.guide.semantic.RichComponent;
 import dev.openallay.guide.ui.GuideRecipeCard;
 
 /** Closed, detached input to a client-thread native view provider. */
-public sealed interface NativeDomainViewBinding
-        permits NativeDomainViewBinding.Recipe {
+public interface NativeDomainViewBinding {
     Family family();
 
     String stableId();
@@ -19,6 +18,12 @@ public static final class Recipe implements NativeDomainViewBinding {
     private final String stableId;
     private final RichComponent.RecipeGrid component;
     private final GuideRecipeCard recipe;
+    private static String requireId(String value) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
+            throw new IllegalArgumentException("native view stable ID is required");
+        }
+        return value;
+    }
     public Recipe(String stableId, RichComponent.RecipeGrid component, GuideRecipeCard recipe) {
 
             stableId = requireId(stableId);
@@ -61,10 +66,5 @@ public static final class Recipe implements NativeDomainViewBinding {
     }
 }
 
-    private static String requireId(String value) {
-        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
-            throw new IllegalArgumentException("native view stable ID is required");
-        }
-        return value;
-    }
+
 }
