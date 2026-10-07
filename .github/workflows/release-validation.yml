@@ -1367,9 +1367,9 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify genuine IR transformation and guarded operand evaluation
+    - name: Verify Parser precedence assignment declaration and error switch behavior
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.IRFactoryLanguageTest
+        --tests dev.latvian.mods.rhino.ParserSwitchLanguageTest
 
         ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
         --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest'
