@@ -97,6 +97,20 @@ public final class HttpExchangeRequest {
             return this;
         }
 
+        /** Binary POST payloads, including bounded WAV multipart requests. */
+        public Builder postBytes(byte[] bytes, String contentType) {
+            Objects.requireNonNull(bytes, "bytes");
+            if (contentType == null || Java8Strings.isBlank(contentType)
+                    || contentType.indexOf('\r') >= 0 || contentType.indexOf('\n') >= 0) {
+                throw new IllegalArgumentException("HTTP content type is required");
+            }
+            method = "POST";
+            body = bytes.clone();
+            // A body has one media type. Replace prior casing variants rather than append.
+            headers.keySet().removeIf(name -> name.equalsIgnoreCase("Content-Type"));
+            return header("Content-Type", contentType);
+        }
+
         public HttpExchangeRequest build() {
             return new HttpExchangeRequest(this);
         }

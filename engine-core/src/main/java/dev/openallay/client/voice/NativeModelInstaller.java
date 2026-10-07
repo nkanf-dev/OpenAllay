@@ -3,9 +3,6 @@ package dev.openallay.client.voice;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -13,16 +10,11 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.security.MessageDigest;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /** Explicit downloads only. Verified immutable installs never replace a last-valid model. */
 public final class NativeModelInstaller {
@@ -39,9 +31,6 @@ public final class NativeModelInstaller {
                             "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51"),
                     new NativeModelFiles.ModelFile(NativeModelFiles.Role.TOKENS, "tokens.txt", 315894,
                             "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc")));
-    private static final ScheduledExecutorService DOWNLOAD_DEADLINE = Executors.newSingleThreadScheduledExecutor(runnable -> {
-        Thread thread = new Thread(runnable, "OpenAllay-voice-download-timeout"); thread.setDaemon(true); return thread;
-    });
     private static final String MODEL_LICENSE = """
             FunASR Model Open Source License Agreement
             
@@ -281,48 +270,13 @@ public final class NativeModelInstaller {
             completed[0] += download.bytes(); progress.update(completed[0], total);
         }
     }
-    private static void download(Download download, Path file, VoiceCancellation cancellation, Progress progress) throws Exception {
-        if (!"https".equals(download.uri().getScheme())) throw new IOException("HTTPS is required");
-        // Reuse one Java17 client. Every request and response body has its own cancellation
-        // and deadline hooks; neither caller nor game thread waits for client shutdown.
-        // No audio or credentials are sent by this installer.
-        HttpClient client = DownloadClient.INSTANCE;
-        {
-            HttpRequest request = HttpRequest.newBuilder(download.uri()).timeout(Duration.ofSeconds(60)).GET().build();
-            var future = client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
-            future.thenAccept(response -> { if (cancellation.cancelled()) close(response.body()); });
-            try (AutoCloseable requestHook = cancellation.onCancel(() -> future.cancel(true))) {
-                HttpResponse<InputStream> response;
-                try { response = future.get(65, TimeUnit.SECONDS); }
-                catch (Exception failure) { future.cancel(true); cancellation.check(); throw failure; }
-                try (InputStream input = response.body(); AutoCloseable streamHook = cancellation.onCancel(() -> close(input))) {
-                    cancellation.check();
-                    if (response.statusCode() != 200 || !"https".equals(response.uri().getScheme())) throw new IOException("Download rejected");
-                    long announced = response.headers().firstValueAsLong("Content-Length").orElse(download.bytes());
-                    if (announced != download.bytes()) throw new NativeSpeechToText.Failure("model_integrity");
-                    var timeout = DOWNLOAD_DEADLINE.schedule(() -> close(input), 10, TimeUnit.MINUTES);
-                    try (var output = Files.newOutputStream(file, StandardOpenOption.CREATE_NEW)) {
-                        byte[] buffer = new byte[64 * 1024]; long count = 0; int length;
-                        MessageDigest digest = NativeModelFiles.digest();
-                        while ((length = input.read(buffer)) != -1) {
-                            cancellation.check(); count += length;
-                            if (count > download.bytes()) throw new NativeSpeechToText.Failure("model_integrity");
-                            output.write(buffer, 0, length); digest.update(buffer, 0, length); progress.update(count, download.bytes());
-                        }
-                        cancellation.check();
-                        if (count != download.bytes() || !HexFormat.of().formatHex(digest.digest()).equals(download.sha256())) {
-                            throw new NativeSpeechToText.Failure("model_integrity");
-                        }
-                    } catch (IOException failure) { cancellation.check(); throw failure;
-                    } finally { timeout.cancel(false); }
-                }
-            }
+    static void download(Download download, Path file, VoiceCancellation cancellation, Progress progress) throws Exception {
+        try {
+            VoiceModelDownload.download(download.uri(), download.bytes(), download.sha256(), file,
+                    cancellation, progress::update);
+        } catch (VoiceModelDownload.IntegrityFailure invalid) {
+            throw new NativeSpeechToText.Failure("model_integrity");
         }
-    }
-    private static final class DownloadClient {
-        private static final HttpClient INSTANCE = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .followRedirects(HttpClient.Redirect.NORMAL).build();
     }
     private static void close(InputStream input) { try { input.close(); } catch (IOException ignored) {} }
     private static void deleteStaging(Path staging) {

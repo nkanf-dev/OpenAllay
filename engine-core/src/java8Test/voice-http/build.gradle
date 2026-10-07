@@ -1,0 +1,59 @@
+plugins { id 'java-base' }
+repositories { mavenCentral() }
+configurations { fixtureLibraries }
+dependencies { fixtureLibraries 'com.google.code.gson:gson:2.8.0' }
+
+def repository = file('../../../..')
+def production = new File(repository, 'engine-core/src/main/java')
+def classes = layout.buildDirectory.dir('classes')
+def compiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+def runtime8 = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+def owners = [
+    'dev/openallay/net/JdkHttpTransport.java', 'dev/openallay/net/HttpExchangeRequest.java',
+    'dev/openallay/net/HttpResponseHeaders.java', 'dev/openallay/net/HttpTransportPolicy.java',
+    'dev/openallay/net/HttpTransport.java', 'dev/openallay/net/HttpCancellation.java',
+    'dev/openallay/net/HttpTimeoutException.java', 'dev/openallay/concurrent/NamedThreads.java',
+    'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java',
+    'dev/openallay/util/Java8Futures.java', 'dev/openallay/util/Java8Hex.java',
+    'dev/openallay/client/voice/VoiceHttpSpeechEndpoint.java',
+    'dev/openallay/client/voice/VoiceModelDownload.java',
+    'dev/openallay/client/voice/VoiceHttpCancellation.java',
+    'dev/openallay/client/voice/VoiceCancellation.java',
+    'dev/openallay/client/voice/SpeechToText.java', 'dev/openallay/client/voice/PcmClip.java'
+]
+def compileVoiceHttp = tasks.register('compileVoiceHttp', JavaCompile) {
+    javaCompiler = compiler
+    source(owners.collect { new File(production, it) })
+    source(new File(repository, 'runtime-json/src/main/java/dev/openallay/json/JsonReaders.java'))
+    source(fileTree('src/main/java') { include '**/*.java' })
+    classpath = configurations.fixtureLibraries
+    destinationDirectory = classes
+    options.release = 8
+    options.encoding = 'UTF-8'
+    options.compilerArgs.addAll(['-Xlint:all,-options,-try', '-Werror'])
+}
+def tlsKeys = layout.buildDirectory.file('tls/fixture.jks')
+def fixtureTls = tasks.register('fixtureTls', Exec) {
+    outputs.file(tlsKeys)
+    doFirst {
+        def keys = tlsKeys.get().asFile
+        keys.parentFile.mkdirs()
+        if (keys.exists()) keys.delete()
+        commandLine(new File(runtime8.get().metadata.installationPath.asFile, 'bin/keytool').absolutePath,
+            '-genkeypair', '-alias', 'fixture', '-keyalg', 'RSA', '-keysize', '2048',
+            '-sigalg', 'SHA256withRSA', '-validity', '30', '-dname', 'CN=localhost',
+            '-ext', 'SAN=dns:localhost,ip:127.0.0.1', '-storetype', 'JKS',
+            '-keystore', keys.absolutePath, '-storepass', 'fixture-only', '-keypass', 'fixture-only', '-noprompt')
+    }
+}
+tasks.register('java8CompatibilityTest', JavaExec) {
+    group = 'verification'
+    dependsOn(compileVoiceHttp, fixtureTls)
+    javaLauncher = runtime8
+    classpath = files(classes) + configurations.fixtureLibraries
+    mainClass = 'dev.openallay.client.voice.VoiceHttpJava8Fixture'
+    args tlsKeys.get().asFile.absolutePath
+    systemProperty('javax.net.ssl.trustStore', tlsKeys.get().asFile.absolutePath)
+    systemProperty('javax.net.ssl.trustStorePassword', 'fixture-only')
+    maxHeapSize = '256m'
+}
