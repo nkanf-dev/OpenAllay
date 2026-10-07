@@ -348,7 +348,7 @@ public boolean successful() { return projection != null; }
         ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
         Optional<ContextProjection> fitted = fitResults(promptForProjection, source, requestTools, dev.openallay.util.Java8Collections.listOf());
         if (fitted.isPresent()) return CompletableFuture.completedFuture(
-                new Result(fitted.orElseThrow(), null, null, null));
+                new Result(fitted.orElseThrow(() -> new java.util.NoSuchElementException("No value present")), null, null, null));
 
         List<ModelMessage> minimum = ModelContextCodec.safe(boundResults(source, MINIMUM_RESULT_BYTES, true));
         int originalEstimate = estimateProjection(promptForProjection, minimum, requestTools);

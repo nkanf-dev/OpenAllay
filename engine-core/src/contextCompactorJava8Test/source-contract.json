@@ -123,6 +123,11 @@
           "old": "message.inputObservation().orElseThrow()",
           "new": "message.inputObservation().get()",
           "count": 1
+        },
+        {
+          "old": "fitted.orElseThrow()",
+          "new": "fitted.orElseThrow(() -> new java.util.NoSuchElementException(\"No value present\"))",
+          "count": 1
         }
       ]
     },
@@ -767,5 +772,6 @@
   "format_policy": "Onlyblankline trailingwhitespacecleanup afteractualconverter+literalmechanicalops. Summarytextblock exactdedentednewlines retained. No hashinputnormalization.",
   "authority_policy": "Budget/losslabel/noinventedevidence, immutableoriginalcontext, summary-onlyobservedmodel attemptreceipt andcancellation/latepublication fences remainactualoriginalalgorithms.",
   "exact_format_correction": "OnlyProjection compactconstructor generatednonblankline trailingoneASCIIspace removed count1 afterrecordedAPIlowering; nobroadnonblanktrimming.",
-  "fixture_error_contract": "Resultoutercontext_compaction_failed plusFAILEDcheckpoint diagnosticsummary_malformed andexactsafeMessage; noncooperativecancel assertsModelClientExceptionagent_cancelled, latecompletionfence. Matchesauthenticbaselineandcurrentexistingtests."
+  "fixture_error_contract": "Resultoutercontext_compaction_failed plusFAILEDcheckpoint diagnosticsummary_malformed andexactsafeMessage; noncooperativecancel assertsModelClientExceptionagent_cancelled, latecompletionfence. Matchesauthenticbaselineandcurrentexistingtests.",
+  "remaining_api_audit": "All11ownedsourcepostJava8calls reviewed: onlyfittednoargOptional.orElseThrow remains; exactsupplier withoriginalNoValuePresentmessage withinexistingisPresentguard, nootherguard/methodchanges."
 }
