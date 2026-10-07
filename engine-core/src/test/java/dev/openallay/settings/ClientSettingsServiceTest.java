@@ -159,8 +159,17 @@ final class ClientSettingsServiceTest {
                     public ModelConnectionResult read(com.google.gson.stream.JsonReader in) throws java.io.IOException {
                         in.skipValue(); return foreign;
                     }
-                }));
-        com.google.gson.JsonObject document = dev.openallay.json.EngineJson.create().toJsonTree(baseline).getAsJsonObject();
+                }).registerTypeAdapter(Duration.class, new com.google.gson.TypeAdapter<Duration>() {
+                    public void write(com.google.gson.stream.JsonWriter out, Duration value) throws java.io.IOException {
+                        out.value(value.toString());
+                    }
+                    public Duration read(com.google.gson.stream.JsonReader in) throws java.io.IOException {
+                        return Duration.parse(in.nextString());
+                    }
+                }.nullSafe()));
+        assertEquals(baseline.config().profiles().get(0).connectTimeout(),
+                gson.fromJson(gson.toJson(baseline.config().profiles().get(0).connectTimeout()), Duration.class));
+        com.google.gson.JsonObject document = gson.toJsonTree(baseline).getAsJsonObject();
         document.add("connectionResult", new com.google.gson.JsonObject());
         org.junit.jupiter.api.Assertions.assertThrows(IncompatibleClassChangeError.class,
                 () -> gson.fromJson(document, ModelProfileSettingsView.class));
