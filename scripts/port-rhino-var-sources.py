@@ -42,11 +42,18 @@ if {path: len(values) for path, values in sites.items()} != expected:
 
 def digest(blob): return hashlib.sha256(blob).hexdigest()
 def delta_hunks(before, after):
+    if before == after:
+        return []
+    if not before:
+        raise ValueError("Empty owner preimage cannot be patched uniquely")
     a = before.splitlines(True); b = after.splitlines(True); result = []; working = before
     for group in difflib.SequenceMatcher(None, a, b).get_grouped_opcodes(3):
         old = "".join(a[group[0][1]:group[-1][2]])
         new = "".join(b[group[0][3]:group[-1][4]])
-        if working.count(old) != 1: raise ValueError("Ambiguous exact source delta")
+        if working.count(old) != 1:
+            # A whole nonempty owner matches itself exactly once. The caller records
+            # its exact pre/post SHA256; never replace several ambiguous fragments.
+            return [{"before": before, "after": after}]
         working = working.replace(old, new, 1); result.append({"before": old, "after": new})
     if working != after: raise ValueError("Source delta replay differs")
     return result
