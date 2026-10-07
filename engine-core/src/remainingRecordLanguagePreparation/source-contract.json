@@ -1,0 +1,27 @@
+{
+  "scope": "Remainingcanonicalengine record LANGUAGE-ONLYbaseline outsideguide/client/settings; authenticdepthorderedwholeownerconversion, unsupportednamed/nopartialowners. No runtime/API/seals/pattern or wholeengineJava8 claim.",
+  "inventory_source_commit": "1e47429674f1828915fce7cc1fdd6a7a61fd0718",
+  "inventory_run": 37593850466,
+  "inventory_sha256": "7231c8da96d593ef9d51bcf892bd84addc68564bd865684389d03346f9fbf39c",
+  "expected_source_count": 701,
+  "expected_selected_owners": 133,
+  "expected_selected_records": 191,
+  "excluded_prefixes": [
+    "dev/openallay/guide/",
+    "dev/openallay/client/",
+    "dev/openallay/settings/"
+  ],
+  "tools": [
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+      "sha256": "07d1953b1c19b57b6e553cafb95978c60e59087ef14d51af5a4f64ac3fca3f5b"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalRecordBatchMaterializer.java",
+      "sha256": "e33cf790f0aaca1951cd20917530b6f8603e0be1e90265dfd91ba6bece9e83c8"
+    }
+  ],
+  "runner_sha256": "f72afe25281a25382ffb663abcb195ccf86213fba690e7fa5db19ac256b4c5d8",
+  "ownership": "NoGuide/client/settingsrecordoverlap; currentremainingactual133sourceowners preflightfull701inventoryrawSHA beforematerialization.",
+  "acceptance": "PrepareONEsupportedbatch+explicitwholeownerunsupportedJSON/status; rootreviewsapplies supportedtargetbytes, fullactualmodernengine gate afterwards. No fakeJava8closedfrontier."
+}
