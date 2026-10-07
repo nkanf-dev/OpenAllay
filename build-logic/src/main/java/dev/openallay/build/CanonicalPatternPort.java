@@ -56,6 +56,30 @@ public final class CanonicalPatternPort {
         javax.lang.model.type.TypeMirror expression = trees.getTypeMirror(expressionPath);
         Scope scope = trees.getScope(site.patternPath());
         accessible(expression, scope, trees);
+        if (expression.getKind() == javax.lang.model.type.TypeKind.UNION) {
+            if (!(site.pattern().getExpression() instanceof IdentifierTree)) {
+                throw new IllegalArgumentException("Union operand needs an exact declared multi-catch parameter");
+            }
+            Element symbol = trees.getElement(expressionPath);
+            if (!(symbol instanceof VariableElement variable) || symbol.getKind() != ElementKind.EXCEPTION_PARAMETER
+                    || variable.asType().getKind() != javax.lang.model.type.TypeKind.UNION) {
+                throw new IllegalArgumentException("Union operand is not an attributed multi-catch parameter");
+            }
+            javax.lang.model.type.TypeMirror declared = variable.asType();
+            javax.lang.model.type.TypeMirror erased = task.getTypes().erasure(declared);
+            if (erased.getKind() != javax.lang.model.type.TypeKind.DECLARED
+                    || !task.getTypes().isAssignable(expression, erased)) {
+                throw new IllegalArgumentException("Multi-catch erasure is not a declared assignable capture type");
+            }
+            for (javax.lang.model.type.TypeMirror alternative : ((javax.lang.model.type.UnionType) declared).getAlternatives()) {
+                if (!task.getTypes().isAssignable(alternative, erased)) {
+                    throw new IllegalArgumentException("Multi-catch alternative is not assignable to the proven erased LUB");
+                }
+            }
+            accessible(erased, scope, trees);
+            AttributedVarTypes.denotable(erased, false);
+            return erased;
+        }
         if (expression.getKind() == javax.lang.model.type.TypeKind.NULL) return expression;
         try { AttributedVarTypes.denotable(expression, false); return expression; }
         catch (IllegalArgumentException captured) {
