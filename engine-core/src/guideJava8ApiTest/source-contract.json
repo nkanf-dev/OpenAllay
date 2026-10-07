@@ -1,22 +1,18 @@
 {
-  "scope": "Only2previousrejectedGuide staticcopyOf methodreference owners actualfullsourceAPIclassifier",
+  "scope": "OnlycurrentwholeMinecraftAgentHostGraph acceptedZERO List::of supplier +existing16API scopes actualclassifier; no partialhostsource",
   "selectedOwners": [
-    "dev/openallay/guide/semantic/SemanticBlock.java",
-    "dev/openallay/guide/ui/GuideDetailCard.java"
+    "dev/openallay/script/data/MinecraftAgentHostGraph.java"
   ],
   "selectedPreimageSha256": {
-    "dev/openallay/guide/semantic/SemanticBlock.java": "42694c534c58a5d161dc6b2e50c7f45fb9755b94aeca712106b87e7a8c718df1",
-    "dev/openallay/guide/ui/GuideDetailCard.java": "b2cc8878978dc5b6e6b3849a5e24037e9635a8f100db753163215185063b5d79"
+    "dev/openallay/script/data/MinecraftAgentHostGraph.java": "0d0ca90536ef7bff232cd2f3fa98d9f60c6af7361876423cee75a3079814dd4d"
   },
-  "sourceLanguageStage": "CurrentGuide200records+303binding+all28switchsites modernaccepted,2copyrefs pending",
-  "excludedOwners": {
-    "dev/openallay/guide/GuideToolMessage.java": "Agent worker actualAgentEvent/ModelCallReceipts dependency owner; avoidconcurrent2helpercall edits"
-  },
-  "acceptedToolOracleRun": 37593433209,
+  "sourceLanguageStage": "Currentwholecanonicalhostgraph heldunchanged acrosscohort166API/29patterns; fouremptyListsuppliers neednarrowprovenpolicy",
+  "excludedOwners": {},
+  "acceptedToolOracleRun": 37661220439,
   "fixtureReexecuted": false,
   "toolPins": {
-    "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java": "43553b4da846e8d29b2280f851005efbb8949f8c40d04e7a91edb8a007941f47",
-    "scripts/java8-api-port/CanonicalJava8ApiPortFixture.java": "e8266b2052c39b2ca9070ddf84f3613887317b700fe253fd43310d9d8fb5ba05"
+    "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java": "0438bff520114e55728f4d4b4f25c42503ceeb04a292b8dc5cc06d4bc045982d",
+    "scripts/java8-api-port/CanonicalJava8ApiPortFixture.java": "c1fd0e1a27886c2d5d37d00d3c8db81d49fc0f7dac158d911ef4fd940f4efd65"
   },
   "helperPins": {
     "engine-core/src/main/java/dev/openallay/util/Java8Collections.java": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
@@ -24,5 +20,5 @@
     "engine-core/src/main/java/dev/openallay/util/Java8Hex.java": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
     "engine-core/src/main/java/dev/openallay/util/Java8Futures.java": "be44b1a5deed7cd847fa1d6bc9acaf0a11fefe8ad6367ade750ac0e770a43268"
   },
-  "unsupportedPolicy": "Onlyactualstatic List/Set/Map.copyOf uniqueattributedfunctional targetdescriptor exactTypeElementqualifier mapping; otherrefs namedcompleteownerreject no partialsource."
+  "unsupportedPolicy": "ZEROarg List.of actualstaticTypeElement/uniquefunctionaldescriptor only; nonzero/devshadowrefs namedreject/no partialowner; no SourceGraph method slicing."
 }

@@ -1,2 +1,1 @@
-dev/openallay/guide/semantic/SemanticBlock.java
-dev/openallay/guide/ui/GuideDetailCard.java
+dev/openallay/script/data/MinecraftAgentHostGraph.java
