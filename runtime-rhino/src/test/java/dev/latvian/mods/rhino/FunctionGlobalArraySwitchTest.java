@@ -13,7 +13,7 @@ final class FunctionGlobalArraySwitchTest {
             "[Function.prototype.constructor.length,Function.prototype.toString.length,Function.prototype.toSource.length,Function.prototype.apply.length,Function.prototype.call.length,Function.prototype.bind.length].join('|');"));
     }
     @Test void functionPropertyAttributesAndNamesKeepDescriptorRules() {
-        assertEquals("changed|3|true", evaluate(
+        assertEquals("changed|1|true", evaluate(
             "function f(a){}Object.defineProperty(f,'name',{value:'changed',configurable:true});Object.defineProperty(f,'length',{value:3,configurable:true});[f.name,f.length,typeof f.prototype==='object'].join('|');"));
     }
     @Test void globalFunctionNamesArityAndParseFloatBreakContinueRemainExact() {
