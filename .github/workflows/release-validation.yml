@@ -1502,14 +1502,21 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       with:
         persist-credentials: false
+        fetch-depth: 0
     - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
       with:
         distribution: temurin
         java-version: '17'
     - name: Materialize authentic complete retained skill owners
-      run: python3 -B scripts/materialize-retained-skill-java8.py --project "$PWD" --recipe
-        engine-core/src/retainedSkillJava8Test/recipe.json --javac "$JAVA_HOME/bin/javac"
+      run: 'python3 -B scripts/materialize-retained-skill-java8.py --project "$PWD"
+        --recipe engine-core/src/retainedSkillJava8Test/recipe.json --javac "$JAVA_HOME/bin/javac"
         --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/retained-skill-materialization"
+        --prepare
+
+        python3 -B scripts/verify-retained-skill-java8.py --project "$PWD" --source-packet
+        "$RUNNER_TEMP/retained-skill-materialization/source-packet" --source-contract
+        engine-core/src/retainedSkillJava8Test/source-contract.json --verify-source-custody
+        --output "$RUNNER_TEMP/retained-skill-source-custody"'
     - name: Retain exact converter passes and generated canonical source packet
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -1525,7 +1532,11 @@ jobs:
 
           ${{ runner.temp }}/retained-skill-materialization/commands.json
 
-          ${{ runner.temp }}/retained-skill-materialization/command-*.log'
+          ${{ runner.temp }}/retained-skill-materialization/command-*.log
+
+          ${{ runner.temp }}/retained-skill-source-custody/
+
+          ${{ runner.temp }}/retained-skill-materialization/source-packet/historical-source-custody.json'
 
   model-message-image-java8:
     if: inputs.scope == 'model-message-image-java8'
@@ -1605,6 +1616,7 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       with:
         persist-credentials: false
+        fetch-depth: 0
     - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
       with:
         distribution: temurin
@@ -1615,6 +1627,7 @@ jobs:
       run: 'python3 -B scripts/materialize-retained-skill-java8.py --project "$PWD"
         --recipe engine-core/src/retainedSkillJava8Test/recipe.json --javac "$JAVA_HOME_17_X64/bin/javac"
         --java "$JAVA_HOME_17_X64/bin/java" --output "$RUNNER_TEMP/retained-skill-materialization"
+        --prepare
 
         mkdir -p "$RUNNER_TEMP/skill-dependencies"
 
