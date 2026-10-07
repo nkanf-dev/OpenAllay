@@ -1344,9 +1344,210 @@
 +			dev.latvian.mods.rhino.type.TypeInfo returnType = member.getReturnType();
 --- a/dev/latvian/mods/rhino/IRFactory.java
 +++ b/dev/latvian/mods/rhino/IRFactory.java
-@@ -931 +931 @@
+@@ -359 +359,4 @@
+-			case Token.NAME, Token.GETPROP, Token.GETELEM, Token.GET_REF -> {
++			case Token.NAME:
++			case Token.GETPROP:
++			case Token.GETELEM:
++			case Token.GET_REF: {
+@@ -581,14 +584,35 @@
+-		return switch (node.getType()) {
+-			case Token.EMPTY, Token.COMMENT, Token.BREAK, Token.NAME, Token.TRUE, Token.FALSE, Token.THIS, Token.NULL, Token.NUMBER -> node;
+-			case Token.ARRAYCOMP -> transformArrayComp((ArrayComprehension) node);
+-			case Token.ARRAYLIT -> transformArrayLiteral((ArrayLiteral) node);
+-			case Token.BLOCK -> transformBlock(node);
+-			case Token.CALL -> transformFunctionCall((FunctionCall) node);
+-			case Token.CONTINUE -> transformContinue((ContinueStatement) node);
+-			case Token.DO -> transformDoLoop((DoLoop) node);
+-			case Token.FOR -> node instanceof ForInLoop ? transformForInLoop((ForInLoop) node) : transformForLoop((ForLoop) node);
+-			case Token.FUNCTION -> transformFunction((FunctionNode) node);
+-			case Token.GENEXPR -> transformGenExpr((GeneratorExpression) node);
+-			case Token.GETELEM -> transformElementGet((ElementGet) node);
+-			case Token.GETPROP -> transformPropertyGet((PropertyGet) node);
+-			case Token.QUESTION_DOT -> node instanceof ElementGet
++		switch (node.getType()) {
++			case Token.EMPTY:
++			case Token.COMMENT:
++			case Token.BREAK:
++			case Token.NAME:
++			case Token.TRUE:
++			case Token.FALSE:
++			case Token.THIS:
++			case Token.NULL:
++			case Token.NUMBER:
++				return node;
++			case Token.ARRAYCOMP:
++				return transformArrayComp((ArrayComprehension) node);
++			case Token.ARRAYLIT:
++				return transformArrayLiteral((ArrayLiteral) node);
++			case Token.BLOCK:
++				return transformBlock(node);
++			case Token.CALL:
++				return transformFunctionCall((FunctionCall) node);
++			case Token.CONTINUE:
++				return transformContinue((ContinueStatement) node);
++			case Token.DO:
++				return transformDoLoop((DoLoop) node);
++			case Token.FOR:
++				return node instanceof ForInLoop ? transformForInLoop((ForInLoop) node) : transformForLoop((ForLoop) node);
++			case Token.FUNCTION:
++				return transformFunction((FunctionNode) node);
++			case Token.GENEXPR:
++				return transformGenExpr((GeneratorExpression) node);
++			case Token.GETELEM:
++				return transformElementGet((ElementGet) node);
++			case Token.GETPROP:
++				return transformPropertyGet((PropertyGet) node);
++			case Token.QUESTION_DOT:
++				return node instanceof ElementGet
+@@ -597,39 +621,67 @@
+-			case Token.HOOK -> transformCondExpr((ConditionalExpression) node);
+-			case Token.IF -> transformIf((IfStatement) node);
+-			case Token.NEW -> transformNewExpr((NewExpression) node);
+-			case Token.OBJECTLIT -> transformObjectLiteral((ObjectLiteral) node);
+-			case Token.TEMPLATE_LITERAL -> transformTemplateLiteral((TemplateLiteral) node);
+-			case Token.TAGGED_TEMPLATE_LITERAL -> transformTemplateLiteralCall((TaggedTemplateLiteral) node);
+-			case Token.REGEXP -> transformRegExp((RegExpLiteral) node);
+-			case Token.RETURN -> transformReturn((ReturnStatement) node);
+-			case Token.SCRIPT -> transformScript((ScriptNode) node);
+-			case Token.STRING -> transformString((StringLiteral) node);
+-			case Token.SWITCH -> transformSwitch((SwitchStatement) node);
+-			case Token.THROW -> transformThrow((ThrowStatement) node);
+-			case Token.TRY -> transformTry((TryStatement) node);
+-			case Token.WHILE -> transformWhileLoop((WhileLoop) node);
+-			case Token.WITH -> transformWith((WithStatement) node);
+-			case Token.YIELD, Token.YIELD_STAR -> transformYield((Yield) node);
+-			default -> {
+-				if (node instanceof ExpressionStatement n) {
+-					yield transformExprStmt(n);
+-				} else if (node instanceof Assignment n) {
+-					yield transformAssignment(n);
+-				} else if (node instanceof UnaryExpression n) {
+-					yield transformUnary(n);
+-				} else if (node instanceof UpdateExpression n) {
+-					yield transformUpdate(n);
+-				} else if (node instanceof InfixExpression n) {
+-					yield transformInfix(n);
+-				} else if (node instanceof VariableDeclaration n) {
+-					yield transformVariables(n);
+-				} else if (node instanceof ParenthesizedExpression n) {
+-					yield transformParenExpr(n);
+-				} else if (node instanceof ComputedPropertyKey n) {
+-					yield transformComputedPropertyKey(n);
+-				} else if (node instanceof LabeledStatement n) {
+-					yield transformLabeledStatement(n);
+-				} else if (node instanceof LetNode n) {
+-					yield transformLetNode(n);
+-				} else if (node instanceof GeneratorMethodDefinition n) {
+-					yield transformGeneratorMethodDefinition(n);
++			case Token.HOOK:
++				return transformCondExpr((ConditionalExpression) node);
++			case Token.IF:
++				return transformIf((IfStatement) node);
++			case Token.NEW:
++				return transformNewExpr((NewExpression) node);
++			case Token.OBJECTLIT:
++				return transformObjectLiteral((ObjectLiteral) node);
++			case Token.TEMPLATE_LITERAL:
++				return transformTemplateLiteral((TemplateLiteral) node);
++			case Token.TAGGED_TEMPLATE_LITERAL:
++				return transformTemplateLiteralCall((TaggedTemplateLiteral) node);
++			case Token.REGEXP:
++				return transformRegExp((RegExpLiteral) node);
++			case Token.RETURN:
++				return transformReturn((ReturnStatement) node);
++			case Token.SCRIPT:
++				return transformScript((ScriptNode) node);
++			case Token.STRING:
++				return transformString((StringLiteral) node);
++			case Token.SWITCH:
++				return transformSwitch((SwitchStatement) node);
++			case Token.THROW:
++				return transformThrow((ThrowStatement) node);
++			case Token.TRY:
++				return transformTry((TryStatement) node);
++			case Token.WHILE:
++				return transformWhileLoop((WhileLoop) node);
++			case Token.WITH:
++				return transformWith((WithStatement) node);
++			case Token.YIELD:
++			case Token.YIELD_STAR:
++				return transformYield((Yield) node);
++			default: {
++				if (node instanceof ExpressionStatement) {
++					ExpressionStatement n = (ExpressionStatement) node;
++					return transformExprStmt(n);
++				} else if (node instanceof Assignment) {
++					Assignment n = (Assignment) node;
++					return transformAssignment(n);
++				} else if (node instanceof UnaryExpression) {
++					UnaryExpression n = (UnaryExpression) node;
++					return transformUnary(n);
++				} else if (node instanceof UpdateExpression) {
++					UpdateExpression n = (UpdateExpression) node;
++					return transformUpdate(n);
++				} else if (node instanceof InfixExpression) {
++					InfixExpression n = (InfixExpression) node;
++					return transformInfix(n);
++				} else if (node instanceof VariableDeclaration) {
++					VariableDeclaration n = (VariableDeclaration) node;
++					return transformVariables(n);
++				} else if (node instanceof ParenthesizedExpression) {
++					ParenthesizedExpression n = (ParenthesizedExpression) node;
++					return transformParenExpr(n);
++				} else if (node instanceof ComputedPropertyKey) {
++					ComputedPropertyKey n = (ComputedPropertyKey) node;
++					return transformComputedPropertyKey(n);
++				} else if (node instanceof LabeledStatement) {
++					LabeledStatement n = (LabeledStatement) node;
++					return transformLabeledStatement(n);
++				} else if (node instanceof LetNode) {
++					LetNode n = (LetNode) node;
++					return transformLetNode(n);
++				} else if (node instanceof GeneratorMethodDefinition) {
++					GeneratorMethodDefinition n = (GeneratorMethodDefinition) node;
++					return transformGeneratorMethodDefinition(n);
+@@ -640 +692 @@
+-		};
++		}
+@@ -908 +960,2 @@
+-				if (param instanceof Name name) {
++				if (param instanceof Name) {
++					Name name = (Name) param;
+@@ -912 +965,6 @@
+-							if (defaultParams.get(i).equals(paramName) && defaultParams.get(i + 1) instanceof AstNode rhs) {
++							if (defaultParams.get(i).equals(paramName)) {
++								Object defaultValue = defaultParams.get(i + 1);
++								if (!(defaultValue instanceof AstNode)) {
++									continue;
++								}
++								AstNode rhs = (AstNode) defaultValue;
+@@ -920,2 +978,6 @@
+-				} else if (param.getProp(Node.DESTRUCTURING_PARAMS) instanceof Node assign) {
+-					prologue.add(new Node(Token.EXPR_VOID, assign, lineno, 0));
++				} else {
++					Object destructuring = param.getProp(Node.DESTRUCTURING_PARAMS);
++					if (destructuring instanceof Node) {
++						Node assign = (Node) destructuring;
++						prologue.add(new Node(Token.EXPR_VOID, assign, lineno, 0));
++					}
+@@ -931 +993 @@
 -				for (var i : dfns) {
 +				for (dev.latvian.mods.rhino.Node[] i : dfns) {
+@@ -1899 +1961 @@
+-			case Token.NAME -> {
++			case Token.NAME: {
+@@ -1904 +1966,2 @@
+-			case Token.GETPROP, Token.GETELEM -> {
++			case Token.GETPROP:
++			case Token.GETELEM: {
+@@ -1914 +1977 @@
+-			case Token.GET_REF -> {
++			case Token.GET_REF: {
+@@ -1933 +1996,2 @@
+-		if (left instanceof Name name && right != null && right.type == Token.FUNCTION) {
++		if (left instanceof Name && right != null && right.type == Token.FUNCTION) {
++			Name name = (Name) left;
 --- a/dev/latvian/mods/rhino/IdEnumeration.java
 +++ b/dev/latvian/mods/rhino/IdEnumeration.java
 @@ -35 +35 @@
