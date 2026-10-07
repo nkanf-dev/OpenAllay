@@ -1892,6 +1892,24 @@
 +				case 'l': cfw.add(ByteCode.LRETURN); break;
 +				case 'f': cfw.add(ByteCode.FRETURN); break;
 +				case 'd': cfw.add(ByteCode.DRETURN); break;
+@@ -1005,0 +1036,17 @@
++
++	/** A lawful lookup owner for Java8 interface defaults, using the existing generator/loader. */
++	static Class<?> createDefaultLookupInterface(Context cx, Class<?>[] interfaces) {
++		String name = "defaultInterface" + cx.newClassSerialNumber();
++		ClassFileWriter writer = new ClassFileWriter(name, "java/lang/Object", "<default-interface>", 52, 0);
++		writer.setFlags((short) (ClassFileWriter.ACC_PUBLIC | ClassFileWriter.ACC_INTERFACE | ClassFileWriter.ACC_ABSTRACT));
++		for (Class<?> type : interfaces) { writer.addInterface(type.getName()); }
++		writer.startMethod("ownerLookup", "()Ljava/lang/invoke/MethodHandles$Lookup;", (short) (ClassFileWriter.ACC_PUBLIC | ClassFileWriter.ACC_STATIC));
++		writer.addInvoke(ByteCode.INVOKESTATIC, "java/lang/invoke/MethodHandles", "lookup", "()Ljava/lang/invoke/MethodHandles$Lookup;");
++		writer.add(ByteCode.ARETURN);
++		writer.stopMethod((short) 0);
++		byte[] bytes = writer.toByteArray();
++		if (((bytes[6] & 255) << 8 | (bytes[7] & 255)) != 52) {
++			throw new IllegalStateException("Default interface producer did not emit Java8 bytecode");
++		}
++		return loadAdapterClass(cx, name, bytes);
++	}
 --- a/dev/latvian/mods/rhino/JavaMembers.java
 +++ b/dev/latvian/mods/rhino/JavaMembers.java
 @@ -7,0 +8,2 @@
@@ -4724,11 +4742,108 @@
 @@ -20 +22 @@
 -		if (accessible.canAccess(target)) {
 +		if (canAccessMember(target, accessible)) {
-@@ -29 +31 @@
+@@ -29 +31,42 @@
 -		return accessible.canAccess(target);
 +		return canAccessMember(target, accessible);
-@@ -47 +49,32 @@
++	}
++
++	private static final Method MODERN_DEFAULT_INVOKER = publicMethod(InvocationHandler.class, "invokeDefault", Object.class, Method.class, Object[].class);
++
++	private static final class InterfaceProxyHelper {
++		final Constructor<?> constructor;
++		final Class<?>[] interfaces;
++		final Class<?> lookupInterface;
++		final java.lang.invoke.MethodHandles.Lookup lookup;
++		final java.util.Map<Method, java.lang.invoke.MethodHandle> defaultHandles = new java.util.HashMap<Method, java.lang.invoke.MethodHandle>();
++		InterfaceProxyHelper(Constructor<?> constructor, Class<?>[] interfaces, Class<?> lookupInterface, java.lang.invoke.MethodHandles.Lookup lookup) {
++			this.constructor = constructor;
++			this.interfaces = interfaces.clone();
++			this.lookupInterface = lookupInterface;
++			this.lookup = lookup;
++		}
++		synchronized java.lang.invoke.MethodHandle defaultHandle(Method method) throws IllegalAccessException, NoSuchMethodException {
++			java.lang.invoke.MethodHandle handle = defaultHandles.get(method);
++			if (handle != null) { return handle; }
++			if (!method.isDefault() || !java.lang.reflect.Modifier.isPublic(method.getDeclaringClass().getModifiers())) {
++				throw new IllegalAccessException("Default method is not a public interface member: " + method);
++			}
++			Class<?> owner = method.getDeclaringClass();
++			Class<?> selectedRoot = null;
++			for (Class<?> root : interfaces) {
++				if (!owner.isAssignableFrom(root)) { continue; }
++				Method resolved = root.getMethod(method.getName(), method.getParameterTypes());
++				if (!resolved.equals(method)) {
++					if (owner.isAssignableFrom(resolved.getDeclaringClass())) {
++						throw new IllegalArgumentException("Default method is overridden in the proxy interface hierarchy: " + method);
++					}
++					continue;
++				}
++				if (selectedRoot == null || selectedRoot.isAssignableFrom(root)) { selectedRoot = root; }
++			}
++			if (selectedRoot == null) { throw new IllegalArgumentException("Default method is overridden or is not in the proxy interface hierarchy: " + method); }
++			java.lang.invoke.MethodType type = java.lang.invoke.MethodType.methodType(method.getReturnType(), method.getParameterTypes());
++			handle = lookup.findSpecial(selectedRoot, method.getName(), type, lookupInterface).asFixedArity();
++			defaultHandles.put(method, handle);
++			return handle;
++		}
+@@ -33,2 +76 @@
+-		// XXX: How to handle interfaces array withclasses from different
+-		// class loaders? Using cf.getApplicationClassLoader() ?
++		if (interfaces == null || interfaces.length == 0) { throw new IllegalArgumentException("Proxy requires at least one interface"); }
+@@ -36,12 +78,79 @@
+-		Class<?> cl = Proxy.getProxyClass(loader, interfaces);
+-		Constructor<?> c;
+-		try {
+-			c = cl.getConstructor(InvocationHandler.class);
+-		} catch (NoSuchMethodException ex) {
+-			// Should not happen
+-			throw new IllegalStateException(ex);
+-		}
+-		return c;
+-	}
+-
 -	public record AdapterInvocationHandler(Context cx, InterfaceAdapter adapter, Object target, Scriptable topScope) implements InvocationHandler {
++		// Validate the exact original Proxy interface array before introducing a lookup owner.
++		Class<?> originalProxy = Proxy.getProxyClass(loader, interfaces);
++		if (MODERN_DEFAULT_INVOKER != null) { return proxyHelper(originalProxy, interfaces, null, null); }
++		boolean needsDefaults = false;
++		for (Class<?> type : interfaces) {
++			for (Method method : type.getMethods()) { needsDefaults |= method.isDefault(); }
++		}
++		if (!needsDefaults) { return proxyHelper(originalProxy, interfaces, null, null); }
++		ClassLoader applicationLoader = cx.getApplicationClassLoader();
++		for (Class<?> type : interfaces) {
++			for (Class<?> owner = type; owner != null; owner = owner.getEnclosingClass()) {
++				if (!java.lang.reflect.Modifier.isPublic(owner.getModifiers())) {
++					throw new IllegalAccessError("Interface defaults require a public owner: " + type.getName());
++				}
++			}
++			if (Kit.classOrNull(applicationLoader, type.getName()) != type) {
++				throw new IllegalArgumentException("Interface is not visible by identity to the existing Rhino adapter loader: " + type.getName());
++			}
++			for (Method method : type.getMethods()) {
++				if (!method.isDefault()) { continue; }
++				for (Class<?> owner = method.getDeclaringClass(); owner != null; owner = owner.getEnclosingClass()) {
++					if (!java.lang.reflect.Modifier.isPublic(owner.getModifiers())) {
++						throw new IllegalAccessError("Default method owner is not public: " + method);
++					}
++				}
++			}
++		}
++		Class<?> lookupInterface = JavaAdapter.createDefaultLookupInterface(cx, interfaces);
++		java.lang.invoke.MethodHandles.Lookup lookup;
++		try { lookup = (java.lang.invoke.MethodHandles.Lookup) lookupInterface.getMethod("ownerLookup").invoke(null); }
++		catch (ReflectiveOperationException failure) { throw new IllegalStateException("Cannot obtain the generated interface's own lookup", failure); }
++		Class<?>[] proxyInterfaces = java.util.Arrays.copyOf(interfaces, interfaces.length + 1);
++		proxyInterfaces[interfaces.length] = lookupInterface;
++		return proxyHelper(Proxy.getProxyClass(lookupInterface.getClassLoader(), proxyInterfaces), interfaces, lookupInterface, lookup);
++	}
++
++	private static InterfaceProxyHelper proxyHelper(Class<?> proxy, Class<?>[] interfaces, Class<?> lookupInterface, java.lang.invoke.MethodHandles.Lookup lookup) {
++		try { return new InterfaceProxyHelper(proxy.getConstructor(InvocationHandler.class), interfaces, lookupInterface, lookup); }
++		catch (NoSuchMethodException failure) { throw new IllegalStateException(failure); }
++	}
++
 +	public static final class AdapterInvocationHandler implements InvocationHandler {
 +		private final Context cx;
 +
@@ -4737,8 +4852,14 @@
 +		private final Object target;
 +
 +		private final Scriptable topScope;
++		private final InterfaceProxyHelper proxyHelper;
 +
 +		public AdapterInvocationHandler(Context cx, InterfaceAdapter adapter, Object target, Scriptable topScope) {
++			this(cx, adapter, target, topScope, null);
++		}
++
++		private AdapterInvocationHandler(Context cx, InterfaceAdapter adapter, Object target, Scriptable topScope, InterfaceProxyHelper proxyHelper) {
++			this.proxyHelper = proxyHelper;
 +			this.cx = cx;
 +			this.adapter = adapter;
 +			this.target = target;
@@ -4761,19 +4882,19 @@
 +			return topScope;
 +		}
 +
-@@ -56 +89 @@
+@@ -56 +165 @@
 -					case "equals" -> {
 +					case "equals": {
-@@ -63 +96 @@
+@@ -63 +172 @@
 -					case "hashCode" -> {
 +					case "hashCode": {
-@@ -66 +99 @@
+@@ -66 +175 @@
 -					case "toString" -> {
 +					case "toString": {
-@@ -73 +106 @@
+@@ -73 +182 @@
 -				return InvocationHandler.invokeDefault(proxy, method, args);
-+				return invokeModernDefault(proxy, method, args);
-@@ -88 +121,25 @@
++				return invokeDefault(proxyHelper, proxy, method, args);
+@@ -88 +197,25 @@
 -			return target instanceof Scriptable s && ScriptableObject.getProperty(s, method.getName(), cx) instanceof Callable;
 +			return target instanceof Scriptable && ScriptableObject.getProperty((Scriptable) target, method.getName(), cx) instanceof Callable;
 +		}
@@ -4800,7 +4921,13 @@
 +		@Override
 +		public String toString() {
 +			return "AdapterInvocationHandler[cx=" + cx + ", adapter=" + adapter + ", target=" + target + ", topScope=" + topScope + "]";
-@@ -103,0 +161,109 @@
+@@ -93 +226 @@
+-		Constructor<?> c = (Constructor<?>) proxyHelper;
++		InterfaceProxyHelper helper = (InterfaceProxyHelper) proxyHelper;
+@@ -96 +229 @@
+-			return c.newInstance(new AdapterInvocationHandler(cx, adapter, target, topScope));
++			return helper.constructor.newInstance(new AdapterInvocationHandler(cx, adapter, target, topScope, helper));
+@@ -103,0 +237,113 @@
 +
 +	/** Public native record metadata, without a static post-Java8 type dependency. */
 +	public static final class NativeRecordComponent {
@@ -4904,11 +5031,15 @@
 +		return separator < 0 ? "" : name.substring(0, separator);
 +	}
 +
-+	private static Object invokeModernDefault(Object proxy, Method method, Object[] args) throws Throwable {
-+		Method invoke = publicMethod(InvocationHandler.class, "invokeDefault", Object.class, Method.class, Object[].class);
-+		if (invoke == null) { throw new UnsupportedOperationException("Java8 interface default invoker is not integrated"); }
-+		try { return invoke.invoke(null, proxy, method, args); }
-+		catch (InvocationTargetException failure) { throw failure.getCause(); }
++	private static Object invokeDefault(InterfaceProxyHelper helper, Object proxy, Method method, Object[] args) throws Throwable {
++		if (MODERN_DEFAULT_INVOKER != null) {
++			try { return MODERN_DEFAULT_INVOKER.invoke(null, proxy, method, args); }
++			catch (InvocationTargetException failure) { throw failure.getCause(); }
++		}
++		if (helper == null || helper.lookup == null || !helper.lookupInterface.isInstance(proxy)) {
++			throw new IllegalArgumentException("Proxy has no matching Java8 default lookup owner");
++		}
++		return helper.defaultHandle(method).bindTo(proxy).invokeWithArguments(args == null ? ScriptRuntime.EMPTY_OBJECTS : args);
 +	}
 --- a/dev/latvian/mods/rhino/WrappedException.java
 +++ b/dev/latvian/mods/rhino/WrappedException.java
@@ -5045,14 +5176,31 @@
 +++ b/dev/latvian/mods/rhino/classfile/ClassFileWriter.java
 @@ -15 +14,0 @@
 -import java.io.Serial;
-@@ -107 +105,0 @@
+@@ -38,0 +38 @@
++	public static final short ACC_INTERFACE = 0x0200;
+@@ -43,3 +43,5 @@
+-	private static final int MajorVersion;
+-	private static final int MinorVersion;
+-	private static final boolean GenerateStackMap;
++	private static final int DefaultMajorVersion;
++	private final int MajorVersion;
++	private static final int DefaultMinorVersion;
++	private final int MinorVersion;
++	private final boolean GenerateStackMap;
+@@ -89,3 +91,2 @@
+-			MinorVersion = minor;
+-			MajorVersion = major;
+-			GenerateStackMap = major >= 50;
++			DefaultMinorVersion = minor;
++			DefaultMajorVersion = major;
+@@ -107 +107,0 @@
 -		@Serial
-@@ -134 +132 @@
+@@ -134 +134 @@
 -			if (!(obj instanceof MHandle mh)) {
 +			if (!(obj instanceof MHandle)) {
-@@ -136,0 +135 @@
+@@ -136,0 +137 @@
 +			MHandle mh = (MHandle) obj;
-@@ -178,11 +177,20 @@
+@@ -178,11 +179,20 @@
 -		return switch (type) {
 -			case ByteCode.T_BOOLEAN -> 'Z';
 -			case ByteCode.T_CHAR -> 'C';
@@ -5084,7 +5232,7 @@
 +			default:
 +				throw new IllegalArgumentException("bad operand");
 +		}
-@@ -206,5 +214,17 @@
+@@ -206,5 +216,17 @@
 -		return switch (descriptor.charAt(0)) {
 -			case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z', 'V', '[' -> descriptor;
 -			case 'L' -> classDescriptorToInternalName(descriptor);
@@ -5107,7 +5255,19 @@
 +			default:
 +				throw new IllegalArgumentException("bad descriptor:" + descriptor);
 +		}
-@@ -2016,7 +2036,7 @@
+@@ -1502,0 +1525,11 @@
++		this(className, superClassName, sourceFileName, DefaultMajorVersion, DefaultMinorVersion);
++	}
++
++	/** Emit a genuine selected class-file format; no post-generation header rewriting. */
++	public ClassFileWriter(String className, String superClassName, String sourceFileName, int majorVersion, int minorVersion) {
++		if (majorVersion < 48 || majorVersion > DefaultMajorVersion || minorVersion < 0 || minorVersion > 65535) {
++			throw new IllegalArgumentException("Unsupported generated class-file version");
++		}
++		this.MajorVersion = majorVersion;
++		this.MinorVersion = minorVersion;
++		this.GenerateStackMap = majorVersion >= 50;
+@@ -2016,7 +2049,7 @@
 -			case 0 -> add(ByteCode.ICONST_0);
 -			case 1 -> add(ByteCode.ICONST_1);
 -			case 2 -> add(ByteCode.ICONST_2);
@@ -5122,20 +5282,20 @@
 +			case 4: add(ByteCode.ICONST_4); break;
 +			case 5: add(ByteCode.ICONST_5); break;
 +			default: add(ByteCode.LDC, itsConstantPool.addConstant(k)); break;
-@@ -2129 +2149,4 @@
+@@ -2129 +2162,4 @@
 -			case ByteCode.NEW, ByteCode.ANEWARRAY, ByteCode.CHECKCAST, ByteCode.INSTANCEOF -> {
 +			case ByteCode.NEW:
 +			case ByteCode.ANEWARRAY:
 +			case ByteCode.CHECKCAST:
 +			case ByteCode.INSTANCEOF: {
-@@ -2133,2 +2156,4 @@
+@@ -2133,2 +2169,4 @@
 -			}
 -			default -> throw new IllegalArgumentException("bad opcode for class reference");
 +
 +				break;
 +			}
 +			default: throw new IllegalArgumentException("bad opcode for class reference");
-@@ -2153,3 +2178,5 @@
+@@ -2153,3 +2191,5 @@
 -			case ByteCode.GETFIELD, ByteCode.GETSTATIC -> newStack += fieldSize;
 -			case ByteCode.PUTSTATIC, ByteCode.PUTFIELD -> newStack -= fieldSize;
 -			default -> throw new IllegalArgumentException("bad opcode for field reference");
@@ -5144,20 +5304,20 @@
 +			case ByteCode.PUTSTATIC:
 +			case ByteCode.PUTFIELD: newStack -= fieldSize; break;
 +			default: throw new IllegalArgumentException("bad opcode for field reference");
-@@ -2188 +2215,4 @@
+@@ -2188 +2228,4 @@
 -			case ByteCode.INVOKEVIRTUAL, ByteCode.INVOKESPECIAL, ByteCode.INVOKESTATIC, ByteCode.INVOKEINTERFACE -> {
 +			case ByteCode.INVOKEVIRTUAL:
 +			case ByteCode.INVOKESPECIAL:
 +			case ByteCode.INVOKESTATIC:
 +			case ByteCode.INVOKEINTERFACE: {
-@@ -2199,2 +2229,4 @@
+@@ -2199,2 +2242,4 @@
 -			}
 -			default -> throw new IllegalArgumentException("bad opcode for method reference");
 +
 +				break;
 +			}
 +			default: throw new IllegalArgumentException("bad opcode for method reference");
-@@ -2696,5 +2728,5 @@
+@@ -2696,5 +2741,5 @@
 -			case 0 -> add(shortOp);
 -			case 1 -> add(shortOp + 1);
 -			case 2 -> add(shortOp + 2);
@@ -5168,7 +5328,7 @@
 +			case 2: add(shortOp + 2); break;
 +			case 3: add(shortOp + 3); break;
 +			default: add(op, local); break;
-@@ -3038 +3070,8 @@
+@@ -3038 +3083,8 @@
 -				case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z' -> {
 +				case 'B':
 +				case 'C':
@@ -5178,19 +5338,19 @@
 +				case 'J':
 +				case 'S':
 +				case 'Z': {
-@@ -3040,0 +3080,2 @@
+@@ -3040,0 +3093,2 @@
 +
 +					break;
-@@ -3042 +3083 @@
+@@ -3042 +3096 @@
 -				case 'L' -> {
 +				case 'L': {
-@@ -3046,0 +3088,2 @@
+@@ -3046,0 +3101,2 @@
 +
 +					break;
-@@ -3048 +3091 @@
+@@ -3048 +3104 @@
 -				case '[' -> {
 +				case '[': {
-@@ -3338,4 +3381,15 @@
+@@ -3338,4 +3394,15 @@
 -			return switch (opcode) {
 -				case ByteCode.ARETURN, ByteCode.FRETURN, ByteCode.IRETURN, ByteCode.LRETURN, ByteCode.RETURN, ByteCode.ATHROW, ByteCode.GOTO, ByteCode.GOTO_W, ByteCode.TABLESWITCH, ByteCode.LOOKUPSWITCH -> true;
 -				default -> false;
@@ -5210,7 +5370,7 @@
 +				default:
 +					return false;
 +			}
-@@ -3392,4 +3446,23 @@
+@@ -3392,4 +3459,23 @@
 -			return switch (opcode) {
 -				case ByteCode.GOTO, ByteCode.GOTO_W, ByteCode.IFEQ, ByteCode.IFGE, ByteCode.IFGT, ByteCode.IFLE, ByteCode.IFLT, ByteCode.IFNE, ByteCode.IFNONNULL, ByteCode.IFNULL, ByteCode.IF_ACMPEQ, ByteCode.IF_ACMPNE, ByteCode.IF_ICMPEQ, ByteCode.IF_ICMPGE, ByteCode.IF_ICMPGT, ByteCode.IF_ICMPLE, ByteCode.IF_ICMPLT, ByteCode.IF_ICMPNE -> true;
 -				default -> false;
@@ -5238,7 +5398,7 @@
 +				default:
 +					return false;
 +			}
-@@ -3904,6 +3977,6 @@
+@@ -3904,6 +3990,6 @@
 -						case ConstantPool.CONSTANT_Double -> push(TypeInfo.DOUBLE);
 -						case ConstantPool.CONSTANT_Float -> push(TypeInfo.FLOAT);
 -						case ConstantPool.CONSTANT_Long -> push(TypeInfo.LONG);

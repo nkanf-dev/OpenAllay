@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 252940,
-    "sha256": "fdf04a4b4ff059126f09a08d89413937110ef88b33e260820cbec09139421e4f",
+    "bytes": 261633,
+    "sha256": "39952b0ca9c0f5db5d7d215ab9a37134240d8dae2e46632dac3b360eac40752a",
     "modified_upstream_files": 117,
     "added_source_files": 1,
-    "hunks": 570,
+    "hunks": 579,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Explicitintermediatepublicmoderndefaultreflection seam permitsrealJava8compilation; absentJava8capabilitythrowsuntilgenuineexistingloaderdefaultimplementation accepted. Not productcompatibility.",
+  "source_only_status": "CanonicalpublicdefaultJava8path usesexistingRhino generatedchildownLookup andJdkProxy, modernpublicinvokeDefault unchanged; actualgenuinejavac8/runtime expandedgraph proof pending. No Forgecompatibilityclaim.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -885,8 +885,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.JavaAdapter",
       "source_bytes": 36342,
       "source_sha256": "15108646a7e754cd368a683a09b6b4d606843cec93fd0f01f663f640de820f5f",
-      "patched_bytes": 36791,
-      "patched_sha256": "7dd77765aac5223273e9987ca6c2a372b1d57ec23e9936ff38bf43a293ba0a77",
+      "patched_bytes": 37923,
+      "patched_sha256": "5c66095ca71ed417fe9fd84ce9c4de2f73e553808d9448bd8dff933de763924f",
       "modified": true,
       "line_count": 1006,
       "license_evidence": [
@@ -1907,8 +1907,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.VMBridge",
       "source_bytes": 3550,
       "source_sha256": "5baca9ae78e3113e70257690a2bd8d3880705470ac69444d2f224b6b2b153d3c",
-      "patched_bytes": 10447,
-      "patched_sha256": "60f40781064e9e403d16bd02ad4390a01155208b1b00fa4318cd69bce7e8f2ba",
+      "patched_bytes": 15503,
+      "patched_sha256": "a69486982854e5ee1c1a51cdfe62641d1808431715f9c46d0276c52cbe2dedd5",
       "modified": true,
       "line_count": 104,
       "license_evidence": [
@@ -2929,8 +2929,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.classfile.ClassFileWriter",
       "source_bytes": 129030,
       "source_sha256": "61d3748254f7795b058d3a6b3c50cc51ac966a03447304035dcdf8ec7b200efc",
-      "patched_bytes": 129687,
-      "patched_sha256": "69dc5d60d3d8d4beaa049a6d614a4f548f4ebfb830523767d023e2817eb63bcf",
+      "patched_bytes": 130415,
+      "patched_sha256": "1fefdcc8453f2ece6d04cab7a5914d79b891d1513cc537a7633ada5c4ba96ca1",
       "modified": true,
       "line_count": 4353,
       "license_evidence": [

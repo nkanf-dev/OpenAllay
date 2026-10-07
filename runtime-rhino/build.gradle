@@ -64,3 +64,6 @@ tasks.named('test') { useJUnitPlatform() }
 tasks.register('printRhinoPortCompileClasspath') {
     doLast { println(configurations.compileClasspath.asPath) }
 }
+
+// One graph fixture exercises the same production path on genuine Java8 and modern JDKs.
+sourceSets.test.java.srcDir('src/java8Fixture/java')
