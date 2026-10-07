@@ -190,3 +190,9 @@ def explicitValueTestVectors = objects.sourceDirectorySet('explicitValueTestVect
 explicitValueTestVectors.srcDir('src/java8Test/java')
 explicitValueTestVectors.include('dev/openallay/json/ValueSchemaJava8Fixture.java')
 sourceSets.test.java.source(explicitValueTestVectors)
+
+// Run the actual ToolResult Java8 constructor vectors through the modern EngineJson owner.
+def toolResultTestVectors = objects.sourceDirectorySet('toolResultTestVectors', 'ToolResult value vectors')
+toolResultTestVectors.srcDir('src/toolResultJava8Test/java')
+toolResultTestVectors.include('dev/openallay/json/ToolResultJava8Fixture.java')
+sourceSets.test.java.source(toolResultTestVectors)

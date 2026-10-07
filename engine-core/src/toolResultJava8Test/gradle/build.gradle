@@ -1,0 +1,31 @@
+plugins { id 'java' }
+def canonical = file('../../..')
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+sourceSets.main.java.setSrcDirs([new File(canonical, 'src/main/java'),
+        new File(canonical, 'src/toolResultJava8Test/java')])
+sourceSets.main.java.setIncludes([
+        'dev/openallay/tool/ToolResult.java', 'dev/openallay/util/Java8Strings.java',
+        'dev/openallay/value/*.java', 'dev/openallay/agent/tool/ToolDescription.java',
+        'dev/openallay/agent/tool/ToolOptional.java',
+        'dev/openallay/json/ConstructorValueJsonAdapter.java',
+        'dev/openallay/json/ToolResultJava8Fixture.java'])
+repositories { mavenCentral() }
+dependencies { implementation('com.google.code.gson:gson:2.8.0') }
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+def host = providers.gradleProperty('jsonVerificationGsonVersion').getOrElse('2.8.0')
+configurations.runtimeClasspath.resolutionStrategy.force("com.google.code.gson:gson:${host}")
+tasks.register('java8ToolResultTest', JavaExec) {
+    dependsOn('classes')
+    mainClass = 'dev.openallay.json.ToolResultJava8Fixture'
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    inputs.property('jsonVerificationGsonVersion', host)
+    doFirst {
+        def artifacts = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+                .findAll { it.moduleVersion.id.group == 'com.google.code.gson' && it.name == 'gson' }
+        if (artifacts.size() != 1 || artifacts.first().moduleVersion.id.version != host) {
+            throw new GradleException("ToolResult runtime must contain exactly Gson ${host}")
+        }
+        logger.lifecycle("ToolResult constructor adapter Gson runtime: ${artifacts.first().moduleVersion.id}")
+    }
+}
