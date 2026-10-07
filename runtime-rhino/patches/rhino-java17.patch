@@ -1,3 +1,21 @@
+--- a/dev/latvian/mods/rhino/AbstractEcmaObjectOperations.java
++++ b/dev/latvian/mods/rhino/AbstractEcmaObjectOperations.java
+@@ -27 +27,2 @@
+-		if (property instanceof Symbol sym) {
++		if (property instanceof Symbol) {
++			Symbol sym = (Symbol) property;
+@@ -219 +220,2 @@
+-		if (base instanceof ScriptableObject so) {
++		if (base instanceof ScriptableObject) {
++			ScriptableObject so = (ScriptableObject) base;
+@@ -239 +241,2 @@
+-		if (base instanceof ScriptableObject so) {
++		if (base instanceof ScriptableObject) {
++			ScriptableObject so = (ScriptableObject) base;
+@@ -259 +262,2 @@
+-		if (base instanceof ScriptableObject so) {
++		if (base instanceof ScriptableObject) {
++			ScriptableObject so = (ScriptableObject) base;
 --- a/dev/latvian/mods/rhino/AccessorSlot.java
 +++ b/dev/latvian/mods/rhino/AccessorSlot.java
 @@ -7,0 +8,2 @@
@@ -1325,6 +1343,29 @@
 -			if (r instanceof YieldStarResult ysResult) {
 +			if (r instanceof YieldStarResult) {
 +				YieldStarResult ysResult = (YieldStarResult) r;
+--- a/dev/latvian/mods/rhino/EqualObjectGraphs.java
++++ b/dev/latvian/mods/rhino/EqualObjectGraphs.java
+@@ -238,8 +238,12 @@
+-		if (s1 instanceof IdFunctionObject s3) {
+-			return s2 instanceof IdFunctionObject s4 && IdFunctionObject.equalObjectGraphs(cx, s3, s4, this);
+-		} else if (s1 instanceof ArrowFunction s3) {
+-			return s2 instanceof ArrowFunction s4 && ArrowFunction.equalObjectGraphs(cx, s3, s4, this);
+-		} else if (s1 instanceof BoundFunction s3) {
+-			return s2 instanceof BoundFunction s4 && BoundFunction.equalObjectGraphs(cx, s3, s4, this);
+-		} else if (s1 instanceof NativeSymbol s3) {
+-			return s2 instanceof NativeSymbol s4 && equalGraphs(cx, s3.getKey(), s4.getKey());
++		if (s1 instanceof IdFunctionObject) {
++			IdFunctionObject s3 = (IdFunctionObject) s1;
++			return s2 instanceof IdFunctionObject && IdFunctionObject.equalObjectGraphs(cx, s3, ((IdFunctionObject) s2), this);
++		} else if (s1 instanceof ArrowFunction) {
++			ArrowFunction s3 = (ArrowFunction) s1;
++			return s2 instanceof ArrowFunction && ArrowFunction.equalObjectGraphs(cx, s3, ((ArrowFunction) s2), this);
++		} else if (s1 instanceof BoundFunction) {
++			BoundFunction s3 = (BoundFunction) s1;
++			return s2 instanceof BoundFunction && BoundFunction.equalObjectGraphs(cx, s3, ((BoundFunction) s2), this);
++		} else if (s1 instanceof NativeSymbol) {
++			NativeSymbol s3 = (NativeSymbol) s1;
++			return s2 instanceof NativeSymbol && equalGraphs(cx, s3.getKey(), ((NativeSymbol) s2).getKey());
 --- a/dev/latvian/mods/rhino/FunctionObject.java
 +++ b/dev/latvian/mods/rhino/FunctionObject.java
 @@ -9,0 +10,2 @@
@@ -1693,68 +1734,197 @@
 +		}
 --- a/dev/latvian/mods/rhino/JavaAdapter.java
 +++ b/dev/latvian/mods/rhino/JavaAdapter.java
-@@ -93 +93 @@
+@@ -44 +44 @@
+-			if (!(obj instanceof JavaAdapterSignature sig)) {
++			if (!(obj instanceof JavaAdapterSignature)) {
+@@ -46,0 +47 @@
++			JavaAdapterSignature sig = (JavaAdapterSignature) obj;
+@@ -93 +94 @@
 -		var typeInfo = TypeInfo.of(c);
 +		dev.latvian.mods.rhino.type.TypeInfo typeInfo = TypeInfo.of(c);
-@@ -376 +376 @@
+@@ -218 +219,2 @@
+-			if (!(ids[i] instanceof String id)) {
++			Object candidateId = ids[i];
++			if (!(candidateId instanceof String)) {
+@@ -220,0 +223 @@
++			String id = (String) candidateId;
+@@ -222 +225,2 @@
+-			if (value instanceof Function f) {
++			if (value instanceof Function) {
++				Function f = (Function) value;
+@@ -376 +380 @@
 -			var intf = interfaces.remove();
 +			java.lang.Class<?> intf = interfaces.remove();
-@@ -382 +382 @@
+@@ -382 +386 @@
 -			var subIntf = intf.getInterfaces();
 +			java.lang.Class<?>[] subIntf = intf.getInterfaces();
-@@ -483 +483 @@
+@@ -483 +487 @@
 -		var globalScope = cx.getTopCallScope(); // ScriptRuntime.getGlobal(cx);
 +		dev.latvian.mods.rhino.Scriptable globalScope = cx.getTopCallScope(); // ScriptRuntime.getGlobal(cx);
+@@ -675 +679,3 @@
+-				case 'b', 's', 'i' -> {
++				case 'b':
++				case 's':
++				case 'i': {
+@@ -679,2 +685,4 @@
+-				}
+-				case 'l' -> {
++
++					break;
++				}
++				case 'l': {
+@@ -685,2 +693,4 @@
+-				}
+-				case 'f' -> {
++
++					break;
++				}
++				case 'f': {
+@@ -690,2 +700,4 @@
+-				}
+-				case 'd' -> {
++
++					break;
++				}
++				case 'd': {
+@@ -693,0 +706,2 @@
++
++					break;
+@@ -748 +762,3 @@
+-				case 'b', 's', 'i' -> {
++				case 'b':
++				case 's':
++				case 'i': {
+@@ -751,2 +767,4 @@
+-				}
+-				case 'l' -> {
++
++					break;
++				}
++				case 'l': {
+@@ -755,2 +773,4 @@
+-				}
+-				case 'f' -> {
++
++					break;
++				}
++				case 'f': {
+@@ -759,3 +779,5 @@
+-				}
+-				case 'd' -> cfw.add(ByteCode.DRETURN);
+-				default -> throw new RuntimeException("Unexpected return type " + retType);
++
++					break;
++				}
++				case 'd': cfw.add(ByteCode.DRETURN); break;
++				default: throw new RuntimeException("Unexpected return type " + retType);
+@@ -857 +879,5 @@
+-			case 'z', 'b', 'c', 's', 'i' -> {
++			case 'z':
++			case 'b':
++			case 'c':
++			case 's':
++			case 'i': {
+@@ -862 +888 @@
+-			case 'l' -> {
++			case 'l': {
+@@ -867 +893 @@
+-			case 'f' -> {
++			case 'f': {
+@@ -872 +898 @@
+-			case 'd' -> {
++			case 'd': {
+@@ -889,4 +915,8 @@
+-				case 'b', 'c', 's', 'i', 'z' -> cfw.add(ByteCode.IRETURN);
+-				case 'l' -> cfw.add(ByteCode.LRETURN);
+-				case 'f' -> cfw.add(ByteCode.FRETURN);
+-				case 'd' -> cfw.add(ByteCode.DRETURN);
++				case 'b':
++				case 'c':
++				case 's':
++				case 'i':
++				case 'z': cfw.add(ByteCode.IRETURN); break;
++				case 'l': cfw.add(ByteCode.LRETURN); break;
++				case 'f': cfw.add(ByteCode.FRETURN); break;
++				case 'd': cfw.add(ByteCode.DRETURN); break;
 --- a/dev/latvian/mods/rhino/JavaMembers.java
 +++ b/dev/latvian/mods/rhino/JavaMembers.java
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
-@@ -101 +103 @@
+@@ -77 +79,2 @@
+-			if (member instanceof NativeJavaMethod njmGet) {
++			if (member instanceof NativeJavaMethod) {
++				NativeJavaMethod njmGet = (NativeJavaMethod) member;
+@@ -101 +104 @@
 -		var type = type0.asClass();
 +		java.lang.Class<?> type = type0.asClass();
-@@ -111 +113 @@
+@@ -111 +114 @@
 -			for (var method : methods) {
 +			for (dev.latvian.mods.rhino.MemberBox method : methods) {
-@@ -113 +115 @@
+@@ -113 +116 @@
 -					var params = method.parameters().types();
 +					java.util.List<java.lang.Class<?>> params = method.parameters().types();
-@@ -116 +118 @@
+@@ -116 +119 @@
 -							if (params.getFirst() == type) {
 +							if (ListCompat.getFirst(params) == type) {
-@@ -123 +125 @@
+@@ -123 +126 @@
 -							if (params.getFirst().isAssignableFrom(type)) {
 +							if (ListCompat.getFirst(params).isAssignableFrom(type)) {
-@@ -216 +218 @@
+@@ -216 +219 @@
 -		var ht = isStatic ? staticMembers : members;
 +		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
-@@ -225 +227 @@
+@@ -225 +228 @@
 -		var ht = isStatic ? staticMembers : members;
 +		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
-@@ -263 +265 @@
+@@ -243 +246,2 @@
+-			if (member instanceof BeanProperty bp) {
++			if (member instanceof BeanProperty) {
++				BeanProperty bp = (BeanProperty) member;
+@@ -263 +267 @@
 -		var ht = isStatic ? staticMembers : members;
 +		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
-@@ -285 +287 @@
+@@ -272 +276,2 @@
+-		if (member instanceof FieldAndMethods fam) {
++		if (member instanceof FieldAndMethods) {
++			FieldAndMethods fam = (FieldAndMethods) member;
+@@ -277 +282,2 @@
+-		if (member instanceof BeanProperty bp) {
++		if (member instanceof BeanProperty) {
++			BeanProperty bp = (BeanProperty) member;
+@@ -285 +291 @@
 -				Object[] args = {cx.jsToJava(value, bp.setter.parameters().typeInfos().getFirst())};
 +				Object[] args = {cx.jsToJava(value, ListCompat.getFirst(bp.setter.parameters().typeInfos()))};
-@@ -308 +310 @@
+@@ -296 +302 @@
+-			if (!(member instanceof CachedFieldInfo fieldInfo)) {
++			if (!(member instanceof CachedFieldInfo)) {
+@@ -302,0 +309 @@
++			CachedFieldInfo fieldInfo = (CachedFieldInfo) member;
+@@ -308,2 +315,3 @@
 -			var type = fieldInfo.getType();
+-			if (scope instanceof NativeJavaObject nativeJavaObject) {
 +			dev.latvian.mods.rhino.type.TypeInfo type = fieldInfo.getType();
-@@ -324 +326 @@
++			if (scope instanceof NativeJavaObject) {
++				NativeJavaObject nativeJavaObject = (NativeJavaObject) scope;
+@@ -324 +332 @@
 -		var map = isStatic ? staticMembers : members;
 +		java.util.Map<java.lang.String, java.lang.Object> map = isStatic ? staticMembers : members;
-@@ -334 +336 @@
+@@ -334 +342 @@
 -		var ht = isStatic ? staticMembers : members;
 +		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
-@@ -355,2 +357,2 @@
+@@ -349 +357,2 @@
+-			if (obj instanceof NativeJavaMethod njm) {
++			if (obj instanceof NativeJavaMethod) {
++				NativeJavaMethod njm = (NativeJavaMethod) obj;
+@@ -355,2 +364,2 @@
 -			for (var methodsOrCtor : methodsOrCtors) {
 -				var type = methodsOrCtor.parameters().types();
 +			for (dev.latvian.mods.rhino.MemberBox methodsOrCtor : methodsOrCtors) {
 +				java.util.List<java.lang.Class<?>> type = methodsOrCtor.parameters().types();
-@@ -368 +370 @@
+@@ -368 +377 @@
 -		var ht = isStatic ? staticMembers : members;
 +		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
-@@ -406,8 +408,8 @@
+@@ -406,8 +415,8 @@
 -		var storage = cx.getCachedClassStorage(includeProtected);
 -		var classInfo = storage.get(cl);
 -
@@ -1771,41 +1941,56 @@
 +			java.lang.String name = methodInfo0.getName();
 +			java.util.Map<java.lang.String, java.lang.Object> ht = methodInfo.isStatic ? staticMembers : members;
 +			java.lang.Object value = ht.get(name);
-@@ -439,3 +441,3 @@
+@@ -439,3 +448,3 @@
 -			var ht = isStatic ? staticMembers : members;
 -
 -			for (var entry : ht.entrySet()) {
 +			java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
 +
 +			for (java.util.Map.Entry<java.lang.String, java.lang.Object> entry : ht.entrySet()) {
-@@ -455 +457 @@
+@@ -444 +453,2 @@
+-				if (value instanceof CachedMethodInfo methodInfo) {
++				if (value instanceof CachedMethodInfo) {
++					CachedMethodInfo methodInfo = (CachedMethodInfo) value;
+@@ -455 +465 @@
 -						var method = (CachedMethodInfo) overloadedMethods.get(i);
 +						dev.latvian.mods.rhino.CachedMethodInfo method = (CachedMethodInfo) overloadedMethods.get(i);
-@@ -468,3 +470,3 @@
+@@ -468,3 +478,3 @@
 -		for (var fieldInfo0 : classInfo.getAccessibleFields(includeProtected)) {
 -			var fieldInfo = fieldInfo0.getInfo();
 -			var name = fieldInfo0.getName();
 +		for (dev.latvian.mods.rhino.CachedFieldInfo.Accessible fieldInfo0 : classInfo.getAccessibleFields(includeProtected)) {
 +			dev.latvian.mods.rhino.CachedFieldInfo fieldInfo = fieldInfo0.getInfo();
 +			java.lang.String name = fieldInfo0.getName();
-@@ -473 +475 @@
+@@ -473 +483 @@
 -				var ht = fieldInfo.isStatic ? staticMembers : members;
 +				java.util.Map<java.lang.String, java.lang.Object> ht = fieldInfo.isStatic ? staticMembers : members;
-@@ -478,2 +480,2 @@
+@@ -477,3 +487,4 @@
+-				} else if (member instanceof NativeJavaMethod method) {
 -					var fam = new FieldAndMethods(scope, method.methods, fieldInfo, cx);
 -					var fmht = fieldInfo.isStatic ? staticFieldAndMethods : fieldAndMethods;
++				} else if (member instanceof NativeJavaMethod) {
++					NativeJavaMethod method = (NativeJavaMethod) member;
 +					dev.latvian.mods.rhino.FieldAndMethods fam = new FieldAndMethods(scope, method.methods, fieldInfo, cx);
 +					java.util.Map<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> fmht = fieldInfo.isStatic ? staticFieldAndMethods : fieldAndMethods;
-@@ -516 +518 @@
+@@ -492 +503,2 @@
+-				} else if (member instanceof CachedFieldInfo oldFieldInfo) {
++				} else if (member instanceof CachedFieldInfo) {
++					CachedFieldInfo oldFieldInfo = (CachedFieldInfo) member;
+@@ -516 +528 @@
 -			var ht = isStatic ? staticMembers : members;
 +			java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
-@@ -579 +581 @@
+@@ -575 +587,2 @@
+-						if (member instanceof NativeJavaMethod njmSet) {
++						if (member instanceof NativeJavaMethod) {
++							NativeJavaMethod njmSet = (NativeJavaMethod) member;
+@@ -579 +592 @@
 -								var type = getter.getReturnType();
 +								dev.latvian.mods.rhino.type.TypeInfo type = getter.getReturnType();
-@@ -601 +603 @@
+@@ -601 +614 @@
 -		var constructors = classInfo.getConstructors();
 +		java.util.List<dev.latvian.mods.rhino.CachedConstructorInfo> constructors = classInfo.getConstructors();
-@@ -625,4 +627,4 @@
+@@ -625,4 +638,4 @@
 -		var list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleFields(includeProtected);
 -		var list = new ArrayList<FieldInfo>(list0.size());
 -
@@ -1814,7 +1999,7 @@
 +		java.util.ArrayList<dev.latvian.mods.rhino.JavaMembers.FieldInfo> list = new ArrayList<FieldInfo>(list0.size());
 +
 +		for (dev.latvian.mods.rhino.CachedFieldInfo.Accessible f : list0) {
-@@ -637,4 +639,4 @@
+@@ -637,4 +650,4 @@
 -		var list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleMethods(includeProtected);
 -		var list = new ArrayList<MethodInfo>(list0.size());
 -
@@ -1823,10 +2008,10 @@
 +		java.util.ArrayList<dev.latvian.mods.rhino.JavaMembers.MethodInfo> list = new ArrayList<MethodInfo>(list0.size());
 +
 +		for (dev.latvian.mods.rhino.CachedMethodInfo.Accessible m : list0) {
-@@ -648 +650 @@
+@@ -648 +661 @@
 -		var ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
 +		java.util.Map<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
-@@ -655,3 +657,3 @@
+@@ -655,3 +668,3 @@
 -		var result = new HashMap<String, FieldAndMethods>(len);
 -
 -		for (var fam : ht.values()) {
@@ -2937,19 +3122,38 @@
 +			IdFunctionObject function = (IdFunctionObject) functionObj;
 --- a/dev/latvian/mods/rhino/NativeJSON.java
 +++ b/dev/latvian/mods/rhino/NativeJSON.java
-@@ -149 +149 @@
+@@ -101 +101,2 @@
+-		if (property instanceof Scriptable val) {
++		if (property instanceof Scriptable) {
++			Scriptable val = (Scriptable) property;
+@@ -149 +150 @@
 -		var builder = new StringBuilder();
 +		java.lang.StringBuilder builder = new StringBuilder();
-@@ -174 +174 @@
+@@ -174 +175 @@
 -			var d = ScriptRuntime.toNumber(cx, v);
 +			double d = ScriptRuntime.toNumber(cx, v);
-@@ -185 +185 @@
+@@ -181 +182,2 @@
+-		} else if (v instanceof NativeObject obj) {
++		} else if (v instanceof NativeObject) {
++			NativeObject obj = (NativeObject) v;
+@@ -185 +187 @@
 -			for (var id : obj.getIds(cx)) {
 +			for (java.lang.Object id : obj.getIds(cx)) {
-@@ -210 +210 @@
+@@ -187 +189 @@
+-				Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);
++				Object value = id instanceof Integer ? obj.get(cx, (Integer) id, obj) : obj.get(cx, String.valueOf(id), obj);
+@@ -206 +208,2 @@
+-		} else if (v instanceof Map<?, ?> map) {
++		} else if (v instanceof Map<?, ?>) {
++			Map<?, ?> map = (Map<?, ?>) v;
+@@ -210 +213 @@
 -			for (var entry : map.entrySet()) {
 +			for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
-@@ -241 +241 @@
+@@ -237 +240,2 @@
+-		} else if (v instanceof Iterable<?> itr) {
++		} else if (v instanceof Iterable<?>) {
++			Iterable<?> itr = (Iterable<?>) v;
+@@ -241 +245 @@
 -			for (var value : itr) {
 +			for (java.lang.Object value : itr) {
 --- a/dev/latvian/mods/rhino/NativeJavaArray.java
@@ -3120,6 +3324,125 @@
 @@ -186 +187 @@
 -		for (var entry : entries) {
 +		for (dev.latvian.mods.rhino.Hashtable.Entry entry : entries) {
+--- a/dev/latvian/mods/rhino/NativeObject.java
++++ b/dev/latvian/mods/rhino/NativeObject.java
+@@ -90 +90 @@
+-		Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, ScriptRuntime.toString(cx, id), obj);
++		Object value = id instanceof Integer ? obj.get(cx, (Integer) id, obj) : obj.get(cx, ScriptRuntime.toString(cx, id), obj);
+@@ -143 +143 @@
+-		if (!(toString instanceof Callable fun)) {
++		if (!(toString instanceof Callable)) {
+@@ -145,0 +146 @@
++		Callable fun = (Callable) toString;
+@@ -174 +175,2 @@
+-			if (result && thisObj instanceof ScriptableObject so) {
++			if (result && thisObj instanceof ScriptableObject) {
++				ScriptableObject so = (ScriptableObject) thisObj;
+@@ -185 +187,2 @@
+-					if (result && thisObj instanceof ScriptableObject so) {
++					if (result && thisObj instanceof ScriptableObject) {
++						ScriptableObject so = (ScriptableObject) thisObj;
+@@ -191 +194,2 @@
+-					if (result && thisObj instanceof ScriptableObject so) {
++					if (result && thisObj instanceof ScriptableObject) {
++						ScriptableObject so = (ScriptableObject) thisObj;
+@@ -213,8 +217,13 @@
+-		if (args.length != 0 && args[0] instanceof Scriptable v) {
+-			do {
+-				v = v.getPrototype(cx);
+-				if (v == thisObj) {
+-					result = true;
+-					break;
+-				}
+-			} while (v != null);
++		if (args.length != 0) {
++			Object candidate = args[0];
++			if (candidate instanceof Scriptable) {
++				Scriptable v = (Scriptable) candidate;
++				do {
++					v = v.getPrototype(cx);
++					if (v == thisObj) {
++						result = true;
++						break;
++					}
++				} while (v != null);
++
++			}
+@@ -234 +243,2 @@
+-		if (args.length < 2 || !(args[1] instanceof Callable getterOrSetter)) {
++		Object candidateGetterOrSetter = args.length < 2 ? Undefined.INSTANCE : args[1];
++		if (args.length < 2 || !(candidateGetterOrSetter instanceof Callable)) {
+@@ -238 +248,2 @@
+-		if (!(thisObj instanceof ScriptableObject so)) {
++		Callable getterOrSetter = (Callable) candidateGetterOrSetter;
++		if (!(thisObj instanceof ScriptableObject)) {
+@@ -240,0 +252 @@
++		ScriptableObject so = (ScriptableObject) thisObj;
+@@ -259 +271 @@
+-		if (args.length < 1 || !(thisObj instanceof ScriptableObject so)) {
++		if (args.length < 1 || !(thisObj instanceof ScriptableObject)) {
+@@ -261,0 +274 @@
++		ScriptableObject so = (ScriptableObject) thisObj;
+@@ -308 +321 @@
+-		if (!(arg0 instanceof ScriptableObject obj)) {
++		if (!(arg0 instanceof ScriptableObject)) {
+@@ -310,0 +324 @@
++		ScriptableObject obj = (ScriptableObject) arg0;
+@@ -356 +370 @@
+-					if (!(val instanceof Scriptable entry) || val instanceof Symbol) {
++					if (!(val instanceof Scriptable) || val instanceof Symbol) {
+@@ -358,0 +373 @@
++					Scriptable entry = (Scriptable) val;
+@@ -367 +382,3 @@
+-					if (key instanceof Symbol sym && obj instanceof SymbolScriptable symObj) {
++					if (key instanceof Symbol && obj instanceof SymbolScriptable) {
++						Symbol sym = (Symbol) key;
++						SymbolScriptable symObj = (SymbolScriptable) obj;
+@@ -435 +452,2 @@
+-			} else if (key instanceof Symbol sym) {
++			} else if (key instanceof Symbol) {
++				Symbol sym = (Symbol) key;
+@@ -437 +455,2 @@
+-			} else if (key instanceof Integer index) {
++			} else if (key instanceof Integer) {
++				Integer index = (Integer) key;
+@@ -564 +583,2 @@
+-			if (sourceObj instanceof ScriptableObject so) {
++			if (sourceObj instanceof ScriptableObject) {
++				ScriptableObject so = (ScriptableObject) sourceObj;
+@@ -570 +590,2 @@
+-				if (key instanceof Integer intId) {
++				if (key instanceof Integer) {
++					Integer intId = (Integer) key;
+@@ -575 +596,2 @@
+-				} else if (key instanceof String stringId) {
++				} else if (key instanceof String) {
++					String stringId = (String) key;
+@@ -584 +606,2 @@
+-			if (sourceObj instanceof ScriptableObject sourceSO) {
++			if (sourceObj instanceof ScriptableObject) {
++				ScriptableObject sourceSO = (ScriptableObject) sourceObj;
+@@ -586 +609,2 @@
+-					if (key instanceof Symbol sym) {
++					if (key instanceof Symbol) {
++						Symbol sym = (Symbol) key;
+@@ -758 +782 @@
+-							if (!(other instanceof Entry<?, ?> e)) {
++							if (!(other instanceof Entry<?, ?>)) {
+@@ -760,0 +785 @@
++							Entry<?, ?> e = (Entry<?, ?>) other;
+@@ -876 +901,2 @@
+-		if (obj instanceof ScriptableObject so) {
++		if (obj instanceof ScriptableObject) {
++			ScriptableObject so = (ScriptableObject) obj;
+@@ -883 +909,2 @@
+-		if (obj instanceof ScriptableObject so) {
++		if (obj instanceof ScriptableObject) {
++			ScriptableObject so = (ScriptableObject) obj;
+@@ -890 +917,2 @@
+-		if (obj instanceof ScriptableObject so) {
++		if (obj instanceof ScriptableObject) {
++			ScriptableObject so = (ScriptableObject) obj;
 --- a/dev/latvian/mods/rhino/NativePromise.java
 +++ b/dev/latvian/mods/rhino/NativePromise.java
 @@ -454 +454,2 @@
@@ -3215,6 +3538,12 @@
 +					default:
 +						return endCheckBlock();
 +				}
+--- a/dev/latvian/mods/rhino/NodeTransformer.java
++++ b/dev/latvian/mods/rhino/NodeTransformer.java
+@@ -113 +113,2 @@
+-			if (createScopeObjects && (type == Token.BLOCK || type == Token.LOOP || type == Token.ARRAYCOMP) && (node instanceof Scope newScope)) {
++			if (createScopeObjects && (type == Token.BLOCK || type == Token.LOOP || type == Token.ARRAYCOMP) && (node instanceof Scope)) {
++				Scope newScope = (Scope) node;
 --- a/dev/latvian/mods/rhino/ObjArray.java
 +++ b/dev/latvian/mods/rhino/ObjArray.java
 @@ -95,8 +95,8 @@
@@ -3703,20 +4032,77 @@
 +					Integer index = (Integer) id;
 --- a/dev/latvian/mods/rhino/ScriptableObject.java
 +++ b/dev/latvian/mods/rhino/ScriptableObject.java
-@@ -1464,3 +1464,3 @@
+@@ -169 +169 @@
+-			if (!(v instanceof Function fun)) {
++			if (!(v instanceof Function)) {
+@@ -171,0 +172 @@
++			Function fun = (Function) v;
+@@ -214 +215 @@
+-		if (!(destination instanceof ScriptableObject so)) {
++		if (!(destination instanceof ScriptableObject)) {
+@@ -217,0 +219 @@
++		ScriptableObject so = (ScriptableObject) destination;
+@@ -231 +233,2 @@
+-		if (destination instanceof ConstProperties cp) {
++		if (destination instanceof ConstProperties) {
++			ConstProperties cp = (ConstProperties) destination;
+@@ -317 +320,2 @@
+-		} else if (ctor instanceof Scriptable ctorObj) {
++		} else if (ctor instanceof Scriptable) {
++			Scriptable ctorObj = (Scriptable) ctor;
+@@ -448 +452,2 @@
+-		if (base instanceof ConstProperties cp) {
++		if (base instanceof ConstProperties) {
++			ConstProperties cp = (ConstProperties) base;
+@@ -703 +708,2 @@
+-			if (scope instanceof ScriptableObject so) {
++			if (scope instanceof ScriptableObject) {
++				ScriptableObject so = (ScriptableObject) scope;
+@@ -1163 +1169 @@
+-			if (!(slot instanceof AccessorSlot gs)) {
++			if (!(slot instanceof AccessorSlot)) {
+@@ -1165,0 +1172 @@
++			AccessorSlot gs = (AccessorSlot) slot;
+@@ -1177 +1184 @@
+-			fslot.setter = getterOrSetter instanceof Function f ? new AccessorSlot.FunctionSetter(f) : null;
++			fslot.setter = getterOrSetter instanceof Function ? new AccessorSlot.FunctionSetter((Function) getterOrSetter) : null;
+@@ -1179 +1186 @@
+-			fslot.getter = getterOrSetter instanceof Function f ? new AccessorSlot.FunctionGetter(f) : null;
++			fslot.getter = getterOrSetter instanceof Function ? new AccessorSlot.FunctionGetter((Function) getterOrSetter) : null;
+@@ -1464,3 +1471,3 @@
 -		var methods = FunctionObject.getMethodList(cx, clazz);
 -		var getter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, getterName, cx));
 -		var setter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, setterName, cx));
 +		java.util.List<dev.latvian.mods.rhino.CachedMethodInfo> methods = FunctionObject.getMethodList(cx, clazz);
 +		dev.latvian.mods.rhino.WrappedExecutable getter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, getterName, cx));
 +		dev.latvian.mods.rhino.WrappedExecutable setter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, setterName, cx));
-@@ -1779 +1779 @@
+@@ -1663 +1670,2 @@
+-				if (slot instanceof AccessorSlot gs) {
++				if (slot instanceof AccessorSlot) {
++					AccessorSlot gs = (AccessorSlot) slot;
+@@ -1772 +1780,2 @@
+-		if (existing instanceof LambdaAccessorSlot lSlot) {
++		if (existing instanceof LambdaAccessorSlot) {
++			LambdaAccessorSlot lSlot = (LambdaAccessorSlot) existing;
+@@ -1779 +1788 @@
 -		var replacedDesc = replacedSlot.buildPropertyDescriptor(cx);
 +		dev.latvian.mods.rhino.ScriptableObject replacedDesc = replacedSlot.buildPropertyDescriptor(cx);
-@@ -1963 +1963 @@
+@@ -1799 +1808,2 @@
+-		} else if (existing instanceof AccessorSlot aSlot) {
++		} else if (existing instanceof AccessorSlot) {
++			AccessorSlot aSlot = (AccessorSlot) existing;
+@@ -1809 +1819,2 @@
+-		} else if (existing instanceof LambdaSlot lSlot) {
++		} else if (existing instanceof LambdaSlot) {
++			LambdaSlot lSlot = (LambdaSlot) existing;
+@@ -1858 +1869,2 @@
+-				} else if (isAccessor && current instanceof AccessorSlot accessor) {
++				} else if (isAccessor && current instanceof AccessorSlot) {
++					AccessorSlot accessor = (AccessorSlot) current;
+@@ -1963 +1975 @@
 -		var methods = FunctionObject.getMethodList(cx, clazz);
 +		java.util.List<dev.latvian.mods.rhino.CachedMethodInfo> methods = FunctionObject.getMethodList(cx, clazz);
-@@ -1966 +1966 @@
+@@ -1966 +1978 @@
 -			var m = FunctionObject.findSingleMethod(methods, name, cx);
 +			dev.latvian.mods.rhino.CachedMethodInfo m = FunctionObject.findSingleMethod(methods, name, cx);
 --- a/dev/latvian/mods/rhino/Slot.java
@@ -4300,6 +4686,20 @@
 +				return true;
 +			default: return false;
 +		}
+--- a/dev/latvian/mods/rhino/ast/FunctionNode.java
++++ b/dev/latvian/mods/rhino/ast/FunctionNode.java
+@@ -439 +439,2 @@
+-		if (scriptOrFn instanceof FunctionNode fnNode) {
++		if (scriptOrFn instanceof FunctionNode) {
++			FunctionNode fnNode = (FunctionNode) scriptOrFn;
+@@ -446 +447,3 @@
+-						if (defaultParams.get(i) instanceof String paramWithDefault) {
++						Object defaultParameter = defaultParams.get(i);
++						if (defaultParameter instanceof String) {
++							String paramWithDefault = (String) defaultParameter;
+@@ -449 +452 @@
+-								if (param instanceof Name name && name.getIdentifier().equals(paramWithDefault)) {
++								if (param instanceof Name && ((Name) param).getIdentifier().equals(paramWithDefault)) {
 --- a/dev/latvian/mods/rhino/ast/InfixExpression.java
 +++ b/dev/latvian/mods/rhino/ast/InfixExpression.java
 @@ -155,5 +155,8 @@
