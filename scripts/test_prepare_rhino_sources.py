@@ -42,6 +42,14 @@ class RhinoPreparationTest(unittest.TestCase):
         self.assertEqual([bundle["zip_path"]], [str(p.relative_to(self.base / "generated/resources")) for p in (self.base / "generated/resources").rglob("*") if p.is_file()])
         self.assertIn("LICENSE-MPL-2.0.txt", (ROOT / "runtime-rhino/build.gradle").read_text())
         self.assertIn("sourcesJar", (ROOT / "runtime-rhino/build.gradle").read_text())
+    def test_possible_nullable_source_fidelity(self):
+        self.run_prepare()
+        text = (self.base / "generated/java/dev/latvian/mods/rhino/util/Possible.java").read_text()
+        self.assertIn("import org.jetbrains.annotations.Nullable;", text)
+        self.assertIn("@Nullable\n\tprivate final Object value;", text)
+        self.assertIn("Possible(@Nullable Object value)", text)
+        self.assertIn("@Nullable\n\tpublic Object value()", text)
+        self.assertIn("of(@Nullable T o)", text)
     def test_archive_bytes(self):
         bad = self.base / "bad.jar"; bad.write_bytes(ARCHIVE.read_bytes() + b"tamper")
         with self.assertRaisesRegex(ValueError, "pinned archive"): self.run_prepare(bad)

@@ -6,8 +6,8 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 23225,
-    "sha256": "37b83a7d98ee79a9e2fb54ee376b645a4148e9ab3870075ef553897586277db9",
+    "bytes": 23109,
+    "sha256": "6bc494bbbd7b27500c8da8ed57b3c8395ee15d68b14b9317f848614fa92fa463",
     "modified_upstream_files": 17,
     "added_source_files": 1,
     "hunks": 50,
@@ -3601,8 +3601,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.util.Possible",
       "source_bytes": 775,
       "source_sha256": "c75f32f25779174b0e1cf0dbd99aab397522594f9a59e1bf7f5dc08ba597e1b9",
-      "patched_bytes": 1085,
-      "patched_sha256": "4b7c6175984d58ad23ae06685d8065829847dba90c7aea4db7b7fd4ac25dda0c",
+      "patched_bytes": 1170,
+      "patched_sha256": "305239bb5da14ef14fb1b7a9273d5542d1b0456fbc5eae954fb95c66206aa34e",
       "modified": true,
       "line_count": 35,
       "license_evidence": [
