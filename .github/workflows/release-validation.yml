@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8]
         default: skills
         required: true
 permissions:
@@ -834,5 +834,125 @@ jobs:
         path: 'build/rhino-collections-java8-proof/
 
           runtime-rhino/build/test-results/
+
+          engine-core/build/test-results/'
+
+  recipe-context-java8:
+    if: inputs.scope == 'recipe-context-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify canonical Java 8 owners and original behavior
+      run: "python3 -c 'from pathlib import Path\nimport subprocess\nroot=Path(\"build/recipe-original-inputs\"\
+        ); root.mkdir(parents=True,exist_ok=False)\nfor name in ['\"'\"'engine-core/src/main/java/dev/openallay/context/IngredientAlternativeSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/IngredientRequirementSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/FluidRequirementSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeOutputSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeEntrySnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeReference.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/SourceObservationCollector.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/SourceObservation.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/ContextValidation.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataAuthority.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataCompleteness.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/ItemStackSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeLayoutSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeProcessingSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeProviderSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeSemanticGroup.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeCatalogDiagnostic.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeProviderDiagnostic.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeCanonicalizer.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeProviderState.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/recipe/RecipeUnlockState.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueType.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Collections.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Strings.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Hex.java'\"'\"\
+        ', '\"'\"'runtime-json/src/main/java/dev/openallay/json/JsonTrees.java'\"'\"\
+        ']:\n path=root/name; path.parent.mkdir(parents=True,exist_ok=True); path.write_bytes(subprocess.check_output([\"\
+        git\",\"show\",\"d629fff0511669bb5df9a5b94eb168bba1b5615a:\"+name]))'\n./gradlew\
+        \ --no-daemon -p engine-core/src/recipeContextJava8Test/gradle -Dorg.gradle.java.installations.paths=\"\
+        $JAVA_HOME_8_X64,$JAVA_HOME_21_X64\" originalRecipeContextOracle -PoriginalRecipeContextSourceRoot=\"\
+        $PWD/build/recipe-original-inputs\"\n./gradlew --no-daemon -p engine-core/src/recipeContextJava8Test/gradle\
+        \ -Dorg.gradle.java.installations.paths=\"$JAVA_HOME_8_X64,$JAVA_HOME_21_X64\"\
+        \ java8RecipeContextTest -PoriginalRecipeContextReport=\"$PWD/engine-core/src/recipeContextJava8Test/gradle/build/recipe-context-original-modern.txt\"\
+        \n./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.context.SourceObservationCollectorTest\
+        \ --tests dev.openallay.recipe.RecipeProviderSnapshotTest --tests dev.openallay.recipe.RecipeCatalogMergerTest\
+        \ --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest"
+    - name: Retain exact original owner and caller proof outputs
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: recipe-context-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'engine-core/src/recipeContextJava8Test/gradle/build/
+
+          engine-core/build/test-results/'
+
+  tool-schema-java8:
+    if: inputs.scope == 'tool-schema-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify canonical Java 8 owners and original behavior
+      run: './gradlew --no-daemon -p engine-core/src/toolSchemaJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64"
+        java8ToolSchemaTest -PjsonVerificationGsonVersion=2.8.0
+
+        ./gradlew --no-daemon -p engine-core/src/toolSchemaJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64"
+        java8ToolSchemaTest -PjsonVerificationGsonVersion=2.13.2
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.agent.tool.ToolSchemaGeneratorTest
+        --tests dev.openallay.agent.tool.ToolSchemaJava8CompatibilityTest --tests dev.openallay.trace.replay.ToolArgumentCodecTest
+        --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.json.ExplicitValueSchemaTest
+        --tests dev.openallay.tool.builtin.RunJavascriptIntentTest -PjsonVerificationGsonVersion=2.8.0
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.agent.tool.ToolSchemaJava8CompatibilityTest
+        -PjsonVerificationGsonVersion=2.13.2'
+    - name: Retain exact original owner and caller proof outputs
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: tool-schema-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'engine-core/src/toolSchemaJava8Test/gradle/build/
 
           engine-core/build/test-results/'
