@@ -1367,12 +1367,12 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify unchanged classfile writer byte emission and actual consumers
+    - name: Verify actual interpreter arithmetic call and keyword scanner behavior
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.classfile.WriterLanguageSwitchTest
+        --tests dev.latvian.mods.rhino.InterpreterScannerLanguageTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
-        --tests dev.openallay.script.RhinoJavascriptRuntimeTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
+        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
