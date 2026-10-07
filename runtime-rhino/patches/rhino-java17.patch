@@ -3334,9 +3334,192 @@
 -					stmt.setInlineComment(scannedComments.getLast());
 +				if (ntt == Token.COMMENT && stmt.getLineno() == ListCompat.getLast(scannedComments).getLineno()) {
 +					stmt.setInlineComment(ListCompat.getLast(scannedComments));
-@@ -3070 +3072 @@
+@@ -2252,7 +2254,9 @@
+-			addError(switch (symbol.getDeclType()) {
+-				case Token.LET -> "msg.let.redecl";
+-				case Token.VAR -> "msg.var.redecl";
+-				case Token.CONST -> "msg.const.redecl";
+-				case Token.FUNCTION -> "msg.fn.redecl";
+-				default -> "msg.parm.redecl";
+-			}, name);
++			String message;
++			switch (symbol.getDeclType()) {
++				case Token.LET: message = "msg.let.redecl"; break;
++				case Token.VAR: message = "msg.var.redecl"; break;
++				case Token.CONST: message = "msg.const.redecl"; break;
++				case Token.FUNCTION: message = "msg.fn.redecl"; break;
++				default: message = "msg.parm.redecl"; break;
++			}
++			addError(message, name);
+@@ -2272,2 +2276,6 @@
+-			case Token.LET, Token.VAR, Token.CONST, Token.FUNCTION, Token.LP -> currentScope.putSymbol(new AstSymbol(declType, name));
+-			default -> throw Kit.codeBug();
++			case Token.LET:
++			case Token.VAR:
++			case Token.CONST:
++			case Token.FUNCTION:
++			case Token.LP: currentScope.putSymbol(new AstSymbol(declType, name)); break;
++			default: throw Kit.codeBug();
+@@ -2491 +2499,4 @@
+-				case Token.EQ, Token.NE, Token.SHEQ, Token.SHNE -> {
++				case Token.EQ:
++				case Token.NE:
++				case Token.SHEQ:
++				case Token.SHNE: {
+@@ -2531 +2542,3 @@
+-				case Token.LSH, Token.URSH, Token.RSH -> {
++				case Token.LSH:
++				case Token.URSH:
++				case Token.RSH: {
+@@ -2561 +2574,3 @@
+-				case Token.MUL, Token.DIV, Token.MOD -> {
++				case Token.MUL:
++				case Token.DIV:
++				case Token.MOD: {
+@@ -2582 +2597,5 @@
+-			case Token.VOID, Token.NOT, Token.BITNOT, Token.TYPEOF, Token.DELPROP -> {
++			case Token.VOID:
++			case Token.NOT:
++			case Token.BITNOT:
++			case Token.TYPEOF:
++			case Token.DELPROP: {
+@@ -2588 +2607 @@
+-			case Token.ADD -> {
++			case Token.ADD: {
+@@ -2595 +2614 @@
+-			case Token.SUB -> {
++			case Token.SUB: {
+@@ -2602 +2621,2 @@
+-			case Token.INC, Token.DEC -> {
++			case Token.INC:
++			case Token.DEC: {
+@@ -2609 +2629 @@
+-			case Token.ERROR -> {
++			case Token.ERROR: {
+@@ -2613 +2633 @@
+-			default -> {
++			default: {
+@@ -3070 +3090 @@
 -				return arrayComprehension(elements.getFirst(), pos);
 +				return arrayComprehension(ListCompat.getFirst(elements), pos);
+@@ -3147 +3167,2 @@
+-				case Token.LB, Token.LC -> {
++				case Token.LB:
++				case Token.LC: {
+@@ -3151,2 +3172,4 @@
+-				}
+-				case Token.NAME -> {
++
++					break;
++				}
++				case Token.NAME: {
+@@ -3155,2 +3178,4 @@
+-				}
+-				default -> reportError("msg.bad.var");
++
++					break;
++				}
++				default: reportError("msg.bad.var"); break;
+@@ -3249 +3274,2 @@
+-				case Token.LB, Token.LC -> {
++				case Token.LB:
++				case Token.LC: {
+@@ -3253,2 +3279,4 @@
+-				}
+-				case Token.NAME -> {
++
++					break;
++				}
++				case Token.NAME: {
+@@ -3257,2 +3285,4 @@
+-				}
+-				default -> reportError("msg.bad.var");
++
++					break;
++				}
++				default: reportError("msg.bad.var"); break;
+@@ -3384 +3414 @@
+-					case PROP_ENTRY -> {
++					case PROP_ENTRY: {
+@@ -3386,0 +3417,2 @@
++
++						break;
+@@ -3388 +3420 @@
+-					case METHOD_ENTRY -> {
++					case METHOD_ENTRY: {
+@@ -3393,0 +3426,2 @@
++
++						break;
+@@ -3395 +3429 @@
+-					case GET_ENTRY -> {
++					case GET_ENTRY: {
+@@ -3399,0 +3434,2 @@
++
++						break;
+@@ -3401 +3437 @@
+-					case SET_ENTRY -> {
++					case SET_ENTRY: {
+@@ -3405,0 +3442,2 @@
++
++						break;
+@@ -3437,4 +3475,4 @@
+-			case Token.NAME -> pname = createNameNode();
+-			case Token.STRING -> pname = createStringLiteral();
+-			case Token.NUMBER -> pname = createNumberLiteral();
+-			case Token.LB -> {
++			case Token.NAME: pname = createNameNode(); break;
++			case Token.STRING: pname = createStringLiteral(); break;
++			case Token.NUMBER: pname = createNumberLiteral(); break;
++			case Token.LB: {
+@@ -3453,2 +3491,4 @@
+-			}
+-			case Token.MUL -> {
++
++				break;
++			}
++			case Token.MUL: {
+@@ -3463,2 +3503,4 @@
+-			}
+-			default -> {
++
++				break;
++			}
++			default: {
+@@ -3511 +3553 @@
+-			case GET_ENTRY -> {
++			case GET_ENTRY: {
+@@ -3514,2 +3556,4 @@
+-			}
+-			case SET_ENTRY -> {
++
++				break;
++			}
++			case SET_ENTRY: {
+@@ -3518,2 +3562,4 @@
+-			}
+-			case METHOD_ENTRY -> {
++
++				break;
++			}
++			case METHOD_ENTRY: {
+@@ -3521,0 +3568,2 @@
++
++				break;
+@@ -3758 +3806,3 @@
+-				case Token.CONST, Token.LET, Token.VAR -> reportError("msg.bad.assign.left");
++				case Token.CONST:
++				case Token.LET:
++				case Token.VAR: reportError("msg.bad.assign.left"); break;
+@@ -4093 +4143 @@
+-			case Token.NAME -> {
++			case Token.NAME: {
+@@ -4101 +4151,2 @@
+-			case Token.GETPROP, Token.GETELEM -> {
++			case Token.GETPROP:
++			case Token.GETELEM: {
+@@ -4135 +4186 @@
+-			case Token.GET_REF -> {
++			case Token.GET_REF: {
 --- a/dev/latvian/mods/rhino/ResolvedOverload.java
 +++ b/dev/latvian/mods/rhino/ResolvedOverload.java
 @@ -43 +43 @@
