@@ -93,7 +93,7 @@ final class OpenAiStreamAccumulator {
             return finishTurn();
         } catch (RuntimeException failure) {
             int incompleteTools = (int) tools.values().stream().filter(tool ->
-                    tool.id == null || tool.name.isEmpty() || tool.arguments.isEmpty()).count();
+                    tool.id == null || tool.name.length() == 0 || tool.arguments.length() == 0).count();
             dev.openallay.model.http.ModelTransportDiagnostics.openAiStreamFinish(
                     failure, model != null, stopReason != null, tools.size(), incompleteTools);
             throw failure;
@@ -105,10 +105,10 @@ final class OpenAiStreamAccumulator {
             throw new IllegalArgumentException("Incomplete OpenAI SSE message");
         }
         List<ModelContent> content = new ArrayList<>();
-        if (!text.isEmpty()) {
+        if (text.length() != 0) {
             content.add(new ModelContent.Text(text.toString()));
         }
-        if (!reasoning.isEmpty()) {
+        if (reasoning.length() != 0) {
             content.add(new ModelContent.Reasoning(reasoning.toString(), null));
         }
         for (Tool value : tools.values()) {

@@ -22,9 +22,11 @@ public final class ProviderToolIds {
         Set<String> ids = new HashSet<>();
         for (ModelMessage message : messages) {
             for (ModelContent content : message.content()) {
-                if (content instanceof ModelContent.ToolUse use) {
+                if (content instanceof ModelContent.ToolUse) {
+            ModelContent.ToolUse use = (ModelContent.ToolUse) content;
                     ids.add(use.id());
-                } else if (content instanceof ModelContent.ToolResult result) {
+                } else if (content instanceof ModelContent.ToolResult) {
+            ModelContent.ToolResult result = (ModelContent.ToolResult) content;
                     ids.add(result.toolUseId());
                 }
             }
@@ -39,7 +41,7 @@ public final class ProviderToolIds {
                 assigned.add(id);
             }
         }
-        for (String id : ids.stream().filter(value -> !providerSafe.test(value)).sorted().toList()) {
+        for (String id : dev.openallay.util.Java8Collections.toList(ids.stream().filter(value -> !providerSafe.test(value)).sorted())) {
             String base = digestId(id);
             String candidate = base;
             long suffix = 1;
@@ -50,7 +52,7 @@ public final class ProviderToolIds {
             }
             mapping.put(id, candidate);
         }
-        encoded = Map.copyOf(mapping);
+        encoded = dev.openallay.util.Java8Collections.mapCopyOf(mapping);
     }
 
     public static ProviderToolIds forOpenAiChat(List<ModelMessage> messages) {

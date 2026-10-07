@@ -30,10 +30,11 @@ public enum ModelReasoningEffort {
     /** Protocol-level choices only. A specific model or gateway can reject an explicit value. */
     public static List<ModelReasoningEffort> choices(ModelProtocol protocol) {
         Objects.requireNonNull(protocol, "protocol");
-        return switch (protocol) {
-            case OPENAI_CHAT -> List.of(values());
-            case ANTHROPIC_MESSAGES -> List.of(AUTO, LOW, MEDIUM, HIGH, XHIGH, MAX);
-        };
+        switch (protocol) {
+            case OPENAI_CHAT: return dev.openallay.util.Java8Collections.listOf(values());
+            case ANTHROPIC_MESSAGES: return dev.openallay.util.Java8Collections.listOf(AUTO, LOW, MEDIUM, HIGH, XHIGH, MAX);
+            default: throw new IncompatibleClassChangeError();
+        }
     }
 
     public void requireSupported(ModelProtocol protocol) {

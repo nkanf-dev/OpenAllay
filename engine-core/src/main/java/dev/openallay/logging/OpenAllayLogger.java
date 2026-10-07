@@ -1,13 +1,13 @@
 package dev.openallay.logging;
 
-import java.lang.System.Logger.Level;
+import java.util.logging.Level;
 
 /** Product logging for the engine's existing brace-formatted messages. */
 public final class OpenAllayLogger {
-    private final System.Logger logger;
+    private final java.util.logging.Logger logger;
 
     public OpenAllayLogger(String name) {
-        logger = System.getLogger(name);
+        logger = java.util.logging.Logger.getLogger(name);
     }
 
     public void info(String message, Object... arguments) {
@@ -19,7 +19,7 @@ public final class OpenAllayLogger {
     }
 
     public void error(String message, Object... arguments) {
-        log(Level.ERROR, message, arguments);
+        log(Level.SEVERE, message, arguments);
     }
 
     private void log(Level level, String message, Object[] arguments) {
@@ -27,8 +27,8 @@ public final class OpenAllayLogger {
             return;
         }
         int count = arguments.length;
-        Throwable failure = count > 0 && arguments[count - 1] instanceof Throwable throwable
-                ? throwable : null;
+        Throwable failure = count > 0 && arguments[count - 1] instanceof Throwable
+                ? (Throwable) arguments[count - 1] : null;
         if (failure != null) {
             count--;
         }

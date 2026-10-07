@@ -89,7 +89,8 @@ public final class AnthropicJsonCodec {
             encoded.addProperty("role", message.role() == ModelRole.USER ? "user" : "assistant");
             JsonArray content = new JsonArray();
             for (ModelContent block : message.content()) {
-                if (block instanceof ModelContent.Image image && image.originToolUseId() != null) {
+                if (block instanceof ModelContent.Image && ((ModelContent.Image) block).originToolUseId() != null) {
+                    ModelContent.Image image = (ModelContent.Image) block;
                     JsonObject label = new JsonObject();
                     label.addProperty("type", "text");
                     label.addProperty("text", dev.openallay.model.image.ModelImages.observationLabel(image.originToolUseId()));
@@ -165,23 +166,28 @@ public final class AnthropicJsonCodec {
             Function<ImageReference, JsonObject> imageEncoder) {
         JsonObject encoded = new JsonObject();
         Objects.requireNonNull(block);
-        if (block instanceof ModelContent.Text text) {
+        if (block instanceof ModelContent.Text) {
+            ModelContent.Text text = (ModelContent.Text) block;
             encoded.addProperty("type", "text");
             encoded.addProperty("text", text.text());
-        } else if (block instanceof ModelContent.Image image) {
+        } else if (block instanceof ModelContent.Image) {
+            ModelContent.Image image = (ModelContent.Image) block;
             return imageEncoder.apply(image.reference());
-        } else if (block instanceof ModelContent.Reasoning reasoning) {
+        } else if (block instanceof ModelContent.Reasoning) {
+            ModelContent.Reasoning reasoning = (ModelContent.Reasoning) block;
             encoded.addProperty("type", "thinking");
             encoded.addProperty("thinking", reasoning.text());
             if (reasoning.signature() != null) {
                 encoded.addProperty("signature", reasoning.signature());
             }
-        } else if (block instanceof ModelContent.ToolUse toolUse) {
+        } else if (block instanceof ModelContent.ToolUse) {
+            ModelContent.ToolUse toolUse = (ModelContent.ToolUse) block;
             encoded.addProperty("type", "tool_use");
             encoded.addProperty("id", toolIds.encode(toolUse.id()));
             encoded.addProperty("name", toolUse.name());
             encoded.add("input", toolUse.input());
-        } else if (block instanceof ModelContent.ToolResult result) {
+        } else if (block instanceof ModelContent.ToolResult) {
+            ModelContent.ToolResult result = (ModelContent.ToolResult) block;
             encoded.addProperty("type", "tool_result");
             encoded.addProperty("tool_use_id", toolIds.encode(result.toolUseId()));
             if (result.images().isEmpty()) {
@@ -264,18 +270,18 @@ public final class AnthropicJsonCodec {
     }
 
     private ModelContent decodeContent(JsonObject object) {
-        return switch (requiredString(object, "type")) {
-            case "text" -> new ModelContent.Text(requiredString(object, "text"));
-            case "thinking" -> new ModelContent.Reasoning(
+        switch (requiredString(object, "type")) {
+            case "text": return new ModelContent.Text(requiredString(object, "text"));
+            case "thinking": return new ModelContent.Reasoning(
                     requiredString(object, "thinking"),
                     object.has("signature") ? object.get("signature").getAsString() : null);
-            case "tool_use" -> new ModelContent.ToolUse(
+            case "tool_use": return new ModelContent.ToolUse(
                     requiredString(object, "id"),
                     requiredString(object, "name"),
                     object.getAsJsonObject("input"));
-            default -> throw new IllegalArgumentException(
+            default: throw new IllegalArgumentException(
                     "Unsupported Anthropic content type: " + requiredString(object, "type"));
-        };
+        }
     }
 
     private String providerToolResult(JsonElement value) {
@@ -286,11 +292,14 @@ public final class AnthropicJsonCodec {
 
     private static void emitCompleteBlock(ModelContent block, Consumer<ModelEvent> events) {
         Objects.requireNonNull(block);
-        if (block instanceof ModelContent.Text text) {
+        if (block instanceof ModelContent.Text) {
+            ModelContent.Text text = (ModelContent.Text) block;
             events.accept(new ModelEvent.TextDelta(text.text()));
-        } else if (block instanceof ModelContent.Reasoning reasoning) {
+        } else if (block instanceof ModelContent.Reasoning) {
+            ModelContent.Reasoning reasoning = (ModelContent.Reasoning) block;
             events.accept(new ModelEvent.ReasoningDelta(reasoning.text()));
-        } else if (block instanceof ModelContent.ToolUse toolUse) {
+        } else if (block instanceof ModelContent.ToolUse) {
+            ModelContent.ToolUse toolUse = (ModelContent.ToolUse) block;
             events.accept(new ModelEvent.ToolUseComplete(
                     toolUse.id(), toolUse.name(), toolUse.input()));
         } else if (block instanceof ModelContent.Image) {

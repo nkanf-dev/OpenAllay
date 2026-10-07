@@ -125,10 +125,9 @@ public final class OpenAiJsonCodec {
             JsonArray output,
             ProviderToolIds toolIds,
             Function<ImageReference, JsonObject> imageEncoder) {
-        List<ModelContent.ToolResult> results = message.content().stream()
+        List<ModelContent.ToolResult> results = dev.openallay.util.Java8Collections.toList(message.content().stream()
                 .filter(ModelContent.ToolResult.class::isInstance)
-                .map(ModelContent.ToolResult.class::cast)
-                .toList();
+                .map(ModelContent.ToolResult.class::cast));
         if (!results.isEmpty()) {
             for (ModelContent.ToolResult result : results) {
                 JsonObject encoded = new JsonObject();
@@ -167,7 +166,8 @@ public final class OpenAiJsonCodec {
         JsonArray toolCalls = new JsonArray();
         for (ModelContent block : message.content()) {
             Objects.requireNonNull(block);
-            if (block instanceof ModelContent.Text value) {
+            if (block instanceof ModelContent.Text) {
+            ModelContent.Text value = (ModelContent.Text) block;
                 if (multipart) {
                     JsonObject part = new JsonObject();
                     part.addProperty("type", "text");
@@ -176,7 +176,8 @@ public final class OpenAiJsonCodec {
                 } else {
                     text.append(value.text());
                 }
-            } else if (block instanceof ModelContent.Image value) {
+            } else if (block instanceof ModelContent.Image) {
+            ModelContent.Image value = (ModelContent.Image) block;
                 if (value.originToolUseId() != null) {
                     JsonObject label = new JsonObject();
                     label.addProperty("type", "text");
@@ -184,9 +185,11 @@ public final class OpenAiJsonCodec {
                     parts.add(label);
                 }
                 parts.add(imageEncoder.apply(value.reference()));
-            } else if (block instanceof ModelContent.Reasoning value) {
+            } else if (block instanceof ModelContent.Reasoning) {
+            ModelContent.Reasoning value = (ModelContent.Reasoning) block;
                 reasoning.append(value.text());
-            } else if (block instanceof ModelContent.ToolUse value) {
+            } else if (block instanceof ModelContent.ToolUse) {
+            ModelContent.ToolUse value = (ModelContent.ToolUse) block;
                 toolCalls.add(encodeToolCall(value, toolIds));
             } else if (block instanceof ModelContent.ToolResult) {
                 throw new IllegalStateException();
@@ -204,9 +207,9 @@ public final class OpenAiJsonCodec {
         if (multipart) {
             encoded.add("content", parts);
         } else {
-            encoded.addProperty("content", text.isEmpty() ? null : text.toString());
+            encoded.addProperty("content", text.length() == 0 ? null : text.toString());
         }
-        if (!reasoning.isEmpty()) {
+        if (reasoning.length() != 0) {
             encoded.addProperty("reasoning_content", reasoning.toString());
         }
         if (!(toolCalls.size() == 0)) {
