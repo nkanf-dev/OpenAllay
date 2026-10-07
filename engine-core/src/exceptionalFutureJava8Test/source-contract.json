@@ -1,0 +1,15 @@
+{
+  "scope": "StandardCompletableFuture defaultasync executor/commonPool semantics only. ExistingGameGuideAgent uses standard futures. Custom CompletableFuture subclasses/defaultExecutor overrides are NOTclaimed.",
+  "sources": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "be44b1a5deed7cd847fa1d6bc9acaf0a11fefe8ad6367ade750ac0e770a43268"
+    },
+    {
+      "path": "engine-core/src/exceptionalFutureJava8Test/java/dev/openallay/util/ExceptionalFutureJava8Fixture.java",
+      "sha256": "16eebf1b6681120e2677c6bea613d312cfed78e340ca293b1f18e1901e9fa004"
+    }
+  ],
+  "runner_sha256": "ddc8efd89fc7c3b1edb4e2f88f16a30ce95f7b902b8144489cb41eac100d9a5f",
+  "semantic_cases": "normalfastpath/recoveryonce/asyncdifferentthread/exactfailureandcallbackthrow/nullablevalue/sourcecancel/downstreamcancelwithnoncooperativecallback"
+}
