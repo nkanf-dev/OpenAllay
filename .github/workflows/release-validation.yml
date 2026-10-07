@@ -1367,13 +1367,12 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify canonical guarded bindings and constant dispatch
+    - name: Verify canonical guest dispatch binding evaluation
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.BindingEqualityTest --tests dev.latvian.mods.rhino.type.TypeBindingEqualityTest
-        --tests dev.latvian.mods.rhino.classfile.ClassfileBindingEqualityTest
+        --tests dev.latvian.mods.rhino.BindingDispatchTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
-        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
+        --tests dev.openallay.script.RhinoJavascriptStringGuardTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
