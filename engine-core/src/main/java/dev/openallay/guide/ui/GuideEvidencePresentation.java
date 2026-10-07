@@ -285,15 +285,34 @@ $oaSwitch2_exit_result = "test"; break $oaSwitch2_exit;
 default: throw new java.lang.IncompatibleClassChangeError();
 }
 }
+{
+final java.lang.String $oaSwitch0_exit_result_prior1 = $oaSwitch2_exit_result_prior1;
+final java.lang.String $oaSwitch0_exit_result_prior2 = $oaSwitch2_exit_result_prior0 + $oaSwitch2_exit_result;
+final java.lang.String $oaSwitch0_exit_result_prior0 = "screen.openallay.detail.tool.coverage.";
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((evidence.completeness())) {
+case COMPLETE:
+{
+$oaSwitch0_exit_result = "complete"; break $oaSwitch0_exit;
+}
+case PARTIAL:
+{
+$oaSwitch0_exit_result = "partial"; break $oaSwitch0_exit;
+}
+case UNKNOWN:
+{
+$oaSwitch0_exit_result = "unknown"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
 return new GuideEvidencePresentation(
-                $oaSwitch2_exit_result_prior1,
-                $oaSwitch2_exit_result_prior0 + $oaSwitch2_exit_result,
-                "screen.openallay.detail.tool.coverage." + switch (evidence.completeness()) {
-                    case COMPLETE -> "complete";
-                    case PARTIAL -> "partial";
-                    case UNKNOWN -> "unknown";
-                },
+                $oaSwitch0_exit_result_prior1,
+                $oaSwitch0_exit_result_prior2,
+                $oaSwitch0_exit_result_prior0 + $oaSwitch0_exit_result,
                 evidence.capturedAt());
+}
 }
     }
     @Override public boolean equals(Object other) {

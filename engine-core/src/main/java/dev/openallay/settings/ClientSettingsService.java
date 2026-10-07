@@ -1844,10 +1844,23 @@ final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
 if ((($oaPattern7_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern7_holder.bound = (ToolResult.Success<ModelState>) $oaPattern7_holder.value) != null))) {
                 modelState = $oaPattern7_holder.bound.value();
                 connectionResult = null;
-                notice = SettingsNotice.success(successCode, switch (successCode) {
-                    case "models_reloaded" -> "Model settings reloaded";
-                    default -> "Model settings saved";
-                });
+                {
+final java.lang.String $oaSwitch1_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((successCode)) {
+case "models_reloaded":
+{
+$oaSwitch1_exit_result = "Model settings reloaded"; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = "Model settings saved"; break $oaSwitch1_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch1_exit_result_prior0, $oaSwitch1_exit_result);
+}
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
                 ToolResult.Failure<ModelState> failure =
@@ -1944,11 +1957,27 @@ if ((($oaPattern9_holder.value = completed) instanceof dev.openallay.tool.ToolRe
 final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
 if ((($oaPattern10_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern10_holder.bound = (ToolResult.Success<SkillSettingsView>) $oaPattern10_holder.value) != null))) {
                 skillState = $oaPattern10_holder.bound.value();
-                notice = SettingsNotice.success(successCode, switch (successCode) {
-                    case "skills_reloaded" -> "Skills reloaded";
-                    case "skill_override_deleted" -> "Skill override deleted";
-                    default -> "Skill override saved";
-                });
+                {
+final java.lang.String $oaSwitch3_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch3_exit_result;
+$oaSwitch3_exit: {
+switch ((successCode)) {
+case "skills_reloaded":
+{
+$oaSwitch3_exit_result = "Skills reloaded"; break $oaSwitch3_exit;
+}
+case "skill_override_deleted":
+{
+$oaSwitch3_exit_result = "Skill override deleted"; break $oaSwitch3_exit;
+}
+default:
+{
+$oaSwitch3_exit_result = "Skill override saved"; break $oaSwitch3_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch3_exit_result_prior0, $oaSwitch3_exit_result);
+}
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
                 ToolResult.Failure<SkillSettingsView> failure =
@@ -1982,11 +2011,27 @@ if ((($oaPattern10_holder.value = completed) instanceof dev.openallay.tool.ToolR
                             skillActions.currentView(), "current Skill projection");
                     skillCommunityState = updatedCommunity;
                     skillState = updatedSkills;
-                    notice = SettingsNotice.success(successCode, switch (successCode) {
-                        case "skill_catalog_refreshed" -> "Skill community catalog refreshed";
-                        case "skill_package_imported" -> "Skill package imported";
-                        default -> "Community Skill installed";
-                    });
+                    {
+final java.lang.String $oaSwitch7_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch7_exit_result;
+$oaSwitch7_exit: {
+switch ((successCode)) {
+case "skill_catalog_refreshed":
+{
+$oaSwitch7_exit_result = "Skill community catalog refreshed"; break $oaSwitch7_exit;
+}
+case "skill_package_imported":
+{
+$oaSwitch7_exit_result = "Skill package imported"; break $oaSwitch7_exit;
+}
+default:
+{
+$oaSwitch7_exit_result = "Community Skill installed"; break $oaSwitch7_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch7_exit_result_prior0, $oaSwitch7_exit_result);
+}
                     result = new ToolResult.Success<>(Boolean.TRUE);
                 } catch (RuntimeException failure) {
                     notice = SettingsNotice.failure(
@@ -2037,15 +2082,31 @@ if (thrown == null
                     && (($oaPattern12_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern12_holder.bound = (ToolResult.Success<ExtensionSettingsView>) $oaPattern12_holder.value) != null))) {
                 extensionState = Objects.requireNonNull(
                         $oaPattern12_holder.bound.value(), "updated Extension projection");
-                notice = SettingsNotice.success(successCode, switch (successCode) {
-                    case "extension_capability_saved" ->
-                            "Extension capability settings saved";
-                    case "extension_catalog_refreshed" ->
-                            "Extension community catalog refreshed";
-                    case "extension_package_imported" ->
-                            "Extension package staged; restart Minecraft to activate it";
-                    default -> "Community Extension staged; restart Minecraft to activate it";
-                });
+                {
+final java.lang.String $oaSwitch10_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch10_exit_result;
+$oaSwitch10_exit: {
+switch ((successCode)) {
+case "extension_capability_saved":
+{
+$oaSwitch10_exit_result = "Extension capability settings saved"; break $oaSwitch10_exit;
+}
+case "extension_catalog_refreshed":
+{
+$oaSwitch10_exit_result = "Extension community catalog refreshed"; break $oaSwitch10_exit;
+}
+case "extension_package_imported":
+{
+$oaSwitch10_exit_result = "Extension package staged; restart Minecraft to activate it"; break $oaSwitch10_exit;
+}
+default:
+{
+$oaSwitch10_exit_result = "Community Extension staged; restart Minecraft to activate it"; break $oaSwitch10_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch10_exit_result_prior0, $oaSwitch10_exit_result);
+}
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
                 try {
@@ -2161,11 +2222,27 @@ if ((($oaPattern15_holder.value = completed) instanceof dev.openallay.tool.ToolR
         CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
         CompletableFuture<ToolResult<Boolean>> operationFuture;
         try {
-            operationFuture = switch (action) {
-                case DELETE_CURRENT -> historyActions.deleteCurrentHistory();
-                case DELETE_ACTOR -> historyActions.deleteActorHistory();
-                case RESET_DATABASE -> historyActions.resetHistoryDatabase();
-            };
+            {
+java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<java.lang.Boolean>> $oaSwitch5_exit_result;
+$oaSwitch5_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch5_exit_result = historyActions.deleteCurrentHistory(); break $oaSwitch5_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch5_exit_result = historyActions.deleteActorHistory(); break $oaSwitch5_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch5_exit_result = historyActions.resetHistoryDatabase(); break $oaSwitch5_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+operationFuture = $oaSwitch5_exit_result;
+}
             Objects.requireNonNull(operationFuture, "history action future");
         } catch (RuntimeException failure) {
             operationFuture = CompletableFuture.completedFuture(new ToolResult.Failure<>(
@@ -2196,11 +2273,25 @@ if ((($oaPattern15_holder.value = completed) instanceof dev.openallay.tool.ToolR
             operation = SettingsOperation.idle();
             historyState = refreshed;
             if (thrown == null && completed instanceof ToolResult.Success<Boolean>) {
-                String code = switch (action) {
-                    case DELETE_CURRENT -> "history_current_deleted";
-                    case DELETE_ACTOR -> "history_actor_deleted";
-                    case RESET_DATABASE -> "history_database_reset";
-                };
+                java.lang.String $oaSwitch4_exit_result;
+$oaSwitch4_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch4_exit_result = "history_current_deleted"; break $oaSwitch4_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch4_exit_result = "history_actor_deleted"; break $oaSwitch4_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch4_exit_result = "history_database_reset"; break $oaSwitch4_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String code = $oaSwitch4_exit_result;
                 notice = SettingsNotice.success(code, "Guide history updated");
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
@@ -2470,30 +2561,65 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
         boolean busy = !state.activity().idleForDeletion()
                 || active > 0
                 || guide.persistence().state() == GuidePersistenceSnapshot.State.SAVING;
-        HistorySettingsView.Health health = !state.configured()
-                ? HistorySettingsView.Health.UNAVAILABLE
-                : switch (guide.persistence().state()) {
-                    case AVAILABLE -> busy
+        dev.openallay.settings.history.HistorySettingsView.Health $oaSwitch9_exit_result_conditional0;
+if (!state.configured()) {
+$oaSwitch9_exit_result_conditional0 = HistorySettingsView.Health.UNAVAILABLE;
+} else {
+dev.openallay.settings.history.HistorySettingsView.Health $oaSwitch9_exit_result;
+$oaSwitch9_exit: {
+switch ((guide.persistence().state())) {
+case AVAILABLE:
+{
+$oaSwitch9_exit_result = busy
                             ? HistorySettingsView.Health.WORKING
-                            : HistorySettingsView.Health.READY;
-                    case LOADING, SAVING -> HistorySettingsView.Health.WORKING;
-                    case DISABLED -> HistorySettingsView.Health.ATTENTION;
-                    case UNAVAILABLE -> HistorySettingsView.Health.UNAVAILABLE;
-                };
+                            : HistorySettingsView.Health.READY; break $oaSwitch9_exit;
+}
+case LOADING:
+case SAVING:
+{
+$oaSwitch9_exit_result = HistorySettingsView.Health.WORKING; break $oaSwitch9_exit;
+}
+case DISABLED:
+{
+$oaSwitch9_exit_result = HistorySettingsView.Health.ATTENTION; break $oaSwitch9_exit;
+}
+case UNAVAILABLE:
+{
+$oaSwitch9_exit_result = HistorySettingsView.Health.UNAVAILABLE; break $oaSwitch9_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+$oaSwitch9_exit_result_conditional0 = $oaSwitch9_exit_result;
+}
+HistorySettingsView.Health health = $oaSwitch9_exit_result_conditional0;
         boolean normalAvailable = state.configured()
                 && !busy
                 && guide.persistence().state() == GuidePersistenceSnapshot.State.AVAILABLE;
         boolean resetAvailable = state.configured()
                 && !busy
                 && guide.persistence().state() != GuidePersistenceSnapshot.State.LOADING;
-        return new HistorySettingsView(
-                switch (state.scopeKind()) {
-                    case NONE -> HistorySettingsView.ConnectionKind.NONE;
-                    case SINGLEPLAYER_WORLD ->
-                            HistorySettingsView.ConnectionKind.SINGLEPLAYER_WORLD;
-                    case MULTIPLAYER_SERVER ->
-                            HistorySettingsView.ConnectionKind.MULTIPLAYER_SERVER;
-                },
+        {
+dev.openallay.settings.history.HistorySettingsView.ConnectionKind $oaSwitch8_exit_result;
+$oaSwitch8_exit: {
+switch ((state.scopeKind())) {
+case NONE:
+{
+$oaSwitch8_exit_result = HistorySettingsView.ConnectionKind.NONE; break $oaSwitch8_exit;
+}
+case SINGLEPLAYER_WORLD:
+{
+$oaSwitch8_exit_result = HistorySettingsView.ConnectionKind.SINGLEPLAYER_WORLD; break $oaSwitch8_exit;
+}
+case MULTIPLAYER_SERVER:
+{
+$oaSwitch8_exit_result = HistorySettingsView.ConnectionKind.MULTIPLAYER_SERVER; break $oaSwitch8_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return new HistorySettingsView(
+                $oaSwitch8_exit_result,
                 health,
                 state.activity().pendingWrites(),
                 state.activity().deleting(),
@@ -2501,6 +2627,7 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
                 normalAvailable,
                 normalAvailable,
                 resetAvailable);
+}
     }
 
     private static long activeRequestCount(GuideSnapshot guide) {
@@ -2511,11 +2638,27 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
     }
 
     private static SettingsOperation historyOperation(HistoryAction action) {
-        return SettingsOperation.domain(switch (action) {
-            case DELETE_CURRENT -> SettingsOperation.Kind.DELETING_CURRENT_HISTORY;
-            case DELETE_ACTOR -> SettingsOperation.Kind.DELETING_ACTOR_HISTORY;
-            case RESET_DATABASE -> SettingsOperation.Kind.RESETTING_HISTORY_DATABASE;
-        });
+        {
+dev.openallay.settings.SettingsOperation.Kind $oaSwitch6_exit_result;
+$oaSwitch6_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch6_exit_result = SettingsOperation.Kind.DELETING_CURRENT_HISTORY; break $oaSwitch6_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch6_exit_result = SettingsOperation.Kind.DELETING_ACTOR_HISTORY; break $oaSwitch6_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch6_exit_result = SettingsOperation.Kind.RESETTING_HISTORY_DATABASE; break $oaSwitch6_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return SettingsOperation.domain($oaSwitch6_exit_result);
+}
     }
 
     private static <T> ToolResult<T> confirmationRequired() {
@@ -2531,10 +2674,23 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
     }
 
     private static ToolResult<Boolean> failed(String code) {
-        return new ToolResult.Failure<>(code, switch (code) {
-            case "settings_closed" -> "Settings are closed";
-            default -> "Another settings operation is already running";
-        });
+        {
+final java.lang.String $oaSwitch0_exit_result_prior0 = code;
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((code)) {
+case "settings_closed":
+{
+$oaSwitch0_exit_result = "Settings are closed"; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = "Another settings operation is already running"; break $oaSwitch0_exit;
+}
+}
+}
+return new ToolResult.Failure<>($oaSwitch0_exit_result_prior0, $oaSwitch0_exit_result);
+}
     }
 
     private static ModelConnectionResult.Failure connectionFailure(
@@ -2543,11 +2699,26 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
     }
 
     private static String safeProbeMessage(String code) {
-        return switch (code) {
-            case "model_not_configured" -> "The configured credential is unavailable";
-            case "model_disabled" -> "The model profile is disabled";
-            default -> "The model profile is invalid";
-        };
+        {
+java.lang.String $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((code)) {
+case "model_not_configured":
+{
+$oaSwitch2_exit_result = "The configured credential is unavailable"; break $oaSwitch2_exit;
+}
+case "model_disabled":
+{
+$oaSwitch2_exit_result = "The model profile is disabled"; break $oaSwitch2_exit;
+}
+default:
+{
+$oaSwitch2_exit_result = "The model profile is invalid"; break $oaSwitch2_exit;
+}
+}
+}
+return $oaSwitch2_exit_result;
+}
     }
 
     private static <T> ToolResult<T> safely(
