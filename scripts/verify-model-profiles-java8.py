@@ -15,9 +15,10 @@ def sha(blob): return hashlib.sha256(blob).hexdigest()
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--project",type=Path,required=True);p.add_argument("--source-packet",type=Path,required=True)
-    p.add_argument("--javac",type=Path,required=True);p.add_argument("--java",type=Path,required=True)
-    p.add_argument("--javac8",type=Path,required=True);p.add_argument("--java8",type=Path,required=True)
-    p.add_argument("--gson",type=Path,action="append",required=True);p.add_argument("--output",type=Path,required=True)
+    p.add_argument("--verify-source-custody",action="store_true",help="Source/hash/currentcanonical equality only, no runtime replay")
+    p.add_argument("--javac",type=Path);p.add_argument("--java",type=Path)
+    p.add_argument("--javac8",type=Path);p.add_argument("--java8",type=Path)
+    p.add_argument("--gson",type=Path,action="append");p.add_argument("--output",type=Path,required=True)
     a=p.parse_args();project=a.project.resolve();packet=a.source_packet.resolve();out=a.output.resolve()
     if out==project or project in out.parents: raise ValueError("External fresh output required")
     out.mkdir(parents=True,exist_ok=False)
@@ -39,6 +40,13 @@ def main():
             if sha(blob)!=row[side+"_sha256"] or len(blob)!=row[side+"_bytes"]: raise ValueError("Candidate source changed")
         name=row["path"].removeprefix("engine-core/src/main/java/")
         if row["pre_sha256"]!=recipe["rawPreimageSha256"][name]: raise ValueError("Originalowner changed")
+        target=contract["normalizedCanonicalTargets"][row["path"]];current=(project/row["path"]).read_bytes()
+        if sha(current)!=target["sha256"] or len(current)!=target["bytes"] or row["post_sha256"]!=target["sha256"] or row["post_bytes"]!=target["bytes"]:raise ValueError("Candidate/currentnormalized owner equality failed")
+    history=json.loads((packet/"historical-source-custody.json").read_text())
+    if len(history)!=6 or {r["path"] for r in history}!=changed:raise ValueError("Historical6owner boundary differs")
+    for row in history:
+        name=row["path"].removeprefix("engine-core/src/main/java/")
+        if row["sourceCommit"]!=recipe["acceptedSourceCommit"] or row["gitBlob"]!=recipe["rawPreimageGitBlob"][name] or row["rawSha256"]!=recipe["rawPreimageSha256"][name]:raise ValueError("Historical rawsource receipt differs")
     patch=(packet/"source.patch").read_bytes()
     if sha(patch)!=manifest["patch_sha256"] or len(patch)!=manifest["patch_bytes"]: raise ValueError("Canonical patch changed")
     for row in contract["sharedSourcePins"]:
@@ -47,6 +55,13 @@ def main():
     for row in contract["resourcePins"]:
         blob=(project/row["path"]).read_bytes()
         if sha(blob)!=row["sha256"] or len(blob)!=row["bytes"]:raise ValueError("Actualcatalog resource changed")
+    if a.verify_source_custody:
+        (out/"source-custody-receipt.json").write_text(json.dumps({"sourceContractSha256":sha(contract_path.read_bytes()),"materializerManifestSha256":sha(manifest_path.read_bytes()),
+            "historicalSourceReceiptSha256":sha((packet/"historical-source-custody.json").read_bytes()),"normalizedCanonicalOwners":contract["normalizedCanonicalTargets"],
+            "sourceEqualityVerified":True,"runtimeReexecuted":False,"preservedRuntimeOracle":contract["preservedRuntimeOracle"]},indent=2)+"\n")
+        print("PASS profiles historicalGit/current normalizedsource custody; no runtime reexecution")
+        return
+    if not all([a.javac,a.java,a.javac8,a.java8,a.gson]):raise ValueError("Runtime mode requires both actualcompiler/runtime pairs/Gsonhosts")
     if len(a.gson)!=2: raise ValueError("Require exactly two approved Gson hosts")
     libraries=[];seen=set()
     for gson in a.gson:

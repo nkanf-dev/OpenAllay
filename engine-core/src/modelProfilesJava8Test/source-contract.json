@@ -316,15 +316,15 @@
   "artifactPins": {
     "recipe": {
       "path": "engine-core/src/modelProfilesJava8Test/recipe.json",
-      "sha256": "a0b70e6417e871da18f91c721f63e6acf45d8ae584ff93649c4f89d17d70b9dc"
+      "sha256": "c0a4097ab9fcb864a555dd4b3cb50ae3485b422c95c98444c560f5be7dea7812"
     },
     "materializer": {
       "path": "scripts/materialize-model-profiles-java8.py",
-      "sha256": "c8e65e102760913136849299f391fef5fd09f12057454dbffbbd2a18ac355f7e"
+      "sha256": "70619b4537e6bfb72c6cac5ee2cebe1556b1b8ee8451c56f363d741005018915"
     },
     "runner": {
       "path": "scripts/verify-model-profiles-java8.py",
-      "sha256": "f4ead89983b93ab59692281ff435a2d50b6611ba6df8d4dd552b48779c60cae7"
+      "sha256": "5e06184caf3046e6606b72011ae8b336eed50543156ef7c9de9808e0532c3c5d"
     },
     "fixture": {
       "path": "engine-core/src/modelProfilesJava8Test/java/dev/openallay/model/config/ModelProfilesJava8Fixture.java",
@@ -337,5 +337,40 @@
       "bytes": 921593,
       "sha256": "8c104f1c7edec22cd967d3c941cba1f2aa5c82a1ad9532547e1c95016002ad32"
     }
-  ]
+  ],
+  "normalizedCanonicalTargets": {
+    "engine-core/src/main/java/dev/openallay/model/config/ModelConfigLoader.java": {
+      "sha256": "e4b042bad05f3e732e9bbd84aa14fb7df68a1d94f8d6b72e66126c5f35abbc8d",
+      "bytes": 11407
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelProfileDefinition.java": {
+      "sha256": "deddf8b2e172b8f3903950613af344571ea4534e5245cd711624fda815ea9a65",
+      "bytes": 16335
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelProfilesConfig.java": {
+      "sha256": "2c31b3dedef619164f154c238e3c8d4eb78dcd3213bcba9998155ca453b788b7",
+      "bytes": 2886
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelProfilesConfigLoader.java": {
+      "sha256": "5d387416ed0579246c8c64f619cef33525c03cf5a71e06ea1a93f073ffe5d19a",
+      "bytes": 17038
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelProfilesConfigWriter.java": {
+      "sha256": "8df781be35d2a684a8de7a3952ab42fb2f4c1700e0d3a438ab2a62806104415e",
+      "bytes": 3505
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ResolvedModelProfile.java": {
+      "sha256": "7bdb408f0a1050cbbaf5cff1d2877de63a64ced3d21c0e24142c7e902e052875",
+      "bytes": 14300
+    }
+  },
+  "preservedRuntimeOracle": {
+    "run": 37573180593,
+    "scope": "Complete51actualproduction source/original17-release8-truejavac8 six49vector executions,twoGsonhosts identicalreports",
+    "sourceAppliedCommit": "6ce83725253759264ac6bca74d9015799771f279",
+    "actualAcceptedPatchSha256": "b269ffda0270e94d95fdbc53a961adee7525f7bef70eb9d9306300f9f8776f48",
+    "reportSha256": "bd246d1e5e4a11f44356edea3c9295fe6c869c2c56b5656bc7fbe7002b4b7666",
+    "runtimeReexecuted": false
+  },
+  "historicalReplay": "Actualraw6Git blobs from preapply0dda2b830843c6777babee733c788dd8c676a620, existingrawGit/SHA256pins,currentcanonical equality, no mutableoverlay/sourcecopies"
 }

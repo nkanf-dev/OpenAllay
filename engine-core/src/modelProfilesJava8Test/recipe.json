@@ -1,5 +1,5 @@
 {
-  "acceptedSourceCommit": "ded3add1ad64b9601c154650d2b39b635cb03f55",
+  "acceptedSourceCommit": "0dda2b830843c6777babee733c788dd8c676a620",
   "scope": "Complete canonical model/profile configuration parsing/resolution/serialization values; no clientregistry method slicing or credential/metadata edits",
   "recordPass1": {
     "dev/openallay/model/config/ModelProfileDefinition.java": [
