@@ -2443,7 +2443,8 @@ jobs:
       run: 'mkdir -p "$RUNNER_TEMP/pattern-tool"
 
         "$JAVA_HOME_17_X64/bin/javac" --release 17 -encoding UTF-8 -d "$RUNNER_TEMP/pattern-tool"
-        build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java scripts/pattern-language-port/CanonicalPatternPortFixture.java
+        build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java
+        scripts/pattern-language-port/CanonicalPatternPortFixture.java
 
         "$JAVA_HOME_17_X64/bin/java" -cp "$RUNNER_TEMP/pattern-tool" dev.openallay.build.CanonicalPatternPortFixture
         "$RUNNER_TEMP/pattern-oracle" "$JAVA_HOME_17_X64/bin/java" "$JAVA_HOME_8_X64/bin/javac"
