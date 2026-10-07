@@ -14,7 +14,8 @@ import javax.tools.*;
 public final class CanonicalVarTypePort {
     public record Site(String path, long start, String variable, String type) {}
     public record Result(List<Site> sites, Map<String, Integer> parsedCounts,
-                         int sources, int allParsedSites, Map<String, Integer> rejected) {}
+                         int sources, int allParsedSites, Map<String, Integer> rejected,
+                         Map<String, Map<String, Integer>> rejectedByOwner) {}
     private record Candidate(CompilationUnitTree unit, TreePath path, long start,
                              String relative, String variable) {}
 
@@ -189,6 +190,7 @@ public final class CanonicalVarTypePort {
             if (!errors.isEmpty()) throw new IllegalStateException("All-source attribution failed (" + errors.size() + "): " + String.join("\n", errors));
             List<Site> sites = new ArrayList<>();
             Map<String, Integer> rejected = new TreeMap<>();
+            Map<String, Map<String, Integer>> rejectedByOwner = new TreeMap<>();
             for (Candidate candidate : candidates) {
                 try {
                     Element element = trees.getElement(candidate.path());
@@ -199,10 +201,12 @@ public final class CanonicalVarTypePort {
                     sites.add(new Site(candidate.relative(), candidate.start(), candidate.variable(), rendered));
                 } catch (IllegalArgumentException failure) {
                     rejected.merge(failure.getMessage(), 1, Integer::sum);
+                    rejectedByOwner.computeIfAbsent(candidate.relative(), ignored -> new TreeMap<>())
+                            .merge(failure.getMessage(), 1, Integer::sum);
                 }
             }
             sites.sort(Comparator.comparing(Site::path).thenComparingLong(Site::start));
-            return new Result(List.copyOf(sites), Collections.unmodifiableMap(counts), files.size(), allSites[0], Collections.unmodifiableMap(rejected));
+            return new Result(List.copyOf(sites), Collections.unmodifiableMap(counts), files.size(), allSites[0], Collections.unmodifiableMap(rejected), Collections.unmodifiableMap(rejectedByOwner));
         }
     }
 
