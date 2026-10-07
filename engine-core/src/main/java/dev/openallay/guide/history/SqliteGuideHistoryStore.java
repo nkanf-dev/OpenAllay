@@ -100,20 +100,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             recoverInterruptedRows(connection, scope);
             header = readHeader(connection, scope);
             List<GuideHistoryMetadata.Session> sessions = new ArrayList<>();
-            try (PreparedStatement query = connection.prepareStatement("""
-                    select s.session_id, s.ordinal, s.model_selection_json, s.control_usage_json,
-                           count(r.request_id) as request_count,
-                           min(r.sequence) as first_sequence,
-                           max(r.sequence) as last_sequence,
-                           (select coalesce(max(m.ordinal), -1) + 1 from messages m
-                            where m.scope_id = s.scope_id and m.session_id = s.session_id) as message_count
-                    from sessions s
-                    left join requests r
-                      on r.scope_id = s.scope_id and r.session_id = s.session_id
-                    where s.scope_id = ?
-                    group by s.session_id, s.ordinal, s.model_selection_json, s.control_usage_json
-                    order by s.ordinal
-                    """)) {
+            try (PreparedStatement query = connection.prepareStatement("select s.session_id, s.ordinal, s.model_selection_json, s.control_usage_json,\n       count(r.request_id) as request_count,\n       min(r.sequence) as first_sequence,\n       max(r.sequence) as last_sequence,\n       (select coalesce(max(m.ordinal), -1) + 1 from messages m\n        where m.scope_id = s.scope_id and m.session_id = s.session_id) as message_count\nfrom sessions s\nleft join requests r\n  on r.scope_id = s.scope_id and r.session_id = s.session_id\nwhere s.scope_id = ?\ngroup by s.session_id, s.ordinal, s.model_selection_json, s.control_usage_json\norder by s.ordinal\n")) {
                 query.setString(1, scope.scopeId());
                 try (ResultSet result = query.executeQuery()) {
                     while (result.next()) {
@@ -153,10 +140,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private GuideUsageSnapshot sessionUsage(
             Connection connection, String scopeId, String sessionId, boolean inherited) throws SQLException {
         GuideUsageSnapshot total = GuideUsageSnapshot.empty();
-        try (PreparedStatement query = connection.prepareStatement("""
-                select usage_projection_json from requests
-                where scope_id = ? and session_id = ? and
-                """ + (inherited ? "usage_origin_request_id is not null" : "usage_origin_request_id is null"))) {
+        try (PreparedStatement query = connection.prepareStatement("select usage_projection_json from requests\nwhere scope_id = ? and session_id = ? and\n" + (inherited ? "usage_origin_request_id is not null" : "usage_origin_request_id is null"))) {
             query.setString(1, scopeId);
             query.setString(2, sessionId);
             try (ResultSet result = query.executeQuery()) {
@@ -246,10 +230,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
 
     private List<ModelMessage> readRequestContext(
             Connection connection, String scopeId, UUID requestId) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("""
-                select payload_json from request_model_context
-                where scope_id = ? and request_id = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select payload_json from request_model_context\nwhere scope_id = ? and request_id = ?\n")) {
             query.setString(1, scopeId);
             query.setString(2, requestId.toString());
             try (ResultSet result = query.executeQuery()) {
@@ -261,9 +242,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
 
     private List<ModelMessage> readContext(
             Connection connection, String scopeId, String sessionId) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("""
-                select payload_json from model_context where scope_id = ? and session_id = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select payload_json from model_context where scope_id = ? and session_id = ?\n")) {
             query.setString(1, scopeId);
             query.setString(2, sessionId);
             try (ResultSet result = query.executeQuery()) {
@@ -426,10 +405,7 @@ if ($oaPattern4_match) throw $oaPattern4_bound;
             }
         }
         List<SequencedRequest> source = new ArrayList<>();
-        try (PreparedStatement query = connection.prepareStatement(requestColumns() + """
-                from requests where scope_id = ? and session_id = ? and sequence <= ?
-                order by sequence
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement(requestColumns() + "from requests where scope_id = ? and session_id = ? and sequence <= ?\norder by sequence\n")) {
             query.setString(1, scopeId);
             query.setString(2, fork.sourceSessionId());
             query.setLong(3, fork.cutoff().sequence());
@@ -473,10 +449,7 @@ if ($oaPattern4_match) throw $oaPattern4_bound;
             }
         }
         int messageOrdinal = 0;
-        try (PreparedStatement query = connection.prepareStatement("""
-                select ordinal, request_id, role, message_text, created_at from messages
-                where scope_id = ? and session_id = ? order by ordinal
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select ordinal, request_id, role, message_text, created_at from messages\nwhere scope_id = ? and session_id = ? order by ordinal\n")) {
             query.setString(1, scopeId);
             query.setString(2, fork.sourceSessionId());
             try (ResultSet result = query.executeQuery()) {
@@ -570,12 +543,7 @@ String columns = $oaSwitch1_exit_result;
         for (ContextCheckpoint checkpoint : boundary.checkpoints()) {
             checkpoints.add(dev.openallay.json.JsonTrees.parse(codec.encodeCheckpoint(checkpoint)));
         }
-        try (PreparedStatement statement = connection.prepareStatement("""
-                insert into request_context_boundaries(scope_id, request_id, payload_json, checkpoints_json)
-                values (?, ?, ?, ?)
-                on conflict(scope_id, request_id) do update set
-                    payload_json = excluded.payload_json, checkpoints_json = excluded.checkpoints_json
-                """)) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into request_context_boundaries(scope_id, request_id, payload_json, checkpoints_json)\nvalues (?, ?, ?, ?)\non conflict(scope_id, request_id) do update set\n    payload_json = excluded.payload_json, checkpoints_json = excluded.checkpoints_json\n")) {
             statement.setString(1, scopeId);
             statement.setString(2, boundary.requestId().toString());
             statement.setString(3, modelContexts.encode(boundary.messages()));
@@ -586,10 +554,7 @@ String columns = $oaSwitch1_exit_result;
 
     private RequestBoundary readRequestBoundary(Connection connection, String scopeId, UUID requestId)
             throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("""
-                select payload_json, checkpoints_json from request_context_boundaries
-                where scope_id = ? and request_id = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select payload_json, checkpoints_json from request_context_boundaries\nwhere scope_id = ? and request_id = ?\n")) {
             query.setString(1, scopeId);
             query.setString(2, requestId.toString());
             try (ResultSet result = query.executeQuery()) {
@@ -752,16 +717,7 @@ if ($oaPattern10_match
     private Map<String, List<ImageReference>> readImageOwners(Connection connection, String scopeId)
             throws SQLException {
         Map<String, List<ImageReference>> owners = new LinkedHashMap<>();
-        try (PreparedStatement query = connection.prepareStatement("""
-                select 'session:' || session_id as owner, payload_json
-                from model_context where scope_id = ?
-                union all
-                select 'request:' || request_id as owner, payload_json
-                from request_model_context where scope_id = ?
-                union all
-                select 'boundary:' || request_id as owner, payload_json
-                from request_context_boundaries where scope_id = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select 'session:' || session_id as owner, payload_json\nfrom model_context where scope_id = ?\nunion all\nselect 'request:' || request_id as owner, payload_json\nfrom request_model_context where scope_id = ?\nunion all\nselect 'boundary:' || request_id as owner, payload_json\nfrom request_context_boundaries where scope_id = ?\n")) {
             query.setString(1, scopeId);
             query.setString(2, scopeId);
             query.setString(3, scopeId);
@@ -1231,147 +1187,25 @@ if ($oaPattern25_match) {
 
     private static void createLayoutObjects(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            statement.execute("""
-                    create table partitions(
-                        scope_id text primary key,
-                        actor_id text not null,
-                        connection_kind text not null,
-                        selected_session text not null,
-                        capture_mode text not null check(capture_mode = 'NORMAL'),
-                        updated_at text not null
-                    )
-                    """);
-            statement.execute("""
-                    create table sessions(
-                        scope_id text not null,
-                        session_id text not null,
-                        ordinal integer not null check(ordinal >= 0),
-                        model_selection_json text not null,
-                        control_usage_json text not null,
-                        primary key(scope_id, session_id),
-                        unique(scope_id, ordinal),
-                        foreign key(scope_id) references partitions(scope_id) on delete cascade
-                    )
-                    """);
-            statement.execute("""
-                    create table requests(
-                        scope_id text not null,
-                        session_id text not null,
-                        request_id text not null,
-                        sequence integer not null check(sequence >= 0),
-                        topology text not null,
-                        model_selection_json text not null,
-                        user_message text not null,
-                        status text not null,
-                        model_usage_json text not null,
-                        usage_projection_json text not null,
-                        usage_origin_request_id text,
-                        retry_after_millis integer,
-                        failure_code text,
-                        failure_message text,
-                        created_at text not null,
-                        updated_at text not null,
-                        terminal_at text,
-                        primary key(scope_id, request_id),
-                        unique(scope_id, session_id, sequence),
-                        foreign key(scope_id, session_id)
-                            references sessions(scope_id, session_id) on delete cascade
-                    )
-                    """);
-            statement.execute("""
-                    create table messages(
-                        scope_id text not null,
-                        session_id text not null,
-                        ordinal integer not null check(ordinal >= 0),
-                        request_id text not null,
-                        role text not null,
-                        message_text text not null,
-                        created_at text not null,
-                        primary key(scope_id, session_id, ordinal),
-                        foreign key(scope_id, session_id)
-                            references sessions(scope_id, session_id) on delete cascade,
-                        foreign key(scope_id, request_id)
-                            references requests(scope_id, request_id) on delete cascade
-                    )
-                    """);
-            statement.execute("""
-                    create table timeline_entries(
-                        scope_id text not null,
-                        request_id text not null,
-                        ordinal integer not null check(ordinal >= 0),
-                        payload_json text not null,
-                        primary key(scope_id, request_id, ordinal),
-                        foreign key(scope_id, request_id)
-                            references requests(scope_id, request_id) on delete cascade
-                    )
-                    """);
-            statement.execute("""
-                    create table request_sources(
-                        scope_id text not null,
-                        request_id text not null,
-                        ordinal integer not null check(ordinal >= 0),
-                        payload_json text not null,
-                        primary key(scope_id, request_id, ordinal),
-                        foreign key(scope_id, request_id)
-                            references requests(scope_id, request_id) on delete cascade
-                    )
-                    """);
+            statement.execute("create table partitions(\n    scope_id text primary key,\n    actor_id text not null,\n    connection_kind text not null,\n    selected_session text not null,\n    capture_mode text not null check(capture_mode = 'NORMAL'),\n    updated_at text not null\n)\n");
+            statement.execute("create table sessions(\n    scope_id text not null,\n    session_id text not null,\n    ordinal integer not null check(ordinal >= 0),\n    model_selection_json text not null,\n    control_usage_json text not null,\n    primary key(scope_id, session_id),\n    unique(scope_id, ordinal),\n    foreign key(scope_id) references partitions(scope_id) on delete cascade\n)\n");
+            statement.execute("create table requests(\n    scope_id text not null,\n    session_id text not null,\n    request_id text not null,\n    sequence integer not null check(sequence >= 0),\n    topology text not null,\n    model_selection_json text not null,\n    user_message text not null,\n    status text not null,\n    model_usage_json text not null,\n    usage_projection_json text not null,\n    usage_origin_request_id text,\n    retry_after_millis integer,\n    failure_code text,\n    failure_message text,\n    created_at text not null,\n    updated_at text not null,\n    terminal_at text,\n    primary key(scope_id, request_id),\n    unique(scope_id, session_id, sequence),\n    foreign key(scope_id, session_id)\n        references sessions(scope_id, session_id) on delete cascade\n)\n");
+            statement.execute("create table messages(\n    scope_id text not null,\n    session_id text not null,\n    ordinal integer not null check(ordinal >= 0),\n    request_id text not null,\n    role text not null,\n    message_text text not null,\n    created_at text not null,\n    primary key(scope_id, session_id, ordinal),\n    foreign key(scope_id, session_id)\n        references sessions(scope_id, session_id) on delete cascade,\n    foreign key(scope_id, request_id)\n        references requests(scope_id, request_id) on delete cascade\n)\n");
+            statement.execute("create table timeline_entries(\n    scope_id text not null,\n    request_id text not null,\n    ordinal integer not null check(ordinal >= 0),\n    payload_json text not null,\n    primary key(scope_id, request_id, ordinal),\n    foreign key(scope_id, request_id)\n        references requests(scope_id, request_id) on delete cascade\n)\n");
+            statement.execute("create table request_sources(\n    scope_id text not null,\n    request_id text not null,\n    ordinal integer not null check(ordinal >= 0),\n    payload_json text not null,\n    primary key(scope_id, request_id, ordinal),\n    foreign key(scope_id, request_id)\n        references requests(scope_id, request_id) on delete cascade\n)\n");
             statement.execute("create index sessions_updated_lookup on sessions(scope_id, ordinal)");
             statement.execute("create index requests_order_lookup on requests(scope_id, session_id, sequence)");
             statement.execute("create index timeline_order_lookup on timeline_entries(scope_id, request_id, ordinal)");
             createCheckpointTable(statement);
-            statement.execute("""
-                    create table model_context(
-                        scope_id text not null,
-                        session_id text not null,
-                        payload_json text not null,
-                        primary key(scope_id, session_id),
-                        foreign key(scope_id, session_id)
-                            references sessions(scope_id, session_id) on delete cascade
-                    )
-                    """);
-            statement.execute("""
-                    create table request_model_context(
-                        scope_id text not null,
-                        request_id text not null,
-                        payload_json text not null,
-                        primary key(scope_id, request_id),
-                        foreign key(scope_id, request_id)
-                            references requests(scope_id, request_id) on delete cascade
-                    )
-                    """);
-            statement.execute("""
-                    create table request_context_boundaries(
-                        scope_id text not null,
-                        request_id text not null,
-                        payload_json text not null,
-                        checkpoints_json text not null,
-                        primary key(scope_id, request_id),
-                        foreign key(scope_id, request_id)
-                            references requests(scope_id, request_id) on delete cascade
-                    )
-                    """);
+            statement.execute("create table model_context(\n    scope_id text not null,\n    session_id text not null,\n    payload_json text not null,\n    primary key(scope_id, session_id),\n    foreign key(scope_id, session_id)\n        references sessions(scope_id, session_id) on delete cascade\n)\n");
+            statement.execute("create table request_model_context(\n    scope_id text not null,\n    request_id text not null,\n    payload_json text not null,\n    primary key(scope_id, request_id),\n    foreign key(scope_id, request_id)\n        references requests(scope_id, request_id) on delete cascade\n)\n");
+            statement.execute("create table request_context_boundaries(\n    scope_id text not null,\n    request_id text not null,\n    payload_json text not null,\n    checkpoints_json text not null,\n    primary key(scope_id, request_id),\n    foreign key(scope_id, request_id)\n        references requests(scope_id, request_id) on delete cascade\n)\n");
         }
     }
 
     private static void createCheckpointTable(Statement statement) throws SQLException {
-        statement.execute("""
-                create table compaction_checkpoints(
-                    scope_id text not null,
-                    session_id text not null,
-                    ordinal integer not null check(ordinal >= 0),
-                    checkpoint_id text not null,
-                    payload_json text not null,
-                    primary key(scope_id, session_id, ordinal),
-                    unique(scope_id, checkpoint_id),
-                    foreign key(scope_id, session_id)
-                        references sessions(scope_id, session_id) on delete cascade
-                )
-                """);
-        statement.execute("""
-                create index checkpoint_order_lookup
-                on compaction_checkpoints(scope_id, session_id, ordinal)
-                """);
+        statement.execute("create table compaction_checkpoints(\n    scope_id text not null,\n    session_id text not null,\n    ordinal integer not null check(ordinal >= 0),\n    checkpoint_id text not null,\n    payload_json text not null,\n    primary key(scope_id, session_id, ordinal),\n    unique(scope_id, checkpoint_id),\n    foreign key(scope_id, session_id)\n        references sessions(scope_id, session_id) on delete cascade\n)\n");
+        statement.execute("create index checkpoint_order_lookup\non compaction_checkpoints(scope_id, session_id, ordinal)\n");
     }
 
     private static void deletePartition(Connection connection, GuideHistoryScope scope)
@@ -1395,11 +1229,7 @@ if ($oaPattern25_match) {
     private static List<String> applicationTables(Connection connection) throws SQLException {
         List<String> tables = new ArrayList<>();
         try (Statement statement = connection.createStatement();
-                ResultSet result = statement.executeQuery("""
-                        select name from sqlite_master
-                        where type = 'table' and name not glob 'sqlite_*'
-                        order by name
-                        """)) {
+                ResultSet result = statement.executeQuery("select name from sqlite_master\nwhere type = 'table' and name not glob 'sqlite_*'\norder by name\n")) {
             while (result.next()) {
                 tables.add(result.getString(1));
             }
@@ -1427,15 +1257,7 @@ final java.lang.Object $oaPattern26_value = mutation;
 final boolean $oaPattern26_match = $oaPattern26_value instanceof GuideHistoryMutation.UpsertPartition;
 GuideHistoryMutation.UpsertPartition $oaPattern26_bound = $oaPattern26_match ? (GuideHistoryMutation.UpsertPartition) $oaPattern26_value : null;
 if ($oaPattern26_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    insert into partitions(
-                        scope_id, actor_id, connection_kind, selected_session,
-                        capture_mode, updated_at)
-                    values (?, ?, ?, ?, 'NORMAL', ?)
-                    on conflict(scope_id) do update set
-                        selected_session = excluded.selected_session,
-                        updated_at = excluded.updated_at
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("insert into partitions(\n    scope_id, actor_id, connection_kind, selected_session,\n    capture_mode, updated_at)\nvalues (?, ?, ?, ?, 'NORMAL', ?)\non conflict(scope_id) do update set\n    selected_session = excluded.selected_session,\n    updated_at = excluded.updated_at\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, scope.actorId().toString());
                 statement.setString(3, scope.kind().name());
@@ -1448,13 +1270,7 @@ final java.lang.Object $oaPattern27_value = mutation;
 final boolean $oaPattern27_match = $oaPattern27_value instanceof GuideHistoryMutation.UpsertSession;
 GuideHistoryMutation.UpsertSession $oaPattern27_bound = $oaPattern27_match ? (GuideHistoryMutation.UpsertSession) $oaPattern27_value : null;
 if ($oaPattern27_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    insert into sessions(scope_id, session_id, ordinal, model_selection_json, control_usage_json)
-                    values (?, ?, ?, ?, ?)
-                    on conflict(scope_id, session_id) do update set
-                        ordinal = excluded.ordinal,
-                        model_selection_json = excluded.model_selection_json
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("insert into sessions(scope_id, session_id, ordinal, model_selection_json, control_usage_json)\nvalues (?, ?, ?, ?, ?)\non conflict(scope_id, session_id) do update set\n    ordinal = excluded.ordinal,\n    model_selection_json = excluded.model_selection_json\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern27_bound.sessionId());
                 statement.setInt(3, $oaPattern27_bound.ordinal());
@@ -1467,9 +1283,7 @@ final java.lang.Object $oaPattern28_value = mutation;
 final boolean $oaPattern28_match = $oaPattern28_value instanceof GuideHistoryMutation.UpsertSessionUsage;
 GuideHistoryMutation.UpsertSessionUsage $oaPattern28_bound = $oaPattern28_match ? (GuideHistoryMutation.UpsertSessionUsage) $oaPattern28_value : null;
 if ($oaPattern28_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    update sessions set control_usage_json = ? where scope_id = ? and session_id = ?
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("update sessions set control_usage_json = ? where scope_id = ? and session_id = ?\n")) {
                 statement.setString(1, codec.encodeUsageProjection($oaPattern28_bound.controlUsage()));
                 statement.setString(2, scopeId);
                 statement.setString(3, $oaPattern28_bound.sessionId());
@@ -1492,12 +1306,7 @@ final java.lang.Object $oaPattern31_value = mutation;
 final boolean $oaPattern31_match = $oaPattern31_value instanceof GuideHistoryMutation.UpsertTimelineEntry;
 GuideHistoryMutation.UpsertTimelineEntry $oaPattern31_bound = $oaPattern31_match ? (GuideHistoryMutation.UpsertTimelineEntry) $oaPattern31_value : null;
 if ($oaPattern31_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    insert into timeline_entries(scope_id, request_id, ordinal, payload_json)
-                    values (?, ?, ?, ?)
-                    on conflict(scope_id, request_id, ordinal) do update set
-                        payload_json = excluded.payload_json
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("insert into timeline_entries(scope_id, request_id, ordinal, payload_json)\nvalues (?, ?, ?, ?)\non conflict(scope_id, request_id, ordinal) do update set\n    payload_json = excluded.payload_json\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern31_bound.requestId().toString());
                 statement.setInt(3, $oaPattern31_bound.entry().ordinal());
@@ -1509,19 +1318,13 @@ final java.lang.Object $oaPattern32_value = mutation;
 final boolean $oaPattern32_match = $oaPattern32_value instanceof GuideHistoryMutation.ReplaceRequestSources;
 GuideHistoryMutation.ReplaceRequestSources $oaPattern32_bound = $oaPattern32_match ? (GuideHistoryMutation.ReplaceRequestSources) $oaPattern32_value : null;
 if ($oaPattern32_match) {
-            try (PreparedStatement delete = connection.prepareStatement("""
-                    delete from request_sources where scope_id = ? and request_id = ?
-                    """)) {
+            try (PreparedStatement delete = connection.prepareStatement("delete from request_sources where scope_id = ? and request_id = ?\n")) {
                 delete.setString(1, scopeId);
                 delete.setString(2, $oaPattern32_bound.requestId().toString());
                 delete.executeUpdate();
             }
             for (int ordinal = 0; ordinal < $oaPattern32_bound.sources().size(); ordinal++) {
-                try (PreparedStatement insert = connection.prepareStatement("""
-                        insert into request_sources(
-                            scope_id, request_id, ordinal, payload_json)
-                        values (?, ?, ?, ?)
-                        """)) {
+                try (PreparedStatement insert = connection.prepareStatement("insert into request_sources(\n    scope_id, request_id, ordinal, payload_json)\nvalues (?, ?, ?, ?)\n")) {
                     insert.setString(1, scopeId);
                     insert.setString(2, $oaPattern32_bound.requestId().toString());
                     insert.setInt(3, ordinal);
@@ -1535,12 +1338,7 @@ final java.lang.Object $oaPattern33_value = mutation;
 final boolean $oaPattern33_match = $oaPattern33_value instanceof GuideHistoryMutation.ReplaceContext;
 GuideHistoryMutation.ReplaceContext $oaPattern33_bound = $oaPattern33_match ? (GuideHistoryMutation.ReplaceContext) $oaPattern33_value : null;
 if ($oaPattern33_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    insert into model_context(scope_id, session_id, payload_json)
-                    values (?, ?, ?)
-                    on conflict(scope_id, session_id) do update set
-                        payload_json = excluded.payload_json
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("insert into model_context(scope_id, session_id, payload_json)\nvalues (?, ?, ?)\non conflict(scope_id, session_id) do update set\n    payload_json = excluded.payload_json\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern33_bound.sessionId());
                 statement.setString(3, modelContexts.encode($oaPattern33_bound.messages()));
@@ -1551,12 +1349,7 @@ final java.lang.Object $oaPattern34_value = mutation;
 final boolean $oaPattern34_match = $oaPattern34_value instanceof GuideHistoryMutation.ReplaceRequestContext;
 GuideHistoryMutation.ReplaceRequestContext $oaPattern34_bound = $oaPattern34_match ? (GuideHistoryMutation.ReplaceRequestContext) $oaPattern34_value : null;
 if ($oaPattern34_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    insert into request_model_context(scope_id, request_id, payload_json)
-                    values (?, ?, ?)
-                    on conflict(scope_id, request_id) do update set
-                        payload_json = excluded.payload_json
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("insert into request_model_context(scope_id, request_id, payload_json)\nvalues (?, ?, ?)\non conflict(scope_id, request_id) do update set\n    payload_json = excluded.payload_json\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern34_bound.requestId().toString());
                 statement.setString(3, modelContexts.encode($oaPattern34_bound.messages()));
@@ -1567,14 +1360,7 @@ final java.lang.Object $oaPattern35_value = mutation;
 final boolean $oaPattern35_match = $oaPattern35_value instanceof GuideHistoryMutation.UpsertCheckpoint;
 GuideHistoryMutation.UpsertCheckpoint $oaPattern35_bound = $oaPattern35_match ? (GuideHistoryMutation.UpsertCheckpoint) $oaPattern35_value : null;
 if ($oaPattern35_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    insert into compaction_checkpoints(
-                        scope_id, session_id, ordinal, checkpoint_id, payload_json)
-                    values (?, ?, ?, ?, ?)
-                    on conflict(scope_id, session_id, ordinal) do update set
-                        checkpoint_id = excluded.checkpoint_id,
-                        payload_json = excluded.payload_json
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("insert into compaction_checkpoints(\n    scope_id, session_id, ordinal, checkpoint_id, payload_json)\nvalues (?, ?, ?, ?, ?)\non conflict(scope_id, session_id, ordinal) do update set\n    checkpoint_id = excluded.checkpoint_id,\n    payload_json = excluded.payload_json\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern35_bound.sessionId());
                 statement.setInt(3, $oaPattern35_bound.ordinal());
@@ -1588,10 +1374,7 @@ final boolean $oaPattern36_match = $oaPattern36_value instanceof GuideHistoryMut
 GuideHistoryMutation.AppendCheckpoint $oaPattern36_bound = $oaPattern36_match ? (GuideHistoryMutation.AppendCheckpoint) $oaPattern36_value : null;
 if ($oaPattern36_match) {
             Integer existingOrdinal = null;
-            try (PreparedStatement query = connection.prepareStatement("""
-                    select ordinal from compaction_checkpoints
-                    where scope_id = ? and session_id = ? and checkpoint_id = ?
-                    """)) {
+            try (PreparedStatement query = connection.prepareStatement("select ordinal from compaction_checkpoints\nwhere scope_id = ? and session_id = ? and checkpoint_id = ?\n")) {
                 query.setString(1, scopeId);
                 query.setString(2, $oaPattern36_bound.sessionId());
                 query.setString(3, $oaPattern36_bound.checkpoint().checkpointId().toString());
@@ -1603,12 +1386,7 @@ if ($oaPattern36_match) {
                 applyMutation(connection, scope, new GuideHistoryMutation.UpsertCheckpoint(
                         $oaPattern36_bound.sessionId(), existingOrdinal, $oaPattern36_bound.checkpoint()));
             } else {
-                try (PreparedStatement statement = connection.prepareStatement("""
-                        insert into compaction_checkpoints(
-                            scope_id, session_id, ordinal, checkpoint_id, payload_json)
-                        select ?, ?, coalesce(max(ordinal), -1) + 1, ?, ?
-                        from compaction_checkpoints where scope_id = ? and session_id = ?
-                        """)) {
+                try (PreparedStatement statement = connection.prepareStatement("insert into compaction_checkpoints(\n    scope_id, session_id, ordinal, checkpoint_id, payload_json)\nselect ?, ?, coalesce(max(ordinal), -1) + 1, ?, ?\nfrom compaction_checkpoints where scope_id = ? and session_id = ?\n")) {
                     statement.setString(1, scopeId);
                     statement.setString(2, $oaPattern36_bound.sessionId());
                     statement.setString(3, $oaPattern36_bound.checkpoint().checkpointId().toString());
@@ -1636,9 +1414,7 @@ final java.lang.Object $oaPattern39_value = mutation;
 final boolean $oaPattern39_match = $oaPattern39_value instanceof GuideHistoryMutation.DeleteSession;
 GuideHistoryMutation.DeleteSession $oaPattern39_bound = $oaPattern39_match ? (GuideHistoryMutation.DeleteSession) $oaPattern39_value : null;
 if ($oaPattern39_match) {
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    delete from sessions where scope_id = ? and session_id = ?
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("delete from sessions where scope_id = ? and session_id = ?\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern39_bound.sessionId());
                 statement.executeUpdate();
@@ -1658,9 +1434,7 @@ if ($oaPattern40_match) {
                     statement.executeUpdate();
                 }
             }
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    delete from requests where scope_id = ? and session_id = ?
-                    """)) {
+            try (PreparedStatement statement = connection.prepareStatement("delete from requests where scope_id = ? and session_id = ?\n")) {
                 statement.setString(1, scopeId);
                 statement.setString(2, $oaPattern40_bound.sessionId());
                 statement.executeUpdate();
@@ -1690,31 +1464,7 @@ if ($oaPattern40_match) {
             String scopeId,
             long sequence,
             GuideRequestSnapshot request) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("""
-                insert into requests(
-                    scope_id, session_id, request_id, sequence, topology,
-                    model_selection_json, user_message, status,
-                    model_usage_json, usage_projection_json, usage_origin_request_id,
-                    retry_after_millis, failure_code, failure_message,
-                    created_at, updated_at, terminal_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                on conflict(scope_id, request_id) do update set
-                    session_id = excluded.session_id,
-                    sequence = excluded.sequence,
-                    topology = excluded.topology,
-                    model_selection_json = excluded.model_selection_json,
-                    user_message = excluded.user_message,
-                    status = excluded.status,
-                    model_usage_json = excluded.model_usage_json,
-                    usage_projection_json = excluded.usage_projection_json,
-                    usage_origin_request_id = excluded.usage_origin_request_id,
-                    retry_after_millis = excluded.retry_after_millis,
-                    failure_code = excluded.failure_code,
-                    failure_message = excluded.failure_message,
-                    created_at = excluded.created_at,
-                    updated_at = excluded.updated_at,
-                    terminal_at = excluded.terminal_at
-                """)) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into requests(\n    scope_id, session_id, request_id, sequence, topology,\n    model_selection_json, user_message, status,\n    model_usage_json, usage_projection_json, usage_origin_request_id,\n    retry_after_millis, failure_code, failure_message,\n    created_at, updated_at, terminal_at)\nvalues (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\non conflict(scope_id, request_id) do update set\n    session_id = excluded.session_id,\n    sequence = excluded.sequence,\n    topology = excluded.topology,\n    model_selection_json = excluded.model_selection_json,\n    user_message = excluded.user_message,\n    status = excluded.status,\n    model_usage_json = excluded.model_usage_json,\n    usage_projection_json = excluded.usage_projection_json,\n    usage_origin_request_id = excluded.usage_origin_request_id,\n    retry_after_millis = excluded.retry_after_millis,\n    failure_code = excluded.failure_code,\n    failure_message = excluded.failure_message,\n    created_at = excluded.created_at,\n    updated_at = excluded.updated_at,\n    terminal_at = excluded.terminal_at\n")) {
             statement.setString(1, scopeId);
             statement.setString(2, request.sessionId());
             statement.setString(3, request.requestId().toString());
@@ -1743,16 +1493,7 @@ if ($oaPattern40_match) {
             String scopeId,
             GuideHistoryMutation.UpsertMessage mutation) throws SQLException {
         GuideMessage message = mutation.message();
-        try (PreparedStatement statement = connection.prepareStatement("""
-                insert into messages(
-                    scope_id, session_id, ordinal, request_id, role, message_text, created_at)
-                values (?, ?, ?, ?, ?, ?, ?)
-                on conflict(scope_id, session_id, ordinal) do update set
-                    request_id = excluded.request_id,
-                    role = excluded.role,
-                    message_text = excluded.message_text,
-                    created_at = excluded.created_at
-                """)) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into messages(\n    scope_id, session_id, ordinal, request_id, role, message_text, created_at)\nvalues (?, ?, ?, ?, ?, ?, ?)\non conflict(scope_id, session_id, ordinal) do update set\n    request_id = excluded.request_id,\n    role = excluded.role,\n    message_text = excluded.message_text,\n    created_at = excluded.created_at\n")) {
             statement.setString(1, scopeId);
             statement.setString(2, mutation.sessionId());
             statement.setInt(3, mutation.ordinal());
@@ -1769,10 +1510,7 @@ if ($oaPattern40_match) {
             String scopeId,
             String sessionId,
             long sequence) throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("""
-                select request_id from requests
-                where scope_id = ? and session_id = ? and sequence = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select request_id from requests\nwhere scope_id = ? and session_id = ? and sequence = ?\n")) {
             query.setString(1, scopeId);
             query.setString(2, sessionId);
             query.setLong(3, sequence);
@@ -1841,10 +1579,7 @@ String comparison = $oaSwitch0_exit_result;
 
     private void requireCursor(Connection connection, GuideHistoryPageRequest request)
             throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("""
-                select request_id from requests
-                where scope_id = ? and session_id = ? and sequence = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select request_id from requests\nwhere scope_id = ? and session_id = ? and sequence = ?\n")) {
             query.setString(1, request.scope().scopeId());
             query.setString(2, request.sessionId());
             query.setLong(3, request.cursor().sequence());
@@ -1880,13 +1615,7 @@ String comparison = $oaSwitch0_exit_result;
     }
 
     private static String requestColumns() {
-        return """
-                select sequence, session_id, request_id, topology, user_message, status,
-                       model_selection_json,
-                       model_usage_json, usage_projection_json, usage_origin_request_id,
-                       retry_after_millis, failure_code, failure_message,
-                       created_at, updated_at, terminal_at
-                """;
+        return "select sequence, session_id, request_id, topology, user_message, status,\n       model_selection_json,\n       model_usage_json, usage_projection_json, usage_origin_request_id,\n       retry_after_millis, failure_code, failure_message,\n       created_at, updated_at, terminal_at\n";
     }
 
     private SequencedRequest readRequestRow(
@@ -1934,10 +1663,7 @@ String comparison = $oaSwitch0_exit_result;
             String modelIdentifier,
             List<ModelMessage> messages) throws SQLException {
         List<ContextStructure.Unit> units = ContextStructure.units(messages);
-        try (PreparedStatement query = connection.prepareStatement("""
-                select checkpoint_id, payload_json from compaction_checkpoints
-                where scope_id = ? and session_id = ? order by ordinal desc
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select checkpoint_id, payload_json from compaction_checkpoints\nwhere scope_id = ? and session_id = ? order by ordinal desc\n")) {
             query.setString(1, scopeId);
             query.setString(2, sessionId);
             try (ResultSet result = query.executeQuery()) {
@@ -1974,14 +1700,7 @@ String comparison = $oaSwitch0_exit_result;
         Instant recoveredAt = clock.instant();
         try {
             List<InterruptedRequest> active = new ArrayList<>();
-            try (PreparedStatement query = connection.prepareStatement("""
-                    select r.request_id, r.session_id, r.user_message,
-                           r.sequence = (select max(latest.sequence) from requests latest
-                               where latest.scope_id = r.scope_id
-                                 and latest.session_id = r.session_id) as latest_request
-                    from requests r where r.scope_id = ? and r.terminal_at is null
-                    order by r.session_id, r.sequence
-                    """)) {
+            try (PreparedStatement query = connection.prepareStatement("select r.request_id, r.session_id, r.user_message,\n       r.sequence = (select max(latest.sequence) from requests latest\n           where latest.scope_id = r.scope_id\n             and latest.session_id = r.session_id) as latest_request\nfrom requests r where r.scope_id = ? and r.terminal_at is null\norder by r.session_id, r.sequence\n")) {
                 query.setString(1, scope.scopeId());
                 try (ResultSet result = query.executeQuery()) {
                     while (result.next()) {
@@ -2003,13 +1722,7 @@ String comparison = $oaSwitch0_exit_result;
             boolean changed = false;
             for (InterruptedRequest request : active) {
                 // Claim only still-active rows. Recovery never changes a terminal request.
-                try (PreparedStatement update = connection.prepareStatement("""
-                        update requests set status = 'INTERRUPTED',
-                            retry_after_millis = null,
-                            failure_code = 'request_interrupted',
-                            failure_message = ?, updated_at = ?, terminal_at = ?
-                        where scope_id = ? and request_id = ? and terminal_at is null
-                        """)) {
+                try (PreparedStatement update = connection.prepareStatement("update requests set status = 'INTERRUPTED',\n    retry_after_millis = null,\n    failure_code = 'request_interrupted',\n    failure_message = ?, updated_at = ?, terminal_at = ?\nwhere scope_id = ? and request_id = ? and terminal_at is null\n")) {
                     update.setString(1, INTERRUPTION_MESSAGE);
                     update.setString(2, recoveredAt.toString());
                     update.setString(3, recoveredAt.toString());
@@ -2031,10 +1744,7 @@ if ($oaPattern41_match
                         GuideTimelineEntry.Assistant closed = new GuideTimelineEntry.Assistant(
                                 $oaPattern41_bound.ordinal(), $oaPattern41_bound.text(), $oaPattern41_bound.semantic(),
                                 false, $oaPattern41_bound.sources());
-                        try (PreparedStatement update = connection.prepareStatement("""
-                                update timeline_entries set payload_json = ?
-                                where scope_id = ? and request_id = ? and ordinal = ?
-                                """)) {
+                        try (PreparedStatement update = connection.prepareStatement("update timeline_entries set payload_json = ?\nwhere scope_id = ? and request_id = ? and ordinal = ?\n")) {
                             update.setString(1, codec.encodeEntry(closed));
                             update.setString(2, scope.scopeId());
                             update.setString(3, request.requestId().toString());
@@ -2079,9 +1789,7 @@ if ($oaPattern41_match
                 }
             }
             if (changed) {
-                try (PreparedStatement update = connection.prepareStatement("""
-                        update partitions set updated_at = ? where scope_id = ?
-                        """)) {
+                try (PreparedStatement update = connection.prepareStatement("update partitions set updated_at = ? where scope_id = ?\n")) {
                     update.setString(1, recoveredAt.toString());
                     update.setString(2, scope.scopeId());
                     update.executeUpdate();
@@ -2109,10 +1817,7 @@ if ($oaPattern41_match
 
     private static PartitionHeader readHeader(Connection connection, GuideHistoryScope scope)
             throws SQLException {
-        try (PreparedStatement query = connection.prepareStatement("""
-                select actor_id, connection_kind, selected_session, capture_mode, updated_at
-                from partitions where scope_id = ?
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select actor_id, connection_kind, selected_session, capture_mode, updated_at\nfrom partitions where scope_id = ?\n")) {
             query.setString(1, scope.scopeId());
             try (ResultSet result = query.executeQuery()) {
                 if (!result.next()) {
@@ -2136,10 +1841,7 @@ if ($oaPattern41_match
     private List<GuideTimelineEntry> readTimeline(
             Connection connection, String scopeId, UUID requestId) throws SQLException {
         List<GuideTimelineEntry> timeline = new ArrayList<>();
-        try (PreparedStatement query = connection.prepareStatement("""
-                select ordinal, payload_json from timeline_entries
-                where scope_id = ? and request_id = ? order by ordinal
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select ordinal, payload_json from timeline_entries\nwhere scope_id = ? and request_id = ? order by ordinal\n")) {
             query.setString(1, scopeId);
             query.setString(2, requestId.toString());
             try (ResultSet result = query.executeQuery()) {
@@ -2163,10 +1865,7 @@ if ($oaPattern41_match
     private List<GuideSource> readSources(
             Connection connection, String scopeId, UUID requestId) throws SQLException {
         List<GuideSource> sources = new ArrayList<>();
-        try (PreparedStatement query = connection.prepareStatement("""
-                select ordinal, payload_json from request_sources
-                where scope_id = ? and request_id = ? order by ordinal
-                """)) {
+        try (PreparedStatement query = connection.prepareStatement("select ordinal, payload_json from request_sources\nwhere scope_id = ? and request_id = ? order by ordinal\n")) {
             query.setString(1, scopeId);
             query.setString(2, requestId.toString());
             try (ResultSet result = query.executeQuery()) {
