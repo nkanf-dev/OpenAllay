@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody]
         default: skills
         required: true
 permissions:
@@ -1668,6 +1668,7 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       with:
         persist-credentials: false
+        fetch-depth: 0
     - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
       with:
         distribution: temurin
@@ -1678,6 +1679,7 @@ jobs:
       run: 'python3 -B scripts/materialize-provider-codec-java8.py --project "$PWD"
         --recipe engine-core/src/providerCodecJava8Test/recipe.json --javac "$JAVA_HOME_17_X64/bin/javac"
         --java "$JAVA_HOME_17_X64/bin/java" --output "$RUNNER_TEMP/provider-materialization"
+        --prepare
 
         mkdir -p "$RUNNER_TEMP/provider-dependencies"
 
@@ -1821,3 +1823,179 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
         path: ${{ runner.temp }}/function-baseline-proof/receipt.json
+
+  bridge-history-java8:
+    if: inputs.scope == 'bridge-history-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify complete canonical source and current affected consumers
+      run: 'mkdir -p "$RUNNER_TEMP/bridge-history-dependencies"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/bridge-history-dependencies/gson-2.8.0.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        --output "$RUNNER_TEMP/bridge-history-dependencies/gson-2.13.2.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
+        --output "$RUNNER_TEMP/bridge-history-dependencies/junit.jar"
+
+        python3 -B engine-core/src/bridgeHistoryJava8Test/verify.py --source-root "$PWD"
+        --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/bridge-history-dependencies/gson-2.8.0.jar"
+        --junit-console "$RUNNER_TEMP/bridge-history-dependencies/junit.jar" --output
+        "$RUNNER_TEMP/bridge-history-2.8.0"
+
+        python3 -B engine-core/src/bridgeHistoryJava8Test/verify.py --source-root "$PWD"
+        --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/bridge-history-dependencies/gson-2.13.2.jar"
+        --junit-console "$RUNNER_TEMP/bridge-history-dependencies/junit.jar" --output
+        "$RUNNER_TEMP/bridge-history-2.13.2"
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest
+        --tests dev.openallay.bridge.protocol.ServerAgentSteerChunkerTest --tests dev.openallay.bridge.protocol.ServerAgentRequestChunkGuardTest
+        --tests dev.openallay.bridge.protocol.BridgeImagePayloadTest --tests dev.openallay.bridge.protocol.ServerAgentSteerProtocolTest'
+    - name: Retain exact original and Java 8 evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: bridge-history-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/bridge-history-2.8.0/receipt.json
+
+          ${{ runner.temp }}/bridge-history-2.8.0/*-vectors.log
+
+          ${{ runner.temp }}/bridge-history-2.8.0/*-junit/
+
+          ${{ runner.temp }}/bridge-history-2.8.0/*-junit-results/
+
+          ${{ runner.temp }}/bridge-history-2.13.2/receipt.json
+
+          ${{ runner.temp }}/bridge-history-2.13.2/*-vectors.log
+
+          ${{ runner.temp }}/bridge-history-2.13.2/*-junit/
+
+          ${{ runner.temp }}/bridge-history-2.13.2/*-junit-results/
+
+          engine-core/build/test-results/'
+  image-attachment-java8:
+    if: inputs.scope == 'image-attachment-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify complete canonical source and current affected consumers
+      run: 'mkdir -p "$RUNNER_TEMP/image-attachment-dependencies"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/image-attachment-dependencies/gson-2.8.0.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        --output "$RUNNER_TEMP/image-attachment-dependencies/gson-2.13.2.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
+        --output "$RUNNER_TEMP/image-attachment-dependencies/junit.jar"
+
+        python3 -B engine-core/src/imageAttachmentPasteJava8Test/verify.py --source-root
+        "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/image-attachment-dependencies/gson-2.8.0.jar"
+        --junit-console "$RUNNER_TEMP/image-attachment-dependencies/junit.jar" --output
+        "$RUNNER_TEMP/image-attachment-2.8.0"
+
+        python3 -B engine-core/src/imageAttachmentPasteJava8Test/verify.py --source-root
+        "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/image-attachment-dependencies/gson-2.13.2.jar"
+        --junit-console "$RUNNER_TEMP/image-attachment-dependencies/junit.jar" --output
+        "$RUNNER_TEMP/image-attachment-2.13.2"
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.client.gui.GuideClientUiStateTest
+        --tests dev.openallay.model.image.FileImageAttachmentStoreTest --tests dev.openallay.client.gui.clipboard.AwtImageClipboardTest
+        --tests dev.openallay.client.gui.clipboard.ClipboardImageDecoderTest --tests
+        dev.openallay.guide.ToolObservationImageIndexTest'
+    - name: Retain exact original and Java 8 evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: image-attachment-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/image-attachment-2.8.0/receipt.json
+
+          ${{ runner.temp }}/image-attachment-2.8.0/*-vectors.log
+
+          ${{ runner.temp }}/image-attachment-2.8.0/*-junit/
+
+          ${{ runner.temp }}/image-attachment-2.8.0/*-junit-results/
+
+          ${{ runner.temp }}/image-attachment-2.13.2/receipt.json
+
+          ${{ runner.temp }}/image-attachment-2.13.2/*-vectors.log
+
+          ${{ runner.temp }}/image-attachment-2.13.2/*-junit/
+
+          ${{ runner.temp }}/image-attachment-2.13.2/*-junit-results/
+
+          engine-core/build/test-results/'
+  provider-source-custody:
+    if: inputs.scope == 'provider-source-custody'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '17'
+    - name: Replay authentic historical provider sources and current canonical equality
+      run: 'python3 -B scripts/materialize-provider-codec-java8.py --project "$PWD"
+        --recipe engine-core/src/providerCodecJava8Test/recipe.json --javac "$JAVA_HOME/bin/javac"
+        --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/provider-custody-materialization"
+        --prepare
+
+        python3 -B scripts/verify-provider-codec-java8.py --project "$PWD" --source-packet
+        "$RUNNER_TEMP/provider-custody-materialization/source-packet" --verify-source-custody
+        --output "$RUNNER_TEMP/provider-source-custody"'
+    - name: Retain exact normalized provider source replay receipt
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: provider-source-custody-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/provider-source-custody/
+
+          ${{ runner.temp }}/provider-custody-materialization/source-packet/manifest.json
+
+          ${{ runner.temp }}/provider-custody-materialization/source-packet/historical-source-custody.json'
