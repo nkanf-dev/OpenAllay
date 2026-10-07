@@ -46,7 +46,7 @@ def compileRoles = ['engine', 'sdk', 'rhino', 'commonmark', 'tables', 'jtokkit']
 def product = new Properties()
 new File(source, 'gradle.properties').withInputStream { product.load(it) }
 version = product.getProperty('version')
-if (version != '0.4.3') throw new GradleException('Current product pin required')
+if (!(version ==~ /[0-9A-Za-z][0-9A-Za-z._+\-]*/)) throw new GradleException('Actual source product version required')
 group = product.getProperty('group')
 base { archivesName = 'openallay-forge-1.16.5-native' }
 java {
