@@ -120,9 +120,9 @@ public final class RecipeCanonicalizer {
     }
 
     private static String alternativeKey(IngredientAlternativeSnapshot value) {
+        java.util.List<String> sortedItems = dev.openallay.util.Java8Collections.toList(value.resolvedItems().stream().sorted());
         return value.kind() + "\u0000" + value.id() + "\u0000"
-                + String.join("\u0000", value.resolvedItems().stream().sorted().collect(java.util.stream.Collectors.collectingAndThen(
-                        java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList)));
+                + String.join("\u0000", sortedItems);
     }
 
     private static void fluid(Digest digest, FluidRequirementSnapshot value) {
