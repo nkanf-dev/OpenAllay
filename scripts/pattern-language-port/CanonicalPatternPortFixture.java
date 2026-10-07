@@ -83,7 +83,7 @@ public final class CanonicalPatternPortFixture {
         check(process(args[1],List.of("-cp",modern.toString(),"PatternFlow")).equals(wanted),"Original evaluation order/output");
         check(process(args[3],List.of("-cp",release8.toString(),"PatternFlow")).equals(wanted),"Converted release8 flow/evaluation");
         check(process(args[3],List.of("-cp",javac8.toString(),"PatternFlow")).equals(wanted),"Truejavac8 flow/evaluation");
-        Path unsupported=root.resolve("unsupported");Files.createDirectory(unsupported);Files.writeString(unsupported.resolve("Unsupported.java"),"class Unsupported { boolean test(Object a,boolean enabled){while(enabled && a instanceof String text && text.length()>0){return true;} return false;} }");
+        Path unsupported=root.resolve("unsupported");Files.createDirectory(unsupported);Files.writeString(unsupported.resolve("Unsupported.java"),"class Unsupported { boolean test(Object a,boolean enabled){for(;enabled && a instanceof String text && text.length()>0;){return true;} return false;} }");
         Path unsupportedSelected=root.resolve("unsupported.txt");Files.writeString(unsupportedSelected,"Unsupported.java\n");Path rejected=root.resolve("rejected");CanonicalPatternPort.main(new String[]{unsupported.toString(),"",unsupportedSelected.toString(),rejected.toString()});
         check(Files.readString(rejected.resolve("owner-status.tsv")).contains("\tREJECTED\t1\t"),"Unsupported flow remains exactnamed rejection");check(!Files.exists(rejected.resolve("post/Unsupported.java")),"No partialunsupported owner");
         Path hidden=root.resolve("hidden");Files.createDirectory(hidden);

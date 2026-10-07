@@ -21,7 +21,18 @@ public final class CanonicalPatternPort {
         TreePath anchor=path.getParentPath();String reason=null;
         while(anchor!=null){
             Tree leaf=anchor.getLeaf();
-            if(leaf instanceof WhileLoopTree||leaf instanceof DoWhileLoopTree||leaf instanceof ForLoopTree||leaf instanceof EnhancedForLoopTree){reason="Repeated loop condition/initializer pattern needs per-iteration capture proof";break;}
+            if(leaf instanceof WhileLoopTree loop){
+                boolean inCondition = false;
+                for (TreePath nested = path; nested != null; nested = nested.getParentPath()) {
+                    if (nested.getLeaf() == loop.getCondition()) { inCondition = true; break; }
+                    if (nested.getLeaf() == loop) break;
+                }
+                if (!inCondition || !(anchor.getParentPath().getLeaf() instanceof BlockTree)) {
+                    reason="While pattern needs an actual conditional inside a direct block loop";
+                }
+                break;
+            }
+            if(leaf instanceof DoWhileLoopTree||leaf instanceof ForLoopTree||leaf instanceof EnhancedForLoopTree){reason="Repeated non-while loop condition/initializer pattern needs separate per-iteration capture proof";break;}
             if(leaf instanceof LambdaExpressionTree lambda){
                 if(lambda.getBodyKind()!=LambdaExpressionTree.BodyKind.EXPRESSION)reason="Block lambda pattern lacks a nearer statement anchor";
                 break;
