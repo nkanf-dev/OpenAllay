@@ -1,0 +1,13 @@
+// Standalone native-free verification: ./gradlew -p runtime-commonmark java8Proof.
+// External upstream version comes from the same canonical root properties.
+rootProject.name = 'OpenAllayCommonMarkRuntime'
+def pins = new Properties()
+file('../gradle.properties').withInputStream { pins.load(it) }
+def commonmarkVersion = pins.getProperty('commonmark_version')
+if (commonmarkVersion == null || commonmarkVersion.isEmpty()) {
+    throw new GradleException('Canonical commonmark_version is required')
+}
+gradle.beforeProject { project ->
+    project.ext.commonmark_version = commonmarkVersion
+    project.repositories { mavenCentral() }
+}

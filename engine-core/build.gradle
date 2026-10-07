@@ -33,8 +33,7 @@ dependencies {
     api('com.google.code.gson:gson:2.8.0')
     api(project(':runtime-rhino'))
     compileOnly(project(path: ':runtime-maven', configuration: 'privateRuntime'))
-    implementation("org.commonmark:commonmark:${commonmark_version}")
-    implementation("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
+    implementation(project(':runtime-commonmark'))
     implementation("com.knuddels:jtokkit:${jtokkit_version}")
     runtimeOnly("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}")
     testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
@@ -72,7 +71,6 @@ def productionCoordinates = [
     'dev.latvian.mods:rhino', 'com.google.guava:guava', 'com.google.guava:failureaccess',
     'com.google.guava:listenablefuture', 'com.google.code.findbugs:jsr305',
     'org.checkerframework:checker-qual', 'com.google.j2objc:j2objc-annotations',
-    'org.commonmark:commonmark', 'org.commonmark:commonmark-ext-gfm-tables',
     'com.knuddels:jtokkit', 'org.xerial:sqlite-jdbc'
 ] as Set
 def nativeClassPrefixes = [
@@ -89,7 +87,7 @@ def verifyProductionDependencies = tasks.register('verifyProductionDependencies'
             configuration.incoming.resolutionResult.allComponents.each { component ->
                 def id = component.id
                 if (id instanceof ProjectComponentIdentifier) {
-                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json', ':runtime-maven', ':runtime-rhino'])) {
+                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json', ':runtime-maven', ':runtime-rhino', ':runtime-commonmark'])) {
                         throw new GradleException("Engine cannot depend on native project ${id.projectPath}")
                     }
                 } else if (id instanceof ModuleComponentIdentifier) {

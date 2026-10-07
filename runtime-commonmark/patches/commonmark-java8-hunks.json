@@ -1,0 +1,505 @@
+{
+  "source_archive_sha256": {
+    "core": "c1296ec293232548329d9051e5fc49b1ecec1a3440db7d3ce36f193feb972757",
+    "tables": "e1fd6175ae9eff2ec0317309f421a8ee1a3090b61030746d824381beb6a61fdd"
+  },
+  "patch_sha256": "556dd41e7bfdbb62123bd8b7a1b5c101c82f87834c28e2561ede61bf54fd039e",
+  "files": [
+    {
+      "module": "core",
+      "path": "module-info.java",
+      "remove": true,
+      "hunks": [
+        {
+          "before": "module org.commonmark {\n    exports org.commonmark;\n    exports org.commonmark.node;\n    exports org.commonmark.parser;\n    exports org.commonmark.parser.beta;\n    exports org.commonmark.parser.block;\n    exports org.commonmark.parser.delimiter;\n    exports org.commonmark.renderer;\n    exports org.commonmark.renderer.html;\n    exports org.commonmark.renderer.markdown;\n    exports org.commonmark.renderer.text;\n    exports org.commonmark.text;\n}\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/Definitions.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    private final Map<Class<?>, DefinitionMap<?>> definitionsByType = new HashMap<>();\n\n    public <D> void addDefinitions(DefinitionMap<D> definitionMap) {\n        var existingMap = getMap(definitionMap.getType());\n        if (existingMap == null) {\n            definitionsByType.put(definitionMap.getType(), definitionMap);\n        } else {\n",
+          "after": "    private final Map<Class<?>, DefinitionMap<?>> definitionsByType = new HashMap<>();\n\n    public <D> void addDefinitions(DefinitionMap<D> definitionMap) {\n        DefinitionMap<D> existingMap = getMap(definitionMap.getType());\n        if (existingMap == null) {\n            definitionsByType.put(definitionMap.getType(), definitionMap);\n        } else {\n"
+        },
+        {
+          "before": "    }\n\n    public <V> V getDefinition(Class<V> type, String label) {\n        var definitionMap = getMap(type);\n        if (definitionMap == null) {\n            return null;\n        }\n",
+          "after": "    }\n\n    public <V> V getDefinition(Class<V> type, String label) {\n        DefinitionMap<V> definitionMap = getMap(type);\n        if (definitionMap == null) {\n            return null;\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/DocumentParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\npublic class DocumentParser implements ParserState {\n\n    private static final Set<Class<? extends Block>> CORE_FACTORY_TYPES = new LinkedHashSet<>(List.of(\n            BlockQuote.class,\n            Heading.class,\n            FencedCodeBlock.class,\n",
+          "after": "\npublic class DocumentParser implements ParserState {\n\n    private static final Set<Class<? extends Block>> CORE_FACTORY_TYPES = new LinkedHashSet<>(org.commonmark.internal.util.Java8Collections.listOf(\n            BlockQuote.class,\n            Heading.class,\n            FencedCodeBlock.class,\n"
+        },
+        {
+          "before": "    }\n\n    public Document parse(Reader input) throws IOException {\n        var lineReader = new LineReader(input);\n        int inputIndex = 0;\n        String line;\n        while ((line = lineReader.readLine()) != null) {\n            parseLine(line, inputIndex);\n            inputIndex += line.length();\n            var eol = lineReader.getLineTerminator();\n            if (eol != null) {\n                inputIndex += eol.length();\n            }\n",
+          "after": "    }\n\n    public Document parse(Reader input) throws IOException {\n        LineReader lineReader = new LineReader(input);\n        int inputIndex = 0;\n        String line;\n        while ((line = lineReader.readLine()) != null) {\n            parseLine(line, inputIndex);\n            inputIndex += line.length();\n            String eol = lineReader.getLineTerminator();\n            if (eol != null) {\n                inputIndex += eol.length();\n            }\n"
+        },
+        {
+          "before": "\n            List<SourceSpan> replacedSourceSpans = null;\n            if (blockStart.getReplaceParagraphLines() >= 1 || blockStart.isReplaceActiveBlockParser()) {\n                var activeBlockParser = getActiveBlockParser();\n                if (activeBlockParser instanceof ParagraphParser) {\n                    var paragraphParser = (ParagraphParser) activeBlockParser;\n                    var lines = blockStart.isReplaceActiveBlockParser() ? Integer.MAX_VALUE : blockStart.getReplaceParagraphLines();\n                    replacedSourceSpans = replaceParagraphLines(lines, paragraphParser);\n                } else if (blockStart.isReplaceActiveBlockParser()) {\n                    replacedSourceSpans = prepareActiveBlockParserForReplacement(activeBlockParser);\n",
+          "after": "\n            List<SourceSpan> replacedSourceSpans = null;\n            if (blockStart.getReplaceParagraphLines() >= 1 || blockStart.isReplaceActiveBlockParser()) {\n                BlockParser activeBlockParser = getActiveBlockParser();\n                if (activeBlockParser instanceof ParagraphParser) {\n                    ParagraphParser paragraphParser = (ParagraphParser) activeBlockParser;\n                    int lines = blockStart.isReplaceActiveBlockParser() ? Integer.MAX_VALUE : blockStart.getReplaceParagraphLines();\n                    replacedSourceSpans = replaceParagraphLines(lines, paragraphParser);\n                } else if (blockStart.isReplaceActiveBlockParser()) {\n                    replacedSourceSpans = prepareActiveBlockParserForReplacement(activeBlockParser);\n"
+        },
+        {
+          "before": "        if (includeSourceSpans != IncludeSourceSpans.NONE) {\n            // Don't add source spans for Document itself (it would get the whole source text), so start at 1, not 0\n            for (int i = 1; i < openBlockParsers.size(); i++) {\n                var openBlockParser = openBlockParsers.get(i);\n                // In case of a lazy continuation line, the index is less than where the block parser would expect the\n                // contents to start, so let's use whichever is smaller.\n                int blockIndex = Math.min(openBlockParser.sourceIndex, index);\n",
+          "after": "        if (includeSourceSpans != IncludeSourceSpans.NONE) {\n            // Don't add source spans for Document itself (it would get the whole source text), so start at 1, not 0\n            for (int i = 1; i < openBlockParsers.size(); i++) {\n                OpenBlockParser openBlockParser = openBlockParsers.get(i);\n                // In case of a lazy continuation line, the index is less than where the block parser would expect the\n                // contents to start, so let's use whichever is smaller.\n                int blockIndex = Math.min(openBlockParser.sourceIndex, index);\n"
+        },
+        {
+          "before": "     * Walk through a block & children recursively, parsing string content into inline content where appropriate.\n     */\n    private void processInlines() {\n        var context = new InlineParserContextImpl(inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, definitions);\n        var inlineParser = inlineParserFactory.create(context);\n\n        for (var blockParser : allBlockParsers) {\n            blockParser.parseInlines(inlineParser);\n        }\n    }\n",
+          "after": "     * Walk through a block & children recursively, parsing string content into inline content where appropriate.\n     */\n    private void processInlines() {\n        InlineParserContextImpl context = new InlineParserContextImpl(inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, definitions);\n        org.commonmark.parser.InlineParser inlineParser = inlineParserFactory.create(context);\n\n        for (BlockParser blockParser : allBlockParsers) {\n            blockParser.parseInlines(inlineParser);\n        }\n    }\n"
+        },
+        {
+          "before": "    private List<SourceSpan> replaceParagraphLines(int lines, ParagraphParser paragraphParser) {\n        // Remove lines from paragraph as the new block is using them.\n        // If all lines are used, this also unlinks the Paragraph block.\n        var sourceSpans = paragraphParser.removeLines(lines);\n        // Close the paragraph block parser, which will finalize it.\n        closeBlockParsers(1);\n        return sourceSpans;\n",
+          "after": "    private List<SourceSpan> replaceParagraphLines(int lines, ParagraphParser paragraphParser) {\n        // Remove lines from paragraph as the new block is using them.\n        // If all lines are used, this also unlinks the Paragraph block.\n        List<SourceSpan> sourceSpans = paragraphParser.removeLines(lines);\n        // Close the paragraph block parser, which will finalize it.\n        closeBlockParsers(1);\n        return sourceSpans;\n"
+        },
+        {
+          "before": "    }\n\n    private void addDefinitionsFrom(BlockParser blockParser) {\n        for (var definitionMap : blockParser.getDefinitions()) {\n            definitions.addDefinitions(definitionMap);\n        }\n    }\n",
+          "after": "    }\n\n    private void addDefinitionsFrom(BlockParser blockParser) {\n        for (DefinitionMap<?> definitionMap : blockParser.getDefinitions()) {\n            definitions.addDefinitions(definitionMap);\n        }\n    }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/InlineParserImpl.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    private List<InlineContentParserFactory> calculateInlineContentParserFactories(List<InlineContentParserFactory> customFactories) {\n        // Custom parsers can override built-in parsers if they want, so make sure they are tried first\n        var list = new ArrayList<>(customFactories);\n        list.add(new BackslashInlineParser.Factory());\n        list.add(new BackticksInlineParser.Factory());\n        list.add(new EntityInlineParser.Factory());\n",
+          "after": "\n    private List<InlineContentParserFactory> calculateInlineContentParserFactories(List<InlineContentParserFactory> customFactories) {\n        // Custom parsers can override built-in parsers if they want, so make sure they are tried first\n        ArrayList<InlineContentParserFactory> list = new ArrayList<>(customFactories);\n        list.add(new BackslashInlineParser.Factory());\n        list.add(new BackticksInlineParser.Factory());\n        list.add(new EntityInlineParser.Factory());\n"
+        },
+        {
+          "before": "\n    private List<LinkProcessor> calculateLinkProcessors(List<LinkProcessor> linkProcessors) {\n        // Custom link processors can override the built-in behavior, so make sure they are tried first\n        var list = new ArrayList<>(linkProcessors);\n        list.add(new CoreLinkProcessor());\n        return list;\n    }\n\n    private static Map<Character, DelimiterProcessor> calculateDelimiterProcessors(List<DelimiterProcessor> delimiterProcessors) {\n        var map = new HashMap<Character, DelimiterProcessor>();\n        addDelimiterProcessors(List.of(new AsteriskDelimiterProcessor(), new UnderscoreDelimiterProcessor()), map);\n        addDelimiterProcessors(delimiterProcessors, map);\n        return map;\n    }\n",
+          "after": "\n    private List<LinkProcessor> calculateLinkProcessors(List<LinkProcessor> linkProcessors) {\n        // Custom link processors can override the built-in behavior, so make sure they are tried first\n        ArrayList<LinkProcessor> list = new ArrayList<>(linkProcessors);\n        list.add(new CoreLinkProcessor());\n        return list;\n    }\n\n    private static Map<Character, DelimiterProcessor> calculateDelimiterProcessors(List<DelimiterProcessor> delimiterProcessors) {\n        HashMap<Character, DelimiterProcessor> map = new HashMap<Character, DelimiterProcessor>();\n        addDelimiterProcessors(org.commonmark.internal.util.Java8Collections.listOf(new AsteriskDelimiterProcessor(), new UnderscoreDelimiterProcessor()), map);\n        addDelimiterProcessors(delimiterProcessors, map);\n        return map;\n    }\n"
+        },
+        {
+          "before": "    }\n\n    private static BitSet calculateLinkMarkers(Set<Character> linkMarkers) {\n        var bitSet = new BitSet();\n        for (var c : linkMarkers) {\n            bitSet.set(c);\n        }\n        bitSet.set('!');\n",
+          "after": "    }\n\n    private static BitSet calculateLinkMarkers(Set<Character> linkMarkers) {\n        BitSet bitSet = new BitSet();\n        for (Character c : linkMarkers) {\n            bitSet.set(c);\n        }\n        bitSet.set('!');\n"
+        },
+        {
+          "before": "        for (Character c : delimiterCharacters) {\n            bitSet.set(c);\n        }\n        for (var factory : inlineContentParserFactories) {\n            for (var c : factory.getTriggerCharacters()) {\n                bitSet.set(c);\n            }\n        }\n",
+          "after": "        for (Character c : delimiterCharacters) {\n            bitSet.set(c);\n        }\n        for (InlineContentParserFactory factory : inlineContentParserFactories) {\n            for (Character c : factory.getTriggerCharacters()) {\n                bitSet.set(c);\n            }\n        }\n"
+        },
+        {
+          "before": "    }\n\n    private Map<Character, List<InlineContentParser>> createInlineContentParsers() {\n        var map = new HashMap<Character, List<InlineContentParser>>();\n        for (var factory : inlineContentParserFactories) {\n            var parser = factory.create();\n            for (var c : factory.getTriggerCharacters()) {\n                map.computeIfAbsent(c, k -> new ArrayList<>()).add(parser);\n            }\n        }\n",
+          "after": "    }\n\n    private Map<Character, List<InlineContentParser>> createInlineContentParsers() {\n        HashMap<Character, List<InlineContentParser>> map = new HashMap<Character, List<InlineContentParser>>();\n        for (InlineContentParserFactory factory : inlineContentParserFactories) {\n            InlineContentParser parser = factory.create();\n            for (Character c : factory.getTriggerCharacters()) {\n                map.computeIfAbsent(c, k -> new ArrayList<>()).add(parser);\n            }\n        }\n"
+        },
+        {
+          "before": "        reset(lines);\n\n        while (true) {\n            var nodes = parseInline();\n            if (nodes == null) {\n                break;\n            }\n",
+          "after": "        reset(lines);\n\n        while (true) {\n            List<? extends Node> nodes = parseInline();\n            if (nodes == null) {\n                break;\n            }\n"
+        },
+        {
+          "before": "\n        switch (c) {\n            case '[':\n                return List.of(parseOpenBracket());\n            case ']':\n                return List.of(parseCloseBracket());\n            case '\\n':\n                return List.of(parseLineBreak());\n            case Scanner.END:\n                return null;\n        }\n\n        if (linkMarkers.get(c)) {\n            var markerPosition = scanner.position();\n            var nodes = parseLinkMarker();\n            if (nodes != null) {\n                return nodes;\n            }\n",
+          "after": "\n        switch (c) {\n            case '[':\n                return org.commonmark.internal.util.Java8Collections.listOf(parseOpenBracket());\n            case ']':\n                return org.commonmark.internal.util.Java8Collections.listOf(parseCloseBracket());\n            case '\\n':\n                return org.commonmark.internal.util.Java8Collections.listOf(parseLineBreak());\n            case Scanner.END:\n                return null;\n        }\n\n        if (linkMarkers.get(c)) {\n            Position markerPosition = scanner.position();\n            List<? extends Node> nodes = parseLinkMarker();\n            if (nodes != null) {\n                return nodes;\n            }\n"
+        },
+        {
+          "before": "\n        // No inline parser, delimiter or other special handling.\n        if (!specialCharacters.get(c)) {\n            return List.of(parseText());\n        }\n\n        List<InlineContentParser> inlineParsers = this.inlineParsers.get(c);\n",
+          "after": "\n        // No inline parser, delimiter or other special handling.\n        if (!specialCharacters.get(c)) {\n            return org.commonmark.internal.util.Java8Collections.listOf(parseText());\n        }\n\n        List<InlineContentParser> inlineParsers = this.inlineParsers.get(c);\n"
+        },
+        {
+          "before": "                    if (includeSourceSpans && node.getSourceSpans().isEmpty()) {\n                        node.setSourceSpans(scanner.getSource(position, scanner.position()).getSourceSpans());\n                    }\n                    return List.of(node);\n                } else {\n                    // Reset position\n                    scanner.setPosition(position);\n",
+          "after": "                    if (includeSourceSpans && node.getSourceSpans().isEmpty()) {\n                        node.setSourceSpans(scanner.getSource(position, scanner.position()).getSourceSpans());\n                    }\n                    return org.commonmark.internal.util.Java8Collections.listOf(node);\n                } else {\n                    // Reset position\n                    scanner.setPosition(position);\n"
+        },
+        {
+          "before": "        }\n\n        // If we get here, even for a special/delimiter character, we will just treat it as text.\n        return List.of(parseText());\n    }\n\n    /**\n",
+          "after": "        }\n\n        // If we get here, even for a special/delimiter character, we will just treat it as text.\n        return org.commonmark.internal.util.Java8Collections.listOf(parseText());\n    }\n\n    /**\n"
+        },
+        {
+          "before": "     * Otherwise, return null.\n     */\n    private List<? extends Node> parseLinkMarker() {\n        var markerPosition = scanner.position();\n        scanner.next();\n        var bracketPosition = scanner.position();\n        if (scanner.next('[')) {\n            var contentPosition = scanner.position();\n            var bangNode = text(scanner.getSource(markerPosition, bracketPosition));\n            var bracketNode = text(scanner.getSource(bracketPosition, contentPosition));\n\n            // Add entry to stack for this opener\n            addBracket(Bracket.withMarker(bangNode, markerPosition, bracketNode, bracketPosition, contentPosition, lastBracket, lastDelimiter));\n            return List.of(bangNode, bracketNode);\n        } else {\n            return null;\n        }\n",
+          "after": "     * Otherwise, return null.\n     */\n    private List<? extends Node> parseLinkMarker() {\n        Position markerPosition = scanner.position();\n        scanner.next();\n        Position bracketPosition = scanner.position();\n        if (scanner.next('[')) {\n            Position contentPosition = scanner.position();\n            Text bangNode = text(scanner.getSource(markerPosition, bracketPosition));\n            Text bracketNode = text(scanner.getSource(bracketPosition, contentPosition));\n\n            // Add entry to stack for this opener\n            addBracket(Bracket.withMarker(bangNode, markerPosition, bracketNode, bracketPosition, contentPosition, lastBracket, lastDelimiter));\n            return org.commonmark.internal.util.Java8Collections.listOf(bangNode, bracketNode);\n        } else {\n            return null;\n        }\n"
+        },
+        {
+          "before": "            return text(scanner.getSource(beforeClose, afterClose));\n        }\n\n        var linkOrImage = parseLinkOrImage(opener, beforeClose);\n        if (linkOrImage != null) {\n            return linkOrImage;\n        }\n",
+          "after": "            return text(scanner.getSource(beforeClose, afterClose));\n        }\n\n        Node linkOrImage = parseLinkOrImage(opener, beforeClose);\n        if (linkOrImage != null) {\n            return linkOrImage;\n        }\n"
+        },
+        {
+          "before": "    }\n\n    private Node parseLinkOrImage(Bracket opener, Position beforeClose) {\n        var linkInfo = parseLinkInfo(opener, beforeClose);\n        if (linkInfo == null) {\n            return null;\n        }\n        var processorStartPosition = scanner.position();\n\n        for (var linkProcessor : linkProcessors) {\n            var linkResult = linkProcessor.process(linkInfo, scanner, context);\n            if (!(linkResult instanceof LinkResultImpl)) {\n                // Reset position in case the processor used the scanner, and it didn't work out.\n                scanner.setPosition(processorStartPosition);\n                continue;\n            }\n\n            var result = (LinkResultImpl) linkResult;\n            var node = result.getNode();\n            var position = result.getPosition();\n            var includeMarker = result.isIncludeMarker();\n\n            switch (result.getType()) {\n                case WRAP:\n",
+          "after": "    }\n\n    private Node parseLinkOrImage(Bracket opener, Position beforeClose) {\n        LinkInfo linkInfo = parseLinkInfo(opener, beforeClose);\n        if (linkInfo == null) {\n            return null;\n        }\n        Position processorStartPosition = scanner.position();\n\n        for (LinkProcessor linkProcessor : linkProcessors) {\n            LinkResult linkResult = linkProcessor.process(linkInfo, scanner, context);\n            if (!(linkResult instanceof LinkResultImpl)) {\n                // Reset position in case the processor used the scanner, and it didn't work out.\n                scanner.setPosition(processorStartPosition);\n                continue;\n            }\n\n            LinkResultImpl result = (LinkResultImpl) linkResult;\n            Node node = result.getNode();\n            Position position = result.getPosition();\n            boolean includeMarker = result.isIncludeMarker();\n\n            switch (result.getType()) {\n                case WRAP:\n"
+        },
+        {
+          "before": "        //   - Shortcut:  `[foo]`      (foo is both the text and label)\n\n        // Starting position is after the closing `]`\n        var afterClose = scanner.position();\n\n        // Maybe an inline link/image\n        var destinationTitle = parseInlineDestinationTitle(scanner);\n        if (destinationTitle != null) {\n            var text = scanner.getSource(opener.contentPosition, beforeClose).getContent();\n            return new LinkInfoImpl(opener.markerNode, opener.bracketNode, text, null, destinationTitle.destination, destinationTitle.title, afterClose);\n        }\n        // Not an inline link/image, rewind back to after `]`.\n",
+          "after": "        //   - Shortcut:  `[foo]`      (foo is both the text and label)\n\n        // Starting position is after the closing `]`\n        Position afterClose = scanner.position();\n\n        // Maybe an inline link/image\n        DestinationTitle destinationTitle = parseInlineDestinationTitle(scanner);\n        if (destinationTitle != null) {\n            String text = scanner.getSource(opener.contentPosition, beforeClose).getContent();\n            return new LinkInfoImpl(opener.markerNode, opener.bracketNode, text, null, destinationTitle.destination, destinationTitle.title, afterClose);\n        }\n        // Not an inline link/image, rewind back to after `]`.\n"
+        },
+        {
+          "before": "        // failed to be parsed as an inline link/image before.\n\n        // See if there's a link label like `[bar]` or `[]`\n        var label = parseLinkLabel(scanner);\n        if (label == null) {\n            // No label, rewind back\n            scanner.setPosition(afterClose);\n        }\n        var textIsReference = label == null || label.isEmpty();\n        if (opener.bracketAfter && textIsReference && opener.markerNode == null) {\n            // In case of shortcut or collapsed links, the text is used as the reference. But the reference is not allowed to\n            // contain an unescaped bracket, so if that's the case we don't need to continue. This is an optimization.\n            return null;\n        }\n\n        var text = scanner.getSource(opener.contentPosition, beforeClose).getContent();\n        return new LinkInfoImpl(opener.markerNode, opener.bracketNode, text, label, null, null, afterClose);\n    }\n\n",
+          "after": "        // failed to be parsed as an inline link/image before.\n\n        // See if there's a link label like `[bar]` or `[]`\n        String label = parseLinkLabel(scanner);\n        if (label == null) {\n            // No label, rewind back\n            scanner.setPosition(afterClose);\n        }\n        boolean textIsReference = label == null || label.isEmpty();\n        if (opener.bracketAfter && textIsReference && opener.markerNode == null) {\n            // In case of shortcut or collapsed links, the text is used as the reference. But the reference is not allowed to\n            // contain an unescaped bracket, so if that's the case we don't need to continue. This is an optimization.\n            return null;\n        }\n\n        String text = scanner.getSource(opener.contentPosition, beforeClose).getContent();\n        return new LinkInfoImpl(opener.markerNode, opener.bracketNode, text, label, null, null, afterClose);\n    }\n\n"
+        },
+        {
+          "before": "        }\n\n        if (includeSourceSpans) {\n            var startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;\n            wrapperNode.setSourceSpans(scanner.getSource(startPosition, scanner.position()).getSourceSpans());\n        }\n\n",
+          "after": "        }\n\n        if (includeSourceSpans) {\n            Position startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;\n            wrapperNode.setSourceSpans(scanner.getSource(startPosition, scanner.position()).getSourceSpans());\n        }\n\n"
+        },
+        {
+          "before": "        }\n\n        if (includeSourceSpans) {\n            var startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;\n            node.setSourceSpans(scanner.getSource(startPosition, scanner.position()).getSourceSpans());\n        }\n\n",
+          "after": "        }\n\n        if (includeSourceSpans) {\n            Position startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;\n            node.setSourceSpans(scanner.getSource(startPosition, scanner.position()).getSourceSpans());\n        }\n\n"
+        },
+        {
+          "before": "        // Remove nodes that we added since the opener, because we're replacing them\n        Node n = includeMarker && opener.markerNode != null ? opener.markerNode : opener.bracketNode;\n        while (n != null) {\n            var next = n.getNext();\n            n.unlink();\n            n = next;\n        }\n",
+          "after": "        // Remove nodes that we added since the opener, because we're replacing them\n        Node n = includeMarker && opener.markerNode != null ? opener.markerNode : opener.bracketNode;\n        while (n != null) {\n            Node next = n.getNext();\n            n.unlink();\n            n = next;\n        }\n"
+        },
+        {
+          "before": "    private Node parseLineBreak() {\n        scanner.next();\n\n        var hard = trailingSpaces >= 2;\n        trailingSpaces = 0;\n        if (hard) {\n            return new HardLineBreak();\n",
+          "after": "    private Node parseLineBreak() {\n        scanner.next();\n\n        boolean hard = trailingSpaces >= 2;\n        trailingSpaces = 0;\n        if (hard) {\n            return new HardLineBreak();\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/LinkReferenceDefinitionParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    }\n\n    List<SourceSpan> removeLines(int lines) {\n        var removedSpans = Collections.unmodifiableList(new ArrayList<>(\n                sourceSpans.subList(Math.max(sourceSpans.size() - lines, 0), sourceSpans.size())));\n        removeLast(lines, paragraphLines);\n        removeLast(lines, sourceSpans);\n",
+          "after": "    }\n\n    List<SourceSpan> removeLines(int lines) {\n        List<SourceSpan> removedSpans = Collections.unmodifiableList(new ArrayList<>(\n                sourceSpans.subList(Math.max(sourceSpans.size() - lines, 0), sourceSpans.size())));\n        removeLast(lines, paragraphLines);\n        removeLast(lines, sourceSpans);\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/ParagraphParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    @Override\n    public List<DefinitionMap<?>> getDefinitions() {\n        var map = new DefinitionMap<>(LinkReferenceDefinition.class);\n        for (var def : linkReferenceDefinitionParser.getDefinitions()) {\n            map.putIfAbsent(def.getLabel(), def);\n        }\n        return List.of(map);\n    }\n\n    @Override\n    public void closeBlock() {\n        for (var def : linkReferenceDefinitionParser.getDefinitions()) {\n            block.insertBefore(def);\n        }\n\n",
+          "after": "\n    @Override\n    public List<DefinitionMap<?>> getDefinitions() {\n        DefinitionMap<LinkReferenceDefinition> map = new DefinitionMap<>(LinkReferenceDefinition.class);\n        for (LinkReferenceDefinition def : linkReferenceDefinitionParser.getDefinitions()) {\n            map.putIfAbsent(def.getLabel(), def);\n        }\n        return org.commonmark.internal.util.Java8Collections.listOf(map);\n    }\n\n    @Override\n    public void closeBlock() {\n        for (LinkReferenceDefinition def : linkReferenceDefinitionParser.getDefinitions()) {\n            block.insertBefore(def);\n        }\n\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/ThematicBreakParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "            int nextNonSpace = state.getNextNonSpaceIndex();\n            CharSequence line = state.getLine().getContent();\n            if (isThematicBreak(line, nextNonSpace)) {\n                var literal = String.valueOf(line.subSequence(state.getIndex(), line.length()));\n                return BlockStart.of(new ThematicBreakParser(literal)).atIndex(line.length());\n            } else {\n                return BlockStart.none();\n",
+          "after": "            int nextNonSpace = state.getNextNonSpaceIndex();\n            CharSequence line = state.getLine().getContent();\n            if (isThematicBreak(line, nextNonSpace)) {\n                String literal = String.valueOf(line.subSequence(state.getIndex(), line.length()));\n                return BlockStart.of(new ThematicBreakParser(literal)).atIndex(line.length());\n            } else {\n                return BlockStart.none();\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/AutolinkInlineParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    public static class Factory implements InlineContentParserFactory {\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return Set.of('<');\n        }\n\n        @Override\n",
+          "after": "    public static class Factory implements InlineContentParserFactory {\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return org.commonmark.internal.util.Java8Collections.setOf('<');\n        }\n\n        @Override\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/BackslashInlineParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    public static class Factory implements InlineContentParserFactory {\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return Set.of('\\\\');\n        }\n\n        @Override\n",
+          "after": "    public static class Factory implements InlineContentParserFactory {\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return org.commonmark.internal.util.Java8Collections.setOf('\\\\');\n        }\n\n        @Override\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/BackticksInlineParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    public static class Factory implements InlineContentParserFactory {\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return Set.of('`');\n        }\n\n        @Override\n",
+          "after": "    public static class Factory implements InlineContentParserFactory {\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return org.commonmark.internal.util.Java8Collections.setOf('`');\n        }\n\n        @Override\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/CoreLinkProcessor.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "            return process(linkInfo, scanner, linkInfo.destination(), linkInfo.title());\n        }\n\n        var label = linkInfo.label();\n        var ref = label != null && !label.isEmpty() ? label : linkInfo.text();\n        var def = context.getDefinition(LinkReferenceDefinition.class, ref);\n        if (def != null) {\n            // Reference link\n            return process(linkInfo, scanner, def.getDestination(), def.getTitle());\n",
+          "after": "            return process(linkInfo, scanner, linkInfo.destination(), linkInfo.title());\n        }\n\n        String label = linkInfo.label();\n        String ref = label != null && !label.isEmpty() ? label : linkInfo.text();\n        LinkReferenceDefinition def = context.getDefinition(LinkReferenceDefinition.class, ref);\n        if (def != null) {\n            // Reference link\n            return process(linkInfo, scanner, def.getDestination(), def.getTitle());\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/EntityInlineParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return Set.of('&');\n        }\n\n        @Override\n",
+          "after": "\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return org.commonmark.internal.util.Java8Collections.setOf('&');\n        }\n\n        @Override\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/HtmlInlineParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return Set.of('<');\n        }\n\n        @Override\n",
+          "after": "\n        @Override\n        public Set<Character> getTriggerCharacters() {\n            return org.commonmark.internal.util.Java8Collections.setOf('<');\n        }\n\n        @Override\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/renderer/NodeRendererMap.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "     */\n    public void add(NodeRenderer nodeRenderer) {\n        nodeRenderers.add(nodeRenderer);\n        for (var nodeType : nodeRenderer.getNodeTypes()) {\n            // The first node renderer for a node type \"wins\".\n            renderers.putIfAbsent(nodeType, nodeRenderer);\n        }\n    }\n\n    public void render(Node node) {\n        var nodeRenderer = renderers.get(node.getClass());\n        if (nodeRenderer != null) {\n            nodeRenderer.render(node);\n        }\n",
+          "after": "     */\n    public void add(NodeRenderer nodeRenderer) {\n        nodeRenderers.add(nodeRenderer);\n        for (Class<? extends Node> nodeType : nodeRenderer.getNodeTypes()) {\n            // The first node renderer for a node type \"wins\".\n            renderers.putIfAbsent(nodeType, nodeRenderer);\n        }\n    }\n\n    public void render(Node node) {\n        NodeRenderer nodeRenderer = renderers.get(node.getClass());\n        if (nodeRenderer != null) {\n            nodeRenderer.render(node);\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/DefinitionMap.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    }\n\n    public void addAll(DefinitionMap<D> that) {\n        for (var entry : that.definitions.entrySet()) {\n            // Note that keys are already normalized, so we can add them directly\n            definitions.putIfAbsent(entry.getKey(), entry.getValue());\n        }\n",
+          "after": "    }\n\n    public void addAll(DefinitionMap<D> that) {\n        for (Map.Entry<String, D> entry : that.definitions.entrySet()) {\n            // Note that keys are already normalized, so we can add them directly\n            definitions.putIfAbsent(entry.getKey(), entry.getValue());\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Node.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "     * @since 0.16.0\n     */\n    public List<SourceSpan> getSourceSpans() {\n        return sourceSpans != null ? Collections.unmodifiableList(sourceSpans) : List.of();\n    }\n\n    /**\n",
+          "after": "     * @since 0.16.0\n     */\n    public List<SourceSpan> getSourceSpans() {\n        return sourceSpans != null ? Collections.unmodifiableList(sourceSpans) : org.commonmark.internal.util.Java8Collections.listOf();\n    }\n\n    /**\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/SourceSpans.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    }\n\n    public List<SourceSpan> getSourceSpans() {\n        return sourceSpans != null ? sourceSpans : List.of();\n    }\n\n    public void addAllFrom(Iterable<? extends Node> nodes) {\n",
+          "after": "    }\n\n    public List<SourceSpan> getSourceSpans() {\n        return sourceSpans != null ? sourceSpans : org.commonmark.internal.util.Java8Collections.listOf();\n    }\n\n    public void addAllFrom(Iterable<? extends Node> nodes) {\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/Parser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n        // Try to construct an inline parser. Invalid configuration might result in an exception, which we want to\n        // detect as soon as possible.\n        var context = new InlineParserContextImpl(\n                inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, new Definitions());\n        this.inlineParserFactory.create(context);\n    }\n",
+          "after": "\n        // Try to construct an inline parser. Invalid configuration might result in an exception, which we want to\n        // detect as soon as possible.\n        InlineParserContextImpl context = new InlineParserContextImpl(\n                inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, new Definitions());\n        this.inlineParserFactory.create(context);\n    }\n"
+        },
+        {
+          "before": "         * E.g., to only parse headings and lists:\n         * <pre>\n         *     {@code\n         *     Parser.builder().enabledBlockTypes(Set.of(Heading.class, ListBlock.class));\n         *     }\n         * </pre>\n         *\n",
+          "after": "         * E.g., to only parse headings and lists:\n         * <pre>\n         *     {@code\n         *     Parser.builder().enabledBlockTypes(org.commonmark.internal.util.Java8Collections.setOf(Heading.class, ListBlock.class));\n         *     }\n         * </pre>\n         *\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/AbstractBlockParser.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    @Override\n    public List<DefinitionMap<?>> getDefinitions() {\n        return List.of();\n    }\n\n    @Override\n",
+          "after": "\n    @Override\n    public List<DefinitionMap<?>> getDefinitions() {\n        return org.commonmark.internal.util.Java8Collections.listOf();\n    }\n\n    @Override\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/CoreHtmlNodeRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return Set.of(\n                Document.class,\n                Heading.class,\n                Paragraph.class,\n",
+          "after": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return org.commonmark.internal.util.Java8Collections.setOf(\n                Document.class,\n                Heading.class,\n                Paragraph.class,\n"
+        },
+        {
+          "before": "\n    @Override\n    public void visit(IndentedCodeBlock indentedCodeBlock) {\n        renderCodeBlock(indentedCodeBlock.getLiteral(), indentedCodeBlock, Map.of());\n    }\n\n    @Override\n",
+          "after": "\n    @Override\n    public void visit(IndentedCodeBlock indentedCodeBlock) {\n        renderCodeBlock(indentedCodeBlock.getLiteral(), indentedCodeBlock, org.commonmark.internal.util.Java8Collections.mapOf());\n    }\n\n    @Override\n"
+        },
+        {
+          "before": "    }\n\n    private Map<String, String> getAttrs(Node node, String tagName) {\n        return getAttrs(node, tagName, Map.of());\n    }\n\n    private Map<String, String> getAttrs(Node node, String tagName, Map<String, String> defaultAttributes) {\n",
+          "after": "    }\n\n    private Map<String, String> getAttrs(Node node, String tagName) {\n        return getAttrs(node, tagName, org.commonmark.internal.util.Java8Collections.mapOf());\n    }\n\n    private Map<String, String> getAttrs(Node node, String tagName, Map<String, String> defaultAttributes) {\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/DefaultUrlSanitizer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    private Set<String> protocols;\n\n    public DefaultUrlSanitizer() {\n        this(List.of(\"http\", \"https\", \"mailto\", \"data\"));\n    }\n\n    public DefaultUrlSanitizer(Collection<String> protocols) {\n",
+          "after": "    private Set<String> protocols;\n\n    public DefaultUrlSanitizer() {\n        this(org.commonmark.internal.util.Java8Collections.listOf(\"http\", \"https\", \"mailto\", \"data\"));\n    }\n\n    public DefaultUrlSanitizer(Collection<String> protocols) {\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/HtmlRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "            this.htmlWriter = htmlWriter;\n\n            attributeProviders = new ArrayList<>(attributeProviderFactories.size());\n            for (var attributeProviderFactory : attributeProviderFactories) {\n                attributeProviders.add(attributeProviderFactory.create(this));\n            }\n\n            for (var factory : nodeRendererFactories) {\n                var renderer = factory.create(this);\n                nodeRendererMap.add(renderer);\n            }\n        }\n",
+          "after": "            this.htmlWriter = htmlWriter;\n\n            attributeProviders = new ArrayList<>(attributeProviderFactories.size());\n            for (AttributeProviderFactory attributeProviderFactory : attributeProviderFactories) {\n                attributeProviders.add(attributeProviderFactory.create(this));\n            }\n\n            for (HtmlNodeRendererFactory factory : nodeRendererFactories) {\n                NodeRenderer renderer = factory.create(this);\n                nodeRendererMap.add(renderer);\n            }\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/HtmlWriter.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\npublic class HtmlWriter {\n\n    private static final Map<String, String> NO_ATTRIBUTES = Map.of();\n\n    private final Appendable buffer;\n    private char lastChar = 0;\n",
+          "after": "\npublic class HtmlWriter {\n\n    private static final Map<String, String> NO_ATTRIBUTES = org.commonmark.internal.util.Java8Collections.mapOf();\n\n    private final Appendable buffer;\n    private char lastChar = 0;\n"
+        },
+        {
+          "before": "        append(\"<\");\n        append(name);\n        if (attrs != null && !attrs.isEmpty()) {\n            for (var attr : attrs.entrySet()) {\n                append(\" \");\n                append(Escaping.escapeHtml(attr.getKey()));\n                if (attr.getValue() != null) {\n",
+          "after": "        append(\"<\");\n        append(name);\n        if (attrs != null && !attrs.isEmpty()) {\n            for (Map.Entry<String, String> attr : attrs.entrySet()) {\n                append(\" \");\n                append(Escaping.escapeHtml(attr.getKey()));\n                if (attr.getValue() != null) {\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return Set.of(\n                BlockQuote.class,\n                BulletList.class,\n                Code.class,\n",
+          "after": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return org.commonmark.internal.util.Java8Collections.setOf(\n                BlockQuote.class,\n                BulletList.class,\n                Code.class,\n"
+        },
+        {
+          "before": "        if (parts[parts.length - 1].isEmpty()) {\n            // But we don't want the last empty string, as \"\\n\" is used as a line terminator (not a separator),\n            // so return without the last element.\n            return List.of(parts).subList(0, parts.length - 1);\n        } else {\n            return List.of(parts);\n        }\n    }\n\n",
+          "after": "        if (parts[parts.length - 1].isEmpty()) {\n            // But we don't want the last empty string, as \"\\n\" is used as a line terminator (not a separator),\n            // so return without the last element.\n            return org.commonmark.internal.util.Java8Collections.listOf(parts).subList(0, parts.length - 1);\n        } else {\n            return org.commonmark.internal.util.Java8Collections.listOf(parts);\n        }\n    }\n\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/MarkdownRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n            @Override\n            public Set<Character> getSpecialCharacters() {\n                return Set.of();\n            }\n        });\n    }\n",
+          "after": "\n            @Override\n            public Set<Character> getSpecialCharacters() {\n                return org.commonmark.internal.util.Java8Collections.setOf();\n            }\n        });\n    }\n"
+        },
+        {
+          "before": "            }\n            additionalTextEscapes = Collections.unmodifiableSet(escapes);\n\n            for (var factory : nodeRendererFactories) {\n                // Pass in this as context here, which uses the fields set above\n                var renderer = factory.create(this);\n                nodeRendererMap.add(renderer);\n            }\n        }\n",
+          "after": "            }\n            additionalTextEscapes = Collections.unmodifiableSet(escapes);\n\n            for (MarkdownNodeRendererFactory factory : nodeRendererFactories) {\n                // Pass in this as context here, which uses the fields set above\n                NodeRenderer renderer = factory.create(this);\n                nodeRendererMap.add(renderer);\n            }\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/CoreTextContentNodeRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return Set.of(\n                Document.class,\n                Heading.class,\n                Paragraph.class,\n",
+          "after": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return org.commonmark.internal.util.Java8Collections.setOf(\n                Document.class,\n                Heading.class,\n                Paragraph.class,\n"
+        },
+        {
+          "before": "\n    @Override\n    public void visit(FencedCodeBlock fencedCodeBlock) {\n        var literal = stripTrailingNewline(fencedCodeBlock.getLiteral());\n        if (stripNewlines()) {\n            textContent.writeStripped(literal);\n        } else {\n",
+          "after": "\n    @Override\n    public void visit(FencedCodeBlock fencedCodeBlock) {\n        String literal = stripTrailingNewline(fencedCodeBlock.getLiteral());\n        if (stripNewlines()) {\n            textContent.writeStripped(literal);\n        } else {\n"
+        },
+        {
+          "before": "\n    @Override\n    public void visit(IndentedCodeBlock indentedCodeBlock) {\n        var literal = stripTrailingNewline(indentedCodeBlock.getLiteral());\n        if (stripNewlines()) {\n            textContent.writeStripped(literal);\n        } else {\n",
+          "after": "\n    @Override\n    public void visit(IndentedCodeBlock indentedCodeBlock) {\n        String literal = stripTrailingNewline(indentedCodeBlock.getLiteral());\n        if (stripNewlines()) {\n            textContent.writeStripped(literal);\n        } else {\n"
+        },
+        {
+          "before": "    @Override\n    public void visit(ListItem listItem) {\n        if (listHolder != null && listHolder instanceof OrderedListHolder) {\n            var orderedListHolder = (OrderedListHolder) listHolder;\n            var marker = orderedListHolder.getCounter() + orderedListHolder.getDelimiter();\n            var spaces = \" \";\n            textContent.write(marker);\n            textContent.write(spaces);\n            textContent.pushPrefix(repeat(\" \", marker.length() + spaces.length()));\n",
+          "after": "    @Override\n    public void visit(ListItem listItem) {\n        if (listHolder != null && listHolder instanceof OrderedListHolder) {\n            OrderedListHolder orderedListHolder = (OrderedListHolder) listHolder;\n            String marker = orderedListHolder.getCounter() + orderedListHolder.getDelimiter();\n            String spaces = \" \";\n            textContent.write(marker);\n            textContent.write(spaces);\n            textContent.pushPrefix(repeat(\" \", marker.length() + spaces.length()));\n"
+        },
+        {
+          "before": "        } else if (listHolder != null && listHolder instanceof BulletListHolder) {\n            BulletListHolder bulletListHolder = (BulletListHolder) listHolder;\n            if (!stripNewlines()) {\n                var marker = bulletListHolder.getMarker();\n                var spaces = \" \";\n                textContent.write(marker);\n                textContent.write(spaces);\n                textContent.pushPrefix(repeat(\" \", marker.length() + spaces.length()));\n",
+          "after": "        } else if (listHolder != null && listHolder instanceof BulletListHolder) {\n            BulletListHolder bulletListHolder = (BulletListHolder) listHolder;\n            if (!stripNewlines()) {\n                String marker = bulletListHolder.getMarker();\n                String spaces = \" \";\n                textContent.write(marker);\n                textContent.write(spaces);\n                textContent.pushPrefix(repeat(\" \", marker.length() + spaces.length()));\n"
+        },
+        {
+          "before": "\n    // Keep for Android compat (String.repeat only available on Android 12 and later)\n    private static String repeat(String s, int count) {\n        var sb = new StringBuilder(s.length() * count);\n        for (int i = 0; i < count; i++) {\n            sb.append(s);\n        }\n",
+          "after": "\n    // Keep for Android compat (String.repeat only available on Android 12 and later)\n    private static String repeat(String s, int count) {\n        StringBuilder sb = new StringBuilder(s.length() * count);\n        for (int i = 0; i < count; i++) {\n            sb.append(s);\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/TextContentRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "        private RendererContext(TextContentWriter textContentWriter) {\n            this.textContentWriter = textContentWriter;\n\n            for (var factory : nodeRendererFactories) {\n                var renderer = factory.create(this);\n                nodeRendererMap.add(renderer);\n            }\n        }\n",
+          "after": "        private RendererContext(TextContentWriter textContentWriter) {\n            this.textContentWriter = textContentWriter;\n\n            for (TextContentNodeRendererFactory factory : nodeRendererFactories) {\n                NodeRenderer renderer = factory.create(this);\n                nodeRendererMap.add(renderer);\n            }\n        }\n"
+        }
+      ]
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/TextContentWriter.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "        if (blockSeparator != null) {\n            if (blockSeparator.equals(\"\\n\") || blockSeparator.equals(\"\\n\\n\")) {\n                for (int i = 0; i < blockSeparator.length(); i++) {\n                    var sep = blockSeparator.charAt(i);\n                    append(sep);\n                    writePrefixes();\n                }\n",
+          "after": "        if (blockSeparator != null) {\n            if (blockSeparator.equals(\"\\n\") || blockSeparator.equals(\"\\n\\n\")) {\n                for (int i = 0; i < blockSeparator.length(); i++) {\n                    char sep = blockSeparator.charAt(i);\n                    append(sep);\n                    writePrefixes();\n                }\n"
+        }
+      ]
+    },
+    {
+      "module": "tables",
+      "path": "module-info.java",
+      "remove": true,
+      "hunks": [
+        {
+          "before": "module org.commonmark.ext.gfm.tables {\n    exports org.commonmark.ext.gfm.tables;\n\n    requires transitive org.commonmark;\n}\n",
+          "after": ""
+        }
+      ]
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TablesExtension.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n            @Override\n            public Set<Character> getSpecialCharacters() {\n                return Set.of('|');\n            }\n        });\n    }\n",
+          "after": "\n            @Override\n            public Set<Character> getSpecialCharacters() {\n                return org.commonmark.internal.util.Java8Collections.setOf('|');\n            }\n        });\n    }\n"
+        }
+      ]
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableHtmlNodeRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "    }\n\n    private Map<String, String> getAttributes(Node node, String tagName) {\n        return context.extendAttributes(node, tagName, Map.of());\n    }\n\n    private Map<String, String> getCellAttributes(TableCell tableCell, String tagName) {\n        if (tableCell.getAlignment() != null) {\n            return context.extendAttributes(tableCell, tagName, Map.of(\"align\", getAlignValue(tableCell.getAlignment())));\n        } else {\n            return context.extendAttributes(tableCell, tagName, Map.of());\n        }\n    }\n\n",
+          "after": "    }\n\n    private Map<String, String> getAttributes(Node node, String tagName) {\n        return context.extendAttributes(node, tagName, org.commonmark.internal.util.Java8Collections.mapOf());\n    }\n\n    private Map<String, String> getCellAttributes(TableCell tableCell, String tagName) {\n        if (tableCell.getAlignment() != null) {\n            return context.extendAttributes(tableCell, tagName, org.commonmark.internal.util.Java8Collections.mapOf(\"align\", getAlignValue(tableCell.getAlignment())));\n        } else {\n            return context.extendAttributes(tableCell, tagName, org.commonmark.internal.util.Java8Collections.mapOf());\n        }\n    }\n\n"
+        }
+      ]
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableNodeRenderer.java",
+      "remove": false,
+      "hunks": [
+        {
+          "before": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return Set.of(\n                TableBlock.class,\n                TableHead.class,\n                TableBody.class,\n",
+          "after": "\n    @Override\n    public Set<Class<? extends Node>> getNodeTypes() {\n        return org.commonmark.internal.util.Java8Collections.setOf(\n                TableBlock.class,\n                TableHead.class,\n                TableBody.class,\n"
+        }
+      ]
+    }
+  ]
+}

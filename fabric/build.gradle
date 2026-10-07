@@ -25,8 +25,7 @@ dependencies {
     add(modImplementationConfiguration, "net.fabricmc.fabric-api:${keyApiArtifact}:${fabric_key_mapping_api_version}")
     add(modImplementationConfiguration, "net.fabricmc.fabric-api:fabric-rendering-v1:${fabric_rendering_version}")
     implementation(include("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}"))
-    implementation(include("org.commonmark:commonmark:${commonmark_version}"))
-    implementation(include("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"))
+    implementation(include(project(':runtime-commonmark')))
     implementation(include(project(':runtime-rhino')))
     implementation(include("com.knuddels:jtokkit:${jtokkit_version}"))
     if (minecraftNativeSourceFamilies.contains('1.21.3') || minecraftTarget == '1.21.4') {

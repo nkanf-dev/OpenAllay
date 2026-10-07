@@ -1,0 +1,1241 @@
+{
+  "upstream_version": "0.28.0",
+  "source_archives": [
+    {
+      "path": "commonmark-0.28.0-sources.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/commonmark/commonmark/0.28.0/commonmark-0.28.0-sources.jar",
+      "bytes": 139578,
+      "sha256": "c1296ec293232548329d9051e5fc49b1ecec1a3440db7d3ce36f193feb972757",
+      "official_sha1": "8a95236265d22187c945fe99a7b92453fba05fc9",
+      "module": "core",
+      "coordinate": "org.commonmark:commonmark:0.28.0:sources@jar"
+    },
+    {
+      "path": "commonmark-ext-gfm-tables-0.28.0-sources.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/commonmark/commonmark-ext-gfm-tables/0.28.0/commonmark-ext-gfm-tables-0.28.0-sources.jar",
+      "bytes": 12442,
+      "sha256": "e1fd6175ae9eff2ec0317309f421a8ee1a3090b61030746d824381beb6a61fdd",
+      "official_sha1": "d89f48c7c3debd014d054ac22b7f6f5a1c03e76e",
+      "module": "tables",
+      "coordinate": "org.commonmark:commonmark-ext-gfm-tables:0.28.0:sources@jar"
+    }
+  ],
+  "source_count": 147,
+  "produced_source_count": 146,
+  "ordinary_upstream_classes": 202,
+  "source_closure": [
+    {
+      "module": "core",
+      "path": "module-info.java",
+      "source_bytes": 448,
+      "source_sha256": "64b991d694056ebebea2d7cf9f62c332808b763565ecc965b461f58a0291ad08",
+      "patched_bytes": null,
+      "patched_sha256": null
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/Extension.java",
+      "source_bytes": 384,
+      "source_sha256": "98ecfe5ab89c733c2071b1d4452257c057d229bd7c57bde347a391affa5413b0",
+      "patched_bytes": 384,
+      "patched_sha256": "98ecfe5ab89c733c2071b1d4452257c057d229bd7c57bde347a391affa5413b0"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/BlockContent.java",
+      "source_bytes": 518,
+      "source_sha256": "7e904256c264a37d05d838864c31a0ee279bbe02a421760c05727b43362defb4",
+      "patched_bytes": 518,
+      "patched_sha256": "7e904256c264a37d05d838864c31a0ee279bbe02a421760c05727b43362defb4"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/BlockContinueImpl.java",
+      "source_bytes": 628,
+      "source_sha256": "4348f9bfabb3842ee1b400da02852023ac01c86752f1b41006efcc09c7ed501d",
+      "patched_bytes": 628,
+      "patched_sha256": "4348f9bfabb3842ee1b400da02852023ac01c86752f1b41006efcc09c7ed501d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/BlockQuoteParser.java",
+      "source_bytes": 2134,
+      "source_sha256": "03915088df5ab9bdffc9c8c3c16ab64fa747a3152b2e3206422da275748128d2",
+      "patched_bytes": 2134,
+      "patched_sha256": "03915088df5ab9bdffc9c8c3c16ab64fa747a3152b2e3206422da275748128d2"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/BlockStartImpl.java",
+      "source_bytes": 1522,
+      "source_sha256": "ec8f4d0d82a13b2f6c108aef51496bec39d9954d448fa660a076d5e0d90eae68",
+      "patched_bytes": 1522,
+      "patched_sha256": "ec8f4d0d82a13b2f6c108aef51496bec39d9954d448fa660a076d5e0d90eae68"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/Bracket.java",
+      "source_bytes": 2405,
+      "source_sha256": "d9f1b73df1518d05575105504667d439eccd862b2ee82f729a9cf6bd687240d0",
+      "patched_bytes": 2405,
+      "patched_sha256": "d9f1b73df1518d05575105504667d439eccd862b2ee82f729a9cf6bd687240d0"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/Definitions.java",
+      "source_bytes": 946,
+      "source_sha256": "9555a71d45526396d5e65870718120573d20f9400cbbe4201dd9f77815d4f205",
+      "patched_bytes": 972,
+      "patched_sha256": "24aac59c9fd705f01a2ea21506cde28e4a4bde9a82bbe91d87c199947f649122"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/Delimiter.java",
+      "source_bytes": 2078,
+      "source_sha256": "4cdc1c0da08efe5b83cb434d8be654b7a252483ccdc616bde350188c6ab829a2",
+      "patched_bytes": 2078,
+      "patched_sha256": "4cdc1c0da08efe5b83cb434d8be654b7a252483ccdc616bde350188c6ab829a2"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/DocumentBlockParser.java",
+      "source_bytes": 864,
+      "source_sha256": "a5fc370caa26b8169b4e08a521cb41c0d5089ac0d530777c075033f54958e2d8",
+      "patched_bytes": 864,
+      "patched_sha256": "a5fc370caa26b8169b4e08a521cb41c0d5089ac0d530777c075033f54958e2d8"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/DocumentParser.java",
+      "source_bytes": 23135,
+      "source_sha256": "e6f066bf988031219b1e9b4113ed4dc06cbb1eedd91df45ca13f9bb67ac0bc7a",
+      "patched_bytes": 23307,
+      "patched_sha256": "ff08f00c589d1074925c3e203d90a4165d3df50f78d8042ffda22277dcdf60ea"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/FencedCodeBlockParser.java",
+      "source_bytes": 5228,
+      "source_sha256": "cbeaa0c5c9e6ce9dbb2ae15229b167e50a2b1cf81eb4a1b9b53d32947cf751f9",
+      "patched_bytes": 5228,
+      "patched_sha256": "cbeaa0c5c9e6ce9dbb2ae15229b167e50a2b1cf81eb4a1b9b53d32947cf751f9"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/HeadingParser.java",
+      "source_bytes": 5881,
+      "source_sha256": "b8e2d7ea549cb919b4158fd11b8e9c4d3349cfcf2047f73efbdd0cb1ddf470d1",
+      "patched_bytes": 5881,
+      "patched_sha256": "b8e2d7ea549cb919b4158fd11b8e9c4d3349cfcf2047f73efbdd0cb1ddf470d1"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/HtmlBlockParser.java",
+      "source_bytes": 5746,
+      "source_sha256": "f0e5594454ae43a9ac0e306727fce2bf38e62070fc4a29df583b10f510db174d",
+      "patched_bytes": 5746,
+      "patched_sha256": "f0e5594454ae43a9ac0e306727fce2bf38e62070fc4a29df583b10f510db174d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/IndentedCodeBlockParser.java",
+      "source_bytes": 2305,
+      "source_sha256": "66d92aa10768e349dd2e4036adaeb4c92b194f3dec16f5facb689c109d4d5591",
+      "patched_bytes": 2305,
+      "patched_sha256": "66d92aa10768e349dd2e4036adaeb4c92b194f3dec16f5facb689c109d4d5591"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/InlineParserContextImpl.java",
+      "source_bytes": 2158,
+      "source_sha256": "49d9705e472e06e51b10b59726045aa7770799e492fa701a6c38ae1a20fd6057",
+      "patched_bytes": 2158,
+      "patched_sha256": "49d9705e472e06e51b10b59726045aa7770799e492fa701a6c38ae1a20fd6057"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/InlineParserImpl.java",
+      "source_bytes": 36651,
+      "source_sha256": "622fbff1bb571eb4d7244d3da4ffa963c7c2750444c5974783291092fa2d6a75",
+      "patched_bytes": 37377,
+      "patched_sha256": "b34478183522d1bf746056fb9f2f961e0c0218db31274c67e556ba79ad82cf75"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/LinkReferenceDefinitionParser.java",
+      "source_bytes": 9740,
+      "source_sha256": "70a491e7246e6b8b73fe4c426ad10180cf0bd1dd9eaae569055f9fe542de14b7",
+      "patched_bytes": 9753,
+      "patched_sha256": "66c038756e717ab472bba7d9b3c740e513d7c986cf19578feca386ab05c806ea"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/ListBlockParser.java",
+      "source_bytes": 9198,
+      "source_sha256": "9f5164301258d0166d4c6a6596beed02970dabb265e4940f32dcdb8b050a1cf6",
+      "patched_bytes": 9198,
+      "patched_sha256": "9f5164301258d0166d4c6a6596beed02970dabb265e4940f32dcdb8b050a1cf6"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/ListItemParser.java",
+      "source_bytes": 2534,
+      "source_sha256": "6c5f8644d7812739b7aade953f341118486b1a8d47991cb5222f42dad3847dfa",
+      "patched_bytes": 2534,
+      "patched_sha256": "6c5f8644d7812739b7aade953f341118486b1a8d47991cb5222f42dad3847dfa"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/ParagraphParser.java",
+      "source_bytes": 2590,
+      "source_sha256": "2c2372257e65e6116de9be899eb0b76b1488f7ab31bfe60d68ff74dbb0d50b55",
+      "patched_bytes": 2710,
+      "patched_sha256": "da752df3d6ff6e6f9cea4b5cb272138c3ff22418b52bdf570f0f1bdb9c76f6d2"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/StaggeredDelimiterProcessor.java",
+      "source_bytes": 2409,
+      "source_sha256": "0c8e04ef12e39f4f7928c38b53ce2940aaa96ac56e9e2872740a3e51200de593",
+      "patched_bytes": 2409,
+      "patched_sha256": "0c8e04ef12e39f4f7928c38b53ce2940aaa96ac56e9e2872740a3e51200de593"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/ThematicBreakParser.java",
+      "source_bytes": 2560,
+      "source_sha256": "8ed53764da154cf7a57aec553fa49b826f3a064da4106a727bf749893f9f1fe6",
+      "patched_bytes": 2563,
+      "patched_sha256": "e1f91c4a102e94bb00182e5602d7183a5096fb1901c857c9c37d56f42d58965c"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/AsteriskDelimiterProcessor.java",
+      "source_bytes": 189,
+      "source_sha256": "ab821e90849855796a050f17379378b145848d07693e760c837fbc8591dd4f28",
+      "patched_bytes": 189,
+      "patched_sha256": "ab821e90849855796a050f17379378b145848d07693e760c837fbc8591dd4f28"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/AutolinkInlineParser.java",
+      "source_bytes": 2093,
+      "source_sha256": "7ba5477c17740ab18cf605d57042b43bbb54a26d20f41ce4928ec908f75e03c6",
+      "patched_bytes": 2138,
+      "patched_sha256": "2b074afc16d6c3e6a5dadcaeca55fd6b2f37d93e889a8412dbf29f80066d464a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/BackslashInlineParser.java",
+      "source_bytes": 1590,
+      "source_sha256": "882dcc4185435372497603ee44ee4b125b2a23157151e053ab524524ea5d3135",
+      "patched_bytes": 1635,
+      "patched_sha256": "1f94ea7270d66af5ce39f49d5d64b10bbfc2c40974e555aa765b9959d14e7957"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/BackticksInlineParser.java",
+      "source_bytes": 2360,
+      "source_sha256": "da56f3c1f379313623cc1ef66ed8ca6ba6e619032a025405ddb3cfb39bc420fe",
+      "patched_bytes": 2405,
+      "patched_sha256": "3f2ebd9fc3628756a482b24a2efdd2c3f95ed413d6dd393c45f54558edd5a74e"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/CoreLinkProcessor.java",
+      "source_bytes": 1535,
+      "source_sha256": "bded6fb866710e59bdef4f962c69fe38ee44bb6a3889989099205bf87220e8f8",
+      "patched_bytes": 1561,
+      "patched_sha256": "73a20bccec39166c390a0a39889a0b0923baf19968b4c43fb76e3b35839d09a4"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/EmphasisDelimiterProcessor.java",
+      "source_bytes": 2067,
+      "source_sha256": "4a6b636136d7c92b34a974ec9609515c37d332e7506752aad1c011875bd205ee",
+      "patched_bytes": 2067,
+      "patched_sha256": "4a6b636136d7c92b34a974ec9609515c37d332e7506752aad1c011875bd205ee"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/EntityInlineParser.java",
+      "source_bytes": 2426,
+      "source_sha256": "76cdf2e7bbeb01516bcb349c5e2e9508413b897f91d497f5d665408a2e381225",
+      "patched_bytes": 2471,
+      "patched_sha256": "d66fb17175e00d096f4c679a77d4d76e9cb254680e9e58ef31cfac7f2266a26d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/HtmlInlineParser.java",
+      "source_bytes": 7819,
+      "source_sha256": "60fa791aee0de8e67e23f8ebaf09283851e8f1e90d28168121a3f3c41cb74e7c",
+      "patched_bytes": 7864,
+      "patched_sha256": "6fd6a21a00b15fb3ac1ec2c992eeac836cbc1b6fd39b00354ff9185dfb70af2a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/LinkResultImpl.java",
+      "source_bytes": 948,
+      "source_sha256": "66748dbecfcc90f74293be6a72d9209f44063b6647f0caae5dea175320e27599",
+      "patched_bytes": 948,
+      "patched_sha256": "66748dbecfcc90f74293be6a72d9209f44063b6647f0caae5dea175320e27599"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/ParsedInlineImpl.java",
+      "source_bytes": 542,
+      "source_sha256": "055a0280854500148431fef937e458b0073ca5c6dfb613dcba5b9955055ed069",
+      "patched_bytes": 542,
+      "patched_sha256": "055a0280854500148431fef937e458b0073ca5c6dfb613dcba5b9955055ed069"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/inline/UnderscoreDelimiterProcessor.java",
+      "source_bytes": 193,
+      "source_sha256": "d4eae02472b861305b36fe535cca979bf761c9a4cbc8e4e00a2c2230252c73ea",
+      "patched_bytes": 193,
+      "patched_sha256": "d4eae02472b861305b36fe535cca979bf761c9a4cbc8e4e00a2c2230252c73ea"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/renderer/NodeRendererMap.java",
+      "source_bytes": 1237,
+      "source_sha256": "05f4975bb0693c0302571c37889643aa90871ed4653fa80a05f75760dfb179a2",
+      "patched_bytes": 1264,
+      "patched_sha256": "68df2d7038e3db91dc5bfb1eb831c19a1390bddb0c3aad9abee3b6afe57ea6cc"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/Escaping.java",
+      "source_bytes": 5208,
+      "source_sha256": "bafdb0b2eeffae81b0c94b7291cd24837e38f532d986707c9df8f51f0291f86f",
+      "patched_bytes": 5208,
+      "patched_sha256": "bafdb0b2eeffae81b0c94b7291cd24837e38f532d986707c9df8f51f0291f86f"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/Html5Entities.java",
+      "source_bytes": 2495,
+      "source_sha256": "027c4012936ccdd6d9ee2449d4743043c7c35bdbecc01a6ccea1917ff898206e",
+      "patched_bytes": 2495,
+      "patched_sha256": "027c4012936ccdd6d9ee2449d4743043c7c35bdbecc01a6ccea1917ff898206e"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/LineReader.java",
+      "source_bytes": 4707,
+      "source_sha256": "8ebf57e5079cdf8a33181cf917bc104ed6fe34d0070e854e7486f5822793178b",
+      "patched_bytes": 4707,
+      "patched_sha256": "8ebf57e5079cdf8a33181cf917bc104ed6fe34d0070e854e7486f5822793178b"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/LinkScanner.java",
+      "source_bytes": 6039,
+      "source_sha256": "1c536d1c45709ff974b50e7410b6bfa1be14575f7b55c56507a440e2ec40ca2f",
+      "patched_bytes": 6039,
+      "patched_sha256": "1c536d1c45709ff974b50e7410b6bfa1be14575f7b55c56507a440e2ec40ca2f"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/Parsing.java",
+      "source_bytes": 231,
+      "source_sha256": "1122e3dcb3b50c09d40ddfc93e27b6f649a6dd85d2cc53249d927659a477da48",
+      "patched_bytes": 231,
+      "patched_sha256": "1122e3dcb3b50c09d40ddfc93e27b6f649a6dd85d2cc53249d927659a477da48"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/AbstractVisitor.java",
+      "source_bytes": 3252,
+      "source_sha256": "fea8375a6b5eaa55c2c8c8b1bb9017913ad8578bac1bda4a935f80b3b8e4639c",
+      "patched_bytes": 3252,
+      "patched_sha256": "fea8375a6b5eaa55c2c8c8b1bb9017913ad8578bac1bda4a935f80b3b8e4639c"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Block.java",
+      "source_bytes": 498,
+      "source_sha256": "5e56f770080d0ba3be3eb070346999e8ce4dcd9f61d4d9f2b6be14fd9668e67d",
+      "patched_bytes": 498,
+      "patched_sha256": "5e56f770080d0ba3be3eb070346999e8ce4dcd9f61d4d9f2b6be14fd9668e67d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/BlockQuote.java",
+      "source_bytes": 432,
+      "source_sha256": "4fbd70adf1a696ba8ea8846f247825b3fc631c089eced64a670f70c66402c75a",
+      "patched_bytes": 432,
+      "patched_sha256": "4fbd70adf1a696ba8ea8846f247825b3fc631c089eced64a670f70c66402c75a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/BulletList.java",
+      "source_bytes": 1188,
+      "source_sha256": "dbf85a27bfadd5dfa89369ff2347c73361131f057e0b828eaae764d68104fa2d",
+      "patched_bytes": 1188,
+      "patched_sha256": "dbf85a27bfadd5dfa89369ff2347c73361131f057e0b828eaae764d68104fa2d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Code.java",
+      "source_bytes": 762,
+      "source_sha256": "6ab6f30abe25973290fcf7ca928224fb8c09361cc96cb58ee84b4d94bb739424",
+      "patched_bytes": 762,
+      "patched_sha256": "6ab6f30abe25973290fcf7ca928224fb8c09361cc96cb58ee84b4d94bb739424"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/CustomBlock.java",
+      "source_bytes": 284,
+      "source_sha256": "a5cb1080c970bd014e355b27d46c35cce7a6237827570e523a09e1d2dffe3b7d",
+      "patched_bytes": 284,
+      "patched_sha256": "a5cb1080c970bd014e355b27d46c35cce7a6237827570e523a09e1d2dffe3b7d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/CustomNode.java",
+      "source_bytes": 279,
+      "source_sha256": "f6c6a22480d9cb07438858c6caf40a425c3850474c21a77e5e1eadb6ec437330",
+      "patched_bytes": 279,
+      "patched_sha256": "f6c6a22480d9cb07438858c6caf40a425c3850474c21a77e5e1eadb6ec437330"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/DefinitionMap.java",
+      "source_bytes": 2075,
+      "source_sha256": "06cd502bbec8e45dceefade3456b5c882f21e4d3ee5e25602f4521f253663d5a",
+      "patched_bytes": 2092,
+      "patched_sha256": "9077927fcdefa6f409fc1e77ad3246479103d16ecd95f490070ac2bb33890906"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Delimited.java",
+      "source_bytes": 386,
+      "source_sha256": "743d4e8c66be6389b93e93d541be6ddc866d9a609cc536888c78e8efd7bb366a",
+      "patched_bytes": 386,
+      "patched_sha256": "743d4e8c66be6389b93e93d541be6ddc866d9a609cc536888c78e8efd7bb366a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Document.java",
+      "source_bytes": 236,
+      "source_sha256": "2c4a50fbb8dbc0955566421f869574aaa43d228cc8179382e7ca53c61a1a348d",
+      "patched_bytes": 236,
+      "patched_sha256": "2c4a50fbb8dbc0955566421f869574aaa43d228cc8179382e7ca53c61a1a348d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Emphasis.java",
+      "source_bytes": 812,
+      "source_sha256": "5f34117ea029570be3003e6295e82def746418a7973c00ff478f4366bb8b80fc",
+      "patched_bytes": 812,
+      "patched_sha256": "5f34117ea029570be3003e6295e82def746418a7973c00ff478f4366bb8b80fc"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/FencedCodeBlock.java",
+      "source_bytes": 3953,
+      "source_sha256": "eef648d3ab93f96f3678d7d38ffd3a22f6fe2c58f155abe69c90e6aa866c6533",
+      "patched_bytes": 3953,
+      "patched_sha256": "eef648d3ab93f96f3678d7d38ffd3a22f6fe2c58f155abe69c90e6aa866c6533"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/HardLineBreak.java",
+      "source_bytes": 340,
+      "source_sha256": "a43bd227c4a93ca1a39307f3c15bb5f62e0ba1926c5ca0912e8d32d324791db5",
+      "patched_bytes": 340,
+      "patched_sha256": "a43bd227c4a93ca1a39307f3c15bb5f62e0ba1926c5ca0912e8d32d324791db5"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Heading.java",
+      "source_bytes": 632,
+      "source_sha256": "312dc43fbd962cad25bc124243b45790136256dcfc91e86b32be06a248c4d8ab",
+      "patched_bytes": 632,
+      "patched_sha256": "312dc43fbd962cad25bc124243b45790136256dcfc91e86b32be06a248c4d8ab"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/HtmlBlock.java",
+      "source_bytes": 450,
+      "source_sha256": "3db733eabf28644af31ff58c37f84c93859f594dc8336325afb5d9198655699d",
+      "patched_bytes": 450,
+      "patched_sha256": "3db733eabf28644af31ff58c37f84c93859f594dc8336325afb5d9198655699d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/HtmlInline.java",
+      "source_bytes": 457,
+      "source_sha256": "fe7e3a0aabb256b376e6f04c8f5f2791ed04576497c9256edf6f2d0b7363c6ab",
+      "patched_bytes": 457,
+      "patched_sha256": "fe7e3a0aabb256b376e6f04c8f5f2791ed04576497c9256edf6f2d0b7363c6ab"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Image.java",
+      "source_bytes": 966,
+      "source_sha256": "ed91e00b47a836e5da863791a7d29d3c3d92ab3f59c6585a97f29cf12621ba77",
+      "patched_bytes": 966,
+      "patched_sha256": "ed91e00b47a836e5da863791a7d29d3c3d92ab3f59c6585a97f29cf12621ba77"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/IndentedCodeBlock.java",
+      "source_bytes": 568,
+      "source_sha256": "9af9dd9d8e0cf81dbd0006aada5143a0df2b492c8d5658e2f0ff7e7d79289d74",
+      "patched_bytes": 568,
+      "patched_sha256": "9af9dd9d8e0cf81dbd0006aada5143a0df2b492c8d5658e2f0ff7e7d79289d74"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Link.java",
+      "source_bytes": 1587,
+      "source_sha256": "a4234c14e6ca97a8c694020ba58024def9ee51b8d40e331359b9fdb3de46f8c9",
+      "patched_bytes": 1587,
+      "patched_sha256": "a4234c14e6ca97a8c694020ba58024def9ee51b8d40e331359b9fdb3de46f8c9"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/LinkReferenceDefinition.java",
+      "source_bytes": 1327,
+      "source_sha256": "c10a5151dc42dbebc0c61f591cb623e7b42444ab538c213b4923e3e9b45550af",
+      "patched_bytes": 1327,
+      "patched_sha256": "c10a5151dc42dbebc0c61f591cb623e7b42444ab538c213b4923e3e9b45550af"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/ListBlock.java",
+      "source_bytes": 485,
+      "source_sha256": "8fc01bf35a7eeedcecfe5e8686a245b9e512b1580fa740a8effe642202a343af",
+      "patched_bytes": 485,
+      "patched_sha256": "8fc01bf35a7eeedcecfe5e8686a245b9e512b1580fa740a8effe642202a343af"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/ListItem.java",
+      "source_bytes": 2427,
+      "source_sha256": "041b5ebbb26d455698d34e099d97c9893420798b90ea55287295e89cd5a38517",
+      "patched_bytes": 2427,
+      "patched_sha256": "041b5ebbb26d455698d34e099d97c9893420798b90ea55287295e89cd5a38517"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Node.java",
+      "source_bytes": 4305,
+      "source_sha256": "0a1e03b9b73163b1dd4e0c67f0d7780d851e938c9c351f68b856007c5f4eb50a",
+      "patched_bytes": 4350,
+      "patched_sha256": "a82917515698a179bc8d1f9b3935f0db2a12dbe48661f6b21df07711b4c8f97a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Nodes.java",
+      "source_bytes": 1419,
+      "source_sha256": "e467c0a76353de3f2d62710e7bac000187355bc06b3e167d512bc4dd95ed6e8d",
+      "patched_bytes": 1419,
+      "patched_sha256": "e467c0a76353de3f2d62710e7bac000187355bc06b3e167d512bc4dd95ed6e8d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/OrderedList.java",
+      "source_bytes": 2081,
+      "source_sha256": "d30afef79711a66544787bf36483b8019bd3cdfd05eef9594b8fcb215e0f4de6",
+      "patched_bytes": 2081,
+      "patched_sha256": "d30afef79711a66544787bf36483b8019bd3cdfd05eef9594b8fcb215e0f4de6"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Paragraph.java",
+      "source_bytes": 324,
+      "source_sha256": "d165565a94e345817179aa2f00423cfe9df216c50bdaa8539fce5fee024b358e",
+      "patched_bytes": 324,
+      "patched_sha256": "d165565a94e345817179aa2f00423cfe9df216c50bdaa8539fce5fee024b358e"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/SoftLineBreak.java",
+      "source_bytes": 377,
+      "source_sha256": "fe6685e1ac808b08fc1881fe78859aba3267a9d6e65b3ff6f94305e29d934be6",
+      "patched_bytes": 377,
+      "patched_sha256": "fe6685e1ac808b08fc1881fe78859aba3267a9d6e65b3ff6f94305e29d934be6"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/SourceSpan.java",
+      "source_bytes": 4932,
+      "source_sha256": "1a0b2fc3e5cf1d171492a0c6b7fba6481c30dda66271335a8f8dcda6816b21ef",
+      "patched_bytes": 4932,
+      "patched_sha256": "1a0b2fc3e5cf1d171492a0c6b7fba6481c30dda66271335a8f8dcda6816b21ef"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/SourceSpans.java",
+      "source_bytes": 1454,
+      "source_sha256": "e241f560e39399f2f418dfda31621a4802cc9d15947c27b8fe8e92957a9f0009",
+      "patched_bytes": 1499,
+      "patched_sha256": "fd77ed91ac6c75886fd5515eca51b2f7b5e0b5c4392693a4ba1cad3a82449cf5"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/StrongEmphasis.java",
+      "source_bytes": 868,
+      "source_sha256": "6d0481294ea44d43561ff25d44ee93da2ac765b5c39f0a941debd6b37ffafa1d",
+      "patched_bytes": 868,
+      "patched_sha256": "6d0481294ea44d43561ff25d44ee93da2ac765b5c39f0a941debd6b37ffafa1d"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Text.java",
+      "source_bytes": 808,
+      "source_sha256": "377478a23e4f1381a4fc60204c3bb714892057e1e37369c79c6e5c33b91c3d75",
+      "patched_bytes": 808,
+      "patched_sha256": "377478a23e4f1381a4fc60204c3bb714892057e1e37369c79c6e5c33b91c3d75"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/ThematicBreak.java",
+      "source_bytes": 640,
+      "source_sha256": "db8aa5c63ece32b780e56f1abd97aa8f25b708539278ba7a548fb48157457ee3",
+      "patched_bytes": 640,
+      "patched_sha256": "db8aa5c63ece32b780e56f1abd97aa8f25b708539278ba7a548fb48157457ee3"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/Visitor.java",
+      "source_bytes": 1121,
+      "source_sha256": "c590f574ee042e8cf85ee2698ee26f2c8300a2816658617db1b9efec7ffe3b00",
+      "patched_bytes": 1121,
+      "patched_sha256": "c590f574ee042e8cf85ee2698ee26f2c8300a2816658617db1b9efec7ffe3b00"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/node/package-info.java",
+      "source_bytes": 157,
+      "source_sha256": "e9080cf8ab73d91f9149ab656e1ad77670c2f09f66f8a4fc9591d55963233ac3",
+      "patched_bytes": 157,
+      "patched_sha256": "e9080cf8ab73d91f9149ab656e1ad77670c2f09f66f8a4fc9591d55963233ac3"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/package-info.java",
+      "source_bytes": 378,
+      "source_sha256": "cecca3db11c81805c1f8a1e2c72608291af443aadf585a2548b378d4ba546c06",
+      "patched_bytes": 378,
+      "patched_sha256": "cecca3db11c81805c1f8a1e2c72608291af443aadf585a2548b378d4ba546c06"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/IncludeSourceSpans.java",
+      "source_bytes": 511,
+      "source_sha256": "adf3b7229e1e68d4c525a46cd49f8e23dfb470658c7234b42cd177f864c372e8",
+      "patched_bytes": 511,
+      "patched_sha256": "adf3b7229e1e68d4c525a46cd49f8e23dfb470658c7234b42cd177f864c372e8"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/InlineParser.java",
+      "source_bytes": 366,
+      "source_sha256": "1824faf4da430ce829d275aacc7d8b62e21e0eaa28c64bff2caf64bd740883f9",
+      "patched_bytes": 366,
+      "patched_sha256": "1824faf4da430ce829d275aacc7d8b62e21e0eaa28c64bff2caf64bd740883f9"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/InlineParserContext.java",
+      "source_bytes": 2108,
+      "source_sha256": "bd21acdcb24c3527a93cc8506654aef58a62c4932fccba1d10a60c57e684da62",
+      "patched_bytes": 2108,
+      "patched_sha256": "bd21acdcb24c3527a93cc8506654aef58a62c4932fccba1d10a60c57e684da62"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/InlineParserFactory.java",
+      "source_bytes": 308,
+      "source_sha256": "aee78f1b07118aeca07fac32aad5d1e703586acb4c9f2169b66fa7f1946c975f",
+      "patched_bytes": 308,
+      "patched_sha256": "aee78f1b07118aeca07fac32aad5d1e703586acb4c9f2169b66fa7f1946c975f"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/Parser.java",
+      "source_bytes": 15424,
+      "source_sha256": "a09bd5e903ec67e451b829134ababaa253da20eb5a5ae42dbe165e23230b609e",
+      "patched_bytes": 15489,
+      "patched_sha256": "5dad54dd7e1e0ee67d785b7b897c9e43675377361b0d7fc26fad340b89ec23bb"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/PostProcessor.java",
+      "source_bytes": 278,
+      "source_sha256": "571995d0908443e81acea719f3b69ad2b85309ffe7171f00b389b8e94a3975d5",
+      "patched_bytes": 278,
+      "patched_sha256": "571995d0908443e81acea719f3b69ad2b85309ffe7171f00b389b8e94a3975d5"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/SourceLine.java",
+      "source_bytes": 1409,
+      "source_sha256": "3a7f7e0374935605f8fc0937b4059ba1263ab273f9649fe30986afb3d093e7a3",
+      "patched_bytes": 1409,
+      "patched_sha256": "3a7f7e0374935605f8fc0937b4059ba1263ab273f9649fe30986afb3d093e7a3"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/SourceLines.java",
+      "source_bytes": 1631,
+      "source_sha256": "ce23aa3e7b1baaf33436fcaf725533d0e08a4f8b03bb63da2fbce3fa61934301",
+      "patched_bytes": 1631,
+      "patched_sha256": "ce23aa3e7b1baaf33436fcaf725533d0e08a4f8b03bb63da2fbce3fa61934301"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/InlineContentParser.java",
+      "source_bytes": 1059,
+      "source_sha256": "5780f952f60096fd54688633e5896648d04d127fa5bb99ebf461e183e0daabe5",
+      "patched_bytes": 1059,
+      "patched_sha256": "5780f952f60096fd54688633e5896648d04d127fa5bb99ebf461e183e0daabe5"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/InlineContentParserFactory.java",
+      "source_bytes": 920,
+      "source_sha256": "a5745e8cd43339637f15f13447ff8e9b132d360161d2e0768f9e189ef3eb34cc",
+      "patched_bytes": 920,
+      "patched_sha256": "a5745e8cd43339637f15f13447ff8e9b132d360161d2e0768f9e189ef3eb34cc"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/InlineParserState.java",
+      "source_bytes": 436,
+      "source_sha256": "1fc14bfa35382c895908138cc300dd722cc64015d37f17a8cd5fade71d798ee3",
+      "patched_bytes": 436,
+      "patched_sha256": "1fc14bfa35382c895908138cc300dd722cc64015d37f17a8cd5fade71d798ee3"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/LinkInfo.java",
+      "source_bytes": 1588,
+      "source_sha256": "66e19b0c6bddd72ebb349cc562da5ac8e13fbf80bbb288f7f23602209d6150a7",
+      "patched_bytes": 1588,
+      "patched_sha256": "66e19b0c6bddd72ebb349cc562da5ac8e13fbf80bbb288f7f23602209d6150a7"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/LinkProcessor.java",
+      "source_bytes": 1477,
+      "source_sha256": "00574b481887d4e7c4a3110d005748c088447e9ca0ad9b0352ad852300f842bd",
+      "patched_bytes": 1477,
+      "patched_sha256": "00574b481887d4e7c4a3110d005748c088447e9ca0ad9b0352ad852300f842bd"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/LinkResult.java",
+      "source_bytes": 1698,
+      "source_sha256": "0c4c666c6f6416278259323f6c371adfb33c563065ad04ba780c1377340968b0",
+      "patched_bytes": 1698,
+      "patched_sha256": "0c4c666c6f6416278259323f6c371adfb33c563065ad04ba780c1377340968b0"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/ParsedInline.java",
+      "source_bytes": 675,
+      "source_sha256": "e6f96d8c77159fe2cb0a676a089f56cb902cb5e7373a69776b1cbe97356fc39e",
+      "patched_bytes": 675,
+      "patched_sha256": "e6f96d8c77159fe2cb0a676a089f56cb902cb5e7373a69776b1cbe97356fc39e"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/Position.java",
+      "source_bytes": 364,
+      "source_sha256": "d290fd467e5445938d00b59466c364aa78ea67cf7f12400ac05d7f70e67321f0",
+      "patched_bytes": 364,
+      "patched_sha256": "d290fd467e5445938d00b59466c364aa78ea67cf7f12400ac05d7f70e67321f0"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/Scanner.java",
+      "source_bytes": 9039,
+      "source_sha256": "c9b84b11b992aedcad50f79f92499a71a804e80a4d696d43c189a2e1ffacea50",
+      "patched_bytes": 9039,
+      "patched_sha256": "c9b84b11b992aedcad50f79f92499a71a804e80a4d696d43c189a2e1ffacea50"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/beta/package-info.java",
+      "source_bytes": 129,
+      "source_sha256": "d16ab181d9d6e35fd00fd2ff288912fb35a5f764bc8e39455b91fec0499779ac",
+      "patched_bytes": 129,
+      "patched_sha256": "d16ab181d9d6e35fd00fd2ff288912fb35a5f764bc8e39455b91fec0499779ac"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/AbstractBlockParser.java",
+      "source_bytes": 1015,
+      "source_sha256": "3b3a5777295b1e2bced60182ea721ae5b5fb41938fdcd9cc21f9263e22139424",
+      "patched_bytes": 1060,
+      "patched_sha256": "da77c22e1f44c722cfb333f90df4902ae92ac2ae847798e549346591e0422186"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/AbstractBlockParserFactory.java",
+      "source_bytes": 121,
+      "source_sha256": "35ccda2ca1416e0484744f544bd71299527821b02d7772c2148e8016804f0e7a",
+      "patched_bytes": 121,
+      "patched_sha256": "35ccda2ca1416e0484744f544bd71299527821b02d7772c2148e8016804f0e7a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/BlockContinue.java",
+      "source_bytes": 677,
+      "source_sha256": "d50a545ea63963e090953609791a79e246737c732922cbd39c40280310dc648b",
+      "patched_bytes": 677,
+      "patched_sha256": "d50a545ea63963e090953609791a79e246737c732922cbd39c40280310dc648b"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/BlockParser.java",
+      "source_bytes": 2162,
+      "source_sha256": "6c11fa08567d3077c4afee03aed6c0e4944e7d4c76713e4ca115581b86529b9b",
+      "patched_bytes": 2162,
+      "patched_sha256": "6c11fa08567d3077c4afee03aed6c0e4944e7d4c76713e4ca115581b86529b9b"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/BlockParserFactory.java",
+      "source_bytes": 359,
+      "source_sha256": "8c2ba0faf92644bd84f0b9acdcc09c8274e4934b1fa2fc62c2aff0d3b58147e2",
+      "patched_bytes": 359,
+      "patched_sha256": "8c2ba0faf92644bd84f0b9acdcc09c8274e4934b1fa2fc62c2aff0d3b58147e2"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/BlockStart.java",
+      "source_bytes": 2148,
+      "source_sha256": "1a4142d816ba213664a2da2cc5e9245573bc26fd382d83280977c50b5373fcff",
+      "patched_bytes": 2148,
+      "patched_sha256": "1a4142d816ba213664a2da2cc5e9245573bc26fd382d83280977c50b5373fcff"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/MatchedBlockParser.java",
+      "source_bytes": 776,
+      "source_sha256": "de9ef11404c52d8658ba35f2388c45e6c111ace3947b4b18b74e7a1fad7824e6",
+      "patched_bytes": 776,
+      "patched_sha256": "de9ef11404c52d8658ba35f2388c45e6c111ace3947b4b18b74e7a1fad7824e6"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/ParserState.java",
+      "source_bytes": 1430,
+      "source_sha256": "ada3ed993b350a8e218881356d62171e4ffdc7018ac822da1df10a9bb950e1cc",
+      "patched_bytes": 1430,
+      "patched_sha256": "ada3ed993b350a8e218881356d62171e4ffdc7018ac822da1df10a9bb950e1cc"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/block/package-info.java",
+      "source_bytes": 82,
+      "source_sha256": "0418a06f90dd008a9e2c14ffee0768f5c9672143980a4d92bbc1c71a493b85ec",
+      "patched_bytes": 82,
+      "patched_sha256": "0418a06f90dd008a9e2c14ffee0768f5c9672143980a4d92bbc1c71a493b85ec"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/delimiter/DelimiterProcessor.java",
+      "source_bytes": 1715,
+      "source_sha256": "becd571367cb35162415a85bc0085779e778183e068f5191465a1c9c82470f30",
+      "patched_bytes": 1715,
+      "patched_sha256": "becd571367cb35162415a85bc0085779e778183e068f5191465a1c9c82470f30"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/delimiter/DelimiterRun.java",
+      "source_bytes": 1769,
+      "source_sha256": "e83e98547823c131e500565e28ad8aa41518751422c3f614b4c9e79ad16e72d6",
+      "patched_bytes": 1769,
+      "patched_sha256": "e83e98547823c131e500565e28ad8aa41518751422c3f614b4c9e79ad16e72d6"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/parser/package-info.java",
+      "source_bytes": 117,
+      "source_sha256": "6ea02842e691aac6aff51e828cacbf797407dca4871a9572f6b434e94ede9ec5",
+      "patched_bytes": 117,
+      "patched_sha256": "6ea02842e691aac6aff51e828cacbf797407dca4871a9572f6b434e94ede9ec5"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/NodeRenderer.java",
+      "source_bytes": 900,
+      "source_sha256": "05c160430f8ec51092bae847b0f5227d482aefd907f362da4d90a6380d07a183",
+      "patched_bytes": 900,
+      "patched_sha256": "05c160430f8ec51092bae847b0f5227d482aefd907f362da4d90a6380d07a183"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/Renderer.java",
+      "source_bytes": 452,
+      "source_sha256": "8ef4c81490b73a50f776d49a3c37dcc79df783b0ff6dd7c145b31c9039db8504",
+      "patched_bytes": 452,
+      "patched_sha256": "8ef4c81490b73a50f776d49a3c37dcc79df783b0ff6dd7c145b31c9039db8504"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/AttributeProvider.java",
+      "source_bytes": 1123,
+      "source_sha256": "2f64cc333d1a5e554496e00d3bedc2c254601b3d681371bcee918e39842454a4",
+      "patched_bytes": 1123,
+      "patched_sha256": "2f64cc333d1a5e554496e00d3bedc2c254601b3d681371bcee918e39842454a4"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/AttributeProviderContext.java",
+      "source_bytes": 300,
+      "source_sha256": "34d3b69d635a5c514484088ddf43992aca286d4527b95bca1ab0ff0240fe3b74",
+      "patched_bytes": 300,
+      "patched_sha256": "34d3b69d635a5c514484088ddf43992aca286d4527b95bca1ab0ff0240fe3b74"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/AttributeProviderFactory.java",
+      "source_bytes": 384,
+      "source_sha256": "7e6a7b0e977cfdc540a9d0ba98ed2c82bbdd1ad06206bb0831ba811e0c3dbfeb",
+      "patched_bytes": 384,
+      "patched_sha256": "7e6a7b0e977cfdc540a9d0ba98ed2c82bbdd1ad06206bb0831ba811e0c3dbfeb"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/CoreHtmlNodeRenderer.java",
+      "source_bytes": 9455,
+      "source_sha256": "448c1ac21d9b5f2f386559b6aac66087297b3039a6b20d5ddaba531493579b7e",
+      "patched_bytes": 9590,
+      "patched_sha256": "f3e158108e14ccdcb456073b562d285dc49630710eb8692d15ba00ee385da72b"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/DefaultUrlSanitizer.java",
+      "source_bytes": 2177,
+      "source_sha256": "f3f863e314eacc98c4649f228d55e2ad718da162805adf397677ff396f74acf7",
+      "patched_bytes": 2222,
+      "patched_sha256": "b848f7c1417038757a1e8fc82ab355fb563845eb80b875fc1b2c6fa99d8b5320"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/HtmlNodeRendererContext.java",
+      "source_bytes": 2011,
+      "source_sha256": "3269cbe084116213aec71119cb62ccde168758569cbad0798fdcb53d627ab465",
+      "patched_bytes": 2011,
+      "patched_sha256": "3269cbe084116213aec71119cb62ccde168758569cbad0798fdcb53d627ab465"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/HtmlNodeRendererFactory.java",
+      "source_bytes": 484,
+      "source_sha256": "5f7c3cd31ea096b8ad154a7887bd06bd8cccb57c73c0500d4ddd491d25bdccf2",
+      "patched_bytes": 484,
+      "patched_sha256": "5f7c3cd31ea096b8ad154a7887bd06bd8cccb57c73c0500d4ddd491d25bdccf2"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/HtmlRenderer.java",
+      "source_bytes": 11739,
+      "source_sha256": "423a248008ab91a3a10a2e7a6947c7792e51d4f8d23c2ba2984f582ec52027bc",
+      "patched_bytes": 11789,
+      "patched_sha256": "d65349a38959b5fa25a7405950e12f1af9125be375d0a85b0ab0be8748c3f24f"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/HtmlWriter.java",
+      "source_bytes": 1825,
+      "source_sha256": "d9f1ba9ff8e174f79b8778687286bf8587d95038b5285a942e57097a0f2a1bc9",
+      "patched_bytes": 1892,
+      "patched_sha256": "18d82074bf406069d7df6ce92fb40bcd3068ed2a950cb3c4caccffb9e920eec5"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/UrlSanitizer.java",
+      "source_bytes": 955,
+      "source_sha256": "3763a6731c4897ee6566aa6b0cc4ca5a96e9bc7b7981efb354e2a5ce85ed9ef6",
+      "patched_bytes": 955,
+      "patched_sha256": "3763a6731c4897ee6566aa6b0cc4ca5a96e9bc7b7981efb354e2a5ce85ed9ef6"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/html/package-info.java",
+      "source_bytes": 120,
+      "source_sha256": "77d1d6f433023de515b7b342f64bd1972c860e2e517abfa499a2c28cff5f24ab",
+      "patched_bytes": 120,
+      "patched_sha256": "77d1d6f433023de515b7b342f64bd1972c860e2e517abfa499a2c28cff5f24ab"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer.java",
+      "source_bytes": 19859,
+      "source_sha256": "98317e0520a0a02b59afe66bf3eb594fb2e25d50a49e4ffd3ed84b32c97da16c",
+      "patched_bytes": 19994,
+      "patched_sha256": "29ef240589e1f7c07a2ef2fbfb110f060287d9f34bd1fa0bd0b66ae703841c41"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/MarkdownNodeRendererContext.java",
+      "source_bytes": 865,
+      "source_sha256": "4f0d4025da02c1a22e16964608e2810f4acefd68916e3f8381db2f165bd8e410",
+      "patched_bytes": 865,
+      "patched_sha256": "4f0d4025da02c1a22e16964608e2810f4acefd68916e3f8381db2f165bd8e410"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/MarkdownNodeRendererFactory.java",
+      "source_bytes": 744,
+      "source_sha256": "d308b653a796743306825a760a13c281b50574bf222e10f21e0cc534534620cb",
+      "patched_bytes": 744,
+      "patched_sha256": "d308b653a796743306825a760a13c281b50574bf222e10f21e0cc534534620cb"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/MarkdownRenderer.java",
+      "source_bytes": 6034,
+      "source_sha256": "cf275b0dec31dc75a1b8224feebca986539e107373aef6d16c4a7c6e88225afa",
+      "patched_bytes": 6112,
+      "patched_sha256": "5717af4fdc49bd648cebb7a0cd98d6e90c32b65cd530b16a68e462cd0add1985"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/MarkdownWriter.java",
+      "source_bytes": 6972,
+      "source_sha256": "2283a3e2fdc3f450b1e846d0d5b6ffa823744df3d7998e17f980532487980437",
+      "patched_bytes": 6972,
+      "patched_sha256": "2283a3e2fdc3f450b1e846d0d5b6ffa823744df3d7998e17f980532487980437"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/markdown/package-info.java",
+      "source_bytes": 136,
+      "source_sha256": "12c482cef53f1840731eab8d5d506644f6870d79c8f561f67cbc81c5daac0429",
+      "patched_bytes": 136,
+      "patched_sha256": "12c482cef53f1840731eab8d5d506644f6870d79c8f561f67cbc81c5daac0429"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/CoreTextContentNodeRenderer.java",
+      "source_bytes": 9564,
+      "source_sha256": "3ee5cecdfa4c16cf4db8f7550a147dea68cc79fadcad0e43398919fd781581b0",
+      "patched_bytes": 9651,
+      "patched_sha256": "4472c37225119be50a1fb0b78ee13a285064b58e2b3c79d8eda151ff49e011fc"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/LineBreakRendering.java",
+      "source_bytes": 495,
+      "source_sha256": "6d24f5b34b947374132f65b6180e8f0a319289964a4df4f0e7bf32a3c66ce029",
+      "patched_bytes": 495,
+      "patched_sha256": "6d24f5b34b947374132f65b6180e8f0a319289964a4df4f0e7bf32a3c66ce029"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/TextContentNodeRendererContext.java",
+      "source_bytes": 915,
+      "source_sha256": "14cb92d52bc3f9eff0494db06d5fcf1e2dcb5c7e98628168b598fcf95569385b",
+      "patched_bytes": 915,
+      "patched_sha256": "14cb92d52bc3f9eff0494db06d5fcf1e2dcb5c7e98628168b598fcf95569385b"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/TextContentNodeRendererFactory.java",
+      "source_bytes": 498,
+      "source_sha256": "bb4d49714033355f30b586ce8026d3d3a7ad040664b22d5d3cb0f3548b2cd2ed",
+      "patched_bytes": 498,
+      "patched_sha256": "bb4d49714033355f30b586ce8026d3d3a7ad040664b22d5d3cb0f3548b2cd2ed"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/TextContentRenderer.java",
+      "source_bytes": 6123,
+      "source_sha256": "0909fcf800f1699496a5be93b88d50a1f00f80c57911cd703e0c1926cf71d6ca",
+      "patched_bytes": 6159,
+      "patched_sha256": "fefbf277563ecd38999208479413ad82bbf184218cfc307a8e4312f9268adc95"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/TextContentWriter.java",
+      "source_bytes": 4173,
+      "source_sha256": "d308ceb05381e8fc23c986ad46be3ce01333987a44df31eae6271be006785b79",
+      "patched_bytes": 4174,
+      "patched_sha256": "8265fd1c057c392786c798cd9e54163f7c7c2b71a5f4a1af1b60d91675cc4f7c"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/renderer/text/package-info.java",
+      "source_bytes": 153,
+      "source_sha256": "72cf84ca142c4315fba63f63d46fcd7c7dd8f05c0e9cb6fd328e2558e60fce90",
+      "patched_bytes": 153,
+      "patched_sha256": "72cf84ca142c4315fba63f63d46fcd7c7dd8f05c0e9cb6fd328e2558e60fce90"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/text/AsciiMatcher.java",
+      "source_bytes": 1704,
+      "source_sha256": "34d8c2fbe348695c891802a044886f88db2cbb08ea4f0d21af57bdd5bb33d3b2",
+      "patched_bytes": 1704,
+      "patched_sha256": "34d8c2fbe348695c891802a044886f88db2cbb08ea4f0d21af57bdd5bb33d3b2"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/text/CharMatcher.java",
+      "source_bytes": 409,
+      "source_sha256": "29dfac3f5944a037b217df5cf4a9df525fa3c5472ec2db38f9831fed3841b692",
+      "patched_bytes": 409,
+      "patched_sha256": "29dfac3f5944a037b217df5cf4a9df525fa3c5472ec2db38f9831fed3841b692"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/text/Characters.java",
+      "source_bytes": 4816,
+      "source_sha256": "7f9c7d093588287a88f8fd37690672953761bca48823497400cad5bf59b4159a",
+      "patched_bytes": 4816,
+      "patched_sha256": "7f9c7d093588287a88f8fd37690672953761bca48823497400cad5bf59b4159a"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/text/package-info.java",
+      "source_bytes": 124,
+      "source_sha256": "7151cd5b9ae428509333b6a5a58980ea2c3a0df19c6efda9ebfb1fe2a465a480",
+      "patched_bytes": 124,
+      "patched_sha256": "7151cd5b9ae428509333b6a5a58980ea2c3a0df19c6efda9ebfb1fe2a465a480"
+    },
+    {
+      "module": "tables",
+      "path": "module-info.java",
+      "source_bytes": 125,
+      "source_sha256": "22ed64ec2bda3b9b547a48efecf5ba4426e5d811c5d5a43a2bc26801b3bb671b",
+      "patched_bytes": null,
+      "patched_sha256": null
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TableBlock.java",
+      "source_bytes": 219,
+      "source_sha256": "e005178c843e17daace2fc9299089f1488c52853390740abd7100410ab22ade1",
+      "patched_bytes": 219,
+      "patched_sha256": "e005178c843e17daace2fc9299089f1488c52853390740abd7100410ab22ade1"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TableBody.java",
+      "source_bytes": 210,
+      "source_sha256": "1eaa528674dccba99d3c72be473c5cc23d432b32a1f24fc4d9db9e6c2a3ea8a4",
+      "patched_bytes": 210,
+      "patched_sha256": "1eaa528674dccba99d3c72be473c5cc23d432b32a1f24fc4d9db9e6c2a3ea8a4"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TableCell.java",
+      "source_bytes": 1140,
+      "source_sha256": "bb98037d794fd86e19b60765841b85db053db6163951dfa4755bfcf4b71a6a39",
+      "patched_bytes": 1140,
+      "patched_sha256": "bb98037d794fd86e19b60765841b85db053db6163951dfa4755bfcf4b71a6a39"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TableHead.java",
+      "source_bytes": 210,
+      "source_sha256": "ae75a869a1246d7b03e43b7636e6235e2abf760a5b041be35e1f2739ff882835",
+      "patched_bytes": 210,
+      "patched_sha256": "ae75a869a1246d7b03e43b7636e6235e2abf760a5b041be35e1f2739ff882835"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TableRow.java",
+      "source_bytes": 231,
+      "source_sha256": "8f9ad2572e827500b76d9fc90a41c800d4df9b991f41affb4d14a5bd826b4297",
+      "patched_bytes": 231,
+      "patched_sha256": "8f9ad2572e827500b76d9fc90a41c800d4df9b991f41affb4d14a5bd826b4297"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/TablesExtension.java",
+      "source_bytes": 3205,
+      "source_sha256": "64c3e7258c981e69ab43846e3fadc77bd074ee15363a23937f0dbb3e25deed09",
+      "patched_bytes": 3250,
+      "patched_sha256": "32d06f3edb7f604f5383ccef0e2a9b05778a8139d8497c9c1f00095287dc3af1"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableBlockParser.java",
+      "source_bytes": 11879,
+      "source_sha256": "0595322a6e12cf4d305428b7f036f3ad29d0bc0bdfd6a1582b2eefdd11068777",
+      "patched_bytes": 11879,
+      "patched_sha256": "0595322a6e12cf4d305428b7f036f3ad29d0bc0bdfd6a1582b2eefdd11068777"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableHtmlNodeRenderer.java",
+      "source_bytes": 3071,
+      "source_sha256": "0c7bf1c10506375f91cf93bb4d496fdc37bb242920a8d40c06398e26c3902a26",
+      "patched_bytes": 3206,
+      "patched_sha256": "1b9aa2531bdc0e926889f72bab2f5bc9f1d122d7f345e0c906c077045dcc4b96"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableMarkdownNodeRenderer.java",
+      "source_bytes": 2646,
+      "source_sha256": "45c8a966b5a929fc42755f7284e3889fa5e50ad0ca4278039d4b60fb5b7548a6",
+      "patched_bytes": 2646,
+      "patched_sha256": "45c8a966b5a929fc42755f7284e3889fa5e50ad0ca4278039d4b60fb5b7548a6"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableNodeRenderer.java",
+      "source_bytes": 1321,
+      "source_sha256": "2be849b49f5524e4ecbfe46266809b65fcb6567d1b1623032574994b8e06403a",
+      "patched_bytes": 1366,
+      "patched_sha256": "4dd45fdfa3d1b3a45abcec059973623bf43c525f33b5e469c1b06ab482036799"
+    },
+    {
+      "module": "tables",
+      "path": "org/commonmark/ext/gfm/tables/internal/TableTextContentNodeRenderer.java",
+      "source_bytes": 2092,
+      "source_sha256": "886a5f040b7e1cc0cffcb982cdbe0aceddfc62bed16cc5ac9264b1b90bddb36e",
+      "patched_bytes": 2092,
+      "patched_sha256": "886a5f040b7e1cc0cffcb982cdbe0aceddfc62bed16cc5ac9264b1b90bddb36e"
+    }
+  ],
+  "resources": [
+    {
+      "module": "core",
+      "path": "META-INF/LICENSE.txt",
+      "bytes": 1300,
+      "sha256": "11cfcf6da0142fb1971c1f40f5924ddded14454e2793d7f1dd87c9f4abe42dfd"
+    },
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/entities.txt",
+      "bytes": 24470,
+      "sha256": "fea6cf4d3bd2aa7ffd421116551654e2a22e40a17e4cd087c8725138113bad69"
+    },
+    {
+      "module": "tables",
+      "path": "META-INF/LICENSE.txt",
+      "bytes": 1300,
+      "sha256": "11cfcf6da0142fb1971c1f40f5924ddded14454e2793d7f1dd87c9f4abe42dfd"
+    }
+  ],
+  "added_sources": [
+    {
+      "module": "core",
+      "path": "org/commonmark/internal/util/Java8Collections.java",
+      "bytes": 3066,
+      "sha256": "e85fe17bc8463fe349a2f02f879ff272598123ed70e47501eea3c02a2cb1f606",
+      "text": "package org.commonmark.internal.util;\n\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.HashMap;\nimport java.util.LinkedHashSet;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Objects;\nimport java.util.Set;\n\n/** Java 8 equivalents of the immutable factory calls used by upstream sources. */\npublic final class Java8Collections {\n    private Java8Collections() { }\n\n    @SafeVarargs\n    public static <E> List<E> listOf(E... elements) {\n        Objects.requireNonNull(elements, \"elements\");\n        List<E> values = new NullRejectList<>();\n        for (E element : elements) {\n            values.add(Objects.requireNonNull(element, \"element\"));\n        }\n        return Collections.unmodifiableList(values);\n    }\n\n    @SafeVarargs\n    public static <E> Set<E> setOf(E... elements) {\n        Objects.requireNonNull(elements, \"elements\");\n        Set<E> values = new NullRejectSet<>();\n        for (E element : elements) {\n            if (!values.add(Objects.requireNonNull(element, \"element\"))) {\n                throw new IllegalArgumentException(\"duplicate element: \" + element);\n            }\n        }\n        return Collections.unmodifiableSet(values);\n    }\n\n    public static <K, V> Map<K, V> mapOf() {\n        return Collections.unmodifiableMap(new NullRejectMap<K, V>());\n    }\n\n    public static <K, V> Map<K, V> mapOf(K key, V value) {\n        Map<K, V> values = new NullRejectMap<>();\n        values.put(Objects.requireNonNull(key, \"key\"), Objects.requireNonNull(value, \"value\"));\n        return Collections.unmodifiableMap(values);\n    }\n\n    // Preserve the null-query rejection of JDK immutable factory collections.\n    // Unmodifiable wrappers reject every mutation, including empty/no-op changes.\n    private static final class NullRejectList<E> extends ArrayList<E> {\n        NullRejectList() { }\n        @Override public boolean contains(Object value) {\n            return super.contains(Objects.requireNonNull(value, \"value\"));\n        }\n        @Override public int indexOf(Object value) {\n            return super.indexOf(Objects.requireNonNull(value, \"value\"));\n        }\n        @Override public int lastIndexOf(Object value) {\n            return super.lastIndexOf(Objects.requireNonNull(value, \"value\"));\n        }\n    }\n    private static final class NullRejectSet<E> extends LinkedHashSet<E> {\n        NullRejectSet() { }\n        @Override public boolean contains(Object value) {\n            return super.contains(Objects.requireNonNull(value, \"value\"));\n        }\n    }\n    private static final class NullRejectMap<K, V> extends HashMap<K, V> {\n        NullRejectMap() { }\n        @Override public V get(Object key) {\n            return super.get(Objects.requireNonNull(key, \"key\"));\n        }\n        @Override public boolean containsKey(Object key) {\n            return super.containsKey(Objects.requireNonNull(key, \"key\"));\n        }\n        @Override public boolean containsValue(Object value) {\n            return super.containsValue(Objects.requireNonNull(value, \"value\"));\n        }\n    }\n}\n"
+    }
+  ],
+  "patch": {
+    "filename": "commonmark-java8.patch",
+    "bytes": 41240,
+    "sha256": "556dd41e7bfdbb62123bd8b7a1b5c101c82f87834c28e2561ede61bf54fd039e",
+    "modified_ordinary_files": 30,
+    "excluded_jpms_descriptors": 2,
+    "added_source_files": 1
+  }
+}

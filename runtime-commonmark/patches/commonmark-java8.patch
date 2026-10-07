@@ -1,0 +1,928 @@
+--- a/core/module-info.java
++++ /dev/null
+@@ -1,13 +0,0 @@
+-module org.commonmark {
+-    exports org.commonmark;
+-    exports org.commonmark.node;
+-    exports org.commonmark.parser;
+-    exports org.commonmark.parser.beta;
+-    exports org.commonmark.parser.block;
+-    exports org.commonmark.parser.delimiter;
+-    exports org.commonmark.renderer;
+-    exports org.commonmark.renderer.html;
+-    exports org.commonmark.renderer.markdown;
+-    exports org.commonmark.renderer.text;
+-    exports org.commonmark.text;
+-}
+--- a/core/org/commonmark/internal/Definitions.java
++++ b/core/org/commonmark/internal/Definitions.java
+@@ -10,7 +10,7 @@
+     private final Map<Class<?>, DefinitionMap<?>> definitionsByType = new HashMap<>();
+ 
+     public <D> void addDefinitions(DefinitionMap<D> definitionMap) {
+-        var existingMap = getMap(definitionMap.getType());
++        DefinitionMap<D> existingMap = getMap(definitionMap.getType());
+         if (existingMap == null) {
+             definitionsByType.put(definitionMap.getType(), definitionMap);
+         } else {
+@@ -19,7 +19,7 @@
+     }
+ 
+     public <V> V getDefinition(Class<V> type, String label) {
+-        var definitionMap = getMap(type);
++        DefinitionMap<V> definitionMap = getMap(type);
+         if (definitionMap == null) {
+             return null;
+         }
+--- a/core/org/commonmark/internal/DocumentParser.java
++++ b/core/org/commonmark/internal/DocumentParser.java
+@@ -19,7 +19,7 @@
+ 
+ public class DocumentParser implements ParserState {
+ 
+-    private static final Set<Class<? extends Block>> CORE_FACTORY_TYPES = new LinkedHashSet<>(List.of(
++    private static final Set<Class<? extends Block>> CORE_FACTORY_TYPES = new LinkedHashSet<>(org.commonmark.internal.util.Java8Collections.listOf(
+             BlockQuote.class,
+             Heading.class,
+             FencedCodeBlock.class,
+@@ -146,13 +146,13 @@
+     }
+ 
+     public Document parse(Reader input) throws IOException {
+-        var lineReader = new LineReader(input);
++        LineReader lineReader = new LineReader(input);
+         int inputIndex = 0;
+         String line;
+         while ((line = lineReader.readLine()) != null) {
+             parseLine(line, inputIndex);
+             inputIndex += line.length();
+-            var eol = lineReader.getLineTerminator();
++            String eol = lineReader.getLineTerminator();
+             if (eol != null) {
+                 inputIndex += eol.length();
+             }
+@@ -274,10 +274,10 @@
+ 
+             List<SourceSpan> replacedSourceSpans = null;
+             if (blockStart.getReplaceParagraphLines() >= 1 || blockStart.isReplaceActiveBlockParser()) {
+-                var activeBlockParser = getActiveBlockParser();
++                BlockParser activeBlockParser = getActiveBlockParser();
+                 if (activeBlockParser instanceof ParagraphParser) {
+-                    var paragraphParser = (ParagraphParser) activeBlockParser;
+-                    var lines = blockStart.isReplaceActiveBlockParser() ? Integer.MAX_VALUE : blockStart.getReplaceParagraphLines();
++                    ParagraphParser paragraphParser = (ParagraphParser) activeBlockParser;
++                    int lines = blockStart.isReplaceActiveBlockParser() ? Integer.MAX_VALUE : blockStart.getReplaceParagraphLines();
+                     replacedSourceSpans = replaceParagraphLines(lines, paragraphParser);
+                 } else if (blockStart.isReplaceActiveBlockParser()) {
+                     replacedSourceSpans = prepareActiveBlockParserForReplacement(activeBlockParser);
+@@ -451,7 +451,7 @@
+         if (includeSourceSpans != IncludeSourceSpans.NONE) {
+             // Don't add source spans for Document itself (it would get the whole source text), so start at 1, not 0
+             for (int i = 1; i < openBlockParsers.size(); i++) {
+-                var openBlockParser = openBlockParsers.get(i);
++                OpenBlockParser openBlockParser = openBlockParsers.get(i);
+                 // In case of a lazy continuation line, the index is less than where the block parser would expect the
+                 // contents to start, so let's use whichever is smaller.
+                 int blockIndex = Math.min(openBlockParser.sourceIndex, index);
+@@ -481,10 +481,10 @@
+      * Walk through a block & children recursively, parsing string content into inline content where appropriate.
+      */
+     private void processInlines() {
+-        var context = new InlineParserContextImpl(inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, definitions);
+-        var inlineParser = inlineParserFactory.create(context);
+-
+-        for (var blockParser : allBlockParsers) {
++        InlineParserContextImpl context = new InlineParserContextImpl(inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, definitions);
++        org.commonmark.parser.InlineParser inlineParser = inlineParserFactory.create(context);
++
++        for (BlockParser blockParser : allBlockParsers) {
+             blockParser.parseInlines(inlineParser);
+         }
+     }
+@@ -513,7 +513,7 @@
+     private List<SourceSpan> replaceParagraphLines(int lines, ParagraphParser paragraphParser) {
+         // Remove lines from paragraph as the new block is using them.
+         // If all lines are used, this also unlinks the Paragraph block.
+-        var sourceSpans = paragraphParser.removeLines(lines);
++        List<SourceSpan> sourceSpans = paragraphParser.removeLines(lines);
+         // Close the paragraph block parser, which will finalize it.
+         closeBlockParsers(1);
+         return sourceSpans;
+@@ -556,7 +556,7 @@
+     }
+ 
+     private void addDefinitionsFrom(BlockParser blockParser) {
+-        for (var definitionMap : blockParser.getDefinitions()) {
++        for (DefinitionMap<?> definitionMap : blockParser.getDefinitions()) {
+             definitions.addDefinitions(definitionMap);
+         }
+     }
+--- a/core/org/commonmark/internal/InlineParserImpl.java
++++ b/core/org/commonmark/internal/InlineParserImpl.java
+@@ -50,7 +50,7 @@
+ 
+     private List<InlineContentParserFactory> calculateInlineContentParserFactories(List<InlineContentParserFactory> customFactories) {
+         // Custom parsers can override built-in parsers if they want, so make sure they are tried first
+-        var list = new ArrayList<>(customFactories);
++        ArrayList<InlineContentParserFactory> list = new ArrayList<>(customFactories);
+         list.add(new BackslashInlineParser.Factory());
+         list.add(new BackticksInlineParser.Factory());
+         list.add(new EntityInlineParser.Factory());
+@@ -61,14 +61,14 @@
+ 
+     private List<LinkProcessor> calculateLinkProcessors(List<LinkProcessor> linkProcessors) {
+         // Custom link processors can override the built-in behavior, so make sure they are tried first
+-        var list = new ArrayList<>(linkProcessors);
++        ArrayList<LinkProcessor> list = new ArrayList<>(linkProcessors);
+         list.add(new CoreLinkProcessor());
+         return list;
+     }
+ 
+     private static Map<Character, DelimiterProcessor> calculateDelimiterProcessors(List<DelimiterProcessor> delimiterProcessors) {
+-        var map = new HashMap<Character, DelimiterProcessor>();
+-        addDelimiterProcessors(List.of(new AsteriskDelimiterProcessor(), new UnderscoreDelimiterProcessor()), map);
++        HashMap<Character, DelimiterProcessor> map = new HashMap<Character, DelimiterProcessor>();
++        addDelimiterProcessors(org.commonmark.internal.util.Java8Collections.listOf(new AsteriskDelimiterProcessor(), new UnderscoreDelimiterProcessor()), map);
+         addDelimiterProcessors(delimiterProcessors, map);
+         return map;
+     }
+@@ -107,8 +107,8 @@
+     }
+ 
+     private static BitSet calculateLinkMarkers(Set<Character> linkMarkers) {
+-        var bitSet = new BitSet();
+-        for (var c : linkMarkers) {
++        BitSet bitSet = new BitSet();
++        for (Character c : linkMarkers) {
+             bitSet.set(c);
+         }
+         bitSet.set('!');
+@@ -122,8 +122,8 @@
+         for (Character c : delimiterCharacters) {
+             bitSet.set(c);
+         }
+-        for (var factory : inlineContentParserFactories) {
+-            for (var c : factory.getTriggerCharacters()) {
++        for (InlineContentParserFactory factory : inlineContentParserFactories) {
++            for (Character c : factory.getTriggerCharacters()) {
+                 bitSet.set(c);
+             }
+         }
+@@ -135,10 +135,10 @@
+     }
+ 
+     private Map<Character, List<InlineContentParser>> createInlineContentParsers() {
+-        var map = new HashMap<Character, List<InlineContentParser>>();
+-        for (var factory : inlineContentParserFactories) {
+-            var parser = factory.create();
+-            for (var c : factory.getTriggerCharacters()) {
++        HashMap<Character, List<InlineContentParser>> map = new HashMap<Character, List<InlineContentParser>>();
++        for (InlineContentParserFactory factory : inlineContentParserFactories) {
++            InlineContentParser parser = factory.create();
++            for (Character c : factory.getTriggerCharacters()) {
+                 map.computeIfAbsent(c, k -> new ArrayList<>()).add(parser);
+             }
+         }
+@@ -158,7 +158,7 @@
+         reset(lines);
+ 
+         while (true) {
+-            var nodes = parseInline();
++            List<? extends Node> nodes = parseInline();
+             if (nodes == null) {
+                 break;
+             }
+@@ -196,18 +196,18 @@
+ 
+         switch (c) {
+             case '[':
+-                return List.of(parseOpenBracket());
++                return org.commonmark.internal.util.Java8Collections.listOf(parseOpenBracket());
+             case ']':
+-                return List.of(parseCloseBracket());
++                return org.commonmark.internal.util.Java8Collections.listOf(parseCloseBracket());
+             case '\n':
+-                return List.of(parseLineBreak());
++                return org.commonmark.internal.util.Java8Collections.listOf(parseLineBreak());
+             case Scanner.END:
+                 return null;
+         }
+ 
+         if (linkMarkers.get(c)) {
+-            var markerPosition = scanner.position();
+-            var nodes = parseLinkMarker();
++            Position markerPosition = scanner.position();
++            List<? extends Node> nodes = parseLinkMarker();
+             if (nodes != null) {
+                 return nodes;
+             }
+@@ -217,7 +217,7 @@
+ 
+         // No inline parser, delimiter or other special handling.
+         if (!specialCharacters.get(c)) {
+-            return List.of(parseText());
++            return org.commonmark.internal.util.Java8Collections.listOf(parseText());
+         }
+ 
+         List<InlineContentParser> inlineParsers = this.inlineParsers.get(c);
+@@ -232,7 +232,7 @@
+                     if (includeSourceSpans && node.getSourceSpans().isEmpty()) {
+                         node.setSourceSpans(scanner.getSource(position, scanner.position()).getSourceSpans());
+                     }
+-                    return List.of(node);
++                    return org.commonmark.internal.util.Java8Collections.listOf(node);
+                 } else {
+                     // Reset position
+                     scanner.setPosition(position);
+@@ -249,7 +249,7 @@
+         }
+ 
+         // If we get here, even for a special/delimiter character, we will just treat it as text.
+-        return List.of(parseText());
++        return org.commonmark.internal.util.Java8Collections.listOf(parseText());
+     }
+ 
+     /**
+@@ -293,17 +293,17 @@
+      * Otherwise, return null.
+      */
+     private List<? extends Node> parseLinkMarker() {
+-        var markerPosition = scanner.position();
++        Position markerPosition = scanner.position();
+         scanner.next();
+-        var bracketPosition = scanner.position();
++        Position bracketPosition = scanner.position();
+         if (scanner.next('[')) {
+-            var contentPosition = scanner.position();
+-            var bangNode = text(scanner.getSource(markerPosition, bracketPosition));
+-            var bracketNode = text(scanner.getSource(bracketPosition, contentPosition));
++            Position contentPosition = scanner.position();
++            Text bangNode = text(scanner.getSource(markerPosition, bracketPosition));
++            Text bracketNode = text(scanner.getSource(bracketPosition, contentPosition));
+ 
+             // Add entry to stack for this opener
+             addBracket(Bracket.withMarker(bangNode, markerPosition, bracketNode, bracketPosition, contentPosition, lastBracket, lastDelimiter));
+-            return List.of(bangNode, bracketNode);
++            return org.commonmark.internal.util.Java8Collections.listOf(bangNode, bracketNode);
+         } else {
+             return null;
+         }
+@@ -331,7 +331,7 @@
+             return text(scanner.getSource(beforeClose, afterClose));
+         }
+ 
+-        var linkOrImage = parseLinkOrImage(opener, beforeClose);
++        Node linkOrImage = parseLinkOrImage(opener, beforeClose);
+         if (linkOrImage != null) {
+             return linkOrImage;
+         }
+@@ -343,24 +343,24 @@
+     }
+ 
+     private Node parseLinkOrImage(Bracket opener, Position beforeClose) {
+-        var linkInfo = parseLinkInfo(opener, beforeClose);
++        LinkInfo linkInfo = parseLinkInfo(opener, beforeClose);
+         if (linkInfo == null) {
+             return null;
+         }
+-        var processorStartPosition = scanner.position();
+-
+-        for (var linkProcessor : linkProcessors) {
+-            var linkResult = linkProcessor.process(linkInfo, scanner, context);
++        Position processorStartPosition = scanner.position();
++
++        for (LinkProcessor linkProcessor : linkProcessors) {
++            LinkResult linkResult = linkProcessor.process(linkInfo, scanner, context);
+             if (!(linkResult instanceof LinkResultImpl)) {
+                 // Reset position in case the processor used the scanner, and it didn't work out.
+                 scanner.setPosition(processorStartPosition);
+                 continue;
+             }
+ 
+-            var result = (LinkResultImpl) linkResult;
+-            var node = result.getNode();
+-            var position = result.getPosition();
+-            var includeMarker = result.isIncludeMarker();
++            LinkResultImpl result = (LinkResultImpl) linkResult;
++            Node node = result.getNode();
++            Position position = result.getPosition();
++            boolean includeMarker = result.isIncludeMarker();
+ 
+             switch (result.getType()) {
+                 case WRAP:
+@@ -384,12 +384,12 @@
+         //   - Shortcut:  `[foo]`      (foo is both the text and label)
+ 
+         // Starting position is after the closing `]`
+-        var afterClose = scanner.position();
++        Position afterClose = scanner.position();
+ 
+         // Maybe an inline link/image
+-        var destinationTitle = parseInlineDestinationTitle(scanner);
++        DestinationTitle destinationTitle = parseInlineDestinationTitle(scanner);
+         if (destinationTitle != null) {
+-            var text = scanner.getSource(opener.contentPosition, beforeClose).getContent();
++            String text = scanner.getSource(opener.contentPosition, beforeClose).getContent();
+             return new LinkInfoImpl(opener.markerNode, opener.bracketNode, text, null, destinationTitle.destination, destinationTitle.title, afterClose);
+         }
+         // Not an inline link/image, rewind back to after `]`.
+@@ -400,19 +400,19 @@
+         // failed to be parsed as an inline link/image before.
+ 
+         // See if there's a link label like `[bar]` or `[]`
+-        var label = parseLinkLabel(scanner);
++        String label = parseLinkLabel(scanner);
+         if (label == null) {
+             // No label, rewind back
+             scanner.setPosition(afterClose);
+         }
+-        var textIsReference = label == null || label.isEmpty();
++        boolean textIsReference = label == null || label.isEmpty();
+         if (opener.bracketAfter && textIsReference && opener.markerNode == null) {
+             // In case of shortcut or collapsed links, the text is used as the reference. But the reference is not allowed to
+             // contain an unescaped bracket, so if that's the case we don't need to continue. This is an optimization.
+             return null;
+         }
+ 
+-        var text = scanner.getSource(opener.contentPosition, beforeClose).getContent();
++        String text = scanner.getSource(opener.contentPosition, beforeClose).getContent();
+         return new LinkInfoImpl(opener.markerNode, opener.bracketNode, text, label, null, null, afterClose);
+     }
+ 
+@@ -426,7 +426,7 @@
+         }
+ 
+         if (includeSourceSpans) {
+-            var startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;
++            Position startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;
+             wrapperNode.setSourceSpans(scanner.getSource(startPosition, scanner.position()).getSourceSpans());
+         }
+ 
+@@ -455,7 +455,7 @@
+         }
+ 
+         if (includeSourceSpans) {
+-            var startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;
++            Position startPosition = includeMarker && opener.markerPosition != null ? opener.markerPosition : opener.bracketPosition;
+             node.setSourceSpans(scanner.getSource(startPosition, scanner.position()).getSourceSpans());
+         }
+ 
+@@ -464,7 +464,7 @@
+         // Remove nodes that we added since the opener, because we're replacing them
+         Node n = includeMarker && opener.markerNode != null ? opener.markerNode : opener.bracketNode;
+         while (n != null) {
+-            var next = n.getNext();
++            Node next = n.getNext();
+             n.unlink();
+             n = next;
+         }
+@@ -598,7 +598,7 @@
+     private Node parseLineBreak() {
+         scanner.next();
+ 
+-        var hard = trailingSpaces >= 2;
++        boolean hard = trailingSpaces >= 2;
+         trailingSpaces = 0;
+         if (hard) {
+             return new HardLineBreak();
+--- a/core/org/commonmark/internal/LinkReferenceDefinitionParser.java
++++ b/core/org/commonmark/internal/LinkReferenceDefinitionParser.java
+@@ -104,7 +104,7 @@
+     }
+ 
+     List<SourceSpan> removeLines(int lines) {
+-        var removedSpans = Collections.unmodifiableList(new ArrayList<>(
++        List<SourceSpan> removedSpans = Collections.unmodifiableList(new ArrayList<>(
+                 sourceSpans.subList(Math.max(sourceSpans.size() - lines, 0), sourceSpans.size())));
+         removeLast(lines, paragraphLines);
+         removeLast(lines, sourceSpans);
+--- a/core/org/commonmark/internal/ParagraphParser.java
++++ b/core/org/commonmark/internal/ParagraphParser.java
+@@ -48,16 +48,16 @@
+ 
+     @Override
+     public List<DefinitionMap<?>> getDefinitions() {
+-        var map = new DefinitionMap<>(LinkReferenceDefinition.class);
+-        for (var def : linkReferenceDefinitionParser.getDefinitions()) {
++        DefinitionMap<LinkReferenceDefinition> map = new DefinitionMap<>(LinkReferenceDefinition.class);
++        for (LinkReferenceDefinition def : linkReferenceDefinitionParser.getDefinitions()) {
+             map.putIfAbsent(def.getLabel(), def);
+         }
+-        return List.of(map);
++        return org.commonmark.internal.util.Java8Collections.listOf(map);
+     }
+ 
+     @Override
+     public void closeBlock() {
+-        for (var def : linkReferenceDefinitionParser.getDefinitions()) {
++        for (LinkReferenceDefinition def : linkReferenceDefinitionParser.getDefinitions()) {
+             block.insertBefore(def);
+         }
+ 
+--- a/core/org/commonmark/internal/ThematicBreakParser.java
++++ b/core/org/commonmark/internal/ThematicBreakParser.java
+@@ -33,7 +33,7 @@
+             int nextNonSpace = state.getNextNonSpaceIndex();
+             CharSequence line = state.getLine().getContent();
+             if (isThematicBreak(line, nextNonSpace)) {
+-                var literal = String.valueOf(line.subSequence(state.getIndex(), line.length()));
++                String literal = String.valueOf(line.subSequence(state.getIndex(), line.length()));
+                 return BlockStart.of(new ThematicBreakParser(literal)).atIndex(line.length());
+             } else {
+                 return BlockStart.none();
+--- a/core/org/commonmark/internal/inline/AutolinkInlineParser.java
++++ b/core/org/commonmark/internal/inline/AutolinkInlineParser.java
+@@ -50,7 +50,7 @@
+     public static class Factory implements InlineContentParserFactory {
+         @Override
+         public Set<Character> getTriggerCharacters() {
+-            return Set.of('<');
++            return org.commonmark.internal.util.Java8Collections.setOf('<');
+         }
+ 
+         @Override
+--- a/core/org/commonmark/internal/inline/BackslashInlineParser.java
++++ b/core/org/commonmark/internal/inline/BackslashInlineParser.java
+@@ -37,7 +37,7 @@
+     public static class Factory implements InlineContentParserFactory {
+         @Override
+         public Set<Character> getTriggerCharacters() {
+-            return Set.of('\\');
++            return org.commonmark.internal.util.Java8Collections.setOf('\\');
+         }
+ 
+         @Override
+--- a/core/org/commonmark/internal/inline/BackticksInlineParser.java
++++ b/core/org/commonmark/internal/inline/BackticksInlineParser.java
+@@ -52,7 +52,7 @@
+     public static class Factory implements InlineContentParserFactory {
+         @Override
+         public Set<Character> getTriggerCharacters() {
+-            return Set.of('`');
++            return org.commonmark.internal.util.Java8Collections.setOf('`');
+         }
+ 
+         @Override
+--- a/core/org/commonmark/internal/inline/CoreLinkProcessor.java
++++ b/core/org/commonmark/internal/inline/CoreLinkProcessor.java
+@@ -18,9 +18,9 @@
+             return process(linkInfo, scanner, linkInfo.destination(), linkInfo.title());
+         }
+ 
+-        var label = linkInfo.label();
+-        var ref = label != null && !label.isEmpty() ? label : linkInfo.text();
+-        var def = context.getDefinition(LinkReferenceDefinition.class, ref);
++        String label = linkInfo.label();
++        String ref = label != null && !label.isEmpty() ? label : linkInfo.text();
++        LinkReferenceDefinition def = context.getDefinition(LinkReferenceDefinition.class, ref);
+         if (def != null) {
+             // Reference link
+             return process(linkInfo, scanner, def.getDestination(), def.getTitle());
+--- a/core/org/commonmark/internal/inline/EntityInlineParser.java
++++ b/core/org/commonmark/internal/inline/EntityInlineParser.java
+@@ -58,7 +58,7 @@
+ 
+         @Override
+         public Set<Character> getTriggerCharacters() {
+-            return Set.of('&');
++            return org.commonmark.internal.util.Java8Collections.setOf('&');
+         }
+ 
+         @Override
+--- a/core/org/commonmark/internal/inline/HtmlInlineParser.java
++++ b/core/org/commonmark/internal/inline/HtmlInlineParser.java
+@@ -206,7 +206,7 @@
+ 
+         @Override
+         public Set<Character> getTriggerCharacters() {
+-            return Set.of('<');
++            return org.commonmark.internal.util.Java8Collections.setOf('<');
+         }
+ 
+         @Override
+--- a/core/org/commonmark/internal/renderer/NodeRendererMap.java
++++ b/core/org/commonmark/internal/renderer/NodeRendererMap.java
+@@ -18,14 +18,14 @@
+      */
+     public void add(NodeRenderer nodeRenderer) {
+         nodeRenderers.add(nodeRenderer);
+-        for (var nodeType : nodeRenderer.getNodeTypes()) {
++        for (Class<? extends Node> nodeType : nodeRenderer.getNodeTypes()) {
+             // The first node renderer for a node type "wins".
+             renderers.putIfAbsent(nodeType, nodeRenderer);
+         }
+     }
+ 
+     public void render(Node node) {
+-        var nodeRenderer = renderers.get(node.getClass());
++        NodeRenderer nodeRenderer = renderers.get(node.getClass());
+         if (nodeRenderer != null) {
+             nodeRenderer.render(node);
+         }
+--- a/core/org/commonmark/node/DefinitionMap.java
++++ b/core/org/commonmark/node/DefinitionMap.java
+@@ -28,7 +28,7 @@
+     }
+ 
+     public void addAll(DefinitionMap<D> that) {
+-        for (var entry : that.definitions.entrySet()) {
++        for (Map.Entry<String, D> entry : that.definitions.entrySet()) {
+             // Note that keys are already normalized, so we can add them directly
+             definitions.putIfAbsent(entry.getKey(), entry.getValue());
+         }
+--- a/core/org/commonmark/node/Node.java
++++ b/core/org/commonmark/node/Node.java
+@@ -125,7 +125,7 @@
+      * @since 0.16.0
+      */
+     public List<SourceSpan> getSourceSpans() {
+-        return sourceSpans != null ? Collections.unmodifiableList(sourceSpans) : List.of();
++        return sourceSpans != null ? Collections.unmodifiableList(sourceSpans) : org.commonmark.internal.util.Java8Collections.listOf();
+     }
+ 
+     /**
+--- a/core/org/commonmark/node/SourceSpans.java
++++ b/core/org/commonmark/node/SourceSpans.java
+@@ -17,7 +17,7 @@
+     }
+ 
+     public List<SourceSpan> getSourceSpans() {
+-        return sourceSpans != null ? sourceSpans : List.of();
++        return sourceSpans != null ? sourceSpans : org.commonmark.internal.util.Java8Collections.listOf();
+     }
+ 
+     public void addAllFrom(Iterable<? extends Node> nodes) {
+--- a/core/org/commonmark/parser/Parser.java
++++ b/core/org/commonmark/parser/Parser.java
+@@ -52,7 +52,7 @@
+ 
+         // Try to construct an inline parser. Invalid configuration might result in an exception, which we want to
+         // detect as soon as possible.
+-        var context = new InlineParserContextImpl(
++        InlineParserContextImpl context = new InlineParserContextImpl(
+                 inlineContentParserFactories, delimiterProcessors, linkProcessors, linkMarkers, new Definitions());
+         this.inlineParserFactory.create(context);
+     }
+@@ -174,7 +174,7 @@
+          * E.g., to only parse headings and lists:
+          * <pre>
+          *     {@code
+-         *     Parser.builder().enabledBlockTypes(Set.of(Heading.class, ListBlock.class));
++         *     Parser.builder().enabledBlockTypes(org.commonmark.internal.util.Java8Collections.setOf(Heading.class, ListBlock.class));
+          *     }
+          * </pre>
+          *
+--- a/core/org/commonmark/parser/block/AbstractBlockParser.java
++++ b/core/org/commonmark/parser/block/AbstractBlockParser.java
+@@ -36,7 +36,7 @@
+ 
+     @Override
+     public List<DefinitionMap<?>> getDefinitions() {
+-        return List.of();
++        return org.commonmark.internal.util.Java8Collections.listOf();
+     }
+ 
+     @Override
+--- a/core/org/commonmark/renderer/html/CoreHtmlNodeRenderer.java
++++ b/core/org/commonmark/renderer/html/CoreHtmlNodeRenderer.java
+@@ -22,7 +22,7 @@
+ 
+     @Override
+     public Set<Class<? extends Node>> getNodeTypes() {
+-        return Set.of(
++        return org.commonmark.internal.util.Java8Collections.setOf(
+                 Document.class,
+                 Heading.class,
+                 Paragraph.class,
+@@ -139,7 +139,7 @@
+ 
+     @Override
+     public void visit(IndentedCodeBlock indentedCodeBlock) {
+-        renderCodeBlock(indentedCodeBlock.getLiteral(), indentedCodeBlock, Map.of());
++        renderCodeBlock(indentedCodeBlock.getLiteral(), indentedCodeBlock, org.commonmark.internal.util.Java8Collections.mapOf());
+     }
+ 
+     @Override
+@@ -291,7 +291,7 @@
+     }
+ 
+     private Map<String, String> getAttrs(Node node, String tagName) {
+-        return getAttrs(node, tagName, Map.of());
++        return getAttrs(node, tagName, org.commonmark.internal.util.Java8Collections.mapOf());
+     }
+ 
+     private Map<String, String> getAttrs(Node node, String tagName, Map<String, String> defaultAttributes) {
+--- a/core/org/commonmark/renderer/html/DefaultUrlSanitizer.java
++++ b/core/org/commonmark/renderer/html/DefaultUrlSanitizer.java
+@@ -12,7 +12,7 @@
+     private Set<String> protocols;
+ 
+     public DefaultUrlSanitizer() {
+-        this(List.of("http", "https", "mailto", "data"));
++        this(org.commonmark.internal.util.Java8Collections.listOf("http", "https", "mailto", "data"));
+     }
+ 
+     public DefaultUrlSanitizer(Collection<String> protocols) {
+--- a/core/org/commonmark/renderer/html/HtmlRenderer.java
++++ b/core/org/commonmark/renderer/html/HtmlRenderer.java
+@@ -241,12 +241,12 @@
+             this.htmlWriter = htmlWriter;
+ 
+             attributeProviders = new ArrayList<>(attributeProviderFactories.size());
+-            for (var attributeProviderFactory : attributeProviderFactories) {
++            for (AttributeProviderFactory attributeProviderFactory : attributeProviderFactories) {
+                 attributeProviders.add(attributeProviderFactory.create(this));
+             }
+ 
+-            for (var factory : nodeRendererFactories) {
+-                var renderer = factory.create(this);
++            for (HtmlNodeRendererFactory factory : nodeRendererFactories) {
++                NodeRenderer renderer = factory.create(this);
+                 nodeRendererMap.add(renderer);
+             }
+         }
+--- a/core/org/commonmark/renderer/html/HtmlWriter.java
++++ b/core/org/commonmark/renderer/html/HtmlWriter.java
+@@ -8,7 +8,7 @@
+ 
+ public class HtmlWriter {
+ 
+-    private static final Map<String, String> NO_ATTRIBUTES = Map.of();
++    private static final Map<String, String> NO_ATTRIBUTES = org.commonmark.internal.util.Java8Collections.mapOf();
+ 
+     private final Appendable buffer;
+     private char lastChar = 0;
+@@ -38,7 +38,7 @@
+         append("<");
+         append(name);
+         if (attrs != null && !attrs.isEmpty()) {
+-            for (var attr : attrs.entrySet()) {
++            for (Map.Entry<String, String> attr : attrs.entrySet()) {
+                 append(" ");
+                 append(Escaping.escapeHtml(attr.getKey()));
+                 if (attr.getValue() != null) {
+--- a/core/org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer.java
++++ b/core/org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer.java
+@@ -49,7 +49,7 @@
+ 
+     @Override
+     public Set<Class<? extends Node>> getNodeTypes() {
+-        return Set.of(
++        return org.commonmark.internal.util.Java8Collections.setOf(
+                 BlockQuote.class,
+                 BulletList.class,
+                 Code.class,
+@@ -474,9 +474,9 @@
+         if (parts[parts.length - 1].isEmpty()) {
+             // But we don't want the last empty string, as "\n" is used as a line terminator (not a separator),
+             // so return without the last element.
+-            return List.of(parts).subList(0, parts.length - 1);
++            return org.commonmark.internal.util.Java8Collections.listOf(parts).subList(0, parts.length - 1);
+         } else {
+-            return List.of(parts);
++            return org.commonmark.internal.util.Java8Collections.listOf(parts);
+         }
+     }
+ 
+--- a/core/org/commonmark/renderer/markdown/MarkdownRenderer.java
++++ b/core/org/commonmark/renderer/markdown/MarkdownRenderer.java
+@@ -38,7 +38,7 @@
+ 
+             @Override
+             public Set<Character> getSpecialCharacters() {
+-                return Set.of();
++                return org.commonmark.internal.util.Java8Collections.setOf();
+             }
+         });
+     }
+@@ -136,9 +136,9 @@
+             }
+             additionalTextEscapes = Collections.unmodifiableSet(escapes);
+ 
+-            for (var factory : nodeRendererFactories) {
++            for (MarkdownNodeRendererFactory factory : nodeRendererFactories) {
+                 // Pass in this as context here, which uses the fields set above
+-                var renderer = factory.create(this);
++                NodeRenderer renderer = factory.create(this);
+                 nodeRendererMap.add(renderer);
+             }
+         }
+--- a/core/org/commonmark/renderer/text/CoreTextContentNodeRenderer.java
++++ b/core/org/commonmark/renderer/text/CoreTextContentNodeRenderer.java
+@@ -22,7 +22,7 @@
+ 
+     @Override
+     public Set<Class<? extends Node>> getNodeTypes() {
+-        return Set.of(
++        return org.commonmark.internal.util.Java8Collections.setOf(
+                 Document.class,
+                 Heading.class,
+                 Paragraph.class,
+@@ -88,7 +88,7 @@
+ 
+     @Override
+     public void visit(FencedCodeBlock fencedCodeBlock) {
+-        var literal = stripTrailingNewline(fencedCodeBlock.getLiteral());
++        String literal = stripTrailingNewline(fencedCodeBlock.getLiteral());
+         if (stripNewlines()) {
+             textContent.writeStripped(literal);
+         } else {
+@@ -141,7 +141,7 @@
+ 
+     @Override
+     public void visit(IndentedCodeBlock indentedCodeBlock) {
+-        var literal = stripTrailingNewline(indentedCodeBlock.getLiteral());
++        String literal = stripTrailingNewline(indentedCodeBlock.getLiteral());
+         if (stripNewlines()) {
+             textContent.writeStripped(literal);
+         } else {
+@@ -158,9 +158,9 @@
+     @Override
+     public void visit(ListItem listItem) {
+         if (listHolder != null && listHolder instanceof OrderedListHolder) {
+-            var orderedListHolder = (OrderedListHolder) listHolder;
+-            var marker = orderedListHolder.getCounter() + orderedListHolder.getDelimiter();
+-            var spaces = " ";
++            OrderedListHolder orderedListHolder = (OrderedListHolder) listHolder;
++            String marker = orderedListHolder.getCounter() + orderedListHolder.getDelimiter();
++            String spaces = " ";
+             textContent.write(marker);
+             textContent.write(spaces);
+             textContent.pushPrefix(repeat(" ", marker.length() + spaces.length()));
+@@ -171,8 +171,8 @@
+         } else if (listHolder != null && listHolder instanceof BulletListHolder) {
+             BulletListHolder bulletListHolder = (BulletListHolder) listHolder;
+             if (!stripNewlines()) {
+-                var marker = bulletListHolder.getMarker();
+-                var spaces = " ";
++                String marker = bulletListHolder.getMarker();
++                String spaces = " ";
+                 textContent.write(marker);
+                 textContent.write(spaces);
+                 textContent.pushPrefix(repeat(" ", marker.length() + spaces.length()));
+@@ -279,7 +279,7 @@
+ 
+     // Keep for Android compat (String.repeat only available on Android 12 and later)
+     private static String repeat(String s, int count) {
+-        var sb = new StringBuilder(s.length() * count);
++        StringBuilder sb = new StringBuilder(s.length() * count);
+         for (int i = 0; i < count; i++) {
+             sb.append(s);
+         }
+--- a/core/org/commonmark/renderer/text/TextContentRenderer.java
++++ b/core/org/commonmark/renderer/text/TextContentRenderer.java
+@@ -140,8 +140,8 @@
+         private RendererContext(TextContentWriter textContentWriter) {
+             this.textContentWriter = textContentWriter;
+ 
+-            for (var factory : nodeRendererFactories) {
+-                var renderer = factory.create(this);
++            for (TextContentNodeRendererFactory factory : nodeRendererFactories) {
++                NodeRenderer renderer = factory.create(this);
+                 nodeRendererMap.add(renderer);
+             }
+         }
+--- a/core/org/commonmark/renderer/text/TextContentWriter.java
++++ b/core/org/commonmark/renderer/text/TextContentWriter.java
+@@ -125,7 +125,7 @@
+         if (blockSeparator != null) {
+             if (blockSeparator.equals("\n") || blockSeparator.equals("\n\n")) {
+                 for (int i = 0; i < blockSeparator.length(); i++) {
+-                    var sep = blockSeparator.charAt(i);
++                    char sep = blockSeparator.charAt(i);
+                     append(sep);
+                     writePrefixes();
+                 }
+--- a/tables/module-info.java
++++ /dev/null
+@@ -1,5 +0,0 @@
+-module org.commonmark.ext.gfm.tables {
+-    exports org.commonmark.ext.gfm.tables;
+-
+-    requires transitive org.commonmark;
+-}
+--- a/tables/org/commonmark/ext/gfm/tables/TablesExtension.java
++++ b/tables/org/commonmark/ext/gfm/tables/TablesExtension.java
+@@ -77,7 +77,7 @@
+ 
+             @Override
+             public Set<Character> getSpecialCharacters() {
+-                return Set.of('|');
++                return org.commonmark.internal.util.Java8Collections.setOf('|');
+             }
+         });
+     }
+--- a/tables/org/commonmark/ext/gfm/tables/internal/TableHtmlNodeRenderer.java
++++ b/tables/org/commonmark/ext/gfm/tables/internal/TableHtmlNodeRenderer.java
+@@ -64,14 +64,14 @@
+     }
+ 
+     private Map<String, String> getAttributes(Node node, String tagName) {
+-        return context.extendAttributes(node, tagName, Map.of());
++        return context.extendAttributes(node, tagName, org.commonmark.internal.util.Java8Collections.mapOf());
+     }
+ 
+     private Map<String, String> getCellAttributes(TableCell tableCell, String tagName) {
+         if (tableCell.getAlignment() != null) {
+-            return context.extendAttributes(tableCell, tagName, Map.of("align", getAlignValue(tableCell.getAlignment())));
++            return context.extendAttributes(tableCell, tagName, org.commonmark.internal.util.Java8Collections.mapOf("align", getAlignValue(tableCell.getAlignment())));
+         } else {
+-            return context.extendAttributes(tableCell, tagName, Map.of());
++            return context.extendAttributes(tableCell, tagName, org.commonmark.internal.util.Java8Collections.mapOf());
+         }
+     }
+ 
+--- a/tables/org/commonmark/ext/gfm/tables/internal/TableNodeRenderer.java
++++ b/tables/org/commonmark/ext/gfm/tables/internal/TableNodeRenderer.java
+@@ -10,7 +10,7 @@
+ 
+     @Override
+     public Set<Class<? extends Node>> getNodeTypes() {
+-        return Set.of(
++        return org.commonmark.internal.util.Java8Collections.setOf(
+                 TableBlock.class,
+                 TableHead.class,
+                 TableBody.class,
+--- /dev/null
++++ b/core/org/commonmark/internal/util/Java8Collections.java
+@@ -0,0 +1,80 @@
++package org.commonmark.internal.util;
++
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.HashMap;
++import java.util.LinkedHashSet;
++import java.util.List;
++import java.util.Map;
++import java.util.Objects;
++import java.util.Set;
++
++/** Java 8 equivalents of the immutable factory calls used by upstream sources. */
++public final class Java8Collections {
++    private Java8Collections() { }
++
++    @SafeVarargs
++    public static <E> List<E> listOf(E... elements) {
++        Objects.requireNonNull(elements, "elements");
++        List<E> values = new NullRejectList<>();
++        for (E element : elements) {
++            values.add(Objects.requireNonNull(element, "element"));
++        }
++        return Collections.unmodifiableList(values);
++    }
++
++    @SafeVarargs
++    public static <E> Set<E> setOf(E... elements) {
++        Objects.requireNonNull(elements, "elements");
++        Set<E> values = new NullRejectSet<>();
++        for (E element : elements) {
++            if (!values.add(Objects.requireNonNull(element, "element"))) {
++                throw new IllegalArgumentException("duplicate element: " + element);
++            }
++        }
++        return Collections.unmodifiableSet(values);
++    }
++
++    public static <K, V> Map<K, V> mapOf() {
++        return Collections.unmodifiableMap(new NullRejectMap<K, V>());
++    }
++
++    public static <K, V> Map<K, V> mapOf(K key, V value) {
++        Map<K, V> values = new NullRejectMap<>();
++        values.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(value, "value"));
++        return Collections.unmodifiableMap(values);
++    }
++
++    // Preserve the null-query rejection of JDK immutable factory collections.
++    // Unmodifiable wrappers reject every mutation, including empty/no-op changes.
++    private static final class NullRejectList<E> extends ArrayList<E> {
++        NullRejectList() { }
++        @Override public boolean contains(Object value) {
++            return super.contains(Objects.requireNonNull(value, "value"));
++        }
++        @Override public int indexOf(Object value) {
++            return super.indexOf(Objects.requireNonNull(value, "value"));
++        }
++        @Override public int lastIndexOf(Object value) {
++            return super.lastIndexOf(Objects.requireNonNull(value, "value"));
++        }
++    }
++    private static final class NullRejectSet<E> extends LinkedHashSet<E> {
++        NullRejectSet() { }
++        @Override public boolean contains(Object value) {
++            return super.contains(Objects.requireNonNull(value, "value"));
++        }
++    }
++    private static final class NullRejectMap<K, V> extends HashMap<K, V> {
++        NullRejectMap() { }
++        @Override public V get(Object key) {
++            return super.get(Objects.requireNonNull(key, "key"));
++        }
++        @Override public boolean containsKey(Object key) {
++            return super.containsKey(Objects.requireNonNull(key, "key"));
++        }
++        @Override public boolean containsValue(Object value) {
++            return super.containsValue(Objects.requireNonNull(value, "value"));
++        }
++    }
++}
