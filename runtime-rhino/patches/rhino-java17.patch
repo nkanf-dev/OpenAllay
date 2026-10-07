@@ -524,6 +524,9 @@
 @@ -352 +354 @@
 -		var current = type;
 +		java.lang.Class<?> current = type;
+@@ -356 +358 @@
+-			current = current.componentType();
++			current = current.getComponentType();
 @@ -362 +364 @@
 -			builder.append("[]".repeat(arr));
 +			builder.append(ListCompat.repeat("[]", arr));
@@ -542,6 +545,9 @@
 +		}
 +
 +		java.util.ArrayList<java.lang.String> list = new ArrayList<String>();
+@@ -389 +391 @@
+-		} else if (cl.isRecord()) {
++		} else if (VMBridge.isRecord(cl)) {
 @@ -397 +399 @@
 -		var shortName = cl.getName();
 +		java.lang.String shortName = cl.getName();
@@ -610,6 +616,9 @@
 @@ -118 +120 @@
 -			var type = params.types().get(i);
 +			java.lang.Class<?> type = params.types().get(i);
+@@ -121 +123 @@
+-				parent.storage.get(type.componentType()).appendDebugType(builder);
++				parent.storage.get(type.getComponentType()).appendDebugType(builder);
 --- a/dev/latvian/mods/rhino/CachedFieldInfo.java
 +++ b/dev/latvian/mods/rhino/CachedFieldInfo.java
 @@ -55 +55 @@
@@ -1277,18 +1286,28 @@
 +				break;
 --- a/dev/latvian/mods/rhino/ContextFactory.java
 +++ b/dev/latvian/mods/rhino/ContextFactory.java
-@@ -51,2 +51,2 @@
+@@ -49 +49,5 @@
+-	public synchronized void registerDefaultRecordProperties(Record record) {
++	public synchronized void registerDefaultRecordProperties(Object record) {
++		java.util.Objects.requireNonNull(record, "record");
++		if (!VMBridge.isRecord(record.getClass())) {
++			throw new IllegalArgumentException("Default record properties require a native record");
++		}
+@@ -51,2 +55,2 @@
 -			var components = record.getClass().getRecordComponents();
 -			var properties = new Object[components.length];
-+			java.lang.reflect.RecordComponent[] components = record.getClass().getRecordComponents();
++			VMBridge.NativeRecordComponent[] components = VMBridge.getRecordComponents(record.getClass());
 +			java.lang.Object[] properties = new Object[components.length];
-@@ -79 +79 @@
+@@ -75 +79 @@
+-		if (!type.isRecord()) {
++		if (!VMBridge.isRecord(type)) {
+@@ -79 +83 @@
 -		var constructor = recordConstructors.get(type);
 +		java.lang.invoke.MethodHandle constructor = recordConstructors.get(type);
-@@ -83,2 +83,2 @@
+@@ -83,2 +87,2 @@
 -				var components = type.getRecordComponents();
 -				var args = new Class<?>[components.length];
-+				java.lang.reflect.RecordComponent[] components = type.getRecordComponents();
++				VMBridge.NativeRecordComponent[] components = VMBridge.getRecordComponents(type);
 +				java.lang.Class<?>[] args = new Class<?>[components.length];
 --- a/dev/latvian/mods/rhino/CustomMember.java
 +++ b/dev/latvian/mods/rhino/CustomMember.java
@@ -1351,6 +1370,12 @@
 -			if (r instanceof YieldStarResult ysResult) {
 +			if (r instanceof YieldStarResult) {
 +				YieldStarResult ysResult = (YieldStarResult) r;
+--- a/dev/latvian/mods/rhino/EcmaError.java
++++ b/dev/latvian/mods/rhino/EcmaError.java
+@@ -11 +10,0 @@
+-import java.io.Serial;
+@@ -18 +16,0 @@
+-	@Serial
 --- a/dev/latvian/mods/rhino/EqualObjectGraphs.java
 +++ b/dev/latvian/mods/rhino/EqualObjectGraphs.java
 @@ -238,8 +238,12 @@
@@ -1374,6 +1399,12 @@
 +		} else if (s1 instanceof NativeSymbol) {
 +			NativeSymbol s3 = (NativeSymbol) s1;
 +			return s2 instanceof NativeSymbol && equalGraphs(cx, s3.getKey(), ((NativeSymbol) s2).getKey());
+--- a/dev/latvian/mods/rhino/EvaluatorException.java
++++ b/dev/latvian/mods/rhino/EvaluatorException.java
+@@ -10 +9,0 @@
+-import java.io.Serial;
+@@ -16 +14,0 @@
+-	@Serial
 --- a/dev/latvian/mods/rhino/FunctionObject.java
 +++ b/dev/latvian/mods/rhino/FunctionObject.java
 @@ -9,0 +10,2 @@
@@ -1391,6 +1422,12 @@
 @@ -220 +222 @@
 -			var returnType = member.getReturnType();
 +			dev.latvian.mods.rhino.type.TypeInfo returnType = member.getReturnType();
+--- a/dev/latvian/mods/rhino/GeneratorState.java
++++ b/dev/latvian/mods/rhino/GeneratorState.java
+@@ -3 +2,0 @@
+-import java.io.Serial;
+@@ -11 +9,0 @@
+-		@Serial
 --- a/dev/latvian/mods/rhino/IRFactory.java
 +++ b/dev/latvian/mods/rhino/IRFactory.java
 @@ -359 +359,4 @@
@@ -1998,7 +2035,11 @@
 @@ -601 +614 @@
 -		var constructors = classInfo.getConstructors();
 +		java.util.List<dev.latvian.mods.rhino.CachedConstructorInfo> constructors = classInfo.getConstructors();
-@@ -625,4 +638,4 @@
+@@ -623 +636,2 @@
+-	@Deprecated(forRemoval = true)
++	/** @deprecated This upstream API is scheduled for removal. */
++	@Deprecated
+@@ -625,4 +639,4 @@
 -		var list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleFields(includeProtected);
 -		var list = new ArrayList<FieldInfo>(list0.size());
 -
@@ -2007,7 +2048,11 @@
 +		java.util.ArrayList<dev.latvian.mods.rhino.JavaMembers.FieldInfo> list = new ArrayList<FieldInfo>(list0.size());
 +
 +		for (dev.latvian.mods.rhino.CachedFieldInfo.Accessible f : list0) {
-@@ -637,4 +650,4 @@
+@@ -635 +649,2 @@
+-	@Deprecated(forRemoval = true)
++	/** @deprecated This upstream API is scheduled for removal. */
++	@Deprecated
+@@ -637,4 +652,4 @@
 -		var list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleMethods(includeProtected);
 -		var list = new ArrayList<MethodInfo>(list0.size());
 -
@@ -2016,27 +2061,39 @@
 +		java.util.ArrayList<dev.latvian.mods.rhino.JavaMembers.MethodInfo> list = new ArrayList<MethodInfo>(list0.size());
 +
 +		for (dev.latvian.mods.rhino.CachedMethodInfo.Accessible m : list0) {
-@@ -648 +661 @@
+@@ -648 +663 @@
 -		var ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
 +		java.util.Map<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
-@@ -655,3 +668,3 @@
+@@ -655,3 +670,3 @@
 -		var result = new HashMap<String, FieldAndMethods>(len);
 -
 -		for (var fam : ht.values()) {
 +		java.util.HashMap<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> result = new HashMap<String, FieldAndMethods>(len);
 +
 +		for (dev.latvian.mods.rhino.FieldAndMethods fam : ht.values()) {
+@@ -673 +688,2 @@
+-	@Deprecated(forRemoval = true)
++	/** @deprecated This upstream API is scheduled for removal. */
++	@Deprecated
+@@ -689 +705,2 @@
+-	@Deprecated(forRemoval = true)
++	/** @deprecated This upstream API is scheduled for removal. */
++	@Deprecated
 --- a/dev/latvian/mods/rhino/JavaScriptException.java
 +++ b/dev/latvian/mods/rhino/JavaScriptException.java
-@@ -38 +38,2 @@
+@@ -11 +10,0 @@
+-import java.io.Serial;
+@@ -20 +18,0 @@
+-	@Serial
+@@ -38 +36,2 @@
 -		if (value instanceof NativeError error) {
 +		if (value instanceof NativeError) {
 +			NativeError error = (NativeError) value;
-@@ -41 +42,2 @@
+@@ -41 +40,2 @@
 -		if (javaCause instanceof Wrapper wrapper) {
 +		if (javaCause instanceof Wrapper) {
 +			Wrapper wrapper = (Wrapper) javaCause;
-@@ -44,2 +46,2 @@
+@@ -44,2 +44,2 @@
 -		if (javaCause instanceof Throwable throwable && throwable != this) {
 -			this.initCause(throwable);
 +		if (javaCause instanceof Throwable && javaCause != this) {
@@ -3079,6 +3136,9 @@
 @@ -117 +127 @@
 -			indent = (gapLength > 0) ? " ".repeat(gapLength) : "";
 +			indent = (gapLength > 0) ? ListCompat.repeat(" ", gapLength) : "";
+@@ -125 +135 @@
+-		writer.setIndent(Objects.requireNonNullElse(indent, ""));
++		writer.setIndent(indent == null ? "" : indent);
 --- a/dev/latvian/mods/rhino/NativeGlobal.java
 +++ b/dev/latvian/mods/rhino/NativeGlobal.java
 @@ -47,11 +47,11 @@
@@ -3453,11 +3513,23 @@
 -					if (key instanceof Symbol sym) {
 +					if (key instanceof Symbol) {
 +						Symbol sym = (Symbol) key;
+@@ -726 +750 @@
+-			return new Iterator<>() {
++			return new Iterator<Entry<Object, Object>>() {
+@@ -740 +764 @@
+-					return new Map.Entry<>() {
++					return new Map.Entry<Object, Object>() {
 @@ -758 +782 @@
 -							if (!(other instanceof Entry<?, ?> e)) {
 +							if (!(other instanceof Entry<?, ?>)) {
 @@ -760,0 +785 @@
 +							Entry<?, ?> e = (Entry<?, ?>) other;
+@@ -802 +827 @@
+-			return new Iterator<>() {
++			return new Iterator<Object>() {
+@@ -843 +868 @@
+-			return new Iterator<>() {
++			return new Iterator<Object>() {
 @@ -876 +901,2 @@
 -		if (obj instanceof ScriptableObject so) {
 +		if (obj instanceof ScriptableObject) {
@@ -3645,52 +3717,56 @@
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
-@@ -520,2 +522,2 @@
+@@ -74 +75,0 @@
+-import java.io.Serial;
+@@ -119 +119,0 @@
+-		@Serial
+@@ -520,2 +520,2 @@
 -		loopSet.removeLast();
 -		loopAndSwitchSet.removeLast();
 +		ListCompat.removeLast(loopSet);
 +		ListCompat.removeLast(loopAndSwitchSet);
-@@ -539 +541 @@
+@@ -539 +539 @@
 -		loopAndSwitchSet.removeLast();
 +		ListCompat.removeLast(loopAndSwitchSet);
-@@ -608 +610 @@
+@@ -608 +608 @@
 -					n = scannedComments.getLast();
 +					n = ListCompat.getLast(scannedComments);
-@@ -696 +698 @@
+@@ -696 +696 @@
 -							n = scannedComments.getLast();
 +							n = ListCompat.getLast(scannedComments);
-@@ -1113,2 +1115,2 @@
+@@ -1113,2 +1113,2 @@
 -				if (ntt == Token.COMMENT && pn.getLineno() == scannedComments.getLast().getLineno()) {
 -					pn.setInlineComment(scannedComments.getLast());
 +				if (ntt == Token.COMMENT && pn.getLineno() == ListCompat.getLast(scannedComments).getLineno()) {
 +					pn.setInlineComment(ListCompat.getLast(scannedComments));
-@@ -1236 +1238 @@
+@@ -1236 +1236 @@
 -				pn = scannedComments.getLast();
 +				pn = ListCompat.getLast(scannedComments);
-@@ -1291 +1293 @@
+@@ -1291 +1291 @@
 -				pn.setElseKeyWordInlineComment(scannedComments.getLast());
 +				pn.setElseKeyWordInlineComment(ListCompat.getLast(scannedComments));
-@@ -1358 +1360 @@
+@@ -1358 +1358 @@
 -						AstNode n = scannedComments.getLast();
 +						AstNode n = ListCompat.getLast(scannedComments);
-@@ -1373 +1375 @@
+@@ -1373 +1373 @@
 -						Comment inlineComment = scannedComments.getLast();
 +						Comment inlineComment = ListCompat.getLast(scannedComments);
-@@ -1666 +1668 @@
+@@ -1666 +1666 @@
 -			Comment commentNode = scannedComments.getLast();
 +			Comment commentNode = ListCompat.getLast(scannedComments);
-@@ -1837 +1839 @@
+@@ -1837 +1837 @@
 -				breakTarget = loopAndSwitchSet.getLast();
 +				breakTarget = ListCompat.getLast(loopAndSwitchSet);
-@@ -1870 +1872 @@
+@@ -1870 +1870 @@
 -				target = loopSet.getLast();
 +				target = ListCompat.getLast(loopSet);
-@@ -2090,2 +2092,2 @@
+@@ -2090,2 +2090,2 @@
 -				if (ntt == Token.COMMENT && stmt.getLineno() == scannedComments.getLast().getLineno()) {
 -					stmt.setInlineComment(scannedComments.getLast());
 +				if (ntt == Token.COMMENT && stmt.getLineno() == ListCompat.getLast(scannedComments).getLineno()) {
 +					stmt.setInlineComment(ListCompat.getLast(scannedComments));
-@@ -2252,7 +2254,9 @@
+@@ -2252,7 +2252,9 @@
 -			addError(switch (symbol.getDeclType()) {
 -				case Token.LET -> "msg.let.redecl";
 -				case Token.VAR -> "msg.var.redecl";
@@ -3707,7 +3783,7 @@
 +				default: message = "msg.parm.redecl"; break;
 +			}
 +			addError(message, name);
-@@ -2272,2 +2276,6 @@
+@@ -2272,2 +2274,6 @@
 -			case Token.LET, Token.VAR, Token.CONST, Token.FUNCTION, Token.LP -> currentScope.putSymbol(new AstSymbol(declType, name));
 -			default -> throw Kit.codeBug();
 +			case Token.LET:
@@ -3716,113 +3792,113 @@
 +			case Token.FUNCTION:
 +			case Token.LP: currentScope.putSymbol(new AstSymbol(declType, name)); break;
 +			default: throw Kit.codeBug();
-@@ -2491 +2499,4 @@
+@@ -2491 +2497,4 @@
 -				case Token.EQ, Token.NE, Token.SHEQ, Token.SHNE -> {
 +				case Token.EQ:
 +				case Token.NE:
 +				case Token.SHEQ:
 +				case Token.SHNE: {
-@@ -2531 +2542,3 @@
+@@ -2531 +2540,3 @@
 -				case Token.LSH, Token.URSH, Token.RSH -> {
 +				case Token.LSH:
 +				case Token.URSH:
 +				case Token.RSH: {
-@@ -2561 +2574,3 @@
+@@ -2561 +2572,3 @@
 -				case Token.MUL, Token.DIV, Token.MOD -> {
 +				case Token.MUL:
 +				case Token.DIV:
 +				case Token.MOD: {
-@@ -2582 +2597,5 @@
+@@ -2582 +2595,5 @@
 -			case Token.VOID, Token.NOT, Token.BITNOT, Token.TYPEOF, Token.DELPROP -> {
 +			case Token.VOID:
 +			case Token.NOT:
 +			case Token.BITNOT:
 +			case Token.TYPEOF:
 +			case Token.DELPROP: {
-@@ -2588 +2607 @@
+@@ -2588 +2605 @@
 -			case Token.ADD -> {
 +			case Token.ADD: {
-@@ -2595 +2614 @@
+@@ -2595 +2612 @@
 -			case Token.SUB -> {
 +			case Token.SUB: {
-@@ -2602 +2621,2 @@
+@@ -2602 +2619,2 @@
 -			case Token.INC, Token.DEC -> {
 +			case Token.INC:
 +			case Token.DEC: {
-@@ -2609 +2629 @@
+@@ -2609 +2627 @@
 -			case Token.ERROR -> {
 +			case Token.ERROR: {
-@@ -2613 +2633 @@
+@@ -2613 +2631 @@
 -			default -> {
 +			default: {
-@@ -2738 +2758,2 @@
+@@ -2738 +2756,2 @@
 -				case Token.DOT, Token.QUESTION_DOT:
 +				case Token.DOT:
 +				case Token.QUESTION_DOT:
-@@ -3070 +3091 @@
+@@ -3070 +3089 @@
 -				return arrayComprehension(elements.getFirst(), pos);
 +				return arrayComprehension(ListCompat.getFirst(elements), pos);
-@@ -3147 +3168,2 @@
+@@ -3147 +3166,2 @@
 -				case Token.LB, Token.LC -> {
 +				case Token.LB:
 +				case Token.LC: {
-@@ -3151,2 +3173,4 @@
+@@ -3151,2 +3171,4 @@
 -				}
 -				case Token.NAME -> {
 +
 +					break;
 +				}
 +				case Token.NAME: {
-@@ -3155,2 +3179,4 @@
+@@ -3155,2 +3177,4 @@
 -				}
 -				default -> reportError("msg.bad.var");
 +
 +					break;
 +				}
 +				default: reportError("msg.bad.var"); break;
-@@ -3249 +3275,2 @@
+@@ -3249 +3273,2 @@
 -				case Token.LB, Token.LC -> {
 +				case Token.LB:
 +				case Token.LC: {
-@@ -3253,2 +3280,4 @@
+@@ -3253,2 +3278,4 @@
 -				}
 -				case Token.NAME -> {
 +
 +					break;
 +				}
 +				case Token.NAME: {
-@@ -3257,2 +3286,4 @@
+@@ -3257,2 +3284,4 @@
 -				}
 -				default -> reportError("msg.bad.var");
 +
 +					break;
 +				}
 +				default: reportError("msg.bad.var"); break;
-@@ -3384 +3415 @@
+@@ -3384 +3413 @@
 -					case PROP_ENTRY -> {
 +					case PROP_ENTRY: {
-@@ -3386,0 +3418,2 @@
+@@ -3386,0 +3416,2 @@
 +
 +						break;
-@@ -3388 +3421 @@
+@@ -3388 +3419 @@
 -					case METHOD_ENTRY -> {
 +					case METHOD_ENTRY: {
-@@ -3393,0 +3427,2 @@
+@@ -3393,0 +3425,2 @@
 +
 +						break;
-@@ -3395 +3430 @@
+@@ -3395 +3428 @@
 -					case GET_ENTRY -> {
 +					case GET_ENTRY: {
-@@ -3399,0 +3435,2 @@
+@@ -3399,0 +3433,2 @@
 +
 +						break;
-@@ -3401 +3438 @@
+@@ -3401 +3436 @@
 -					case SET_ENTRY -> {
 +					case SET_ENTRY: {
-@@ -3405,0 +3443,2 @@
+@@ -3405,0 +3441,2 @@
 +
 +						break;
-@@ -3437,4 +3476,4 @@
+@@ -3437,4 +3474,4 @@
 -			case Token.NAME -> pname = createNameNode();
 -			case Token.STRING -> pname = createStringLiteral();
 -			case Token.NUMBER -> pname = createNumberLiteral();
@@ -3831,53 +3907,53 @@
 +			case Token.STRING: pname = createStringLiteral(); break;
 +			case Token.NUMBER: pname = createNumberLiteral(); break;
 +			case Token.LB: {
-@@ -3453,2 +3492,4 @@
+@@ -3453,2 +3490,4 @@
 -			}
 -			case Token.MUL -> {
 +
 +				break;
 +			}
 +			case Token.MUL: {
-@@ -3463,2 +3504,4 @@
+@@ -3463,2 +3502,4 @@
 -			}
 -			default -> {
 +
 +				break;
 +			}
 +			default: {
-@@ -3511 +3554 @@
+@@ -3511 +3552 @@
 -			case GET_ENTRY -> {
 +			case GET_ENTRY: {
-@@ -3514,2 +3557,4 @@
+@@ -3514,2 +3555,4 @@
 -			}
 -			case SET_ENTRY -> {
 +
 +				break;
 +			}
 +			case SET_ENTRY: {
-@@ -3518,2 +3563,4 @@
+@@ -3518,2 +3561,4 @@
 -			}
 -			case METHOD_ENTRY -> {
 +
 +				break;
 +			}
 +			case METHOD_ENTRY: {
-@@ -3521,0 +3569,2 @@
+@@ -3521,0 +3567,2 @@
 +
 +				break;
-@@ -3758 +3807,3 @@
+@@ -3758 +3805,3 @@
 -				case Token.CONST, Token.LET, Token.VAR -> reportError("msg.bad.assign.left");
 +				case Token.CONST:
 +				case Token.LET:
 +				case Token.VAR: reportError("msg.bad.assign.left"); break;
-@@ -4093 +4144 @@
+@@ -4093 +4142 @@
 -			case Token.NAME -> {
 +			case Token.NAME: {
-@@ -4101 +4152,2 @@
+@@ -4101 +4150,2 @@
 -			case Token.GETPROP, Token.GETELEM -> {
 +			case Token.GETPROP:
 +			case Token.GETELEM: {
-@@ -4135 +4187 @@
+@@ -4135 +4185 @@
 -			case Token.GET_REF -> {
 +			case Token.GET_REF: {
 --- a/dev/latvian/mods/rhino/ResolvedOverload.java
@@ -3887,6 +3963,12 @@
 +		if (!(other instanceof ResolvedOverload)) {
 @@ -45,0 +46 @@
 +		ResolvedOverload ovl = (ResolvedOverload) other;
+--- a/dev/latvian/mods/rhino/RhinoException.java
++++ b/dev/latvian/mods/rhino/RhinoException.java
+@@ -13 +12,0 @@
+-import java.io.Serial;
+@@ -24 +22,0 @@
+-	@Serial
 --- a/dev/latvian/mods/rhino/ScriptRuntime.java
 +++ b/dev/latvian/mods/rhino/ScriptRuntime.java
 @@ -297,13 +297,6 @@
@@ -4063,77 +4145,81 @@
 +					Integer index = (Integer) id;
 --- a/dev/latvian/mods/rhino/ScriptableObject.java
 +++ b/dev/latvian/mods/rhino/ScriptableObject.java
-@@ -169 +169 @@
+@@ -16 +15,0 @@
+-import java.io.Serial;
+@@ -100 +98,0 @@
+-		@Serial
+@@ -169 +167 @@
 -			if (!(v instanceof Function fun)) {
 +			if (!(v instanceof Function)) {
-@@ -171,0 +172 @@
+@@ -171,0 +170 @@
 +			Function fun = (Function) v;
-@@ -214 +215 @@
+@@ -214 +213 @@
 -		if (!(destination instanceof ScriptableObject so)) {
 +		if (!(destination instanceof ScriptableObject)) {
-@@ -217,0 +219 @@
+@@ -217,0 +217 @@
 +		ScriptableObject so = (ScriptableObject) destination;
-@@ -231 +233,2 @@
+@@ -231 +231,2 @@
 -		if (destination instanceof ConstProperties cp) {
 +		if (destination instanceof ConstProperties) {
 +			ConstProperties cp = (ConstProperties) destination;
-@@ -317 +320,2 @@
+@@ -317 +318,2 @@
 -		} else if (ctor instanceof Scriptable ctorObj) {
 +		} else if (ctor instanceof Scriptable) {
 +			Scriptable ctorObj = (Scriptable) ctor;
-@@ -448 +452,2 @@
+@@ -448 +450,2 @@
 -		if (base instanceof ConstProperties cp) {
 +		if (base instanceof ConstProperties) {
 +			ConstProperties cp = (ConstProperties) base;
-@@ -703 +708,2 @@
+@@ -703 +706,2 @@
 -			if (scope instanceof ScriptableObject so) {
 +			if (scope instanceof ScriptableObject) {
 +				ScriptableObject so = (ScriptableObject) scope;
-@@ -1163 +1169 @@
+@@ -1163 +1167 @@
 -			if (!(slot instanceof AccessorSlot gs)) {
 +			if (!(slot instanceof AccessorSlot)) {
-@@ -1165,0 +1172 @@
+@@ -1165,0 +1170 @@
 +			AccessorSlot gs = (AccessorSlot) slot;
-@@ -1177 +1184 @@
+@@ -1177 +1182 @@
 -			fslot.setter = getterOrSetter instanceof Function f ? new AccessorSlot.FunctionSetter(f) : null;
 +			fslot.setter = getterOrSetter instanceof Function ? new AccessorSlot.FunctionSetter((Function) getterOrSetter) : null;
-@@ -1179 +1186 @@
+@@ -1179 +1184 @@
 -			fslot.getter = getterOrSetter instanceof Function f ? new AccessorSlot.FunctionGetter(f) : null;
 +			fslot.getter = getterOrSetter instanceof Function ? new AccessorSlot.FunctionGetter((Function) getterOrSetter) : null;
-@@ -1464,3 +1471,3 @@
+@@ -1464,3 +1469,3 @@
 -		var methods = FunctionObject.getMethodList(cx, clazz);
 -		var getter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, getterName, cx));
 -		var setter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, setterName, cx));
 +		java.util.List<dev.latvian.mods.rhino.CachedMethodInfo> methods = FunctionObject.getMethodList(cx, clazz);
 +		dev.latvian.mods.rhino.WrappedExecutable getter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, getterName, cx));
 +		dev.latvian.mods.rhino.WrappedExecutable setter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, setterName, cx));
-@@ -1663 +1670,2 @@
+@@ -1663 +1668,2 @@
 -				if (slot instanceof AccessorSlot gs) {
 +				if (slot instanceof AccessorSlot) {
 +					AccessorSlot gs = (AccessorSlot) slot;
-@@ -1772 +1780,2 @@
+@@ -1772 +1778,2 @@
 -		if (existing instanceof LambdaAccessorSlot lSlot) {
 +		if (existing instanceof LambdaAccessorSlot) {
 +			LambdaAccessorSlot lSlot = (LambdaAccessorSlot) existing;
-@@ -1779 +1788 @@
+@@ -1779 +1786 @@
 -		var replacedDesc = replacedSlot.buildPropertyDescriptor(cx);
 +		dev.latvian.mods.rhino.ScriptableObject replacedDesc = replacedSlot.buildPropertyDescriptor(cx);
-@@ -1799 +1808,2 @@
+@@ -1799 +1806,2 @@
 -		} else if (existing instanceof AccessorSlot aSlot) {
 +		} else if (existing instanceof AccessorSlot) {
 +			AccessorSlot aSlot = (AccessorSlot) existing;
-@@ -1809 +1819,2 @@
+@@ -1809 +1817,2 @@
 -		} else if (existing instanceof LambdaSlot lSlot) {
 +		} else if (existing instanceof LambdaSlot) {
 +			LambdaSlot lSlot = (LambdaSlot) existing;
-@@ -1858 +1869,2 @@
+@@ -1858 +1867,2 @@
 -				} else if (isAccessor && current instanceof AccessorSlot accessor) {
 +				} else if (isAccessor && current instanceof AccessorSlot) {
 +					AccessorSlot accessor = (AccessorSlot) current;
-@@ -1963 +1975 @@
+@@ -1963 +1973 @@
 -		var methods = FunctionObject.getMethodList(cx, clazz);
 +		java.util.List<dev.latvian.mods.rhino.CachedMethodInfo> methods = FunctionObject.getMethodList(cx, clazz);
-@@ -1966 +1978 @@
+@@ -1966 +1976 @@
 -			var m = FunctionObject.findSingleMethod(methods, name, cx);
 +			dev.latvian.mods.rhino.CachedMethodInfo m = FunctionObject.findSingleMethod(methods, name, cx);
 --- a/dev/latvian/mods/rhino/Slot.java
@@ -4635,6 +4721,12 @@
 @@ -9,0 +10,2 @@
 +
 +import java.util.Objects;
+@@ -20 +22 @@
+-		if (accessible.canAccess(target)) {
++		if (canAccessMember(target, accessible)) {
+@@ -29 +31 @@
+-		return accessible.canAccess(target);
++		return canAccessMember(target, accessible);
 @@ -47 +49,32 @@
 -	public record AdapterInvocationHandler(Context cx, InterfaceAdapter adapter, Object target, Scriptable topScope) implements InvocationHandler {
 +	public static final class AdapterInvocationHandler implements InvocationHandler {
@@ -4678,6 +4770,9 @@
 @@ -66 +99 @@
 -					case "toString" -> {
 +					case "toString": {
+@@ -73 +106 @@
+-				return InvocationHandler.invokeDefault(proxy, method, args);
++				return invokeModernDefault(proxy, method, args);
 @@ -88 +121,25 @@
 -			return target instanceof Scriptable s && ScriptableObject.getProperty(s, method.getName(), cx) instanceof Callable;
 +			return target instanceof Scriptable && ScriptableObject.getProperty((Scriptable) target, method.getName(), cx) instanceof Callable;
@@ -4705,6 +4800,122 @@
 +		@Override
 +		public String toString() {
 +			return "AdapterInvocationHandler[cx=" + cx + ", adapter=" + adapter + ", target=" + target + ", topScope=" + topScope + "]";
+@@ -103,0 +161,109 @@
++
++	/** Public native record metadata, without a static post-Java8 type dependency. */
++	public static final class NativeRecordComponent {
++		private final String name;
++		private final Class<?> type;
++		private final java.lang.reflect.Type genericType;
++		private final Method accessor;
++		private NativeRecordComponent(String name, Class<?> type, java.lang.reflect.Type genericType, Method accessor) {
++			this.name = name;
++			this.type = type;
++			this.genericType = genericType;
++			this.accessor = accessor;
++		}
++		public String getName() { return name; }
++		public Class<?> getType() { return type; }
++		public java.lang.reflect.Type getGenericType() { return genericType; }
++		public Method getAccessor() { return accessor; }
++	}
++
++	private static Method publicMethod(Class<?> owner, String name, Class<?>... parameters) {
++		try { return owner.getMethod(name, parameters); }
++		catch (NoSuchMethodException absent) { return null; }
++	}
++
++	private static final class PublicRecordMethods {
++		static final Method IS_RECORD = publicMethod(Class.class, "isRecord");
++		static final Method COMPONENTS = publicMethod(Class.class, "getRecordComponents");
++	}
++
++	private static Object invokePublic(Method method, Object receiver) {
++		try { return method.invoke(receiver); }
++		catch (IllegalAccessException failure) { throw new IllegalStateException("Public native record metadata is not accessible", failure); }
++		catch (InvocationTargetException failure) {
++			Throwable cause = failure.getCause();
++			if (cause instanceof RuntimeException) { throw (RuntimeException) cause; }
++			if (cause instanceof Error) { throw (Error) cause; }
++			throw new IllegalStateException("Native record metadata failed", cause);
++		}
++	}
++
++	public static boolean isRecord(Class<?> type) {
++		java.util.Objects.requireNonNull(type);
++		return PublicRecordMethods.IS_RECORD != null && Boolean.TRUE.equals(invokePublic(PublicRecordMethods.IS_RECORD, type));
++	}
++
++	public static NativeRecordComponent[] getRecordComponents(Class<?> type) {
++		if (!isRecord(type)) { return null; }
++		Object[] nativeComponents = (Object[]) invokePublic(PublicRecordMethods.COMPONENTS, type);
++		NativeRecordComponent[] components = new NativeRecordComponent[nativeComponents.length];
++		for (int i = 0; i < components.length; i++) {
++			Object nativeComponent = nativeComponents[i];
++			Class<?> owner = nativeComponent.getClass();
++			components[i] = new NativeRecordComponent(
++				(String) invokePublic(publicMethod(owner, "getName"), nativeComponent),
++				(Class<?>) invokePublic(publicMethod(owner, "getType"), nativeComponent),
++				(java.lang.reflect.Type) invokePublic(publicMethod(owner, "getGenericType"), nativeComponent),
++				(Method) invokePublic(publicMethod(owner, "getAccessor"), nativeComponent));
++		}
++		return components;
++	}
++
++	private static final class PublicAccessMethods {
++		static final Method CAN_ACCESS = publicMethod(AccessibleObject.class, "canAccess", Object.class);
++	}
++
++	static boolean canAccessMember(Object target, AccessibleObject accessible) {
++		java.util.Objects.requireNonNull(accessible);
++		if (PublicAccessMethods.CAN_ACCESS != null) {
++			try { return Boolean.TRUE.equals(PublicAccessMethods.CAN_ACCESS.invoke(accessible, target)); }
++			catch (IllegalAccessException failure) { throw new IllegalStateException(failure); }
++			catch (InvocationTargetException failure) {
++				Throwable cause = failure.getCause();
++				if (cause instanceof RuntimeException) { throw (RuntimeException) cause; }
++				if (cause instanceof Error) { throw (Error) cause; }
++				throw new IllegalStateException(cause);
++			}
++		}
++		java.lang.reflect.Member member = (java.lang.reflect.Member) accessible;
++		boolean isStatic = !(accessible instanceof Constructor<?>) && java.lang.reflect.Modifier.isStatic(member.getModifiers());
++		if (accessible instanceof Constructor<?> || isStatic) {
++			if (target != null) { throw new IllegalArgumentException("Non-null receiver for static member or constructor"); }
++		} else if (target == null || !member.getDeclaringClass().isInstance(target)) {
++			throw new IllegalArgumentException("Receiver is not an instance of the declaring class");
++		}
++		if (accessible.isAccessible()) { return true; }
++		Class<?> owner = member.getDeclaringClass();
++		boolean publicOwner = true;
++		for (Class<?> current = owner; current != null; current = current.getEnclosingClass()) {
++			if (!java.lang.reflect.Modifier.isPublic(current.getModifiers())) { publicOwner = false; break; }
++		}
++		boolean samePackage = packageName(owner).equals(packageName(VMBridge.class)) && owner.getClassLoader() == VMBridge.class.getClassLoader();
++		int modifiers = member.getModifiers();
++		if (java.lang.reflect.Modifier.isPublic(modifiers)) { return publicOwner || samePackage; }
++		if (java.lang.reflect.Modifier.isPrivate(modifiers)) { return owner == VMBridge.class; }
++		return samePackage && !java.lang.reflect.Modifier.isPrivate(modifiers);
++	}
++
++	private static String packageName(Class<?> owner) {
++		String name = owner.getName();
++		int separator = name.lastIndexOf('.');
++		return separator < 0 ? "" : name.substring(0, separator);
++	}
++
++	private static Object invokeModernDefault(Object proxy, Method method, Object[] args) throws Throwable {
++		Method invoke = publicMethod(InvocationHandler.class, "invokeDefault", Object.class, Method.class, Object[].class);
++		if (invoke == null) { throw new UnsupportedOperationException("Java8 interface default invoker is not integrated"); }
++		try { return invoke.invoke(null, proxy, method, args); }
++		catch (InvocationTargetException failure) { throw failure.getCause(); }
++	}
+--- a/dev/latvian/mods/rhino/WrappedException.java
++++ b/dev/latvian/mods/rhino/WrappedException.java
+@@ -9 +8,0 @@
+-import java.io.Serial;
+@@ -20 +18,0 @@
+-	@Serial
 --- a/dev/latvian/mods/rhino/Wrapper.java
 +++ b/dev/latvian/mods/rhino/Wrapper.java
 @@ -21 +21 @@
@@ -4832,12 +5043,16 @@
 +		return ListCompat.getFirst(labels);
 --- a/dev/latvian/mods/rhino/classfile/ClassFileWriter.java
 +++ b/dev/latvian/mods/rhino/classfile/ClassFileWriter.java
-@@ -134 +134 @@
+@@ -15 +14,0 @@
+-import java.io.Serial;
+@@ -107 +105,0 @@
+-		@Serial
+@@ -134 +132 @@
 -			if (!(obj instanceof MHandle mh)) {
 +			if (!(obj instanceof MHandle)) {
-@@ -136,0 +137 @@
+@@ -136,0 +135 @@
 +			MHandle mh = (MHandle) obj;
-@@ -178,11 +179,20 @@
+@@ -178,11 +177,20 @@
 -		return switch (type) {
 -			case ByteCode.T_BOOLEAN -> 'Z';
 -			case ByteCode.T_CHAR -> 'C';
@@ -4869,7 +5084,7 @@
 +			default:
 +				throw new IllegalArgumentException("bad operand");
 +		}
-@@ -206,5 +216,17 @@
+@@ -206,5 +214,17 @@
 -		return switch (descriptor.charAt(0)) {
 -			case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z', 'V', '[' -> descriptor;
 -			case 'L' -> classDescriptorToInternalName(descriptor);
@@ -4892,7 +5107,7 @@
 +			default:
 +				throw new IllegalArgumentException("bad descriptor:" + descriptor);
 +		}
-@@ -2016,7 +2038,7 @@
+@@ -2016,7 +2036,7 @@
 -			case 0 -> add(ByteCode.ICONST_0);
 -			case 1 -> add(ByteCode.ICONST_1);
 -			case 2 -> add(ByteCode.ICONST_2);
@@ -4907,20 +5122,20 @@
 +			case 4: add(ByteCode.ICONST_4); break;
 +			case 5: add(ByteCode.ICONST_5); break;
 +			default: add(ByteCode.LDC, itsConstantPool.addConstant(k)); break;
-@@ -2129 +2151,4 @@
+@@ -2129 +2149,4 @@
 -			case ByteCode.NEW, ByteCode.ANEWARRAY, ByteCode.CHECKCAST, ByteCode.INSTANCEOF -> {
 +			case ByteCode.NEW:
 +			case ByteCode.ANEWARRAY:
 +			case ByteCode.CHECKCAST:
 +			case ByteCode.INSTANCEOF: {
-@@ -2133,2 +2158,4 @@
+@@ -2133,2 +2156,4 @@
 -			}
 -			default -> throw new IllegalArgumentException("bad opcode for class reference");
 +
 +				break;
 +			}
 +			default: throw new IllegalArgumentException("bad opcode for class reference");
-@@ -2153,3 +2180,5 @@
+@@ -2153,3 +2178,5 @@
 -			case ByteCode.GETFIELD, ByteCode.GETSTATIC -> newStack += fieldSize;
 -			case ByteCode.PUTSTATIC, ByteCode.PUTFIELD -> newStack -= fieldSize;
 -			default -> throw new IllegalArgumentException("bad opcode for field reference");
@@ -4929,20 +5144,20 @@
 +			case ByteCode.PUTSTATIC:
 +			case ByteCode.PUTFIELD: newStack -= fieldSize; break;
 +			default: throw new IllegalArgumentException("bad opcode for field reference");
-@@ -2188 +2217,4 @@
+@@ -2188 +2215,4 @@
 -			case ByteCode.INVOKEVIRTUAL, ByteCode.INVOKESPECIAL, ByteCode.INVOKESTATIC, ByteCode.INVOKEINTERFACE -> {
 +			case ByteCode.INVOKEVIRTUAL:
 +			case ByteCode.INVOKESPECIAL:
 +			case ByteCode.INVOKESTATIC:
 +			case ByteCode.INVOKEINTERFACE: {
-@@ -2199,2 +2231,4 @@
+@@ -2199,2 +2229,4 @@
 -			}
 -			default -> throw new IllegalArgumentException("bad opcode for method reference");
 +
 +				break;
 +			}
 +			default: throw new IllegalArgumentException("bad opcode for method reference");
-@@ -2696,5 +2730,5 @@
+@@ -2696,5 +2728,5 @@
 -			case 0 -> add(shortOp);
 -			case 1 -> add(shortOp + 1);
 -			case 2 -> add(shortOp + 2);
@@ -4953,7 +5168,7 @@
 +			case 2: add(shortOp + 2); break;
 +			case 3: add(shortOp + 3); break;
 +			default: add(op, local); break;
-@@ -3038 +3072,8 @@
+@@ -3038 +3070,8 @@
 -				case 'B', 'C', 'D', 'F', 'I', 'J', 'S', 'Z' -> {
 +				case 'B':
 +				case 'C':
@@ -4963,19 +5178,19 @@
 +				case 'J':
 +				case 'S':
 +				case 'Z': {
-@@ -3040,0 +3082,2 @@
+@@ -3040,0 +3080,2 @@
 +
 +					break;
-@@ -3042 +3085 @@
+@@ -3042 +3083 @@
 -				case 'L' -> {
 +				case 'L': {
-@@ -3046,0 +3090,2 @@
+@@ -3046,0 +3088,2 @@
 +
 +					break;
-@@ -3048 +3093 @@
+@@ -3048 +3091 @@
 -				case '[' -> {
 +				case '[': {
-@@ -3338,4 +3383,15 @@
+@@ -3338,4 +3381,15 @@
 -			return switch (opcode) {
 -				case ByteCode.ARETURN, ByteCode.FRETURN, ByteCode.IRETURN, ByteCode.LRETURN, ByteCode.RETURN, ByteCode.ATHROW, ByteCode.GOTO, ByteCode.GOTO_W, ByteCode.TABLESWITCH, ByteCode.LOOKUPSWITCH -> true;
 -				default -> false;
@@ -4995,7 +5210,7 @@
 +				default:
 +					return false;
 +			}
-@@ -3392,4 +3448,23 @@
+@@ -3392,4 +3446,23 @@
 -			return switch (opcode) {
 -				case ByteCode.GOTO, ByteCode.GOTO_W, ByteCode.IFEQ, ByteCode.IFGE, ByteCode.IFGT, ByteCode.IFLE, ByteCode.IFLT, ByteCode.IFNE, ByteCode.IFNONNULL, ByteCode.IFNULL, ByteCode.IF_ACMPEQ, ByteCode.IF_ACMPNE, ByteCode.IF_ICMPEQ, ByteCode.IF_ICMPGE, ByteCode.IF_ICMPGT, ByteCode.IF_ICMPLE, ByteCode.IF_ICMPLT, ByteCode.IF_ICMPNE -> true;
 -				default -> false;
@@ -5023,7 +5238,7 @@
 +				default:
 +					return false;
 +			}
-@@ -3904,6 +3979,6 @@
+@@ -3904,6 +3977,6 @@
 -						case ConstantPool.CONSTANT_Double -> push(TypeInfo.DOUBLE);
 -						case ConstantPool.CONSTANT_Float -> push(TypeInfo.FLOAT);
 -						case ConstantPool.CONSTANT_Long -> push(TypeInfo.LONG);
@@ -5100,7 +5315,11 @@
 +			}
 --- a/dev/latvian/mods/rhino/json/JsonParser.java
 +++ b/dev/latvian/mods/rhino/json/JsonParser.java
-@@ -73,10 +73,28 @@
+@@ -13 +12,0 @@
+-import java.io.Serial;
+@@ -29 +27,0 @@
+-		@Serial
+@@ -73,10 +71,28 @@
 -			return switch (c) {
 -				case '{' -> readObject(cx);
 -				case '[' -> readArray(cx);
@@ -5139,43 +5358,43 @@
 +				default:
 +					throw new ParseException("Unexpected token: " + c);
 +			}
-@@ -101 +119 @@
+@@ -101 +117 @@
 -				case '}' -> {
 +				case '}': {
-@@ -107 +125 @@
+@@ -107 +123 @@
 -				case ',' -> {
 +				case ',': {
-@@ -112,2 +130,4 @@
+@@ -112,2 +128,4 @@
 -				}
 -				case '"' -> {
 +
 +					break;
 +				}
 +				case '"': {
-@@ -127,2 +147,4 @@
+@@ -127,2 +145,4 @@
 -				}
 -				default -> throw new ParseException("Unexpected token in object literal");
 +
 +					break;
 +				}
 +				default: throw new ParseException("Unexpected token in object literal");
-@@ -147 +169 @@
+@@ -147 +167 @@
 -				case ']' -> {
 +				case ']': {
-@@ -154 +176 @@
+@@ -154 +174 @@
 -				case ',' -> {
 +				case ',': {
-@@ -160,2 +182,4 @@
+@@ -160,2 +180,4 @@
 -				}
 -				default -> {
 +
 +					break;
 +				}
 +				default: {
-@@ -166,0 +191,2 @@
+@@ -166,0 +189,2 @@
 +
 +					break;
-@@ -205,9 +231,9 @@
+@@ -205,9 +229,9 @@
 -				case '"' -> b.append('"');
 -				case '\\' -> b.append('\\');
 -				case '/' -> b.append('/');
@@ -5194,7 +5413,7 @@
 +				case 'r': b.append('\r'); break;
 +				case 't': b.append('\t'); break;
 +				case 'u': {
-@@ -223,2 +249,4 @@
+@@ -223,2 +247,4 @@
 -				}
 -				default -> throw new ParseException("Unexpected character in string: '\\" + c + "'");
 +
@@ -5718,9 +5937,15 @@
 +			typeSet = ListCompat.setOf(type);
 --- a/dev/latvian/mods/rhino/type/ClassValueTypeInfoFactory.java
 +++ b/dev/latvian/mods/rhino/type/ClassValueTypeInfoFactory.java
+@@ -22 +22 @@
+-	private final ClassValue<TypeInfo> classCache = new ClassValue<>() {
++	private final ClassValue<TypeInfo> classCache = new ClassValue<TypeInfo>() {
 @@ -25 +25 @@
 -			var preset = TypeUtils.IMMUTABLE_CACHE.get(c);
 +			dev.latvian.mods.rhino.type.TypeInfo preset = TypeUtils.IMMUTABLE_CACHE.get(c);
+@@ -35 +35 @@
+-			if (c.isRecord()) {
++			if (dev.latvian.mods.rhino.VMBridge.isRecord(c)) {
 --- a/dev/latvian/mods/rhino/type/EnumTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/EnumTypeInfo.java
 @@ -1,0 +2,2 @@
@@ -6275,7 +6500,7 @@
 -			var components = new Component[rc.length];
 -			var componentMap = new HashMap<String, Component>();
 -			var defaultArguments = new Object[rc.length];
-+			java.lang.reflect.RecordComponent[] rc = asClass().getRecordComponents();
++			dev.latvian.mods.rhino.VMBridge.NativeRecordComponent[] rc = dev.latvian.mods.rhino.VMBridge.getRecordComponents(asClass());
 +			dev.latvian.mods.rhino.type.RecordTypeInfo.Component[] components = new Component[rc.length];
 +			java.util.HashMap<java.lang.String, dev.latvian.mods.rhino.type.RecordTypeInfo.Component> componentMap = new HashMap<String, Component>();
 +			java.lang.Object[] defaultArguments = new Object[rc.length];
@@ -6875,6 +7100,20 @@
 +		public String toString() {
 +			return "FromIterator[length=" + length + ", iterator=" + iterator + ", errorSource=" + errorSource + "]";
 +		}
+--- a/dev/latvian/mods/rhino/util/JavaSetWrapper.java
++++ b/dev/latvian/mods/rhino/util/JavaSetWrapper.java
+@@ -18 +18 @@
+-			throw new IndexOutOfBoundsException(index);
++			throw new IndexOutOfBoundsException("Index out of range: " + index);
+@@ -31 +31 @@
+-		throw new IndexOutOfBoundsException(index);
++		throw new IndexOutOfBoundsException("Index out of range: " + index);
+@@ -73 +73 @@
+-			throw new IndexOutOfBoundsException(index);
++			throw new IndexOutOfBoundsException("Index out of range: " + index);
+@@ -88 +88 @@
+-		throw new IndexOutOfBoundsException(index);
++		throw new IndexOutOfBoundsException("Index out of range: " + index);
 --- a/dev/latvian/mods/rhino/util/Possible.java
 +++ b/dev/latvian/mods/rhino/util/Possible.java
 @@ -4,0 +5,2 @@
