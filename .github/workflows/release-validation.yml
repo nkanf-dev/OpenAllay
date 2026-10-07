@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language]
         default: skills
         required: true
 permissions:
@@ -3035,3 +3035,43 @@ jobs:
           ${{ runner.temp }}/event-prepare/authenticated/
 
           ${{ runner.temp }}/event-prepare/converted/conversion-receipt.json'
+
+  guide-java8-api-language:
+    if: inputs.scope == 'guide-java8-api-language'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Classify actual resolved Guide API invocations with canonical helpers
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/guide-api-classpath.json"
+
+        python3 -B scripts/materialize-guide-java8-api.py --project "$PWD" --classpath-metadata
+        "$RUNNER_TEMP/guide-api-classpath.json" --javac "$JAVA_HOME_21_X64/bin/javac"
+        --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/guide-api-materialization"'
+    - name: Retain actual mapped and rejected Guide source API receipts
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: guide-java8-api-language-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/guide-api-classpath.json
+
+          ${{ runner.temp }}/guide-api-materialization/source-packet/
+
+          ${{ runner.temp }}/guide-api-materialization/materialized/owner-status.tsv
+
+          ${{ runner.temp }}/guide-api-materialization/command-*.log'
