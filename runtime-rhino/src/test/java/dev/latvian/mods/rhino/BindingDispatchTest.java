@@ -19,7 +19,7 @@ final class BindingDispatchTest {
         assertEquals(new JsonPrimitive("text"), NativeGSON.stringify0(cx, new StringBuilder("text")));
         Map<String,Object> map = new LinkedHashMap<>(); map.put("a", List.of(1, 2));
         assertEquals("{\"a\":[1,2]}", NativeGSON.stringify0(cx, map).toString());
-        NativeObject object = new NativeObject(); object.put(cx, "x", object, "y"); object.put(cx, 0, object, 7);
+        NativeObject object = new NativeObject(cx.factory); object.put(cx, "x", object, "y"); object.put(cx, 0, object, 7);
         JsonObject json = NativeGSON.stringify0(cx, object).getAsJsonObject();
         assertEquals("y", json.get("x").getAsString()); assertEquals(7, json.get("0").getAsInt());
     }
@@ -37,7 +37,7 @@ final class BindingDispatchTest {
         Wrapper wrapped = () -> { calls[0]++; return cause; };
         JavaScriptException exception = new JavaScriptException(cx, wrapped, "test.js", 2);
         assertSame(cause, exception.getCause()); assertSame(wrapped, exception.getValue()); assertEquals(1, calls[0]);
-        NativeError error = new NativeError(); error.put(cx, "javaException", error, wrapped);
+        NativeError error = new NativeError(cx); error.put(cx, "javaException", error, wrapped);
         JavaScriptException fromError = new JavaScriptException(cx, error, "test.js", 3);
         assertSame(cause, fromError.getCause()); assertEquals(2, calls[0]);
         assertNull(new JavaScriptException(cx, null, "test.js", 4).getCause());
