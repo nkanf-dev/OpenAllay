@@ -35,8 +35,8 @@ public final class LiveAgentTraceRecorder {
 
     public synchronized void modelTurn(ModelTurn turn) {
         ModelTurn visible = new ModelTurn(turn.providerId(), turn.model(),
-                turn.content().stream()
-                        .filter(content -> !(content instanceof dev.openallay.model.ModelContent.Reasoning)).toList(),
+                dev.openallay.util.Java8Collections.toList(turn.content().stream()
+                        .filter(content -> !(content instanceof dev.openallay.model.ModelContent.Reasoning))),
                 turn.stopReason(), turn.usage());
         add("model_turn", gson.toJsonTree(visible));
     }
@@ -86,7 +86,7 @@ public final class LiveAgentTraceRecorder {
                 startedAt,
                 Instant.now(),
                 state,
-                List.copyOf(events),
+                dev.openallay.util.Java8Collections.listCopyOf(events),
                 finalText,
                 errorCode);
     }

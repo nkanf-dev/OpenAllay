@@ -38,6 +38,11 @@
           "old": "private static void requireIdentity(",
           "new": "static void requireIdentity(",
           "count": 1
+        },
+        {
+          "old": " Objects.requireNonNull(messageId, \"messageId\"); ",
+          "new": " Objects.requireNonNull(messageId, \"messageId\");",
+          "count": 1
         }
       ]
     },
@@ -653,5 +658,6 @@
   },
   "runner_sha256": "b23b82709b56137dfcaf773eceb77da50fb4d88e88b37bed64177fcc171a531a",
   "format_policy": "Onlyblankline cleanup followingauthenticAST/exactAPIoperations; fixedconstructedfixturetimes, productionRecorder timestamps neverrewritten.",
-  "closed_ingress_policy": "OneAgentEvent.requireKnown14classvalidator, directModelCallReceipts.accept beforeusageaccount/handoff; ModelProgress alreadyModelEvent.requireKnown/reasoningredaction unchanged. Foreignfixture candidate-onlybecauseauthenticmodernsealedbaseline rejectsforeigncompile."
+  "closed_ingress_policy": "OneAgentEvent.requireKnown14classvalidator, directModelCallReceipts.accept beforeusageaccount/handoff; ModelProgress alreadyModelEvent.requireKnown/reasoningredaction unchanged. Foreignfixture candidate-onlybecauseauthenticmodernsealedbaseline rejectsforeigncompile.",
+  "exact_format_correction": "ExactlySteerRejectedcompactconstructor onegeneratednonblankline ASCIItrailingoneSpace removed afterAPIlowering, nobroadnonblanktrim."
 }

@@ -11,7 +11,7 @@ public final class GuideToolMessage {
     public GuideToolMessage(Key key, List<String> arguments) {
 
         Objects.requireNonNull(key, "key");
-        arguments = List.copyOf(arguments);
+        arguments = dev.openallay.util.Java8Collections.listCopyOf(arguments);
         for (String argument : arguments) requireSafeArgument(argument);
 
         this.key = key;
@@ -57,7 +57,7 @@ public enum Key {
         }
     }
 public static GuideToolMessage of(Key key, String... arguments) {
-        return new GuideToolMessage(key, List.of(arguments));
+        return new GuideToolMessage(key, dev.openallay.util.Java8Collections.listOf(arguments));
     }
 private static void requireSafeArgument(String argument) {
         Objects.requireNonNull(argument, "Tool message argument");
