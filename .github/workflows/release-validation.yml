@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare]
         default: skills
         required: true
 permissions:
@@ -2080,3 +2080,92 @@ jobs:
           ${{ runner.temp }}/rhino-java8-diagnostics/javac-java8.*.log
 
           ${{ runner.temp }}/rhino-java8-diagnostics/canonical-source-list.txt'
+
+  model-profiles-java8:
+    if: inputs.scope == 'model-profiles-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17'
+    - name: Materialize and verify actual full profile configuration owners
+      run: 'python3 -B scripts/materialize-model-profiles-java8.py --project "$PWD"
+        --recipe engine-core/src/modelProfilesJava8Test/recipe.json --javac "$JAVA_HOME_17_X64/bin/javac"
+        --java "$JAVA_HOME_17_X64/bin/java" --output "$RUNNER_TEMP/profile-materialization"
+
+        mkdir -p "$RUNNER_TEMP/profile-dependencies"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/profile-dependencies/gson-2.8.0.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        --output "$RUNNER_TEMP/profile-dependencies/gson-2.13.2.jar"
+
+        python3 -B scripts/verify-model-profiles-java8.py --project "$PWD" --source-packet
+        "$RUNNER_TEMP/profile-materialization/source-packet" --javac "$JAVA_HOME_17_X64/bin/javac"
+        --java "$JAVA_HOME_17_X64/bin/java" --javac8 "$JAVA_HOME_8_X64/bin/javac" --java8
+        "$JAVA_HOME_8_X64/bin/java" --gson "$RUNNER_TEMP/profile-dependencies/gson-2.8.0.jar"
+        --gson "$RUNNER_TEMP/profile-dependencies/gson-2.13.2.jar" --output "$RUNNER_TEMP/profile-oracle"'
+    - name: Retain original profile converter runtime and configuration evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: model-profiles-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/profile-materialization/source-packet/
+
+          ${{ runner.temp }}/profile-materialization/command-*.log
+
+          ${{ runner.temp }}/profile-oracle/receipt.json
+
+          ${{ runner.temp }}/profile-oracle/*.log'
+  agent-request-prepare:
+    if: inputs.scope == 'agent-request-prepare'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17'
+    - name: Emit authentic actor owned request source conversion
+      run: 'mkdir -p "$RUNNER_TEMP/request-dependencies"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/request-dependencies/gson.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
+        --output "$RUNNER_TEMP/request-dependencies/junit.jar"
+
+        python3 -B engine-core/src/agentRequestJava8Test/verify.py --source-root "$PWD"
+        --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/request-dependencies/gson.jar"
+        --junit-console "$RUNNER_TEMP/request-dependencies/junit.jar" --output "$RUNNER_TEMP/request-prepare"
+        --prepare'
+    - name: Retain exact authentic request conversion outputs and custody
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: agent-request-prepare-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/request-prepare/converter-custody.json
+
+          ${{ runner.temp }}/request-prepare/authentic-owner-correction.patch
+
+          ${{ runner.temp }}/request-prepare/authenticated/
+
+          ${{ runner.temp }}/request-prepare/converted/conversion-receipt.json'
