@@ -12,20 +12,43 @@ import javax.tools.*;
 /** Build-only compiler-symbol-aware pattern lowering. Evaluates each selected operand once. */
 public final class CanonicalPatternPort {
     private record Edit(int start,int end,String replacement) {}
-    private record Candidate(CompilationUnitTree unit,TreePath patternPath,InstanceOfTree pattern,BindingPatternTree binding,IfTree owner,TreePath ownerPath,boolean negative,String reason) {}
+    private record Candidate(CompilationUnitTree unit,TreePath patternPath,InstanceOfTree pattern,BindingPatternTree binding,Tree owner,TreePath ownerPath,boolean negative,String reason) {}
     private record Lower(Candidate candidate,List<Edit> edits,int ownerStart,int ownerEnd,String declarations,boolean negative) {}
     private static Tree unwrap(Tree tree){while(tree instanceof ParenthesizedTree p)tree=p.getExpression();return tree;}
     private static boolean leftmost(Tree condition,Tree target){condition=unwrap(condition);if(condition==target)return true;return condition instanceof BinaryTree b&&b.getKind()==Tree.Kind.CONDITIONAL_AND&&leftmost(b.getLeftOperand(),target);}
     private static boolean abrupt(StatementTree statement){if(statement instanceof ReturnTree||statement instanceof ThrowTree)return true;if(statement instanceof BlockTree block&&!block.getStatements().isEmpty())return abrupt(block.getStatements().get(block.getStatements().size()-1));return false;}
     private static Candidate candidate(CompilationUnitTree unit,TreePath path,InstanceOfTree pattern,BindingPatternTree binding){
-        TreePath owner=path;while(owner!=null&&!(owner.getLeaf() instanceof IfTree))owner=owner.getParentPath();
-        if(owner==null)return new Candidate(unit,path,pattern,binding,null,null,false,"Pattern is not controlled by an if statement");
-        IfTree conditional=(IfTree)owner.getLeaf();Tree condition=unwrap(conditional.getCondition());boolean negative=condition instanceof UnaryTree unary&&unary.getKind()==Tree.Kind.LOGICAL_COMPLEMENT&&unwrap(unary.getExpression())==pattern;
-        String reason=null;
-        if(!negative&&!leftmost(condition,pattern))reason="Pattern is not the first positively evaluated if/&& operand";
-        if(negative&&(conditional.getElseStatement()!=null||!abrupt(conditional.getThenStatement())||!(owner.getParentPath().getLeaf() instanceof BlockTree)))reason="Negative pattern needs a no-else direct block guard ending in return/throw";
+        TreePath anchor=path.getParentPath();String reason=null;
+        while(anchor!=null){
+            Tree leaf=anchor.getLeaf();
+            if(leaf instanceof WhileLoopTree||leaf instanceof DoWhileLoopTree||leaf instanceof ForLoopTree||leaf instanceof EnhancedForLoopTree){reason="Repeated loop condition/initializer pattern needs per-iteration capture proof";break;}
+            if(leaf instanceof LambdaExpressionTree lambda){
+                if(lambda.getBodyKind()!=LambdaExpressionTree.BodyKind.EXPRESSION)reason="Block lambda pattern lacks a nearer statement anchor";
+                break;
+            }
+            if(leaf instanceof StatementTree && !(leaf instanceof BlockTree)){break;}
+            anchor=anchor.getParentPath();
+        }
+        if(anchor==null)reason="Pattern has no supported statement/lambda evaluation boundary";
+        Tree owner=anchor==null?null:anchor.getLeaf();
+        if(owner instanceof VariableTree && !(anchor.getParentPath().getLeaf() instanceof BlockTree))reason="Field/resource/for-initializer pattern lacks a local block boundary";
+        if(owner!=null && !(owner instanceof LambdaExpressionTree) && !(anchor.getParentPath().getLeaf() instanceof BlockTree)
+                && !(anchor.getParentPath().getLeaf() instanceof IfTree))reason="Statement boundary is not a direct block or if branch";
         if(!binding.getVariable().getModifiers().getAnnotations().isEmpty())reason="Annotated binding declaration needs an explicit attributed target policy";
-        return new Candidate(unit,path,pattern,binding,conditional,owner,negative,reason);
+        return new Candidate(unit,path,pattern,binding,owner,anchor,false,reason);
+    }
+    private static void accessible(javax.lang.model.type.TypeMirror type,Scope scope,Trees trees){
+        switch(type.getKind()){
+            case ARRAY -> accessible(((javax.lang.model.type.ArrayType)type).getComponentType(),scope,trees);
+            case DECLARED -> {
+                javax.lang.model.type.DeclaredType declared=(javax.lang.model.type.DeclaredType)type;TypeElement element=(TypeElement)declared.asElement();
+                if(!trees.isAccessible(scope,element))throw new IllegalArgumentException("Operand type inaccessible at explicit temporary: "+element);
+                if(declared.getEnclosingType().getKind()==javax.lang.model.type.TypeKind.DECLARED)accessible(declared.getEnclosingType(),scope,trees);
+                for(var argument:declared.getTypeArguments())accessible(argument,scope,trees);
+            }
+            case WILDCARD -> {var wildcard=(javax.lang.model.type.WildcardType)type;if(wildcard.getExtendsBound()!=null)accessible(wildcard.getExtendsBound(),scope,trees);if(wildcard.getSuperBound()!=null)accessible(wildcard.getSuperBound(),scope,trees);}
+            default -> { /* shared renderer rejects unsupported denotations */ }
+        }
     }
     private static int position(long value){if(value<0||value>Integer.MAX_VALUE)throw new IllegalArgumentException("Missing public AST source position");return(int)value;}
     private static String apply(String text,int base,int end,List<Edit> edits){
@@ -45,29 +68,49 @@ public final class CanonicalPatternPort {
             }
             if(!originals.keySet().equals(selected))throw new IllegalArgumentException("Selected owner closure mismatch");task.analyze();for(Diagnostic<?> d:diagnostics.getDiagnostics())if(d.getKind()==Diagnostic.Kind.ERROR)throw new IllegalStateException("Complete source attribution failed: "+d);
             for(var entry:candidates.entrySet()){
-                CompilationUnitTree unit=entry.getKey();String name=root.relativize(Paths.get(unit.getSourceFile().toUri())).toString().replace(File.separatorChar,'/');String text=new String(originals.get(name),StandardCharsets.UTF_8);List<Candidate> sites=entry.getValue();List<String> reasons=new ArrayList<>();Map<IfTree,Integer> perIf=new IdentityHashMap<>();for(Candidate site:sites)if(site.owner()!=null)perIf.merge(site.owner(),1,Integer::sum);
-                for(Candidate site:sites){if(site.reason()!=null)reasons.add("offset="+positions.getStartPosition(unit,site.pattern())+" "+site.reason());if(site.owner()!=null&&perIf.get(site.owner())>1)reasons.add("Multiple binding patterns in one if need boolean flow expansion");}
+                CompilationUnitTree unit=entry.getKey();String name=root.relativize(Paths.get(unit.getSourceFile().toUri())).toString().replace(File.separatorChar,'/');String text=new String(originals.get(name),StandardCharsets.UTF_8);List<Candidate> sites=entry.getValue();List<String> reasons=new ArrayList<>();
+                for(Candidate site:sites)if(site.reason()!=null)reasons.add("offset="+positions.getStartPosition(unit,site.pattern())+" "+site.reason());
+                for(Candidate outer:sites)for(Candidate inner:sites)if(outer!=inner){
+                    long start=positions.getStartPosition(unit,outer.pattern()),end=positions.getEndPosition(unit,outer.pattern());long nested=positions.getStartPosition(unit,inner.pattern());
+                    if(nested>start&&nested<end)reasons.add("Nested pattern operand requires separate attributed expression ordering proof");
+                }
                 if(!reasons.isEmpty()){rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
-                List<Lower> lowered=new ArrayList<>();int index=0;
                 for(Candidate site:sites){
-                    String prefix;do{prefix="$oaPattern"+index++ +"_";}while(text.contains(prefix));String object=prefix+"value",match=prefix+"match",bound=prefix+"bound";
+                    try{
+                        javax.lang.model.type.TypeMirror mirror=trees.getTypeMirror(new TreePath(site.patternPath(),site.pattern().getExpression()));
+                        accessible(mirror,trees.getScope(site.patternPath()),trees);
+                        if(mirror.getKind()!=javax.lang.model.type.TypeKind.NULL)AttributedVarTypes.denotable(mirror,false);
+                    }catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,site.pattern())+" "+failure.getMessage());}
+                }
+                if(!reasons.isEmpty()){rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
+                List<Edit> all=new ArrayList<>();Map<Tree,List<String>> declarations=new IdentityHashMap<>();Map<Tree,TreePath> boundaries=new IdentityHashMap<>();int index=0;
+                for(Candidate site:sites){
+                    String prefix;do{prefix="$oaPattern"+index++ +"_";}while(text.contains(prefix));String holder=prefix+"holder",localClass=prefix+"Holder";
                     int exprStart=position(positions.getStartPosition(unit,site.pattern().getExpression())),exprEnd=position(positions.getEndPosition(unit,site.pattern().getExpression()));Tree type=site.binding().getVariable().getType();String typeText=text.substring(position(positions.getStartPosition(unit,type)),position(positions.getEndPosition(unit,type)));String operand=text.substring(exprStart,exprEnd);
                     javax.lang.model.type.TypeMirror patternMirror=trees.getTypeMirror(TreePath.getPath(unit,type));
                     String runtimeType=AttributedVarTypes.denotable(task.getTypes().erasure(patternMirror),false);
-                    TreePath operandPath=new TreePath(site.patternPath(),site.pattern().getExpression());
-                    javax.lang.model.type.TypeMirror operandMirror=trees.getTypeMirror(operandPath);
-                    String operandType=operandMirror.getKind()==javax.lang.model.type.TypeKind.NULL
-                            ? "java.lang.Object" : AttributedVarTypes.denotable(operandMirror,false);
-                    String declarations="final "+operandType+" "+object+" = "+operand+";\nfinal boolean "+match+" = "+object+" instanceof "+runtimeType+";\n"+typeText+" "+bound+" = "+match+" ? ("+typeText+") "+object+" : null;\n";
-                    Element binding=trees.getElement(TreePath.getPath(unit,site.binding().getVariable()));if(binding==null)throw new IllegalStateException("Missing original binding element");List<Edit> edits=new ArrayList<>();int start=position(positions.getStartPosition(unit,site.pattern())),end=position(positions.getEndPosition(unit,site.pattern()));edits.add(new Edit(start,end,match));
-                    final boolean[] escapes={false};int ownerStart=position(positions.getStartPosition(unit,site.owner())),ownerEnd=position(positions.getEndPosition(unit,site.owner()));
-                    new TreePathScanner<Void,Void>(){@Override public Void visitIdentifier(IdentifierTree tree,Void ignored){if(binding.equals(trees.getElement(getCurrentPath()))){int from=position(positions.getStartPosition(unit,tree)),to=position(positions.getEndPosition(unit,tree));if(!site.negative()&&(from<ownerStart||to>ownerEnd))escapes[0]=true;edits.add(new Edit(from,to,bound));}return super.visitIdentifier(tree,ignored);}}.scan(unit,null);
-                    if(escapes[0])throw new IllegalArgumentException("Positive binding escapes its if lexical scope");lowered.add(new Lower(site,edits,ownerStart,ownerEnd,declarations,site.negative()));
+                    javax.lang.model.type.TypeMirror operandMirror=trees.getTypeMirror(new TreePath(site.patternPath(),site.pattern().getExpression()));accessible(operandMirror,trees.getScope(site.patternPath()),trees);String operandType=operandMirror.getKind()==javax.lang.model.type.TypeKind.NULL?"java.lang.Object":AttributedVarTypes.denotable(operandMirror,false);
+                    String declaration="final class "+localClass+" { "+operandType+" value; "+typeText+" bound; }\nfinal "+localClass+" "+holder+" = new "+localClass+"();\n";
+                    declarations.computeIfAbsent(site.owner(),ignored->new ArrayList<>()).add(declaration);boundaries.put(site.owner(),site.ownerPath());
+                    String test="(("+holder+".value = "+operand+") instanceof "+runtimeType+" && (("+holder+".bound = ("+typeText+") "+holder+".value) != null))";
+                    all.add(new Edit(position(positions.getStartPosition(unit,site.pattern())),position(positions.getEndPosition(unit,site.pattern())),test));
+                    Element binding=trees.getElement(TreePath.getPath(unit,site.binding().getVariable()));if(binding==null)throw new IllegalStateException("Missing original binding element");
+                    new TreePathScanner<Void,Void>(){@Override public Void visitIdentifier(IdentifierTree tree,Void ignored){if(binding.equals(trees.getElement(getCurrentPath()))){all.add(new Edit(position(positions.getStartPosition(unit,tree)),position(positions.getEndPosition(unit,tree)),holder+".bound"));}return super.visitIdentifier(tree,ignored);}}.scan(unit,null);
                 }
-                // Compose nested if replacements from innermost to outermost. Symbol edits outside
-                // a negative guard remain in the parent block; nested conditional evaluation stays lazy.
-                List<Edit> all=new ArrayList<>();for(Lower lower:lowered)all.addAll(lower.edits());lowered.sort(Comparator.comparingInt((Lower l)->l.ownerEnd()-l.ownerStart()));
-                for(Lower lower:lowered){List<Edit> inner=new ArrayList<>();for(Edit edit:all)if(edit.start()>=lower.ownerStart()&&edit.end()<=lower.ownerEnd())inner.add(edit);String statement=apply(text,lower.ownerStart(),lower.ownerEnd(),inner);all.removeAll(inner);String replacement=lower.negative()?lower.declarations()+statement:"{\n"+lower.declarations()+statement+"\n}";all.add(new Edit(lower.ownerStart(),lower.ownerEnd(),replacement));}
+                List<Tree> ordered=new ArrayList<>(boundaries.keySet());ordered.sort(Comparator.comparingLong(tree->positions.getEndPosition(unit,tree)-positions.getStartPosition(unit,tree)));
+                for(Tree owner:ordered){
+                    int ownerStart=position(positions.getStartPosition(unit,owner)),ownerEnd=position(positions.getEndPosition(unit,owner));String declare=String.join("",declarations.get(owner));
+                    if(owner instanceof LambdaExpressionTree lambda){
+                        javax.lang.model.type.TypeMirror bodyType=trees.getTypeMirror(new TreePath(boundaries.get(owner),lambda.getBody()));
+                        if(bodyType==null||bodyType.getKind()==javax.lang.model.type.TypeKind.VOID||bodyType.getKind()==javax.lang.model.type.TypeKind.ERROR)throw new IllegalArgumentException("Expression lambda needs a genuine nonvoid attributed body");
+                        int bodyStart=position(positions.getStartPosition(unit,lambda.getBody())),bodyEnd=position(positions.getEndPosition(unit,lambda.getBody()));List<Edit> inner=new ArrayList<>();for(Edit edit:all)if(edit.start()>=bodyStart&&edit.end()<=bodyEnd)inner.add(edit);
+                        String body=apply(text,bodyStart,bodyEnd,inner);all.removeAll(inner);all.add(new Edit(bodyStart,bodyEnd,"{\n"+declare+"return "+body+";\n}"));
+                    }else if(boundaries.get(owner).getParentPath().getLeaf() instanceof BlockTree){
+                        all.add(new Edit(ownerStart,ownerStart,declare));
+                    }else{
+                        List<Edit> inner=new ArrayList<>();for(Edit edit:all)if(edit.start()>=ownerStart&&edit.end()<=ownerEnd)inner.add(edit);String body=apply(text,ownerStart,ownerEnd,inner);all.removeAll(inner);all.add(new Edit(ownerStart,ownerEnd,"{\n"+declare+body+"\n}"));
+                    }
+                }
                 String result=apply(text,0,text.length(),all);products.put(name,result.getBytes(StandardCharsets.UTF_8));rows.add(name+"\tSUPPORTED\t"+sites.size()+"\t0");
             }
         }
