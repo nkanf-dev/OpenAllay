@@ -79,6 +79,18 @@ public final class CanonicalSwitchPort {
         }
         throw new IllegalArgumentException("Embedded switch lacks supported statement/lambda boundary");
     }
+    private static int remainingModernSwitches(String name,String text)throws Exception{
+        JavaCompiler compiler=ToolProvider.getSystemJavaCompiler();DiagnosticCollector<JavaFileObject> diagnostics=new DiagnosticCollector<>();
+        try(StandardJavaFileManager manager=compiler.getStandardFileManager(diagnostics,Locale.ROOT,StandardCharsets.UTF_8)){
+            JavaFileObject source=new SimpleJavaFileObject(java.net.URI.create("string:///"+name),JavaFileObject.Kind.SOURCE){@Override public CharSequence getCharContent(boolean ignore){return text;}};
+            JavacTask parse=(JavacTask)compiler.getTask(null,manager,diagnostics,List.of("--source","17","-proc:none"),null,List.of(source));int[] count={0};
+            for(CompilationUnitTree unit:parse.parse())new TreeScanner<Void,Void>(){
+                @Override public Void visitSwitchExpression(SwitchExpressionTree tree,Void unused){count[0]++;return super.visitSwitchExpression(tree,unused);}
+                @Override public Void visitSwitch(SwitchTree tree,Void unused){if(tree.getCases().stream().anyMatch(rule->rule.getCaseKind()==CaseTree.CaseKind.RULE))count[0]++;return super.visitSwitch(tree,unused);}
+            }.scan(unit,null);
+            for(Diagnostic<?>d:diagnostics.getDiagnostics())if(d.getKind()==Diagnostic.Kind.ERROR)throw new IllegalArgumentException("Generated owner parse failed: "+d);return count[0];
+        }
+    }
     public static void main(String[] args)throws Exception{
         if(args.length!=4)throw new IllegalArgumentException("completeActualRoot genuineProductionClasspath selectedOwners freshExternalOutput");Path root=Paths.get(args[0]).toAbsolutePath().normalize(),output=Paths.get(args[3]).toAbsolutePath().normalize();if(Files.exists(output)||output.startsWith(root)||root.startsWith(output))throw new IllegalArgumentException("Fresh externaloutput required");Set<String> selected=new TreeSet<>(Files.readAllLines(Paths.get(args[2]),StandardCharsets.UTF_8));List<File> files=new ArrayList<>();try(var stream=Files.walk(root)){stream.filter(p->p.toString().endsWith(".java")).sorted().forEach(p->files.add(p.toFile()));}
         JavaCompiler compiler=ToolProvider.getSystemJavaCompiler();DiagnosticCollector<JavaFileObject> diagnostics=new DiagnosticCollector<>();Map<String,byte[]> before=new TreeMap<>(),after=new TreeMap<>();List<String> rows=new ArrayList<>();
@@ -128,7 +140,9 @@ public final class CanonicalSwitchPort {
                     List<Edit> nested=new ArrayList<>();for(Edit edit:changes)if(edit.start()>=from&&edit.end()<=to)nested.add(edit);changes.removeAll(nested);changes.add(new Edit(from,to,replacement));
                 }catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,site.tree())+" "+failure.getMessage());}}
                 if(!reasons.isEmpty()){rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
-                after.put(name,apply(text,0,text.length(),changes).getBytes(StandardCharsets.UTF_8));rows.add(name+"\tSUPPORTED\t"+sites.size()+"\t0");
+                String post=apply(text,0,text.length(),changes);int remaining=remainingModernSwitches(name,post);
+                if(remaining!=0){String reason="Generated owner retains "+remaining+" modern switch forms; overlapping/sibling source composition not admitted";rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(reason.getBytes(StandardCharsets.UTF_8)));continue;}
+                after.put(name,post.getBytes(StandardCharsets.UTF_8));rows.add(name+"\tSUPPORTED\t"+sites.size()+"\t0");
             }
         }
         for(var original:before.entrySet())if(!Arrays.equals(original.getValue(),Files.readAllBytes(root.resolve(original.getKey()))))throw new IllegalStateException("Canonical source drift");Files.createDirectories(output);for(var item:after.entrySet())for(String side:List.of("pre","post")){Path path=output.resolve(side).resolve(item.getKey());Files.createDirectories(path.getParent());Files.write(path,side.equals("pre")?before.get(item.getKey()):item.getValue());}Files.write(output.resolve("owner-status.tsv"),rows,StandardCharsets.UTF_8);System.out.println("PASS publicswitch sourceclassification owners="+before.size()+" supported="+after.size());

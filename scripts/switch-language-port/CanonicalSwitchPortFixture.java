@@ -89,6 +89,11 @@ public final class CanonicalSwitchPortFixture {
         Path fieldSelection=root.resolve("fields.txt");Files.writeString(fieldSelection,"FieldSwitch.java\n");Path fieldRefused=root.resolve("fields-refused");
         CanonicalSwitchPort.main(new String[]{fields.toString(),"",fieldSelection.toString(),fieldRefused.toString()});
         String fieldStatus=Files.readString(fieldRefused.resolve("owner-status.tsv"));check(fieldStatus.contains("\tREJECTED\t1\t"),"Actualfield dereference flow remains failclosed");check(!Files.exists(fieldRefused.resolve("post/FieldSwitch.java")),"No partialfieldowner");
+        Path siblings=root.resolve("siblings");Files.createDirectory(siblings);
+        Files.writeString(siblings.resolve("SiblingSwitch.java"),"class SiblingSwitch {int pair(int a,int b){return a+b;}int test(int selector){return pair(switch(selector){case 0->1;default->2;},switch(selector){case 0->3;default->4;});}}");
+        Path siblingSelection=root.resolve("siblings.txt");Files.writeString(siblingSelection,"SiblingSwitch.java\n");Path siblingRefused=root.resolve("siblings-refused");
+        CanonicalSwitchPort.main(new String[]{siblings.toString(),"",siblingSelection.toString(),siblingRefused.toString()});
+        check(Files.readString(siblingRefused.resolve("owner-status.tsv")).contains("\tREJECTED\t2\t"),"Unproved sibling composition must not report supported owner");check(!Files.exists(siblingRefused.resolve("post/SiblingSwitch.java")),"No incomplete sibling postsource");
         System.out.println("PASS publicswitch genuinecompiler original17=release8=truejavac8;6switches selectoronce/yield/throw/null/labeledbreak/continue/enumICCE;embeddedflow failclosed");
     }
 }
