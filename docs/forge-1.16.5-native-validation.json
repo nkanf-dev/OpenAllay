@@ -70,8 +70,7 @@
   "remaining": [
     "Main integration and release publication when authorized",
     "Optional viewer combinations and dedicated-server acceptance as separate scope",
-    "Visual screenshot review and physical devices",
-    "Stock Forge1.12.2 adaptation"
+    "Visual screenshot review and physical devices"
   ],
   "limitations": {
     "Forge36Requires": "User launches with Java17; no falseJava8engineclaim",
@@ -181,5 +180,6 @@
       "reason": "missing_material_palette_role",
       "role": "lightning_rod_up"
     }
-  ]
+  ],
+  "subsequentTargetRecord": "forge-1.12.2-native-validation.json"
 }
