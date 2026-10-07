@@ -79,14 +79,26 @@ public final class ContextCompactorJava8Fixture {
         ModelClient malformedModel = (request, events, cancellation) -> CompletableFuture.completedFuture(new ModelTurn("test", "model", Arrays.<ModelContent>asList(new ModelContent.Text("not-json")), "end", ModelUsage.empty()));
         ContextCompactor.Result malformed = compactor(malformedModel, new ContextBudget(10_000, 512)).compactManually(messages -> "system", history, 2,
                 Collections.<ModelToolDefinition>emptyList(), "actor:malformed", new CancellationSignal()).join();
-        check(!malformed.successful(), "malformed summary rejected"); equal("summary_malformed", malformed.failureCode());
-        System.out.println("malformed=" + malformed.failureCode());
+        check(!malformed.successful(), "malformed summary rejected");
+        equal("context_compaction_failed", malformed.failureCode());
+        equal(ContextCheckpoint.Status.FAILED, malformed.checkpoint().status());
+        equal("summary_malformed", malformed.checkpoint().failureCode());
+        equal("summary_malformed: Summary response did not match schema", malformed.failureMessage());
+        equal(malformed.failureMessage(), malformed.checkpoint().failureMessage());
+        System.out.println("malformed=" + malformed.failureCode() + "/" + malformed.checkpoint().failureCode()
+                + "/" + malformed.failureMessage());
         CompletableFuture<ModelTurn> raw = new CompletableFuture<>();
         ContextCompactor cancelCompactor = compactor((request, events, cancellation) -> raw, new ContextBudget(10_000, 512));
         CancellationSignal cancellation = new CancellationSignal();
         CompletableFuture<ContextCompactor.Result> running = cancelCompactor.compactManually(messages -> "system", history, 2,
                 Collections.<ModelToolDefinition>emptyList(), "actor:cancel", cancellation);
         check(!running.isDone(), "summary running"); check(cancellation.cancel(), "canceled"); check(running.isCompletedExceptionally(), "cancel visible");
+        check(!raw.isDone(), "raw provider remains noncooperative");
+        try { running.join(); throw new AssertionError("cancel did not reject"); }
+        catch (java.util.concurrent.CompletionException expected) {
+            check(expected.getCause() instanceof ModelClientException, "cancel actual model failure");
+            equal("agent_cancelled", ((ModelClientException) expected.getCause()).failure().code());
+        }
         raw.complete(new ModelTurn("test", "model", Arrays.<ModelContent>asList(new ModelContent.Text(SUMMARY)), "end", ModelUsage.empty()));
         check(running.isCompletedExceptionally(), "late summary cannot publish checkpoint");
         System.out.println("cancel=agent_cancelled");

@@ -714,7 +714,7 @@
   "fixtures": [
     {
       "path": "engine-core/src/contextCompactorJava8Test/java/dev/openallay/agent/context/ContextCompactorJava8Fixture.java",
-      "sha256": "0ca6d69112b4701d0539d54dc16ef56c1bb83afd0a272420b9ef142e1ca1626e"
+      "sha256": "6335d5cb3f66e82e281d99150b8cc7b4478ce73f17df1391cb559c339700cec2"
     },
     {
       "path": "engine-core/src/contextCompactorJava8Test/java/dev/openallay/agent/context/ContextCompactorJava8Test.java",
@@ -761,5 +761,6 @@
   "runner_sha256": "29416511eeb21aa4e74d83578cb381ee6f7908a2768f8c879e978ed9ebf49f5d",
   "format_policy": "Onlyblankline trailingwhitespacecleanup afteractualconverter+literalmechanicalops. Summarytextblock exactdedentednewlines retained. No hashinputnormalization.",
   "authority_policy": "Budget/losslabel/noinventedevidence, immutableoriginalcontext, summary-onlyobservedmodel attemptreceipt andcancellation/latepublication fences remainactualoriginalalgorithms.",
-  "exact_format_correction": "OnlyProjection compactconstructor generatednonblankline trailingoneASCIIspace removed count1 afterrecordedAPIlowering; nobroadnonblanktrimming."
+  "exact_format_correction": "OnlyProjection compactconstructor generatednonblankline trailingoneASCIIspace removed count1 afterrecordedAPIlowering; nobroadnonblanktrimming.",
+  "fixture_error_contract": "Resultoutercontext_compaction_failed plusFAILEDcheckpoint diagnosticsummary_malformed andexactsafeMessage; noncooperativecancel assertsModelClientExceptionagent_cancelled, latecompletionfence. Matchesauthenticbaselineandcurrentexistingtests."
 }
