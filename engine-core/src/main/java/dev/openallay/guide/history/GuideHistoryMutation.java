@@ -68,7 +68,7 @@ public static final class UpsertSession implements GuideHistoryMutation {
     private final GuideModelSelection modelSelection;
     public UpsertSession(String sessionId, int ordinal, GuideModelSelection modelSelection) {
 
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             if (ordinal < 0) throw new IllegalArgumentException("session ordinal is invalid");
             java.util.Objects.requireNonNull(modelSelection, "modelSelection");
 
@@ -108,7 +108,7 @@ public static final class UpsertSessionUsage implements GuideHistoryMutation {
     private final GuideUsageSnapshot controlUsage;
     public UpsertSessionUsage(String sessionId, GuideUsageSnapshot controlUsage) {
 
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             java.util.Objects.requireNonNull(controlUsage, "controlUsage");
 
         this.sessionId = sessionId;
@@ -179,7 +179,7 @@ public static final class UpsertMessage implements GuideHistoryMutation {
     private final GuideMessage message;
     public UpsertMessage(String sessionId, int ordinal, GuideMessage message) {
 
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             if (ordinal < 0) throw new IllegalArgumentException("message ordinal is invalid");
             java.util.Objects.requireNonNull(message, "message");
 
@@ -290,7 +290,7 @@ public static final class ReplaceContext implements GuideHistoryMutation {
     private final List<ModelMessage> messages;
     public ReplaceContext(String sessionId, List<ModelMessage> messages) {
 
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             messages = ModelContextCodec.safe(messages);
 
         this.sessionId = sessionId;
@@ -362,7 +362,7 @@ public static final class UpsertCheckpoint implements GuideHistoryMutation {
     private final ContextCheckpoint checkpoint;
     public UpsertCheckpoint(String sessionId, int ordinal, ContextCheckpoint checkpoint) {
 
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             if (ordinal < 0) throw new IllegalArgumentException("checkpoint ordinal is invalid");
             java.util.Objects.requireNonNull(checkpoint, "checkpoint");
 
@@ -402,7 +402,7 @@ public static final class AppendCheckpoint implements GuideHistoryMutation {
     private final ContextCheckpoint checkpoint;
     public AppendCheckpoint(String sessionId, ContextCheckpoint checkpoint) {
 
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             java.util.Objects.requireNonNull(checkpoint, "checkpoint");
 
         this.sessionId = sessionId;
@@ -482,9 +482,9 @@ public static final class ForkSession implements GuideHistoryMutation {
     private final GuideModelSelection modelSelection;
     public ForkSession(String sourceSessionId, GuideHistoryCursor cutoff, String sessionId, int ordinal, GuideModelSelection modelSelection) {
 
-            requireSession(sourceSessionId);
+            GuideHistoryMutationDefaults.requireSession(sourceSessionId);
             java.util.Objects.requireNonNull(cutoff, "cutoff");
-            requireSession(sessionId);
+            GuideHistoryMutationDefaults.requireSession(sessionId);
             if (sourceSessionId.equals(sessionId)) {
                 throw new IllegalArgumentException("fork target must be a new session");
             }
@@ -530,7 +530,7 @@ public static final class ForkSession implements GuideHistoryMutation {
 public static final class DeleteSession implements GuideHistoryMutation {
     private final String sessionId;
     public DeleteSession(String sessionId) {
- requireSession(sessionId);
+ GuideHistoryMutationDefaults.requireSession(sessionId);
         this.sessionId = sessionId;
     }
     public String sessionId() { return sessionId; }
@@ -558,7 +558,7 @@ public static final class DeleteSession implements GuideHistoryMutation {
 public static final class ClearSession implements GuideHistoryMutation {
     private final String sessionId;
     public ClearSession(String sessionId) {
- requireSession(sessionId);
+ GuideHistoryMutationDefaults.requireSession(sessionId);
         this.sessionId = sessionId;
     }
     public String sessionId() { return sessionId; }
@@ -582,7 +582,13 @@ public static final class ClearSession implements GuideHistoryMutation {
     }
 }
 
-    private static void requireSession(String sessionId) {
+
+}
+
+/** Package-private Java8 implementation of existing interface helper behavior. */
+final class GuideHistoryMutationDefaults {
+    private GuideHistoryMutationDefaults() {}
+static void requireSession(String sessionId) {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid session ID");
         }
