@@ -59,3 +59,8 @@ tasks.register('sourcesJar', Jar) {
 tasks.named('assemble') { dependsOn 'sourcesJar' }
 
 tasks.named('test') { useJUnitPlatform() }
+
+// Build-only attribution input for the one canonical source-language port.
+tasks.register('printRhinoPortCompileClasspath') {
+    doLast { println(configurations.compileClasspath.asPath) }
+}

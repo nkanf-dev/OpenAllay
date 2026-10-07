@@ -1,0 +1,14 @@
+{
+  "dev/latvian/mods/rhino/CachedClassInfo.java": 42,
+  "dev/latvian/mods/rhino/CachedClassStorage.java": 1,
+  "dev/latvian/mods/rhino/CachedConstructorInfo.java": 2,
+  "dev/latvian/mods/rhino/CachedExecutableInfo.java": 8,
+  "dev/latvian/mods/rhino/CachedFieldInfo.java": 2,
+  "dev/latvian/mods/rhino/CachedMemberInfo.java": 2,
+  "dev/latvian/mods/rhino/CachedMethodInfo.java": 2,
+  "dev/latvian/mods/rhino/FunctionObject.java": 2,
+  "dev/latvian/mods/rhino/MemberBox.java": 7,
+  "dev/latvian/mods/rhino/type/InterfaceTypeInfo.java": 1,
+  "dev/latvian/mods/rhino/type/TypeInfo.java": 1,
+  "dev/latvian/mods/rhino/type/TypeStringContext.java": 1
+}
