@@ -151,7 +151,7 @@ public ClientSettingsSnapshot(
                 CommandCapabilityConfig.defaults(),
                 UnrestrictedJavascriptConfig.defaults(),
                 HistorySettingsView.disconnected(),
-                new SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
+                new SettingsDiagnosticsSnapshot(dev.openallay.util.Java8Collections.listOf(), Optional.empty()),
                 operation,
                 notice);
     }
@@ -174,7 +174,7 @@ public ClientSettingsSnapshot(
                 CommandCapabilityConfig.defaults(),
                 UnrestrictedJavascriptConfig.defaults(),
                 HistorySettingsView.disconnected(),
-                new SettingsDiagnosticsSnapshot(List.of(), Optional.empty()),
+                new SettingsDiagnosticsSnapshot(dev.openallay.util.Java8Collections.listOf(), Optional.empty()),
                 operation,
                 notice);
     }

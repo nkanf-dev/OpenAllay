@@ -23,7 +23,7 @@ public final class ModelProfileSettingsView {
     public ModelProfileSettingsView(ModelProfilesConfig config, List<Profile> profiles, GuideFailure metadataFailure, ModelConnectionResult connectionResult) {
 
         Objects.requireNonNull(config, "config");
-        profiles = List.copyOf(profiles);
+        profiles = dev.openallay.util.Java8Collections.listCopyOf(profiles);
         if (profiles.size() != config.profiles().size()) {
             throw new IllegalArgumentException("every configured model profile needs a view");
         }
@@ -73,7 +73,7 @@ public static ModelProfileSettingsView from(
     }
 private static ModelImageCapabilityResolution automaticImageCapability(ModelProfileDefinition definition) {
         return ModelImageCapabilityResolution.resolve(definition.baseUri(), definition.model(),
-                definition.imageInputCapabilityOverride(), Map.of(), BuiltinModelCatalog.bundled().catalog());
+                definition.imageInputCapabilityOverride(), dev.openallay.util.Java8Collections.mapOf(), BuiltinModelCatalog.bundled().catalog());
     }
 @dev.openallay.value.ValueType(Resolution.ValueSchemaProvider.class)
 public static final class Resolution {

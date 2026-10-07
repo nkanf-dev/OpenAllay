@@ -62,7 +62,7 @@ public static final class Recipe implements NativeDomainViewBinding {
 }
 
     private static String requireId(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException("native view stable ID is required");
         }
         return value;

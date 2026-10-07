@@ -192,7 +192,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
     public Set<ContextCapability> requiredContext() {
         State captured = state.get();
         ClientGuideRuntime runtime = captured.runtimes().get(captured.defaultProfileId());
-        return runtime == null ? Set.of() : runtime.requiredContext();
+        return runtime == null ? dev.openallay.util.Java8Collections.setOf() : runtime.requiredContext();
     }
 
     @Override
@@ -344,7 +344,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
             ClientGuideRuntime selected = runtime(captured, profileId);
             GuideClientModelProfile profile = captured.profiles().stream()
                     .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow();
-            boolean containsImages = hasImages(List.of(userInput))
+            boolean containsImages = hasImages(dev.openallay.util.Java8Collections.listOf(userInput))
                     || hasImages(sessions.history(new AgentSessionKey(actor, sessionId)));
             if (containsImages
                     && profile.imageInputCapability()
@@ -356,7 +356,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
             }
             return selected.ask(actor, sessionId, requestId, userInput, images, context, events);
         } catch (GuideModelProfileException failure) {
-            return CompletableFuture.failedFuture(failure);
+            return dev.openallay.util.Java8Futures.failedFuture(failure);
         }
     }
 
@@ -495,7 +495,7 @@ private static final class State {
     private State(ModelProfilesConfig config, List<GuideClientModelProfile> profiles, Map<String, ClientGuideRuntime> runtimes, ClientCapabilitySnapshot capabilities) {
 
             Objects.requireNonNull(config, "config");
-            profiles = List.copyOf(profiles);
+            profiles = dev.openallay.util.Java8Collections.listCopyOf(profiles);
             runtimes = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(runtimes));
             Objects.requireNonNull(capabilities, "capabilities");
 

@@ -53,16 +53,16 @@ public static final class Chip {
         } else if (focus.target().entity() != null) {
             dev.openallay.world.WorldFocusObservation.Entity entity = focus.target().entity();
             result.add(new Chip("screen.openallay.observation.crosshair",
-                    entity.name().isBlank() ? entity.type() : entity.name()));
+                    dev.openallay.util.Java8Strings.isBlank(entity.name()) ? entity.type() : entity.name()));
         }
         if (focus.mainHand().count() > 0) result.add(new Chip("screen.openallay.observation.held", itemName(focus.mainHand())));
         if (result.isEmpty()) result.add(new Chip("screen.openallay.observation.focus",
-                focus.screen().title().isBlank() ? focus.dimension() : focus.screen().title()));
-        return List.copyOf(result);
+                dev.openallay.util.Java8Strings.isBlank(focus.screen().title()) ? focus.dimension() : focus.screen().title()));
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     private static String itemName(WorldFocusObservation.Item item) {
-        String name = item.name().isBlank() ? item.id() : item.name();
+        String name = dev.openallay.util.Java8Strings.isBlank(item.name()) ? item.id() : item.name();
         return item.count() > 1 ? name + " ×" + item.count() : name;
     }
 }

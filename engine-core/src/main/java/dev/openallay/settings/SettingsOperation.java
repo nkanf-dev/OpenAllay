@@ -18,7 +18,7 @@ public final class SettingsOperation {
                 || kind == Kind.FETCHING_MODEL_CATALOG)) {
             throw new IllegalArgumentException("only provider reads are cancellable");
         }
-        if (targetId != null && targetId.isBlank()) {
+        if (targetId != null && dev.openallay.util.Java8Strings.isBlank(targetId)) {
             throw new IllegalArgumentException("targetId must be null or nonblank");
         }
 

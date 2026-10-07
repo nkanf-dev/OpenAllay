@@ -32,9 +32,9 @@ public final class CapabilitySettingsView {
 public static CapabilitySettingsView defaults() {
         return new CapabilitySettingsView(
                 CapabilityPolicy.defaults(),
-                new CapabilityCatalogSnapshot(java.util.List.of()),
-                Set.of(),
-                Set.of());
+                new CapabilityCatalogSnapshot(dev.openallay.util.Java8Collections.listOf()),
+                dev.openallay.util.Java8Collections.setOf(),
+                dev.openallay.util.Java8Collections.setOf());
     }
 private static Set<String> sorted(Set<String> values) {
         return Collections.unmodifiableSet(new TreeSet<>(values));

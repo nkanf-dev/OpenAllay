@@ -8,8 +8,8 @@ public final class NativeDomainViewDiagnostic {
     private final String code;
     public NativeDomainViewDiagnostic(String stableId, String providerId, String code) {
 
-        if (stableId == null || stableId.isBlank()
-                || providerId == null || providerId.isBlank()
+        if (stableId == null || dev.openallay.util.Java8Strings.isBlank(stableId)
+                || providerId == null || dev.openallay.util.Java8Strings.isBlank(providerId)
                 || code == null || !code.matches("[a-z0-9_]+")) {
             throw new IllegalArgumentException("native view diagnostic is invalid");
         }

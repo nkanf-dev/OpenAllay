@@ -14,10 +14,9 @@ public final class SkillSettingsView {
     private final List<SkillDiagnostic> diagnostics;
     public SkillSettingsView(List<Skill> skills, List<SkillDiagnostic> diagnostics) {
 
-        skills = List.copyOf(skills).stream()
-                .sorted(Comparator.comparing(skill -> skill.metadata().name()))
-                .toList();
-        diagnostics = List.copyOf(diagnostics);
+        skills = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(skills).stream()
+                .sorted(Comparator.comparing(skill -> skill.metadata().name())));
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
 
         this.skills = skills;
         this.diagnostics = diagnostics;
@@ -25,7 +24,7 @@ public final class SkillSettingsView {
     public List<Skill> skills() { return skills; }
     public List<SkillDiagnostic> diagnostics() { return diagnostics; }
 public static SkillSettingsView empty() {
-        return new SkillSettingsView(List.of(), List.of());
+        return new SkillSettingsView(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
     }
 public Optional<Skill> find(String name) {
         return skills.stream().filter(skill -> skill.metadata().name().equals(name)).findFirst();
@@ -39,10 +38,10 @@ public static final class Skill {
     public Skill(SkillMetadata metadata, String body, String markdown, boolean overridePresent) {
 
             metadata = java.util.Objects.requireNonNull(metadata, "metadata");
-            if (body == null || body.isBlank()) {
+            if (body == null || dev.openallay.util.Java8Strings.isBlank(body)) {
                 throw new IllegalArgumentException("Skill body must not be blank");
             }
-            if (markdown == null || markdown.isBlank()) {
+            if (markdown == null || dev.openallay.util.Java8Strings.isBlank(markdown)) {
                 throw new IllegalArgumentException("Skill Markdown must not be blank");
             }
 

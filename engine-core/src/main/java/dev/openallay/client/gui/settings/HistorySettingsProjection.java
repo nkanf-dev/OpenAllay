@@ -17,7 +17,7 @@ public final class HistorySettingsProjection {
     private final List<ActionRow> actions;
     public HistorySettingsProjection(String titleKey, String scopeLabelKey, String statusKey, String narrationKey, List<ActionRow> actions) {
 
-        actions = List.copyOf(actions);
+        actions = dev.openallay.util.Java8Collections.listCopyOf(actions);
 
         this.titleKey = titleKey;
         this.scopeLabelKey = scopeLabelKey;
@@ -92,8 +92,8 @@ public static final class ActionRow {
     public ActionRow(Action action, String labelKey, String descriptionKey, boolean enabled, boolean requiresSecondConfirmation) {
 
             Objects.requireNonNull(action, "action");
-            if (labelKey == null || labelKey.isBlank()
-                    || descriptionKey == null || descriptionKey.isBlank()) {
+            if (labelKey == null || dev.openallay.util.Java8Strings.isBlank(labelKey)
+                    || descriptionKey == null || dev.openallay.util.Java8Strings.isBlank(descriptionKey)) {
                 throw new IllegalArgumentException("history action localization is required");
             }
 

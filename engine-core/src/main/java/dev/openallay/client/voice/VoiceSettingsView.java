@@ -13,7 +13,7 @@ public final class VoiceSettingsView {
     private final long downloadedBytes;
     private final long totalBytes;
     public VoiceSettingsView(VoiceConfig config, List<AudioCapture.Device> devices, boolean busy, boolean modelReady, String modelName, String statusCode, long downloadedBytes, long totalBytes) {
- devices = List.copyOf(devices);
+ devices = dev.openallay.util.Java8Collections.listCopyOf(devices);
         this.config = config;
         this.devices = devices;
         this.busy = busy;

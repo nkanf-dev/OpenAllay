@@ -14,7 +14,7 @@ import java.util.List;
 public final class BuiltinModelSettingsProjection {
     private final List<Line> lines;
     public BuiltinModelSettingsProjection(List<Line> lines) {
- lines = List.copyOf(lines);
+ lines = dev.openallay.util.Java8Collections.listCopyOf(lines);
         this.lines = lines;
     }
     public List<Line> lines() { return lines; }
@@ -25,7 +25,7 @@ public static final class EventCache {
         private ModelOutputResolution outputResolution;
         private ModelImageCapabilityResolution imageResolution;
         private BuiltinModelCatalog.Load loaded;
-        private BuiltinModelSettingsProjection projection = new BuiltinModelSettingsProjection(List.of());
+        private BuiltinModelSettingsProjection projection = new BuiltinModelSettingsProjection(dev.openallay.util.Java8Collections.listOf());
 
         public ModelProfileDraft refresh(ModelProfileDraft candidate, BuiltinModelCatalog.Load catalog,
                 java.util.function.Supplier<ModelContextResolution> resolve) {
@@ -68,14 +68,14 @@ public static final class Line {
     private final String key;
     private final List<Object> arguments;
     public Line(String key, List<Object> arguments) {
- arguments = List.copyOf(arguments);
+ arguments = dev.openallay.util.Java8Collections.listCopyOf(arguments);
         this.key = key;
         this.arguments = arguments;
     }
     public String key() { return key; }
     public List<Object> arguments() { return arguments; }
 public static Line of(String key, Object... args) {
-            return new Line(PREFIX + key, List.of(args));
+            return new Line(PREFIX + key, dev.openallay.util.Java8Collections.listOf(args));
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -104,27 +104,27 @@ public static BuiltinModelSettingsProjection from(
             ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
         return from(draft, loaded, ModelContextResolution.resolve(null, draft.model(),
                 draft.automaticContextWindowTokens() == null && draft.contextWindowTokens() != null
-                        && !draft.contextWindowTokens().isBlank()
+                        && !dev.openallay.util.Java8Strings.isBlank(draft.contextWindowTokens())
                         ? parseInteger(draft.contextWindowTokens()) : null,
-                java.util.Map.of(), loaded.catalog()));
+                dev.openallay.util.Java8Collections.mapOf(), loaded.catalog()));
     }
 private static ModelOutputResolution outputResolution(
             ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
         Integer explicit = null;
         if (draft.automaticMaxOutputTokens() == null && draft.maxOutputTokens() != null
-                && !draft.maxOutputTokens().isBlank()) {
+                && !dev.openallay.util.Java8Strings.isBlank(draft.maxOutputTokens())) {
             explicit = parseInteger(draft.maxOutputTokens());
             if (explicit == null || explicit <= 0) {
                 return new ModelOutputResolution(null, ModelOutputResolution.Origin.REQUIRED);
             }
         }
         return ModelOutputResolution.resolve(null, draft.model(), explicit,
-                java.util.Map.of(), loaded.catalog());
+                dev.openallay.util.Java8Collections.mapOf(), loaded.catalog());
     }
 private static ModelImageCapabilityResolution imageResolution(
             ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
         return ModelImageCapabilityResolution.resolve(null, draft.model(),
-                draft.imageInputCapabilityOverride(), java.util.Map.of(), loaded.catalog());
+                draft.imageInputCapabilityOverride(), dev.openallay.util.Java8Collections.mapOf(), loaded.catalog());
     }
 private static Integer parseInteger(String text) {
         try { return Integer.valueOf(text.trim()); }
@@ -198,7 +198,7 @@ public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
                 price(lines, "cache_read", tier.cacheRead());
                 price(lines, "cache_write", tier.cacheWrite());
             }
-            if (!entry.pricing().note().isBlank()) lines.add(Line.of("note", entry.pricing().note()));
+            if (!dev.openallay.util.Java8Strings.isBlank(entry.pricing().note())) lines.add(Line.of("note", entry.pricing().note()));
         }
         source(lines, "capability_source", loaded.catalog().sources().get(entry.capabilitySource()));
         if (entry.pricingSource() != null)

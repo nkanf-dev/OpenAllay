@@ -120,8 +120,8 @@ public static final class ExportedFile {
     private static Map<String, ImageReference> preflightAssets(GuideSessionExportSnapshot snapshot)
             throws IOException {
         Map<String, ImageReference> references = new LinkedHashMap<>();
-        List<dev.openallay.model.ModelMessage> messages = snapshot.requests().stream()
-                .flatMap(request -> request.originalContext().stream()).toList();
+        List<dev.openallay.model.ModelMessage> messages = dev.openallay.util.Java8Collections.toList(snapshot.requests().stream()
+                .flatMap(request -> request.originalContext().stream()));
         dev.openallay.model.image.ModelImages.uniqueReferences(messages)
                 .forEach(reference -> references.put(reference.sha256(), reference));
         for (ImageReference reference : references.values()) readVerified(snapshot, reference);
@@ -201,7 +201,7 @@ public static final class ExportedFile {
                     .append("User\n")
                     .append(formatText(request.userMessage())).append("\n\n");
             if (request.originalContext().isEmpty()) {
-                appendUnrecordedTimeline(result, request, Set.of(), false);
+                appendUnrecordedTimeline(result, request, dev.openallay.util.Java8Collections.setOf(), false);
             } else {
                 Map<String, String> tools = new LinkedHashMap<>();
                 Set<String> recordedCalls = new HashSet<>();
@@ -392,7 +392,7 @@ if ((($oaPattern7_holder.value = entry) instanceof dev.openallay.guide.export.Gu
 
     private static String digest(byte[] value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));
+            return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(value));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }

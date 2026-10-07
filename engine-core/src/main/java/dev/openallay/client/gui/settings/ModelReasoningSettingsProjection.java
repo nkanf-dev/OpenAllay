@@ -15,7 +15,7 @@ public final class ModelReasoningSettingsProjection {
     public ModelReasoningSettingsProjection(ModelReasoningEffort selected, List<ModelReasoningEffort> choices, String wireField, String explanationKey) {
 
         Objects.requireNonNull(selected, "selected");
-        choices = List.copyOf(choices);
+        choices = dev.openallay.util.Java8Collections.listCopyOf(choices);
         Objects.requireNonNull(wireField, "wireField");
         Objects.requireNonNull(explanationKey, "explanationKey");
 

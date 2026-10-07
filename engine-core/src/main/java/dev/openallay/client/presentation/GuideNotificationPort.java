@@ -48,7 +48,7 @@ public static final class Notification {
             Objects.requireNonNull(sessionId, "sessionId");
             Objects.requireNonNull(requestId, "requestId");
             Objects.requireNonNull(preview, "preview");
-            cardPreviews = List.copyOf(cardPreviews);
+            cardPreviews = dev.openallay.util.Java8Collections.listCopyOf(cardPreviews);
             Objects.requireNonNull(fence, "fence");
             if (cardPreviews.size() > cardCount || cardPreviews.stream()
                     .map(GuidePresentationEvent.CardPreview::source).distinct().count() != cardPreviews.size()) {

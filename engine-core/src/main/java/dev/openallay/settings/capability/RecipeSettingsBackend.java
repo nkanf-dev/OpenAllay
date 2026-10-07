@@ -109,12 +109,12 @@ if ((($oaPattern1_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
 
     private RecipeSettingsView view(RecipeClientConfig config) {
         Map<String, RecipeViewerNavigator> viewerById = new TreeMap<>();
-        for (RecipeViewerNavigator navigator : List.copyOf(navigators.get())) {
+        for (RecipeViewerNavigator navigator : dev.openallay.util.Java8Collections.listCopyOf(navigators.get())) {
             viewerById.put(navigator.viewerId(), navigator);
         }
         Set<String> known = new TreeSet<>();
         known.add(VANILLA_SOURCE_ID);
-        known.addAll(List.copyOf(providerIds.get()));
+        known.addAll(dev.openallay.util.Java8Collections.listCopyOf(providerIds.get()));
         known.addAll(viewerById.keySet());
         List<RecipeSettingsView.Source> sources = new ArrayList<>();
         for (String sourceId : known) {

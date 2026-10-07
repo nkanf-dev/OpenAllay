@@ -28,10 +28,10 @@ public final class ExtensionSettingsProjection {
     public ExtensionSettingsProjection(RuntimeCard runtime, List<RootCard> roots, List<ModuleCard> modules, List<AdapterCard> adapters, List<ExtensionCard> extensions, CatalogCard catalog, boolean experimentalCommands, boolean unrestrictedJavascript, boolean debugMode) {
 
         Objects.requireNonNull(runtime, "runtime");
-        roots = List.copyOf(roots);
-        modules = List.copyOf(modules);
-        adapters = List.copyOf(adapters);
-        extensions = List.copyOf(extensions);
+        roots = dev.openallay.util.Java8Collections.listCopyOf(roots);
+        modules = dev.openallay.util.Java8Collections.listCopyOf(modules);
+        adapters = dev.openallay.util.Java8Collections.listCopyOf(adapters);
+        extensions = dev.openallay.util.Java8Collections.listCopyOf(extensions);
         Objects.requireNonNull(catalog, "catalog");
 
         this.runtime = runtime;
@@ -62,7 +62,7 @@ public static ExtensionSettingsProjection from(
             UnrestrictedJavascriptConfig unrestricted,
             boolean debugMode) {
         return from(view, commands, unrestricted,
-                new RequirementEnvironment(Map.of(), Map.of(), Map.of()), debugMode);
+                new RequirementEnvironment(dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.mapOf()), debugMode);
     }
 public static ExtensionSettingsProjection from(
             ExtensionSettingsView view,
@@ -78,23 +78,18 @@ public static ExtensionSettingsProjection from(
                         "openallay:run_javascript",
                         "screen.openallay.settings.extensions.runtime.title",
                         "screen.openallay.settings.extensions.runtime.description",
-                        List.of("source", "handles", "title", "description"),
-                        List.of(
-                                "typed result",
-                                "workspace handle",
-                                "preview",
-                                "evidence")),
-                view.roots().stream()
+                        dev.openallay.util.Java8Collections.listOf("source", "handles", "title", "description"),
+                        dev.openallay.util.Java8Collections.listOf("typed result", "workspace handle", "preview", "evidence")),
+                dev.openallay.util.Java8Collections.toList(view.roots().stream()
                         .map(root -> new RootCard(
                                 root.name(),
                                 root.availability().name(),
                                 root.provider(),
                                 root.summary(),
                                 root.evidenceOwner(),
-                                renderSchema(root.schema(), 0)))
-                        .toList(),
-                view.bundledModules().stream().map(ModuleCard::new).toList(),
-                view.adapters().stream()
+                                renderSchema(root.schema(), 0)))),
+                dev.openallay.util.Java8Collections.toList(view.bundledModules().stream().map(ModuleCard::new)),
+                dev.openallay.util.Java8Collections.toList(view.adapters().stream()
                         .map(adapter -> new AdapterCard(
                                 adapter.id(),
                                 adapter.provider(),
@@ -103,9 +98,8 @@ public static ExtensionSettingsProjection from(
                                 adapter.schema() == null
                                         ? ""
                                         : renderSchema(adapter.schema(), 0),
-                                adapter.diagnostic()))
-                        .toList(),
-                view.extensions().stream()
+                                adapter.diagnostic()))),
+                dev.openallay.util.Java8Collections.toList(view.extensions().stream()
                         .map(extension -> new ExtensionCard(
                                 extension.id(),
                                 extension.name(),
@@ -125,8 +119,7 @@ public static ExtensionSettingsProjection from(
                                 extension.packageInfo().sha256(),
                                 extension.packageInfo().updateAvailable(),
                                 extension.packageInfo().installable(),
-                                RequirementSettingsProjection.evaluate(extension.requirements(), environment)))
-                        .toList(),
+                                RequirementSettingsProjection.evaluate(extension.requirements(), environment)))),
                 new CatalogCard(
                         view.catalog().configured(),
                         view.catalog().available(),
@@ -151,17 +144,15 @@ public ExtensionSettingsProjection toggleExperimentalCommands() {
                 debugMode);
     }
 public List<ExtensionCard> installed() {
-        return extensions.stream()
+        return dev.openallay.util.Java8Collections.toList(extensions.stream()
                 .filter(extension -> extension.state() == ExtensionSettingsView.State.ACTIVE
                         || extension.state()
                                 == ExtensionSettingsView.State.RESTART_REQUIRED
-                        || extension.state() == ExtensionSettingsView.State.UNAVAILABLE)
-                .toList();
+                        || extension.state() == ExtensionSettingsView.State.UNAVAILABLE));
     }
 public List<ExtensionCard> community() {
-        return extensions.stream()
-                .filter(ExtensionCard::catalogListed)
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(extensions.stream()
+                .filter(ExtensionCard::catalogListed));
     }
 public java.util.Optional<ExtensionCard> find(String id) {
         return extensions.stream().filter(extension -> extension.id().equals(id)).findFirst();
@@ -181,8 +172,8 @@ public static final class RuntimeCard {
     private final List<String> returns;
     public RuntimeCard(String id, String titleKey, String descriptionKey, List<String> parameters, List<String> returns) {
 
-            parameters = List.copyOf(parameters);
-            returns = List.copyOf(returns);
+            parameters = dev.openallay.util.Java8Collections.listCopyOf(parameters);
+            returns = dev.openallay.util.Java8Collections.listCopyOf(returns);
 
         this.id = id;
         this.titleKey = titleKey;
@@ -401,7 +392,7 @@ public static final class ExtensionCard {
     private final RequirementSettingsProjection requirements;
     public ExtensionCard(String id, String name, String version, ExtensionSettingsView.State state, String provider, String summary, List<String> loaders, String minecraftVersionRange, String openAllayApiVersionRange, String source, ExtensionSettingsView.Contributions contributions, String diagnostic, boolean catalogListed, String availableVersion, String artifact, String sha256, boolean updateAvailable, boolean installable, RequirementSettingsProjection requirements) {
 
-            loaders = List.copyOf(loaders);
+            loaders = dev.openallay.util.Java8Collections.listCopyOf(loaders);
             Objects.requireNonNull(state, "state");
             Objects.requireNonNull(contributions, "contributions");
             availableVersion = availableVersion == null ? "" : availableVersion;

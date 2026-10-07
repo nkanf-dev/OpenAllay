@@ -97,7 +97,7 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
         ToolResult<ModelProfilesConfigLoader.Load> loaded = loader.load(
                 profilesPath,
                 credentials,
-                Map.copyOf(metadata));
+                dev.openallay.util.Java8Collections.mapCopyOf(metadata));
         final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Success<ModelProfilesConfigLoader.Load> bound; }
 final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
 if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ModelProfilesConfigLoader.Load>) $oaPattern0_holder.value) != null))) {
@@ -109,7 +109,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
     public Set<String> presentEnvironmentNames() {
         TreeSet<String> names = new TreeSet<>();
         environmentSnapshot().forEach((name, value) -> {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !dev.openallay.util.Java8Strings.isBlank(value)) {
                 names.add(name);
             }
         });
@@ -142,18 +142,18 @@ if ((($oaPattern1_holder.value = created) instanceof dev.openallay.tool.ToolResu
             try {
                 prepared = replaceCredential(candidate, replacementProfileId, inserted);
             } catch (RuntimeException failure) {
-                credentialStore.deleteIfUnreferenced(inserted, Set.of());
+                credentialStore.deleteIfUnreferenced(inserted, dev.openallay.util.Java8Collections.setOf());
                 return new ToolResult.Failure<>(
                         "invalid_model_config", "Unable to prepare model profile settings");
             }
         }
         ToolResult<ModelProfileSettingsStore.Saved> saved = store.save(
-                prepared, credentials, Map.copyOf(metadata), registry);
+                prepared, credentials, dev.openallay.util.Java8Collections.mapCopyOf(metadata), registry);
         final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfileSettingsStore.Saved> value; ToolResult.Failure<ModelProfileSettingsStore.Saved> bound; }
 final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
 if ((($oaPattern2_holder.value = saved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<ModelProfileSettingsStore.Saved>) $oaPattern2_holder.value) != null))) {
             if (inserted != null) {
-                credentialStore.deleteIfUnreferenced(inserted, Set.of());
+                credentialStore.deleteIfUnreferenced(inserted, dev.openallay.util.Java8Collections.setOf());
             }
             return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
         }
@@ -162,10 +162,9 @@ if ((($oaPattern2_holder.value = saved) instanceof dev.openallay.tool.ToolResult
         collectUnreferenced(value.config());
         return new ToolResult.Success<>(new ClientSettingsService.ModelState(
                 value.config(),
-                value.profiles().stream()
+                dev.openallay.util.Java8Collections.toList(value.profiles().stream()
                         .map(profile -> ModelProfileSettingsView.Resolution.from(
-                                profile, credentialPresent(profile.definition())))
-                        .toList()));
+                                profile, credentialPresent(profile.definition()))))));
     }
 
     @Override
@@ -174,7 +173,7 @@ if ((($oaPattern2_holder.value = saved) instanceof dev.openallay.tool.ToolResult
         ToolResult<ModelProfilesConfigLoader.Load> loaded = loader.load(
                 profilesPath,
                 credentials,
-                Map.copyOf(metadata));
+                dev.openallay.util.Java8Collections.mapCopyOf(metadata));
         final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
 final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
 if ((($oaPattern3_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern3_holder.value) != null))) {
@@ -201,7 +200,7 @@ if ((($oaPattern3_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
         ModelProfilesConfig isolated = new ModelProfilesConfig(
                 candidate.id(),
-                java.util.List.of(candidate));
+                dev.openallay.util.Java8Collections.listOf(candidate));
         ToolResult<ModelProfilesConfigLoader.Load> loaded = replacement == null
                 ? decode(isolated, metadata)
                 : decode(isolated, reference -> {
@@ -299,7 +298,7 @@ if (!((($oaPattern6_holder.value = resolved) instanceof dev.openallay.tool.ToolR
             return loader.load(
                     new StringReader(writer.encode(config)),
                     resolver,
-                    Map.copyOf(metadata));
+                    dev.openallay.util.Java8Collections.mapCopyOf(metadata));
         } catch (RuntimeException failure) {
             return new ToolResult.Failure<>(
                     "invalid_model_config", "Unable to prepare model profile settings");
@@ -307,7 +306,7 @@ if (!((($oaPattern6_holder.value = resolved) instanceof dev.openallay.tool.ToolR
     }
 
     private Map<String, String> environmentSnapshot() {
-        return Map.copyOf(environment.get());
+        return dev.openallay.util.Java8Collections.mapCopyOf(environment.get());
     }
 
     public void closeCredentials() {
@@ -322,7 +321,7 @@ if (!((($oaPattern6_holder.value = resolved) instanceof dev.openallay.tool.ToolR
             ModelProfilesConfig candidate,
             String profileId,
             CredentialReference reference) {
-        if (profileId == null || profileId.isBlank()) {
+        if (profileId == null || dev.openallay.util.Java8Strings.isBlank(profileId)) {
             throw new IllegalArgumentException("replacement profile id is required");
         }
         boolean found = false;
@@ -383,10 +382,9 @@ if ((($oaPattern7_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
             ModelProfilesConfigLoader.Load load) {
         return new ClientSettingsService.ModelState(
                 load.config(),
-                load.profiles().stream()
+                dev.openallay.util.Java8Collections.toList(load.profiles().stream()
                         .map(profile -> ModelProfileSettingsView.Resolution.from(
-                                profile, credentialPresent(profile.definition())))
-                        .toList());
+                                profile, credentialPresent(profile.definition())))));
     }
 
     private boolean credentialPresent(ModelProfileDefinition definition) {
@@ -398,7 +396,7 @@ if ((($oaPattern7_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
         }
         if (reference.kind() == CredentialReference.Kind.ENVIRONMENT) {
             String value = environmentSnapshot().get(reference.value());
-            return value != null && !value.isBlank();
+            return value != null && !dev.openallay.util.Java8Strings.isBlank(value);
         }
         ToolResult<Boolean> present = credentialStore.contains(reference);
         final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }

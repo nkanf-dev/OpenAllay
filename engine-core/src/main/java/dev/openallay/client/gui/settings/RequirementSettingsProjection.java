@@ -18,7 +18,7 @@ public final class RequirementSettingsProjection {
     private final List<Row> rows;
     public RequirementSettingsProjection(List<Row> rows) {
 
-        rows = List.copyOf(rows);
+        rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
 
         this.rows = rows;
     }
@@ -26,14 +26,14 @@ public final class RequirementSettingsProjection {
 public static final String PREFIX = "screen.openallay.settings.requirements.";
 public static RequirementSettingsProjection evaluate(
             RequirementSet requirements, RequirementEnvironment environment) {
-        return from(RequirementEvaluator.evaluate(requirements, environment), List.of());
+        return from(RequirementEvaluator.evaluate(requirements, environment), dev.openallay.util.Java8Collections.listOf());
     }
 public static RequirementSettingsProjection from(
             RequirementReport report, List<RequirementChange> changes) {
         Objects.requireNonNull(report, "report");
-        List<RequirementChange> allowed = List.copyOf(changes);
-        return new RequirementSettingsProjection(report.entries().stream()
-                .map(entry -> row(entry, allowed)).toList());
+        List<RequirementChange> allowed = dev.openallay.util.Java8Collections.listCopyOf(changes);
+        return new RequirementSettingsProjection(dev.openallay.util.Java8Collections.toList(report.entries().stream()
+                .map(entry -> row(entry, allowed))));
     }
 private static Row row(RequirementAssessment entry, List<RequirementChange> changes) {
         // Only a real disabled owner can be enabled. Missing providers and staged JARs

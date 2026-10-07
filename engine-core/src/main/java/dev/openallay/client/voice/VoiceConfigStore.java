@@ -12,8 +12,7 @@ import java.util.Set;
 
 /** Exact current shape; malformed files are retained, never replaced with defaults. */
 public final class VoiceConfigStore {
-    private static final Set<String> FIELDS = Set.of("enabled", "backend", "deviceId", "maxClipSeconds", "language",
-            "cpuThreads", "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef", "gameplayAction");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("enabled", "backend", "deviceId", "maxClipSeconds", "language", "cpuThreads", "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef", "gameplayAction");
     private final Path path;
     private volatile VoiceConfig config = VoiceConfig.defaults();
     public VoiceConfigStore(Path path) { this.path = path; }

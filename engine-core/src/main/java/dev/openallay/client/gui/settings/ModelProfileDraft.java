@@ -167,8 +167,8 @@ public static ModelProfileDraft from(ModelProfileDefinition definition) {
                 definition.maxOutputTokens() == null
                         ? ""
                         : Integer.toString(definition.maxOutputTokens()),
-                Long.toString(definition.connectTimeout().toSeconds()),
-                Long.toString(definition.requestTimeout().toSeconds()),
+                Long.toString((definition.connectTimeout()).getSeconds()),
+                Long.toString((definition.requestTimeout()).getSeconds()),
                 definition.metadata(), null, null, definition.reasoningEffort(), definition.tokenEncoding(),
                 definition.imageInputCapabilityOverride())
                 .autoFill(BuiltinModelCatalog.bundled().catalog());
@@ -222,7 +222,7 @@ public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
         return withAutomaticContext(context).withAutomaticOutput(output);
     }
 public ModelProfileDraft withAutomaticContext(Integer value) {
-        if (contextWindowTokens != null && !contextWindowTokens.isBlank()
+        if (contextWindowTokens != null && !dev.openallay.util.Java8Strings.isBlank(contextWindowTokens)
                 && automaticContextWindowTokens == null) return this;
         String text = value == null ? "" : Integer.toString(value);
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
@@ -231,7 +231,7 @@ public ModelProfileDraft withAutomaticContext(Integer value) {
                 automaticMaxOutputTokens, reasoningEffort, tokenEncoding, imageInputCapabilityOverride);
     }
 public ModelProfileDraft withAutomaticOutput(Integer value) {
-        if (maxOutputTokens != null && !maxOutputTokens.isBlank()
+        if (maxOutputTokens != null && !dev.openallay.util.Java8Strings.isBlank(maxOutputTokens)
                 && automaticMaxOutputTokens == null) return this;
         String text = value == null ? "" : Integer.toString(value);
         return new ModelProfileDraft(id, displayName, enabled, protocol, baseUrl, model,
@@ -266,7 +266,7 @@ return !((($oaPattern0_holder.value = validated) instanceof dev.openallay.tool.T
     }
 public ToolResult<ModelProfileDefinition> validate() {
         try {
-            Integer contextWindow = contextWindowTokens == null || contextWindowTokens.isBlank()
+            Integer contextWindow = contextWindowTokens == null || dev.openallay.util.Java8Strings.isBlank(contextWindowTokens)
                     || Objects.equals(contextWindowTokens, automaticContextWindowTokens)
                     ? null
                     : Integer.valueOf(contextWindowTokens.trim());
@@ -279,7 +279,7 @@ public ToolResult<ModelProfileDefinition> validate() {
                     model == null ? null : model.trim(),
                     credentialRef == null ? null : credentialRef.trim(),
                     contextWindow,
-                    maxOutputTokens == null || maxOutputTokens.isBlank()
+                    maxOutputTokens == null || dev.openallay.util.Java8Strings.isBlank(maxOutputTokens)
                             || Objects.equals(maxOutputTokens, automaticMaxOutputTokens)
                             ? null : Integer.valueOf(maxOutputTokens.trim()),
                     Duration.ofSeconds(Long.parseLong(

@@ -12,7 +12,7 @@ public final class ClientResource {
         if (resourceId == null || !resourceId.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) {
             throw new IllegalArgumentException("Invalid client resource ID: " + resourceId);
         }
-        if (packId == null || packId.isBlank()) {
+        if (packId == null || dev.openallay.util.Java8Strings.isBlank(packId)) {
             throw new IllegalArgumentException("Pack ID must not be blank");
         }
         if (content == null) {

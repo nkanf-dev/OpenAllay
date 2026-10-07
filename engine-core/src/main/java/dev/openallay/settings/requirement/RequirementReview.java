@@ -26,7 +26,7 @@ public final class RequirementReview {
         Objects.requireNonNull(version, "version");
         Objects.requireNonNull(sha256, "sha256");
         Objects.requireNonNull(report, "report");
-        changes = List.copyOf(changes);
+        changes = dev.openallay.util.Java8Collections.listCopyOf(changes);
 
         this.token = token;
         this.kind = kind;

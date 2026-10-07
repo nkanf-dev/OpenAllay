@@ -28,16 +28,16 @@ public final class VoiceConfig {
         Objects.requireNonNull(nativeModelDirectory, "nativeModelDirectory");
         Objects.requireNonNull(httpBaseUrl, "httpBaseUrl");
         Objects.requireNonNull(httpModel, "httpModel");
-        if (deviceId.isBlank() || deviceId.length() > 512) throw new IllegalArgumentException("deviceId");
+        if (dev.openallay.util.Java8Strings.isBlank(deviceId) || deviceId.length() > 512) throw new IllegalArgumentException("deviceId");
         if (maxClipSeconds < 1 || maxClipSeconds > PcmClip.MAX_SECONDS) throw new IllegalArgumentException("maxClipSeconds");
         if (!language.matches("auto|[a-z]{2,3}(-[A-Z]{2})?")) throw new IllegalArgumentException("language");
         if (cpuThreads < 1 || cpuThreads > 8) throw new IllegalArgumentException("cpuThreads");
-        if (!nativeModelDirectory.isEmpty()) Path.of(nativeModelDirectory);
+        if (!nativeModelDirectory.isEmpty()) java.nio.file.Paths.get(nativeModelDirectory);
         if (httpBaseUrl.getScheme() == null
-                || !java.util.Set.of("http", "https").contains(httpBaseUrl.getScheme())
+                || !dev.openallay.util.Java8Collections.setOf("http", "https").contains(httpBaseUrl.getScheme())
                 || httpBaseUrl.getHost() == null || httpBaseUrl.getUserInfo() != null
                 || httpBaseUrl.getFragment() != null || httpBaseUrl.getQuery() != null) throw new IllegalArgumentException("httpBaseUrl");
-        if (httpModel.isBlank() || httpModel.length() > 256 || httpModel.chars().anyMatch(c -> c < 32)) throw new IllegalArgumentException("httpModel");
+        if (dev.openallay.util.Java8Strings.isBlank(httpModel) || httpModel.length() > 256 || httpModel.chars().anyMatch(c -> c < 32)) throw new IllegalArgumentException("httpModel");
 
         this.enabled = enabled;
         this.backend = backend;

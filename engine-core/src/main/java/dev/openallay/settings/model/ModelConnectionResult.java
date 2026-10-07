@@ -95,7 +95,7 @@ public static final class Failure implements ModelConnectionResult {
 }
 
     private static void requireText(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
     }

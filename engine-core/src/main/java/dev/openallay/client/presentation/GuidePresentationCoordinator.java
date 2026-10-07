@@ -158,7 +158,7 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
     }
 
     private void closeVoiceObservations() {
-        List.copyOf(voiceObservations.values()).forEach(GuideClientUiState.ObservationLease::close);
+        dev.openallay.util.Java8Collections.listCopyOf(voiceObservations.values()).forEach(GuideClientUiState.ObservationLease::close);
         voiceObservations.clear();
     }
 
@@ -308,7 +308,7 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
         GuideClientUiState.ObservationCapture observation = observationForVoice(target).orElse(null);
         java.util.function.BooleanSupplier fence = () -> service == bound && voiceAdmissionAllowed(target)
                 && admissionFence.getAsBoolean();
-        dev.openallay.model.ModelMessage input = dev.openallay.model.ModelMessage.userInput(text, List.of(),
+        dev.openallay.model.ModelMessage input = dev.openallay.model.ModelMessage.userInput(text, dev.openallay.util.Java8Collections.listOf(),
                 observation == null ? Optional.empty() : observation.anchor());
         return service.followUp(target.sessionId(), target.sessionOwner(), input, fence).thenApply(result -> {
             final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.GuideService.InputReceipt> value; dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt> bound; }

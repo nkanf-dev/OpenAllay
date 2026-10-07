@@ -118,13 +118,13 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 .normalize();
         this.repository = Objects.requireNonNull(repository, "repository");
         this.parser = Objects.requireNonNull(parser, "parser");
-        this.bundledSources = List.copyOf(bundledSources);
-        this.installedMods = Set.copyOf(installedMods);
+        this.bundledSources = dev.openallay.util.Java8Collections.listCopyOf(bundledSources);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
         this.localLoader = Objects.requireNonNull(localLoader, "localLoader");
         this.store = new SkillSettingsStore(this.localRoot, parser);
         this.communityCatalog = communityCatalog;
         this.installer = Objects.requireNonNull(installer, "installer");
-        if (minecraftVersion == null || minecraftVersion.isBlank()) {
+        if (minecraftVersion == null || dev.openallay.util.Java8Strings.isBlank(minecraftVersion)) {
             throw new IllegalArgumentException("minecraftVersion must not be blank");
         }
         this.minecraftVersion = minecraftVersion;
@@ -249,7 +249,7 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
         if (selected == null) {
             return new ToolResult.Failure<>("skill_not_found", "The selected Skill is unavailable");
         }
-        if (markdown == null || markdown.isBlank()) {
+        if (markdown == null || dev.openallay.util.Java8Strings.isBlank(markdown)) {
             return new ToolResult.Failure<>("skill_override_invalid", "Skill Markdown must not be blank");
         }
 
@@ -338,10 +338,10 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
 
     private SkillCommunityView buildCommunity(Optional<SkillCommunityView.Notice> notice) {
         if (communityCatalog == null || communityCatalog.current().isEmpty()) {
-            return new SkillCommunityView(false, Optional.empty(), List.of(), notice);
+            return new SkillCommunityView(false, Optional.empty(), dev.openallay.util.Java8Collections.listOf(), notice);
         }
         CommunityCatalogManifest catalog = communityCatalog.current().orElseThrow();
-        List<SkillCommunityView.Package> packages = catalog.packages().stream().map(entry -> {
+        List<SkillCommunityView.Package> packages = dev.openallay.util.Java8Collections.toList(catalog.packages().stream().map(entry -> {
             Optional<String> installedVersion = current.find(entry.id())
                     .flatMap(skill -> Optional.ofNullable(
                             skill.metadata().attributes().get("openallay/version")));
@@ -349,7 +349,7 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
             boolean compatible = compatible(entry);
             return SkillCommunityView.Package.from(
                     entry, installed, installedVersion, compatible);
-        }).toList();
+        }));
         return new SkillCommunityView(
                 true, Optional.of(catalog.generatedAt()), packages, notice);
     }
@@ -407,7 +407,7 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
         List<SkillSettingsView.Skill> skills = new ArrayList<>();
         for (dev.openallay.skill.SkillMetadata metadata : repository.metadata()) {
             SkillDocument document = repository.find(metadata.name()).orElseThrow();
-            String markdown = parsedSources.getOrDefault(metadata.name(), List.of()).stream()
+            String markdown = parsedSources.getOrDefault(metadata.name(), dev.openallay.util.Java8Collections.listOf()).stream()
                     .filter(parsed -> parsed.document().metadata().origin() == metadata.origin())
                     .filter(parsed -> sameContent(parsed.document(), document))
                     .map(parsed -> entryMarkdown(parsed.source()))
@@ -502,7 +502,7 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
 
     private static String entryMarkdown(SkillSource source) {
         String markdown = source.files().get(source.entryPath());
-        if (markdown == null || markdown.isBlank()) {
+        if (markdown == null || dev.openallay.util.Java8Strings.isBlank(markdown)) {
             throw new IllegalStateException("Skill entry Markdown is unavailable");
         }
         return markdown;
@@ -513,7 +513,7 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
         String detail = failure.getMessage();
         return new ToolResult.Failure<>(
                 code,
-                detail == null || detail.isBlank() ? message : message + ": " + detail);
+                detail == null || dev.openallay.util.Java8Strings.isBlank(detail) ? message : message + ": " + detail);
     }
 
     @dev.openallay.value.ValueType(ParsedSource.ValueSchemaProvider.class)

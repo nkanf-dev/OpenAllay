@@ -14,7 +14,7 @@ public final class UiSettingsProjection {
     public UiSettingsProjection(GuideUiConfig config, boolean animationsEnabled, List<Group> groups) {
 
         Objects.requireNonNull(config, "config");
-        groups = List.copyOf(groups);
+        groups = dev.openallay.util.Java8Collections.listCopyOf(groups);
 
         this.config = config;
         this.animationsEnabled = animationsEnabled;
@@ -31,7 +31,7 @@ public enum Group {
     }
 public static UiSettingsProjection from(GuideDisplayConfig display) {
         Objects.requireNonNull(display, "display");
-        return new UiSettingsProjection(display.ui(), display.animationsEnabled(), List.of(Group.values()));
+        return new UiSettingsProjection(display.ui(), display.animationsEnabled(), dev.openallay.util.Java8Collections.listOf(Group.values()));
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

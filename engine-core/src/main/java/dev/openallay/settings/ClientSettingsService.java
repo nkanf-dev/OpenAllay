@@ -365,7 +365,7 @@ public static final class ModelState {
     public ModelState(ModelProfilesConfig config, List<ModelProfileSettingsView.Resolution> profiles) {
 
             Objects.requireNonNull(config, "config");
-            profiles = List.copyOf(profiles);
+            profiles = dev.openallay.util.Java8Collections.listCopyOf(profiles);
             if (profiles.size() != config.profiles().size()) {
                 throw new IllegalArgumentException("every configured profile needs a resolution");
             }
@@ -475,7 +475,7 @@ public static final class PreparedModels {
     private long modelGeneration;
     private long metadataGeneration;
     private boolean metadataReconciliationPending;
-    private Map<ModelMetadata.Key, ModelMetadata> metadata = Map.of();
+    private Map<ModelMetadata.Key, ModelMetadata> metadata = dev.openallay.util.Java8Collections.mapOf();
     private GuideFailure metadataFailure;
     private ModelConnectionResult connectionResult;
     private SettingsOperation operation = SettingsOperation.idle();
@@ -1535,7 +1535,7 @@ if ((($oaPattern3_holder.value = completed) instanceof dev.openallay.tool.ToolRe
         try {
             refresh = metadataActions.refresh();
         } catch (RuntimeException failure) {
-            refresh = CompletableFuture.failedFuture(failure);
+            refresh = dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         refresh.whenComplete((ignored, failure) -> dispatcher.execute(() -> {
             synchronized (lock) {
@@ -1659,7 +1659,7 @@ if ((($oaPattern3_holder.value = completed) instanceof dev.openallay.tool.ToolRe
             if (closed) {
                 return;
             }
-            metadata = Map.copyOf(update.entries());
+            metadata = dev.openallay.util.Java8Collections.mapCopyOf(update.entries());
             metadataFailure = update.failure();
             expectedMetadataGeneration = ++metadataGeneration;
             expectedGeneration = modelGeneration;
@@ -2227,7 +2227,7 @@ ToolResult.Failure<Boolean> failure =
             Map<ModelMetadata.Key, ModelMetadata> entries) {
         worker.execute(() -> {
             ToolResult<PreparedModels> prepared = safely(
-                    () -> models.prepare(config, Map.copyOf(entries)),
+                    () -> models.prepare(config, dev.openallay.util.Java8Collections.mapCopyOf(entries)),
                     "metadata_unavailable",
                     "Model metadata reconciliation is unavailable");
             dispatcher.execute(() -> finishMetadataReconciliation(
@@ -2407,11 +2407,11 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
                                 historyState.guide(),
                                 historyState.activity(),
                                 historyState.scopeKind(),
-                                sourceState.sources().stream().map(source ->
+                                dev.openallay.util.Java8Collections.toList(sourceState.sources().stream().map(source ->
                                         new SettingsDiagnosticsAggregator.SourceStatus(
                                                 source.sourceId(), source.generation(),
                                                 SettingsDiagnosticsAggregator.SourceState.valueOf(source.state().name()),
-                                                source.itemCount(), source.failureCode())).toList(),
+                                                source.itemCount(), source.failureCode()))),
                                 sourceState.loaded(),
                                 sourceState.retained(),
                                 historyState.estimatedContextTokens())),

@@ -17,9 +17,8 @@ public final class SkillCommunityView {
     public SkillCommunityView(boolean available, Optional<Instant> generatedAt, List<Package> packages, Optional<Notice> notice) {
 
         generatedAt = Objects.requireNonNull(generatedAt, "generatedAt");
-        packages = List.copyOf(packages).stream()
-                .sorted(Comparator.comparing(Package::id))
-                .toList();
+        packages = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(packages).stream()
+                .sorted(Comparator.comparing(Package::id)));
         notice = Objects.requireNonNull(notice, "notice");
 
         this.available = available;
@@ -32,7 +31,7 @@ public final class SkillCommunityView {
     public List<Package> packages() { return packages; }
     public Optional<Notice> notice() { return notice; }
 public static SkillCommunityView unavailable() {
-        return new SkillCommunityView(false, Optional.empty(), List.of(), Optional.empty());
+        return new SkillCommunityView(false, Optional.empty(), dev.openallay.util.Java8Collections.listOf(), Optional.empty());
     }
 @dev.openallay.value.ValueType(Package.ValueSchemaProvider.class)
 public static final class Package {
@@ -165,7 +164,7 @@ public static final class Notice {
     }
 }
 private static void require(String value, String label) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " must not be blank");
         }
     }

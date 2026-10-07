@@ -159,8 +159,8 @@ if ((($oaPattern5_holder.value = resolved) instanceof dev.openallay.tool.ToolRes
         Set<String> disabled = new HashSet<>(policy.disabledTools());
         disabled.addAll(policy.disabledSkills());
         Set<String> unavailable = product.platform().isModLoaded("ftbquests")
-                ? Set.of()
-                : Set.of("ftbquests");
+                ? dev.openallay.util.Java8Collections.setOf()
+                : dev.openallay.util.Java8Collections.setOf("ftbquests");
         return new CapabilitySettingsView(
                 policy,
                 product.capabilitySettings().snapshot(

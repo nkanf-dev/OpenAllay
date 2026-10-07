@@ -166,7 +166,7 @@ toolExecutor = extension == null
                 ? local
                 : (($oaPattern0_holder.value = extension) instanceof dev.openallay.bridge.client.RemoteToolExecutor && (($oaPattern0_holder.bound = (RemoteToolExecutor) $oaPattern0_holder.value) != null))
                         ? new ClientPlacedToolExecutor(local, $oaPattern0_holder.bound)
-                        : new CompositeAgentToolExecutor(List.of(local, extension));
+                        : new CompositeAgentToolExecutor(dev.openallay.util.Java8Collections.listOf(local, extension));
         agent = new GameGuideAgent(
                 endpoint.scheduler(), toolExecutor, sessions, gson, endpoint.compactor(),
                 (request, tokens) -> {
@@ -180,10 +180,9 @@ toolExecutor = extension == null
                                             endpoint.contextBudget(), endpoint.contextBudget() == null
                                                     ? null : endpoint.modelIdentifier(),
                                             endpoint.estimator().imageAccounting(
-                                                    java.util.stream.Stream.concat(
+                                                    dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(
                                                             sessions.history(request.sessionKey()).stream(),
-                                                            java.util.stream.Stream.of(request.userInput()))
-                                                            .toList())));
+                                                            java.util.stream.Stream.of(request.userInput()))))));
                         }
                     }
                 });
@@ -244,9 +243,9 @@ toolExecutor = extension == null
         ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true, true));
         ContextTokenEstimator estimator = endpoint.estimator();
         int promptAndTools = Math.max(
-                estimator.estimate(budgetSystemPrompt(systemPrompt()), List.of(), toolExecutor.definitions()),
+                estimator.estimate(budgetSystemPrompt(systemPrompt()), dev.openallay.util.Java8Collections.listOf(), toolExecutor.definitions()),
                 estimator.estimate(enabled.budgetSystemPrompt(enabled.systemPrompt(true, true)),
-                        List.of(), enabled.toolExecutor.definitions()));
+                        dev.openallay.util.Java8Collections.listOf(), enabled.toolExecutor.definitions()));
         if (promptAndTools >= endpoint.contextBudget().inputTokens()) {
             return Optional.empty();
         }
@@ -261,10 +260,10 @@ toolExecutor = extension == null
         dev.openallay.skill.RetainedSkillContext retained = new dev.openallay.skill.RetainedSkillContext();
         String correlation = "context-budget-" + UUID.randomUUID();
         captured.prepareSystem(system, retained);
-        captured.prepareContext(correlation, List.of(), retained);
+        captured.prepareContext(correlation, dev.openallay.util.Java8Collections.listOf(), retained);
         try {
             String facts = captured.skillManifest(correlation);
-            return facts.isBlank() ? system : system + "\n" + facts;
+            return dev.openallay.util.Java8Strings.isBlank(facts) ? system : system + "\n" + facts;
         } finally {
             captured.closeSkillContext(correlation);
         }
@@ -341,7 +340,7 @@ if ((($oaPattern1_holder.value = reservation) instanceof dev.openallay.tool.Tool
                         "The selected model has no confirmed image input support"));
             }
             ContextCompactor compactor = endpoint.compactor();
-            List<dev.openallay.model.ModelToolDefinition> definitions = List.copyOf(capturedTools.definitions());
+            List<dev.openallay.model.ModelToolDefinition> definitions = dev.openallay.util.Java8Collections.listCopyOf(capturedTools.definitions());
             // This index is private to preparation. It never touches the session's retained facts.
             RetainedSkillContext retained = new RetainedSkillContext();
             String system = capturedTools.skillSystemPrompt(captured.systemPrompt(
@@ -353,7 +352,7 @@ if ((($oaPattern1_holder.value = reservation) instanceof dev.openallay.tool.Tool
                 lease.cancellation().throwIfCancelled();
                 capturedTools.prepareContext(scope.correlationId, candidate, retained);
                 String facts = capturedTools.skillManifest(scope.correlationId);
-                return facts.isBlank() ? system : system + "\n" + facts;
+                return dev.openallay.util.Java8Strings.isBlank(facts) ? system : system + "\n" + facts;
             };
             int before = compactor.estimateTokens(prompt.apply(source), source, definitions);
             if (source.isEmpty()) {
@@ -511,7 +510,7 @@ if ((($oaPattern5_holder.value = event) instanceof dev.openallay.model.ModelEven
                 GuideCompactResult outcome, List<ModelMessage> projection) {
             this.scope = scope;
             this.outcome = outcome;
-            this.projection = List.copyOf(projection);
+            this.projection = dev.openallay.util.Java8Collections.listCopyOf(projection);
         }
 
         @Override public GuideCompactResult outcome() { return outcome; }
@@ -634,10 +633,10 @@ if ((($oaPattern5_holder.value = event) instanceof dev.openallay.model.ModelEven
 
 
     public List<String> sessions(UUID actor) {
-        java.util.TreeSet<String> ids = new java.util.TreeSet<>(sessions.sessions(actor).stream()
-                .map(AgentSessionKey::sessionId).toList());
+        java.util.TreeSet<String> ids = new java.util.TreeSet<>(dev.openallay.util.Java8Collections.toList(sessions.sessions(actor).stream()
+                .map(AgentSessionKey::sessionId)));
         ids.add(selectedSession(actor));
-        return List.copyOf(ids);
+        return dev.openallay.util.Java8Collections.listCopyOf(ids);
     }
 
     public boolean closeSession(UUID actor, String sessionId) {

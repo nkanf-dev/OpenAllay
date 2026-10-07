@@ -28,12 +28,11 @@ public final class ExtensionSettingsView {
     private final Catalog catalog;
     public ExtensionSettingsView(List<Root> roots, List<String> bundledModules, List<Adapter> adapters, List<Extension> extensions, Catalog catalog) {
 
-        roots = List.copyOf(roots);
-        bundledModules = List.copyOf(bundledModules);
-        adapters = List.copyOf(adapters);
-        extensions = List.copyOf(extensions).stream()
-                .sorted(Comparator.comparing(Extension::id))
-                .toList();
+        roots = dev.openallay.util.Java8Collections.listCopyOf(roots);
+        bundledModules = dev.openallay.util.Java8Collections.listCopyOf(bundledModules);
+        adapters = dev.openallay.util.Java8Collections.listCopyOf(adapters);
+        extensions = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(extensions).stream()
+                .sorted(Comparator.comparing(Extension::id)));
         Objects.requireNonNull(catalog, "catalog");
 
         this.roots = roots;
@@ -62,15 +61,13 @@ public static ExtensionSettingsView from(
             OpenAllayExtensionRegistry extensionRegistry) {
         Objects.requireNonNull(registry, "registry");
         HostSchemaCatalog catalog = MinecraftAgentHostGraph.declaredOnlyCatalog();
-        List<Root> roots = catalog.list().stream()
+        List<Root> roots = dev.openallay.util.Java8Collections.toList(catalog.list().stream()
                 .map(summary -> Root.from(catalog, summary))
-                .sorted(Comparator.comparing(Root::name))
-                .toList();
-        List<String> modules = JavascriptModuleCatalog.bundledIds().stream().sorted().toList();
-        List<Adapter> adapters = registry.descriptors().stream()
+                .sorted(Comparator.comparing(Root::name)));
+        List<String> modules = dev.openallay.util.Java8Collections.toList(JavascriptModuleCatalog.bundledIds().stream().sorted());
+        List<Adapter> adapters = dev.openallay.util.Java8Collections.toList(registry.descriptors().stream()
                 .map(Adapter::from)
-                .sorted(Comparator.comparing(Adapter::id))
-                .toList();
+                .sorted(Comparator.comparing(Adapter::id)));
         List<Extension> extensions = new java.util.ArrayList<>();
         extensions.add(core(roots, modules, adapters));
         if (extensionRegistry != null) {
@@ -324,15 +321,15 @@ public static final class PackageInfo {
                 throw new IllegalArgumentException(
                         "Local Extensions cannot expose catalog actions or artifacts");
             }
-            if (catalogListed && availableVersion.isBlank()) {
+            if (catalogListed && dev.openallay.util.Java8Strings.isBlank(availableVersion)) {
                 throw new IllegalArgumentException(
                         "Catalog Extensions require an available version");
             }
-            if (catalogListed && artifact.isBlank() != sha256.isBlank()) {
+            if (catalogListed && dev.openallay.util.Java8Strings.isBlank(artifact) != dev.openallay.util.Java8Strings.isBlank(sha256)) {
                 throw new IllegalArgumentException(
                         "Catalog Extension artifact metadata must be complete");
             }
-            if (catalogListed && installable && artifact.isBlank()) {
+            if (catalogListed && installable && dev.openallay.util.Java8Strings.isBlank(artifact)) {
                 throw new IllegalArgumentException(
                         "Installable catalog Extensions require an artifact");
             }
@@ -345,7 +342,7 @@ public static final class PackageInfo {
                         "Extension package SHA-256 must be lowercase hexadecimal");
             }
             if (!catalogListed
-                    && (availableVersion.isBlank() != sha256.isBlank())) {
+                    && (dev.openallay.util.Java8Strings.isBlank(availableVersion) != dev.openallay.util.Java8Strings.isBlank(sha256))) {
                 throw new IllegalArgumentException(
                         "Local Extension package metadata must be complete");
             }
@@ -429,7 +426,7 @@ public static final class Contributions {
 public Contributions(
                 List<String> roots, List<String> dataModules, List<String> javascriptModules,
                 List<String> skills, List<String> resultViews) {
-            this(roots, dataModules, javascriptModules, skills, resultViews, List.of());
+            this(roots, dataModules, javascriptModules, skills, resultViews, dev.openallay.util.Java8Collections.listOf());
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -565,12 +562,12 @@ private static Extension from(
                     descriptor.provider(),
                     descriptor.summary(),
                     State.ACTIVE,
-                    descriptor.loaders().stream().toList(),
+                    dev.openallay.util.Java8Collections.toList(descriptor.loaders().stream()),
                     descriptor.minecraftVersionRange(),
                     descriptor.openAllayApiVersionRange(),
                     descriptor.source(),
                     new Contributions(
-                            List.of(),
+                            dev.openallay.util.Java8Collections.listOf(),
                             extension.dataModules(),
                             extension.javascriptModules(),
                             extension.skills(),
@@ -629,24 +626,24 @@ private static Extension core(
                 "OpenAllay",
                 "Built-in JavaScript runtime, host roots, and typed result views.",
                 State.ACTIVE,
-                List.of("fabric", "neoforge"),
+                dev.openallay.util.Java8Collections.listOf("fabric", "neoforge"),
                 "[26.2,26.3)",
                 "[0.2,0.3)",
                 "bundled",
                 new Contributions(
-                        roots.stream().map(Root::name).toList(),
-                        adapters.stream().map(Adapter::id).toList(),
+                        dev.openallay.util.Java8Collections.toList(roots.stream().map(Root::name)),
+                        dev.openallay.util.Java8Collections.toList(adapters.stream().map(Adapter::id)),
                         modules,
-                        List.of(),
-                        List.of("openallay:recipe", "openallay:item", "openallay:table")),
+                        dev.openallay.util.Java8Collections.listOf(),
+                        dev.openallay.util.Java8Collections.listOf("openallay:recipe", "openallay:item", "openallay:table")),
                 "",
                 PackageInfo.none());
     }
 private static List<String> sorted(List<String> values) {
-        return List.copyOf(values).stream().sorted().toList();
+        return dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(values).stream().sorted());
     }
 private static String require(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
         return value;

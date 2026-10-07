@@ -19,7 +19,7 @@ public final class RecipeSettingsProjection {
     private final int retainedUnknownCount;
     public RecipeSettingsProjection(List<SourceRow> sources, RecipeClientConfig config, boolean preferredViewerAvailable, int retainedUnknownCount) {
 
-        sources = List.copyOf(sources);
+        sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
         Objects.requireNonNull(config, "config");
         if (retainedUnknownCount < 0) {
             throw new IllegalArgumentException("retainedUnknownCount must not be negative");
@@ -36,7 +36,7 @@ public final class RecipeSettingsProjection {
     public int retainedUnknownCount() { return retainedUnknownCount; }
 public static RecipeSettingsProjection from(
             RecipeSettingsView view, RecipeClientConfig draft, boolean debugMode) {
-        List<SourceRow> rows = view.sources().stream()
+        List<SourceRow> rows = dev.openallay.util.Java8Collections.toList(view.sources().stream()
                 .map(source -> new SourceRow(
                         source.id(),
                         sourceTitleKey(source.id()),
@@ -44,8 +44,7 @@ public static RecipeSettingsProjection from(
                         !draft.disabledSources().contains(source.id()),
                         source.viewer(),
                         source.exactNavigation(),
-                        debugMode ? source.id() : null))
-                .toList();
+                        debugMode ? source.id() : null)));
         boolean preferredAvailable = RecipeClientConfig.AUTO.equals(draft.preferredViewer())
                 || rows.stream().anyMatch(row -> row.viewer()
                         && row.available()

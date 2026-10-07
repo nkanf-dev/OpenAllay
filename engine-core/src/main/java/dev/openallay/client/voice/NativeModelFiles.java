@@ -69,7 +69,7 @@ public static final class Model {
     private final ModelFamily family;
     private final List<ModelFile> files;
     public Model(String name, ModelFamily family, List<ModelFile> files) {
- files = List.copyOf(files);
+ files = dev.openallay.util.Java8Collections.listCopyOf(files);
         this.name = name;
         this.family = family;
         this.files = files;
@@ -138,9 +138,9 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
             JsonElement element = dev.openallay.json.JsonTrees.parse(json);
             if (!element.isJsonObject()) throw new IllegalArgumentException();
             JsonObject root = element.getAsJsonObject();
-            exactKeys(root, Set.of("name", "family", "files"));
+            exactKeys(root, dev.openallay.util.Java8Collections.setOf("name", "family", "files"));
             String name = string(root, "name");
-            if (name.isBlank() || name.length() > 100 || name.chars().anyMatch(c -> c < 32)) throw new IllegalArgumentException();
+            if (dev.openallay.util.Java8Strings.isBlank(name) || name.length() > 100 || name.chars().anyMatch(c -> c < 32)) throw new IllegalArgumentException();
             ModelFamily family = ModelFamily.valueOf(string(root, "family"));
             JsonArray entries = root.getAsJsonArray("files");
             if (entries.size() < 2 || entries.size() > 3) throw new IllegalArgumentException();
@@ -150,7 +150,7 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
             long total = 0;
             for (JsonElement entry : entries) {
                 JsonObject file = entry.getAsJsonObject();
-                exactKeys(file, Set.of("role", "path", "bytes", "sha256"));
+                exactKeys(file, dev.openallay.util.Java8Collections.setOf("role", "path", "bytes", "sha256"));
                 Role role = Role.valueOf(string(file, "role"));
                 String path = string(file, "path");
                 // One simple filename avoids traversal, drive names, symlink ancestors and archives.
@@ -167,9 +167,9 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
                 files.add(new ModelFile(role, path, bytes, hash));
             }
             Set<Role> required = switch (family) {
-                case SENSE_VOICE -> Set.of(Role.TOKENS, Role.SENSE_VOICE_MODEL);
-                case PARA_FORMER -> Set.of(Role.TOKENS, Role.PARA_FORMER_MODEL);
-                case WHISPER -> Set.of(Role.TOKENS, Role.WHISPER_ENCODER, Role.WHISPER_DECODER);
+                case SENSE_VOICE -> dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.SENSE_VOICE_MODEL);
+                case PARA_FORMER -> dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.PARA_FORMER_MODEL);
+                case WHISPER -> dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.WHISPER_ENCODER, Role.WHISPER_DECODER);
             };
             if (!roles.equals(required) || total > MAX_TOTAL_BYTES) throw new IllegalArgumentException();
             return new Model(name, family, files);
@@ -236,7 +236,7 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
                 digest.update(buffer, 0, length);
             }
             cancellation.check();
-            if (count != bytes || !HexFormat.of().formatHex(digest.digest()).equals(sha256)) {
+            if (count != bytes || !dev.openallay.util.Java8Hex.formatHex(digest.digest()).equals(sha256)) {
                 throw new NativeSpeechToText.Failure("model_integrity");
             }
         } catch (NativeSpeechToText.Failure failure) { throw failure;

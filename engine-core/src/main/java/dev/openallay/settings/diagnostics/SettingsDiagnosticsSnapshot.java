@@ -20,7 +20,7 @@ public final class SettingsDiagnosticsSnapshot {
     private final Optional<DebugSettingsDiagnostics> debug;
     public SettingsDiagnosticsSnapshot(List<SettingsDiagnosticCard> cards, Optional<DebugSettingsDiagnostics> debug) {
 
-        cards = List.copyOf(cards);
+        cards = dev.openallay.util.Java8Collections.listCopyOf(cards);
         debug = Objects.requireNonNull(debug, "debug");
 
         this.cards = cards;
@@ -43,11 +43,11 @@ public static final class DebugSettingsDiagnostics {
             if (settingsGeneration < 0) {
                 throw new IllegalArgumentException("debug generation is invalid");
             }
-            models = List.copyOf(models);
+            models = dev.openallay.util.Java8Collections.listCopyOf(models);
             Objects.requireNonNull(capabilities, "capabilities");
             guide = Objects.requireNonNull(guide, "guide");
-            sources = List.copyOf(sources);
-            failureCodes = List.copyOf(failureCodes);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
+            failureCodes = dev.openallay.util.Java8Collections.listCopyOf(failureCodes);
             failureCodes.forEach(code -> requireTechnical(code, "failureCode"));
 
         this.settingsGeneration = settingsGeneration;

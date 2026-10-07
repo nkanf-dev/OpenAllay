@@ -20,7 +20,7 @@ public final class CapabilitySettingsProjection {
     private final int retainedUnknownCount;
     public CapabilitySettingsProjection(List<Card> cards, CapabilityPolicy policy, int retainedUnknownCount) {
 
-        cards = List.copyOf(cards);
+        cards = dev.openallay.util.Java8Collections.listCopyOf(cards);
         Objects.requireNonNull(policy, "policy");
         if (retainedUnknownCount < 0) {
             throw new IllegalArgumentException("retainedUnknownCount must not be negative");
@@ -84,7 +84,7 @@ public ToolResult<CapabilityPolicy> toggle(String actionId) {
     }
 public List<Card> cards(CapabilityKind kind) {
         Objects.requireNonNull(kind, "kind");
-        return cards.stream().filter(card -> card.kind() == kind).toList();
+        return dev.openallay.util.Java8Collections.toList(cards.stream().filter(card -> card.kind() == kind));
     }
 public CapabilityChildPage route(String actionId) {
         return cards.stream()

@@ -387,8 +387,7 @@ if ((($oaPattern3_holder.value = failure) instanceof dev.openallay.client.voice.
 final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
 if ((($oaPattern4_holder.value = failure) instanceof dev.openallay.client.voice.NativeSpeechToText.Failure && (($oaPattern4_holder.bound = (NativeSpeechToText.Failure) $oaPattern4_holder.value) != null))) return $oaPattern4_holder.bound.code();
         String message = failure.getMessage();
-        return message != null && java.util.Set.of("empty_audio", "device_broken", "microphone_denied", "microphone_launcher_unprepared",
-                "microphone_permission_unavailable", "model_not_installed").contains(message) ? message : "voice_failed";
+        return message != null && dev.openallay.util.Java8Collections.setOf("empty_audio", "device_broken", "microphone_denied", "microphone_launcher_unprepared", "microphone_permission_unavailable", "model_not_installed").contains(message) ? message : "voice_failed";
     }
     private long elapsed(Operation op) { return Math.max(0, (nanoTime.getAsLong() - op.started) / 1_000_000L); }
     private void setStatus(State state, String code, long maximum, String source, SpeechToText.Usage usage) {

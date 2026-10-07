@@ -75,7 +75,7 @@ public final class RequirementSettingsEnvironment {
     /** Only disabled entries with a known persistent owner can be offered as exact changes. */
     public static List<RequirementChange> changes(
             RequirementReport report, CapabilitySettingsView capabilities) {
-        return report.entries().stream()
+        return dev.openallay.util.Java8Collections.toList(report.entries().stream()
                 .filter(entry -> entry.status() == RequirementStatus.DISABLED)
                 .filter(entry -> entry.kind() == RequirementKind.SKILL
                         ? capabilities.policy().disabledSkills().contains(entry.id())
@@ -84,8 +84,7 @@ public final class RequirementSettingsEnvironment {
                                     || entry.id().equals(EXPERIMENTAL_COMMANDS)
                                     || capabilities.policy().disabledTools().contains(entry.id())))
                 .map(entry -> new RequirementChange(entry.kind(), entry.id(),
-                        isUnrestrictedJavascript(entry.id())))
-                .toList();
+                        isUnrestrictedJavascript(entry.id()))));
     }
 
     /** Two reviewed declarations, one persistent setting owner; no generic ID normalization. */

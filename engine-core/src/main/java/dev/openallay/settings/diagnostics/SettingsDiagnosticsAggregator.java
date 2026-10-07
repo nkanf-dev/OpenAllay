@@ -64,7 +64,7 @@ public static final class SourceStatus {
                 throw new IllegalArgumentException("source item count must not be negative");
             }
             if ((state == SourceState.AVAILABLE || state == SourceState.PARTIAL)
-                    && (generation == null || generation.isBlank())) {
+                    && (generation == null || dev.openallay.util.Java8Strings.isBlank(generation))) {
                 throw new IllegalArgumentException("available source requires a generation");
             }
             if ((state == SourceState.UNAVAILABLE || state == SourceState.FAILED)
@@ -138,7 +138,7 @@ public static final class DiagnosticsInputs {
             guide = Objects.requireNonNull(guide, "guide");
             Objects.requireNonNull(historyActivity, "historyActivity");
             Objects.requireNonNull(historyScopeKind, "historyScopeKind");
-            sources = List.copyOf(sources);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
             if (estimatedContextTokens != null && estimatedContextTokens < 0) {
                 throw new IllegalArgumentException("Context estimate must not be negative");
             }
@@ -214,11 +214,7 @@ public DiagnosticsInputs(
             boolean debugMode, DiagnosticsInputs inputs) {
         Objects.requireNonNull(inputs, "inputs");
         GuideSummary guide = summarizeGuide(inputs.guide());
-        List<SettingsDiagnosticCard> cards = List.of(
-                modelCard(inputs.models()),
-                knowledgeCard(inputs),
-                historyCard(inputs, guide),
-                contextCard(inputs, guide));
+        List<SettingsDiagnosticCard> cards = dev.openallay.util.Java8Collections.listOf(modelCard(inputs.models()), knowledgeCard(inputs), historyCard(inputs, guide), contextCard(inputs, guide));
         Optional<DebugSettingsDiagnostics> debug = debugMode
                 ? Optional.of(debug(inputs, guide))
                 : Optional.empty();
@@ -227,17 +223,14 @@ public DiagnosticsInputs(
 
     private static SettingsDiagnosticCard modelCard(ModelProfileSettingsView models) {
         int total = models.profiles().size();
-        int available = count(models.profiles().stream().map(
-                ModelProfileSettingsView.Profile::available).toList());
-        int credentials = count(models.profiles().stream().map(
-                ModelProfileSettingsView.Profile::credentialPresent).toList());
+        int available = count(dev.openallay.util.Java8Collections.toList(models.profiles().stream().map(
+                ModelProfileSettingsView.Profile::available)));
+        int credentials = count(dev.openallay.util.Java8Collections.toList(models.profiles().stream().map(
+                ModelProfileSettingsView.Profile::credentialPresent)));
         FriendlyStatus status = total == 0 || available == 0
                 ? FriendlyStatus.UNAVAILABLE
                 : available < total ? FriendlyStatus.ATTENTION : FriendlyStatus.READY;
-        return card(Domain.MODELS, status, List.of(
-                metric("screen.openallay.settings.diagnostics.metric.configured", total),
-                metric("screen.openallay.settings.diagnostics.metric.available", available),
-                metric("screen.openallay.settings.diagnostics.metric.credentials", credentials)));
+        return card(Domain.MODELS, status, dev.openallay.util.Java8Collections.listOf(metric("screen.openallay.settings.diagnostics.metric.configured", total), metric("screen.openallay.settings.diagnostics.metric.available", available), metric("screen.openallay.settings.diagnostics.metric.credentials", credentials)));
     }
 
     private static SettingsDiagnosticCard knowledgeCard(DiagnosticsInputs inputs) {
@@ -257,15 +250,11 @@ public DiagnosticsInputs(
                 : inputs.sourcesKnown() && !degraded && enabled + availableSources == total
                         ? FriendlyStatus.READY : FriendlyStatus.ATTENTION;
         List<String> notes = !inputs.sourcesKnown()
-                ? List.of("screen.openallay.settings.diagnostics.knowledge.not_observed")
+                ? dev.openallay.util.Java8Collections.listOf("screen.openallay.settings.diagnostics.knowledge.not_observed")
                 : inputs.sourcesRetained()
-                        ? List.of("screen.openallay.settings.diagnostics.knowledge.retained") : List.of();
-        return card(Domain.KNOWLEDGE, status, notes, List.of(
-                metric("screen.openallay.settings.diagnostics.metric.registered", catalog),
-                metric("screen.openallay.settings.diagnostics.metric.enabled", enabled),
-                optionalMetric("screen.openallay.settings.diagnostics.metric.sources",
-                        inputs.sourcesKnown() ? Long.valueOf(sources.size()) : null),
-                optionalMetric("screen.openallay.settings.diagnostics.metric.available_sources",
+                        ? dev.openallay.util.Java8Collections.listOf("screen.openallay.settings.diagnostics.knowledge.retained") : dev.openallay.util.Java8Collections.listOf();
+        return card(Domain.KNOWLEDGE, status, notes, dev.openallay.util.Java8Collections.listOf(metric("screen.openallay.settings.diagnostics.metric.registered", catalog), metric("screen.openallay.settings.diagnostics.metric.enabled", enabled), optionalMetric("screen.openallay.settings.diagnostics.metric.sources",
+                        inputs.sourcesKnown() ? Long.valueOf(sources.size()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.available_sources",
                         inputs.sourcesKnown() ? Long.valueOf(availableSources) : null)));
     }
 
@@ -305,10 +294,8 @@ public DiagnosticsInputs(
                 }
             });
         }
-        return card(Domain.HISTORY, status, notes, List.of(
-                optionalMetric("screen.openallay.settings.diagnostics.metric.pending_writes",
-                        inputs.guide().isPresent() ? Long.valueOf(inputs.historyActivity().pendingWrites()) : null),
-                optionalMetric("screen.openallay.settings.diagnostics.metric.active_requests",
+        return card(Domain.HISTORY, status, notes, dev.openallay.util.Java8Collections.listOf(optionalMetric("screen.openallay.settings.diagnostics.metric.pending_writes",
+                        inputs.guide().isPresent() ? Long.valueOf(inputs.historyActivity().pendingWrites()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.active_requests",
                         inputs.guide().isPresent() ? Long.valueOf(guide.activeRequests()) : null)));
     }
 
@@ -323,21 +310,17 @@ public DiagnosticsInputs(
                                 : FriendlyStatus.READY;
         return card(Domain.CONTEXT, status,
                 guideSnapshot.isPresent()
-                        ? List.of("screen.openallay.settings.diagnostics.context.retained") : List.of(),
-                List.of(
-                        optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoints",
-                                guideSnapshot.isPresent() ? Long.valueOf(guide.checkpointCount()) : null),
-                        optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoint_failures",
-                                guideSnapshot.isPresent() ? Long.valueOf(guide.failedCheckpoints()) : null),
-                        optionalMetric("screen.openallay.settings.diagnostics.metric.estimated_tokens",
+                        ? dev.openallay.util.Java8Collections.listOf("screen.openallay.settings.diagnostics.context.retained") : dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoints",
+                                guideSnapshot.isPresent() ? Long.valueOf(guide.checkpointCount()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoint_failures",
+                                guideSnapshot.isPresent() ? Long.valueOf(guide.failedCheckpoints()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.estimated_tokens",
                                 inputs.estimatedContextTokens())));
     }
 
     private static DebugSettingsDiagnostics debug(
             DiagnosticsInputs inputs, GuideSummary summary) {
-        List<DebugModelProfile> models = inputs.models().profiles().stream()
-                .map(profile -> debugModel(profile))
-                .toList();
+        List<DebugModelProfile> models = dev.openallay.util.Java8Collections.toList(inputs.models().profiles().stream()
+                .map(profile -> debugModel(profile)));
         int catalog = inputs.capabilities().catalog().entries().size();
         DebugCapabilities capabilities = new DebugCapabilities(
                 catalog,
@@ -357,14 +340,13 @@ public DiagnosticsInputs(
                 inputs.capabilities().unknownDisabledTools().size()
                         + inputs.capabilities().unknownDisabledSkills().size()
                         + inputs.recipes().unknownDisabledSources().size());
-        List<DebugSource> sources = inputs.sources().stream()
+        List<DebugSource> sources = dev.openallay.util.Java8Collections.toList(inputs.sources().stream()
                 .map(source -> new DebugSource(
                         source.sourceId(),
                         source.generation(),
                         source.state(),
                         source.itemCount(),
-                        source.failureCode()))
-                .toList();
+                        source.failureCode())));
         return new DebugSettingsDiagnostics(
                 inputs.settingsGeneration(),
                 models,
@@ -471,7 +453,7 @@ if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof 
                 .map(SourceStatus::failureCode)
                 .filter(Objects::nonNull)
                 .forEach(codes::add);
-        return List.copyOf(codes);
+        return dev.openallay.util.Java8Collections.listCopyOf(codes);
     }
 
     private static GuideSummary summarizeGuide(Optional<GuideSnapshot> optional) {
@@ -508,7 +490,7 @@ if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof 
 
     private static SettingsDiagnosticCard card(
             Domain domain, FriendlyStatus status, List<Metric> metrics) {
-        return card(domain, status, List.of(), metrics);
+        return card(domain, status, dev.openallay.util.Java8Collections.listOf(), metrics);
     }
 
     private static SettingsDiagnosticCard card(
@@ -538,7 +520,7 @@ if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof 
 
     private static String authority(URI endpoint) {
         String authority = endpoint.getRawAuthority();
-        if (authority == null || authority.isBlank()) return "https://redacted.invalid";
+        if (authority == null || dev.openallay.util.Java8Strings.isBlank(authority)) return "https://redacted.invalid";
         String candidate = endpoint.getScheme().toLowerCase(Locale.ROOT) + "://" + authority;
         String safe = safe(candidate, "");
         return safe.isEmpty() ? "https://redacted.invalid" : safe;
@@ -557,7 +539,7 @@ if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof 
     }
 
     private static String safe(String value, String fallback) {
-        if (value == null || value.isBlank() || value.length() > 160) return fallback;
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value) || value.length() > 160) return fallback;
         String lower = value.toLowerCase(Locale.ROOT);
         if (lower.contains("authorization")
                 || lower.contains("secret")

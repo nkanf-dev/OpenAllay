@@ -53,8 +53,8 @@ public final class ModelConnectionProbe {
         ModelConfig probeConfig = probeConfig(profile.runtimeConfig());
         ModelRequest request = new ModelRequest(
                 SYSTEM_PROMPT,
-                List.of(ModelMessage.userText("Reply exactly OK.")),
-                List.of(),
+                dev.openallay.util.Java8Collections.listOf(ModelMessage.userText("Reply exactly OK.")),
+                dev.openallay.util.Java8Collections.listOf(),
                 false,
                 "openallay-settings-probe");
         long startedAt = nanoTime.getAsLong();
@@ -71,7 +71,7 @@ public final class ModelConnectionProbe {
             if (cancellation.isCancelled()) {
                 return failure("connection_cancelled");
             }
-            if (turn == null || turn.text().isBlank() || !turn.toolUses().isEmpty()) {
+            if (turn == null || dev.openallay.util.Java8Strings.isBlank(turn.text()) || !turn.toolUses().isEmpty()) {
                 return failure("connection_protocol_failed");
             }
             long elapsedMillis = Math.max(0, (nanoTime.getAsLong() - startedAt) / 1_000_000L);

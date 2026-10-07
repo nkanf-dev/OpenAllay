@@ -15,7 +15,7 @@ public final class DiagnosticsSettingsProjection {
     private final Optional<DebugSection> debug;
     public DiagnosticsSettingsProjection(String titleKey, String narrationKey, List<CardRow> cards, Optional<DebugSection> debug) {
 
-        cards = List.copyOf(cards);
+        cards = dev.openallay.util.Java8Collections.listCopyOf(cards);
         debug = Objects.requireNonNull(debug, "debug");
 
         this.titleKey = titleKey;
@@ -29,7 +29,7 @@ public final class DiagnosticsSettingsProjection {
     public Optional<DebugSection> debug() { return debug; }
 public static DiagnosticsSettingsProjection from(SettingsDiagnosticsSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        List<CardRow> cards = snapshot.cards().stream()
+        List<CardRow> cards = dev.openallay.util.Java8Collections.toList(snapshot.cards().stream()
                 .map(card -> new CardRow(
                         card.domain(),
                         card.titleKey(),
@@ -37,8 +37,7 @@ public static DiagnosticsSettingsProjection from(SettingsDiagnosticsSnapshot sna
                         card.statusKey(),
                         icon(card.friendlyStatus()),
                         card.noteKeys(),
-                        card.metrics()))
-                .toList();
+                        card.metrics())));
         return new DiagnosticsSettingsProjection(
                 "screen.openallay.settings.diagnostics.title",
                 "screen.openallay.settings.diagnostics.narration",
@@ -72,11 +71,11 @@ public static final class CardRow {
             requireKey(titleKey, "titleKey");
             requireKey(statusKey, "statusKey");
             requireKey(statusTextKey, "statusTextKey");
-            if (statusIcon == null || statusIcon.isBlank()) {
+            if (statusIcon == null || dev.openallay.util.Java8Strings.isBlank(statusIcon)) {
                 throw new IllegalArgumentException("statusIcon is required");
             }
-            noteKeys = List.copyOf(noteKeys);
-            metrics = List.copyOf(metrics);
+            noteKeys = dev.openallay.util.Java8Collections.listCopyOf(noteKeys);
+            metrics = dev.openallay.util.Java8Collections.listCopyOf(metrics);
 
         this.domain = domain;
         this.titleKey = titleKey;

@@ -21,7 +21,7 @@ public final class ServerModelSettingsView {
             throw new IllegalArgumentException("Unavailable server model cannot retain image capability");
         }
         if (available) {
-            if (canonicalModelId.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(canonicalModelId)) {
                 throw new IllegalArgumentException("available server model requires an identity");
             }
             if (contextWindowTokens <= 0

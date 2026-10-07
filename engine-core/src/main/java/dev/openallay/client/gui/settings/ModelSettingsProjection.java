@@ -13,7 +13,7 @@ public final class ModelSettingsProjection {
     private final List<ModelCard> models;
     public ModelSettingsProjection(List<ModelCard> models) {
 
-        models = List.copyOf(models);
+        models = dev.openallay.util.Java8Collections.listCopyOf(models);
 
         this.models = models;
     }
@@ -90,7 +90,7 @@ public static final class ModelCard {
             Objects.requireNonNull(model, "model");
             Objects.requireNonNull(origin, "origin");
             Objects.requireNonNull(imageCapability, "imageCapability");
-            if (displayName.isBlank() || model.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(displayName) || dev.openallay.util.Java8Strings.isBlank(model)) {
                 throw new IllegalArgumentException("model identity must not be blank");
             }
             if (origin == Origin.SERVER && (editable || testable || deletable)) {

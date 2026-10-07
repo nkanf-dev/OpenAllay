@@ -261,8 +261,8 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
         java.util.stream.Stream<ImageReference> observed = closed || capture == null || !ownerId.equals(capture.ownerId())
                 || generation != capture.generation() || !session.equals(capture.session()) ? java.util.stream.Stream.empty()
                 : capture.anchor().stream().flatMap(anchor -> anchor.image().stream()).map(view -> view.image());
-        return java.util.stream.Stream.concat(images.attachments(session).stream()
-                .map(ComposerImageDraft.Attachment::reference).filter(Objects::nonNull), observed).distinct().toList();
+        return dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(images.attachments(session).stream()
+                .map(ComposerImageDraft.Attachment::reference).filter(Objects::nonNull), observed).distinct());
     }
 
     private boolean currentObservation(ObservationCapture capture) {
@@ -293,7 +293,7 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
 
     public InsertionResult insertTranscript(Insertion capture, String transcript, ObservationCapture observation) {
         if (closed || capture == null || !ownerId.equals(capture.ownerId)
-                || generation != capture.generation || transcript == null || transcript.isBlank()) {
+                || generation != capture.generation || transcript == null || dev.openallay.util.Java8Strings.isBlank(transcript)) {
             return InsertionResult.REJECTED;
         }
         Draft draft = drafts.get(capture.session);
@@ -315,7 +315,7 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
 
     public boolean retainPendingTranscript(Insertion capture, String transcript, ObservationCapture observation) {
         if (closed || capture == null || !ownerId.equals(capture.ownerId())
-                || generation != capture.generation() || transcript == null || transcript.isBlank()) return false;
+                || generation != capture.generation() || transcript == null || dev.openallay.util.Java8Strings.isBlank(transcript)) return false;
         Draft draft = drafts.get(capture.session());
         if (draft == null) return false;
         draft.pending.add(new PendingInsertion(UUID.randomUUID(), capture.session(), transcript, pendingAnchor(capture, observation)));
@@ -330,7 +330,7 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
     }
 
     public List<PendingInsertion> pendingInsertions(String session) {
-        return closed ? List.of() : List.copyOf(draft(session).pending);
+        return closed ? dev.openallay.util.Java8Collections.listOf() : dev.openallay.util.Java8Collections.listCopyOf(draft(session).pending);
     }
 
     public boolean applyPendingInsertion(UUID id) {
@@ -392,7 +392,7 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
         return drafts.computeIfAbsent(Objects.requireNonNull(session, "session"), ignored -> new Draft());
     }
     private static String append(String existing, String transcript) {
-        return existing.isBlank() ? transcript : existing + (existing.endsWith("\n") ? "" : "\n") + transcript;
+        return dev.openallay.util.Java8Strings.isBlank(existing) ? transcript : existing + (existing.endsWith("\n") ? "" : "\n") + transcript;
     }
     private void imagesChanged(ComposerImageDraft.Notice notice) {
         if (closed) return;
@@ -407,13 +407,13 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
         java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> heldAnchors = observationLeases.values().stream().flatMap(value -> value.anchor().stream());
         java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> pendingAnchors = drafts.values().stream().flatMap(value -> value.pending.stream())
                 .flatMap(value -> value.observation().stream());
-        List<ImageReference> refs = java.util.stream.Stream.concat(images.retainedReferences().stream(),
+        List<ImageReference> refs = dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(images.retainedReferences().stream(),
                 java.util.stream.Stream.concat(java.util.stream.Stream.concat(draftAnchors, heldAnchors), pendingAnchors)
-                        .flatMap(anchor -> anchor.image().stream()).map(view -> view.image())).distinct().toList();
+                        .flatMap(anchor -> anchor.image().stream()).map(view -> view.image())).distinct());
         // Serialize retain updates so a slower old lease update cannot drop a newly added image.
         leaseWork = leaseWork.handle((ignored, failure) -> null).thenCompose(ignored -> retain.apply(refs));
     }
-    private void changed() { List.copyOf(listeners).forEach(Runnable::run); }
+    private void changed() { dev.openallay.util.Java8Collections.listCopyOf(listeners).forEach(Runnable::run); }
 
     @Override public void close() {
         if (closed) return;

@@ -63,10 +63,8 @@ static final class Download {
     private static final String MODEL_BASE = "https://huggingface.co/csukuangfj/"
             + "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/";
     private static final NativeModelFiles.Model DEFAULT_MODEL = new NativeModelFiles.Model("SenseVoice Small INT8",
-            NativeModelFiles.ModelFamily.SENSE_VOICE, List.of(
-                    new NativeModelFiles.ModelFile(NativeModelFiles.Role.SENSE_VOICE_MODEL, "model.int8.onnx", 239233841,
-                            "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51"),
-                    new NativeModelFiles.ModelFile(NativeModelFiles.Role.TOKENS, "tokens.txt", 315894,
+            NativeModelFiles.ModelFamily.SENSE_VOICE, dev.openallay.util.Java8Collections.listOf(new NativeModelFiles.ModelFile(NativeModelFiles.Role.SENSE_VOICE_MODEL, "model.int8.onnx", 239233841,
+                            "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51"), new NativeModelFiles.ModelFile(NativeModelFiles.Role.TOKENS, "tokens.txt", 315894,
                             "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc")));
     private static final String MODEL_LICENSE = """
             FunASR Model Open Source License Agreement
@@ -194,15 +192,15 @@ static final class Download {
     private final boolean installRuntime;
 
     public NativeModelInstaller(Path installRoot) {
-        this(installRoot, DEFAULT_MODEL, DEFAULT_MODEL.files().stream().map(file ->
-                new Download(file.path(), URI.create(MODEL_BASE + file.path()), file.bytes(), file.sha256())).toList(),
+        this(installRoot, DEFAULT_MODEL, dev.openallay.util.Java8Collections.toList(DEFAULT_MODEL.files().stream().map(file ->
+                new Download(file.path(), URI.create(MODEL_BASE + file.path()), file.bytes(), file.sha256()))),
                 NativeModelInstaller::download, true);
     }
     NativeModelInstaller(Path installRoot, NativeModelFiles.Model model, List<Download> downloads,
             Downloader downloader, boolean installRuntime) {
         this.installRoot = Objects.requireNonNull(installRoot).toAbsolutePath().normalize();
         this.model = Objects.requireNonNull(model);
-        this.modelDownloads = List.copyOf(downloads);
+        this.modelDownloads = dev.openallay.util.Java8Collections.listCopyOf(downloads);
         this.downloader = Objects.requireNonNull(downloader);
         this.installRuntime = installRuntime;
     }
@@ -250,10 +248,10 @@ static final class Download {
         Files.createDirectories(installRoot);
         if (!Files.isDirectory(installRoot, LinkOption.NOFOLLOW_LINKS)) throw new IOException("Invalid install directory");
         byte[] manifest = NativeModelFiles.json(model).getBytes(StandardCharsets.UTF_8);
-        String identity = HexFormat.of().formatHex(NativeModelFiles.digest().digest(manifest));
+        String identity = dev.openallay.util.Java8Hex.formatHex(NativeModelFiles.digest().digest(manifest));
         Path destination = installRoot.resolve("model-" + identity);
-        List<Download> runtimeDownloads = installRuntime ? NativeRuntimeCatalog.artifacts().stream().map(artifact ->
-                new Download(artifact.name(), artifact.uri(), artifact.bytes(), artifact.sha256())).toList() : List.of();
+        List<Download> runtimeDownloads = installRuntime ? dev.openallay.util.Java8Collections.toList(NativeRuntimeCatalog.artifacts().stream().map(artifact ->
+                new Download(artifact.name(), artifact.uri(), artifact.bytes(), artifact.sha256()))) : dev.openallay.util.Java8Collections.listOf();
         long total = modelDownloads.stream().mapToLong(Download::bytes).sum()
                 + runtimeDownloads.stream().mapToLong(Download::bytes).sum();
         long[] completed = {0};
@@ -319,7 +317,7 @@ static final class Download {
     private static void deleteStaging(Path staging) {
         if (!Files.exists(staging, LinkOption.NOFOLLOW_LINKS)) return;
         try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(staging)) {
-            for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(entry);
+            for (Path entry : dev.openallay.util.Java8Collections.toList(entries.sorted(Comparator.reverseOrder()))) Files.deleteIfExists(entry);
         } catch (IOException ignored) { /* Never remove an installed model or a world save. */ }
     }
 }

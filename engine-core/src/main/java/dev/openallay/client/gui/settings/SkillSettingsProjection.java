@@ -19,7 +19,7 @@ public final class SkillSettingsProjection {
     private final boolean debugMode;
     public SkillSettingsProjection(List<Skill> skills, Community community, int diagnosticCount, boolean debugMode) {
 
-        skills = List.copyOf(skills);
+        skills = dev.openallay.util.Java8Collections.listCopyOf(skills);
         Objects.requireNonNull(community, "community");
         if (diagnosticCount < 0) {
             throw new IllegalArgumentException("diagnosticCount must not be negative");
@@ -41,7 +41,7 @@ public static SkillSettingsProjection from(
             SkillSettingsView view,
             SkillCommunityView community,
             boolean debugMode) {
-        return from(view, community, new RequirementEnvironment(Map.of(), Map.of(), Map.of()), debugMode);
+        return from(view, community, new RequirementEnvironment(dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.mapOf()), debugMode);
     }
 public static SkillSettingsProjection from(
             SkillSettingsView view,
@@ -51,7 +51,7 @@ public static SkillSettingsProjection from(
         Objects.requireNonNull(view, "view");
         Objects.requireNonNull(community, "community");
         return new SkillSettingsProjection(
-                view.skills().stream().map(skill -> Skill.from(skill, environment)).toList(),
+                dev.openallay.util.Java8Collections.toList(view.skills().stream().map(skill -> Skill.from(skill, environment))),
                 Community.from(community),
                 view.diagnostics().size(),
                 debugMode);
@@ -141,7 +141,7 @@ public static final class Community {
     public Community(boolean available, Optional<Instant> generatedAt, List<Package> packages, Optional<Notice> notice) {
 
             generatedAt = Objects.requireNonNull(generatedAt, "generatedAt");
-            packages = List.copyOf(packages);
+            packages = dev.openallay.util.Java8Collections.listCopyOf(packages);
             notice = Objects.requireNonNull(notice, "notice");
 
         this.available = available;
@@ -157,7 +157,7 @@ static Community from(SkillCommunityView view) {
             return new Community(
                     view.available(),
                     view.generatedAt(),
-                    view.packages().stream().map(Package::from).toList(),
+                    dev.openallay.util.Java8Collections.toList(view.packages().stream().map(Package::from)),
                     view.notice().map(value -> new Notice(value.code(), value.message())));
         }
 public Optional<Package> find(String id) {

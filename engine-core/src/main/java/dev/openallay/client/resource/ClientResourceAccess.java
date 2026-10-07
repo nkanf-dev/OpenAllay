@@ -6,12 +6,12 @@ public interface ClientResourceAccess {
     List<ClientResource> list(String pathPrefix);
 
     default List<ClientResource> selected(String pathPrefix) {
-        return list(pathPrefix).stream().filter(ClientResource::selected).toList();
+        return dev.openallay.util.Java8Collections.toList(list(pathPrefix).stream().filter(ClientResource::selected));
     }
 
     static String validatePrefix(String prefix) {
         if (prefix == null
-                || prefix.isBlank()
+                || dev.openallay.util.Java8Strings.isBlank(prefix)
                 || prefix.startsWith("/")
                 || prefix.contains("\\")
                 || prefix.contains(":")
@@ -20,7 +20,7 @@ public interface ClientResourceAccess {
                 || prefix.contains("/../")) {
             throw new IllegalArgumentException("Invalid asset path prefix: " + prefix);
         }
-        String normalized = java.nio.file.Path.of(prefix).normalize().toString()
+        String normalized = java.nio.file.Paths.get(prefix).normalize().toString()
                 .replace(java.io.File.separatorChar, '/');
         if (!normalized.equals(prefix) && !normalized.equals(prefix.replaceAll("/+$", ""))) {
             throw new IllegalArgumentException("Asset prefix must be normalized: " + prefix);

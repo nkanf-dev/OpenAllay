@@ -39,7 +39,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                     ExtensionCatalogManifest.SCHEMA_VERSION,
                     "extension",
                     java.time.Instant.EPOCH,
-                    List.of());
+                    dev.openallay.util.Java8Collections.listOf());
     private final Map<String, StagedPackage> staged = new TreeMap<>();
     private Optional<ExtensionSettingsView.Notice> notice = Optional.empty();
 
@@ -120,7 +120,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 hasCatalog(),
                 hasCatalog() ? Optional.of(catalog.generatedAt()) : Optional.empty(),
                 notice);
-        return base.withCommunity(List.copyOf(extensions.values()), catalogView);
+        return base.withCommunity(dev.openallay.util.Java8Collections.listCopyOf(extensions.values()), catalogView);
     }
 
     /**
@@ -315,7 +315,7 @@ if ((($oaPattern3_holder.value = committed) instanceof dev.openallay.tool.ToolRe
                 descriptor.provider(),
                 descriptor.summary(),
                 ExtensionSettingsView.State.RESTART_REQUIRED,
-                descriptor.loaders().stream().toList(),
+                dev.openallay.util.Java8Collections.toList(descriptor.loaders().stream()),
                 descriptor.minecraftVersionRange(),
                 descriptor.openAllayApiVersionRange(),
                 descriptor.source(),
@@ -337,7 +337,7 @@ if ((($oaPattern3_holder.value = committed) instanceof dev.openallay.tool.ToolRe
             boolean updateAvailable,
             ExtensionSettingsView.Contributions contributions) {
         String displayVersion =
-                installedVersion.isBlank() ? entry.version() : installedVersion;
+                dev.openallay.util.Java8Strings.isBlank(installedVersion) ? entry.version() : installedVersion;
         return new ExtensionSettingsView.Extension(
                 entry.id(),
                 entry.name(),
@@ -345,7 +345,7 @@ if ((($oaPattern3_holder.value = committed) instanceof dev.openallay.tool.ToolRe
                 entry.provider(),
                 entry.summary(),
                 state,
-                entry.loaders().stream().toList(),
+                dev.openallay.util.Java8Collections.toList(entry.loaders().stream()),
                 entry.minecraftVersionRange(),
                 entry.openAllayApiVersionRange(),
                 entry.source(),
@@ -371,7 +371,7 @@ if ((($oaPattern3_holder.value = committed) instanceof dev.openallay.tool.ToolRe
 
     private static ExtensionSettingsView.Contributions emptyContributions() {
         return new ExtensionSettingsView.Contributions(
-                List.of(), List.of(), List.of(), List.of(), List.of());
+                dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
     }
 
     private boolean hasCatalog() {

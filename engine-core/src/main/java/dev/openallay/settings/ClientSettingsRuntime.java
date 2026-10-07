@@ -194,7 +194,7 @@ private static ToolResult<ClientSettingsRuntime> createInternal(
         Objects.requireNonNull(displayActions, "displayActions");
         Objects.requireNonNull(historyActions, "historyActions");
 
-        Map<String, String> environmentSnapshot = Map.copyOf(environment);
+        Map<String, String> environmentSnapshot = dev.openallay.util.Java8Collections.mapCopyOf(environment);
         LocalCredentialStore credentialStore = new LocalCredentialStore(
                 profilesPath.toAbsolutePath().normalize().resolveSibling("credentials.sqlite3"),
                 clock);
@@ -204,7 +204,7 @@ private static ToolResult<ClientSettingsRuntime> createInternal(
                 .load(
                         profilesPath,
                         credentials,
-                        Map.of());
+                        dev.openallay.util.Java8Collections.mapOf());
         ModelProfilesConfigLoader.Load initial;
         SettingsNotice startupNotice = null;
         final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Success<ModelProfilesConfigLoader.Load> bound; }
@@ -275,7 +275,7 @@ if ((($oaPattern3_holder.value = loadedUnrestricted) instanceof dev.openallay.to
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
                 product.tools().register(
                         "openallay:managed-skills",
-                        List.of(new ManageSkillTool(new AgentSkillManager(
+                        dev.openallay.util.Java8Collections.listOf(new ManageSkillTool(new AgentSkillManager(
                                 configDirectory.resolve("skills"),
                                 product.skills(),
                                 new SkillParser(),
@@ -499,8 +499,8 @@ if ((($oaPattern9_holder.value = published) instanceof dev.openallay.tool.ToolRe
 private static void updateCommandGuidance(
             FeatureServices product, UnrestrictedJavascriptRuntime unrestrictedRuntime) {
         product.skills().setRuntimeDisabledSkills(unrestrictedRuntime.enabled() || product.commands().enabled()
-                ? Set.of()
-                : Set.of(dev.openallay.skill.SkillCatalogSnapshot.GAME_COMMANDS));
+                ? dev.openallay.util.Java8Collections.setOf()
+                : dev.openallay.util.Java8Collections.setOf(dev.openallay.skill.SkillCatalogSnapshot.GAME_COMMANDS));
     }
 private static ClientSettingsService.DisplayActions unavailableDisplayActions() {
         return new ClientSettingsService.DisplayActions() {
@@ -533,13 +533,13 @@ private static ModelProfilesConfigLoader.Load unconfigured() {
                 null);
         ModelProfilesConfig config = new ModelProfilesConfig(
                 definition.id(),
-                List.of(definition));
+                dev.openallay.util.Java8Collections.listOf(definition));
         ResolvedModelProfile resolved = new ResolvedModelProfile(
                 definition,
                 null,
                 new GuideFailure("invalid_model_config", "Configure a model"));
         return new ModelProfilesConfigLoader.Load(
-                config, List.of(resolved));
+                config, dev.openallay.util.Java8Collections.listOf(resolved));
     }
 private static Set<String> installedSkillMods(FeatureServices product) {
         java.util.TreeSet<String> installed = new java.util.TreeSet<>();
@@ -554,7 +554,7 @@ private static Set<String> installedSkillMods(FeatureServices product) {
         product.skills().externalSources().stream()
                 .flatMap(source -> parser.parse(source).metadata().requiredMods().stream())
                 .filter(product.platform()::isModLoaded).forEach(installed::add);
-        return Set.copyOf(installed);
+        return dev.openallay.util.Java8Collections.setCopyOf(installed);
     }
 private static Path managedModsRoot(Path configDirectory) {
         Path configRoot = configDirectory.toAbsolutePath().normalize().getParent();

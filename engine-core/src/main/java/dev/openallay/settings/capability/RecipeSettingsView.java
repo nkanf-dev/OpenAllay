@@ -18,9 +18,8 @@ public final class RecipeSettingsView {
     public RecipeSettingsView(RecipeClientConfig config, List<Source> sources, Set<String> unknownDisabledSources, boolean preferredViewerAvailable) {
 
         java.util.Objects.requireNonNull(config, "config");
-        sources = List.copyOf(sources).stream()
-                .sorted(Comparator.comparing(Source::id))
-                .toList();
+        sources = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(sources).stream()
+                .sorted(Comparator.comparing(Source::id)));
         unknownDisabledSources = Collections.unmodifiableSet(
                 new TreeSet<>(unknownDisabledSources));
 
@@ -35,7 +34,7 @@ public final class RecipeSettingsView {
     public boolean preferredViewerAvailable() { return preferredViewerAvailable; }
 public static RecipeSettingsView defaults() {
         return new RecipeSettingsView(
-                RecipeClientConfig.defaults(), List.of(), Set.of(), true);
+                RecipeClientConfig.defaults(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.setOf(), true);
     }
 @dev.openallay.value.ValueType(Source.ValueSchemaProvider.class)
 public static final class Source {

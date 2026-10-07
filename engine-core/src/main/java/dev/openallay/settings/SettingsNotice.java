@@ -8,7 +8,7 @@ public final class SettingsNotice {
     private final String message;
     public SettingsNotice(Level level, String code, String message) {
 
-        if (level == null || code == null || code.isBlank() || message == null || message.isBlank()) {
+        if (level == null || code == null || dev.openallay.util.Java8Strings.isBlank(code) || message == null || dev.openallay.util.Java8Strings.isBlank(message)) {
             throw new IllegalArgumentException("settings notice fields are required");
         }
 
