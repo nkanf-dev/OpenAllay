@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool]
         default: skills
         required: true
 permissions:
@@ -1222,3 +1222,43 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
         path: build/model-values-proof/
+
+  core-var-tool:
+    if: inputs.scope == 'core-var-tool'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Attribute complete canonical core sources and emit review-only type edits
+      run: 'python3 -B scripts/test_core_var_materialization.py
+
+        ./gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath -PcanonicalVarClasspathOutput="$RUNNER_TEMP/core-var-classpath.json"
+
+        python3 -B scripts/port-core-var-sources.py --project "$PWD" --classpath-metadata
+        "$RUNNER_TEMP/core-var-classpath.json" --javac "$JAVA_HOME_21_X64/bin/javac"
+        --java "$JAVA_HOME_21_X64/bin/java" --java8 "$JAVA_HOME_8_X64/bin/java" --output
+        "$RUNNER_TEMP/core-var-proof"'
+    - name: Retain actual compiler, oracle and immutable source packet outputs
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: core-var-tool-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/core-var-classpath.json
+
+          ${{ runner.temp }}/core-var-proof/'
