@@ -11,6 +11,9 @@ public final class CanonicalPatternPortFixture {
         import java.util.*;
         public class PatternFlow {
             static int calls;
+            interface Result<T> {}
+            static final class Failure<T> implements Result<T>{final T value;Failure(T value){this.value=value;}}
+            static <T> Result<T> generic(Result<T> value){calls++;return value;}
             static Object value(Object value){calls++;return value;}
             static String guard(Object input){
                 if(!(value(input) instanceof String text)) return "negative";
@@ -35,6 +38,8 @@ public final class CanonicalPatternPortFixture {
                 if(value("write") instanceof String reassigned){reassigned="changed";out.append(reassigned);}
                 Object array=new String[]{"q"};
                 if(value(array) instanceof String[] strings){out.append(strings[0]);}
+                Result<String> result=new Failure<String>("generic");
+                if(generic(result) instanceof Failure<String> failure){out.append(failure.value);}
                 System.out.println(out+":"+calls);
             }
         }
@@ -54,10 +59,10 @@ public final class CanonicalPatternPortFixture {
         check(process(args[2],List.of("-version")).startsWith("javac 1.8."),"Require genuinejavac8");check(process(args[3],List.of("-version")).contains("version \"1.8."),"Require genuinejava8");
         Path original=root.resolve("original");Files.createDirectory(original);Path source=original.resolve("PatternFlow.java");Files.writeString(source,SOURCE);
         Path selected=root.resolve("selected.txt");Files.writeString(selected,"PatternFlow.java\n");Path converted=root.resolve("converted");CanonicalPatternPort.main(new String[]{original.toString(),"",selected.toString(),converted.toString()});
-        check(Files.readString(converted.resolve("owner-status.tsv")).equals("PatternFlow.java\tSUPPORTED\t8\t0\n"),"Exact parsed pattern count/status");
+        check(Files.readString(converted.resolve("owner-status.tsv")).equals("PatternFlow.java\tSUPPORTED\t9\t0\n"),"Exact parsed pattern count/status");
         Path explicit=converted.resolve("post/PatternFlow.java");Path modern=root.resolve("modern-classes"),release8=root.resolve("release8-classes"),javac8=root.resolve("javac8-classes");compile(source,modern,"17");compile(explicit,release8,"8");Files.createDirectory(javac8);
         process(args[2],List.of("-source","8","-target","8","-encoding","UTF-8","-d",javac8.toString(),explicit.toString()));
-        String wanted="a3zBnegativexychangedq:11\n";
+        String wanted="a3zBnegativexychangedqgeneric:12\n";
         check(process(args[1],List.of("-cp",modern.toString(),"PatternFlow")).equals(wanted),"Original evaluation order/output");
         check(process(args[3],List.of("-cp",release8.toString(),"PatternFlow")).equals(wanted),"Converted release8 flow/evaluation");
         check(process(args[3],List.of("-cp",javac8.toString(),"PatternFlow")).equals(wanted),"Truejavac8 flow/evaluation");
