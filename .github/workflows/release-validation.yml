@@ -2747,13 +2747,16 @@ jobs:
     - name: Verify complete canonical source and current affected consumers
       run: 'mkdir -p "$RUNNER_TEMP/context-compactor-dependencies"
 
-        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --max-time
+        120 https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
         --output "$RUNNER_TEMP/context-compactor-dependencies/gson-2.8.0.jar"
 
-        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --max-time
+        120 https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
         --output "$RUNNER_TEMP/context-compactor-dependencies/gson-2.13.2.jar"
 
-        curl --fail --location https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
+        curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --max-time
+        120 https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
         --output "$RUNNER_TEMP/context-compactor-dependencies/junit.jar"
 
         python3 -B engine-core/src/contextCompactorJava8Test/verify.py --source-root
