@@ -5,7 +5,7 @@ on:
       release_tag:
         description: Annotated tag bound to the package build source
         required: true
-        default: v0.4.3
+        default: v0.4.4
         type: string
       build_run_id:
         description: Successful release package build run
@@ -63,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/publish-current-github-release.py
-      - name: Publish all selected loaders to Modrinth
+      - name: Publish matching single-mod JARs to Modrinth
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: env GITHUB_SHA="$PACKAGE_SOURCE_SHA" ./scripts/publish-modrinth.sh "$RELEASE_TAG" release

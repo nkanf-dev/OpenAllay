@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
-"""Publish the exact staged files; never rebuild or overwrite a prior release."""
+"""Publish exact staged player files; never rebuild or overwrite a prior release."""
+import json
 import os
 from pathlib import Path
 import subprocess
 
-def main():
-    tag = os.environ['RELEASE_TAG']
-    release = Path('release')
-    jars = sorted(release.glob('openallay-*.jar'))
-    if not jars or not (release / 'SHA256SUMS').is_file():
-        raise ValueError('Missing verified release packages')
-    command = ['gh', 'release', 'create', tag]
-    command += [str(path) for path in jars]
-    # Internal source/build records stay in the retained CI artifact, not player downloads.
-    command += [str(release / 'SHA256SUMS'),
-                '--notes-file', 'release-notes.md', '--title', 'OpenAllay ' + tag,
-                '--verify-tag']
-    if '-' in tag:
-        command.append('--prerelease')
-    subprocess.run(command, check=True)
+from release_publication import select_records
 
-if __name__ == '__main__':
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main():
+    tag = os.environ["RELEASE_TAG"]
+    release = (ROOT / "release").resolve(strict=True)
+    records = json.loads((ROOT / "release-publication-records.json").read_text())
+    selected = select_records(ROOT, release, records, tag, "github")
+    command = ["gh", "release", "create", tag]
+    command += [row["artifactPath"] for row in selected]
+    # Internal source/build JSON stays in CI artifacts, not player downloads.
+    command += [str(release / "SHA256SUMS"),
+                "--notes-file", str(ROOT / "release-notes.md"), "--title", "OpenAllay " + tag,
+                "--verify-tag"]
+    if "-" in tag:
+        command.append("--prerelease")
+    subprocess.run(command, check=True, cwd=ROOT)
+
+
+if __name__ == "__main__":
     main()

@@ -245,7 +245,7 @@ class ProductionRoutingTest(unittest.TestCase):
             artifact.write_bytes(b"same accepted immutable bytes")
             response = directory / "versions.json"
             existing = {"version_number": "0.5.0", "game_versions": ["26.1", "26.1.1", "26.1.2"], "loaders": ["fabric"],
-                        "files": [{"filename": "family.jar", "hashes": {"sha512": hashlib.sha512(artifact.read_bytes()).hexdigest()}}]}
+                        "files": [{"filename": "family.jar", "primary": True, "hashes": {"sha512": hashlib.sha512(artifact.read_bytes()).hexdigest()}}]}
             for values, expected in (([], 1), ([existing], 0), ([dict(existing, game_versions=["26.1"])], 2),
                                      ([dict(existing, files=[])], 2)):
                 response.write_text(json.dumps(values))

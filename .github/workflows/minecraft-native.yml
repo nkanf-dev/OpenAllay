@@ -84,6 +84,9 @@ jobs:
             build/release-build-logs/
             build/reports/problems/
   stage:
+    permissions:
+      contents: read
+      actions: read
     needs: build-packages
     runs-on: ubuntu-24.04
     timeout-minutes: 10
