@@ -196,3 +196,9 @@ def toolResultTestVectors = objects.sourceDirectorySet('toolResultTestVectors', 
 toolResultTestVectors.srcDir('src/toolResultJava8Test/java')
 toolResultTestVectors.include('dev/openallay/json/ToolResultJava8Fixture.java')
 sourceSets.test.java.source(toolResultTestVectors)
+
+// Reuse actual Java8 schema/codec vectors on the normal modern EngineJson test owner.
+def toolSchemaTestVectors = objects.sourceDirectorySet('toolSchemaTestVectors', 'Tool schema Java8 vectors')
+toolSchemaTestVectors.srcDir('src/toolSchemaJava8Test/java')
+toolSchemaTestVectors.include('dev/openallay/tool/ToolSchemaJava8Fixture.java')
+sourceSets.test.java.source(toolSchemaTestVectors)

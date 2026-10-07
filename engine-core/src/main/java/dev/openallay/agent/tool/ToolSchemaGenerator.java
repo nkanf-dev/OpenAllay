@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.RecordComponent;
+import dev.openallay.value.RecordMetadata;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -26,10 +26,11 @@ public final class ToolSchemaGenerator {
     }
 
     private JsonObject schema(Type type, Set<Type> visiting, boolean inputContract) {
-        if (type instanceof Class<?> raw) {
-            return classSchema(raw, visiting, inputContract);
+        if (type instanceof Class<?>) {
+            return classSchema((Class<?>) type, visiting, inputContract);
         }
-        if (type instanceof ParameterizedType parameterized) {
+        if (type instanceof ParameterizedType) {
+            ParameterizedType parameterized = (ParameterizedType) type;
             Class<?> raw = (Class<?>) parameterized.getRawType();
             Type[] arguments = parameterized.getActualTypeArguments();
             if (raw == Optional.class) {
@@ -46,7 +47,8 @@ public final class ToolSchemaGenerator {
                 return result;
             }
         }
-        if (type instanceof GenericArrayType array) {
+        if (type instanceof GenericArrayType) {
+            GenericArrayType array = (GenericArrayType) type;
             JsonObject result = typed("array");
             result.add("items", schema(array.getGenericComponentType(), visiting, inputContract));
             return result;
@@ -54,7 +56,16 @@ public final class ToolSchemaGenerator {
         throw new IllegalArgumentException("Unsupported tool schema type: " + type.getTypeName());
     }
 
-    private record Component(String name, Type genericType, java.util.function.Function<Class<? extends java.lang.annotation.Annotation>, java.lang.annotation.Annotation> annotations) {
+    private static final class Component {
+        private final String name;
+        private final Type genericType;
+        private final java.util.function.Function<Class<? extends java.lang.annotation.Annotation>, java.lang.annotation.Annotation> annotations;
+        private Component(String name, Type genericType,
+                java.util.function.Function<Class<? extends java.lang.annotation.Annotation>, java.lang.annotation.Annotation> annotations) {
+            this.name = name; this.genericType = genericType; this.annotations = annotations;
+        }
+        String name() { return name; }
+        Type genericType() { return genericType; }
         @SuppressWarnings("unchecked") <A extends java.lang.annotation.Annotation> A annotation(Class<A> type) {
             return (A) annotations.apply(type);
         }
@@ -67,13 +78,8 @@ public final class ToolSchemaGenerator {
                 components.add(new Component(component.name(), component.genericType(), component::annotation));
             }
         } else {
-            for (RecordComponent component : type.getRecordComponents()) {
-                components.add(new Component(component.getName(), component.getGenericType(), annotation -> {
-                    java.lang.annotation.Annotation found = component.getAnnotation(annotation);
-                    if (found != null) return found;
-                    try { return type.getDeclaredField(component.getName()).getAnnotation(annotation); }
-                    catch (NoSuchFieldException failure) { throw new IllegalStateException(failure); }
-                }));
+            for (RecordMetadata.Component component : RecordMetadata.components(type)) {
+                components.add(new Component(component.name(), component.genericType(), component::annotation));
             }
         }
         return components;
@@ -136,7 +142,7 @@ public final class ToolSchemaGenerator {
         if (com.google.gson.JsonElement.class.isAssignableFrom(type) || type == Object.class) {
             return new JsonObject();
         }
-        if (type.isRecord() || dev.openallay.value.ValueSchemas.supports(type)) {
+        if (dev.openallay.value.ValueSchemas.supports(type) || RecordMetadata.isRecord(type)) {
             if (!visiting.add(type)) {
                 throw new IllegalArgumentException("Recursive tool record is unsupported: " + type.getName());
             }
@@ -161,8 +167,8 @@ public final class ToolSchemaGenerator {
                 properties.add(component.name(), componentSchema);
                 if (inputContract
                         && component.annotation(ToolOptional.class) == null
-                        && !(component.genericType() instanceof ParameterizedType parameterized
-                                && parameterized.getRawType() == Optional.class)) {
+                        && !(component.genericType() instanceof ParameterizedType
+                                && ((ParameterizedType) component.genericType()).getRawType() == Optional.class)) {
                     required.add(component.name());
                 }
             }
@@ -174,7 +180,7 @@ public final class ToolSchemaGenerator {
             if (atLeastOne != null) {
                 Set<String> componentNames = components(type).stream()
                         .map(Component::name)
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                        .collect(java.util.stream.Collectors.toSet());
                 JsonArray anyOf = new JsonArray();
                 for (String name : atLeastOne.value()) {
                     if (!componentNames.contains(name)) {
