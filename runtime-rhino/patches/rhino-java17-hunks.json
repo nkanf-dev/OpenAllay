@@ -1,6 +1,6 @@
 {
   "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
-  "patch_sha256": "ec0e59d70943eef6ccc2952d2b878da464561ad71fe24f21f8b8c9bc790084d7",
+  "patch_sha256": "ae7d72ef886b2aca9fff9158338d752bc84178c0b365fbcf0be3b921db6d5bb4",
   "files": [
     {
       "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
@@ -67,6 +67,38 @@
         {
           "before": "\t\t\t\treturn n.map;\n\t\t\t} else {\n\t\t\t\tif (n.map.isEmpty()) {\n\t\t\t\t\treturn Map.of();\n\t\t\t\t}\n\n\t\t\t\tvar map = new LinkedHashMap<>(n.map.size());\n",
           "after": "\t\t\t\treturn n.map;\n\t\t\t} else {\n\t\t\t\tif (n.map.isEmpty()) {\n\t\t\t\t\treturn ListCompat.mapOf();\n\t\t\t\t}\n\n\t\t\t\tvar map = new LinkedHashMap<>(n.map.size());\n"
+        },
+        {
+          "before": "\t\t\t\t// No conversion necessary\n\t\t\t\treturn n.list;\n\t\t\t} else {\n\t\t\t\tvar list = new ArrayList<>(n.list.size());\n\n\t\t\t\tfor (var o : n.list) {\n\t\t\t\t\tlist.add(jsToJava(o, target));\n\t\t\t\t}\n\n",
+          "after": "\t\t\t\t// No conversion necessary\n\t\t\t\treturn n.list;\n\t\t\t} else {\n\t\t\t\tjava.util.ArrayList<java.lang.Object> list = new ArrayList<>(n.list.size());\n\n\t\t\t\tfor (java.lang.Object o : n.list) {\n\t\t\t\t\tlist.add(jsToJava(o, target));\n\t\t\t\t}\n\n"
+        },
+        {
+          "before": "\t\t\t\t// No conversion necessary\n\t\t\t\treturn new LinkedHashSet<>(n.list);\n\t\t\t} else {\n\t\t\t\tvar set = new LinkedHashSet<>(n.list.size());\n\n\t\t\t\tfor (var o : n.list) {\n\t\t\t\t\tset.add(jsToJava(o, target));\n\t\t\t\t}\n\n",
+          "after": "\t\t\t\t// No conversion necessary\n\t\t\t\treturn new LinkedHashSet<>(n.list);\n\t\t\t} else {\n\t\t\t\tjava.util.LinkedHashSet<java.lang.Object> set = new LinkedHashSet<>(n.list.size());\n\n\t\t\t\tfor (java.lang.Object o : n.list) {\n\t\t\t\t\tset.add(jsToJava(o, target));\n\t\t\t\t}\n\n"
+        },
+        {
+          "before": "\t\t\t\t\treturn ListCompat.mapOf();\n\t\t\t\t}\n\n\t\t\t\tvar map = new LinkedHashMap<>(n.map.size());\n\n\t\t\t\tfor (var entry : ((Map<?, ?>) n.map).entrySet()) {\n\t\t\t\t\tmap.put(jsToJava(entry.getKey(), kTarget), jsToJava(entry.getValue(), vTarget));\n\t\t\t\t}\n\n\t\t\t\treturn map;\n\t\t\t}\n\t\t} else if (from instanceof NativeObject obj) {\n\t\t\tvar keys = obj.getIds(this);\n\t\t\tvar map = new LinkedHashMap<>(keys.length);\n\n\t\t\tfor (var key : keys) {\n\t\t\t\tmap.put(jsToJava(key, kTarget), jsToJava(obj.get(this, key), vTarget));\n\t\t\t}\n\n",
+          "after": "\t\t\t\t\treturn ListCompat.mapOf();\n\t\t\t\t}\n\n\t\t\t\tjava.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(n.map.size());\n\n\t\t\t\tfor (java.util.Map.Entry<?, ?> entry : ((Map<?, ?>) n.map).entrySet()) {\n\t\t\t\t\tmap.put(jsToJava(entry.getKey(), kTarget), jsToJava(entry.getValue(), vTarget));\n\t\t\t\t}\n\n\t\t\t\treturn map;\n\t\t\t}\n\t\t} else if (from instanceof NativeObject obj) {\n\t\t\tjava.lang.Object[] keys = obj.getIds(this);\n\t\t\tjava.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(keys.length);\n\n\t\t\tfor (java.lang.Object key : keys) {\n\t\t\t\tmap.put(jsToJava(key, kTarget), jsToJava(obj.get(this, key), vTarget));\n\t\t\t}\n\n"
+        },
+        {
+          "before": "\t\t\t\treturn m;\n\t\t\t}\n\n\t\t\tvar map = new LinkedHashMap<>(m.size());\n\n\t\t\tfor (var entry : m.entrySet()) {\n\t\t\t\tmap.put(jsToJava(entry.getKey(), kTarget), jsToJava(entry.getValue(), vTarget));\n\t\t\t}\n\n",
+          "after": "\t\t\t\treturn m;\n\t\t\t}\n\n\t\t\tjava.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(m.size());\n\n\t\t\tfor (java.util.Map.Entry<?, ?> entry : m.entrySet()) {\n\t\t\t\tmap.put(jsToJava(entry.getKey(), kTarget), jsToJava(entry.getValue(), vTarget));\n\t\t\t}\n\n"
+        },
+        {
+          "before": "\t\t\t\tthrow reportRuntimeError(\"Class \" + c.getName() + \" not allowed\", this);\n\t\t\t}\n\t\t} else {\n\t\t\tvar s = ScriptRuntime.toString(this, from);\n\n\t\t\tif (visibleToScripts(s, ClassVisibilityContext.ARGUMENT)) {\n\t\t\t\ttry {\n",
+          "after": "\t\t\t\tthrow reportRuntimeError(\"Class \" + c.getName() + \" not allowed\", this);\n\t\t\t}\n\t\t} else {\n\t\t\tjava.lang.String s = ScriptRuntime.toString(this, from);\n\n\t\t\tif (visibleToScripts(s, ClassVisibilityContext.ARGUMENT)) {\n\t\t\t\ttry {\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object createInterfaceAdapter(TypeInfo type, ScriptableObject so) {\n\t\tvar cl = type.asClass();\n\n\t\tif (cl == null) {\n\t\t\tthrow new NullPointerException(\"type.asClass() must not be null\");\n",
+          "after": "\t}\n\n\tpublic Object createInterfaceAdapter(TypeInfo type, ScriptableObject so) {\n\t\tjava.lang.Class<?> cl = type.asClass();\n\n\t\tif (cl == null) {\n\t\t\tthrow new NullPointerException(\"type.asClass() must not be null\");\n"
+        },
+        {
+          "before": "\tprotected Object internalJsToJava(Object from, TypeInfo target) {\n\t\tif (target instanceof ArrayTypeInfo) {\n\t\t\t// Make a new java array, and coerce the JS array components to the target (component) type.\n\t\t\tvar arrayType = target.componentType();\n\n\t\t\tif (from instanceof NativeArray array) {\n\t\t\t\tlong length = array.getLength();\n",
+          "after": "\tprotected Object internalJsToJava(Object from, TypeInfo target) {\n\t\tif (target instanceof ArrayTypeInfo) {\n\t\t\t// Make a new java array, and coerce the JS array components to the target (component) type.\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo arrayType = target.componentType();\n\n\t\t\tif (from instanceof NativeArray array) {\n\t\t\t\tlong length = array.getLength();\n"
+        },
+        {
+          "before": "\n\t\tObject unwrappedValue = Wrapper.unwrapped(from);\n\n\t\tvar typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);\n\n\t\tif (typeWrapper != null) {\n\t\t\treturn typeWrapper.wrap(this, unwrappedValue, target);\n",
+          "after": "\n\t\tObject unwrappedValue = Wrapper.unwrapped(from);\n\n\t\tdev.latvian.mods.rhino.util.wrap.TypeWrapperFactory<?> typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);\n\n\t\tif (typeWrapper != null) {\n\t\t\treturn typeWrapper.wrap(this, unwrappedValue, target);\n"
         }
       ]
     },
@@ -239,6 +271,22 @@
           "new_count": 7,
           "before": "\t\t\tthrow new ArrayIndexOutOfBoundsException(\"Array doesn't contain any objects\");\n\t\t}\n\n\t\treturn list.getFirst();\n\t}\n\n\t@Override\n",
           "after": "\t\t\tthrow new ArrayIndexOutOfBoundsException(\"Array doesn't contain any objects\");\n\t\t}\n\n\t\treturn ListCompat.getFirst(list);\n\t}\n\n\t@Override\n"
+        },
+        {
+          "before": "\t\tLambdaConstructor ctor =\n\t\t\t\tnew LambdaConstructor(cx, scope, CLASS_NAME, 1, NativeArray::jsConstructor);\n\n\t\tvar proto = new NativeArray(cx, 0);\n\t\tctor.setPrototypeScriptable(proto, cx);\n\n\t\tdefineMethodOnConstructor(cx, ctor, scope, \"of\", 0, NativeArray::js_of);\n",
+          "after": "\t\tLambdaConstructor ctor =\n\t\t\t\tnew LambdaConstructor(cx, scope, CLASS_NAME, 1, NativeArray::jsConstructor);\n\n\t\tdev.latvian.mods.rhino.NativeArray proto = new NativeArray(cx, 0);\n\t\tctor.setPrototypeScriptable(proto, cx);\n\n\t\tdefineMethodOnConstructor(cx, ctor, scope, \"of\", 0, NativeArray::js_of);\n"
+        },
+        {
+          "before": "\t\t\t\tname,\n\t\t\t\tlength,\n\t\t\t\t(c, s, thisObj, args) -> {\n\t\t\t\t\tvar realThis = ScriptRuntime.toObject(c, scope, args[0]);\n\t\t\t\t\tvar realArgs = Arrays.copyOfRange(args, 1, args.length);\n\t\t\t\t\treturn target.call(c, s, realThis, realArgs);\n\t\t\t\t},\n\t\t\t\tDONTENUM,\n",
+          "after": "\t\t\t\tname,\n\t\t\t\tlength,\n\t\t\t\t(c, s, thisObj, args) -> {\n\t\t\t\t\tdev.latvian.mods.rhino.Scriptable realThis = ScriptRuntime.toObject(c, scope, args[0]);\n\t\t\t\t\tjava.lang.Object[] realArgs = Arrays.copyOfRange(args, 1, args.length);\n\t\t\t\t\treturn target.call(c, s, realThis, realArgs);\n\t\t\t\t},\n\t\t\t\tDONTENUM,\n"
+        },
+        {
+          "before": "\t\tobj = (NativeObject) cx.newObject(scope);\n\n\t\tScriptableObject desc = ScriptableObject.buildDataDescriptor(obj, true, EMPTY, cx);\n\t\tfor (var k : UNSCOPABLES) {\n\t\t\tobj.defineOwnProperty(cx, k, desc);\n\t\t}\n\t\tobj.setPrototype(null); // unscopables don't have any prototype\n",
+          "after": "\t\tobj = (NativeObject) cx.newObject(scope);\n\n\t\tScriptableObject desc = ScriptableObject.buildDataDescriptor(obj, true, EMPTY, cx);\n\t\tfor (java.lang.String k : UNSCOPABLES) {\n\t\t\tobj.defineOwnProperty(cx, k, desc);\n\t\t}\n\t\tobj.setPrototype(null); // unscopables don't have any prototype\n"
+        },
+        {
+          "before": "\t\t// The standard set path that will be done by this call will\n\t\t// clear any elements as required.\n\t\tbuiltIn.defineOrdinaryProperty(cx, id, desc, checkValid, key, index);\n\t\tvar currentAttrs = current.getAttributes();\n\t\tvar newAttrs = newWritable ? (currentAttrs & ~READONLY) : (currentAttrs | READONLY);\n\t\tcurrent.setAttributes(newAttrs);\n\t}\n\n",
+          "after": "\t\t// The standard set path that will be done by this call will\n\t\t// clear any elements as required.\n\t\tbuiltIn.defineOrdinaryProperty(cx, id, desc, checkValid, key, index);\n\t\tint currentAttrs = current.getAttributes();\n\t\tint newAttrs = newWritable ? (currentAttrs & ~READONLY) : (currentAttrs | READONLY);\n\t\tcurrent.setAttributes(newAttrs);\n\t}\n\n"
         }
       ]
     },
@@ -623,6 +671,46 @@
         {
           "before": "\tprivate static Map<VariableTypeInfo, TypeInfo> transformMapping(\n\t\tMap<VariableTypeInfo, TypeInfo> mapping, Map<VariableTypeInfo, TypeInfo> transformer) {\n\t\tif (mapping.isEmpty()) {\n\t\t\treturn Map.of();\n\t\t} else if (mapping.size() == 1) {\n\t\t\tvar entry = mapping.entrySet().iterator().next();\n\t\t\treturn Map.of(entry.getKey(), entry.getValue().consolidate(transformer));\n\t\t}\n\t\tvar transformed = new HashMap<>(mapping);\n\t\tfor (var entry : transformed.entrySet()) {\n",
           "after": "\tprivate static Map<VariableTypeInfo, TypeInfo> transformMapping(\n\t\tMap<VariableTypeInfo, TypeInfo> mapping, Map<VariableTypeInfo, TypeInfo> transformer) {\n\t\tif (mapping.isEmpty()) {\n\t\t\treturn ListCompat.mapOf();\n\t\t} else if (mapping.size() == 1) {\n\t\t\tvar entry = mapping.entrySet().iterator().next();\n\t\t\treturn ListCompat.mapOf(entry.getKey(), entry.getValue().consolidate(transformer));\n\t\t}\n\t\tvar transformed = new HashMap<>(mapping);\n\t\tfor (var entry : transformed.entrySet()) {\n"
+        },
+        {
+          "before": "        if (DEBUG) {\n            System.out.println(\"getting mapping from: \" + type);\n        }\n        var got = getImpl(type);\n        return got == null ? Collections.emptyMap() : got;\n    }\n\n",
+          "after": "        if (DEBUG) {\n            System.out.println(\"getting mapping from: \" + type);\n        }\n        java.util.Map<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> got = getImpl(type);\n        return got == null ? Collections.emptyMap() : got;\n    }\n\n"
+        },
+        {
+          "before": "        @NotNull TypeInfo @NotNull [] original,\n        @NotNull Map<VariableTypeInfo, TypeInfo> mapping\n    ) {\n        var len = original.length;\n        if (DEBUG) {\n            System.out.println(\"consolidating\" + Arrays.toString(original));\n        }\n        if (len == 0) {\n            return original;\n        } else if (len == 1) {\n            var consolidated = original[0].consolidate(mapping);\n            return consolidated != original[0] ? new TypeInfo[]{consolidated} : original;\n        }\n\t\tvar transformed = original;\n\t\tfor (var i = 0; i < original.length; i++) {\n\t\t\tvar type = original[i];\n\t\t\tvar consolidated = type.consolidate(mapping);\n\t\t\tif (consolidated != type) {\n\t\t\t\tif (transformed == original) {\n\t\t\t\t\ttransformed = original.clone();\n",
+          "after": "        @NotNull TypeInfo @NotNull [] original,\n        @NotNull Map<VariableTypeInfo, TypeInfo> mapping\n    ) {\n        int len = original.length;\n        if (DEBUG) {\n            System.out.println(\"consolidating\" + Arrays.toString(original));\n        }\n        if (len == 0) {\n            return original;\n        } else if (len == 1) {\n            dev.latvian.mods.rhino.type.TypeInfo consolidated = original[0].consolidate(mapping);\n            return consolidated != original[0] ? new TypeInfo[]{consolidated} : original;\n        }\n\t\tdev.latvian.mods.rhino.type.TypeInfo[] transformed = original;\n\t\tfor (int i = 0; i < original.length; i++) {\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo type = original[i];\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo consolidated = type.consolidate(mapping);\n\t\t\tif (consolidated != type) {\n\t\t\t\tif (transformed == original) {\n\t\t\t\t\ttransformed = original.clone();\n"
+        },
+        {
+          "before": "\t\t@NotNull List<@NotNull TypeInfo> original,\n\t\t@NotNull Map<VariableTypeInfo, TypeInfo> mapping\n\t) {\n\t\tvar len = original.size();\n\t\tif (DEBUG) {\n\t\t\tSystem.out.println(\"consolidating\" + original);\n\t\t}\n\t\tif (len == 0) {\n\t\t\treturn original;\n\t\t} else if (len == 1) {\n\t\t\tvar consolidated = ListCompat.getFirst(original).consolidate(mapping);\n\t\t\treturn consolidated != ListCompat.getFirst(original) ? ListCompat.listOf(consolidated) : original;\n\t\t}\n\t\tvar transformed = original;\n\t\tfor (int i = 0; i < len; i++) {\n\t\t\tvar type = original.get(i);\n\t\t\tvar consolidated = type.consolidate(mapping);\n\t\t\tif (consolidated != type) {\n\t\t\t\tif (transformed == original) {\n\t\t\t\t\ttransformed = new ArrayList<>(original);\n",
+          "after": "\t\t@NotNull List<@NotNull TypeInfo> original,\n\t\t@NotNull Map<VariableTypeInfo, TypeInfo> mapping\n\t) {\n\t\tint len = original.size();\n\t\tif (DEBUG) {\n\t\t\tSystem.out.println(\"consolidating\" + original);\n\t\t}\n\t\tif (len == 0) {\n\t\t\treturn original;\n\t\t} else if (len == 1) {\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo consolidated = ListCompat.getFirst(original).consolidate(mapping);\n\t\t\treturn consolidated != ListCompat.getFirst(original) ? ListCompat.listOf(consolidated) : original;\n\t\t}\n\t\tjava.util.List<dev.latvian.mods.rhino.type.TypeInfo> transformed = original;\n\t\tfor (int i = 0; i < len; i++) {\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo type = original.get(i);\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo consolidated = type.consolidate(mapping);\n\t\t\tif (consolidated != type) {\n\t\t\t\tif (transformed == original) {\n\t\t\t\t\ttransformed = new ArrayList<>(original);\n"
+        },
+        {
+          "before": "            return null;\n        }\n\t\t// no '.computeIfAbsent(...)' because of 'java.util.ConcurrentModificationException'\n\t\tvar got = MAPPINGS.get(type);\n\t\tif (got == null) {\n\t\t\tgot = TypeConsolidator.collect(type);\n\t\t\tMAPPINGS.put(type, got);\n",
+          "after": "            return null;\n        }\n\t\t// no '.computeIfAbsent(...)' because of 'java.util.ConcurrentModificationException'\n\t\tjava.util.Map<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> got = MAPPINGS.get(type);\n\t\tif (got == null) {\n\t\t\tgot = TypeConsolidator.collect(type);\n\t\t\tMAPPINGS.put(type, got);\n"
+        },
+        {
+          "before": "\n    @NotNull\n    private static Map<VariableTypeInfo, TypeInfo> collect(Class<?> type) {\n        var mapping = new HashMap<VariableTypeInfo, TypeInfo>();\n\n        /**\n         * (classes are named as 'XXX': A, B, C, ...)\n",
+          "after": "\n    @NotNull\n    private static Map<VariableTypeInfo, TypeInfo> collect(Class<?> type) {\n        java.util.HashMap<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> mapping = new HashMap<VariableTypeInfo, TypeInfo>();\n\n        /**\n         * (classes are named as 'XXX': A, B, C, ...)\n"
+        },
+        {
+          "before": "\n        //collect current level mapping\n        //current level types will only be consolidated by mappings from its subclasses\n        var parent = type.getSuperclass();\n\n        //in our D.class example, this will collect mapping from C<Td>, forming Tc -> Td\n        extractSuperMapping(type.getGenericSuperclass(), mapping);\n\n        //in our D.class example, this will collect mapping from B<A<Td>>, forming Tb -> A<Td>\n        for (var genericInterface : type.getGenericInterfaces()) {\n            extractSuperMapping(genericInterface, mapping);\n        }\n\n        //mapping from super\n        //in our D.class example, super mapping will only include Ta -> Tc\n        var superMapping = getMapping(parent);\n\n\t\tvar interfaces = type.getInterfaces();\n\t\tvar interfaceMappings = new ArrayList<Map<VariableTypeInfo, TypeInfo>>(interfaces.length);\n\t\tfor (var anInterface : interfaces) {\n\t\t\tinterfaceMappings.add(getMapping(anInterface));\n\t\t}\n\n",
+          "after": "\n        //collect current level mapping\n        //current level types will only be consolidated by mappings from its subclasses\n        java.lang.Class<?> parent = type.getSuperclass();\n\n        //in our D.class example, this will collect mapping from C<Td>, forming Tc -> Td\n        extractSuperMapping(type.getGenericSuperclass(), mapping);\n\n        //in our D.class example, this will collect mapping from B<A<Td>>, forming Tb -> A<Td>\n        for (java.lang.reflect.Type genericInterface : type.getGenericInterfaces()) {\n            extractSuperMapping(genericInterface, mapping);\n        }\n\n        //mapping from super\n        //in our D.class example, super mapping will only include Ta -> Tc\n        java.util.Map<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> superMapping = getMapping(parent);\n\n\t\tjava.lang.Class<?>[] interfaces = type.getInterfaces();\n\t\tjava.util.ArrayList<java.util.Map<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo>> interfaceMappings = new ArrayList<Map<VariableTypeInfo, TypeInfo>>(interfaces.length);\n\t\tfor (java.lang.Class<?> anInterface : interfaces) {\n\t\t\tinterfaceMappings.add(getMapping(anInterface));\n\t\t}\n\n"
+        },
+        {
+          "before": "        }\n\n        // 'flatten' super mapping\n        var merged = new HashMap<>(transformMapping(superMapping, mapping));\n\t\t// 'flatten' interface mapping\n\t\tfor (var interfaceMapping : interfaceMappings) {\n\t\t\tmerged.putAll(transformMapping(interfaceMapping, mapping));\n\t\t}\n        // merge all mappings\n",
+          "after": "        }\n\n        // 'flatten' super mapping\n        java.util.HashMap<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> merged = new HashMap<>(transformMapping(superMapping, mapping));\n\t\t// 'flatten' interface mapping\n\t\tfor (java.util.Map<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> interfaceMapping : interfaceMappings) {\n\t\t\tmerged.putAll(transformMapping(interfaceMapping, mapping));\n\t\t}\n        // merge all mappings\n"
+        },
+        {
+          "before": "\t\tif (mapping.isEmpty()) {\n\t\t\treturn ListCompat.mapOf();\n\t\t} else if (mapping.size() == 1) {\n\t\t\tvar entry = mapping.entrySet().iterator().next();\n\t\t\treturn ListCompat.mapOf(entry.getKey(), entry.getValue().consolidate(transformer));\n\t\t}\n\t\tvar transformed = new HashMap<>(mapping);\n\t\tfor (var entry : transformed.entrySet()) {\n\t\t\tentry.setValue(entry.getValue().consolidate(transformer));\n\t\t}\n\t\treturn transformed;\n",
+          "after": "\t\tif (mapping.isEmpty()) {\n\t\t\treturn ListCompat.mapOf();\n\t\t} else if (mapping.size() == 1) {\n\t\t\tjava.util.Map.Entry<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> entry = mapping.entrySet().iterator().next();\n\t\t\treturn ListCompat.mapOf(entry.getKey(), entry.getValue().consolidate(transformer));\n\t\t}\n\t\tjava.util.HashMap<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> transformed = new HashMap<>(mapping);\n\t\tfor (java.util.Map.Entry<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> entry : transformed.entrySet()) {\n\t\t\tentry.setValue(entry.getValue().consolidate(transformer));\n\t\t}\n\t\treturn transformed;\n"
+        },
+        {
+          "before": "        if (superType instanceof ParameterizedType parameterized\n            && parameterized.getRawType() instanceof Class<?> parent\n        ) {\n            final var params = parent.getTypeParameters(); // T\n            final var args = parameterized.getActualTypeArguments(); // T is mapped to\n            for (int i = 0; i < args.length; i++) {\n                pushTo.put(TypeInfo.of(params[i]), TypeInfo.of(args[i]));\n            }\n",
+          "after": "        if (superType instanceof ParameterizedType parameterized\n            && parameterized.getRawType() instanceof Class<?> parent\n        ) {\n            final java.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] params = parent.getTypeParameters(); // T\n            final java.lang.reflect.Type[] args = parameterized.getActualTypeArguments(); // T is mapped to\n            for (int i = 0; i < args.length; i++) {\n                pushTo.put(TypeInfo.of(params[i]), TypeInfo.of(args[i]));\n            }\n"
+        },
+        {
+          "before": "                }\n                return Collections.emptyMap();\n            case 1:\n                var entry = mapping.entrySet().iterator().next();\n                if (DEBUG) {\n                    System.out.println(\"collected singleton mapping: \" + entry.getKey() + \" -> \" + entry.getValue());\n                }\n",
+          "after": "                }\n                return Collections.emptyMap();\n            case 1:\n                java.util.Map.Entry<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> entry = mapping.entrySet().iterator().next();\n                if (DEBUG) {\n                    System.out.println(\"collected singleton mapping: \" + entry.getKey() + \" -> \" + entry.getValue());\n                }\n"
         }
       ]
     },
@@ -667,6 +755,14 @@
           "new_count": 47,
           "before": "\tstatic String toStringJS(Context cx, Object o) {\n\t\to = Wrapper.unwrapped(o);\n\n\t\treturn switch (o) {\n\t\t\tcase null -> \"null\";\n\t\t\tcase ToStringJS toStringJS -> toStringJS.toStringJS(cx);\n\t\t\tcase Iterable<?> itr -> {\n\t\t\t\tvar sb = new StringBuilder();\n\t\t\t\tsb.append('[');\n\t\t\t\tvar first = true;\n\n\t\t\t\tfor (var i : itr) {\n\t\t\t\t\tif (!first) {\n\t\t\t\t\t\tsb.append(\", \");\n\t\t\t\t\t}\n\n\t\t\t\t\tsb.append(toStringJS(cx, i));\n\t\t\t\t\tfirst = false;\n\t\t\t\t}\n\n\t\t\t\tsb.append(']');\n\t\t\t\tyield sb.toString();\n\t\t\t}\n\t\t\tcase Map<?, ?> map -> {\n\t\t\t\tvar sb = new StringBuilder();\n\t\t\t\tboolean first = true;\n\n\t\t\t\tsb.append('{');\n\n\t\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\t\tif (!first) {\n\t\t\t\t\t\tsb.append(\", \");\n\t\t\t\t\t}\n\n\t\t\t\t\tsb.append(toStringJS(cx, entry.getKey()));\n\t\t\t\t\tsb.append(\": \");\n\t\t\t\t\tsb.append(toStringJS(cx, entry.getValue()));\n\t\t\t\t\tfirst = false;\n\t\t\t\t}\n\n\t\t\t\tsb.append('}');\n\t\t\t\tyield sb.toString();\n\t\t\t}\n\t\t\tdefault -> o.toString();\n\t\t};\n\t}\n\n\tdefault String toStringJS(Context cx) {\n",
           "after": "\tstatic String toStringJS(Context cx, Object o) {\n\t\to = Wrapper.unwrapped(o);\n\n\t\tif (o == null) {\n\t\t\treturn \"null\";\n\t\t} else if (o instanceof ToStringJS toStringJS) {\n\t\t\treturn toStringJS.toStringJS(cx);\n\t\t} else if (o instanceof Iterable<?> itr) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tsb.append('[');\n\t\t\tvar first = true;\n\n\t\t\tfor (var i : itr) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n\n\t\t\t\tsb.append(toStringJS(cx, i));\n\t\t\t\tfirst = false;\n\t\t\t}\n\n\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n\t\t\tsb.append('{');\n\n\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n\n\t\t\t\tsb.append(toStringJS(cx, entry.getKey()));\n\t\t\t\tsb.append(\": \");\n\t\t\t\tsb.append(toStringJS(cx, entry.getValue()));\n\t\t\t\tfirst = false;\n\t\t\t}\n\n\t\t\tsb.append('}');\n\t\t\treturn sb.toString();\n\t\t}\n\t\treturn o.toString();\n\t}\n\n\tdefault String toStringJS(Context cx) {\n"
+        },
+        {
+          "before": "\t\t} else if (o instanceof ToStringJS toStringJS) {\n\t\t\treturn toStringJS.toStringJS(cx);\n\t\t} else if (o instanceof Iterable<?> itr) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tsb.append('[');\n\t\t\tvar first = true;\n\n\t\t\tfor (var i : itr) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n",
+          "after": "\t\t} else if (o instanceof ToStringJS toStringJS) {\n\t\t\treturn toStringJS.toStringJS(cx);\n\t\t} else if (o instanceof Iterable<?> itr) {\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tsb.append('[');\n\t\t\tboolean first = true;\n\n\t\t\tfor (java.lang.Object i : itr) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n"
+        },
+        {
+          "before": "\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n\t\t\tsb.append('{');\n\n\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n",
+          "after": "\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n\t\t\tsb.append('{');\n\n\t\t\tfor (java.util.Map.Entry<?, ?> entry : map.entrySet()) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n"
         }
       ]
     },
@@ -1037,6 +1133,42 @@
         {
           "before": "\t\t\t\tlist.add(new JSOptionalParam(c.name, c.type, true));\n\t\t\t}\n\n\t\t\tarrayTypeInfo = new JSFixedArrayTypeInfo(List.copyOf(list));\n\t\t}\n\n\t\treturn arrayTypeInfo;\n",
           "after": "\t\t\t\tlist.add(new JSOptionalParam(c.name, c.type, true));\n\t\t\t}\n\n\t\t\tarrayTypeInfo = new JSFixedArrayTypeInfo(ListCompat.copyList(list));\n\t\t}\n\n\t\treturn arrayTypeInfo;\n"
+        },
+        {
+          "before": "\n\tpublic record Data(Component[] components, Map<String, Component> componentMap, Object[] defaultArguments) {\n\t\tprivate Object[] createMHArgs() {\n\t\t\tvar args = new Object[components.length + 1];\n\t\t\tSystem.arraycopy(components, 0, args, 1, components.length);\n\t\t\treturn args;\n\t\t}\n",
+          "after": "\n\tpublic record Data(Component[] components, Map<String, Component> componentMap, Object[] defaultArguments) {\n\t\tprivate Object[] createMHArgs() {\n\t\t\tjava.lang.Object[] args = new Object[components.length + 1];\n\t\t\tSystem.arraycopy(components, 0, args, 1, components.length);\n\t\t\treturn args;\n\t\t}\n"
+        },
+        {
+          "before": "\n\tpublic synchronized Data getData() {\n\t\tif (data == null) {\n\t\t\tvar rc = asClass().getRecordComponents();\n\t\t\tvar components = new Component[rc.length];\n\t\t\tvar componentMap = new HashMap<String, Component>();\n\t\t\tvar defaultArguments = new Object[rc.length];\n\n\t\t\tfor (int i = 0; i < rc.length; i++) {\n\t\t\t\tvar gt = rc[i].getGenericType();\n\n\t\t\t\tvar rename = rc[i].getAccessor().getDeclaredAnnotation(RemapForJS.class);\n\t\t\t\tvar c = new Component(i, rename != null ? rename.value() : rc[i].getName(), TypeInfo.of(gt));\n\t\t\t\tcomponents[i] = c;\n\t\t\t\tcomponentMap.put(c.name, c);\n\t\t\t\tdefaultArguments[i] = c.type.createDefaultValue();\n",
+          "after": "\n\tpublic synchronized Data getData() {\n\t\tif (data == null) {\n\t\t\tjava.lang.reflect.RecordComponent[] rc = asClass().getRecordComponents();\n\t\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Component[] components = new Component[rc.length];\n\t\t\tjava.util.HashMap<java.lang.String, dev.latvian.mods.rhino.type.RecordTypeInfo.Component> componentMap = new HashMap<String, Component>();\n\t\t\tjava.lang.Object[] defaultArguments = new Object[rc.length];\n\n\t\t\tfor (int i = 0; i < rc.length; i++) {\n\t\t\t\tjava.lang.reflect.Type gt = rc[i].getGenericType();\n\n\t\t\t\tdev.latvian.mods.rhino.util.RemapForJS rename = rc[i].getAccessor().getDeclaredAnnotation(RemapForJS.class);\n\t\t\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Component c = new Component(i, rename != null ? rename.value() : rc[i].getName(), TypeInfo.of(gt));\n\t\t\t\tcomponents[i] = c;\n\t\t\t\tcomponentMap.put(c.name, c);\n\t\t\t\tdefaultArguments[i] = c.type.createDefaultValue();\n"
+        },
+        {
+          "before": "\n\tpublic JSObjectTypeInfo getObjectTypeInfo() {\n\t\tif (objectTypeInfo == null) {\n\t\t\tvar data = getData();\n\t\t\tvar list = new ArrayList<JSOptionalParam>(data.components.length);\n\n\t\t\tfor (var c : data.components) {\n\t\t\t\tlist.add(new JSOptionalParam(c.name, c.type, true));\n\t\t\t}\n\n",
+          "after": "\n\tpublic JSObjectTypeInfo getObjectTypeInfo() {\n\t\tif (objectTypeInfo == null) {\n\t\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Data data = getData();\n\t\t\tjava.util.ArrayList<dev.latvian.mods.rhino.type.JSOptionalParam> list = new ArrayList<JSOptionalParam>(data.components.length);\n\n\t\t\tfor (dev.latvian.mods.rhino.type.RecordTypeInfo.Component c : data.components) {\n\t\t\t\tlist.add(new JSOptionalParam(c.name, c.type, true));\n\t\t\t}\n\n"
+        },
+        {
+          "before": "\n\tpublic JSFixedArrayTypeInfo getArrayTypeInfo() {\n\t\tif (arrayTypeInfo == null) {\n\t\t\tvar data = getData();\n\t\t\tvar list = new ArrayList<JSOptionalParam>(data.components.length);\n\n\t\t\tfor (var c : data.components) {\n\t\t\t\tlist.add(new JSOptionalParam(c.name, c.type, true));\n\t\t\t}\n\n",
+          "after": "\n\tpublic JSFixedArrayTypeInfo getArrayTypeInfo() {\n\t\tif (arrayTypeInfo == null) {\n\t\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Data data = getData();\n\t\t\tjava.util.ArrayList<dev.latvian.mods.rhino.type.JSOptionalParam> list = new ArrayList<JSOptionalParam>(data.components.length);\n\n\t\t\tfor (dev.latvian.mods.rhino.type.RecordTypeInfo.Component c : data.components) {\n\t\t\t\tlist.add(new JSOptionalParam(c.name, c.type, true));\n\t\t\t}\n\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic TypeInfo createCombinedType(TypeInfo... preference) {\n\t\tvar types = new ArrayList<TypeInfo>(2 + preference.length);\n\t\ttypes.addAll(Arrays.asList(preference));\n\t\ttypes.add(getObjectTypeInfo());\n\t\ttypes.add(getArrayTypeInfo());\n",
+          "after": "\t}\n\n\tpublic TypeInfo createCombinedType(TypeInfo... preference) {\n\t\tjava.util.ArrayList<dev.latvian.mods.rhino.type.TypeInfo> types = new ArrayList<TypeInfo>(2 + preference.length);\n\t\ttypes.addAll(Arrays.asList(preference));\n\t\ttypes.add(getObjectTypeInfo());\n\t\ttypes.add(getArrayTypeInfo());\n"
+        },
+        {
+          "before": "\t}\n\n\tprivate Object createInstance0(Context cx, Object original, Object[] args) {\n\t\tvar constructor = cx.factory.getRecordConstructor(asClass());\n\n\t\tif (constructor == null) {\n\t\t\tthrow Context.reportRuntimeError(\"Unable to find record '\" + asClass().getName() + \"' constructor\", cx);\n",
+          "after": "\t}\n\n\tprivate Object createInstance0(Context cx, Object original, Object[] args) {\n\t\tjava.lang.invoke.MethodHandle constructor = cx.factory.getRecordConstructor(asClass());\n\n\t\tif (constructor == null) {\n\t\t\tthrow Context.reportRuntimeError(\"Unable to find record '\" + asClass().getName() + \"' constructor\", cx);\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object createInstance(Context cx, Map<?, ?> map) {\n\t\tvar data = getData();\n\t\tvar defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());\n\t\tvar args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;\n\t\tvar args = args0.clone();\n\n\t\tfor (var entry : map.entrySet()) {\n\t\t\tvar c = data.componentMap.get(String.valueOf(entry.getKey()));\n\n\t\t\tif (c != null) {\n\t\t\t\tif (args[c.index] instanceof Optional) {\n",
+          "after": "\t}\n\n\tpublic Object createInstance(Context cx, Map<?, ?> map) {\n\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Data data = getData();\n\t\tjava.lang.Object[] defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());\n\t\tjava.lang.Object[] args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;\n\t\tjava.lang.Object[] args = args0.clone();\n\n\t\tfor (java.util.Map.Entry<?, ?> entry : map.entrySet()) {\n\t\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Component c = data.componentMap.get(String.valueOf(entry.getKey()));\n\n\t\t\tif (c != null) {\n\t\t\t\tif (args[c.index] instanceof Optional) {\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object createInstance(Context cx, Object... objects) {\n\t\tvar data = getData();\n\t\tvar defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());\n\t\tvar args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;\n\t\tvar args = args0.clone();\n\n\t\tint alen = Math.min(args0.length, objects.length);\n\n",
+          "after": "\t}\n\n\tpublic Object createInstance(Context cx, Object... objects) {\n\t\tdev.latvian.mods.rhino.type.RecordTypeInfo.Data data = getData();\n\t\tjava.lang.Object[] defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());\n\t\tjava.lang.Object[] args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;\n\t\tjava.lang.Object[] args = args0.clone();\n\n\t\tint alen = Math.min(args0.length, objects.length);\n\n"
+        },
+        {
+          "before": "\t\tif (asClass().isInstance(from)) {\n\t\t\treturn from;\n\t\t} else if (from instanceof NativeArray || from instanceof NativeJavaList) {\n\t\t\tvar arr = (Object[]) cx.arrayOf(from, TypeInfo.NONE);\n\t\t\treturn createInstance(cx, arr);\n\t\t} else if (from instanceof Map<?, ?> || from instanceof NativeJavaObject || from instanceof NativeMap) {\n\t\t\tvar map = (Map) cx.mapOf(from, TypeInfo.STRING, TypeInfo.NONE);\n\t\t\treturn createInstance(cx, map);\n\t\t} else if (from instanceof Callable) {\n\t\t\tvar map = new HashMap<String, Object>(2);\n\t\t\tvar consumer = (Consumer<Map<String, ?>>) cx.jsToJava(from, CONSUMER_TYPE_INFO);\n\t\t\tconsumer.accept(map);\n\t\t\treturn createInstance(cx, map);\n\t\t} else {\n",
+          "after": "\t\tif (asClass().isInstance(from)) {\n\t\t\treturn from;\n\t\t} else if (from instanceof NativeArray || from instanceof NativeJavaList) {\n\t\t\tjava.lang.Object[] arr = (Object[]) cx.arrayOf(from, TypeInfo.NONE);\n\t\t\treturn createInstance(cx, arr);\n\t\t} else if (from instanceof Map<?, ?> || from instanceof NativeJavaObject || from instanceof NativeMap) {\n\t\t\tjava.util.Map map = (Map) cx.mapOf(from, TypeInfo.STRING, TypeInfo.NONE);\n\t\t\treturn createInstance(cx, map);\n\t\t} else if (from instanceof Callable) {\n\t\t\tjava.util.HashMap<java.lang.String, java.lang.Object> map = new HashMap<String, Object>(2);\n\t\t\tjava.util.function.Consumer<java.util.Map<java.lang.String, ?>> consumer = (Consumer<Map<String, ?>>) cx.jsToJava(from, CONSUMER_TYPE_INFO);\n\t\t\tconsumer.accept(map);\n\t\t\treturn createInstance(cx, map);\n\t\t} else {\n"
         }
       ]
     },
@@ -1327,6 +1459,156 @@
         {
           "before": "\t\t\treturn null;\n\t\t}\n\n\t\tvar cl = target.asClass();\n\n\t\tvar wrapper = wrappers.get(cl);\n\n\t\tif (wrapper != null && wrapper.validator().isValid(from, target)) {\n\t\t\treturn wrapper.factory();\n",
           "after": "\t\t\treturn null;\n\t\t}\n\n\t\tjava.lang.Class<?> cl = target.asClass();\n\n\t\tdev.latvian.mods.rhino.util.wrap.TypeWrapper<?> wrapper = wrappers.get(cl);\n\n\t\tif (wrapper != null && wrapper.validator().isValid(from, target)) {\n\t\t\treturn wrapper.factory();\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/ConsString.java",
+      "old_path": "dev/latvian/mods/rhino/ConsString.java",
+      "hunks": [
+        {
+          "before": "\tpublic static String flatten(CharSequence left, CharSequence right) {\n\t\tint l = left.length();\n\t\tint r = right.length();\n\t\tvar chars = new char[l + r];\n\t\tleft.toString().getChars(0, l, chars, 0);\n\t\tright.toString().getChars(0, r, chars, l);\n\t\treturn new String(chars);\n",
+          "after": "\tpublic static String flatten(CharSequence left, CharSequence right) {\n\t\tint l = left.length();\n\t\tint r = right.length();\n\t\tchar[] chars = new char[l + r];\n\t\tleft.toString().getChars(0, l, chars, 0);\n\t\tright.toString().getChars(0, r, chars, l);\n\t\treturn new String(chars);\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/ContextFactory.java",
+      "old_path": "dev/latvian/mods/rhino/ContextFactory.java",
+      "hunks": [
+        {
+          "before": "\n\tpublic synchronized void registerDefaultRecordProperties(Record record) {\n\t\ttry {\n\t\t\tvar components = record.getClass().getRecordComponents();\n\t\t\tvar properties = new Object[components.length];\n\n\t\t\tfor (int i = 0; i < components.length; i++) {\n\t\t\t\tproperties[i] = components[i].getAccessor().invoke(record);\n",
+          "after": "\n\tpublic synchronized void registerDefaultRecordProperties(Record record) {\n\t\ttry {\n\t\t\tjava.lang.reflect.RecordComponent[] components = record.getClass().getRecordComponents();\n\t\t\tjava.lang.Object[] properties = new Object[components.length];\n\n\t\t\tfor (int i = 0; i < components.length; i++) {\n\t\t\t\tproperties[i] = components[i].getAccessor().invoke(record);\n"
+        },
+        {
+          "before": "\t\t\treturn null;\n\t\t}\n\n\t\tvar constructor = recordConstructors.get(type);\n\n\t\tif (constructor == null) {\n\t\t\ttry {\n\t\t\t\tvar components = type.getRecordComponents();\n\t\t\t\tvar args = new Class<?>[components.length];\n\n\t\t\t\tfor (int i = 0; i < components.length; i++) {\n\t\t\t\t\targs[i] = components[i].getType();\n",
+          "after": "\t\t\treturn null;\n\t\t}\n\n\t\tjava.lang.invoke.MethodHandle constructor = recordConstructors.get(type);\n\n\t\tif (constructor == null) {\n\t\t\ttry {\n\t\t\t\tjava.lang.reflect.RecordComponent[] components = type.getRecordComponents();\n\t\t\t\tjava.lang.Class<?>[] args = new Class<?>[components.length];\n\n\t\t\t\tfor (int i = 0; i < components.length; i++) {\n\t\t\t\t\targs[i] = components[i].getType();\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/IRFactory.java",
+      "old_path": "dev/latvian/mods/rhino/IRFactory.java",
+      "hunks": [
+        {
+          "before": "\t\t\t/* transform nodes used as default parameters */\n\t\t\tList<Node[]> dfns = fn.getDestructuringRvalues();\n\t\t\tif (dfns != null) {\n\t\t\t\tfor (var i : dfns) {\n\t\t\t\t\tNode a = i[0];\n\t\t\t\t\tif (i[1] instanceof AstNode) {\n\t\t\t\t\t\tAstNode b = (AstNode) i[1];\n",
+          "after": "\t\t\t/* transform nodes used as default parameters */\n\t\t\tList<Node[]> dfns = fn.getDestructuringRvalues();\n\t\t\tif (dfns != null) {\n\t\t\t\tfor (dev.latvian.mods.rhino.Node[] i : dfns) {\n\t\t\t\t\tNode a = i[0];\n\t\t\t\t\tif (i[1] instanceof AstNode) {\n\t\t\t\t\t\tAstNode b = (AstNode) i[1];\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/Interpreter.java",
+      "old_path": "dev/latvian/mods/rhino/Interpreter.java",
+      "hunks": [
+        {
+          "before": "\t\t\t\t// in order to evaluate their attributes.\n\t\t\t\t//final Context cx = Context.enter();\n\t\t\t\t//try {\n\t\t\t\tvar cx = localContext.factory.enter();\n\n\t\t\t\tif (cx.hasTopCallScope()) {\n\t\t\t\t\treturn equalsInTopScope(otherCallFrame);\n",
+          "after": "\t\t\t\t// in order to evaluate their attributes.\n\t\t\t\t//final Context cx = Context.enter();\n\t\t\t\t//try {\n\t\t\t\tdev.latvian.mods.rhino.Context cx = localContext.factory.enter();\n\n\t\t\t\tif (cx.hasTopCallScope()) {\n\t\t\t\t\treturn equalsInTopScope(otherCallFrame);\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/JavaAdapter.java",
+      "old_path": "dev/latvian/mods/rhino/JavaAdapter.java",
+      "hunks": [
+        {
+          "before": "\t// Used by generated bytecode\n\t@SuppressWarnings(\"unused\")\n\tpublic static Object convertResult(Context cx, Object result, Class<?> c) {\n\t\tvar typeInfo = TypeInfo.of(c);\n\n\t\tif (result == Undefined.INSTANCE && (typeInfo != TypeInfo.OBJECT && typeInfo != TypeInfo.STRING)) {\n\t\t\t// Avoid an error for an undefined value; return null instead.\n",
+          "after": "\t// Used by generated bytecode\n\t@SuppressWarnings(\"unused\")\n\tpublic static Object convertResult(Context cx, Object result, Class<?> c) {\n\t\tdev.latvian.mods.rhino.type.TypeInfo typeInfo = TypeInfo.of(c);\n\n\t\tif (result == Undefined.INSTANCE && (typeInfo != TypeInfo.OBJECT && typeInfo != TypeInfo.STRING)) {\n\t\t\t// Avoid an error for an undefined value; return null instead.\n"
+        },
+        {
+          "before": "\t\t}\n\t\t// Visit interfaces in depth first order.\n\t\twhile (!interfaces.isEmpty()) {\n\t\t\tvar intf = interfaces.remove();\n\t\t\tif (visitedInterfaces.contains(intf)) {\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tvisitedInterfaces.add(intf);\n\t\t\tappendOverridableMethods(intf, list, skip);\n\t\t\tvar subIntf = intf.getInterfaces();\n\t\t\tfor (int j = subIntf.length -1; j >= 0; j--) {\n\t\t\t\tinterfaces.addFirst(subIntf[j]);\n\t\t\t}\n",
+          "after": "\t\t}\n\t\t// Visit interfaces in depth first order.\n\t\twhile (!interfaces.isEmpty()) {\n\t\t\tjava.lang.Class<?> intf = interfaces.remove();\n\t\t\tif (visitedInterfaces.contains(intf)) {\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tvisitedInterfaces.add(intf);\n\t\t\tappendOverridableMethods(intf, list, skip);\n\t\t\tjava.lang.Class<?>[] subIntf = intf.getInterfaces();\n\t\t\tfor (int j = subIntf.length -1; j >= 0; j--) {\n\t\t\t\tinterfaces.addFirst(subIntf[j]);\n\t\t\t}\n"
+        },
+        {
+          "before": "\t// Used by generated bytecode in the adapter's empty ctor\n\t@SuppressWarnings(\"unused\")\n\tpublic static Scriptable runScript(final Script script, Context cx) {\n\t\tvar globalScope = cx.getTopCallScope(); // ScriptRuntime.getGlobal(cx);\n\t\tscript.exec(cx, globalScope);\n\t\treturn globalScope;\n\t}\n",
+          "after": "\t// Used by generated bytecode in the adapter's empty ctor\n\t@SuppressWarnings(\"unused\")\n\tpublic static Scriptable runScript(final Script script, Context cx) {\n\t\tdev.latvian.mods.rhino.Scriptable globalScope = cx.getTopCallScope(); // ScriptRuntime.getGlobal(cx);\n\t\tscript.exec(cx, globalScope);\n\t\treturn globalScope;\n\t}\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeMap.java",
+      "old_path": "dev/latvian/mods/rhino/NativeMap.java",
+      "hunks": [
+        {
+          "before": "\n\t\tboolean isStrict = cx.isStrictMode();\n\n\t\tfor (var entry : entries) {\n\t\t\t// Per spec must convert every time so that primitives are always regenerated...\n\t\t\tScriptable thisObj = ScriptRuntime.toObjectOrNull(cx, arg2, scope);\n\n",
+          "after": "\n\t\tboolean isStrict = cx.isStrictMode();\n\n\t\tfor (dev.latvian.mods.rhino.Hashtable.Entry entry : entries) {\n\t\t\t// Per spec must convert every time so that primitives are always regenerated...\n\t\t\tScriptable thisObj = ScriptRuntime.toObjectOrNull(cx, arg2, scope);\n\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeString.java",
+      "old_path": "dev/latvian/mods/rhino/NativeString.java",
+      "hunks": [
+        {
+          "before": "\n\tprivate static void checkValidRegex(Context cx, Object[] args, int pos, String functionName) {\n\t\tif (args.length > pos && args[pos] instanceof Scriptable arg) {\n\t\t\tvar reProxy = cx.getRegExp();\n\t\t\tif (reProxy != null) {\n\t\t\t\tif (reProxy.isRegExp(arg)) {\n\t\t\t\t\tif (ScriptableObject.isTrue(ScriptableObject.getProperty(arg, SymbolKey.MATCH, cx), cx)) {\n",
+          "after": "\n\tprivate static void checkValidRegex(Context cx, Object[] args, int pos, String functionName) {\n\t\tif (args.length > pos && args[pos] instanceof Scriptable arg) {\n\t\t\tdev.latvian.mods.rhino.regexp.RegExp reProxy = cx.getRegExp();\n\t\t\tif (reProxy != null) {\n\t\t\t\tif (reProxy.isRegExp(arg)) {\n\t\t\t\t\tif (ScriptableObject.isTrue(ScriptableObject.getProperty(arg, SymbolKey.MATCH, cx), cx)) {\n"
+        },
+        {
+          "before": "\t\tContext cx, Scriptable scope, Scriptable thisObj, Object[] args) {\n\t\tObject o = requireObjectCoercible(cx, thisObj, CLASS_NAME, \"match\");\n\t\tObject regexp = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tvar regExpProxy = cx.getRegExp();\n\t\tif (regexp != null && !Undefined.isUndefined(regexp)) {\n\t\t\tObject matcher = ScriptRuntime.getObjectElem(cx, scope, regexp, SymbolKey.MATCH);\n\t\t\t// If method is not undefined, it should be a Callable\n",
+          "after": "\t\tContext cx, Scriptable scope, Scriptable thisObj, Object[] args) {\n\t\tObject o = requireObjectCoercible(cx, thisObj, CLASS_NAME, \"match\");\n\t\tObject regexp = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tdev.latvian.mods.rhino.regexp.RegExp regExpProxy = cx.getRegExp();\n\t\tif (regexp != null && !Undefined.isUndefined(regexp)) {\n\t\t\tObject matcher = ScriptRuntime.getObjectElem(cx, scope, regexp, SymbolKey.MATCH);\n\t\t\t// If method is not undefined, it should be a Callable\n"
+        },
+        {
+          "before": "\t\t// See ECMAScript spec 22.1.3.14\n\t\tObject o = requireObjectCoercible(cx, thisObj, CLASS_NAME, \"matchAll\");\n\t\tObject regexp = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tvar regExpProxy = cx.getRegExp();\n\t\tif (regexp != null && !Undefined.isUndefined(regexp)) {\n\t\t\tboolean isRegExp =\n\t\t\t\tregexp instanceof Scriptable && regExpProxy.isRegExp((Scriptable) regexp);\n",
+          "after": "\t\t// See ECMAScript spec 22.1.3.14\n\t\tObject o = requireObjectCoercible(cx, thisObj, CLASS_NAME, \"matchAll\");\n\t\tObject regexp = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tdev.latvian.mods.rhino.regexp.RegExp regExpProxy = cx.getRegExp();\n\t\tif (regexp != null && !Undefined.isUndefined(regexp)) {\n\t\t\tboolean isRegExp =\n\t\t\t\tregexp instanceof Scriptable && regExpProxy.isRegExp((Scriptable) regexp);\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/ScriptRuntime.java",
+      "old_path": "dev/latvian/mods/rhino/ScriptRuntime.java",
+      "hunks": [
+        {
+          "before": "\t}\n\n\tpublic static String escapeAndWrapString(String s) {\n\t\tvar c = s.indexOf('\\'') == -1 ? '\\'' : '\"';\n\t\tvar escaped = escapeString(s, c);\n\t\treturn c + escaped + c;\n\t}\n\n",
+          "after": "\t}\n\n\tpublic static String escapeAndWrapString(String s) {\n\t\tchar c = s.indexOf('\\'') == -1 ? '\\'' : '\"';\n\t\tjava.lang.String escaped = escapeString(s, c);\n\t\treturn c + escaped + c;\n\t}\n\n"
+        },
+        {
+          "before": "\t\t\treturn toString(cx, val);\n\t\t}\n\t\tif (val.getClass().isArray()) {\n\t\t\tvar builder = new StringBuilder();\n\t\t\tint length = Array.getLength(val);\n\n\t\t\tif (length == 0) {\n",
+          "after": "\t\t\treturn toString(cx, val);\n\t\t}\n\t\tif (val.getClass().isArray()) {\n\t\t\tjava.lang.StringBuilder builder = new StringBuilder();\n\t\t\tint length = Array.getLength(val);\n\n\t\t\tif (length == 0) {\n"
+        },
+        {
+          "before": "\t\t\treturn false;\n\t\t}\n\t\tif (value instanceof ScriptableObject) {\n\t\t\tvar type = ((ScriptableObject) value).getTypeOf();\n\t\t\treturn type == MemberType.OBJECT || type == MemberType.FUNCTION;\n\t\t}\n\t\tif (value instanceof Scriptable) {\n",
+          "after": "\t\t\treturn false;\n\t\t}\n\t\tif (value instanceof ScriptableObject) {\n\t\t\tdev.latvian.mods.rhino.MemberType type = ((ScriptableObject) value).getTypeOf();\n\t\t\treturn type == MemberType.OBJECT || type == MemberType.FUNCTION;\n\t\t}\n\t\tif (value instanceof Scriptable) {\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/ScriptableObject.java",
+      "old_path": "dev/latvian/mods/rhino/ScriptableObject.java",
+      "hunks": [
+        {
+          "before": "\t\tbuf[0] = 's';\n\t\tString setterName = new String(buf);\n\n\t\tvar methods = FunctionObject.getMethodList(cx, clazz);\n\t\tvar getter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, getterName, cx));\n\t\tvar setter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, setterName, cx));\n\t\tif (setter == null) {\n\t\t\tattributes |= ScriptableObject.READONLY;\n\t\t}\n",
+          "after": "\t\tbuf[0] = 's';\n\t\tString setterName = new String(buf);\n\n\t\tjava.util.List<dev.latvian.mods.rhino.CachedMethodInfo> methods = FunctionObject.getMethodList(cx, clazz);\n\t\tdev.latvian.mods.rhino.WrappedExecutable getter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, getterName, cx));\n\t\tdev.latvian.mods.rhino.WrappedExecutable setter = WrappedReflectionMethod.of(FunctionObject.findSingleMethod(methods, setterName, cx));\n\t\tif (setter == null) {\n\t\t\tattributes |= ScriptableObject.READONLY;\n\t\t}\n"
+        },
+        {
+          "before": "\t\t}\n\n\t\treplacedSlot.replaceWith(newSlot);\n\t\tvar replacedDesc = replacedSlot.buildPropertyDescriptor(cx);\n\n\t\tcheckPropertyChangeForSlot(cx, name, existing, replacedDesc);\n\t\treturn replacedSlot;\n",
+          "after": "\t\t}\n\n\t\treplacedSlot.replaceWith(newSlot);\n\t\tdev.latvian.mods.rhino.ScriptableObject replacedDesc = replacedSlot.buildPropertyDescriptor(cx);\n\n\t\tcheckPropertyChangeForSlot(cx, name, existing, replacedDesc);\n\t\treturn replacedSlot;\n"
+        },
+        {
+          "before": "\t * @see FunctionObject\n\t */\n\tpublic void defineFunctionProperties(Context cx, String[] names, Class<?> clazz, int attributes) {\n\t\tvar methods = FunctionObject.getMethodList(cx, clazz);\n\t\tfor (int i = 0; i < names.length; i++) {\n\t\t\tString name = names[i];\n\t\t\tvar m = FunctionObject.findSingleMethod(methods, name, cx);\n\t\t\tif (m == null) {\n\t\t\t\tthrow Context.reportRuntimeError2(\"msg.method.not.found\", name, clazz.getName(), cx);\n\t\t\t}\n",
+          "after": "\t * @see FunctionObject\n\t */\n\tpublic void defineFunctionProperties(Context cx, String[] names, Class<?> clazz, int attributes) {\n\t\tjava.util.List<dev.latvian.mods.rhino.CachedMethodInfo> methods = FunctionObject.getMethodList(cx, clazz);\n\t\tfor (int i = 0; i < names.length; i++) {\n\t\t\tString name = names[i];\n\t\t\tdev.latvian.mods.rhino.CachedMethodInfo m = FunctionObject.findSingleMethod(methods, name, cx);\n\t\t\tif (m == null) {\n\t\t\t\tthrow Context.reportRuntimeError2(\"msg.method.not.found\", name, clazz.getName(), cx);\n\t\t\t}\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/Slot.java",
+      "old_path": "dev/latvian/mods/rhino/Slot.java",
+      "hunks": [
+        {
+          "before": "\t}\n\n\tSlot copySlot() {\n\t\tvar newSlot = new Slot(this);\n\t\tnewSlot.next = null;\n\t\tnewSlot.orderedNext = null;\n\t\treturn newSlot;\n",
+          "after": "\t}\n\n\tSlot copySlot() {\n\t\tdev.latvian.mods.rhino.Slot newSlot = new Slot(this);\n\t\tnewSlot.next = null;\n\t\tnewSlot.orderedNext = null;\n\t\treturn newSlot;\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/type/TypeUtils.java",
+      "old_path": "dev/latvian/mods/rhino/type/TypeUtils.java",
+      "hunks": [
+        {
+          "before": "\tstatic final Map<Class<?>, TypeInfo> IMMUTABLE_CACHE = new IdentityHashMap<>();\n\n\tprivate static void cacheType(TypeInfo... info) {\n\t\tfor (var i : info) {\n\t\t\tIMMUTABLE_CACHE.putIfAbsent(i.asClass(), i);\n\t\t}\n\t}\n",
+          "after": "\tstatic final Map<Class<?>, TypeInfo> IMMUTABLE_CACHE = new IdentityHashMap<>();\n\n\tprivate static void cacheType(TypeInfo... info) {\n\t\tfor (dev.latvian.mods.rhino.type.TypeInfo i : info) {\n\t\t\tIMMUTABLE_CACHE.putIfAbsent(i.asClass(), i);\n\t\t}\n\t}\n"
+        },
+        {
+          "before": "\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tvar rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tvar componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n",
+          "after": "\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tjava.lang.reflect.Type rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tjava.lang.reflect.Type componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n"
         }
       ]
     }
