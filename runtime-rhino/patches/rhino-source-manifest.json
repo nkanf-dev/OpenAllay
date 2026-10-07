@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 175142,
-    "sha256": "4076f00a75b87b52a0840a22fee525ff1e206d5ae0ac21f4d221f78a727c4709",
-    "modified_upstream_files": 100,
+    "bytes": 182288,
+    "sha256": "f16181f687122e48b4ebb3acfa649eb33c51ab414cf43bd474a7e84e6bfc76d4",
+    "modified_upstream_files": 101,
     "added_source_files": 1,
-    "hunks": 374,
+    "hunks": 387,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "NativeDate6state/timezone/formatter/prototype switchesloweredexactly; no calendartimezonealgorithmchanges. Fullruntime release17untilremaininglanguage/capabilityport.",
+  "source_only_status": "ClassFileWriter12arrow switches/MHandlebindinglowered; bytecodeemission/stack/descriptoralgorithm retained. No classloading workaround; fullruntime release17pendinglanguage/APIport.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -2929,9 +2929,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.classfile.ClassFileWriter",
       "source_bytes": 129030,
       "source_sha256": "61d3748254f7795b058d3a6b3c50cc51ac966a03447304035dcdf8ec7b200efc",
-      "patched_bytes": 129030,
-      "patched_sha256": "61d3748254f7795b058d3a6b3c50cc51ac966a03447304035dcdf8ec7b200efc",
-      "modified": false,
+      "patched_bytes": 129720,
+      "patched_sha256": "3cb6915b0d6b2cd211d98c482e054fbe16e8bd2f1d8d1b51a3523cae49ca741a",
+      "modified": true,
       "line_count": 4353,
       "license_evidence": [
         "MPL-2.0 header"
