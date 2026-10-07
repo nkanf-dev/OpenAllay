@@ -1,6 +1,12 @@
 name: Release affected verification
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        options: [skills, modern]
+        default: skills
+        required: true
 permissions:
   contents: read
 concurrency:
@@ -8,6 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   skills-runtime:
+    if: inputs.scope != 'modern'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -34,4 +41,42 @@ jobs:
           path: |
             engine-core/build/test-results/
             engine-core/build/reports/tests/
+            build/reports/problems/
+
+  shared-and-modern:
+    if: inputs.scope == 'modern'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Prepare the accepted universal Builder source
+        run: python3 -B scripts/prepare-distribution.py
+      - name: Verify shared code and representative modern loader builds
+        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :extension-api:test :common:test :fabric:build :neoforge:build
+      - name: Retain original shared and loader verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-shared-modern-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            extension-api/build/test-results/
+            engine-core/build/test-results/
+            runtime-json/build/test-results/
+            runtime-maven/build/test-results/
+            common/build/test-results/
+            adapters/minecraft/build/test-results/
+            fabric/build/test-results/
+            neoforge/build/test-results/
             build/reports/problems/
