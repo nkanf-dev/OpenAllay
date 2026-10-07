@@ -35,12 +35,12 @@ public final class ResultChunker {
                     hash,
                     Base64.getEncoder().encodeToString(part)));
         }
-        return List.copyOf(chunks);
+        return dev.openallay.util.Java8Collections.listCopyOf(chunks);
     }
 
     static String sha256(byte[] bytes) {
         try {
-            return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+            return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }
@@ -123,7 +123,8 @@ public final class ResultChunker {
             }
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             for (int index = 0; index < assembly.total; index++) {
-                output.writeBytes(assembly.parts.get(index));
+                byte[] part = assembly.parts.get(index);
+                output.write(part, 0, part.length);
             }
             byte[] complete = output.toByteArray();
             remove(chunk.correlationId());
