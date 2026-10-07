@@ -1,0 +1,268 @@
+{
+  "scope": "13 complete canonical bridge transport owners, authentic AST+API output custody and real EngineJson. Notwholebridge/engine/Forge8.",
+  "original_custody_commit": "2034dade4abd2b0124672816997fa6801146055b",
+  "owners": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/RemoteToolCallPayload.java",
+      "record": "RemoteToolCallPayload",
+      "git_blob": "caee9b5c5338c585088346de03f7059ec4925da7",
+      "pre_sha256": "58ccc48cb62df3dda9482e8b735380647bbc666d4cc9775ea110c54e758108ec",
+      "pre_bytes": 625,
+      "api_substitutions": [
+        {
+          "old": "value.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(value)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ClientToolCallPayload.java",
+      "record": "ClientToolCallPayload",
+      "git_blob": "84cd5362f9496ba110566b43468f824ff05d1a2a",
+      "pre_sha256": "6b0f7d1781cfaaa3b4b71a40681952e837891cbd6071fd4e1d1183a86c58408a",
+      "pre_bytes": 980,
+      "api_substitutions": [
+        {
+          "old": "argumentsJson.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(argumentsJson)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/RemoteCancelPayload.java",
+      "record": "RemoteCancelPayload",
+      "git_blob": "7a88735af58a2f80c2aa3d131f7faef5186d3a4f",
+      "pre_sha256": "16bcb196ff419d955d12bfbfd8427341c7095e04c9544f92662cd8890f042470",
+      "pre_bytes": 235,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ClientToolCancelPayload.java",
+      "record": "ClientToolCancelPayload",
+      "git_blob": "d3a953c6a91a32873690c287a6fc4e37a2ea3c52",
+      "pre_sha256": "9a8cb733659465cc2b5559630e114bc15ccab7bbba40ceec0bebb8893736be10",
+      "pre_bytes": 408,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ServerAgentCancelPayload.java",
+      "record": "ServerAgentCancelPayload",
+      "git_blob": "04b757aab9a710d26d0092894be26377c91b2313",
+      "pre_sha256": "e5dc1551008ea8a5df275a54c4c5563ec391f86cce6e256e039e7adb0fe74b71",
+      "pre_bytes": 233,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/RemoteToolRequestClosePayload.java",
+      "record": "RemoteToolRequestClosePayload",
+      "git_blob": "7aa778e9cb2a5166a77020a11496c6747da964c7",
+      "pre_sha256": "85457d6bc2efd88b628e2ce5bb9ab8a2afe7544ee7b89efde82cccb2bbd859ec",
+      "pre_bytes": 395,
+      "api_substitutions": [
+        {
+          "old": "requestId.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(requestId)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/RemoteToolResultChunkPayload.java",
+      "record": "RemoteToolResultChunkPayload",
+      "git_blob": "2bc253b23f1e2da65199b7a6d005230ec980fa22",
+      "pre_sha256": "f9bbb2fa858bc0daacfd318313ad5c9d311838910335a7935224c03532ce775a",
+      "pre_bytes": 1016,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ClientToolResultChunkPayload.java",
+      "record": "ClientToolResultChunkPayload",
+      "git_blob": "bf57d3ccfe367d8775044e9f6b0f9c83d60f96a4",
+      "pre_sha256": "e14986860024801a08960bf23cbe92621fd6fd8ca54e3968defdea9332f47041",
+      "pre_bytes": 2080,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ServerAgentEventChunkPayload.java",
+      "record": "ServerAgentEventChunkPayload",
+      "git_blob": "6ae1e66167a373cf6feef445ddebb1f9b820276f",
+      "pre_sha256": "4f6125e0bd418736473100e761c67a4151d077385cad39306bf1d295dccb95ec",
+      "pre_bytes": 1739,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ServerAgentRequestChunkPayload.java",
+      "record": "ServerAgentRequestChunkPayload",
+      "git_blob": "8bb48183efd0cb268bca06b345a53c367b327378",
+      "pre_sha256": "7f977e094a2024f5ebefb1e961954de6c8d5d6de70df8d32dfca0cc2004cdfa6",
+      "pre_bytes": 2126,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ServerAgentSteerChunkPayload.java",
+      "record": "ServerAgentSteerChunkPayload",
+      "git_blob": "f33e6d498012a46aa87c7b7addc859d223ca497c",
+      "pre_sha256": "a73473b53f64c1e80e87e7e42f104303ee92d1b04525acdded66bafbdfd6973b",
+      "pre_bytes": 686,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ServerAgentEventPayload.java",
+      "record": "ServerAgentEventPayload",
+      "git_blob": "ab54c47e1c8b57fdef14cdbde9205ed12fb5e69f",
+      "pre_sha256": "1fa6964c326b701d3ccb9456b6db1ef57bc9ccd9a155221ea549758c73fc70bb",
+      "pre_bytes": 494,
+      "api_substitutions": [
+        {
+          "old": "eventType.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(eventType)",
+          "count": 1
+        },
+        {
+          "old": "eventJson.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(eventJson)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/ResultChunker.java",
+      "record": null,
+      "git_blob": "aef044845c80e466c1816cb1a52da617da829b3c",
+      "pre_sha256": "5bdab9fbc62b5b9a3481e87feb0aa5a237d6b1e4252bb1beef9597fd190a4db8",
+      "pre_bytes": 7911,
+      "api_substitutions": [
+        {
+          "old": "List.copyOf(",
+          "new": "dev.openallay.util.Java8Collections.listCopyOf(",
+          "count": 1
+        },
+        {
+          "old": "java.util.HexFormat.of().formatHex(",
+          "new": "dev.openallay.util.Java8Hex.formatHex(",
+          "count": 1
+        },
+        {
+          "old": "                output.writeBytes(assembly.parts.get(index));",
+          "new": "                byte[] part = assembly.parts.get(index);\n                output.write(part, 0, part.length);",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "support": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/bridge/protocol/BridgeProtocol.java",
+      "sha256": "d8f8998d3dd9976d51bc733d3997d54b0514849ad39d9302d6908e8b79501003",
+      "bytes": 945
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+      "sha256": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81",
+      "bytes": 4108
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
+      "sha256": "3cb1573ce1a0773a85b0ff797cfa444b55cb2ef610a503c142743f3683b9d8ab",
+      "bytes": 4235
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+      "sha256": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e",
+      "bytes": 415
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+      "sha256": "3b1ab1d755049ee829d20c6f8d0a8504def3368f4d4a68a9f61f8fb975040b5c",
+      "bytes": 1521
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
+      "bytes": 4686
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+      "sha256": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
+      "bytes": 3667
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+      "sha256": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
+      "bytes": 1191
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+      "sha256": "ba0183b406daac7f1e97ca0d95f1e42b24bb8b7e8ef571d81f833ebd2e24f9ac",
+      "bytes": 17687
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+      "sha256": "638fe24a01f86e13701ad11073c3630938b76778e4138d34f53592c316b3ac60",
+      "bytes": 12218
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+      "sha256": "7fa96c324f1eae6a2a86965b202f9bdfd0ae38a2437fba7dad49b620dc4098cb",
+      "bytes": 4878
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java",
+      "sha256": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
+      "bytes": 3587
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+      "sha256": "374c7d12e8d02ed33234c8029c2f2717713f92fec90fdde34971242c0730c4aa",
+      "bytes": 3757
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "engine-core/src/bridgeTransportJava8Test/java/dev/openallay/bridge/protocol/BridgeTransportJava8Fixture.java",
+      "sha256": "fe8f4bbcd40fdbaa9a901b06cf71071c15bdc0d7969a4d91131252144716c311"
+    },
+    {
+      "path": "engine-core/src/bridgeTransportJava8Test/java/dev/openallay/bridge/protocol/BridgeTransportJava8Test.java",
+      "sha256": "23d203754722a37d60f301a98a61a165c4620133621dc87b5bb2d7c388b9ac28"
+    }
+  ],
+  "converter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218"
+  },
+  "dependency_pins": {
+    "gson": [
+      {
+        "name": "gson-2.8.0.jar",
+        "bytes": 231952,
+        "digest_algorithm": "sha1",
+        "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+      },
+      {
+        "name": "gson-2.13.2.jar",
+        "bytes": 289901,
+        "digest_algorithm": "sha256",
+        "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+      }
+    ],
+    "junit_console": [
+      {
+        "name": "junit-platform-console-standalone-1.11.4.jar",
+        "bytes": 2809597,
+        "digest_algorithm": "sha256",
+        "digest": "b016ef6b1c3454d6d7c2c88ce081dabf289699686af6622d6e4e2e1b54b4a2fc",
+        "artifact_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar.sha256"
+      }
+    ]
+  },
+  "runner_sha256": "59739edb2ab6715865be02e1b6f41c139499950e93e9b6bd52200e35e74993c3",
+  "format_policy": "Only blankline trailingwhitespace cleanup afteractualconverter/APIops; no arbitrary handrender acceptance."
+}

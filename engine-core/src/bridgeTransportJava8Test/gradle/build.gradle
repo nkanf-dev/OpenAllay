@@ -1,0 +1,55 @@
+plugins { id 'java' }
+def repo = file('../../../..')
+def engine = new File(repo, 'engine-core')
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+def owners = ['RemoteToolCallPayload', 'ClientToolCallPayload', 'RemoteCancelPayload', 'ClientToolCancelPayload',
+        'ServerAgentCancelPayload', 'RemoteToolRequestClosePayload', 'RemoteToolResultChunkPayload', 'ClientToolResultChunkPayload',
+        'ServerAgentEventChunkPayload', 'ServerAgentRequestChunkPayload', 'ServerAgentSteerChunkPayload', 'ServerAgentEventPayload',
+        'ResultChunker', 'BridgeProtocol']
+def paths = owners.collect { 'dev/openallay/bridge/protocol/' + it + '.java' } + [
+        'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/ValueType.java', 'dev/openallay/value/RecordMetadata.java',
+        'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java', 'dev/openallay/util/Java8Hex.java',
+        'dev/openallay/json/EngineJson.java', 'dev/openallay/json/ConstructorValueJsonAdapter.java', 'dev/openallay/json/RecordJsonAdapter.java']
+sourceSets.main.java.setSrcDirs([new File(engine, 'src/main/java'), new File(engine, 'src/bridgeTransportJava8Test/java'), new File(repo, 'runtime-json/src/main/java')])
+sourceSets.main.java.setIncludes(paths + ['dev/openallay/bridge/protocol/BridgeTransportJava8Fixture.java', 'dev/openallay/json/JsonTrees.java', 'dev/openallay/json/JsonReaders.java'])
+dependencies { implementation('com.google.code.gson:gson:2.8.0') }
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+def host = providers.gradleProperty('jsonVerificationGsonVersion').getOrElse('2.8.0')
+configurations.runtimeClasspath.resolutionStrategy.force("com.google.code.gson:gson:${host}")
+tasks.register('java8BridgeTransportTest', JavaExec) {
+    dependsOn('classes'); mainClass = 'dev.openallay.bridge.protocol.BridgeTransportJava8Fixture'; args('java8')
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    inputs.property('jsonVerificationGsonVersion', host)
+    doFirst { standardOutput = new ByteArrayOutputStream() }
+    doLast {
+        def report = layout.buildDirectory.file("bridge-transport-java8-${host}.txt").get().asFile
+        report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        if (providers.gradleProperty('originalBridgeTransportReport').isPresent()
+                && !java.util.Arrays.equals(file(providers.gradleProperty('originalBridgeTransportReport').get()).bytes, report.bytes)) {
+            throw new GradleException('Original canonical bridge transport vs genuineJava8 differs')
+        }
+    }
+}
+if (providers.gradleProperty('originalBridgeTransportSourceRoot').isPresent()) {
+    def original = file(providers.gradleProperty('originalBridgeTransportSourceRoot').get())
+    tasks.register('compileOriginalBridgeTransport', JavaCompile) {
+        source = files(paths.collect { new File(original, 'engine-core/src/main/java/' + it) },
+                new File(original, 'runtime-json/src/main/java/dev/openallay/json/JsonTrees.java'),
+                new File(original, 'runtime-json/src/main/java/dev/openallay/json/JsonReaders.java'),
+                new File(engine, 'src/bridgeTransportJava8Test/java/dev/openallay/bridge/protocol/BridgeTransportJava8Fixture.java'))
+        classpath = configurations.compileClasspath; destinationDirectory = layout.buildDirectory.dir('original-classes')
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+        options.release = 17; options.encoding = 'UTF-8'
+    }
+    tasks.register('originalBridgeTransportOracle', JavaExec) {
+        dependsOn('compileOriginalBridgeTransport'); mainClass = 'dev.openallay.bridge.protocol.BridgeTransportJava8Fixture'
+        classpath = files(tasks.named('compileOriginalBridgeTransport').flatMap { it.destinationDirectory }) + configurations.runtimeClasspath
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+        doFirst { standardOutput = new ByteArrayOutputStream() }
+        doLast {
+            def report = layout.buildDirectory.file("bridge-transport-original-modern-${host}.txt").get().asFile
+            report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        }
+    }
+}
