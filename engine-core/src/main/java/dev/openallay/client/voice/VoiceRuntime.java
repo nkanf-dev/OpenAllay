@@ -22,16 +22,91 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
     public enum Insertion { INSERTED, PENDING, REJECTED }
     public enum Origin { FULLSCREEN, GAMEPLAY, HUD_INPUT }
     public enum DeliveryKind { SENT, QUEUED }
-    public record DeliveryReceipt(UUID id, DeliveryKind kind) {
-        public DeliveryReceipt { Objects.requireNonNull(id); Objects.requireNonNull(kind); }
+    @dev.openallay.value.ValueType(DeliveryReceipt.ValueSchemaProvider.class)
+public static final class DeliveryReceipt {
+    private final UUID id;
+    private final DeliveryKind kind;
+    public DeliveryReceipt(UUID id, DeliveryKind kind) {
+ Objects.requireNonNull(id); Objects.requireNonNull(kind);
+        this.id = id;
+        this.kind = kind;
     }
-    public record DraftTarget(UUID actorId, String uiOwnerId, long uiGeneration, String sessionId,
-            UUID sessionOwner, UUID connectionGeneration, long draftRevision) {
-        public DraftTarget {
-            Objects.requireNonNull(actorId); Objects.requireNonNull(uiOwnerId); Objects.requireNonNull(sessionId);
-            Objects.requireNonNull(sessionOwner); Objects.requireNonNull(connectionGeneration);
+    public UUID id() { return id; }
+    public DeliveryKind kind() { return kind; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DeliveryReceipt)) return false;
+        DeliveryReceipt that = (DeliveryReceipt) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(kind, that.kind);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(kind);
+        return hash;
+    }
+    @Override public String toString() { return "DeliveryReceipt[id=" + id + ", kind=" + kind + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DeliveryReceipt> schema() {
+            return new dev.openallay.value.ValueSchema<>(DeliveryReceipt.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DeliveryReceipt>>asList(new dev.openallay.value.ValueSchema.Component<>(DeliveryReceipt.class, "id", DeliveryReceipt::id), new dev.openallay.value.ValueSchema.Component<>(DeliveryReceipt.class, "kind", DeliveryReceipt::kind)), arguments -> new DeliveryReceipt((UUID) arguments[0], (DeliveryKind) arguments[1]));
         }
     }
+}
+    @dev.openallay.value.ValueType(DraftTarget.ValueSchemaProvider.class)
+public static final class DraftTarget {
+    private final UUID actorId;
+    private final String uiOwnerId;
+    private final long uiGeneration;
+    private final String sessionId;
+    private final UUID sessionOwner;
+    private final UUID connectionGeneration;
+    private final long draftRevision;
+    public DraftTarget(UUID actorId, String uiOwnerId, long uiGeneration, String sessionId, UUID sessionOwner, UUID connectionGeneration, long draftRevision) {
+
+            Objects.requireNonNull(actorId); Objects.requireNonNull(uiOwnerId); Objects.requireNonNull(sessionId);
+            Objects.requireNonNull(sessionOwner); Objects.requireNonNull(connectionGeneration);
+
+        this.actorId = actorId;
+        this.uiOwnerId = uiOwnerId;
+        this.uiGeneration = uiGeneration;
+        this.sessionId = sessionId;
+        this.sessionOwner = sessionOwner;
+        this.connectionGeneration = connectionGeneration;
+        this.draftRevision = draftRevision;
+    }
+    public UUID actorId() { return actorId; }
+    public String uiOwnerId() { return uiOwnerId; }
+    public long uiGeneration() { return uiGeneration; }
+    public String sessionId() { return sessionId; }
+    public UUID sessionOwner() { return sessionOwner; }
+    public UUID connectionGeneration() { return connectionGeneration; }
+    public long draftRevision() { return draftRevision; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DraftTarget)) return false;
+        DraftTarget that = (DraftTarget) other;
+        return java.util.Objects.equals(actorId, that.actorId) && java.util.Objects.equals(uiOwnerId, that.uiOwnerId) && uiGeneration == that.uiGeneration && java.util.Objects.equals(sessionId, that.sessionId) && java.util.Objects.equals(sessionOwner, that.sessionOwner) && java.util.Objects.equals(connectionGeneration, that.connectionGeneration) && draftRevision == that.draftRevision;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actorId);
+        hash = 31 * hash + java.util.Objects.hashCode(uiOwnerId);
+        hash = 31 * hash + Long.hashCode(uiGeneration);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionOwner);
+        hash = 31 * hash + java.util.Objects.hashCode(connectionGeneration);
+        hash = 31 * hash + Long.hashCode(draftRevision);
+        return hash;
+    }
+    @Override public String toString() { return "DraftTarget[actorId=" + actorId + ", uiOwnerId=" + uiOwnerId + ", uiGeneration=" + uiGeneration + ", sessionId=" + sessionId + ", sessionOwner=" + sessionOwner + ", connectionGeneration=" + connectionGeneration + ", draftRevision=" + draftRevision + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DraftTarget> schema() {
+            return new dev.openallay.value.ValueSchema<>(DraftTarget.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DraftTarget>>asList(new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "actorId", DraftTarget::actorId), new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "uiOwnerId", DraftTarget::uiOwnerId), new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "uiGeneration", DraftTarget::uiGeneration), new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "sessionId", DraftTarget::sessionId), new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "sessionOwner", DraftTarget::sessionOwner), new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "connectionGeneration", DraftTarget::connectionGeneration), new dev.openallay.value.ValueSchema.Component<>(DraftTarget.class, "draftRevision", DraftTarget::draftRevision)), arguments -> new DraftTarget((UUID) arguments[0], (String) arguments[1], (Long) arguments[2], (String) arguments[3], (UUID) arguments[4], (UUID) arguments[5], (Long) arguments[6]));
+        }
+    }
+}
     public interface DraftPort {
         DraftTarget capture();
         Insertion append(DraftTarget target, String text);
@@ -39,12 +114,59 @@ public final class VoiceRuntime implements VoiceInputActions, AutoCloseable {
         /** Keep refused spoken text separate from typed text, images and pending-edit intent. */
         Insertion retainPending(DraftTarget target, String text);
     }
-    public record Status(State state, String code, long elapsedMillis, long maxMillis,
-            String source, SpeechToText.Usage usage, UUID receipt) {
-        public boolean active() { return state == State.STARTING || state == State.RECORDING
-                || state == State.TRANSCRIBING || state == State.DELIVERING; }
-        public boolean indicatorVisible() { return state != State.IDLE; }
+    @dev.openallay.value.ValueType(Status.ValueSchemaProvider.class)
+public static final class Status {
+    private final State state;
+    private final String code;
+    private final long elapsedMillis;
+    private final long maxMillis;
+    private final String source;
+    private final SpeechToText.Usage usage;
+    private final UUID receipt;
+    public Status(State state, String code, long elapsedMillis, long maxMillis, String source, SpeechToText.Usage usage, UUID receipt) {
+        this.state = state;
+        this.code = code;
+        this.elapsedMillis = elapsedMillis;
+        this.maxMillis = maxMillis;
+        this.source = source;
+        this.usage = usage;
+        this.receipt = receipt;
     }
+    public State state() { return state; }
+    public String code() { return code; }
+    public long elapsedMillis() { return elapsedMillis; }
+    public long maxMillis() { return maxMillis; }
+    public String source() { return source; }
+    public SpeechToText.Usage usage() { return usage; }
+    public UUID receipt() { return receipt; }
+public boolean active() { return state == State.STARTING || state == State.RECORDING
+                || state == State.TRANSCRIBING || state == State.DELIVERING; }
+public boolean indicatorVisible() { return state != State.IDLE; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Status)) return false;
+        Status that = (Status) other;
+        return java.util.Objects.equals(state, that.state) && java.util.Objects.equals(code, that.code) && elapsedMillis == that.elapsedMillis && maxMillis == that.maxMillis && java.util.Objects.equals(source, that.source) && java.util.Objects.equals(usage, that.usage) && java.util.Objects.equals(receipt, that.receipt);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(code);
+        hash = 31 * hash + Long.hashCode(elapsedMillis);
+        hash = 31 * hash + Long.hashCode(maxMillis);
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + java.util.Objects.hashCode(usage);
+        hash = 31 * hash + java.util.Objects.hashCode(receipt);
+        return hash;
+    }
+    @Override public String toString() { return "Status[state=" + state + ", code=" + code + ", elapsedMillis=" + elapsedMillis + ", maxMillis=" + maxMillis + ", source=" + source + ", usage=" + usage + ", receipt=" + receipt + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Status> schema() {
+            return new dev.openallay.value.ValueSchema<>(Status.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Status>>asList(new dev.openallay.value.ValueSchema.Component<>(Status.class, "state", Status::state), new dev.openallay.value.ValueSchema.Component<>(Status.class, "code", Status::code), new dev.openallay.value.ValueSchema.Component<>(Status.class, "elapsedMillis", Status::elapsedMillis), new dev.openallay.value.ValueSchema.Component<>(Status.class, "maxMillis", Status::maxMillis), new dev.openallay.value.ValueSchema.Component<>(Status.class, "source", Status::source), new dev.openallay.value.ValueSchema.Component<>(Status.class, "usage", Status::usage), new dev.openallay.value.ValueSchema.Component<>(Status.class, "receipt", Status::receipt)), arguments -> new Status((State) arguments[0], (String) arguments[1], (Long) arguments[2], (Long) arguments[3], (String) arguments[4], (SpeechToText.Usage) arguments[5], (UUID) arguments[6]));
+        }
+    }
+}
     private static final class Operation {
         final long id;
         final DraftTarget target;

@@ -13,9 +13,41 @@ import java.util.Map;
 public final class NativeRuntimeCatalog {
     public static final String RELEASE = "1.13.8";
     private static final String RELEASE_URL = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v" + RELEASE + "/";
-    public record Artifact(String name, long bytes, String sha256) {
-        public URI uri() { return URI.create(RELEASE_URL + name); }
+    @dev.openallay.value.ValueType(Artifact.ValueSchemaProvider.class)
+public static final class Artifact {
+    private final String name;
+    private final long bytes;
+    private final String sha256;
+    public Artifact(String name, long bytes, String sha256) {
+        this.name = name;
+        this.bytes = bytes;
+        this.sha256 = sha256;
     }
+    public String name() { return name; }
+    public long bytes() { return bytes; }
+    public String sha256() { return sha256; }
+public URI uri() { return URI.create(RELEASE_URL + name); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Artifact)) return false;
+        Artifact that = (Artifact) other;
+        return java.util.Objects.equals(name, that.name) && bytes == that.bytes && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + Long.hashCode(bytes);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "Artifact[name=" + name + ", bytes=" + bytes + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Artifact> schema() {
+            return new dev.openallay.value.ValueSchema<>(Artifact.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Artifact>>asList(new dev.openallay.value.ValueSchema.Component<>(Artifact.class, "name", Artifact::name), new dev.openallay.value.ValueSchema.Component<>(Artifact.class, "bytes", Artifact::bytes), new dev.openallay.value.ValueSchema.Component<>(Artifact.class, "sha256", Artifact::sha256)), arguments -> new Artifact((String) arguments[0], (Long) arguments[1], (String) arguments[2]));
+        }
+    }
+}
     private static final Artifact JVM = new Artifact("sherpa-onnx-jvm-1.13.8.jar", 187490,
             "77b7b047fade4eadada96b568eb92615049aaf1dc317c7244e46c1ea38b9a63b");
     private static final Map<String, Artifact> NATIVES = Map.of(

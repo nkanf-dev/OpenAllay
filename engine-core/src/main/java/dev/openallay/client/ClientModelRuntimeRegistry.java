@@ -482,28 +482,58 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
         return runtime;
     }
 
-    private record State(
-            ModelProfilesConfig config,
-            List<GuideClientModelProfile> profiles,
-            Map<String, ClientGuideRuntime> runtimes,
-            ClientCapabilitySnapshot capabilities) {
-        private State {
+    @dev.openallay.value.ValueType(State.ValueSchemaProvider.class)
+private static final class State {
+    private final ModelProfilesConfig config;
+    private final List<GuideClientModelProfile> profiles;
+    private final Map<String, ClientGuideRuntime> runtimes;
+    private final ClientCapabilitySnapshot capabilities;
+    private State(ModelProfilesConfig config, List<GuideClientModelProfile> profiles, Map<String, ClientGuideRuntime> runtimes, ClientCapabilitySnapshot capabilities) {
+
             Objects.requireNonNull(config, "config");
             profiles = List.copyOf(profiles);
             runtimes = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(runtimes));
             Objects.requireNonNull(capabilities, "capabilities");
-        }
 
-        private String defaultProfileId() {
+        this.config = config;
+        this.profiles = profiles;
+        this.runtimes = runtimes;
+        this.capabilities = capabilities;
+    }
+    public ModelProfilesConfig config() { return config; }
+    public List<GuideClientModelProfile> profiles() { return profiles; }
+    public Map<String, ClientGuideRuntime> runtimes() { return runtimes; }
+    public ClientCapabilitySnapshot capabilities() { return capabilities; }
+private String defaultProfileId() {
             return config.defaultProfileId();
         }
-
-        private State withCapabilities(ClientCapabilitySnapshot replacement) {
+private State withCapabilities(ClientCapabilitySnapshot replacement) {
             Map<String, ClientGuideRuntime> updated = new LinkedHashMap<>();
             runtimes.forEach((id, runtime) -> updated.put(id, runtime.withCapabilities(replacement)));
             return new State(config, profiles, updated, replacement);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof State)) return false;
+        State that = (State) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(profiles, that.profiles) && java.util.Objects.equals(runtimes, that.runtimes) && java.util.Objects.equals(capabilities, that.capabilities);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(profiles);
+        hash = 31 * hash + java.util.Objects.hashCode(runtimes);
+        hash = 31 * hash + java.util.Objects.hashCode(capabilities);
+        return hash;
+    }
+    @Override public String toString() { return "State[config=" + config + ", profiles=" + profiles + ", runtimes=" + runtimes + ", capabilities=" + capabilities + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<State> schema() {
+            return new dev.openallay.value.ValueSchema<>(State.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<State>>asList(new dev.openallay.value.ValueSchema.Component<>(State.class, "config", State::config), new dev.openallay.value.ValueSchema.Component<>(State.class, "profiles", State::profiles), new dev.openallay.value.ValueSchema.Component<>(State.class, "runtimes", State::runtimes), new dev.openallay.value.ValueSchema.Component<>(State.class, "capabilities", State::capabilities)), arguments -> new State((ModelProfilesConfig) arguments[0], (List) arguments[1], (Map) arguments[2], (ClientCapabilitySnapshot) arguments[3]));
+        }
+    }
+}
 
     /** Fully built replacement bound to the exact model and capability state it captured. */
     public static final class PreparedReplacement {

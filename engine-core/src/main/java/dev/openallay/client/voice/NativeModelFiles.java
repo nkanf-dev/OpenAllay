@@ -25,14 +25,83 @@ public final class NativeModelFiles {
     private static final int MAX_MANIFEST_BYTES = 16_384;
     public enum ModelFamily { SENSE_VOICE, PARA_FORMER, WHISPER }
     public enum Role { TOKENS, SENSE_VOICE_MODEL, PARA_FORMER_MODEL, WHISPER_ENCODER, WHISPER_DECODER }
-    public record ModelFile(Role role, String path, long bytes, String sha256) {}
-    public record Model(String name, ModelFamily family, List<ModelFile> files) {
-        public Model { files = List.copyOf(files); }
-        public ModelFile file(Role role) {
+    @dev.openallay.value.ValueType(ModelFile.ValueSchemaProvider.class)
+public static final class ModelFile {
+    private final Role role;
+    private final String path;
+    private final long bytes;
+    private final String sha256;
+    public ModelFile(Role role, String path, long bytes, String sha256) {
+        this.role = role;
+        this.path = path;
+        this.bytes = bytes;
+        this.sha256 = sha256;
+    }
+    public Role role() { return role; }
+    public String path() { return path; }
+    public long bytes() { return bytes; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ModelFile)) return false;
+        ModelFile that = (ModelFile) other;
+        return java.util.Objects.equals(role, that.role) && java.util.Objects.equals(path, that.path) && bytes == that.bytes && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(role);
+        hash = 31 * hash + java.util.Objects.hashCode(path);
+        hash = 31 * hash + Long.hashCode(bytes);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "ModelFile[role=" + role + ", path=" + path + ", bytes=" + bytes + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ModelFile> schema() {
+            return new dev.openallay.value.ValueSchema<>(ModelFile.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ModelFile>>asList(new dev.openallay.value.ValueSchema.Component<>(ModelFile.class, "role", ModelFile::role), new dev.openallay.value.ValueSchema.Component<>(ModelFile.class, "path", ModelFile::path), new dev.openallay.value.ValueSchema.Component<>(ModelFile.class, "bytes", ModelFile::bytes), new dev.openallay.value.ValueSchema.Component<>(ModelFile.class, "sha256", ModelFile::sha256)), arguments -> new ModelFile((Role) arguments[0], (String) arguments[1], (Long) arguments[2], (String) arguments[3]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Model.ValueSchemaProvider.class)
+public static final class Model {
+    private final String name;
+    private final ModelFamily family;
+    private final List<ModelFile> files;
+    public Model(String name, ModelFamily family, List<ModelFile> files) {
+ files = List.copyOf(files);
+        this.name = name;
+        this.family = family;
+        this.files = files;
+    }
+    public String name() { return name; }
+    public ModelFamily family() { return family; }
+    public List<ModelFile> files() { return files; }
+public ModelFile file(Role role) {
             return files.stream().filter(file -> file.role() == role).findFirst().orElseThrow();
         }
-        public Path file(Path directory, Role role) { return directory.resolve(file(role).path()); }
+public Path file(Path directory, Role role) { return directory.resolve(file(role).path()); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Model)) return false;
+        Model that = (Model) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(family, that.family) && java.util.Objects.equals(files, that.files);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(family);
+        hash = 31 * hash + java.util.Objects.hashCode(files);
+        return hash;
+    }
+    @Override public String toString() { return "Model[name=" + name + ", family=" + family + ", files=" + files + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Model> schema() {
+            return new dev.openallay.value.ValueSchema<>(Model.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Model>>asList(new dev.openallay.value.ValueSchema.Component<>(Model.class, "name", Model::name), new dev.openallay.value.ValueSchema.Component<>(Model.class, "family", Model::family), new dev.openallay.value.ValueSchema.Component<>(Model.class, "files", Model::files)), arguments -> new Model((String) arguments[0], (ModelFamily) arguments[1], (List) arguments[2]));
+        }
+    }
+}
     private NativeModelFiles() {}
     public static boolean modelReady(Path directory) {
         try { validate(directory); return true; }

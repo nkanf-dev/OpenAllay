@@ -8,7 +8,36 @@ import java.util.List;
 /** Compact labels from one actual sample. Native identities remain in the anchor, not in UI task modes. */
 public final class ObservationAnchorPresentation {
     private ObservationAnchorPresentation() {}
-    public record Chip(String key, String value) {}
+    @dev.openallay.value.ValueType(Chip.ValueSchemaProvider.class)
+public static final class Chip {
+    private final String key;
+    private final String value;
+    public Chip(String key, String value) {
+        this.key = key;
+        this.value = value;
+    }
+    public String key() { return key; }
+    public String value() { return value; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Chip)) return false;
+        Chip that = (Chip) other;
+        return java.util.Objects.equals(key, that.key) && java.util.Objects.equals(value, that.value);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(key);
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        return hash;
+    }
+    @Override public String toString() { return "Chip[key=" + key + ", value=" + value + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Chip> schema() {
+            return new dev.openallay.value.ValueSchema<>(Chip.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Chip>>asList(new dev.openallay.value.ValueSchema.Component<>(Chip.class, "key", Chip::key), new dev.openallay.value.ValueSchema.Component<>(Chip.class, "value", Chip::value)), arguments -> new Chip((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
     public static List<Chip> chips(ClientObservationAnchor anchor) {
         List<Chip> result = new ArrayList<>();

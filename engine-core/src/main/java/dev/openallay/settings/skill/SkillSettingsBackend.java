@@ -510,5 +510,34 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 detail == null || detail.isBlank() ? message : message + ": " + detail);
     }
 
-    private record ParsedSource(SkillSource source, SkillDocument document) {}
+    @dev.openallay.value.ValueType(ParsedSource.ValueSchemaProvider.class)
+private static final class ParsedSource {
+    private final SkillSource source;
+    private final SkillDocument document;
+    private ParsedSource(SkillSource source, SkillDocument document) {
+        this.source = source;
+        this.document = document;
+    }
+    public SkillSource source() { return source; }
+    public SkillDocument document() { return document; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ParsedSource)) return false;
+        ParsedSource that = (ParsedSource) other;
+        return java.util.Objects.equals(source, that.source) && java.util.Objects.equals(document, that.document);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        return hash;
+    }
+    @Override public String toString() { return "ParsedSource[source=" + source + ", document=" + document + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ParsedSource> schema() {
+            return new dev.openallay.value.ValueSchema<>(ParsedSource.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ParsedSource>>asList(new dev.openallay.value.ValueSchema.Component<>(ParsedSource.class, "source", ParsedSource::source), new dev.openallay.value.ValueSchema.Component<>(ParsedSource.class, "document", ParsedSource::document)), arguments -> new ParsedSource((SkillSource) arguments[0], (SkillDocument) arguments[1]));
+        }
+    }
+}
 }

@@ -10,11 +10,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Credential-free localized published estimates for one typed model name. */
-public record BuiltinModelSettingsProjection(List<Line> lines) {
-    private static final String PREFIX = "screen.openallay.settings.models.builtin.";
-    public BuiltinModelSettingsProjection { lines = List.copyOf(lines); }
-    /** Updated only by editor/metadata events. A render read performs no resolution or matching. */
-    public static final class EventCache {
+@dev.openallay.value.ValueType(BuiltinModelSettingsProjection.ValueSchemaProvider.class)
+public final class BuiltinModelSettingsProjection {
+    private final List<Line> lines;
+    public BuiltinModelSettingsProjection(List<Line> lines) {
+ lines = List.copyOf(lines);
+        this.lines = lines;
+    }
+    public List<Line> lines() { return lines; }
+private static final String PREFIX = "screen.openallay.settings.models.builtin.";
+public static final class EventCache {
         private ModelProfileDraft draft;
         private ModelContextResolution resolution;
         private ModelOutputResolution outputResolution;
@@ -58,19 +63,44 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
 
         public BuiltinModelSettingsProjection projection() { return projection; }
     }
-
-    public record Line(String key, List<Object> arguments) {
-        public Line { arguments = List.copyOf(arguments); }
-        public static Line of(String key, Object... args) {
+@dev.openallay.value.ValueType(Line.ValueSchemaProvider.class)
+public static final class Line {
+    private final String key;
+    private final List<Object> arguments;
+    public Line(String key, List<Object> arguments) {
+ arguments = List.copyOf(arguments);
+        this.key = key;
+        this.arguments = arguments;
+    }
+    public String key() { return key; }
+    public List<Object> arguments() { return arguments; }
+public static Line of(String key, Object... args) {
             return new Line(PREFIX + key, List.of(args));
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Line)) return false;
+        Line that = (Line) other;
+        return java.util.Objects.equals(key, that.key) && java.util.Objects.equals(arguments, that.arguments);
     }
-
-    public static BuiltinModelSettingsProjection from(ModelProfileDraft draft) {
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(key);
+        hash = 31 * hash + java.util.Objects.hashCode(arguments);
+        return hash;
+    }
+    @Override public String toString() { return "Line[key=" + key + ", arguments=" + arguments + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Line> schema() {
+            return new dev.openallay.value.ValueSchema<>(Line.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Line>>asList(new dev.openallay.value.ValueSchema.Component<>(Line.class, "key", Line::key), new dev.openallay.value.ValueSchema.Component<>(Line.class, "arguments", Line::arguments)), arguments -> new Line((String) arguments[0], (List) arguments[1]));
+        }
+    }
+}
+public static BuiltinModelSettingsProjection from(ModelProfileDraft draft) {
         return from(draft, BuiltinModelCatalog.bundled());
     }
-
-    public static BuiltinModelSettingsProjection from(
+public static BuiltinModelSettingsProjection from(
             ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
         return from(draft, loaded, ModelContextResolution.resolve(null, draft.model(),
                 draft.automaticContextWindowTokens() == null && draft.contextWindowTokens() != null
@@ -78,8 +108,7 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
                         ? parseInteger(draft.contextWindowTokens()) : null,
                 java.util.Map.of(), loaded.catalog()));
     }
-
-    private static ModelOutputResolution outputResolution(
+private static ModelOutputResolution outputResolution(
             ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
         Integer explicit = null;
         if (draft.automaticMaxOutputTokens() == null && draft.maxOutputTokens() != null
@@ -92,30 +121,25 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
         return ModelOutputResolution.resolve(null, draft.model(), explicit,
                 java.util.Map.of(), loaded.catalog());
     }
-
-    private static ModelImageCapabilityResolution imageResolution(
+private static ModelImageCapabilityResolution imageResolution(
             ModelProfileDraft draft, BuiltinModelCatalog.Load loaded) {
         return ModelImageCapabilityResolution.resolve(null, draft.model(),
                 draft.imageInputCapabilityOverride(), java.util.Map.of(), loaded.catalog());
     }
-
-    private static Integer parseInteger(String text) {
+private static Integer parseInteger(String text) {
         try { return Integer.valueOf(text.trim()); }
         catch (NumberFormatException invalid) { return null; }
     }
-
-    public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
+public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
             BuiltinModelCatalog.Load loaded, ModelContextResolution resolution) {
         return from(draft, loaded, resolution, outputResolution(draft, loaded));
     }
-
-    public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
+public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
             BuiltinModelCatalog.Load loaded, ModelContextResolution resolution,
             ModelOutputResolution outputResolution) {
         return from(draft, loaded, resolution, outputResolution, imageResolution(draft, loaded));
     }
-
-    public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
+public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
             BuiltinModelCatalog.Load loaded, ModelContextResolution resolution,
             ModelOutputResolution outputResolution, ModelImageCapabilityResolution imageResolution) {
         List<Line> lines = new ArrayList<>();
@@ -182,11 +206,29 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
         lines.add(Line.of("version", loaded.catalog().version()));
         return new BuiltinModelSettingsProjection(lines);
     }
-    private static void price(List<Line> lines, String label, BigDecimal rate) {
+private static void price(List<Line> lines, String label, BigDecimal rate) {
         if (rate != null) lines.add(Line.of(label, rate.toPlainString()));
     }
-    private static void source(List<Line> lines, String label, BuiltinModelCatalog.Source source) {
+private static void source(List<Line> lines, String label, BuiltinModelCatalog.Source source) {
         lines.add(Line.of(label, source.label(), source.capturedAt().toString()));
         lines.add(Line.of("source_url", source.url().toString()));
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof BuiltinModelSettingsProjection)) return false;
+        BuiltinModelSettingsProjection that = (BuiltinModelSettingsProjection) other;
+        return java.util.Objects.equals(lines, that.lines);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(lines);
+        return hash;
+    }
+    @Override public String toString() { return "BuiltinModelSettingsProjection[lines=" + lines + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<BuiltinModelSettingsProjection> schema() {
+            return new dev.openallay.value.ValueSchema<>(BuiltinModelSettingsProjection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<BuiltinModelSettingsProjection>>asList(new dev.openallay.value.ValueSchema.Component<>(BuiltinModelSettingsProjection.class, "lines", BuiltinModelSettingsProjection::lines)), arguments -> new BuiltinModelSettingsProjection((List) arguments[0]));
+        }
     }
 }

@@ -294,18 +294,15 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    public record HistoryRuntimeState(
-            boolean configured,
-            Optional<GuideSnapshot> guide,
-            GuideHistoryActivity activity,
-            SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind,
-            Long estimatedContextTokens) {
-        public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide,
-                GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind) {
-            this(configured, guide, activity, scopeKind, null);
-        }
+    @dev.openallay.value.ValueType(HistoryRuntimeState.ValueSchemaProvider.class)
+public static final class HistoryRuntimeState {
+    private final boolean configured;
+    private final Optional<GuideSnapshot> guide;
+    private final GuideHistoryActivity activity;
+    private final SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind;
+    private final Long estimatedContextTokens;
+    public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide, GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind, Long estimatedContextTokens) {
 
-        public HistoryRuntimeState {
             guide = Objects.requireNonNull(guide, "guide");
             Objects.requireNonNull(activity, "activity");
             Objects.requireNonNull(scopeKind, "scopeKind");
@@ -314,21 +311,59 @@ public final class ClientSettingsService implements AutoCloseable {
                 throw new IllegalArgumentException(
                         "history scope kind must match current Guide availability");
             }
-        }
 
-        public static HistoryRuntimeState disconnected() {
+        this.configured = configured;
+        this.guide = guide;
+        this.activity = activity;
+        this.scopeKind = scopeKind;
+        this.estimatedContextTokens = estimatedContextTokens;
+    }
+    public boolean configured() { return configured; }
+    public Optional<GuideSnapshot> guide() { return guide; }
+    public GuideHistoryActivity activity() { return activity; }
+    public SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind() { return scopeKind; }
+    public Long estimatedContextTokens() { return estimatedContextTokens; }
+public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide,
+                GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind) {
+            this(configured, guide, activity, scopeKind, null);
+        }
+public static HistoryRuntimeState disconnected() {
             return new HistoryRuntimeState(
                     false,
                     Optional.empty(),
                     GuideHistoryActivity.idle(),
                     SettingsDiagnosticsAggregator.HistoryScopeKind.NONE);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof HistoryRuntimeState)) return false;
+        HistoryRuntimeState that = (HistoryRuntimeState) other;
+        return configured == that.configured && java.util.Objects.equals(guide, that.guide) && java.util.Objects.equals(activity, that.activity) && java.util.Objects.equals(scopeKind, that.scopeKind) && java.util.Objects.equals(estimatedContextTokens, that.estimatedContextTokens);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Boolean.hashCode(configured);
+        hash = 31 * hash + java.util.Objects.hashCode(guide);
+        hash = 31 * hash + java.util.Objects.hashCode(activity);
+        hash = 31 * hash + java.util.Objects.hashCode(scopeKind);
+        hash = 31 * hash + java.util.Objects.hashCode(estimatedContextTokens);
+        return hash;
+    }
+    @Override public String toString() { return "HistoryRuntimeState[configured=" + configured + ", guide=" + guide + ", activity=" + activity + ", scopeKind=" + scopeKind + ", estimatedContextTokens=" + estimatedContextTokens + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<HistoryRuntimeState> schema() {
+            return new dev.openallay.value.ValueSchema<>(HistoryRuntimeState.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<HistoryRuntimeState>>asList(new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "configured", HistoryRuntimeState::configured), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "guide", HistoryRuntimeState::guide), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "activity", HistoryRuntimeState::activity), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "scopeKind", HistoryRuntimeState::scopeKind), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "estimatedContextTokens", HistoryRuntimeState::estimatedContextTokens)), arguments -> new HistoryRuntimeState((Boolean) arguments[0], (Optional) arguments[1], (GuideHistoryActivity) arguments[2], (SettingsDiagnosticsAggregator.HistoryScopeKind) arguments[3], (Long) arguments[4]));
+        }
+    }
+}
 
-    public record ModelState(
-            ModelProfilesConfig config,
-            List<ModelProfileSettingsView.Resolution> profiles) {
-        public ModelState {
+    @dev.openallay.value.ValueType(ModelState.ValueSchemaProvider.class)
+public static final class ModelState {
+    private final ModelProfilesConfig config;
+    private final List<ModelProfileSettingsView.Resolution> profiles;
+    public ModelState(ModelProfilesConfig config, List<ModelProfileSettingsView.Resolution> profiles) {
+
             Objects.requireNonNull(config, "config");
             profiles = List.copyOf(profiles);
             if (profiles.size() != config.profiles().size()) {
@@ -339,15 +374,67 @@ public final class ClientSettingsService implements AutoCloseable {
                     throw new IllegalArgumentException("resolved profile order must match configuration");
                 }
             }
+
+        this.config = config;
+        this.profiles = profiles;
+    }
+    public ModelProfilesConfig config() { return config; }
+    public List<ModelProfileSettingsView.Resolution> profiles() { return profiles; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ModelState)) return false;
+        ModelState that = (ModelState) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(profiles, that.profiles);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(profiles);
+        return hash;
+    }
+    @Override public String toString() { return "ModelState[config=" + config + ", profiles=" + profiles + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ModelState> schema() {
+            return new dev.openallay.value.ValueSchema<>(ModelState.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ModelState>>asList(new dev.openallay.value.ValueSchema.Component<>(ModelState.class, "config", ModelState::config), new dev.openallay.value.ValueSchema.Component<>(ModelState.class, "profiles", ModelState::profiles)), arguments -> new ModelState((ModelProfilesConfig) arguments[0], (List) arguments[1]));
         }
     }
+}
 
-    public record PreparedModels(ModelState state, BooleanSupplier publish) {
-        public PreparedModels {
+    @dev.openallay.value.ValueType(PreparedModels.ValueSchemaProvider.class)
+public static final class PreparedModels {
+    private final ModelState state;
+    private final BooleanSupplier publish;
+    public PreparedModels(ModelState state, BooleanSupplier publish) {
+
             Objects.requireNonNull(state, "state");
             Objects.requireNonNull(publish, "publish");
+
+        this.state = state;
+        this.publish = publish;
+    }
+    public ModelState state() { return state; }
+    public BooleanSupplier publish() { return publish; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PreparedModels)) return false;
+        PreparedModels that = (PreparedModels) other;
+        return java.util.Objects.equals(state, that.state) && java.util.Objects.equals(publish, that.publish);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(publish);
+        return hash;
+    }
+    @Override public String toString() { return "PreparedModels[state=" + state + ", publish=" + publish + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PreparedModels> schema() {
+            return new dev.openallay.value.ValueSchema<>(PreparedModels.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PreparedModels>>asList(new dev.openallay.value.ValueSchema.Component<>(PreparedModels.class, "state", PreparedModels::state), new dev.openallay.value.ValueSchema.Component<>(PreparedModels.class, "publish", PreparedModels::publish)), arguments -> new PreparedModels((ModelState) arguments[0], (BooleanSupplier) arguments[1]));
         }
     }
+}
 
     private final Object lock = new Object();
     private GuideDisplayConfig display;
@@ -1192,8 +1279,40 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    private record ActivePackagePreparation(long operationId, CancellationSignal cancellation,
-            CompletableFuture<ToolResult<Boolean>> outward) {}
+    @dev.openallay.value.ValueType(ActivePackagePreparation.ValueSchemaProvider.class)
+private static final class ActivePackagePreparation {
+    private final long operationId;
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<ToolResult<Boolean>> outward;
+    private ActivePackagePreparation(long operationId, CancellationSignal cancellation, CompletableFuture<ToolResult<Boolean>> outward) {
+        this.operationId = operationId;
+        this.cancellation = cancellation;
+        this.outward = outward;
+    }
+    public long operationId() { return operationId; }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<ToolResult<Boolean>> outward() { return outward; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ActivePackagePreparation)) return false;
+        ActivePackagePreparation that = (ActivePackagePreparation) other;
+        return operationId == that.operationId && java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(outward, that.outward);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(operationId);
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(outward);
+        return hash;
+    }
+    @Override public String toString() { return "ActivePackagePreparation[operationId=" + operationId + ", cancellation=" + cancellation + ", outward=" + outward + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ActivePackagePreparation> schema() {
+            return new dev.openallay.value.ValueSchema<>(ActivePackagePreparation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ActivePackagePreparation>>asList(new dev.openallay.value.ValueSchema.Component<>(ActivePackagePreparation.class, "operationId", ActivePackagePreparation::operationId), new dev.openallay.value.ValueSchema.Component<>(ActivePackagePreparation.class, "cancellation", ActivePackagePreparation::cancellation), new dev.openallay.value.ValueSchema.Component<>(ActivePackagePreparation.class, "outward", ActivePackagePreparation::outward)), arguments -> new ActivePackagePreparation((Long) arguments[0], (CancellationSignal) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 
     public CompletableFuture<ToolResult<Boolean>> saveDisplay(GuideDisplayConfig candidate) {
         Objects.requireNonNull(candidate, "candidate");
@@ -2547,27 +2666,113 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    private record Reservation(long id, String failureCode) {
-        private static Reservation accepted(long id) {
+    @dev.openallay.value.ValueType(Reservation.ValueSchemaProvider.class)
+private static final class Reservation {
+    private final long id;
+    private final String failureCode;
+    private Reservation(long id, String failureCode) {
+        this.id = id;
+        this.failureCode = failureCode;
+    }
+    public long id() { return id; }
+    public String failureCode() { return failureCode; }
+private static Reservation accepted(long id) {
             return new Reservation(id, null);
         }
-
-        private static Reservation rejected(String code) {
+private static Reservation rejected(String code) {
             return new Reservation(-1, code);
         }
-
-        private boolean accepted() {
+private boolean accepted() {
             return failureCode == null;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Reservation)) return false;
+        Reservation that = (Reservation) other;
+        return id == that.id && java.util.Objects.equals(failureCode, that.failureCode);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        return hash;
+    }
+    @Override public String toString() { return "Reservation[id=" + id + ", failureCode=" + failureCode + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Reservation> schema() {
+            return new dev.openallay.value.ValueSchema<>(Reservation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Reservation>>asList(new dev.openallay.value.ValueSchema.Component<>(Reservation.class, "id", Reservation::id), new dev.openallay.value.ValueSchema.Component<>(Reservation.class, "failureCode", Reservation::failureCode)), arguments -> new Reservation((Long) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
-    private record ActiveProbe(
-            long id,
-            CancellationSignal cancellation,
-            CompletableFuture<ModelConnectionResult> result) {}
+    @dev.openallay.value.ValueType(ActiveProbe.ValueSchemaProvider.class)
+private static final class ActiveProbe {
+    private final long id;
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<ModelConnectionResult> result;
+    private ActiveProbe(long id, CancellationSignal cancellation, CompletableFuture<ModelConnectionResult> result) {
+        this.id = id;
+        this.cancellation = cancellation;
+        this.result = result;
+    }
+    public long id() { return id; }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<ModelConnectionResult> result() { return result; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ActiveProbe)) return false;
+        ActiveProbe that = (ActiveProbe) other;
+        return id == that.id && java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(result, that.result);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(result);
+        return hash;
+    }
+    @Override public String toString() { return "ActiveProbe[id=" + id + ", cancellation=" + cancellation + ", result=" + result + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ActiveProbe> schema() {
+            return new dev.openallay.value.ValueSchema<>(ActiveProbe.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ActiveProbe>>asList(new dev.openallay.value.ValueSchema.Component<>(ActiveProbe.class, "id", ActiveProbe::id), new dev.openallay.value.ValueSchema.Component<>(ActiveProbe.class, "cancellation", ActiveProbe::cancellation), new dev.openallay.value.ValueSchema.Component<>(ActiveProbe.class, "result", ActiveProbe::result)), arguments -> new ActiveProbe((Long) arguments[0], (CancellationSignal) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 
-    private record ActiveCatalog(
-            long id,
-            CancellationSignal cancellation,
-            CompletableFuture<ToolResult<ModelCatalog>> result) {}
+    @dev.openallay.value.ValueType(ActiveCatalog.ValueSchemaProvider.class)
+private static final class ActiveCatalog {
+    private final long id;
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<ToolResult<ModelCatalog>> result;
+    private ActiveCatalog(long id, CancellationSignal cancellation, CompletableFuture<ToolResult<ModelCatalog>> result) {
+        this.id = id;
+        this.cancellation = cancellation;
+        this.result = result;
+    }
+    public long id() { return id; }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<ToolResult<ModelCatalog>> result() { return result; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ActiveCatalog)) return false;
+        ActiveCatalog that = (ActiveCatalog) other;
+        return id == that.id && java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(result, that.result);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(result);
+        return hash;
+    }
+    @Override public String toString() { return "ActiveCatalog[id=" + id + ", cancellation=" + cancellation + ", result=" + result + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ActiveCatalog> schema() {
+            return new dev.openallay.value.ValueSchema<>(ActiveCatalog.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ActiveCatalog>>asList(new dev.openallay.value.ValueSchema.Component<>(ActiveCatalog.class, "id", ActiveCatalog::id), new dev.openallay.value.ValueSchema.Component<>(ActiveCatalog.class, "cancellation", ActiveCatalog::cancellation), new dev.openallay.value.ValueSchema.Component<>(ActiveCatalog.class, "result", ActiveCatalog::result)), arguments -> new ActiveCatalog((Long) arguments[0], (CancellationSignal) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 }

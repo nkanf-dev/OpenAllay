@@ -7,12 +7,44 @@ public final class VoiceStatusPresentation {
     private static final String PREFIX = "screen.openallay.voice.feedback.";
     private VoiceStatusPresentation() {}
 
-    public record Notice(String translationKey, String actionTranslationKey, boolean error) {
-        public Notice {
+    @dev.openallay.value.ValueType(Notice.ValueSchemaProvider.class)
+public static final class Notice {
+    private final String translationKey;
+    private final String actionTranslationKey;
+    private final boolean error;
+    public Notice(String translationKey, String actionTranslationKey, boolean error) {
+
             Objects.requireNonNull(translationKey, "translationKey");
             Objects.requireNonNull(actionTranslationKey, "actionTranslationKey");
+
+        this.translationKey = translationKey;
+        this.actionTranslationKey = actionTranslationKey;
+        this.error = error;
+    }
+    public String translationKey() { return translationKey; }
+    public String actionTranslationKey() { return actionTranslationKey; }
+    public boolean error() { return error; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Notice)) return false;
+        Notice that = (Notice) other;
+        return java.util.Objects.equals(translationKey, that.translationKey) && java.util.Objects.equals(actionTranslationKey, that.actionTranslationKey) && error == that.error;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(translationKey);
+        hash = 31 * hash + java.util.Objects.hashCode(actionTranslationKey);
+        hash = 31 * hash + Boolean.hashCode(error);
+        return hash;
+    }
+    @Override public String toString() { return "Notice[translationKey=" + translationKey + ", actionTranslationKey=" + actionTranslationKey + ", error=" + error + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Notice> schema() {
+            return new dev.openallay.value.ValueSchema<>(Notice.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Notice>>asList(new dev.openallay.value.ValueSchema.Component<>(Notice.class, "translationKey", Notice::translationKey), new dev.openallay.value.ValueSchema.Component<>(Notice.class, "actionTranslationKey", Notice::actionTranslationKey), new dev.openallay.value.ValueSchema.Component<>(Notice.class, "error", Notice::error)), arguments -> new Notice((String) arguments[0], (String) arguments[1], (Boolean) arguments[2]));
         }
     }
+}
 
     public static Notice describe(VoiceRuntime.Status status) {
         Objects.requireNonNull(status, "status");

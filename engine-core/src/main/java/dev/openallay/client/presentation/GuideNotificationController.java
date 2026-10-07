@@ -303,11 +303,51 @@ public final class GuideNotificationController implements GuidePresentationListe
         boolean seen, delivered;
         Receipt(GuidePresentationEvent event) { this.event = event; }
     }
-    private record Task(UUID generation, UUID actor, UUID owner, String session, UUID request) {
-        static Task of(GuidePresentationEvent.Key key) {
+    @dev.openallay.value.ValueType(Task.ValueSchemaProvider.class)
+private static final class Task {
+    private final UUID generation;
+    private final UUID actor;
+    private final UUID owner;
+    private final String session;
+    private final UUID request;
+    private Task(UUID generation, UUID actor, UUID owner, String session, UUID request) {
+        this.generation = generation;
+        this.actor = actor;
+        this.owner = owner;
+        this.session = session;
+        this.request = request;
+    }
+    public UUID generation() { return generation; }
+    public UUID actor() { return actor; }
+    public UUID owner() { return owner; }
+    public String session() { return session; }
+    public UUID request() { return request; }
+static Task of(GuidePresentationEvent.Key key) {
             return new Task(key.connectionGeneration(), key.actorId(), key.sessionOwner(), key.sessionId(), key.requestId());
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Task)) return false;
+        Task that = (Task) other;
+        return java.util.Objects.equals(generation, that.generation) && java.util.Objects.equals(actor, that.actor) && java.util.Objects.equals(owner, that.owner) && java.util.Objects.equals(session, that.session) && java.util.Objects.equals(request, that.request);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(actor);
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "Task[generation=" + generation + ", actor=" + actor + ", owner=" + owner + ", session=" + session + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Task> schema() {
+            return new dev.openallay.value.ValueSchema<>(Task.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Task>>asList(new dev.openallay.value.ValueSchema.Component<>(Task.class, "generation", Task::generation), new dev.openallay.value.ValueSchema.Component<>(Task.class, "actor", Task::actor), new dev.openallay.value.ValueSchema.Component<>(Task.class, "owner", Task::owner), new dev.openallay.value.ValueSchema.Component<>(Task.class, "session", Task::session), new dev.openallay.value.ValueSchema.Component<>(Task.class, "request", Task::request)), arguments -> new Task((UUID) arguments[0], (UUID) arguments[1], (UUID) arguments[2], (String) arguments[3], (UUID) arguments[4]));
+        }
+    }
+}
     private static final class Batch {
         final Task task;
         final Instant first;

@@ -49,13 +49,15 @@ public final class SettingsDiagnosticsAggregator {
         FAILED
     }
 
-    public record SourceStatus(
-            String sourceId,
-            String generation,
-            SourceState state,
-            Integer itemCount,
-            String failureCode) {
-        public SourceStatus {
+    @dev.openallay.value.ValueType(SourceStatus.ValueSchemaProvider.class)
+public static final class SourceStatus {
+    private final String sourceId;
+    private final String generation;
+    private final SourceState state;
+    private final Integer itemCount;
+    private final String failureCode;
+    public SourceStatus(String sourceId, String generation, SourceState state, Integer itemCount, String failureCode) {
+
             sourceId = safeIdentifier(sourceId);
             Objects.requireNonNull(state, "state");
             if (itemCount != null && itemCount < 0) {
@@ -76,31 +78,57 @@ public final class SettingsDiagnosticsAggregator {
                 throw new IllegalArgumentException(
                         "source state and failure diagnostic do not agree");
             }
+
+        this.sourceId = sourceId;
+        this.generation = generation;
+        this.state = state;
+        this.itemCount = itemCount;
+        this.failureCode = failureCode;
+    }
+    public String sourceId() { return sourceId; }
+    public String generation() { return generation; }
+    public SourceState state() { return state; }
+    public Integer itemCount() { return itemCount; }
+    public String failureCode() { return failureCode; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SourceStatus)) return false;
+        SourceStatus that = (SourceStatus) other;
+        return java.util.Objects.equals(sourceId, that.sourceId) && java.util.Objects.equals(generation, that.generation) && java.util.Objects.equals(state, that.state) && java.util.Objects.equals(itemCount, that.itemCount) && java.util.Objects.equals(failureCode, that.failureCode);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sourceId);
+        hash = 31 * hash + java.util.Objects.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(itemCount);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        return hash;
+    }
+    @Override public String toString() { return "SourceStatus[sourceId=" + sourceId + ", generation=" + generation + ", state=" + state + ", itemCount=" + itemCount + ", failureCode=" + failureCode + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SourceStatus> schema() {
+            return new dev.openallay.value.ValueSchema<>(SourceStatus.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SourceStatus>>asList(new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "sourceId", SourceStatus::sourceId), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "generation", SourceStatus::generation), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "state", SourceStatus::state), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "itemCount", SourceStatus::itemCount), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "failureCode", SourceStatus::failureCode)), arguments -> new SourceStatus((String) arguments[0], (String) arguments[1], (SourceState) arguments[2], (Integer) arguments[3], (String) arguments[4]));
         }
     }
+}
 
-    public record DiagnosticsInputs(
-            long settingsGeneration,
-            ModelProfileSettingsView models,
-            CapabilitySettingsView capabilities,
-            RecipeSettingsView recipes,
-            Optional<GuideSnapshot> guide,
-            GuideHistoryActivity historyActivity,
-            HistoryScopeKind historyScopeKind,
-            List<SourceStatus> sources,
-            boolean sourcesKnown,
-            boolean sourcesRetained,
-            Long estimatedContextTokens) {
-        public DiagnosticsInputs(
-                long settingsGeneration, ModelProfileSettingsView models,
-                CapabilitySettingsView capabilities, RecipeSettingsView recipes,
-                Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity,
-                HistoryScopeKind historyScopeKind, List<SourceStatus> sources) {
-            this(settingsGeneration, models, capabilities, recipes, guide, historyActivity,
-                    historyScopeKind, sources, true, false, null);
-        }
+    @dev.openallay.value.ValueType(DiagnosticsInputs.ValueSchemaProvider.class)
+public static final class DiagnosticsInputs {
+    private final long settingsGeneration;
+    private final ModelProfileSettingsView models;
+    private final CapabilitySettingsView capabilities;
+    private final RecipeSettingsView recipes;
+    private final Optional<GuideSnapshot> guide;
+    private final GuideHistoryActivity historyActivity;
+    private final HistoryScopeKind historyScopeKind;
+    private final List<SourceStatus> sources;
+    private final boolean sourcesKnown;
+    private final boolean sourcesRetained;
+    private final Long estimatedContextTokens;
+    public DiagnosticsInputs(long settingsGeneration, ModelProfileSettingsView models, CapabilitySettingsView capabilities, RecipeSettingsView recipes, Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity, HistoryScopeKind historyScopeKind, List<SourceStatus> sources, boolean sourcesKnown, boolean sourcesRetained, Long estimatedContextTokens) {
 
-        public DiagnosticsInputs {
             if (settingsGeneration < 0) {
                 throw new IllegalArgumentException("diagnostic generation is invalid");
             }
@@ -120,8 +148,67 @@ public final class SettingsDiagnosticsAggregator {
             if (guide.isEmpty() != (historyScopeKind == HistoryScopeKind.NONE)) {
                 throw new IllegalArgumentException("history scope kind must match Guide availability");
             }
+
+        this.settingsGeneration = settingsGeneration;
+        this.models = models;
+        this.capabilities = capabilities;
+        this.recipes = recipes;
+        this.guide = guide;
+        this.historyActivity = historyActivity;
+        this.historyScopeKind = historyScopeKind;
+        this.sources = sources;
+        this.sourcesKnown = sourcesKnown;
+        this.sourcesRetained = sourcesRetained;
+        this.estimatedContextTokens = estimatedContextTokens;
+    }
+    public long settingsGeneration() { return settingsGeneration; }
+    public ModelProfileSettingsView models() { return models; }
+    public CapabilitySettingsView capabilities() { return capabilities; }
+    public RecipeSettingsView recipes() { return recipes; }
+    public Optional<GuideSnapshot> guide() { return guide; }
+    public GuideHistoryActivity historyActivity() { return historyActivity; }
+    public HistoryScopeKind historyScopeKind() { return historyScopeKind; }
+    public List<SourceStatus> sources() { return sources; }
+    public boolean sourcesKnown() { return sourcesKnown; }
+    public boolean sourcesRetained() { return sourcesRetained; }
+    public Long estimatedContextTokens() { return estimatedContextTokens; }
+public DiagnosticsInputs(
+                long settingsGeneration, ModelProfileSettingsView models,
+                CapabilitySettingsView capabilities, RecipeSettingsView recipes,
+                Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity,
+                HistoryScopeKind historyScopeKind, List<SourceStatus> sources) {
+            this(settingsGeneration, models, capabilities, recipes, guide, historyActivity,
+                    historyScopeKind, sources, true, false, null);
+        }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DiagnosticsInputs)) return false;
+        DiagnosticsInputs that = (DiagnosticsInputs) other;
+        return settingsGeneration == that.settingsGeneration && java.util.Objects.equals(models, that.models) && java.util.Objects.equals(capabilities, that.capabilities) && java.util.Objects.equals(recipes, that.recipes) && java.util.Objects.equals(guide, that.guide) && java.util.Objects.equals(historyActivity, that.historyActivity) && java.util.Objects.equals(historyScopeKind, that.historyScopeKind) && java.util.Objects.equals(sources, that.sources) && sourcesKnown == that.sourcesKnown && sourcesRetained == that.sourcesRetained && java.util.Objects.equals(estimatedContextTokens, that.estimatedContextTokens);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(settingsGeneration);
+        hash = 31 * hash + java.util.Objects.hashCode(models);
+        hash = 31 * hash + java.util.Objects.hashCode(capabilities);
+        hash = 31 * hash + java.util.Objects.hashCode(recipes);
+        hash = 31 * hash + java.util.Objects.hashCode(guide);
+        hash = 31 * hash + java.util.Objects.hashCode(historyActivity);
+        hash = 31 * hash + java.util.Objects.hashCode(historyScopeKind);
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + Boolean.hashCode(sourcesKnown);
+        hash = 31 * hash + Boolean.hashCode(sourcesRetained);
+        hash = 31 * hash + java.util.Objects.hashCode(estimatedContextTokens);
+        return hash;
+    }
+    @Override public String toString() { return "DiagnosticsInputs[settingsGeneration=" + settingsGeneration + ", models=" + models + ", capabilities=" + capabilities + ", recipes=" + recipes + ", guide=" + guide + ", historyActivity=" + historyActivity + ", historyScopeKind=" + historyScopeKind + ", sources=" + sources + ", sourcesKnown=" + sourcesKnown + ", sourcesRetained=" + sourcesRetained + ", estimatedContextTokens=" + estimatedContextTokens + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DiagnosticsInputs> schema() {
+            return new dev.openallay.value.ValueSchema<>(DiagnosticsInputs.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DiagnosticsInputs>>asList(new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "settingsGeneration", DiagnosticsInputs::settingsGeneration), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "models", DiagnosticsInputs::models), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "capabilities", DiagnosticsInputs::capabilities), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "recipes", DiagnosticsInputs::recipes), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "guide", DiagnosticsInputs::guide), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "historyActivity", DiagnosticsInputs::historyActivity), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "historyScopeKind", DiagnosticsInputs::historyScopeKind), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "sources", DiagnosticsInputs::sources), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "sourcesKnown", DiagnosticsInputs::sourcesKnown), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "sourcesRetained", DiagnosticsInputs::sourcesRetained), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "estimatedContextTokens", DiagnosticsInputs::estimatedContextTokens)), arguments -> new DiagnosticsInputs((Long) arguments[0], (ModelProfileSettingsView) arguments[1], (CapabilitySettingsView) arguments[2], (RecipeSettingsView) arguments[3], (Optional) arguments[4], (GuideHistoryActivity) arguments[5], (HistoryScopeKind) arguments[6], (List) arguments[7], (Boolean) arguments[8], (Boolean) arguments[9], (Long) arguments[10]));
         }
     }
+}
 
     public SettingsDiagnosticsSnapshot snapshot(
             boolean debugMode, DiagnosticsInputs inputs) {
@@ -483,13 +570,45 @@ public final class SettingsDiagnosticsAggregator {
         return value.matches("[a-zA-Z0-9_./:-]+") ? value : fallback;
     }
 
-    private record GuideSummary(
-            long activeRequests,
-            int checkpointCount,
-            int successfulCheckpoints,
-            int failedCheckpoints) {
-        private static GuideSummary empty() {
+    @dev.openallay.value.ValueType(GuideSummary.ValueSchemaProvider.class)
+private static final class GuideSummary {
+    private final long activeRequests;
+    private final int checkpointCount;
+    private final int successfulCheckpoints;
+    private final int failedCheckpoints;
+    private GuideSummary(long activeRequests, int checkpointCount, int successfulCheckpoints, int failedCheckpoints) {
+        this.activeRequests = activeRequests;
+        this.checkpointCount = checkpointCount;
+        this.successfulCheckpoints = successfulCheckpoints;
+        this.failedCheckpoints = failedCheckpoints;
+    }
+    public long activeRequests() { return activeRequests; }
+    public int checkpointCount() { return checkpointCount; }
+    public int successfulCheckpoints() { return successfulCheckpoints; }
+    public int failedCheckpoints() { return failedCheckpoints; }
+private static GuideSummary empty() {
             return new GuideSummary(0, 0, 0, 0);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof GuideSummary)) return false;
+        GuideSummary that = (GuideSummary) other;
+        return activeRequests == that.activeRequests && checkpointCount == that.checkpointCount && successfulCheckpoints == that.successfulCheckpoints && failedCheckpoints == that.failedCheckpoints;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(activeRequests);
+        hash = 31 * hash + Integer.hashCode(checkpointCount);
+        hash = 31 * hash + Integer.hashCode(successfulCheckpoints);
+        hash = 31 * hash + Integer.hashCode(failedCheckpoints);
+        return hash;
+    }
+    @Override public String toString() { return "GuideSummary[activeRequests=" + activeRequests + ", checkpointCount=" + checkpointCount + ", successfulCheckpoints=" + successfulCheckpoints + ", failedCheckpoints=" + failedCheckpoints + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<GuideSummary> schema() {
+            return new dev.openallay.value.ValueSchema<>(GuideSummary.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<GuideSummary>>asList(new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "activeRequests", GuideSummary::activeRequests), new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "checkpointCount", GuideSummary::checkpointCount), new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "successfulCheckpoints", GuideSummary::successfulCheckpoints), new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "failedCheckpoints", GuideSummary::failedCheckpoints)), arguments -> new GuideSummary((Long) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3]));
+        }
+    }
+}
 }

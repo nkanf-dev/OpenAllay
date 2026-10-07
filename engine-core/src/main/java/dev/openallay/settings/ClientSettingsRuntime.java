@@ -51,17 +51,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Loader-neutral lifecycle bundle for the model registry and native settings owner. */
-public record ClientSettingsRuntime(
-        ClientModelRuntimeRegistry models,
-        ClientSettingsService settings,
-        UnrestrictedJavascriptRuntime unrestrictedJavascript) {
-    public ClientSettingsRuntime {
+@dev.openallay.value.ValueType(ClientSettingsRuntime.ValueSchemaProvider.class)
+public final class ClientSettingsRuntime {
+    private final ClientModelRuntimeRegistry models;
+    private final ClientSettingsService settings;
+    private final UnrestrictedJavascriptRuntime unrestrictedJavascript;
+    public ClientSettingsRuntime(ClientModelRuntimeRegistry models, ClientSettingsService settings, UnrestrictedJavascriptRuntime unrestrictedJavascript) {
+
         Objects.requireNonNull(models, "models");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(unrestrictedJavascript, "unrestrictedJavascript");
-    }
 
-    public static ToolResult<ClientSettingsRuntime> create(
+        this.models = models;
+        this.settings = settings;
+        this.unrestrictedJavascript = unrestrictedJavascript;
+    }
+    public ClientModelRuntimeRegistry models() { return models; }
+    public ClientSettingsService settings() { return settings; }
+    public UnrestrictedJavascriptRuntime unrestrictedJavascript() { return unrestrictedJavascript; }
+public static ToolResult<ClientSettingsRuntime> create(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -89,8 +97,7 @@ public record ClientSettingsRuntime(
                 clock,
                 display);
     }
-
-    public static ToolResult<ClientSettingsRuntime> create(
+public static ToolResult<ClientSettingsRuntime> create(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -118,8 +125,7 @@ public record ClientSettingsRuntime(
                 new ClientSettingsHistoryBinding(),
                 null);
     }
-
-    public static ToolResult<ClientSettingsRuntime> create(
+public static ToolResult<ClientSettingsRuntime> create(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -162,8 +168,7 @@ public record ClientSettingsRuntime(
                 historyActions,
                 display.failure());
     }
-
-    private static ToolResult<ClientSettingsRuntime> createInternal(
+private static ToolResult<ClientSettingsRuntime> createInternal(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -419,12 +424,10 @@ public record ClientSettingsRuntime(
                     "settings_unavailable", "Native settings are unavailable");
         }
     }
-
-    public CompletableFuture<Void> closeAsync() {
+public CompletableFuture<Void> closeAsync() {
         return settings.closeAsync();
     }
-
-    private static ToolResult<CommandCapabilityConfig> publishCommandConfig(
+private static ToolResult<CommandCapabilityConfig> publishCommandConfig(
             ToolResult<CommandCapabilityConfig> loaded,
             CommandCapabilityConfigStore store,
             FeatureServices product,
@@ -449,8 +452,7 @@ public record ClientSettingsRuntime(
         }
         return new ToolResult.Success<>(candidate);
     }
-
-    private static ToolResult<UnrestrictedJavascriptConfig> publishUnrestrictedConfig(
+private static ToolResult<UnrestrictedJavascriptConfig> publishUnrestrictedConfig(
             ToolResult<UnrestrictedJavascriptConfig> loaded,
             UnrestrictedJavascriptConfigStore store,
             UnrestrictedJavascriptRuntime unrestrictedRuntime,
@@ -474,15 +476,13 @@ public record ClientSettingsRuntime(
         }
         return new ToolResult.Success<>(candidate);
     }
-
-    private static void updateCommandGuidance(
+private static void updateCommandGuidance(
             FeatureServices product, UnrestrictedJavascriptRuntime unrestrictedRuntime) {
         product.skills().setRuntimeDisabledSkills(unrestrictedRuntime.enabled() || product.commands().enabled()
                 ? Set.of()
                 : Set.of(dev.openallay.skill.SkillCatalogSnapshot.GAME_COMMANDS));
     }
-
-    private static ClientSettingsService.DisplayActions unavailableDisplayActions() {
+private static ClientSettingsService.DisplayActions unavailableDisplayActions() {
         return new ClientSettingsService.DisplayActions() {
             @Override
             public ToolResult<GuideDisplayConfig> saveDisplay(GuideDisplayConfig candidate) {
@@ -497,8 +497,7 @@ public record ClientSettingsRuntime(
             }
         };
     }
-
-    private static ModelProfilesConfigLoader.Load unconfigured() {
+private static ModelProfilesConfigLoader.Load unconfigured() {
         ModelProfileDefinition definition = new ModelProfileDefinition(
                 "default",
                 "Configure a model",
@@ -522,8 +521,7 @@ public record ClientSettingsRuntime(
         return new ModelProfilesConfigLoader.Load(
                 config, List.of(resolved));
     }
-
-    private static Set<String> installedSkillMods(FeatureServices product) {
+private static Set<String> installedSkillMods(FeatureServices product) {
         java.util.TreeSet<String> installed = new java.util.TreeSet<>();
         try {
             product.platform().installedMods().stream()
@@ -538,8 +536,7 @@ public record ClientSettingsRuntime(
                 .filter(product.platform()::isModLoaded).forEach(installed::add);
         return Set.copyOf(installed);
     }
-
-    private static Path managedModsRoot(Path configDirectory) {
+private static Path managedModsRoot(Path configDirectory) {
         Path configRoot = configDirectory.toAbsolutePath().normalize().getParent();
         Path gameRoot = configRoot == null ? null : configRoot.getParent();
         if (gameRoot == null) {
@@ -547,5 +544,25 @@ public record ClientSettingsRuntime(
                     "OpenAllay configuration directory requires a game directory");
         }
         return gameRoot.resolve("mods");
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ClientSettingsRuntime)) return false;
+        ClientSettingsRuntime that = (ClientSettingsRuntime) other;
+        return java.util.Objects.equals(models, that.models) && java.util.Objects.equals(settings, that.settings) && java.util.Objects.equals(unrestrictedJavascript, that.unrestrictedJavascript);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(models);
+        hash = 31 * hash + java.util.Objects.hashCode(settings);
+        hash = 31 * hash + java.util.Objects.hashCode(unrestrictedJavascript);
+        return hash;
+    }
+    @Override public String toString() { return "ClientSettingsRuntime[models=" + models + ", settings=" + settings + ", unrestrictedJavascript=" + unrestrictedJavascript + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ClientSettingsRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(ClientSettingsRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ClientSettingsRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(ClientSettingsRuntime.class, "models", ClientSettingsRuntime::models), new dev.openallay.value.ValueSchema.Component<>(ClientSettingsRuntime.class, "settings", ClientSettingsRuntime::settings), new dev.openallay.value.ValueSchema.Component<>(ClientSettingsRuntime.class, "unrestrictedJavascript", ClientSettingsRuntime::unrestrictedJavascript)), arguments -> new ClientSettingsRuntime((ClientModelRuntimeRegistry) arguments[0], (ClientSettingsService) arguments[1], (UnrestrictedJavascriptRuntime) arguments[2]));
+        }
     }
 }

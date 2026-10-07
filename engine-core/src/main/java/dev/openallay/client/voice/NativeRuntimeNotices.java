@@ -13,7 +13,40 @@ import java.util.List;
 /** Fixed runtime notices. Model manifests cannot supply notices or executable selections. */
 public final class NativeRuntimeNotices {
     private static final String RESOURCE_ROOT = "/assets/openallay/native-runtime-notices/";
-    record Notice(String name, int bytes, String sha256) {}
+    @dev.openallay.value.ValueType(Notice.ValueSchemaProvider.class)
+static final class Notice {
+    private final String name;
+    private final int bytes;
+    private final String sha256;
+    Notice(String name, int bytes, String sha256) {
+        this.name = name;
+        this.bytes = bytes;
+        this.sha256 = sha256;
+    }
+    public String name() { return name; }
+    public int bytes() { return bytes; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Notice)) return false;
+        Notice that = (Notice) other;
+        return java.util.Objects.equals(name, that.name) && bytes == that.bytes && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + Integer.hashCode(bytes);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "Notice[name=" + name + ", bytes=" + bytes + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Notice> schema() {
+            return new dev.openallay.value.ValueSchema<>(Notice.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Notice>>asList(new dev.openallay.value.ValueSchema.Component<>(Notice.class, "name", Notice::name), new dev.openallay.value.ValueSchema.Component<>(Notice.class, "bytes", Notice::bytes), new dev.openallay.value.ValueSchema.Component<>(Notice.class, "sha256", Notice::sha256)), arguments -> new Notice((String) arguments[0], (Integer) arguments[1], (String) arguments[2]));
+        }
+    }
+}
     private static final List<Notice> NOTICES = List.of(
             new Notice("ASR-DEPENDENCY-eigen-src-LICENSE.txt", 16725, "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"),
             new Notice("ASR-DEPENDENCY-json-src-LICENSE.MIT.txt", 1076, "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603"),

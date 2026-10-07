@@ -41,7 +41,44 @@ public final class NativeSpeechToText implements SpeechToText {
     }
     @FunctionalInterface interface RuntimeValidator { void validate(Path root, VoiceCancellation cancellation) throws IOException; }
     @FunctionalInterface interface WorkerExecutor { String recognize(Call call, VoiceCancellation cancellation) throws Exception; }
-    record Call(Path modelDirectory, Path runtimeRoot, NativeModelFiles.Model model, Request request) {}
+    @dev.openallay.value.ValueType(Call.ValueSchemaProvider.class)
+static final class Call {
+    private final Path modelDirectory;
+    private final Path runtimeRoot;
+    private final NativeModelFiles.Model model;
+    private final Request request;
+    Call(Path modelDirectory, Path runtimeRoot, NativeModelFiles.Model model, Request request) {
+        this.modelDirectory = modelDirectory;
+        this.runtimeRoot = runtimeRoot;
+        this.model = model;
+        this.request = request;
+    }
+    public Path modelDirectory() { return modelDirectory; }
+    public Path runtimeRoot() { return runtimeRoot; }
+    public NativeModelFiles.Model model() { return model; }
+    public Request request() { return request; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Call)) return false;
+        Call that = (Call) other;
+        return java.util.Objects.equals(modelDirectory, that.modelDirectory) && java.util.Objects.equals(runtimeRoot, that.runtimeRoot) && java.util.Objects.equals(model, that.model) && java.util.Objects.equals(request, that.request);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(modelDirectory);
+        hash = 31 * hash + java.util.Objects.hashCode(runtimeRoot);
+        hash = 31 * hash + java.util.Objects.hashCode(model);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "Call[modelDirectory=" + modelDirectory + ", runtimeRoot=" + runtimeRoot + ", model=" + model + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Call> schema() {
+            return new dev.openallay.value.ValueSchema<>(Call.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Call>>asList(new dev.openallay.value.ValueSchema.Component<>(Call.class, "modelDirectory", Call::modelDirectory), new dev.openallay.value.ValueSchema.Component<>(Call.class, "runtimeRoot", Call::runtimeRoot), new dev.openallay.value.ValueSchema.Component<>(Call.class, "model", Call::model), new dev.openallay.value.ValueSchema.Component<>(Call.class, "request", Call::request)), arguments -> new Call((Path) arguments[0], (Path) arguments[1], (NativeModelFiles.Model) arguments[2], (Request) arguments[3]));
+        }
+    }
+}
 
     /** Convenience layout matches NativeModelInstaller: model and runtime are siblings. */
     public NativeSpeechToText(Path modelDirectory) {

@@ -403,17 +403,46 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         return 0;
     }
 
-    private record StagedPackage(
-            OpenAllayExtensionDescriptor descriptor,
-            Optional<ExtensionCatalogEntry> catalogEntry,
-            String sha256) {
-        private StagedPackage {
+    @dev.openallay.value.ValueType(StagedPackage.ValueSchemaProvider.class)
+private static final class StagedPackage {
+    private final OpenAllayExtensionDescriptor descriptor;
+    private final Optional<ExtensionCatalogEntry> catalogEntry;
+    private final String sha256;
+    private StagedPackage(OpenAllayExtensionDescriptor descriptor, Optional<ExtensionCatalogEntry> catalogEntry, String sha256) {
+
             Objects.requireNonNull(descriptor, "descriptor");
             catalogEntry = Objects.requireNonNull(catalogEntry, "catalogEntry");
             if (sha256 == null || !sha256.matches("[0-9a-f]{64}")) {
                 throw new IllegalArgumentException(
                         "A staged Extension requires a SHA-256 digest");
             }
+
+        this.descriptor = descriptor;
+        this.catalogEntry = catalogEntry;
+        this.sha256 = sha256;
+    }
+    public OpenAllayExtensionDescriptor descriptor() { return descriptor; }
+    public Optional<ExtensionCatalogEntry> catalogEntry() { return catalogEntry; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof StagedPackage)) return false;
+        StagedPackage that = (StagedPackage) other;
+        return java.util.Objects.equals(descriptor, that.descriptor) && java.util.Objects.equals(catalogEntry, that.catalogEntry) && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(descriptor);
+        hash = 31 * hash + java.util.Objects.hashCode(catalogEntry);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "StagedPackage[descriptor=" + descriptor + ", catalogEntry=" + catalogEntry + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<StagedPackage> schema() {
+            return new dev.openallay.value.ValueSchema<>(StagedPackage.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<StagedPackage>>asList(new dev.openallay.value.ValueSchema.Component<>(StagedPackage.class, "descriptor", StagedPackage::descriptor), new dev.openallay.value.ValueSchema.Component<>(StagedPackage.class, "catalogEntry", StagedPackage::catalogEntry), new dev.openallay.value.ValueSchema.Component<>(StagedPackage.class, "sha256", StagedPackage::sha256)), arguments -> new StagedPackage((OpenAllayExtensionDescriptor) arguments[0], (Optional) arguments[1], (String) arguments[2]));
         }
     }
+}
 }

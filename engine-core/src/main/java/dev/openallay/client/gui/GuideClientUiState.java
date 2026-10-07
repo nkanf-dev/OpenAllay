@@ -433,26 +433,138 @@ public final class GuideClientUiState implements AutoCloseable {
         return requestActive ? intent.steer() ? SubmissionRoute.STEER : SubmissionRoute.FOLLOW_UP : SubmissionRoute.ASK;
     }
     public enum DraftMode { FOLLOW_UP, STEER }
-    public record DraftIntent(DraftMode mode, UUID pendingId, boolean editInvalid) {
-        public DraftIntent {
+    @dev.openallay.value.ValueType(DraftIntent.ValueSchemaProvider.class)
+public static final class DraftIntent {
+    private final DraftMode mode;
+    private final UUID pendingId;
+    private final boolean editInvalid;
+    public DraftIntent(DraftMode mode, UUID pendingId, boolean editInvalid) {
+
             Objects.requireNonNull(mode, "mode");
             if (editInvalid && pendingId == null) throw new IllegalArgumentException("An invalid edit needs its captured target");
-        }
-        public static DraftIntent defaults() { return new DraftIntent(DraftMode.FOLLOW_UP, null, false); }
-        public boolean editing() { return pendingId != null; }
-        public boolean steer() { return mode == DraftMode.STEER; }
+
+        this.mode = mode;
+        this.pendingId = pendingId;
+        this.editInvalid = editInvalid;
     }
-    public record IntentCapture(String ownerId, long generation, String session, long intentRevision, DraftIntent intent) {}
+    public DraftMode mode() { return mode; }
+    public UUID pendingId() { return pendingId; }
+    public boolean editInvalid() { return editInvalid; }
+public static DraftIntent defaults() { return new DraftIntent(DraftMode.FOLLOW_UP, null, false); }
+public boolean editing() { return pendingId != null; }
+public boolean steer() { return mode == DraftMode.STEER; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DraftIntent)) return false;
+        DraftIntent that = (DraftIntent) other;
+        return java.util.Objects.equals(mode, that.mode) && java.util.Objects.equals(pendingId, that.pendingId) && editInvalid == that.editInvalid;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(mode);
+        hash = 31 * hash + java.util.Objects.hashCode(pendingId);
+        hash = 31 * hash + Boolean.hashCode(editInvalid);
+        return hash;
+    }
+    @Override public String toString() { return "DraftIntent[mode=" + mode + ", pendingId=" + pendingId + ", editInvalid=" + editInvalid + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DraftIntent> schema() {
+            return new dev.openallay.value.ValueSchema<>(DraftIntent.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DraftIntent>>asList(new dev.openallay.value.ValueSchema.Component<>(DraftIntent.class, "mode", DraftIntent::mode), new dev.openallay.value.ValueSchema.Component<>(DraftIntent.class, "pendingId", DraftIntent::pendingId), new dev.openallay.value.ValueSchema.Component<>(DraftIntent.class, "editInvalid", DraftIntent::editInvalid)), arguments -> new DraftIntent((DraftMode) arguments[0], (UUID) arguments[1], (Boolean) arguments[2]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(IntentCapture.ValueSchemaProvider.class)
+public static final class IntentCapture {
+    private final String ownerId;
+    private final long generation;
+    private final String session;
+    private final long intentRevision;
+    private final DraftIntent intent;
+    public IntentCapture(String ownerId, long generation, String session, long intentRevision, DraftIntent intent) {
+        this.ownerId = ownerId;
+        this.generation = generation;
+        this.session = session;
+        this.intentRevision = intentRevision;
+        this.intent = intent;
+    }
+    public String ownerId() { return ownerId; }
+    public long generation() { return generation; }
+    public String session() { return session; }
+    public long intentRevision() { return intentRevision; }
+    public DraftIntent intent() { return intent; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof IntentCapture)) return false;
+        IntentCapture that = (IntentCapture) other;
+        return java.util.Objects.equals(ownerId, that.ownerId) && generation == that.generation && java.util.Objects.equals(session, that.session) && intentRevision == that.intentRevision && java.util.Objects.equals(intent, that.intent);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(ownerId);
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + Long.hashCode(intentRevision);
+        hash = 31 * hash + java.util.Objects.hashCode(intent);
+        return hash;
+    }
+    @Override public String toString() { return "IntentCapture[ownerId=" + ownerId + ", generation=" + generation + ", session=" + session + ", intentRevision=" + intentRevision + ", intent=" + intent + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<IntentCapture> schema() {
+            return new dev.openallay.value.ValueSchema<>(IntentCapture.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<IntentCapture>>asList(new dev.openallay.value.ValueSchema.Component<>(IntentCapture.class, "ownerId", IntentCapture::ownerId), new dev.openallay.value.ValueSchema.Component<>(IntentCapture.class, "generation", IntentCapture::generation), new dev.openallay.value.ValueSchema.Component<>(IntentCapture.class, "session", IntentCapture::session), new dev.openallay.value.ValueSchema.Component<>(IntentCapture.class, "intentRevision", IntentCapture::intentRevision), new dev.openallay.value.ValueSchema.Component<>(IntentCapture.class, "intent", IntentCapture::intent)), arguments -> new IntentCapture((String) arguments[0], (Long) arguments[1], (String) arguments[2], (Long) arguments[3], (DraftIntent) arguments[4]));
+        }
+    }
+}
     public enum Surface { FULLSCREEN, HUD_INPUT }
     public enum InsertionResult { INSERTED, PENDING, REJECTED }
-    public record ObservationCapture(String ownerId, long generation, String session,
-            long observationRevision, Optional<ClientObservationAnchor> anchor) {
-        public ObservationCapture {
+    @dev.openallay.value.ValueType(ObservationCapture.ValueSchemaProvider.class)
+public static final class ObservationCapture {
+    private final String ownerId;
+    private final long generation;
+    private final String session;
+    private final long observationRevision;
+    private final Optional<ClientObservationAnchor> anchor;
+    public ObservationCapture(String ownerId, long generation, String session, long observationRevision, Optional<ClientObservationAnchor> anchor) {
+
             Objects.requireNonNull(ownerId, "ownerId");
             Objects.requireNonNull(session, "session");
             Objects.requireNonNull(anchor, "anchor");
+
+        this.ownerId = ownerId;
+        this.generation = generation;
+        this.session = session;
+        this.observationRevision = observationRevision;
+        this.anchor = anchor;
+    }
+    public String ownerId() { return ownerId; }
+    public long generation() { return generation; }
+    public String session() { return session; }
+    public long observationRevision() { return observationRevision; }
+    public Optional<ClientObservationAnchor> anchor() { return anchor; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ObservationCapture)) return false;
+        ObservationCapture that = (ObservationCapture) other;
+        return java.util.Objects.equals(ownerId, that.ownerId) && generation == that.generation && java.util.Objects.equals(session, that.session) && observationRevision == that.observationRevision && java.util.Objects.equals(anchor, that.anchor);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(ownerId);
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + Long.hashCode(observationRevision);
+        hash = 31 * hash + java.util.Objects.hashCode(anchor);
+        return hash;
+    }
+    @Override public String toString() { return "ObservationCapture[ownerId=" + ownerId + ", generation=" + generation + ", session=" + session + ", observationRevision=" + observationRevision + ", anchor=" + anchor + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ObservationCapture> schema() {
+            return new dev.openallay.value.ValueSchema<>(ObservationCapture.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ObservationCapture>>asList(new dev.openallay.value.ValueSchema.Component<>(ObservationCapture.class, "ownerId", ObservationCapture::ownerId), new dev.openallay.value.ValueSchema.Component<>(ObservationCapture.class, "generation", ObservationCapture::generation), new dev.openallay.value.ValueSchema.Component<>(ObservationCapture.class, "session", ObservationCapture::session), new dev.openallay.value.ValueSchema.Component<>(ObservationCapture.class, "observationRevision", ObservationCapture::observationRevision), new dev.openallay.value.ValueSchema.Component<>(ObservationCapture.class, "anchor", ObservationCapture::anchor)), arguments -> new ObservationCapture((String) arguments[0], (Long) arguments[1], (String) arguments[2], (Long) arguments[3], (Optional) arguments[4]));
         }
     }
+}
     public final class ObservationLease implements AutoCloseable {
         private final UUID id;
         private final ObservationCapture capture;
@@ -462,11 +574,84 @@ public final class GuideClientUiState implements AutoCloseable {
             if (observationLeases.remove(id) != null && !closed) retainImages();
         }
     }
-    public record Insertion(String ownerId, long generation, String session, long revision) {}
-    public record PendingInsertion(UUID id, String session, String text, Optional<ClientObservationAnchor> observation) {
-        public PendingInsertion { Objects.requireNonNull(observation, "observation"); }
-        public PendingInsertion(UUID id, String session, String text) { this(id, session, text, Optional.empty()); }
+    @dev.openallay.value.ValueType(Insertion.ValueSchemaProvider.class)
+public static final class Insertion {
+    private final String ownerId;
+    private final long generation;
+    private final String session;
+    private final long revision;
+    public Insertion(String ownerId, long generation, String session, long revision) {
+        this.ownerId = ownerId;
+        this.generation = generation;
+        this.session = session;
+        this.revision = revision;
     }
+    public String ownerId() { return ownerId; }
+    public long generation() { return generation; }
+    public String session() { return session; }
+    public long revision() { return revision; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Insertion)) return false;
+        Insertion that = (Insertion) other;
+        return java.util.Objects.equals(ownerId, that.ownerId) && generation == that.generation && java.util.Objects.equals(session, that.session) && revision == that.revision;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(ownerId);
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + Long.hashCode(revision);
+        return hash;
+    }
+    @Override public String toString() { return "Insertion[ownerId=" + ownerId + ", generation=" + generation + ", session=" + session + ", revision=" + revision + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Insertion> schema() {
+            return new dev.openallay.value.ValueSchema<>(Insertion.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Insertion>>asList(new dev.openallay.value.ValueSchema.Component<>(Insertion.class, "ownerId", Insertion::ownerId), new dev.openallay.value.ValueSchema.Component<>(Insertion.class, "generation", Insertion::generation), new dev.openallay.value.ValueSchema.Component<>(Insertion.class, "session", Insertion::session), new dev.openallay.value.ValueSchema.Component<>(Insertion.class, "revision", Insertion::revision)), arguments -> new Insertion((String) arguments[0], (Long) arguments[1], (String) arguments[2], (Long) arguments[3]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(PendingInsertion.ValueSchemaProvider.class)
+public static final class PendingInsertion {
+    private final UUID id;
+    private final String session;
+    private final String text;
+    private final Optional<ClientObservationAnchor> observation;
+    public PendingInsertion(UUID id, String session, String text, Optional<ClientObservationAnchor> observation) {
+ Objects.requireNonNull(observation, "observation");
+        this.id = id;
+        this.session = session;
+        this.text = text;
+        this.observation = observation;
+    }
+    public UUID id() { return id; }
+    public String session() { return session; }
+    public String text() { return text; }
+    public Optional<ClientObservationAnchor> observation() { return observation; }
+public PendingInsertion(UUID id, String session, String text) { this(id, session, text, Optional.empty()); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PendingInsertion)) return false;
+        PendingInsertion that = (PendingInsertion) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(session, that.session) && java.util.Objects.equals(text, that.text) && java.util.Objects.equals(observation, that.observation);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + java.util.Objects.hashCode(text);
+        hash = 31 * hash + java.util.Objects.hashCode(observation);
+        return hash;
+    }
+    @Override public String toString() { return "PendingInsertion[id=" + id + ", session=" + session + ", text=" + text + ", observation=" + observation + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PendingInsertion> schema() {
+            return new dev.openallay.value.ValueSchema<>(PendingInsertion.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PendingInsertion>>asList(new dev.openallay.value.ValueSchema.Component<>(PendingInsertion.class, "id", PendingInsertion::id), new dev.openallay.value.ValueSchema.Component<>(PendingInsertion.class, "session", PendingInsertion::session), new dev.openallay.value.ValueSchema.Component<>(PendingInsertion.class, "text", PendingInsertion::text), new dev.openallay.value.ValueSchema.Component<>(PendingInsertion.class, "observation", PendingInsertion::observation)), arguments -> new PendingInsertion((UUID) arguments[0], (String) arguments[1], (String) arguments[2], (Optional) arguments[3]));
+        }
+    }
+}
     private static final class Draft {
         String text = "";
         ClientObservationAnchor observation;

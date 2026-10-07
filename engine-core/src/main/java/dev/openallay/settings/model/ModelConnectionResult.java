@@ -7,14 +7,15 @@ import java.util.Objects;
 /** Credential-free result retained by the settings UI after a connection probe. */
 public sealed interface ModelConnectionResult
         permits ModelConnectionResult.Success, ModelConnectionResult.Failure {
-    record Success(
-            String profileId,
-            ModelProtocol protocol,
-            String authority,
-            Instant completedAt,
-            long latencyMillis)
-            implements ModelConnectionResult {
-        public Success {
+    @dev.openallay.value.ValueType(Success.ValueSchemaProvider.class)
+public static final class Success implements ModelConnectionResult {
+    private final String profileId;
+    private final ModelProtocol protocol;
+    private final String authority;
+    private final Instant completedAt;
+    private final long latencyMillis;
+    public Success(String profileId, ModelProtocol protocol, String authority, Instant completedAt, long latencyMillis) {
+
             requireText(profileId, "profileId");
             Objects.requireNonNull(protocol, "protocol");
             requireText(authority, "authority");
@@ -22,15 +23,76 @@ public sealed interface ModelConnectionResult
             if (latencyMillis < 0) {
                 throw new IllegalArgumentException("latencyMillis must not be negative");
             }
+
+        this.profileId = profileId;
+        this.protocol = protocol;
+        this.authority = authority;
+        this.completedAt = completedAt;
+        this.latencyMillis = latencyMillis;
+    }
+    public String profileId() { return profileId; }
+    public ModelProtocol protocol() { return protocol; }
+    public String authority() { return authority; }
+    public Instant completedAt() { return completedAt; }
+    public long latencyMillis() { return latencyMillis; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Success)) return false;
+        Success that = (Success) other;
+        return java.util.Objects.equals(profileId, that.profileId) && java.util.Objects.equals(protocol, that.protocol) && java.util.Objects.equals(authority, that.authority) && java.util.Objects.equals(completedAt, that.completedAt) && latencyMillis == that.latencyMillis;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(profileId);
+        hash = 31 * hash + java.util.Objects.hashCode(protocol);
+        hash = 31 * hash + java.util.Objects.hashCode(authority);
+        hash = 31 * hash + java.util.Objects.hashCode(completedAt);
+        hash = 31 * hash + Long.hashCode(latencyMillis);
+        return hash;
+    }
+    @Override public String toString() { return "Success[profileId=" + profileId + ", protocol=" + protocol + ", authority=" + authority + ", completedAt=" + completedAt + ", latencyMillis=" + latencyMillis + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Success> schema() {
+            return new dev.openallay.value.ValueSchema<>(Success.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Success>>asList(new dev.openallay.value.ValueSchema.Component<>(Success.class, "profileId", Success::profileId), new dev.openallay.value.ValueSchema.Component<>(Success.class, "protocol", Success::protocol), new dev.openallay.value.ValueSchema.Component<>(Success.class, "authority", Success::authority), new dev.openallay.value.ValueSchema.Component<>(Success.class, "completedAt", Success::completedAt), new dev.openallay.value.ValueSchema.Component<>(Success.class, "latencyMillis", Success::latencyMillis)), arguments -> new Success((String) arguments[0], (ModelProtocol) arguments[1], (String) arguments[2], (Instant) arguments[3], (Long) arguments[4]));
         }
     }
+}
 
-    record Failure(String code, String message) implements ModelConnectionResult {
-        public Failure {
+    @dev.openallay.value.ValueType(Failure.ValueSchemaProvider.class)
+public static final class Failure implements ModelConnectionResult {
+    private final String code;
+    private final String message;
+    public Failure(String code, String message) {
+
             requireText(code, "code");
             requireText(message, "message");
+
+        this.code = code;
+        this.message = message;
+    }
+    public String code() { return code; }
+    public String message() { return message; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Failure)) return false;
+        Failure that = (Failure) other;
+        return java.util.Objects.equals(code, that.code) && java.util.Objects.equals(message, that.message);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(code);
+        hash = 31 * hash + java.util.Objects.hashCode(message);
+        return hash;
+    }
+    @Override public String toString() { return "Failure[code=" + code + ", message=" + message + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Failure> schema() {
+            return new dev.openallay.value.ValueSchema<>(Failure.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Failure>>asList(new dev.openallay.value.ValueSchema.Component<>(Failure.class, "code", Failure::code), new dev.openallay.value.ValueSchema.Component<>(Failure.class, "message", Failure::message)), arguments -> new Failure((String) arguments[0], (String) arguments[1]));
         }
     }
+}
 
     private static void requireText(String value, String name) {
         if (value == null || value.isBlank()) {

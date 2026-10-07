@@ -728,14 +728,85 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     /** Optional guidance modes from an actual admitted request, never from a new resource capture. */
-    private record PromptModes(boolean unrestrictedJavascript, boolean commandsAvailable) {}
+    @dev.openallay.value.ValueType(PromptModes.ValueSchemaProvider.class)
+private static final class PromptModes {
+    private final boolean unrestrictedJavascript;
+    private final boolean commandsAvailable;
+    private PromptModes(boolean unrestrictedJavascript, boolean commandsAvailable) {
+        this.unrestrictedJavascript = unrestrictedJavascript;
+        this.commandsAvailable = commandsAvailable;
+    }
+    public boolean unrestrictedJavascript() { return unrestrictedJavascript; }
+    public boolean commandsAvailable() { return commandsAvailable; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PromptModes)) return false;
+        PromptModes that = (PromptModes) other;
+        return unrestrictedJavascript == that.unrestrictedJavascript && commandsAvailable == that.commandsAvailable;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Boolean.hashCode(unrestrictedJavascript);
+        hash = 31 * hash + Boolean.hashCode(commandsAvailable);
+        return hash;
+    }
+    @Override public String toString() { return "PromptModes[unrestrictedJavascript=" + unrestrictedJavascript + ", commandsAvailable=" + commandsAvailable + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PromptModes> schema() {
+            return new dev.openallay.value.ValueSchema<>(PromptModes.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PromptModes>>asList(new dev.openallay.value.ValueSchema.Component<>(PromptModes.class, "unrestrictedJavascript", PromptModes::unrestrictedJavascript), new dev.openallay.value.ValueSchema.Component<>(PromptModes.class, "commandsAvailable", PromptModes::commandsAvailable)), arguments -> new PromptModes((Boolean) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 
-    private record EndpointRuntime(
-            ModelRequestScheduler scheduler,
-            ContextCompactor compactor,
-            ContextTokenEstimator estimator,
-            ContextBudget contextBudget,
-            String modelIdentifier,
-            Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates,
-            Map<AgentSessionKey, PromptModes> promptModes) {}
+    @dev.openallay.value.ValueType(EndpointRuntime.ValueSchemaProvider.class)
+private static final class EndpointRuntime {
+    private final ModelRequestScheduler scheduler;
+    private final ContextCompactor compactor;
+    private final ContextTokenEstimator estimator;
+    private final ContextBudget contextBudget;
+    private final String modelIdentifier;
+    private final Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates;
+    private final Map<AgentSessionKey, PromptModes> promptModes;
+    private EndpointRuntime(ModelRequestScheduler scheduler, ContextCompactor compactor, ContextTokenEstimator estimator, ContextBudget contextBudget, String modelIdentifier, Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates, Map<AgentSessionKey, PromptModes> promptModes) {
+        this.scheduler = scheduler;
+        this.compactor = compactor;
+        this.estimator = estimator;
+        this.contextBudget = contextBudget;
+        this.modelIdentifier = modelIdentifier;
+        this.estimates = estimates;
+        this.promptModes = promptModes;
+    }
+    public ModelRequestScheduler scheduler() { return scheduler; }
+    public ContextCompactor compactor() { return compactor; }
+    public ContextTokenEstimator estimator() { return estimator; }
+    public ContextBudget contextBudget() { return contextBudget; }
+    public String modelIdentifier() { return modelIdentifier; }
+    public Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates() { return estimates; }
+    public Map<AgentSessionKey, PromptModes> promptModes() { return promptModes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof EndpointRuntime)) return false;
+        EndpointRuntime that = (EndpointRuntime) other;
+        return java.util.Objects.equals(scheduler, that.scheduler) && java.util.Objects.equals(compactor, that.compactor) && java.util.Objects.equals(estimator, that.estimator) && java.util.Objects.equals(contextBudget, that.contextBudget) && java.util.Objects.equals(modelIdentifier, that.modelIdentifier) && java.util.Objects.equals(estimates, that.estimates) && java.util.Objects.equals(promptModes, that.promptModes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(scheduler);
+        hash = 31 * hash + java.util.Objects.hashCode(compactor);
+        hash = 31 * hash + java.util.Objects.hashCode(estimator);
+        hash = 31 * hash + java.util.Objects.hashCode(contextBudget);
+        hash = 31 * hash + java.util.Objects.hashCode(modelIdentifier);
+        hash = 31 * hash + java.util.Objects.hashCode(estimates);
+        hash = 31 * hash + java.util.Objects.hashCode(promptModes);
+        return hash;
+    }
+    @Override public String toString() { return "EndpointRuntime[scheduler=" + scheduler + ", compactor=" + compactor + ", estimator=" + estimator + ", contextBudget=" + contextBudget + ", modelIdentifier=" + modelIdentifier + ", estimates=" + estimates + ", promptModes=" + promptModes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<EndpointRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(EndpointRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<EndpointRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "scheduler", EndpointRuntime::scheduler), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "compactor", EndpointRuntime::compactor), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "estimator", EndpointRuntime::estimator), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "contextBudget", EndpointRuntime::contextBudget), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "modelIdentifier", EndpointRuntime::modelIdentifier), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "estimates", EndpointRuntime::estimates), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "promptModes", EndpointRuntime::promptModes)), arguments -> new EndpointRuntime((ModelRequestScheduler) arguments[0], (ContextCompactor) arguments[1], (ContextTokenEstimator) arguments[2], (ContextBudget) arguments[3], (String) arguments[4], (Map) arguments[5], (Map) arguments[6]));
+        }
+    }
+}
 }

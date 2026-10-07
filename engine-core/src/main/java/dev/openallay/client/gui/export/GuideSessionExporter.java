@@ -31,14 +31,42 @@ public final class GuideSessionExporter {
     private static final DateTimeFormatter FILE_TIME = DateTimeFormatter
             .ofPattern("uuuuMMdd-HHmmss-SSS", Locale.ROOT)
             .withZone(ZoneOffset.UTC);
-    public record ExportedFile(String filename, int requestCount) {
-        public ExportedFile {
+    @dev.openallay.value.ValueType(ExportedFile.ValueSchemaProvider.class)
+public static final class ExportedFile {
+    private final String filename;
+    private final int requestCount;
+    public ExportedFile(String filename, int requestCount) {
+
             if (filename == null || !filename.matches("[a-zA-Z0-9_.-]+\\.txt")
                     || requestCount < 0) {
                 throw new IllegalArgumentException("invalid exported file result");
             }
+
+        this.filename = filename;
+        this.requestCount = requestCount;
+    }
+    public String filename() { return filename; }
+    public int requestCount() { return requestCount; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ExportedFile)) return false;
+        ExportedFile that = (ExportedFile) other;
+        return java.util.Objects.equals(filename, that.filename) && requestCount == that.requestCount;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(filename);
+        hash = 31 * hash + Integer.hashCode(requestCount);
+        return hash;
+    }
+    @Override public String toString() { return "ExportedFile[filename=" + filename + ", requestCount=" + requestCount + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ExportedFile> schema() {
+            return new dev.openallay.value.ValueSchema<>(ExportedFile.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ExportedFile>>asList(new dev.openallay.value.ValueSchema.Component<>(ExportedFile.class, "filename", ExportedFile::filename), new dev.openallay.value.ValueSchema.Component<>(ExportedFile.class, "requestCount", ExportedFile::requestCount)), arguments -> new ExportedFile((String) arguments[0], (Integer) arguments[1]));
         }
     }
+}
 
     private final Path gameDirectory;
 
