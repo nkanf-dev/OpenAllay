@@ -29,16 +29,25 @@ def main():
     p.add_argument("--java",type=Path,required=True)
     p.add_argument("--javac",type=Path,required=True)
     p.add_argument("--output",type=Path,required=True)
+    p.add_argument("--prepare",action="store_true",required=True,help="Replay only pinned historical Git owner bytes")
     a=p.parse_args(); project=a.project.resolve(); output=a.output.resolve()
     if output==project or project in output.parents: raise ValueError("External fresh output required")
     output.mkdir(parents=True,exist_ok=False)
     recipe=json.loads(a.recipe.read_text())
     converter=project/recipe["converter"]
     if sha(converter.read_bytes())!=recipe["converterSha256"]: raise ValueError("Accepted converter source changed")
-    before={}; working={}
+    contract=json.loads((project/"engine-core/src/providerCodecJava8Test/source-contract.json").read_text())
+    before={}; working={}; historical=[]
     for name,wanted in recipe["rawPreimageSha256"].items():
-        blob=(project/"engine-core/src/main/java"/name).read_bytes()
-        if sha(blob)!=wanted: raise ValueError("Raw owner changed: "+name)
+        logical="engine-core/src/main/java/"+name; target=contract["normalizedCanonicalTargets"][logical]
+        current=(project/logical).read_bytes()
+        if sha(current)!=target["sha256"] or len(current)!=target["bytes"]: raise ValueError("Normalized currentowner changed: "+logical)
+        spec=recipe["acceptedSourceCommit"]+":"+logical
+        git_blob=subprocess.run(["git","rev-parse",spec],cwd=project,capture_output=True,check=True).stdout.decode("ascii").strip()
+        if git_blob!=recipe["rawPreimageGitBlob"][name]: raise ValueError("Historical Git blob differs: "+logical)
+        blob=subprocess.run(["git","cat-file","blob",git_blob],cwd=project,capture_output=True,check=True).stdout
+        if sha(blob)!=wanted: raise ValueError("Historical original rawowner changed: "+logical)
+        historical.append({"path":logical,"sourceCommit":recipe["acceptedSourceCommit"],"gitBlob":git_blob,"rawSha256":sha(blob),"rawBytes":len(blob)})
         before[name]=blob; text=blob.decode("utf-8")
         for edit in sorted(recipe["apiEdits"].get(name,[]),key=lambda item:len(item["before"]),reverse=True):
             if text.count(edit["before"])!=edit["occurrences"]: raise ValueError("Exact API preimage changed: "+name)
@@ -73,7 +82,11 @@ def main():
             target=packet/side/path; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(blob)
         patch+="".join(difflib.unified_diff(old.decode().splitlines(True),new.decode().splitlines(True),fromfile="a/"+path,tofile="b/"+path))
         rows.append({"path":path,"pre_sha256":sha(old),"post_sha256":sha(new),"pre_bytes":len(old),"post_bytes":len(new),"converterRawPostSha256":sha(raw),"converterRawPostBytes":len(raw)})
-    if before!={n:(project/"engine-core/src/main/java"/n).read_bytes() for n in before}: raise ValueError("Source changed during materialization")
+    for row in rows:
+        target=contract["normalizedCanonicalTargets"][row["path"]]; current=(project/row["path"]).read_bytes()
+        if sha(current)!=target["sha256"] or len(current)!=target["bytes"] or row["post_sha256"]!=target["sha256"] or row["post_bytes"]!=target["bytes"]:
+            raise ValueError("Historical replay differs from current canonical owner: "+row["path"])
+    (packet/"historical-source-custody.json").write_text(json.dumps(historical,indent=2)+"\n")
     (packet/"source.patch").write_bytes(patch.encode())
     (packet/"manifest.json").write_text(json.dumps({"scope":recipe["scope"],"files":rows,"patch_sha256":sha(patch.encode()),
         "patch_bytes":len(patch.encode()),"recipeSha256":sha(a.recipe.read_bytes()),"acceptedConverterSha256":recipe["converterSha256"],

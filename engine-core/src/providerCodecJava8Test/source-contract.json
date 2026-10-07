@@ -394,15 +394,15 @@
   "artifactPins": {
     "recipe": {
       "path": "engine-core/src/providerCodecJava8Test/recipe.json",
-      "sha256": "c89396a5bdac78e6dfe0955e60b4a9739408cb772f4d9e58f3c7e56dbde8f2e4"
+      "sha256": "3fbaa3f2ffe6f9d3fd468811c7087669cba5b2978aed3be9a70998dd949ca8b7"
     },
     "materializer": {
       "path": "scripts/materialize-provider-codec-java8.py",
-      "sha256": "f4cff9afc35cd8098f1179e86fbdf4437241d2e16cd0357aeaebd5675c4fb286"
+      "sha256": "aaa1e372478443649efe82238729eeac69613fb464da05846d92e91700f8eca0"
     },
     "runner": {
       "path": "scripts/verify-provider-codec-java8.py",
-      "sha256": "316b69b050d816c354a3ded3218d7de79de8b4908662db90414dca6b597bd531"
+      "sha256": "8f98fb0f08477b497aa2ae00a6ecad5d1840faced89df55686a60cb46c8bd666"
     },
     "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/anthropic/AnthropicStreamJava8Fixture.java": {
       "path": "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/anthropic/AnthropicStreamJava8Fixture.java",
@@ -420,5 +420,64 @@
       "path": "engine-core/src/providerCodecJava8Test/java/dev/openallay/logging/LoggerJava8Fixture.java",
       "sha256": "416d8cff2cc6466c7408be871ac7ddaf3b0e78f76c72963f9736111bc8f87300"
     }
-  }
+  },
+  "normalizedCanonicalTargets": {
+    "engine-core/src/main/java/dev/openallay/agent/context/ContextBudget.java": {
+      "sha256": "45abce2842aedb98bf1acb7c063a020e339d2e67e33064b8955ad3e4158cd66a",
+      "bytes": 2745
+    },
+    "engine-core/src/main/java/dev/openallay/logging/OpenAllayLogger.java": {
+      "sha256": "8ab259c3ff482f018ea3a1203d8f998b0e5027402f1a1fde83e2e21147abc9ee",
+      "bytes": 2079
+    },
+    "engine-core/src/main/java/dev/openallay/model/ProviderToolIds.java": {
+      "sha256": "741a10d2b9a9f202822dd708f5bfd589d8f5d5d54080a55551bbbc1c7b409342",
+      "bytes": 4259
+    },
+    "engine-core/src/main/java/dev/openallay/model/anthropic/AnthropicJsonCodec.java": {
+      "sha256": "b6245a807963e3f805303b88457197760bf8456b0cfbb4518d88448e97fa2620",
+      "bytes": 16131
+    },
+    "engine-core/src/main/java/dev/openallay/model/anthropic/AnthropicStreamAccumulator.java": {
+      "sha256": "fad3e96fc85b980f45e49097de49ee375fb728b18bbeb772ffca433bebb4e243",
+      "bytes": 8446
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelConfig.java": {
+      "sha256": "204b2882fe61a9f46bde0295a13e50afb0abd609635db8278a66d2fcc28018bc",
+      "bytes": 17008
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelReasoningEffort.java": {
+      "sha256": "c3beadc476df2aebd3ae10801c7b3caf91c428ff07a2b25a68883a3dcaac4bb5",
+      "bytes": 1558
+    },
+    "engine-core/src/main/java/dev/openallay/model/http/ModelTransportDiagnostics.java": {
+      "sha256": "9c5200b3a16e89626448d8e5b5f21d040b2ec6c21e5cfe57a51641761c8ff486",
+      "bytes": 7801
+    },
+    "engine-core/src/main/java/dev/openallay/model/http/SseEvent.java": {
+      "sha256": "83805cfc3efabf683e977a74bb9f839ae11ca4208549a2229db055a5c208528c",
+      "bytes": 1648
+    },
+    "engine-core/src/main/java/dev/openallay/model/openai/OpenAiJsonCodec.java": {
+      "sha256": "5aed13899258a48454645390ff59d367707338d4d6a6532bc4bac68db537700e",
+      "bytes": 16813
+    },
+    "engine-core/src/main/java/dev/openallay/model/openai/OpenAiStreamAccumulator.java": {
+      "sha256": "ecca426b8f3c10aecfac5fd9cc77255b9716fc8797eebaef38a2d237798bd7f7",
+      "bytes": 5776
+    },
+    "engine-core/src/main/java/dev/openallay/model/tokenizer/ModelTokenEncoding.java": {
+      "sha256": "afcc2351f9df448301d7724e179b614e61c6af3aa484f1105279605574cb51c4",
+      "bytes": 811
+    }
+  },
+  "preservedRuntimeOracle": {
+    "run": 37571848055,
+    "scope": "Complete68source original17/release8/truejavac8 sixexecutions;49checks/two authenticatedGson hosts, identicalreports, actual223Java8classes major52",
+    "sourceAppliedCommit": "da0d4d1e98dbab514532f7bebafee56f513084fe",
+    "actualAcceptedPatchSha256": "fc68e23bef7de9acaefdcb939aa2bc1684562a3f0b9c4f9e999a082072cdbbbd",
+    "JULHandlerSemanticsPassed": true,
+    "runtimeReexecuted": false
+  },
+  "historicalReplay": "Pinned originalGit12owners from actual pre-apply commit5aa19714d79814d051662a5eaf35d493b9ca37e5; Gitblob+independentrawSHA256 checked; no external source overlays"
 }

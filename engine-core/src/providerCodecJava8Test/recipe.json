@@ -1,5 +1,5 @@
 {
-  "acceptedSourceCommit": "92a8f6ec2091c85bb6b2af463cb42179367f0e80",
+  "acceptedSourceCommit": "5aa19714d79814d051662a5eaf35d493b9ca37e5",
   "scope": "Canonical complete provider codec/stream/config frontier; actualusage/parser algorithms preserved, no metadata/credential production changes",
   "recordPass1": {
     "dev/openallay/model/http/SseEvent.java": [
