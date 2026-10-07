@@ -52,11 +52,13 @@ public final class CanonicalPatternPort {
                 for(Candidate site:sites){
                     String prefix;do{prefix="$oaPattern"+index++ +"_";}while(text.contains(prefix));String object=prefix+"value",match=prefix+"match",bound=prefix+"bound";
                     int exprStart=position(positions.getStartPosition(unit,site.pattern().getExpression())),exprEnd=position(positions.getEndPosition(unit,site.pattern().getExpression()));Tree type=site.binding().getVariable().getType();String typeText=text.substring(position(positions.getStartPosition(unit,type)),position(positions.getEndPosition(unit,type)));String operand=text.substring(exprStart,exprEnd);
+                    javax.lang.model.type.TypeMirror patternMirror=trees.getTypeMirror(TreePath.getPath(unit,type));
+                    String runtimeType=AttributedVarTypes.denotable(task.getTypes().erasure(patternMirror),false);
                     TreePath operandPath=new TreePath(site.patternPath(),site.pattern().getExpression());
                     javax.lang.model.type.TypeMirror operandMirror=trees.getTypeMirror(operandPath);
                     String operandType=operandMirror.getKind()==javax.lang.model.type.TypeKind.NULL
                             ? "java.lang.Object" : AttributedVarTypes.denotable(operandMirror,false);
-                    String declarations="final "+operandType+" "+object+" = "+operand+";\nfinal boolean "+match+" = "+object+" instanceof "+typeText+";\n"+typeText+" "+bound+" = "+match+" ? ("+typeText+") "+object+" : null;\n";
+                    String declarations="final "+operandType+" "+object+" = "+operand+";\nfinal boolean "+match+" = "+object+" instanceof "+runtimeType+";\n"+typeText+" "+bound+" = "+match+" ? ("+typeText+") "+object+" : null;\n";
                     Element binding=trees.getElement(TreePath.getPath(unit,site.binding().getVariable()));if(binding==null)throw new IllegalStateException("Missing original binding element");List<Edit> edits=new ArrayList<>();int start=position(positions.getStartPosition(unit,site.pattern())),end=position(positions.getEndPosition(unit,site.pattern()));edits.add(new Edit(start,end,match));
                     final boolean[] escapes={false};int ownerStart=position(positions.getStartPosition(unit,site.owner())),ownerEnd=position(positions.getEndPosition(unit,site.owner()));
                     new TreePathScanner<Void,Void>(){@Override public Void visitIdentifier(IdentifierTree tree,Void ignored){if(binding.equals(trees.getElement(getCurrentPath()))){int from=position(positions.getStartPosition(unit,tree)),to=position(positions.getEndPosition(unit,tree));if(!site.negative()&&(from<ownerStart||to>ownerEnd))escapes[0]=true;edits.add(new Edit(from,to,bound));}return super.visitIdentifier(tree,ignored);}}.scan(unit,null);

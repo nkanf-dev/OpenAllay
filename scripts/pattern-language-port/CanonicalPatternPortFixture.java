@@ -5,7 +5,7 @@ import java.nio.file.*;
 import java.util.*;
 import javax.tools.*;
 
-/** Genuine public compiler flow/evaluation oracle; only JDK dependencies. */
+/** Genuine public compiler flow/evaluation oracle, including Java8 reifiable generic runtime tests. */
 public final class CanonicalPatternPortFixture {
     private static final String SOURCE="""
         import java.util.*;
