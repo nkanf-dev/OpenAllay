@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof, attributed-remaining-records, java8-objects-oracle, client-settings-switch-language, client-native-speech-java8-api, whole-engine-java8-diagnostic, rhino-native-api-consumers, rhino-existing-default-prototype, rhino-complete-regexp-baseline, complete-host-schema-modern, remaining-engine-api-cohort, client-native-syntax-frontier, canonical-textblock-oracle, guide-textblock-language, remaining-engine-pattern-cohort, rhino-canonical-java8, rhino-canonical-default-modern, union-catch-pattern-oracle, model-result-closed-modern, specialized-trace-try-literal-prepare, rhino-java8-package]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof, attributed-remaining-records, java8-objects-oracle, client-settings-switch-language, client-native-speech-java8-api, whole-engine-java8-diagnostic, rhino-native-api-consumers, rhino-existing-default-prototype, rhino-complete-regexp-baseline, complete-host-schema-modern, remaining-engine-api-cohort, client-native-syntax-frontier, canonical-textblock-oracle, guide-textblock-language, remaining-engine-pattern-cohort, rhino-canonical-java8, rhino-canonical-default-modern, union-catch-pattern-oracle, model-result-closed-modern, specialized-trace-try-literal-prepare, rhino-java8-package, remaining-switch-language-cohort]
         default: skills
         required: true
 permissions:
@@ -4291,3 +4291,50 @@ jobs:
         path: 'runtime-rhino/build/test-results/
 
           runtime-rhino/build/java8-package-receipt.json'
+
+  remaining-switch-language-cohort:
+    if: inputs.scope == 'remaining-switch-language-cohort'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Classify the complete remaining switch owner cohort using current production
+        attribution
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/switch-classpath.json"
+
+        python3 -B -c ''from pathlib import Path; import os,json; t=Path(os.environ["RUNNER_TEMP"]);
+        m=json.loads((t/"switch-classpath.json").read_text()); (t/"switch-classpath.txt").write_text(os.pathsep.join(m["compileClasspath"]))''
+
+        python3 -B engine-core/src/remainingSwitchLanguagePreparation/classify.py --source-root
+        "$PWD" --production-classpath-file "$RUNNER_TEMP/switch-classpath.txt" --jdk17
+        "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/remaining-switch-cohort"'
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: remaining-switch-language-cohort-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/remaining-switch-cohort/*.json
+
+          ${{ runner.temp }}/remaining-switch-cohort/*.log
+
+          ${{ runner.temp }}/remaining-switch-cohort/*.patch
+
+          ${{ runner.temp }}/remaining-switch-cohort/selected-owners.txt
+
+          ${{ runner.temp }}/remaining-switch-cohort/classification/'
