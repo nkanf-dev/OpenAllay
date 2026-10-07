@@ -696,6 +696,338 @@
 +	public String toString() {
 +		return "CachedParameters[count=" + count + ", types=" + types + ", typeInfos=" + typeInfos + ", firstArgContext=" + firstArgContext + ", varArgType=" + varArgType + "]";
 +	}
+--- a/dev/latvian/mods/rhino/CodeGenerator.java
++++ b/dev/latvian/mods/rhino/CodeGenerator.java
+@@ -498 +498 @@
+-			case Token.FUNCTION -> {
++			case Token.FUNCTION: {
+@@ -507,2 +507,4 @@
+-			}
+-			case Token.LOCAL_LOAD -> {
++
++				break;
++			}
++			case Token.LOCAL_LOAD: {
+@@ -512,2 +514,4 @@
+-			}
+-			case Token.COMMA -> {
++
++				break;
++			}
++			case Token.COMMA: {
+@@ -523,2 +527,4 @@
+-			}
+-			case Token.USE_STACK ->
++
++				break;
++			}
++			case Token.USE_STACK:
+@@ -527,2 +533,4 @@
+-				stackChange(1);
+-			case Token.REF_CALL, Token.CALL, Token.NEW -> {
++				stackChange(1); break;
++			case Token.REF_CALL:
++			case Token.CALL:
++			case Token.NEW: {
+@@ -576,2 +584,5 @@
+-			}
+-			case Token.AND, Token.OR -> {
++
++				break;
++			}
++			case Token.AND:
++			case Token.OR: {
+@@ -591,2 +602,4 @@
+-			}
+-			case Token.HOOK -> {
++
++				break;
++			}
++			case Token.HOOK: {
+@@ -608,2 +621,5 @@
+-			}
+-			case Token.GETPROP, Token.GETPROPNOWARN -> {
++
++				break;
++			}
++			case Token.GETPROP:
++			case Token.GETPROPNOWARN: {
+@@ -633,2 +649,4 @@
+-			}
+-			case Token.DELPROP -> {
++
++				break;
++			}
++			case Token.DELPROP: {
+@@ -646,2 +664,4 @@
+-			}
+-			case Token.GETELEM -> {
++
++				break;
++			}
++			case Token.GETELEM: {
+@@ -670,2 +690,4 @@
+-			}
+-			case Token.NULLISH_COALESCING -> {
++
++				break;
++			}
++			case Token.NULLISH_COALESCING: {
+@@ -686,2 +708,25 @@
+-			}
+-			case Token.BITAND, Token.BITOR, Token.BITXOR, Token.LSH, Token.RSH, Token.URSH, Token.ADD, Token.SUB, Token.MOD, Token.DIV, Token.MUL, Token.EQ, Token.NE, Token.SHEQ, Token.SHNE, Token.IN, Token.INSTANCEOF, Token.LE, Token.LT, Token.GE, Token.GT, Token.POW -> {
++
++				break;
++			}
++			case Token.BITAND:
++			case Token.BITOR:
++			case Token.BITXOR:
++			case Token.LSH:
++			case Token.RSH:
++			case Token.URSH:
++			case Token.ADD:
++			case Token.SUB:
++			case Token.MOD:
++			case Token.DIV:
++			case Token.MUL:
++			case Token.EQ:
++			case Token.NE:
++			case Token.SHEQ:
++			case Token.SHNE:
++			case Token.IN:
++			case Token.INSTANCEOF:
++			case Token.LE:
++			case Token.LT:
++			case Token.GE:
++			case Token.GT:
++			case Token.POW: {
+@@ -693,2 +738,9 @@
+-			}
+-			case Token.POS, Token.NEG, Token.NOT, Token.BITNOT, Token.TYPEOF, Token.VOID -> {
++
++				break;
++			}
++			case Token.POS:
++			case Token.NEG:
++			case Token.NOT:
++			case Token.BITNOT:
++			case Token.TYPEOF:
++			case Token.VOID: {
+@@ -702,2 +754,5 @@
+-			}
+-			case Token.GET_REF, Token.DEL_REF -> {
++
++				break;
++			}
++			case Token.GET_REF:
++			case Token.DEL_REF: {
+@@ -722,2 +777,5 @@
+-			}
+-			case Token.SETPROP, Token.SETPROP_OP -> {
++
++				break;
++			}
++			case Token.SETPROP:
++			case Token.SETPROP_OP: {
+@@ -738,2 +796,5 @@
+-			}
+-			case Token.SETELEM, Token.SETELEM_OP -> {
++
++				break;
++			}
++			case Token.SETELEM:
++			case Token.SETELEM_OP: {
+@@ -755,2 +816,5 @@
+-			}
+-			case Token.SET_REF, Token.SET_REF_OP -> {
++
++				break;
++			}
++			case Token.SET_REF:
++			case Token.SET_REF_OP: {
+@@ -769,2 +833,5 @@
+-			}
+-			case Token.STRICT_SETNAME, Token.SETNAME -> {
++
++				break;
++			}
++			case Token.STRICT_SETNAME:
++			case Token.SETNAME: {
+@@ -777,2 +844,4 @@
+-			}
+-			case Token.SETCONST -> {
++
++				break;
++			}
++			case Token.SETCONST: {
+@@ -785,2 +854,4 @@
+-			}
+-			case Token.TYPEOFNAME -> {
++
++				break;
++			}
++			case Token.TYPEOFNAME: {
+@@ -801,2 +872,6 @@
+-			}
+-			case Token.BINDNAME, Token.NAME, Token.STRING -> {
++
++				break;
++			}
++			case Token.BINDNAME:
++			case Token.NAME:
++			case Token.STRING: {
+@@ -805,3 +880,6 @@
+-			}
+-			case Token.INC, Token.DEC -> visitIncDec(node, child);
+-			case Token.NUMBER -> {
++
++				break;
++			}
++			case Token.INC:
++			case Token.DEC: visitIncDec(node, child); break;
++			case Token.NUMBER: {
+@@ -832,2 +910,4 @@
+-			}
+-			case Token.GETVAR -> {
++
++				break;
++			}
++			case Token.GETVAR: {
+@@ -840,2 +920,4 @@
+-			}
+-			case Token.SETVAR -> {
++
++				break;
++			}
++			case Token.SETVAR: {
+@@ -849,2 +931,4 @@
+-			}
+-			case Token.SETCONSTVAR -> {
++
++				break;
++			}
++			case Token.SETCONSTVAR: {
+@@ -858,2 +942,8 @@
+-			}
+-			case Token.NULL, Token.THIS, Token.THISFN, Token.FALSE, Token.TRUE -> {
++
++				break;
++			}
++			case Token.NULL:
++			case Token.THIS:
++			case Token.THISFN:
++			case Token.FALSE:
++			case Token.TRUE: {
+@@ -862,2 +952,5 @@
+-			}
+-			case Token.ENUM_NEXT, Token.ENUM_ID -> {
++
++				break;
++			}
++			case Token.ENUM_NEXT:
++			case Token.ENUM_ID: {
+@@ -866,2 +959,4 @@
+-			}
+-			case Token.REGEXP -> {
++
++				break;
++			}
++			case Token.REGEXP: {
+@@ -871,4 +966,7 @@
+-			}
+-			case Token.ARRAYLIT, Token.OBJECTLIT -> visitLiteral(node, child);
+-			case Token.ARRAYCOMP -> visitArrayComprehension(node, child, child.getNext());
+-			case Token.REF_SPECIAL -> {
++
++				break;
++			}
++			case Token.ARRAYLIT:
++			case Token.OBJECTLIT: visitLiteral(node, child); break;
++			case Token.ARRAYCOMP: visitArrayComprehension(node, child, child.getNext()); break;
++			case Token.REF_SPECIAL: {
+@@ -897,2 +995,5 @@
+-			}
+-			case Token.YIELD, Token.YIELD_STAR -> {
++
++				break;
++			}
++			case Token.YIELD:
++			case Token.YIELD_STAR: {
+@@ -911,2 +1012,4 @@
+-			}
+-			case Token.WITHEXPR -> {
++
++				break;
++			}
++			case Token.WITHEXPR: {
+@@ -920,3 +1023,5 @@
+-			}
+-			case Token.TEMPLATE_LITERAL -> visitTemplateLiteral(node);
+-			default -> throw badTree(node);
++
++				break;
++			}
++			case Token.TEMPLATE_LITERAL: visitTemplateLiteral(node); break;
++			default: throw badTree(node);
+@@ -939 +1044 @@
+-			case Token.NAME -> {
++			case Token.NAME: {
+@@ -950,2 +1055,5 @@
+-			}
+-			case Token.GETPROP, Token.GETELEM -> {
++
++				break;
++			}
++			case Token.GETPROP:
++			case Token.GETELEM: {
+@@ -976,2 +1084,4 @@
+-			}
+-			default -> {
++
++				break;
++			}
++			default: {
+@@ -988,0 +1099,2 @@
++
++				break;
+@@ -1026 +1138 @@
+-			case Token.GETVAR -> {
++			case Token.GETVAR: {
+@@ -1034,2 +1146,4 @@
+-			}
+-			case Token.NAME -> {
++
++				break;
++			}
++			case Token.NAME: {
+@@ -1040,2 +1154,4 @@
+-			}
+-			case Token.GETPROP -> {
++
++				break;
++			}
++			case Token.GETPROP: {
+@@ -1047,2 +1163,4 @@
+-			}
+-			case Token.GETELEM -> {
++
++				break;
++			}
++			case Token.GETELEM: {
+@@ -1056,2 +1174,4 @@
+-			}
+-			case Token.GET_REF -> {
++
++				break;
++			}
++			case Token.GET_REF: {
+@@ -1062,2 +1182,4 @@
+-			}
+-			default -> throw badTree(node);
++
++				break;
++			}
++			default: throw badTree(node);
 --- a/dev/latvian/mods/rhino/ConsString.java
 +++ b/dev/latvian/mods/rhino/ConsString.java
 @@ -13 +13 @@

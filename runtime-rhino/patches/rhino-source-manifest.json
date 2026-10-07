@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 188648,
-    "sha256": "83b1e8a770b84d7410d4eb20c1386d05dc12b9c18ae7f90d40ef83ca692e8d50",
-    "modified_upstream_files": 102,
+    "bytes": 194972,
+    "sha256": "28f63b82d3ee83267a3206d994e6e67d57ad980d048a65bf60af403c8b0abc76",
+    "modified_upstream_files": 103,
     "added_source_files": 1,
-    "hunks": 397,
+    "hunks": 430,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Interpreter9bindings2arithmeticswitches/TokenStreamkeyword switchlowered; stack/callback/control/receiverorder preserved. Fullrelease17pendingremaininglanguage/APIcapabilities.",
+  "source_only_status": "CodeGenerator3expression/call/incdec switches lowered; existingbytecode/stack/evaluationbranch bodies retained. Fullrelease17untilremaininglanguage/capability8port.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -282,9 +282,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.CodeGenerator",
       "source_bytes": 42971,
       "source_sha256": "8eaebbab6020d1cce65840db98783fa669298734c83830e237893cfcf9c7b811",
-      "patched_bytes": 42971,
-      "patched_sha256": "8eaebbab6020d1cce65840db98783fa669298734c83830e237893cfcf9c7b811",
-      "modified": false,
+      "patched_bytes": 43740,
+      "patched_sha256": "d365a2c65ad0f7187ac48dd688179e0486b9b731ecd9ca66d66de4d51e36b610",
+      "modified": true,
       "line_count": 1508,
       "license_evidence": [
         "MPL-2.0 header"
