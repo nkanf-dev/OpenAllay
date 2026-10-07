@@ -73,7 +73,7 @@ public final class ModelMessageImageJava8Fixture {
     }
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void value(Object original, String... expectedNames) throws Exception {
-        Class owner = original.getClass();
+        Class<?> owner = original.getClass();
         String name = owner.getName();
         ArrayList<String> names = new ArrayList<String>();
         ArrayList<String> types = new ArrayList<String>();

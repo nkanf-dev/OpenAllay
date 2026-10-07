@@ -459,7 +459,7 @@
   "fixture_artifacts": [
     {
       "path": "engine-core/src/java8Test/java/dev/openallay/model/ModelMessageImageJava8Fixture.java",
-      "sha256": "767bda4856b7e071602384739a34e2f9f792fbc0f2e58033581c80fa83a8a08c"
+      "sha256": "2b7ec341c1504545fb93a8b5766e60cb3eca8939ee905622b76f10a427015c5b"
     },
     {
       "path": "engine-core/src/java8Test/java/dev/openallay/model/ModelMessageImageJava8Test.java",
