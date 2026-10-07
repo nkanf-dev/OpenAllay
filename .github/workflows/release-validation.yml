@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8]
         default: skills
         required: true
 permissions:
@@ -568,3 +568,118 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
         path: engine-core/build/test-results/
+
+  context-java8:
+    if: inputs.scope == 'context-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual canonical affected owners
+      run: "python3 -c 'from pathlib import Path\nimport subprocess, hashlib\nroot=Path(\"\
+        build/context-original-inputs\")\nroot.mkdir(parents=True,exist_ok=False)\n\
+        files=['\"'\"'engine-core/src/main/java/dev/openallay/context/ItemStackSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/InventorySlotSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/InventorySnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/BlockPositionSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/PlayerSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/CallerSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/ContextMetrics.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/SourceObservation.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeLayoutSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RecipeProcessingSnapshot.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/ContextValidation.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataAuthority.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataCompleteness.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/CallerKind.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueType.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Collections.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Strings.java'\"\
+        '\"']\nfor name in files:\n p=root/name; p.parent.mkdir(parents=True,exist_ok=True);\
+        \ p.write_bytes(subprocess.check_output([\"git\",\"show\",\"dbe87bca8afa097c44a0fd0fe63f907d157f1a59:\"\
+        +name]))\nrequest=Path(\"build/context-converter-request.tsv\")\nrows=[]\nfor\
+        \ owner in ['\"'\"'ItemStackSnapshot'\"'\"', '\"'\"'InventorySlotSnapshot'\"\
+        '\"', '\"'\"'InventorySnapshot'\"'\"', '\"'\"'BlockPositionSnapshot'\"'\"',\
+        \ '\"'\"'PlayerSnapshot'\"'\"', '\"'\"'CallerSnapshot'\"'\"', '\"'\"'ContextMetrics'\"\
+        '\"', '\"'\"'SourceObservation'\"'\"', '\"'\"'RecipeLayoutSnapshot'\"'\"', '\"\
+        '\"'RecipeProcessingSnapshot'\"'\"']:\n relative=\"engine-core/src/main/java/dev/openallay/context/\"\
+        +owner+\".java\"\n p=root/relative\n rows.append(\"\\t\".join([str(p.resolve()),relative,hashlib.sha256(p.read_bytes()).hexdigest(),owner]))\n\
+        request.write_text(\"\\n\".join(rows)+\"\\n\")'\n./gradlew --no-daemon -p build-logic/src/recordConversionTest/gradle\
+        \ -Dorg.gradle.java.installations.paths=\"$JAVA_HOME_8_X64,$JAVA_HOME_21_X64\"\
+        \ classes\n\"$JAVA_HOME_21_X64/bin/java\" -cp build-logic/src/recordConversionTest/gradle/build/classes/java/main\
+        \ dev.openallay.build.RecordValueSourceConverter build/context-converter-request.tsv\
+        \ build/context-converter-proof\n./gradlew --no-daemon -p engine-core/src/contextJava8Test/gradle\
+        \ -Dorg.gradle.java.installations.paths=\"$JAVA_HOME_8_X64,$JAVA_HOME_21_X64\"\
+        \ originalContextOracle -PoriginalContextSourceRoot=\"$PWD/build/context-original-inputs\"\
+        \n./gradlew --no-daemon -p engine-core/src/contextJava8Test/gradle -Dorg.gradle.java.installations.paths=\"\
+        $JAVA_HOME_8_X64,$JAVA_HOME_21_X64\" java8ContextSnapshotsTest -PoriginalContextReport=\"\
+        $PWD/engine-core/src/contextJava8Test/gradle/build/context-original-modern.txt\"\
+        \n./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.context.ContextSnapshotMetricsJsonTest\
+        \ --tests dev.openallay.context.SourceObservationCollectorTest --tests dev.openallay.context.GroundedSnapshotTest\
+        \ --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.script.host.RhinoHostAdapterTest\
+        \ --tests dev.openallay.script.schema.HostSchemaCatalogTest"
+    - name: Retain original proof and consumer results
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: context-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'build/context-converter-proof/
+
+          engine-core/src/contextJava8Test/gradle/build/
+
+          engine-core/build/test-results/'
+
+  rhino-carriers:
+    if: inputs.scope == 'rhino-carriers'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual canonical affected owners
+      run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
+        --tests dev.latvian.mods.rhino.InternalCarrierValuesTest
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest
+        --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest --tests dev.openallay.script.host.RhinoHostAdapterTest
+        --tests dev.openallay.script.schema.HostSchemaCatalogTest'
+    - name: Retain original proof and consumer results
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-carriers-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'runtime-rhino/build/test-results/
+
+          engine-core/build/test-results/'
