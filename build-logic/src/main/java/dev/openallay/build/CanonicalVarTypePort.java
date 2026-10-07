@@ -66,32 +66,69 @@ public final class CanonicalVarTypePort {
         throw new IllegalArgumentException("Parsed VAR has no exact source token for " + variable);
     }
 
-    private static void visible(TypeMirror type, Scope scope, Trees trees) {
+    /** Prove local names against the original AST, not re-attributed scope symbols. */
+    private static void localVisible(TypeElement element, TreePath use, Trees trees) {
+        TreePath declaration = trees.getPath(element);
+        if (declaration == null || !(declaration.getLeaf() instanceof ClassTree)) {
+            throw new IllegalArgumentException("Local declaration has no source tree: " + element);
+        }
+        Tree wanted = declaration.getLeaf();
+        String name = element.getSimpleName().toString();
+        Tree child = use.getLeaf();
+        for (TreePath cursor = use.getParentPath(); cursor != null; cursor = cursor.getParentPath()) {
+            Tree enclosing = cursor.getLeaf();
+            if (enclosing instanceof BlockTree block) {
+                ClassTree matching = null;
+                boolean reached = false;
+                for (StatementTree statement : block.getStatements()) {
+                    if (statement instanceof ClassTree local && local.getSimpleName().contentEquals(name)) matching = local;
+                    if (statement == child) { reached = true; break; }
+                }
+                if (!reached) throw new IllegalArgumentException("Local use has no containing block statement: " + element);
+                if (matching != null) {
+                    if (matching == wanted) return;
+                    throw new IllegalArgumentException("Local type name is shadowed at declaration: " + element);
+                }
+            } else if (enclosing instanceof ClassTree klass) {
+                if (klass.getSimpleName().contentEquals(name)) {
+                    if (klass == wanted) return;
+                    throw new IllegalArgumentException("Local type name is shadowed by enclosing class: " + element);
+                }
+                for (TypeParameterTree parameter : klass.getTypeParameters()) {
+                    if (parameter.getName().contentEquals(name)) throw new IllegalArgumentException("Local type name is shadowed by type parameter: " + element);
+                }
+                for (Tree member : klass.getMembers()) {
+                    if (member instanceof ClassTree nested && nested.getSimpleName().contentEquals(name))
+                        throw new IllegalArgumentException("Local type name is shadowed by member class: " + element);
+                }
+            } else if (enclosing instanceof MethodTree method) {
+                for (TypeParameterTree parameter : method.getTypeParameters()) {
+                    if (parameter.getName().contentEquals(name)) throw new IllegalArgumentException("Local type name is shadowed by method parameter: " + element);
+                }
+            }
+            child = enclosing;
+        }
+        throw new IllegalArgumentException("Local type not visible at declaration: " + element);
+    }
+
+    private static void visible(TypeMirror type, Scope scope, TreePath use, Trees trees) {
         switch (type.getKind()) {
-            case ARRAY -> visible(((ArrayType) type).getComponentType(), scope, trees);
+            case ARRAY -> visible(((ArrayType) type).getComponentType(), scope, use, trees);
             case DECLARED -> {
                 DeclaredType declaration = (DeclaredType) type;
                 TypeElement element = (TypeElement) declaration.asElement();
                 if (element.getNestingKind() == NestingKind.LOCAL) {
-                    boolean found = false;
-                    search: for (Scope cursor = scope; cursor != null; cursor = cursor.getEnclosingScope()) {
-                        for (Element local : cursor.getLocalElements()) {
-                            if (local instanceof TypeElement && local.getSimpleName().contentEquals(element.getSimpleName())) {
-                                found = local.equals(element); break search;
-                            }
-                        }
-                    }
-                    if (!found) throw new IllegalArgumentException("Local type not visible at declaration: " + element);
+                    localVisible(element, use, trees);
                 } else if (element.getNestingKind() != NestingKind.ANONYMOUS && !trees.isAccessible(scope, element)) {
                     throw new IllegalArgumentException("Inaccessible inferred declaration: " + element);
                 }
-                if (declaration.getEnclosingType().getKind() == TypeKind.DECLARED) visible(declaration.getEnclosingType(), scope, trees);
-                for (TypeMirror argument : declaration.getTypeArguments()) visible(argument, scope, trees);
+                if (declaration.getEnclosingType().getKind() == TypeKind.DECLARED) visible(declaration.getEnclosingType(), scope, use, trees);
+                for (TypeMirror argument : declaration.getTypeArguments()) visible(argument, scope, use, trees);
             }
             case WILDCARD -> {
                 WildcardType wildcard = (WildcardType) type;
-                if (wildcard.getExtendsBound() != null) visible(wildcard.getExtendsBound(), scope, trees);
-                if (wildcard.getSuperBound() != null) visible(wildcard.getSuperBound(), scope, trees);
+                if (wildcard.getExtendsBound() != null) visible(wildcard.getExtendsBound(), scope, use, trees);
+                if (wildcard.getSuperBound() != null) visible(wildcard.getSuperBound(), scope, use, trees);
             }
             default -> { /* The shared renderer rejects other non-denotable forms. */ }
         }
@@ -157,7 +194,7 @@ public final class CanonicalVarTypePort {
                     Element element = trees.getElement(candidate.path());
                     if (!(element instanceof VariableElement)) throw new IllegalArgumentException("Missing variable element");
                     TypeMirror type = element.asType();
-                    visible(type, trees.getScope(candidate.path()), trees);
+                    visible(type, trees.getScope(candidate.path()), candidate.path(), trees);
                     String rendered = AttributedVarTypes.denotable(type, true);
                     sites.add(new Site(candidate.relative(), candidate.start(), candidate.variable(), rendered));
                 } catch (IllegalArgumentException failure) {

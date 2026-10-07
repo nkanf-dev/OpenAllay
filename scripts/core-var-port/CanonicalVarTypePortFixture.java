@@ -32,6 +32,10 @@ public final class CanonicalVarTypePortFixture {
                     var primitive = 2;
                     class Local { String label(){return "local";} }
                     var local = new Local();
+                    {
+                        var localAlias = local;
+                        if (!localAlias.label().equals("local")) throw new AssertionError("Local alias differs");
+                    }
                     var nested = new Outer<String>().new Inner<Integer>();
                     final var immutable = identity("identity");
                     int sum = 0;
@@ -123,7 +127,7 @@ public final class CanonicalVarTypePortFixture {
         Map<String,String> expected = new TreeMap<>();
         expected.put("same","X"); expected.put("list","java.util.ArrayList<java.lang.String>");
         expected.put("alias","java.util.ArrayList<java.lang.String>"); expected.put("wildcard","java.util.List<? extends java.lang.Number>");
-        expected.put("array","java.lang.String[]"); expected.put("primitive","int"); expected.put("local","Local");
+        expected.put("array","java.lang.String[]"); expected.put("primitive","int"); expected.put("local","Local"); expected.put("localAlias","Local");
         expected.put("nested","DispatchFixture.Outer<java.lang.String>.Inner<java.lang.Integer>");
         expected.put("immutable","java.lang.String"); expected.put("number","java.lang.Number"); expected.put("i","int");
         check(result.sites().size() == expected.size(), "Parsed VAR count/lambda exclusion differs: " + result);
@@ -155,6 +159,12 @@ public final class CanonicalVarTypePortFixture {
         CanonicalVarTypePort.Result inaccessible = CanonicalVarTypePort.attribute(hidden,"",Set.of("Hidden.java"));
         check(inaccessible.sites().isEmpty() && inaccessible.rejected().values().stream().mapToInt(Integer::intValue).sum() == 1,
                 "Inaccessible nested type fail-closed count differs");
+        Path shadowed = root.resolve("shadowed"); Files.createDirectory(shadowed);
+        Files.writeString(shadowed.resolve("Shadowed.java"), "class Shadowed { void test(){class Local{} final Local original=new Local(); "
+                + "class Wrapper { class Local{} void nested(){var alias=original;} } } }", StandardCharsets.UTF_8);
+        CanonicalVarTypePort.Result shadow = CanonicalVarTypePort.attribute(shadowed,"",Set.of("Shadowed.java"));
+        check(shadow.sites().isEmpty() && shadow.rejected().values().stream().mapToInt(Integer::intValue).sum() == 1,
+                "Shadowed local name fail-closed count differs: " + shadow);
         Path escaped = root.resolve("escaped"); Files.createDirectory(escaped);
         Files.writeString(escaped.resolve("Escaped.java"), "class Escaped { void test(){ v"+"\\u0061"+"r value=1; } }", StandardCharsets.UTF_8);
         try { CanonicalVarTypePort.attribute(escaped,"",Set.of("Escaped.java")); throw new AssertionError("Escaped token accepted"); }
