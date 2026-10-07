@@ -206,7 +206,8 @@ sourceSets.test.java.source(toolSchemaTestVectors)
 // Public-compiler source attribution uses the real current production classpath.
 // This export never adds test runtime dependencies or an old engine JAR.
 tasks.register('exportCanonicalVarCompileClasspath') {
-    dependsOn(tasks.named('compileJava'))
+    dependsOn(tasks.named('classes'))
+    dependsOn(configurations.runtimeClasspath.buildDependencies)
     dependsOn(mergePrivateMaven)
     def destination = providers.gradleProperty('canonicalVarClasspathOutput')
     doLast {
@@ -224,6 +225,7 @@ tasks.register('exportCanonicalVarCompileClasspath') {
                 sourceRoot: file('src/main/java').canonicalPath,
                 sources: sources,
                 compileClasspath: resolved.collect { it.canonicalPath },
+                runtimeClasspath: sourceSets.main.runtimeClasspath.files.collect { it.canonicalPath }.sort(),
                 classpath: resolved.collect { it.canonicalPath }.join(File.pathSeparator),
                 release: tasks.named('compileJava').get().options.release.get(),
                 sourceClosure: 'all current canonical engine-core production Java sources',
