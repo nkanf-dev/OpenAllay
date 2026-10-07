@@ -17,6 +17,8 @@ def main():
     a=p.parse_args();project=a.project.resolve();packet=a.source_packet.resolve();out=a.output.resolve()
     if out==project or project in out.parents:raise ValueError("Fresh externaloutput required")
     out.mkdir(parents=True,exist_ok=False);contract_path=project/"engine-core/src/guideUnionAdmissionTest/source-contract.json";contract=json.loads(contract_path.read_text());manifest=json.loads((packet/"manifest.json").read_text())
+    if manifest["sourceContractSha256"]!=sha(contract_path.read_bytes()) or manifest["files"]!=contract["owners"]:raise ValueError("Actual repository stage manifest contract changed")
+    if sha(Path(__file__).read_bytes())!=contract["semanticRunner"]["sha256"]:raise ValueError("Repository semantic runner pin changed")
     pins={r["path"]:r for r in manifest["files"]};commands=[];receipt=[]
     for row in contract["semanticSourcePaths"]:
         if row in pins:
@@ -35,7 +37,18 @@ def main():
         with zipfile.ZipFile(path)as archive:
             classes=[name for name in archive.namelist()if name.endswith(".class")]
             if any(name.startswith("dev/openallay/") for name in classes):raise ValueError("No engine/core precompiledclass dependency")
-        receipt.append({"externalClasspath":str(path),"sha256":sha(path.read_bytes()),"bytes":path.stat().st_size})
+        blob=path.read_bytes();gsonMatches=[pin for pin in contract["gsonPins"] if len(blob)==pin["bytes"] and hashlib.new(pin["digest_algorithm"],blob).hexdigest()==pin["digest"]]
+        if gsonMatches:
+            kind="approved-Gson"
+        elif classes and all(name.startswith("org/commonmark/") or name.startswith("META-INF/") for name in classes):
+            if not any(name.startswith("org/commonmark/parser/") for name in classes) or not any(name.startswith("org/commonmark/ext/gfm/tables/") for name in classes):raise ValueError("Complete accepted CommonMark core/tables artifact required")
+            with zipfile.ZipFile(path)as archive:
+                majors={struct.unpack(">H",archive.read(name)[6:8])[0]for name in classes}
+            if majors!={52}:raise ValueError("CommonMark class artifact not genuine Java8")
+            kind="actual-CommonMark-core-and-tables"
+        else:raise ValueError("Unapproved external semantic dependency artifact")
+        receipt.append({"externalClasspath":str(path),"kind":kind,"sha256":sha(blob),"bytes":len(blob)})
+    if len(paths)!=2 or {row["kind"]for row in receipt}!={"approved-Gson","actual-CommonMark-core-and-tables"}:raise ValueError("Require exact Gson + complete actual CommonMark artifact")
     def run(command,label):
         commands.append([str(x)for x in command]);(out/"commands.json").write_text(json.dumps(commands,indent=2)+"\n")
         with(out/(label+".log")).open("wb")as log:subprocess.run(commands[-1],cwd=project,stdout=log,stderr=subprocess.STDOUT,check=True)

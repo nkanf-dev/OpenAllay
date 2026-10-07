@@ -543,5 +543,54 @@
     "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionJava8Fixture.java": "3a02311b5e902fb8ee16f935969941b3958a43dfdc97726fa0673383b108b631"
   },
   "positiveOriginalOracle": "Knownactualunion values original17 vs candidateactual8 closedsemantic; wholemodern foreignall10 behavior",
-  "wholeGuideJava8Acceptance": false
+  "wholeGuideJava8Acceptance": false,
+  "rawGitBlobPins": {
+    "engine-core/src/main/java/dev/openallay/guide/GuideRequestSnapshot.java": "0bbbe8bdeed48259f4664346d3acad6d55e5ffb1",
+    "engine-core/src/main/java/dev/openallay/guide/GuideTimelineEntry.java": "38b0aa31576565cf3691b11d9dc829973e6cff5d",
+    "engine-core/src/main/java/dev/openallay/guide/export/GuideSessionExportSnapshot.java": "4f61f37403b84d84406f29bba0acd427feba4094",
+    "engine-core/src/main/java/dev/openallay/guide/history/GuideHistoryCommit.java": "49e661f3d5dd7763c5c64d309f235e17fe1b8375",
+    "engine-core/src/main/java/dev/openallay/guide/history/GuideHistoryDeleteScope.java": "74b3f12bd87b56944cdf8fcf474acf38917afe41",
+    "engine-core/src/main/java/dev/openallay/guide/history/GuideHistoryMutation.java": "0b4e904c673a351a630a1bd553e431148a532be3",
+    "engine-core/src/main/java/dev/openallay/guide/history/GuideHistoryRepository.java": "d5bb501259ee9fcfd6da963b6b12683208f2d499",
+    "engine-core/src/main/java/dev/openallay/guide/history/SqliteGuideHistoryStore.java": "4ff52f60dd7e3a4c3f572bfd4f43125b3b7049c7",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/RichComponent.java": "2cc4bf2c221a5f893c28abbbe390cca5b72173e3",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/RichComponentRegistry.java": "bdbfa62c4663d333900526569fe7f3f566e12537",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticBlock.java": "97e6be0d5c92ae321320d2abda8026a2d7ece2ec",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticDocument.java": "f9363c385a8526749389e4008499f8a9ff9cf94e",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticInline.java": "436bd992d93f324cfc5565bcfb529fe11e9a4a87",
+    "engine-core/src/main/java/dev/openallay/guide/ui/GuideDetailCard.java": "9df3bfa16f8272670ff25f4e10b63bfe43bc48a5",
+    "engine-core/src/main/java/dev/openallay/guide/ui/GuideToolDetailView.java": "c3860cff20e85107f721dbe43e3b05f135e9ece1",
+    "engine-core/src/main/java/dev/openallay/guide/ui/GuideToolSummaryPresenter.java": "aaa5642f6ea1252cd62f47a8f3d3a78cc518c899",
+    "engine-core/src/main/java/dev/openallay/guide/ui/GuideUiRow.java": "32d1b027aeabdced8a09b1f103188019d6e9d44d",
+    "engine-core/src/main/java/dev/openallay/guide/ui/GuideUiView.java": "9ed3338efc5ad0c94a3b95cc5e8221fce5877b8c",
+    "engine-core/src/main/java/dev/openallay/guide/ui/SemanticLayout.java": "0b48e7b0f69d4cbf844a06d8b486ba3d478bac98",
+    "engine-core/src/main/java/dev/openallay/guide/ui/hud/GuideHudView.java": "31e6aa7dba45af4ad324702451d3700365a58c4b"
+  },
+  "stageTool": {
+    "path": "scripts/prepare-guide-union-semantic-java8.py",
+    "sha256": "54120fb07d1da284283f2e2e3b697abcf1f4c8fe59b1459a998df684491e5234"
+  },
+  "runtimeExternalArtifacts": "Exactly approved Gson 2.8.0/2.13.2 +accepted real runtime-commonmark Java8 artifact; no engine classes/stubs or unrelated JARs",
+  "gsonPins": [
+    {
+      "name": "gson-2.8.0.jar",
+      "bytes": 231952,
+      "digest_algorithm": "sha1",
+      "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+      "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+      "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+    },
+    {
+      "name": "gson-2.13.2.jar",
+      "bytes": 289901,
+      "digest_algorithm": "sha256",
+      "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+      "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+      "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+    }
+  ],
+  "semanticRunner": {
+    "path": "scripts/verify-guide-union-semantic-java8.py",
+    "sha256": "57e4b2ddb6d50eb992cab99b5651ac9fae8ff86f4ca2c73b6500cac95e188b3d"
+  }
 }
