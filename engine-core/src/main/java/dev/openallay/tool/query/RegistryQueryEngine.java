@@ -24,46 +24,190 @@ import java.util.TreeSet;
 public final class RegistryQueryEngine {
     public enum Dataset { all, items, blocks, effects, potions, entities, attributes }
 
-    public record Stage(int index, QueryOperation.Op operation, int inputRows, int outputRows) {}
+    @dev.openallay.value.ValueType(Stage.ValueSchemaProvider.class)
+public static final class Stage {
+    private final int index;
+    private final QueryOperation.Op operation;
+    private final int inputRows;
+    private final int outputRows;
+    public Stage(int index, QueryOperation.Op operation, int inputRows, int outputRows) {
+        this.index = index;
+        this.operation = operation;
+        this.inputRows = inputRows;
+        this.outputRows = outputRows;
+    }
+    public int index() { return index; }
+    public QueryOperation.Op operation() { return operation; }
+    public int inputRows() { return inputRows; }
+    public int outputRows() { return outputRows; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Stage)) return false;
+        Stage that = (Stage) other;
+        return index == that.index && java.util.Objects.equals(operation, that.operation) && inputRows == that.inputRows && outputRows == that.outputRows;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(index);
+        hash = 31 * hash + java.util.Objects.hashCode(operation);
+        hash = 31 * hash + Integer.hashCode(inputRows);
+        hash = 31 * hash + Integer.hashCode(outputRows);
+        return hash;
+    }
+    @Override public String toString() { return "Stage[index=" + index + ", operation=" + operation + ", inputRows=" + inputRows + ", outputRows=" + outputRows + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Stage> schema() {
+            return new dev.openallay.value.ValueSchema<>(Stage.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Stage>>asList(new dev.openallay.value.ValueSchema.Component<>(Stage.class, "index", Stage::index), new dev.openallay.value.ValueSchema.Component<>(Stage.class, "operation", Stage::operation), new dev.openallay.value.ValueSchema.Component<>(Stage.class, "inputRows", Stage::inputRows), new dev.openallay.value.ValueSchema.Component<>(Stage.class, "outputRows", Stage::outputRows)), arguments -> new Stage((Integer) arguments[0], (QueryOperation.Op) arguments[1], (Integer) arguments[2], (Integer) arguments[3]));
+        }
+    }
+}
 
     /** A runtime-discovered JSON Pointer; no Minecraft domain field is built into this contract. */
-    public record Field(
-            String path,
-            List<String> types,
-            int presentRows,
-            int totalRows,
-            String example,
-            List<String> operations) {
-        public Field {
+    @dev.openallay.value.ValueType(Field.ValueSchemaProvider.class)
+public static final class Field {
+    private final String path;
+    private final List<String> types;
+    private final int presentRows;
+    private final int totalRows;
+    private final String example;
+    private final List<String> operations;
+    public Field(String path, List<String> types, int presentRows, int totalRows, String example, List<String> operations) {
+
             types = List.copyOf(types);
             operations = List.copyOf(operations);
+
+        this.path = path;
+        this.types = types;
+        this.presentRows = presentRows;
+        this.totalRows = totalRows;
+        this.example = example;
+        this.operations = operations;
+    }
+    public String path() { return path; }
+    public List<String> types() { return types; }
+    public int presentRows() { return presentRows; }
+    public int totalRows() { return totalRows; }
+    public String example() { return example; }
+    public List<String> operations() { return operations; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Field)) return false;
+        Field that = (Field) other;
+        return java.util.Objects.equals(path, that.path) && java.util.Objects.equals(types, that.types) && presentRows == that.presentRows && totalRows == that.totalRows && java.util.Objects.equals(example, that.example) && java.util.Objects.equals(operations, that.operations);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(path);
+        hash = 31 * hash + java.util.Objects.hashCode(types);
+        hash = 31 * hash + Integer.hashCode(presentRows);
+        hash = 31 * hash + Integer.hashCode(totalRows);
+        hash = 31 * hash + java.util.Objects.hashCode(example);
+        hash = 31 * hash + java.util.Objects.hashCode(operations);
+        return hash;
+    }
+    @Override public String toString() { return "Field[path=" + path + ", types=" + types + ", presentRows=" + presentRows + ", totalRows=" + totalRows + ", example=" + example + ", operations=" + operations + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Field> schema() {
+            return new dev.openallay.value.ValueSchema<>(Field.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Field>>asList(new dev.openallay.value.ValueSchema.Component<>(Field.class, "path", Field::path), new dev.openallay.value.ValueSchema.Component<>(Field.class, "types", Field::types), new dev.openallay.value.ValueSchema.Component<>(Field.class, "presentRows", Field::presentRows), new dev.openallay.value.ValueSchema.Component<>(Field.class, "totalRows", Field::totalRows), new dev.openallay.value.ValueSchema.Component<>(Field.class, "example", Field::example), new dev.openallay.value.ValueSchema.Component<>(Field.class, "operations", Field::operations)), arguments -> new Field((String) arguments[0], (List) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (String) arguments[4], (List) arguments[5]));
         }
     }
+}
 
-    public record Schema(Dataset dataset, String namespace, int rows, List<Field> fields) {
-        public Schema {
+    @dev.openallay.value.ValueType(Schema.ValueSchemaProvider.class)
+public static final class Schema {
+    private final Dataset dataset;
+    private final String namespace;
+    private final int rows;
+    private final List<Field> fields;
+    public Schema(Dataset dataset, String namespace, int rows, List<Field> fields) {
+
             namespace = namespace == null ? "" : namespace;
             fields = List.copyOf(fields);
+
+        this.dataset = dataset;
+        this.namespace = namespace;
+        this.rows = rows;
+        this.fields = fields;
+    }
+    public Dataset dataset() { return dataset; }
+    public String namespace() { return namespace; }
+    public int rows() { return rows; }
+    public List<Field> fields() { return fields; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Schema)) return false;
+        Schema that = (Schema) other;
+        return java.util.Objects.equals(dataset, that.dataset) && java.util.Objects.equals(namespace, that.namespace) && rows == that.rows && java.util.Objects.equals(fields, that.fields);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(dataset);
+        hash = 31 * hash + java.util.Objects.hashCode(namespace);
+        hash = 31 * hash + Integer.hashCode(rows);
+        hash = 31 * hash + java.util.Objects.hashCode(fields);
+        return hash;
+    }
+    @Override public String toString() { return "Schema[dataset=" + dataset + ", namespace=" + namespace + ", rows=" + rows + ", fields=" + fields + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Schema> schema() {
+            return new dev.openallay.value.ValueSchema<>(Schema.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Schema>>asList(new dev.openallay.value.ValueSchema.Component<>(Schema.class, "dataset", Schema::dataset), new dev.openallay.value.ValueSchema.Component<>(Schema.class, "namespace", Schema::namespace), new dev.openallay.value.ValueSchema.Component<>(Schema.class, "rows", Schema::rows), new dev.openallay.value.ValueSchema.Component<>(Schema.class, "fields", Schema::fields)), arguments -> new Schema((Dataset) arguments[0], (String) arguments[1], (Integer) arguments[2], (List) arguments[3]));
         }
     }
+}
 
-    public record Result(
-            Dataset dataset,
-            List<String> columns,
-            List<Map<String, JsonElement>> rows,
-            List<Stage> stages,
-            int sourceRows) {
-        public Result {
+    @dev.openallay.value.ValueType(Result.ValueSchemaProvider.class)
+public static final class Result {
+    private final Dataset dataset;
+    private final List<String> columns;
+    private final List<Map<String, JsonElement>> rows;
+    private final List<Stage> stages;
+    private final int sourceRows;
+    public Result(Dataset dataset, List<String> columns, List<Map<String, JsonElement>> rows, List<Stage> stages, int sourceRows) {
+
             columns = List.copyOf(columns);
             rows = rows.stream().map(RegistryQueryEngine::copyRow).toList();
             stages = List.copyOf(stages);
-        }
 
-        @Override
+        this.dataset = dataset;
+        this.columns = columns;
+        this.rows = rows;
+        this.stages = stages;
+        this.sourceRows = sourceRows;
+    }
+    public Dataset dataset() { return dataset; }
+    public List<String> columns() { return columns; }
+    public List<Stage> stages() { return stages; }
+    public int sourceRows() { return sourceRows; }
+
         public List<Map<String, JsonElement>> rows() {
             return rows.stream().map(RegistryQueryEngine::copyRow).toList();
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Result)) return false;
+        Result that = (Result) other;
+        return java.util.Objects.equals(dataset, that.dataset) && java.util.Objects.equals(columns, that.columns) && java.util.Objects.equals(rows, that.rows) && java.util.Objects.equals(stages, that.stages) && sourceRows == that.sourceRows;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(dataset);
+        hash = 31 * hash + java.util.Objects.hashCode(columns);
+        hash = 31 * hash + java.util.Objects.hashCode(rows);
+        hash = 31 * hash + java.util.Objects.hashCode(stages);
+        hash = 31 * hash + Integer.hashCode(sourceRows);
+        return hash;
+    }
+    @Override public String toString() { return "Result[dataset=" + dataset + ", columns=" + columns + ", rows=" + rows + ", stages=" + stages + ", sourceRows=" + sourceRows + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Result> schema() {
+            return new dev.openallay.value.ValueSchema<>(Result.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Result>>asList(new dev.openallay.value.ValueSchema.Component<>(Result.class, "dataset", Result::dataset), new dev.openallay.value.ValueSchema.Component<>(Result.class, "columns", Result::columns), new dev.openallay.value.ValueSchema.Component<>(Result.class, "rows", Result::rows), new dev.openallay.value.ValueSchema.Component<>(Result.class, "stages", Result::stages), new dev.openallay.value.ValueSchema.Component<>(Result.class, "sourceRows", Result::sourceRows)), arguments -> new Result((Dataset) arguments[0], (List) arguments[1], (List) arguments[2], (List) arguments[3], (Integer) arguments[4]));
+        }
+    }
+}
 
     public Schema describe(
             Collection<RegistryEntrySnapshot> entries, Dataset dataset, String namespace) {
