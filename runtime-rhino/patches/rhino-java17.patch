@@ -6,12 +6,20 @@
 @@ -33 +35 @@
 -		var newSlot = new AccessorSlot(this);
 +		dev.latvian.mods.rhino.AccessorSlot newSlot = new AccessorSlot(this);
-@@ -216 +218 @@
+@@ -181 +183,2 @@
+-			if (target instanceof Function t) {
++			if (target instanceof Function) {
++				Function t = (Function) target;
+@@ -216 +219 @@
 -			var pTypes = member.parameters().types();
 +			java.util.List<java.lang.Class<?>> pTypes = member.parameters().types();
-@@ -219 +221 @@
+@@ -219 +222 @@
 -			Class<?> valueType = pTypes.getLast();
 +			Class<?> valueType = ListCompat.getLast(pTypes);
+@@ -253 +256,2 @@
+-			if (target instanceof Function t) {
++			if (target instanceof Function) {
++				Function t = (Function) target;
 --- a/dev/latvian/mods/rhino/ArrayLikeAbstractOperations.java
 +++ b/dev/latvian/mods/rhino/ArrayLikeAbstractOperations.java
 @@ -1,0 +2,2 @@
@@ -796,6 +804,21 @@
 +		java.util.HashMap<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> result = new HashMap<String, FieldAndMethods>(len);
 +
 +		for (dev.latvian.mods.rhino.FieldAndMethods fam : ht.values()) {
+--- a/dev/latvian/mods/rhino/JavaScriptException.java
++++ b/dev/latvian/mods/rhino/JavaScriptException.java
+@@ -38 +38,2 @@
+-		if (value instanceof NativeError error) {
++		if (value instanceof NativeError) {
++			NativeError error = (NativeError) value;
+@@ -41 +42,2 @@
+-		if (javaCause instanceof Wrapper wrapper) {
++		if (javaCause instanceof Wrapper) {
++			Wrapper wrapper = (Wrapper) javaCause;
+@@ -44,2 +46,2 @@
+-		if (javaCause instanceof Throwable throwable && throwable != this) {
+-			this.initCause(throwable);
++		if (javaCause instanceof Throwable && javaCause != this) {
++			this.initCause((Throwable) javaCause);
 --- a/dev/latvian/mods/rhino/LambdaAccessorSlot.java
 +++ b/dev/latvian/mods/rhino/LambdaAccessorSlot.java
 @@ -35 +35 @@
@@ -891,7 +914,7 @@
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
-@@ -31,10 +33,16 @@
+@@ -31,10 +33,20 @@
 -		return switch (v) {
 -			case null -> JsonNull.INSTANCE;
 -			case JsonElement json -> json;
@@ -904,28 +927,32 @@
 -				var json = new JsonObject();
 +		if (v == null) {
 +			return JsonNull.INSTANCE;
-+		} else if (v instanceof JsonElement json) {
++		} else if (v instanceof JsonElement) {
++			JsonElement json = (JsonElement) v;
 +			return json;
-+		} else if (v instanceof Boolean b) {
++		} else if (v instanceof Boolean) {
++			Boolean b = (Boolean) v;
 +			return new JsonPrimitive(b);
 +		} else if (v instanceof CharSequence) {
 +			return new JsonPrimitive(v.toString());
-+		} else if (v instanceof Number n) {
++		} else if (v instanceof Number) {
++			Number n = (Number) v;
 +			return numberPrimitive(n);
 +		} else if (v instanceof NativeString) {
 +			return new JsonPrimitive(ScriptRuntime.toString(cx, v));
 +		} else if (v instanceof NativeNumber) {
 +			return numberPrimitive(ScriptRuntime.toNumber(cx, v));
-+		} else if (v instanceof NativeObject obj) {
++		} else if (v instanceof NativeObject) {
++			NativeObject obj = (NativeObject) v;
 +			com.google.gson.JsonObject json = new JsonObject();
-@@ -42,3 +50,3 @@
+@@ -42,3 +54,3 @@
 -				for (Object id : obj.getIds(cx)) {
 -					Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);
 -					value = Wrapper.unwrapped(value);
 +			for (Object id : obj.getIds(cx)) {
-+				Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);
++				Object value = id instanceof Integer ? obj.get(cx, (Integer) id, obj) : obj.get(cx, String.valueOf(id), obj);
 +				value = Wrapper.unwrapped(value);
-@@ -46,5 +54,2 @@
+@@ -46,5 +58,2 @@
 -					if (doesNotSerialize(value)) {
 -						continue;
 -					}
@@ -933,38 +960,40 @@
 -					json.add(String.valueOf(id), stringify0(cx, value));
 +				if (doesNotSerialize(value)) {
 +					continue;
-@@ -53 +58 @@
+@@ -53 +62 @@
 -				yield json;
 +				json.add(String.valueOf(id), stringify0(cx, value));
-@@ -55,2 +59,0 @@
+@@ -55,2 +63,0 @@
 -			case Map<?, ?> map -> {
 -				var json = new JsonObject();
-@@ -58,4 +61,7 @@
+@@ -58,4 +65,8 @@
 -				for (var entry : map.entrySet()) {
 -					if (!doesNotSerialize(entry.getValue())) {
 -						json.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));
 -					}
 +			return json;
-+		} else if (v instanceof Map<?, ?> map) {
++		} else if (v instanceof Map<?, ?>) {
++			Map<?, ?> map = (Map<?, ?>) v;
 +			com.google.gson.JsonObject json = new JsonObject();
 +
 +			for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
 +				if (!doesNotSerialize(entry.getValue())) {
 +					json.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));
-@@ -62,0 +69 @@
+@@ -62,0 +74 @@
 +			}
-@@ -64 +71,6 @@
+@@ -64 +76,7 @@
 -				yield json;
 +			return json;
-+		} else if (v instanceof Iterable<?> itr) {
++		} else if (v instanceof Iterable<?>) {
++			Iterable<?> itr = (Iterable<?>) v;
 +			com.google.gson.JsonArray json = new JsonArray();
 +
 +			for (java.lang.Object o : itr) {
 +				json.add(stringify0(cx, o));
-@@ -66,2 +77,0 @@
+@@ -66,2 +83,0 @@
 -			case Iterable<?> itr -> {
 -				var json = new JsonArray();
-@@ -69,13 +79,7 @@
+@@ -69,13 +85,7 @@
 -				for (var o : itr) {
 -					json.add(stringify0(cx, o));
 -				}
@@ -985,9 +1014,15 @@
 +		com.google.gson.JsonArray json = new JsonArray();
 +		cx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);
 +		return json;
-@@ -117 +121 @@
+@@ -117 +127 @@
 -			indent = (gapLength > 0) ? " ".repeat(gapLength) : "";
 +			indent = (gapLength > 0) ? ListCompat.repeat(" ", gapLength) : "";
+--- a/dev/latvian/mods/rhino/NativeGlobal.java
++++ b/dev/latvian/mods/rhino/NativeGlobal.java
+@@ -384 +384,2 @@
+-		if (functionObj instanceof IdFunctionObject function) {
++		if (functionObj instanceof IdFunctionObject) {
++			IdFunctionObject function = (IdFunctionObject) functionObj;
 --- a/dev/latvian/mods/rhino/NativeJSON.java
 +++ b/dev/latvian/mods/rhino/NativeJSON.java
 @@ -149 +149 @@
@@ -1092,23 +1127,62 @@
 +		dev.latvian.mods.rhino.type.TypeInfo returnType = meth.getReturnType();
 --- a/dev/latvian/mods/rhino/NativeJavaObject.java
 +++ b/dev/latvian/mods/rhino/NativeJavaObject.java
-@@ -90 +90 @@
+@@ -89,2 +89,4 @@
+-			if (typeInfo instanceof ParameterizedTypeInfo parameterized) {
 -				var parameters = parameterized.asClass().getTypeParameters();
++			TypeInfo currentTypeInfo = typeInfo;
++			if (currentTypeInfo instanceof ParameterizedTypeInfo) {
++				ParameterizedTypeInfo parameterized = (ParameterizedTypeInfo) currentTypeInfo;
 +				java.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] parameters = parameterized.asClass().getTypeParameters();
-@@ -94 +94 @@
+@@ -94 +96 @@
 -					var mapping = ImmutableMap.<VariableTypeInfo, TypeInfo>builder();
 +					com.google.common.collect.ImmutableMap.Builder<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> mapping = ImmutableMap.<VariableTypeInfo, TypeInfo>builder();
-@@ -152 +152 @@
+@@ -152 +154 @@
 -			var member = customMembers.get(name);
 +			dev.latvian.mods.rhino.CustomMember member = customMembers.get(name);
-@@ -155 +155 @@
+@@ -155,3 +157,4 @@
 -				var value = member.value();
+-
+-				if (value instanceof CustomProperty p) {
 +				java.lang.Object value = member.value();
++
++				if (value instanceof CustomProperty) {
++					CustomProperty p = (CustomProperty) value;
+@@ -328 +331,2 @@
+-			if (converterObject instanceof Function f) {
++			if (converterObject instanceof Function) {
++				Function f = (Function) converterObject;
 --- a/dev/latvian/mods/rhino/NativeMap.java
 +++ b/dev/latvian/mods/rhino/NativeMap.java
 @@ -186 +186 @@
 -		for (var entry : entries) {
 +		for (dev.latvian.mods.rhino.Hashtable.Entry entry : entries) {
+--- a/dev/latvian/mods/rhino/NativePromise.java
++++ b/dev/latvian/mods/rhino/NativePromise.java
+@@ -454 +454,2 @@
+-		if (re instanceof EcmaError ee) {
++		if (re instanceof EcmaError) {
++			EcmaError ee = (EcmaError) re;
+@@ -456,10 +457,9 @@
+-				case "EvalError" -> constructor = NativeErrors.EvalError;
+-				case "RangeError" -> constructor = NativeErrors.RangeError;
+-				case "ReferenceError" -> constructor = NativeErrors.ReferenceError;
+-				case "SyntaxError" -> constructor = NativeErrors.SyntaxError;
+-				case "TypeError" -> constructor = NativeErrors.TypeError;
+-				case "URIError" -> constructor = NativeErrors.URIError;
+-				case "InternalError" -> constructor = NativeErrors.InternalError;
+-				case "JavaException" -> constructor = NativeErrors.JavaException;
+-				default -> {
+-				}
++				case "EvalError": constructor = NativeErrors.EvalError; break;
++				case "RangeError": constructor = NativeErrors.RangeError; break;
++				case "ReferenceError": constructor = NativeErrors.ReferenceError; break;
++				case "SyntaxError": constructor = NativeErrors.SyntaxError; break;
++				case "TypeError": constructor = NativeErrors.TypeError; break;
++				case "URIError": constructor = NativeErrors.URIError; break;
++				case "InternalError": constructor = NativeErrors.InternalError; break;
++				case "JavaException": constructor = NativeErrors.JavaException; break;
++				default: break;
 --- a/dev/latvian/mods/rhino/NativeString.java
 +++ b/dev/latvian/mods/rhino/NativeString.java
 @@ -388 +388 @@
@@ -1120,6 +1194,12 @@
 @@ -824 +824 @@
 -		var regExpProxy = cx.getRegExp();
 +		dev.latvian.mods.rhino.regexp.RegExp regExpProxy = cx.getRegExp();
+--- a/dev/latvian/mods/rhino/NativeWith.java
++++ b/dev/latvian/mods/rhino/NativeWith.java
+@@ -36 +36,2 @@
+-		if (functionObj instanceof IdFunctionObject f) {
++		if (functionObj instanceof IdFunctionObject) {
++			IdFunctionObject f = (IdFunctionObject) functionObj;
 --- a/dev/latvian/mods/rhino/Parser.java
 +++ b/dev/latvian/mods/rhino/Parser.java
 @@ -7,0 +8,2 @@
@@ -1294,24 +1374,28 @@
 @@ -1,0 +2,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
-@@ -36 +38 @@
+@@ -15 +17,2 @@
+-		if (e instanceof RemappedEnumConstant c) {
++		if (e instanceof RemappedEnumConstant) {
++			RemappedEnumConstant c = (RemappedEnumConstant) e;
+@@ -36 +39 @@
 -			constants = List.of(asClass().getEnumConstants());
 +			constants = ListCompat.listOf(asClass().getEnumConstants());
-@@ -51 +53 @@
+@@ -51 +54 @@
 -			var constants = enumConstants();
 +			java.util.List<java.lang.Object> constants = enumConstants();
-@@ -56,2 +58,2 @@
+@@ -56,2 +59,2 @@
 -				for (var entry : constants) {
 -					var name = getName(entry);
 +				for (java.lang.Object entry : constants) {
 +					java.lang.String name = getName(entry);
-@@ -63 +65 @@
+@@ -63 +66 @@
 -			var lookup = constantMap.get(s);
 +			java.lang.Object lookup = constantMap.get(s);
-@@ -69 +71 @@
+@@ -69 +72 @@
 -			for (var entry : constants) {
 +			for (java.lang.Object entry : constants) {
-@@ -79 +81 @@
+@@ -79 +82 @@
 -			var constants = enumConstants();
 +			java.util.List<java.lang.Object> constants = enumConstants();
 --- a/dev/latvian/mods/rhino/type/InterfaceTypeInfo.java
@@ -2320,9 +2404,19 @@
 +	public int hashCode() {
 +		return Objects.hashCode(value);
 +	}
+--- a/dev/latvian/mods/rhino/util/SpecialEquality.java
++++ b/dev/latvian/mods/rhino/util/SpecialEquality.java
+@@ -13 +13,2 @@
+-		} else if (o instanceof SpecialEquality s) {
++		} else if (o instanceof SpecialEquality) {
++			SpecialEquality s = (SpecialEquality) o;
+@@ -15 +16,2 @@
+-		} else if (o1 != null && o instanceof Enum<?> e) {
++		} else if (o1 != null && o instanceof Enum<?>) {
++			Enum<?> e = (Enum<?>) o;
 --- a/dev/latvian/mods/rhino/util/ToStringJS.java
 +++ b/dev/latvian/mods/rhino/util/ToStringJS.java
-@@ -12,7 +12,8 @@
+@@ -12,7 +12,10 @@
 -		return switch (o) {
 -			case null -> "null";
 -			case ToStringJS toStringJS -> toStringJS.toStringJS(cx);
@@ -2332,13 +2426,15 @@
 -				var first = true;
 +		if (o == null) {
 +			return "null";
-+		} else if (o instanceof ToStringJS toStringJS) {
++		} else if (o instanceof ToStringJS) {
++			ToStringJS toStringJS = (ToStringJS) o;
 +			return toStringJS.toStringJS(cx);
-+		} else if (o instanceof Iterable<?> itr) {
++		} else if (o instanceof Iterable<?>) {
++			Iterable<?> itr = (Iterable<?>) o;
 +			java.lang.StringBuilder sb = new StringBuilder();
 +			sb.append('[');
 +			boolean first = true;
-@@ -20,7 +21,3 @@
+@@ -20,7 +23,3 @@
 -				for (var i : itr) {
 -					if (!first) {
 -						sb.append(", ");
@@ -2349,29 +2445,30 @@
 +			for (java.lang.Object i : itr) {
 +				if (!first) {
 +					sb.append(", ");
-@@ -29,2 +26,2 @@
+@@ -29,2 +28,2 @@
 -				sb.append(']');
 -				yield sb.toString();
 +				sb.append(toStringJS(cx, i));
 +				first = false;
-@@ -32,3 +28,0 @@
+@@ -32,3 +30,0 @@
 -			case Map<?, ?> map -> {
 -				var sb = new StringBuilder();
 -				boolean first = true;
-@@ -36 +30,5 @@
+@@ -36 +32,6 @@
 -				sb.append('{');
 +			sb.append(']');
 +			return sb.toString();
-+		} else if (o instanceof Map<?, ?> map) {
++		} else if (o instanceof Map<?, ?>) {
++			Map<?, ?> map = (Map<?, ?>) o;
 +			java.lang.StringBuilder sb = new StringBuilder();
 +			boolean first = true;
-@@ -38,4 +36 @@
+@@ -38,4 +39 @@
 -				for (var entry : map.entrySet()) {
 -					if (!first) {
 -						sb.append(", ");
 -					}
 +			sb.append('{');
-@@ -43,4 +38,3 @@
+@@ -43,4 +41,3 @@
 -					sb.append(toStringJS(cx, entry.getKey()));
 -					sb.append(": ");
 -					sb.append(toStringJS(cx, entry.getValue()));
@@ -2379,14 +2476,14 @@
 +			for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
 +				if (!first) {
 +					sb.append(", ");
-@@ -49,2 +43,4 @@
+@@ -49,2 +46,4 @@
 -				sb.append('}');
 -				yield sb.toString();
 +				sb.append(toStringJS(cx, entry.getKey()));
 +				sb.append(": ");
 +				sb.append(toStringJS(cx, entry.getValue()));
 +				first = false;
-@@ -52,2 +48,5 @@
+@@ -52,2 +51,5 @@
 -			default -> o.toString();
 -		};
 +

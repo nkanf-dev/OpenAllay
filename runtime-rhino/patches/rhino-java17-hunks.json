@@ -1,6 +1,6 @@
 {
   "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
-  "patch_sha256": "4cafc954890b175e18936698f7e14166b5d29e61580950273ec10850537a35fa",
+  "patch_sha256": "060246cd3bb108939abe397141e8edf211d39b10af80f2f38dba7aa00a2c76f3",
   "files": [
     {
       "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
@@ -29,6 +29,14 @@
         {
           "before": "\n\t\t@Override\n\t\tboolean setValue(Object value, Scriptable owner, Scriptable start, Context cx) {\n\t\t\tvar pTypes = member.parameters().types();\n\t\t\t// XXX: cache tag since it is already calculated in\n\t\t\t// defineProperty ?\n\t\t\tClass<?> valueType = ListCompat.getLast(pTypes);\n",
           "after": "\n\t\t@Override\n\t\tboolean setValue(Object value, Scriptable owner, Scriptable start, Context cx) {\n\t\t\tjava.util.List<java.lang.Class<?>> pTypes = member.parameters().types();\n\t\t\t// XXX: cache tag since it is already calculated in\n\t\t\t// defineProperty ?\n\t\t\tClass<?> valueType = ListCompat.getLast(pTypes);\n"
+        },
+        {
+          "before": "\n\t\t@Override\n\t\tObject getValue(Scriptable start, Context cx) {\n\t\t\tif (target instanceof Function t) {\n\t\t\t\treturn t.call(cx, t.getParentScope(), start, ScriptRuntime.EMPTY_OBJECTS);\n\t\t\t}\n\t\t\treturn Undefined.INSTANCE;\n",
+          "after": "\n\t\t@Override\n\t\tObject getValue(Scriptable start, Context cx) {\n\t\t\tif (target instanceof Function) {\n\t\t\t\tFunction t = (Function) target;\n\t\t\t\treturn t.call(cx, t.getParentScope(), start, ScriptRuntime.EMPTY_OBJECTS);\n\t\t\t}\n\t\t\treturn Undefined.INSTANCE;\n"
+        },
+        {
+          "before": "\n\t\t@Override\n\t\tboolean setValue(Object value, Scriptable owner, Scriptable start, Context cx) {\n\t\t\tif (target instanceof Function t) {\n\t\t\t\tt.call(cx, t.getParentScope(), start, new Object[]{value});\n\t\t\t}\n\t\t\treturn true;\n",
+          "after": "\n\t\t@Override\n\t\tboolean setValue(Object value, Scriptable owner, Scriptable start, Context cx) {\n\t\t\tif (target instanceof Function) {\n\t\t\t\tFunction t = (Function) target;\n\t\t\t\tt.call(cx, t.getParentScope(), start, new Object[]{value});\n\t\t\t}\n\t\t\treturn true;\n"
         }
       ]
     },
@@ -325,6 +333,18 @@
         {
           "before": "\t\t} else if (doesNotSerialize(v)) {\n\t\t\treturn JsonNull.INSTANCE;\n\t\t}\n\t\tvar json = new JsonArray();\n\t\tcx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);\n\t\treturn json;\n\t}\n",
           "after": "\t\t} else if (doesNotSerialize(v)) {\n\t\t\treturn JsonNull.INSTANCE;\n\t\t}\n\t\tcom.google.gson.JsonArray json = new JsonArray();\n\t\tcx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);\n\t\treturn json;\n\t}\n"
+        },
+        {
+          "before": "\tpublic static JsonElement stringify0(Context cx, Object v) {\n\t\tif (v == null) {\n\t\t\treturn JsonNull.INSTANCE;\n\t\t} else if (v instanceof JsonElement json) {\n\t\t\treturn json;\n\t\t} else if (v instanceof Boolean b) {\n\t\t\treturn new JsonPrimitive(b);\n\t\t} else if (v instanceof CharSequence) {\n\t\t\treturn new JsonPrimitive(v.toString());\n\t\t} else if (v instanceof Number n) {\n\t\t\treturn numberPrimitive(n);\n\t\t} else if (v instanceof NativeString) {\n\t\t\treturn new JsonPrimitive(ScriptRuntime.toString(cx, v));\n\t\t} else if (v instanceof NativeNumber) {\n\t\t\treturn numberPrimitive(ScriptRuntime.toNumber(cx, v));\n\t\t} else if (v instanceof NativeObject obj) {\n\t\t\tcom.google.gson.JsonObject json = new JsonObject();\n\n\t\t\tfor (Object id : obj.getIds(cx)) {\n\t\t\t\tObject value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);\n\t\t\t\tvalue = Wrapper.unwrapped(value);\n\n\t\t\t\tif (doesNotSerialize(value)) {\n",
+          "after": "\tpublic static JsonElement stringify0(Context cx, Object v) {\n\t\tif (v == null) {\n\t\t\treturn JsonNull.INSTANCE;\n\t\t} else if (v instanceof JsonElement) {\n\t\t\tJsonElement json = (JsonElement) v;\n\t\t\treturn json;\n\t\t} else if (v instanceof Boolean) {\n\t\t\tBoolean b = (Boolean) v;\n\t\t\treturn new JsonPrimitive(b);\n\t\t} else if (v instanceof CharSequence) {\n\t\t\treturn new JsonPrimitive(v.toString());\n\t\t} else if (v instanceof Number) {\n\t\t\tNumber n = (Number) v;\n\t\t\treturn numberPrimitive(n);\n\t\t} else if (v instanceof NativeString) {\n\t\t\treturn new JsonPrimitive(ScriptRuntime.toString(cx, v));\n\t\t} else if (v instanceof NativeNumber) {\n\t\t\treturn numberPrimitive(ScriptRuntime.toNumber(cx, v));\n\t\t} else if (v instanceof NativeObject) {\n\t\t\tNativeObject obj = (NativeObject) v;\n\t\t\tcom.google.gson.JsonObject json = new JsonObject();\n\n\t\t\tfor (Object id : obj.getIds(cx)) {\n\t\t\t\tObject value = id instanceof Integer ? obj.get(cx, (Integer) id, obj) : obj.get(cx, String.valueOf(id), obj);\n\t\t\t\tvalue = Wrapper.unwrapped(value);\n\n\t\t\t\tif (doesNotSerialize(value)) {\n"
+        },
+        {
+          "before": "\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (v instanceof Map<?, ?> map) {\n\t\t\tcom.google.gson.JsonObject json = new JsonObject();\n\n\t\t\tfor (java.util.Map.Entry<?, ?> entry : map.entrySet()) {\n",
+          "after": "\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (v instanceof Map<?, ?>) {\n\t\t\tMap<?, ?> map = (Map<?, ?>) v;\n\t\t\tcom.google.gson.JsonObject json = new JsonObject();\n\n\t\t\tfor (java.util.Map.Entry<?, ?> entry : map.entrySet()) {\n"
+        },
+        {
+          "before": "\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (v instanceof Iterable<?> itr) {\n\t\t\tcom.google.gson.JsonArray json = new JsonArray();\n\n\t\t\tfor (java.lang.Object o : itr) {\n",
+          "after": "\t\t\t}\n\n\t\t\treturn json;\n\t\t} else if (v instanceof Iterable<?>) {\n\t\t\tIterable<?> itr = (Iterable<?>) v;\n\t\t\tcom.google.gson.JsonArray json = new JsonArray();\n\n\t\t\tfor (java.lang.Object o : itr) {\n"
         }
       ]
     },
@@ -763,6 +783,14 @@
         {
           "before": "\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tvar sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n\t\t\tsb.append('{');\n\n\t\t\tfor (var entry : map.entrySet()) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n",
           "after": "\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n\t\t\tsb.append('{');\n\n\t\t\tfor (java.util.Map.Entry<?, ?> entry : map.entrySet()) {\n\t\t\t\tif (!first) {\n\t\t\t\t\tsb.append(\", \");\n\t\t\t\t}\n"
+        },
+        {
+          "before": "\n\t\tif (o == null) {\n\t\t\treturn \"null\";\n\t\t} else if (o instanceof ToStringJS toStringJS) {\n\t\t\treturn toStringJS.toStringJS(cx);\n\t\t} else if (o instanceof Iterable<?> itr) {\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tsb.append('[');\n\t\t\tboolean first = true;\n",
+          "after": "\n\t\tif (o == null) {\n\t\t\treturn \"null\";\n\t\t} else if (o instanceof ToStringJS) {\n\t\t\tToStringJS toStringJS = (ToStringJS) o;\n\t\t\treturn toStringJS.toStringJS(cx);\n\t\t} else if (o instanceof Iterable<?>) {\n\t\t\tIterable<?> itr = (Iterable<?>) o;\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tsb.append('[');\n\t\t\tboolean first = true;\n"
+        },
+        {
+          "before": "\n\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?> map) {\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n",
+          "after": "\n\t\t\tsb.append(']');\n\t\t\treturn sb.toString();\n\t\t} else if (o instanceof Map<?, ?>) {\n\t\t\tMap<?, ?> map = (Map<?, ?>) o;\n\t\t\tjava.lang.StringBuilder sb = new StringBuilder();\n\t\t\tboolean first = true;\n\n"
         }
       ]
     },
@@ -1097,6 +1125,10 @@
         {
           "before": "\t\t} else if (from instanceof Number) {\n\t\t\tint index = ((Number) from).intValue();\n\n\t\t\tvar constants = enumConstants();\n\n\t\t\tif (index < 0 || index >= constants.size()) {\n\t\t\t\tthrow new IllegalArgumentException(index + \" is not a valid enum index! Valid values are: 0 - \" + (constants.size() - 1));\n",
           "after": "\t\t} else if (from instanceof Number) {\n\t\t\tint index = ((Number) from).intValue();\n\n\t\t\tjava.util.List<java.lang.Object> constants = enumConstants();\n\n\t\t\tif (index < 0 || index >= constants.size()) {\n\t\t\t\tthrow new IllegalArgumentException(index + \" is not a valid enum index! Valid values are: 0 - \" + (constants.size() - 1));\n"
+        },
+        {
+          "before": "\npublic class EnumTypeInfo extends ClassTypeInfo implements TypeWrapperFactory<Object> {\n\tpublic static String getName(Object e) {\n\t\tif (e instanceof RemappedEnumConstant c) {\n\t\t\tString s = c.getRemappedEnumConstantName();\n\n\t\t\tif (!s.isEmpty()) {\n",
+          "after": "\npublic class EnumTypeInfo extends ClassTypeInfo implements TypeWrapperFactory<Object> {\n\tpublic static String getName(Object e) {\n\t\tif (e instanceof RemappedEnumConstant) {\n\t\t\tRemappedEnumConstant c = (RemappedEnumConstant) e;\n\t\t\tString s = c.getRemappedEnumConstantName();\n\n\t\t\tif (!s.isEmpty()) {\n"
         }
       ]
     },
@@ -1395,6 +1427,18 @@
         {
           "before": "\t\t}\n\n\t\tif (customMembers != null) {\n\t\t\tvar member = customMembers.get(name);\n\n\t\t\tif (member != null) {\n\t\t\t\tvar value = member.value();\n\n\t\t\t\tif (value instanceof CustomProperty p) {\n\t\t\t\t\tvalue = p.get(cx);\n",
           "after": "\t\t}\n\n\t\tif (customMembers != null) {\n\t\t\tdev.latvian.mods.rhino.CustomMember member = customMembers.get(name);\n\n\t\t\tif (member != null) {\n\t\t\t\tjava.lang.Object value = member.value();\n\n\t\t\t\tif (value instanceof CustomProperty p) {\n\t\t\t\t\tvalue = p.get(cx);\n"
+        },
+        {
+          "before": "\t */\n\tpublic Map<VariableTypeInfo, TypeInfo> getTypeMapping() {\n\t\tif (typeMapping == null) {\n\t\t\tif (typeInfo instanceof ParameterizedTypeInfo parameterized) {\n\t\t\t\tjava.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] parameters = parameterized.asClass().getTypeParameters();\n\t\t\t\tif (parameters.length == 1) {\n\t\t\t\t\ttypeMapping = Collections.singletonMap(TypeInfo.of(parameters[0]), parameterized.param(0));\n",
+          "after": "\t */\n\tpublic Map<VariableTypeInfo, TypeInfo> getTypeMapping() {\n\t\tif (typeMapping == null) {\n\t\t\tTypeInfo currentTypeInfo = typeInfo;\n\t\t\tif (currentTypeInfo instanceof ParameterizedTypeInfo) {\n\t\t\t\tParameterizedTypeInfo parameterized = (ParameterizedTypeInfo) currentTypeInfo;\n\t\t\t\tjava.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] parameters = parameterized.asClass().getTypeParameters();\n\t\t\t\tif (parameters.length == 1) {\n\t\t\t\t\ttypeMapping = Collections.singletonMap(TypeInfo.of(parameters[0]), parameterized.param(0));\n"
+        },
+        {
+          "before": "\t\t\tif (member != null) {\n\t\t\t\tjava.lang.Object value = member.value();\n\n\t\t\t\tif (value instanceof CustomProperty p) {\n\t\t\t\t\tvalue = p.get(cx);\n\t\t\t\t}\n\n",
+          "after": "\t\t\tif (member != null) {\n\t\t\t\tjava.lang.Object value = member.value();\n\n\t\t\t\tif (value instanceof CustomProperty) {\n\t\t\t\t\tCustomProperty p = (CustomProperty) value;\n\t\t\t\t\tvalue = p.get(cx);\n\t\t\t\t}\n\n"
+        },
+        {
+          "before": "\t\t\t\tthrow Context.reportRuntimeError0(\"msg.default.value\", cx);\n\t\t\t}\n\t\t\tObject converterObject = get(cx, converterName, this);\n\t\t\tif (converterObject instanceof Function f) {\n\t\t\t\tvalue = f.call(cx, f.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);\n\t\t\t} else {\n\t\t\t\tif (hint == DefaultValueTypeHint.NUMBER && javaObject instanceof Boolean) {\n",
+          "after": "\t\t\t\tthrow Context.reportRuntimeError0(\"msg.default.value\", cx);\n\t\t\t}\n\t\t\tObject converterObject = get(cx, converterName, this);\n\t\t\tif (converterObject instanceof Function) {\n\t\t\t\tFunction f = (Function) converterObject;\n\t\t\t\tvalue = f.call(cx, f.getParentScope(), this, ScriptRuntime.EMPTY_OBJECTS);\n\t\t\t} else {\n\t\t\t\tif (hint == DefaultValueTypeHint.NUMBER && javaObject instanceof Boolean) {\n"
         }
       ]
     },
@@ -1671,6 +1715,56 @@
         {
           "before": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\tif (!(obj instanceof FieldOrMethodRef x)) {\n\t\t\treturn false;\n\t\t}\n\t\treturn className.equals(x.className) && name.equals(x.name) && type.equals(x.type);\n\t}\n\n",
           "after": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\tif (!(obj instanceof FieldOrMethodRef)) {\n\t\t\treturn false;\n\t\t}\n\t\tFieldOrMethodRef x = (FieldOrMethodRef) obj;\n\t\treturn className.equals(x.className) && name.equals(x.name) && type.equals(x.type);\n\t}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/JavaScriptException.java",
+      "old_path": "dev/latvian/mods/rhino/JavaScriptException.java",
+      "hunks": [
+        {
+          "before": "\t\t// try to extract the cause. Value can be either a (wrapped) java.lang.Throwable\n\t\t// or a NativeError, that may contain the causing javaException\n\t\tObject javaCause = value;\n\t\tif (value instanceof NativeError error) {\n\t\t\tjavaCause = error.get(cx, \"javaException\", error);\n\t\t}\n\t\tif (javaCause instanceof Wrapper wrapper) {\n\t\t\tjavaCause = wrapper.unwrap();\n\t\t}\n\t\tif (javaCause instanceof Throwable throwable && throwable != this) {\n\t\t\tthis.initCause(throwable);\n\t\t}\n\t}\n\n",
+          "after": "\t\t// try to extract the cause. Value can be either a (wrapped) java.lang.Throwable\n\t\t// or a NativeError, that may contain the causing javaException\n\t\tObject javaCause = value;\n\t\tif (value instanceof NativeError) {\n\t\t\tNativeError error = (NativeError) value;\n\t\t\tjavaCause = error.get(cx, \"javaException\", error);\n\t\t}\n\t\tif (javaCause instanceof Wrapper) {\n\t\t\tWrapper wrapper = (Wrapper) javaCause;\n\t\t\tjavaCause = wrapper.unwrap();\n\t\t}\n\t\tif (javaCause instanceof Throwable && javaCause != this) {\n\t\t\tthis.initCause((Throwable) javaCause);\n\t\t}\n\t}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeGlobal.java",
+      "old_path": "dev/latvian/mods/rhino/NativeGlobal.java",
+      "hunks": [
+        {
+          "before": "\t}\n\n\tstatic boolean isEvalFunction(Object functionObj) {\n\t\tif (functionObj instanceof IdFunctionObject function) {\n\t\t\treturn function.hasTag(FTAG) && function.methodId() == Id_eval;\n\t\t}\n\t\treturn false;\n",
+          "after": "\t}\n\n\tstatic boolean isEvalFunction(Object functionObj) {\n\t\tif (functionObj instanceof IdFunctionObject) {\n\t\t\tIdFunctionObject function = (IdFunctionObject) functionObj;\n\t\t\treturn function.hasTag(FTAG) && function.methodId() == Id_eval;\n\t\t}\n\t\treturn false;\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeWith.java",
+      "old_path": "dev/latvian/mods/rhino/NativeWith.java",
+      "hunks": [
+        {
+          "before": "\t}\n\n\tstatic boolean isWithFunction(Object functionObj) {\n\t\tif (functionObj instanceof IdFunctionObject f) {\n\t\t\treturn f.hasTag(FTAG) && f.methodId() == Id_constructor;\n\t\t}\n\t\treturn false;\n",
+          "after": "\t}\n\n\tstatic boolean isWithFunction(Object functionObj) {\n\t\tif (functionObj instanceof IdFunctionObject) {\n\t\t\tIdFunctionObject f = (IdFunctionObject) functionObj;\n\t\t\treturn f.hasTag(FTAG) && f.methodId() == Id_constructor;\n\t\t}\n\t\treturn false;\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativePromise.java",
+      "old_path": "dev/latvian/mods/rhino/NativePromise.java",
+      "hunks": [
+        {
+          "before": "\t\t}\n\n\t\tTopLevel.NativeErrors constructor = NativeErrors.Error;\n\t\tif (re instanceof EcmaError ee) {\n\t\t\tswitch (ee.getName()) {\n\t\t\t\tcase \"EvalError\" -> constructor = NativeErrors.EvalError;\n\t\t\t\tcase \"RangeError\" -> constructor = NativeErrors.RangeError;\n\t\t\t\tcase \"ReferenceError\" -> constructor = NativeErrors.ReferenceError;\n\t\t\t\tcase \"SyntaxError\" -> constructor = NativeErrors.SyntaxError;\n\t\t\t\tcase \"TypeError\" -> constructor = NativeErrors.TypeError;\n\t\t\t\tcase \"URIError\" -> constructor = NativeErrors.URIError;\n\t\t\t\tcase \"InternalError\" -> constructor = NativeErrors.InternalError;\n\t\t\t\tcase \"JavaException\" -> constructor = NativeErrors.JavaException;\n\t\t\t\tdefault -> {\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\treturn ScriptRuntime.newNativeError(cx, scope, constructor, new Object[]{re.getMessage()});\n",
+          "after": "\t\t}\n\n\t\tTopLevel.NativeErrors constructor = NativeErrors.Error;\n\t\tif (re instanceof EcmaError) {\n\t\t\tEcmaError ee = (EcmaError) re;\n\t\t\tswitch (ee.getName()) {\n\t\t\t\tcase \"EvalError\": constructor = NativeErrors.EvalError; break;\n\t\t\t\tcase \"RangeError\": constructor = NativeErrors.RangeError; break;\n\t\t\t\tcase \"ReferenceError\": constructor = NativeErrors.ReferenceError; break;\n\t\t\t\tcase \"SyntaxError\": constructor = NativeErrors.SyntaxError; break;\n\t\t\t\tcase \"TypeError\": constructor = NativeErrors.TypeError; break;\n\t\t\t\tcase \"URIError\": constructor = NativeErrors.URIError; break;\n\t\t\t\tcase \"InternalError\": constructor = NativeErrors.InternalError; break;\n\t\t\t\tcase \"JavaException\": constructor = NativeErrors.JavaException; break;\n\t\t\t\tdefault: break;\n\t\t\t}\n\t\t}\n\t\treturn ScriptRuntime.newNativeError(cx, scope, constructor, new Object[]{re.getMessage()});\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/util/SpecialEquality.java",
+      "old_path": "dev/latvian/mods/rhino/util/SpecialEquality.java",
+      "hunks": [
+        {
+          "before": "\tstatic boolean checkSpecialEquality(Context cx, Object o, Object o1, boolean shallow) {\n\t\tif (o == o1) {\n\t\t\treturn true;\n\t\t} else if (o instanceof SpecialEquality s) {\n\t\t\treturn s.specialEquals(cx, o1, shallow);\n\t\t} else if (o1 != null && o instanceof Enum<?> e) {\n\t\t\tif (o1 instanceof Number) {\n\t\t\t\treturn e.ordinal() == ((Number) o1).intValue();\n\t\t\t} else {\n",
+          "after": "\tstatic boolean checkSpecialEquality(Context cx, Object o, Object o1, boolean shallow) {\n\t\tif (o == o1) {\n\t\t\treturn true;\n\t\t} else if (o instanceof SpecialEquality) {\n\t\t\tSpecialEquality s = (SpecialEquality) o;\n\t\t\treturn s.specialEquals(cx, o1, shallow);\n\t\t} else if (o1 != null && o instanceof Enum<?>) {\n\t\t\tEnum<?> e = (Enum<?>) o;\n\t\t\tif (o1 instanceof Number) {\n\t\t\t\treturn e.ordinal() == ((Number) o1).intValue();\n\t\t\t} else {\n"
         }
       ]
     }
