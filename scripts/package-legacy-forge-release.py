@@ -228,9 +228,14 @@ def main():
         digest,relative=line.split('  ',1)
         if sha(safe(packet,relative).read_bytes())!=digest: raise ValueError('Packet checksum differs: '+relative)
         sums[relative]=digest
-    copies=[]
+    copies=[]; reused=[]
     for relative in sums:
-        if relative.startswith('libraries/'): copies.append((safe(packet,relative),safe(root,relative)))
+        if relative.startswith('libraries/'):
+            target=safe(root,relative)
+            if target.exists():
+                if not target.is_file() or target.is_symlink() or sha(target.read_bytes())!=sums[relative]: raise FileExistsError('Shared library bytes differ: '+str(target))
+                reused.append({'path':relative,'sha256':sums[relative]})
+            else: copies.append((safe(packet,relative),target))
         elif relative.startswith(('mods/','openallay-runtime/')): copies.append((safe(packet,relative),safe(game,relative)))
     version_dir=safe(root,'versions/'+a.profile_id)
     if version_dir.exists(): raise FileExistsError('Profile already exists; choose a new profile ID')
@@ -238,28 +243,31 @@ def main():
         if target.exists() or target.is_symlink(): raise FileExistsError('Never overwrite installed files: '+str(target))
     print('Stock libraries verified. New profile: '+a.profile_id)
     print('Game directory: '+str(game))
-    if not a.install: print('No files written. Add --install to opt in.'); return
+    for record in reused: print('REUSED '+record['sha256']+'  '+record['path'])
+    if not a.install: print('No files written. Add --install to opt in.'); return {'reused':reused,'installed':False}
     created=[]; dirs=[]
     try:
         for source,target in copies:
             target.parent.mkdir(parents=True,exist_ok=True)
             with target.open('xb') as stream: stream.write(source.read_bytes()); stream.flush(); os.fsync(stream.fileno())
-            created.append(target)
+            st=target.stat(); created.append((target,st.st_dev,st.st_ino))
         safe(game,'logs').mkdir(parents=True,exist_ok=True)
         version_dir.mkdir(parents=True,exist_ok=False); dirs.append(version_dir)
         # Atomic, no-overwrite profile publication. This installer never edits launcher account/profile files.
         stage=version_dir/'.profile-new'
         with stage.open('xb') as stream: stream.write((json.dumps(profile,indent=2)+'\n').encode()); stream.flush(); os.fsync(stream.fileno())
-        created.append(stage); final=version_dir/(a.profile_id+'.json')
-        os.link(stage,final); created.append(final); stage.unlink(); created.remove(stage)
+        st=stage.stat();stage_record=(stage,st.st_dev,st.st_ino);created.append(stage_record);final=version_dir/(a.profile_id+'.json')
+        os.link(stage,final);created.append((final,st.st_dev,st.st_ino));stage.unlink();created.remove(stage_record)
     except BaseException:
-        for file in reversed(created):
-            if file.is_file() and not file.is_symlink(): file.unlink()
+        for file,device,inode in reversed(created):
+            current=file.lstat()
+            if current.st_dev==device and current.st_ino==inode and file.is_file() and not file.is_symlink(): file.unlink()
         for directory in reversed(dirs):
             try: directory.rmdir()
             except OSError: pass
         raise
     print('Installed. Select the new version in your launcher, Java17 and the printed game directory. Sign in normally.')
+    return {'reused':reused,'installed':True}
 if __name__=='__main__': main()
 '''
 INSTALLER = INSTALLER.replace('__FORGE_SHA__', FORGE_SHA).replace('__WRAPPER_SHA__', WRAPPER_SHA).replace('__ASM_SHA__', ASM_SHA)
@@ -471,13 +479,31 @@ def build_packet(request, target, work, guide):
     return jar_bytes(entries),{'provider':proof,'helperBuild':custody}
 
 
+def validate_family(family, target, root):
+    require(target in ('forge1122','forge16165'), 'Exact legacy target identity')
+    identity={'forge1122':'forge-1.12.2','forge16165':'forge-1.16.5'}[target]
+    if isinstance(family,dict):
+        catalog=load(Path(root)/'gradle/minecraft-artifacts.json')
+        rows=[record for record in catalog['acceptedFamilies'] if record['id']==identity]
+        require(len(rows)==1 and family==rows[0], 'Exact source catalog legacy family required')
+        minecraft={'forge1122':'1.12.2','forge16165':'1.16.5'}[target]
+        require(family['buildTarget']==minecraft and family['supportedTargets']==[minecraft]
+                and family['loader']=='forge' and family['artifactKind']==('zip' if target=='forge1122' else 'jar')
+                and family['packagingRecipe']==('forge-install' if target=='forge1122' else 'forge-flat')
+                and family['publicationChannels']==(['github'] if target=='forge1122' else ['github','modrinth']),
+                'Actual legacy target/recipe/kind/channels differ')
+    else:
+        require(family in (target,identity), 'Exact internal target identity required')
+    return identity
+
+
 def verify_release(path, family, release_version, root):
     """Offline strict custody check; canonical engine/Builder parity belongs to caller."""
     path=Path(path);raw=path.read_bytes();receipt=load(str(path)+'.packaging.json')
     require(re.search(r'(?m)^version\s*=\s*'+re.escape(release_version)+r'\s*$',(Path(root)/'gradle.properties').read_text()), 'Actual release source version differs')
     require(receipt['version']==release_version==VERSION and receipt['outputSha256']==sha(raw), 'Release/package identity differs')
     check_inventory(raw,receipt['entries']);target=receipt['target']
-    require(target in ('forge1122','forge16165') and family in (target,{'forge1122':'forge-1.12.2','forge16165':'forge-1.16.5'}[target]), 'Exact legacy family identity')
+    validate_family(family,target,root)
     if target=='forge16165':
         payloads={'product':raw};mod_version(raw,target,release_version);core=raw
     else:

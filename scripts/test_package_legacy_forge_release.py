@@ -108,9 +108,10 @@ class PlayerPacketTests(unittest.TestCase):
                 path=minecraft/'libraries'/relative;path.parent.mkdir(parents=True);path.write_bytes(raw)
             client=minecraft/'versions/1.12.2/1.12.2.jar';client.parent.mkdir();client.write_bytes(b'client')
             profile=legacy.player_profile(stock,'new-profile',[])
+            library=legacy.library_path('runtime-helper')
             payload={'profile-template.json':legacy.encoded(profile),
                      'mods/openallay-feature-core.jar':b'product',
-                     'openallay-runtime/agent.jar':b'agent'}
+                     'openallay-runtime/agent.jar':b'agent',library:b'helper'}
             for relative,raw in payload.items():
                 path=packet/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
             (packet/'SHA256SUMS').write_text(''.join(legacy.sha(raw)+'  '+name+'\n' for name,raw in payload.items()))
@@ -129,6 +130,25 @@ class PlayerPacketTests(unittest.TestCase):
             self.assertEqual(json.loads(stock_path.read_text()),stock)
             with patch('sys.argv',args+['--install']):
                 with self.assertRaises(FileExistsError):scope['main']()
+            second=base/'second-game'
+            second_args=['installer','--minecraft-root',str(minecraft),'--game-directory',str(second),'--profile-id','second-profile','--install']
+            with patch('sys.argv',second_args): result=scope['main']()
+            self.assertEqual(result['reused'],[{'path':library,'sha256':legacy.sha(b'helper')}])
+            self.assertEqual((second/'mods/openallay-feature-core.jar').read_bytes(),b'product')
+            shared=minecraft/library
+            shared.write_bytes(b'changed')
+            third=base/'third-game'
+            third_args=['installer','--minecraft-root',str(minecraft),'--game-directory',str(third),'--profile-id','third-profile','--install']
+            with patch('sys.argv',third_args):
+                with self.assertRaises(FileExistsError):scope['main']()
+            self.assertFalse(third.exists())
+            self.assertFalse((minecraft/'versions/third-profile').exists())
+            self.assertEqual(shared.read_bytes(),b'changed')
+            shared.unlink(); shared.symlink_to(packet/library)
+            with patch('sys.argv',third_args):
+                with self.assertRaises(ValueError):scope['main']()
+            self.assertFalse(third.exists())
+            self.assertTrue(shared.is_symlink())
 
 
     def test_runtime_agent_only_public_instrumentation_with_exact_source_guards(self):
@@ -141,5 +161,19 @@ class PlayerPacketTests(unittest.TestCase):
         self.assertEqual(legacy.SOURCES['bridge/DimensionEnumBridge.java'],
                          '462eab9dcf961efdf2d6122fb60613e6455ce5cce123902641897337a4dc1b5c')
         self.assertIn('bridge/pack200/DimensionConstructorFailure.java',legacy.SOURCES)
+
+
+    def test_actual_central_family_dictionary(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);(root/'gradle').mkdir()
+            family={'buildTarget':'1.12.2','filenameTemplate':'openallay-forge-1.12.2-{version}.zip',
+                'id':'forge-1.12.2','loader':'forge','supportedTargets':['1.12.2'],
+                'packagingRecipe':'forge-install','artifactKind':'zip','publicationChannels':['github']}
+            (root/'gradle/minecraft-artifacts.json').write_text(json.dumps({'acceptedFamilies':[family]}))
+            self.assertEqual(legacy.validate_family(family,'forge1122',root),'forge-1.12.2')
+            for changes in [{'artifactKind':'jar'},{'buildTarget':'1.16.5'},
+                            {'publicationChannels':['github','modrinth']},{'packagingRecipe':'nested-mod'}]:
+                with self.assertRaises(ValueError):legacy.validate_family({**family,**changes},'forge1122',root)
+            self.assertEqual(legacy.validate_family('forge1122','forge1122',root),'forge-1.12.2')
 
 if __name__ == '__main__': unittest.main()
