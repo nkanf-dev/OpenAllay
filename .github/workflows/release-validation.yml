@@ -127,9 +127,9 @@ jobs:
           cache-provider: basic
           cache-read-only: true
       - name: Verify canonical JSON behavior on Java 8 and Gson 2.8.0
-        run: ./gradlew -c runtime-json/src/java8Test/gradle/settings.gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :java8CompatibilityTest :jar -PjsonVerificationGsonVersion=2.8.0
+        run: ./gradlew -p runtime-json/src/java8Test/gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :runtime-json:java8CompatibilityTest :runtime-json:jar -PjsonVerificationGsonVersion=2.8.0
       - name: Verify the same classes on Java 8 and current Gson
-        run: ./gradlew -c runtime-json/src/java8Test/gradle/settings.gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :java8CompatibilityTest -PjsonVerificationGsonVersion=2.13.2
+        run: ./gradlew -p runtime-json/src/java8Test/gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :runtime-json:java8CompatibilityTest -PjsonVerificationGsonVersion=2.13.2
       - name: Retain canonical Java 8 JSON artifact and diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
