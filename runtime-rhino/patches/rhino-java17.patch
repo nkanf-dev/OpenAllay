@@ -4630,6 +4630,81 @@
 +			case ID_DOUBLE_MARK: name = "DOUBLE_MARK"; break;
 +			default: throw Kit.codeBug();
 +		}
+--- a/dev/latvian/mods/rhino/VMBridge.java
++++ b/dev/latvian/mods/rhino/VMBridge.java
+@@ -9,0 +10,2 @@
++
++import java.util.Objects;
+@@ -47 +49,32 @@
+-	public record AdapterInvocationHandler(Context cx, InterfaceAdapter adapter, Object target, Scriptable topScope) implements InvocationHandler {
++	public static final class AdapterInvocationHandler implements InvocationHandler {
++		private final Context cx;
++
++		private final InterfaceAdapter adapter;
++
++		private final Object target;
++
++		private final Scriptable topScope;
++
++		public AdapterInvocationHandler(Context cx, InterfaceAdapter adapter, Object target, Scriptable topScope) {
++			this.cx = cx;
++			this.adapter = adapter;
++			this.target = target;
++			this.topScope = topScope;
++		}
++
++		public Context cx() {
++			return cx;
++		}
++
++		public InterfaceAdapter adapter() {
++			return adapter;
++		}
++
++		public Object target() {
++			return target;
++		}
++
++		public Scriptable topScope() {
++			return topScope;
++		}
++
+@@ -56 +89 @@
+-					case "equals" -> {
++					case "equals": {
+@@ -63 +96 @@
+-					case "hashCode" -> {
++					case "hashCode": {
+@@ -66 +99 @@
+-					case "toString" -> {
++					case "toString": {
+@@ -88 +121,25 @@
+-			return target instanceof Scriptable s && ScriptableObject.getProperty(s, method.getName(), cx) instanceof Callable;
++			return target instanceof Scriptable && ScriptableObject.getProperty((Scriptable) target, method.getName(), cx) instanceof Callable;
++		}
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof AdapterInvocationHandler)) {
++				return false;
++			}
++			AdapterInvocationHandler that = (AdapterInvocationHandler) other;
++			return Objects.equals(cx, that.cx) && Objects.equals(adapter, that.adapter) && Objects.equals(target, that.target) && Objects.equals(topScope, that.topScope);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(cx);
++			hash = 31 * hash + Objects.hashCode(adapter);
++			hash = 31 * hash + Objects.hashCode(target);
++			hash = 31 * hash + Objects.hashCode(topScope);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "AdapterInvocationHandler[cx=" + cx + ", adapter=" + adapter + ", target=" + target + ", topScope=" + topScope + "]";
 --- a/dev/latvian/mods/rhino/Wrapper.java
 +++ b/dev/latvian/mods/rhino/Wrapper.java
 @@ -21 +21 @@
@@ -6073,20 +6148,129 @@
 +		dev.latvian.mods.rhino.type.TypeInfo[] consolidatedParams = TypeConsolidator.consolidateAll(this.params, mapping);
 --- a/dev/latvian/mods/rhino/type/RecordTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/RecordTypeInfo.java
-@@ -1,0 +2,2 @@
+@@ -1,0 +2,4 @@
++
++import java.util.Objects;
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
-@@ -33,3 +35,3 @@
+@@ -33,9 +37,80 @@
 -		setGlobalDefaultValue(List.class, List.of());
 -		setGlobalDefaultValue(Set.class, Set.of());
 -		setGlobalDefaultValue(Map.class, Map.of());
+-	}
+-
+-	public record Component(int index, String name, TypeInfo type) {
+-	}
+-
+-	public record Data(Component[] components, Map<String, Component> componentMap, Object[] defaultArguments) {
 +		setGlobalDefaultValue(List.class, ListCompat.listOf());
 +		setGlobalDefaultValue(Set.class, ListCompat.setOf());
 +		setGlobalDefaultValue(Map.class, ListCompat.mapOf());
-@@ -43 +45 @@
++	}
++
++	public static final class Component {
++		private final int index;
++
++		private final String name;
++
++		private final TypeInfo type;
++
++		public Component(int index, String name, TypeInfo type) {
++			this.index = index;
++			this.name = name;
++			this.type = type;
++		}
++
++		public int index() {
++			return index;
++		}
++
++		public String name() {
++			return name;
++		}
++
++		public TypeInfo type() {
++			return type;
++		}
++
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof Component)) {
++				return false;
++			}
++			Component that = (Component) other;
++			return index == that.index && Objects.equals(name, that.name) && Objects.equals(type, that.type);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Integer.hashCode(index);
++			hash = 31 * hash + Objects.hashCode(name);
++			hash = 31 * hash + Objects.hashCode(type);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "Component[index=" + index + ", name=" + name + ", type=" + type + "]";
++		}
++	}
++
++	public static final class Data {
++		private final Component[] components;
++
++		private final Map<String, Component> componentMap;
++
++		private final Object[] defaultArguments;
++
++		public Data(Component[] components, Map<String, Component> componentMap, Object[] defaultArguments) {
++			this.components = components;
++			this.componentMap = componentMap;
++			this.defaultArguments = defaultArguments;
++		}
++
++		public Component[] components() {
++			return components;
++		}
++
++		public Map<String, Component> componentMap() {
++			return componentMap;
++		}
++
++		public Object[] defaultArguments() {
++			return defaultArguments;
++		}
++
+@@ -43 +118 @@
 -			var args = new Object[components.length + 1];
 +			java.lang.Object[] args = new Object[components.length + 1];
-@@ -59,4 +61,4 @@
+@@ -45,0 +121,23 @@
++		}
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof Data)) {
++				return false;
++			}
++			Data that = (Data) other;
++			return Objects.equals(components, that.components) && Objects.equals(componentMap, that.componentMap) && Objects.equals(defaultArguments, that.defaultArguments);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(components);
++			hash = 31 * hash + Objects.hashCode(componentMap);
++			hash = 31 * hash + Objects.hashCode(defaultArguments);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "Data[components=" + components + ", componentMap=" + componentMap + ", defaultArguments=" + defaultArguments + "]";
+@@ -59,4 +157,4 @@
 -			var rc = asClass().getRecordComponents();
 -			var components = new Component[rc.length];
 -			var componentMap = new HashMap<String, Component>();
@@ -6095,7 +6279,7 @@
 +			dev.latvian.mods.rhino.type.RecordTypeInfo.Component[] components = new Component[rc.length];
 +			java.util.HashMap<java.lang.String, dev.latvian.mods.rhino.type.RecordTypeInfo.Component> componentMap = new HashMap<String, Component>();
 +			java.lang.Object[] defaultArguments = new Object[rc.length];
-@@ -65,4 +67,4 @@
+@@ -65,4 +163,4 @@
 -				var gt = rc[i].getGenericType();
 -
 -				var rename = rc[i].getAccessor().getDeclaredAnnotation(RemapForJS.class);
@@ -6104,10 +6288,10 @@
 +
 +				dev.latvian.mods.rhino.util.RemapForJS rename = rc[i].getAccessor().getDeclaredAnnotation(RemapForJS.class);
 +				dev.latvian.mods.rhino.type.RecordTypeInfo.Component c = new Component(i, rename != null ? rename.value() : rc[i].getName(), TypeInfo.of(gt));
-@@ -78 +80 @@
+@@ -78 +176 @@
 -			data = new Data(components, Map.copyOf(componentMap), defaultArguments);
 +			data = new Data(components, ListCompat.copyMap(componentMap), defaultArguments);
-@@ -86,4 +88,4 @@
+@@ -86,4 +184,4 @@
 -			var data = getData();
 -			var list = new ArrayList<JSOptionalParam>(data.components.length);
 -
@@ -6116,10 +6300,10 @@
 +			java.util.ArrayList<dev.latvian.mods.rhino.type.JSOptionalParam> list = new ArrayList<JSOptionalParam>(data.components.length);
 +
 +			for (dev.latvian.mods.rhino.type.RecordTypeInfo.Component c : data.components) {
-@@ -93 +95 @@
+@@ -93 +191 @@
 -			objectTypeInfo = new JSObjectTypeInfo(List.copyOf(list));
 +			objectTypeInfo = new JSObjectTypeInfo(ListCompat.copyList(list));
-@@ -101,4 +103,4 @@
+@@ -101,4 +199,4 @@
 -			var data = getData();
 -			var list = new ArrayList<JSOptionalParam>(data.components.length);
 -
@@ -6128,16 +6312,16 @@
 +			java.util.ArrayList<dev.latvian.mods.rhino.type.JSOptionalParam> list = new ArrayList<JSOptionalParam>(data.components.length);
 +
 +			for (dev.latvian.mods.rhino.type.RecordTypeInfo.Component c : data.components) {
-@@ -108 +110 @@
+@@ -108 +206 @@
 -			arrayTypeInfo = new JSFixedArrayTypeInfo(List.copyOf(list));
 +			arrayTypeInfo = new JSFixedArrayTypeInfo(ListCompat.copyList(list));
-@@ -115 +117 @@
+@@ -115 +213 @@
 -		var types = new ArrayList<TypeInfo>(2 + preference.length);
 +		java.util.ArrayList<dev.latvian.mods.rhino.type.TypeInfo> types = new ArrayList<TypeInfo>(2 + preference.length);
-@@ -128 +130 @@
+@@ -128 +226 @@
 -		var constructor = cx.factory.getRecordConstructor(asClass());
 +		java.lang.invoke.MethodHandle constructor = cx.factory.getRecordConstructor(asClass());
-@@ -144,7 +146,7 @@
+@@ -144,7 +242,7 @@
 -		var data = getData();
 -		var defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());
 -		var args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;
@@ -6152,7 +6336,7 @@
 +
 +		for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
 +			dev.latvian.mods.rhino.type.RecordTypeInfo.Component c = data.componentMap.get(String.valueOf(entry.getKey()));
-@@ -165,4 +167,4 @@
+@@ -165,4 +263,4 @@
 -		var data = getData();
 -		var defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());
 -		var args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;
@@ -6161,13 +6345,13 @@
 +		java.lang.Object[] defaultRecordProperties = cx.factory.getDefaultRecordProperties(asClass());
 +		java.lang.Object[] args0 = defaultRecordProperties == null ? data.defaultArguments : defaultRecordProperties;
 +		java.lang.Object[] args = args0.clone();
-@@ -189 +191 @@
+@@ -189 +287 @@
 -			var arr = (Object[]) cx.arrayOf(from, TypeInfo.NONE);
 +			java.lang.Object[] arr = (Object[]) cx.arrayOf(from, TypeInfo.NONE);
-@@ -192 +194 @@
+@@ -192 +290 @@
 -			var map = (Map) cx.mapOf(from, TypeInfo.STRING, TypeInfo.NONE);
 +			java.util.Map map = (Map) cx.mapOf(from, TypeInfo.STRING, TypeInfo.NONE);
-@@ -195,2 +197,2 @@
+@@ -195,2 +293,2 @@
 -			var map = new HashMap<String, Object>(2);
 -			var consumer = (Consumer<Map<String, ?>>) cx.jsToJava(from, CONSUMER_TYPE_INFO);
 +			java.util.HashMap<java.lang.String, java.lang.Object> map = new HashMap<String, Object>(2);

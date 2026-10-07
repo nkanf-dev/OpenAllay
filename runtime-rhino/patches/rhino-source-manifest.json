@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 238051,
-    "sha256": "dfb8ac0ba0094d4f2e8c9d79d5ccdc2f26ad9d8c98ff4269207cb31184f304aa",
-    "modified_upstream_files": 110,
+    "bytes": 243015,
+    "sha256": "0ff5731f383e9d537059b3bb1eb7560a36e5ecb924800a083bd5e677c54bf158",
+    "modified_upstream_files": 111,
     "added_source_files": 1,
-    "hunks": 525,
+    "hunks": 531,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Rebasedexactfrozena29RegExpoperationpostimagesaftera28cleanup, no newalgorithms/fullrelease17pendingcapabilities.",
+  "source_only_status": "Remaining3recorddeclarations/VMBridgesourcepatterns syntaxlowered, retainingactualpost8record/default/access APIs ascompilerblockers. Fullruntime release17untilgenuinecapabilityport.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -1907,9 +1907,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.VMBridge",
       "source_bytes": 3550,
       "source_sha256": "5baca9ae78e3113e70257690a2bd8d3880705470ac69444d2f224b6b2b153d3c",
-      "patched_bytes": 3550,
-      "patched_sha256": "5baca9ae78e3113e70257690a2bd8d3880705470ac69444d2f224b6b2b153d3c",
-      "modified": false,
+      "patched_bytes": 4900,
+      "patched_sha256": "745441f939a858a407a4cfa01ad97fd8d7bbb41a0f094c602eef7c9e72a1715a",
+      "modified": true,
       "line_count": 104,
       "license_evidence": [
         "MPL-2.0 header"
@@ -3349,8 +3349,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.type.RecordTypeInfo",
       "source_bytes": 6535,
       "source_sha256": "3340b4796a86a18b07106d2a7b26c90bf81da7b729b88a707b027c403fdb785d",
-      "patched_bytes": 7711,
-      "patched_sha256": "8e030c45ba32a938e7dccfe426d9f01d19f5221ec8c4bae6d671ff5e36bcb42a",
+      "patched_bytes": 9895,
+      "patched_sha256": "60152c03887e58adcade438872e65aa33a5893be0d08841614bfc57e595a07a6",
       "modified": true,
       "line_count": 203,
       "license_evidence": [
