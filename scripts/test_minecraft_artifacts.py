@@ -67,7 +67,7 @@ class MinecraftArtifactsTest(unittest.TestCase):
         return ARTIFACTS.verify_receipt(self.family, self.receipt_path, self.artifact, self.artifact_sha)
 
     def test_current_defaults_and_filenames_stay_singleton_26_2(self):
-        self.assertEqual(len(self.catalog["acceptedFamilies"]), 35)
+        self.assertEqual(len(self.catalog["acceptedFamilies"]), 34)
         for loader in ARTIFACTS.DEFAULT_LOADERS:
             result = self.run_cli("resolve", "--loader", loader, "--version", "0.4.1")
             self.assertEqual(result.returncode, 0, result.stderr)

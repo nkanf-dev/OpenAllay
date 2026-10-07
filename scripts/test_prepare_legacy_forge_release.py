@@ -63,8 +63,8 @@ class LegacyInputTest(unittest.TestCase):
             original=m.ROOT
             m.ROOT=Path(t);(m.ROOT/'gradle.properties').write_text('version=0.4.4\n')
             self.addCleanup(setattr,m,'ROOT',original)
-            args=argparse.Namespace(target='1.12.2',family='forge-1.12.2',version=m.source_version(),
-                output=Path(t)/('openallay-forge-1.12.2-'+m.source_version()+'.zip'),plan=True)
+            args=argparse.Namespace(target='1.16.5',family='forge-1.16.5',version=m.source_version(),
+                output=Path(t)/('openallay-forge-1.16.5-'+m.source_version()+'.jar'),plan=True)
             args.receipt=Path(str(args.output)+'.packaging.json')
             result=m.prepare(args);self.assertTrue(result['remoteOnly']);self.assertFalse(result['gameExecuted'])
             args.version='wrong'
@@ -72,6 +72,9 @@ class LegacyInputTest(unittest.TestCase):
     def test_historical_and_current_builder_pins_remain_distinct(self):
         self.assertEqual(m.BUILDER_SOURCE,'6e977110cbe8e0ca0b39c012f0cdfc10bafffef2')
         self.assertEqual(m.PRODUCT16['sourceRevision'],'ee94284188f21003de589d509e880875cabc5cbc')
-        self.assertEqual(m.BOOT12['runId'],37549916767)
+        self.assertFalse(hasattr(m, 'BOOT12'))
+        self.assertFalse(hasattr(m, 'public12'))
+        self.assertFalse(hasattr(m, 'prepared12'))
+        self.assertFalse(hasattr(m, 'native12'))
 
 if __name__=='__main__':unittest.main()

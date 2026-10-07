@@ -70,8 +70,7 @@ def groups(data):
     return list(result.items())
 
 
-LEGACY_RECIPES = {"forge-flat": ("1.16.5", "jar", "forge16165"),
-                  "forge-install": ("1.12.2", "zip", "forge1122-component")}
+LEGACY_RECIPES = {"forge-flat": ("1.16.5", "jar", "forge16165")}
 
 
 def package_path(family, release_version):
@@ -118,18 +117,7 @@ def legacy_builder(archive, family, lock):
     provenance = builder.prepare.decode_json(archive.read(builder.PROVENANCE))
     builder.verify_provenance(provenance, lock, hashlib.sha256(content).hexdigest(), False)
     builder.verify_universal(content, lock)
-    # Component core has no FML descriptor. Its facade ownership is checked by
-    # the install recipe, not by pretending the feature engine is a loader mod.
-    if family["packagingRecipe"] == "forge-flat":
-        builder.reject_builder_registration(archive, entries, "forge", lock)
-    else:
-        require(not any(name in entries for name in ("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "fabric.mod.json", "mcmod.info")),
-                "Forge12 feature core cannot claim facade ownership")
-        for name in entries:
-            if name.endswith(".jar") and name != expected:
-                with zipfile.ZipFile(BytesIO(archive.read(name))) as dependency:
-                    require(not any(entry.startswith("dev/openallay/builder/") or entry == builder.DESCRIPTOR
-                                    for entry in dependency.namelist()), "Duplicate Builder in legacy dependency")
+    builder.reject_builder_registration(archive, entries, "forge", lock)
     with zipfile.ZipFile(BytesIO(content)) as nested:
         descriptor = builder.verify_manifest(nested.read(builder.DESCRIPTOR), lock)
     declarations = {row["minecraftVersionRange"] for row in descriptor["support"]["targets"] if row["loader"] == "forge"}

@@ -1,20 +1,22 @@
 # Stock Forge integrated-client validation
 
-## Accepted task branches
+## Original task-branch validation records
 
 | Minecraft | Stock Forge | Runtime | Record |
 | --- | --- | --- | --- |
 | 1.16.5 | 36.2.42 | Java 17 | [Native validation](../forge-1.16.5-native-validation.json) |
 | 1.12.2 | 14.23.5.2864 | Java 17 | [Native validation](../forge-1.12.2-native-validation.json) |
 
-Both targets use the canonical Java 17 feature engine and Rhino, the Java 8
-public Extension SDK, and one universal Java 8 Builder. Native adapters own game
-and loader APIs. The task branches contain the integrations and exact artifact
-providers. Release downloads remain the published v0.4.3 files.
+These original records used the canonical Java 17 feature engine and Rhino,
+the Java 8 public Extension SDK, and one universal Java 8 Builder. Native
+adapters own game and loader APIs. The task branches preserve the integrations
+and exact artifact providers. The Forge 1.12.2 Java17 delivery is archived;
+the active [Java8 port](forge1122-java8-port.md) is a nonpublishing candidate.
+Forge 1.16.5 remains in the current release catalog.
 
-## Forge 1.12.2
+## Historical Forge 1.12.2 Java17 validation
 
-The accepted topology is the stock client with an integrated server. Genuine
+The original accepted topology was the stock client with an integrated server. Genuine
 ForgeGradle 3.0.197 and its Java 8 tooling island perform native compilation,
 annotation processing and reobfuscation. Product feature classes use Java 17.
 The runtime prerequisite uses narrowly guarded product-owned instrumentation

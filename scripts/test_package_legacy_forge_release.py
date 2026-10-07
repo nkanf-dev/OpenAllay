@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused player packet tests. No downloads, Java compilation, Gradle or game."""
+"""Focused Forge16 package tests. No downloads, Java compilation, Gradle or game."""
 import importlib.util
 import io
 import json
@@ -26,32 +26,11 @@ class PlayerPacketTests(unittest.TestCase):
         with self.assertRaises(ValueError): legacy.archive(jar({'A': b'x', 'a': b'y'}))
 
     def test_metadata_is_actual_not_filename(self):
-        bad = jar({'mcmod.info': b'[{"modid":"openallay","version":"0.4.3"}]'})
-        with self.assertRaises(ValueError): legacy.mod_version(bad, 'forge1122', '0.4.4')
-        good = jar({'mcmod.info': b'[{"modid":"openallay","version":"0.4.4"}]'})
-        legacy.mod_version(good, 'forge1122', '0.4.4')
+        bad = jar({'META-INF/mods.toml': b'[[mods]]\nmodId="openallay"\nversion="0.4.3"\n'})
+        with self.assertRaises(ValueError): legacy.mod_version(bad, 'forge16165', '0.4.4')
+        good = jar({'META-INF/mods.toml': b'[[mods]]\nmodId="openallay"\nversion="0.4.4"\n'})
+        legacy.mod_version(good, 'forge16165', '0.4.4')
 
-    def test_profile_preserves_auth_and_stock_ownership(self):
-        stock = {'id': legacy.STOCK_PROFILE, 'mainClass': legacy.MAIN,
-                 'inheritsFrom': '1.12.2', 'minecraftArguments': legacy.GAME_ARGUMENTS,
-                 'libraries': []}
-        profile = legacy.player_profile(stock, 'player-profile', [])
-        self.assertEqual(profile['inheritsFrom'], legacy.STOCK_PROFILE)
-        self.assertEqual(profile['mainClass'], legacy.MAIN)
-        self.assertEqual(profile['javaVersion']['majorVersion'], 17)
-        args = profile['minecraftArguments']
-        for token in ['${auth_player_name}', '${auth_uuid}', '${auth_access_token}',
-                      'net.minecraftforge.fml.common.launcher.FMLTweaker',
-                      'org.spongepowered.asm.launch.MixinTweaker']:
-            self.assertIn(token, args)
-        self.assertNotIn('auth_access_token=0', str(profile))
-        self.assertNotIn('openallay.e2e', str(profile))
-        self.assertNotIn('--add-opens', str(profile))
-        self.assertNotIn('config/', str(profile))
-
-    def test_profile_mismatch_refuses(self):
-        with self.assertRaises(ValueError): legacy.player_profile({'id': 'other'}, 'player', [])
-        with self.assertRaises(ValueError): legacy.player_profile({'id': legacy.STOCK_PROFILE}, '../escape', [])
 
     def test_class_entries_cannot_be_silently_rewritten(self):
         raw = jar({'A.class': b'\xca\xfe\xba\xbe\0\0\0\x34rest'})
@@ -63,14 +42,6 @@ class PlayerPacketTests(unittest.TestCase):
         with self.assertRaises(ValueError): legacy.require_remote({})
         legacy.require_remote({'GITHUB_ACTIONS': 'true'})
 
-    def test_source_fixture_gate_is_exact(self):
-        raw = 'prefix ' + legacy.FIXTURE_HOOK + ' suffix'
-        changed = legacy.gate_dimension_fixture(raw)
-        self.assertIn('fixtureIfEnabled', changed)
-        runtime=legacy.gate_dimension_runtime('public static synchronized void fixture(Class<?> type)throws Exception { }')
-        self.assertIn('Boolean.getBoolean("openallay.e2e.enabled")',runtime)
-        with self.assertRaises(ValueError): legacy.gate_dimension_fixture('different')
-        with self.assertRaises(ValueError): legacy.gate_dimension_fixture(raw + raw)
 
     def test_new_file_refuses_existing_and_symlink(self):
         with tempfile.TemporaryDirectory() as td:
@@ -81,99 +52,50 @@ class PlayerPacketTests(unittest.TestCase):
             symlink = Path(td) / 'link'; symlink.symlink_to(p)
             with self.assertRaises(FileExistsError): legacy.write_new(symlink, b'next')
 
-    def test_public_installer_compiles_and_is_not_game_launcher(self):
-        compile(legacy.INSTALLER, 'install-openallay.py', 'exec')
-        self.assertNotIn('access_token', legacy.INSTALLER)
-        self.assertNotIn('offline_uuid', legacy.INSTALLER)
-        self.assertIn("'xb'", legacy.INSTALLER)
-        self.assertIn('--install', legacy.INSTALLER)
-        self.assertNotIn('launchwrapper.Launch', legacy.INSTALLER)
-
-
-    def test_installer_dry_run_install_and_second_install_refuses(self):
-        from types import SimpleNamespace
-        from unittest.mock import patch
-        with tempfile.TemporaryDirectory() as td:
-            base=Path(td); packet=base/'packet'; packet.mkdir()
-            minecraft=base/'minecraft'; minecraft.mkdir(); game=base/'game'
-            stock={'id':legacy.STOCK_PROFILE,'mainClass':legacy.MAIN,
-                   'inheritsFrom':'1.12.2','minecraftArguments':legacy.GAME_ARGUMENTS}
-            stock_path=minecraft/'versions'/legacy.STOCK_PROFILE/(legacy.STOCK_PROFILE+'.json')
-            stock_path.parent.mkdir(parents=True); stock_path.write_text(json.dumps(stock))
-            rawpins={b'forge':legacy.FORGE_SHA,b'wrapper':legacy.WRAPPER_SHA,b'asm':legacy.ASM_SHA}
-            fixtures=[('net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864.jar',b'forge'),
-                      ('net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar',b'wrapper'),
-                      ('org/ow2/asm/asm-debug-all/5.2/asm-debug-all-5.2.jar',b'asm')]
-            for relative,raw in fixtures:
-                path=minecraft/'libraries'/relative;path.parent.mkdir(parents=True);path.write_bytes(raw)
-            client=minecraft/'versions/1.12.2/1.12.2.jar';client.parent.mkdir();client.write_bytes(b'client')
-            profile=legacy.player_profile(stock,'new-profile',[])
-            library=legacy.library_path('runtime-helper')
-            payload={'profile-template.json':legacy.encoded(profile),
-                     'mods/openallay-feature-core.jar':b'product',
-                     'openallay-runtime/agent.jar':b'agent',library:b'helper'}
-            for relative,raw in payload.items():
-                path=packet/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
-            (packet/'SHA256SUMS').write_text(''.join(legacy.sha(raw)+'  '+name+'\n' for name,raw in payload.items()))
-            scope={'__file__':str(packet/'install-openallay.py'),'__name__':'installer_test'}
-            exec(compile(legacy.INSTALLER,'installer','exec'),scope)
-            scope['sha']=lambda raw:rawpins[raw] if raw in rawpins else legacy.sha(raw)
-            scope['hashlib']=SimpleNamespace(sha1=lambda raw:SimpleNamespace(hexdigest=lambda:'0f275bc1547d01fa5f56ba34bdc87d981ee12daf'))
-            args=['installer','--minecraft-root',str(minecraft),'--game-directory',str(game),'--profile-id','new-profile']
-            with patch('sys.argv',args):scope['main']()
-            self.assertFalse(game.exists())
-            self.assertFalse((minecraft/'versions/new-profile').exists())
-            with patch('sys.argv',args+['--install']):scope['main']()
-            installed=json.loads((minecraft/'versions/new-profile/new-profile.json').read_text())
-            self.assertEqual(installed['inheritsFrom'],legacy.STOCK_PROFILE)
-            self.assertEqual((game/'mods/openallay-feature-core.jar').read_bytes(),b'product')
-            self.assertEqual(json.loads(stock_path.read_text()),stock)
-            with patch('sys.argv',args+['--install']):
-                with self.assertRaises(FileExistsError):scope['main']()
-            second=base/'second-game'
-            second_args=['installer','--minecraft-root',str(minecraft),'--game-directory',str(second),'--profile-id','second-profile','--install']
-            with patch('sys.argv',second_args): result=scope['main']()
-            self.assertEqual(result['reused'],[{'path':library,'sha256':legacy.sha(b'helper')}])
-            self.assertEqual((second/'mods/openallay-feature-core.jar').read_bytes(),b'product')
-            shared=minecraft/library
-            shared.write_bytes(b'changed')
-            third=base/'third-game'
-            third_args=['installer','--minecraft-root',str(minecraft),'--game-directory',str(third),'--profile-id','third-profile','--install']
-            with patch('sys.argv',third_args):
-                with self.assertRaises(FileExistsError):scope['main']()
-            self.assertFalse(third.exists())
-            self.assertFalse((minecraft/'versions/third-profile').exists())
-            self.assertEqual(shared.read_bytes(),b'changed')
-            shared.unlink(); shared.symlink_to(packet/library)
-            with patch('sys.argv',third_args):
-                with self.assertRaises(ValueError):scope['main']()
-            self.assertFalse(third.exists())
-            self.assertTrue(shared.is_symlink())
-
-
-    def test_runtime_agent_only_public_instrumentation_with_exact_source_guards(self):
-        self.assertIn('LaunchWrapperJava17Bridge.premain',legacy.PUBLIC_AGENT)
-        for flag in ['openallay.pack200.enabled','openallay.objectholder.enabled','openallay.capability.enabled']:
-            self.assertIn(flag,legacy.PUBLIC_AGENT)
-        self.assertNotIn('setProperty("openallay.e2e.enabled"',legacy.PUBLIC_AGENT)
-        self.assertNotIn('Unsafe',legacy.PUBLIC_AGENT.replace('Unsafe or test enable flag',''))
-        self.assertNotIn('new URLClassLoader',legacy.PUBLIC_AGENT)
-        self.assertEqual(legacy.SOURCES['bridge/DimensionEnumBridge.java'],
-                         '462eab9dcf961efdf2d6122fb60613e6455ce5cce123902641897337a4dc1b5c')
-        self.assertIn('bridge/pack200/DimensionConstructorFailure.java',legacy.SOURCES)
-
 
     def test_actual_central_family_dictionary(self):
+        root = Path(__file__).resolve().parents[1]
+        data = json.loads((root/'gradle/minecraft-artifacts.json').read_text())
+        family = next(f for f in data['acceptedFamilies'] if f['id']=='forge-1.16.5')
+        self.assertEqual(legacy.validate_family(family,'forge16165',root),'forge-1.16.5')
+        for changes in [{'artifactKind':'zip'},{'buildTarget':'1.12.2'},
+                        {'publicationChannels':['github']},{'packagingRecipe':'nested-mod'}]:
+            with self.assertRaises(ValueError):legacy.validate_family({**family,**changes},'forge16165',root)
+        self.assertEqual(legacy.validate_family('forge16165','forge16165',root),'forge-1.16.5')
+        with self.assertRaises(ValueError):legacy.validate_family('forge1122','forge1122',root)
+
+    def test_obsolete_player_installer_and_premain_helpers_are_removed(self):
+        for name in ('INSTALLER','PUBLIC_AGENT','SOURCES','compile_helpers','player_profile'):
+            self.assertFalse(hasattr(legacy,name),name)
+
+    def test_forge16_verifier_preserves_provider_provenance_and_entry_custody(self):
+        from unittest.mock import patch
         with tempfile.TemporaryDirectory() as td:
-            root=Path(td);(root/'gradle').mkdir()
-            family={'buildTarget':'1.12.2','filenameTemplate':'openallay-forge-1.12.2-{version}.zip',
-                'id':'forge-1.12.2','loader':'forge','supportedTargets':['1.12.2'],
-                'packagingRecipe':'forge-install','artifactKind':'zip','publicationChannels':['github']}
-            (root/'gradle/minecraft-artifacts.json').write_text(json.dumps({'acceptedFamilies':[family]}))
-            self.assertEqual(legacy.validate_family(family,'forge1122',root),'forge-1.12.2')
-            for changes in [{'artifactKind':'jar'},{'buildTarget':'1.16.5'},
-                            {'publicationChannels':['github','modrinth']},{'packagingRecipe':'nested-mod'}]:
-                with self.assertRaises(ValueError):legacy.validate_family({**family,**changes},'forge1122',root)
-            self.assertEqual(legacy.validate_family('forge1122','forge1122',root),'forge-1.12.2')
+            path = Path(td)/'product.jar'
+            raw = jar({'META-INF/mods.toml':b'[[mods]]\nmodId="openallay"\nversion="0.4.4"\n',
+                       'Own.class':b'\xca\xfe\xba\xbe\x00\x00\x00\x3dmore'})
+            path.write_bytes(raw)
+            provider = {'sqlite':{'artifactSha256':'a'*64,'payloadSha256':'b'*64},
+                        'sharedRuntimes':{'extension-api':'c'*64,'runtime-rhino':'d'*64}}
+            receipt = {'target':'forge16165','version':'0.4.4','outputSha256':legacy.sha(raw),
+                       'entries':legacy.inventory(raw),'helperBuild':None,'provider':provider}
+            sidecar = Path(str(path)+'.packaging.json')
+            sidecar.write_bytes(legacy.encoded(receipt))
+            root = Path(__file__).resolve().parents[1]
+            with patch.object(legacy,'provider_check') as check_provider, \
+                 patch.object(legacy,'provenance_check') as check_provenance:
+                result = legacy.verify_release(path,'forge16165','0.4.4',root)
+                self.assertEqual(result['coreBytes'],raw)
+                check_provider.assert_called_once_with(provider,'0.4.4',{'product':raw})
+                check_provenance.assert_called_once_with(provider,root,'0.4.4')
+            receipt['helperBuild'] = {'obsolete':'agent'}
+            sidecar.write_bytes(legacy.encoded(receipt))
+            with self.assertRaisesRegex(ValueError,'no player helper'):
+                legacy.verify_release(path,'forge16165','0.4.4',root)
+            receipt['helperBuild'] = None
+            receipt['entries']['Own.class']['sha256'] = '0'*64
+            sidecar.write_bytes(legacy.encoded(receipt))
+            with self.assertRaisesRegex(ValueError,'custody differs'):
+                legacy.verify_release(path,'forge16165','0.4.4',root)
 
 if __name__ == '__main__': unittest.main()

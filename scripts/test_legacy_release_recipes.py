@@ -40,12 +40,11 @@ def archive_bytes(entries):
 class LegacyRecipeTest(unittest.TestCase):
     def setUp(self):
         self.data = CATALOG.read_catalog(ROOT / "gradle/minecraft-artifacts.json")
-        self.f12 = CATALOG.resolve(self.data, "1.12.2", "forge")
         self.f16 = CATALOG.resolve(self.data, "1.16.5", "forge")
 
     def test_exact_release_math_and_modern_identities_preserved(self):
         families = self.data["acceptedFamilies"]
-        self.assertEqual((len(families), len(self.data["targetOrder"]), sum(len(f["supportedTargets"]) for f in families)), (35, 27, 50))
+        self.assertEqual((len(families), len(self.data["targetOrder"]), sum(len(f["supportedTargets"]) for f in families)), (34, 27, 49))
         modern = [{key: value for key, value in f.items() if key not in ("packagingRecipe", "artifactKind", "publicationChannels")}
                   for f in families if f["packagingRecipe"] == "nested-mod"]
         self.assertEqual(len(modern), 33)
@@ -53,18 +52,20 @@ class LegacyRecipeTest(unittest.TestCase):
         modrinth = [f for f in families if "modrinth" in f["publicationChannels"]]
         self.assertEqual((len(modrinth), sum(len(f["supportedTargets"]) for f in modrinth),
                           len({t for f in modrinth for t in f["supportedTargets"]})), (34, 49, 26))
-        self.assertEqual(len(WIRING.groups(self.data)), 20)
+        self.assertEqual(len(WIRING.groups(self.data)), 19)
 
     def test_legacy_kind_recipe_channels_are_exact_not_inferred(self):
-        self.assertEqual((self.f12["artifactKind"], self.f12["packagingRecipe"], self.f12["publicationChannels"]),
-                         ("zip", "forge-install", ["github"]))
+        with self.assertRaisesRegex(ValueError, "candidates do not publish"):
+            CATALOG.resolve(self.data, "1.12.2", "forge")
+        self.assertIn({"loaders":["forge"],"buildTarget":"1.12.2","targets":["1.12.2"],"publishing":False},
+                      self.data["candidateIntervals"])
         self.assertEqual((self.f16["artifactKind"], self.f16["packagingRecipe"], self.f16["publicationChannels"]),
                          ("jar", "forge-flat", ["github", "modrinth"]))
-        for family in (self.f12, self.f16, CATALOG.resolve(self.data, "26.2", "fabric")):
+        for family in (self.f16, CATALOG.resolve(self.data, "26.2", "fabric")):
             self.assertEqual(CATALOG.describe(family, "0.4.4")["filename"], family["filenameTemplate"].replace("{version}", "0.4.4"))
-            for key, value in (("packagingRecipe", "nested-mod" if family != self.f16 else "forge-install"),
+            for key, value in (("packagingRecipe", "nested-mod" if family == self.f16 else "forge-flat"),
                                ("artifactKind", "zip" if family["artifactKind"] == "jar" else "jar"),
-                               ("publicationChannels", ["github", "modrinth"] if family == self.f12 else ["github"]),
+                               ("publicationChannels", ["github"]),
                                ("filenameTemplate", "openallay-fake-{version}.jar")):
                 changed = dict(family, **{key: value})
                 if changed != family:
@@ -72,12 +73,12 @@ class LegacyRecipeTest(unittest.TestCase):
                         CATALOG.validate_family(changed, self.data["targetOrder"])
         with self.assertRaises(ValueError):
             CATALOG.validate_family(CATALOG.family_for("forge", "1.16.5", ["1.16.5", "1.18.2"]), self.data["targetOrder"])
-        changed = dict(self.f12, schemaVersion=1)
+        changed = dict(self.f16, schemaVersion=1)
         with self.assertRaises(ValueError):
             CATALOG.validate_family(changed, self.data["targetOrder"])
 
     def test_actual_external_profiles_and_native_source_roots(self):
-        for target, forge in (("1.12.2", "14.23.5.2864"), ("1.16.5", "36.2.42")):
+        for target, forge in (("1.16.5", "36.2.42"),):
             pins = PINS.read_profile(ROOT, target)
             self.assertEqual((pins["minecraft_version"], pins["java_version"], pins["forge_version"]),
                              (target, "17", target + "-" + forge))
@@ -89,10 +90,11 @@ class LegacyRecipeTest(unittest.TestCase):
             self.assertIn("1.18.2", chain)
             for owner in ("common", "adapters/minecraft", "forge"):
                 self.assertTrue((SOURCE_ROOT / owner / "src/targets" / target).is_dir(), (owner, target))
-        self.assertEqual(set(PINS.read_profile(ROOT, "1.12.2")), PINS.FORGE1122_FIELDS)
+        for owner in ("common", "adapters/minecraft", "forge"):
+            self.assertTrue((SOURCE_ROOT / owner / "src/targets/1.12.2").is_dir())
 
     def test_legacy_exact_commands_never_compile_a_root_loader_alias(self):
-        for family in (self.f12, self.f16):
+        for family in (self.f16,):
             target = family["buildTarget"]
             commands = COMPILER.commands(ROOT, target, loaders=("forge",), artifact_ids=family["id"])
             self.assertEqual([runtime for _, runtime in commands], ["root", "legacy-forge"])
@@ -116,6 +118,11 @@ class LegacyRecipeTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "remotely only"):
                 COMPILER.compile_target(ROOT, target, environment={}, artifact_ids=family["id"], execute=lambda *a, **k: calls.append(a))
             self.assertEqual(calls, [])
+
+    def test_forge12_candidate_cannot_use_obsolete_or_root_release_recipe(self):
+        for options in ({}, {"artifact_ids":"forge-1.12.2"}, {"candidate_ids":"forge-1.12.2"}):
+            with self.assertRaisesRegex(ValueError, "Java8 port is in progress"):
+                COMPILER.commands(ROOT,"1.12.2",**options)
 
     def test_modern_compiler_command_semantics_unchanged(self):
         original_path = SOURCE_ROOT / "scripts/compile-native-target.py"
@@ -143,26 +150,26 @@ class LegacyRecipeTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     WIRING.read_reuse_selection()
 
-    def test_flat_and_install_verifier_is_mandatory_and_exact(self):
+    def test_flat_verifier_is_mandatory_and_exact(self):
         class Stub:
             def verify_release(self, *args):
                 return {"coreBytes": b"fixture", "sqlite": {"artifactSha256": "a" * 64, "payloadSha256": "b" * 64},
                         "sharedRuntimes": {"extension-api": "c" * 64, "runtime-rhino": "d" * 64}}
         with patch.object(WIRING, "module", return_value=Stub()) as provider:
-            self.assertEqual(WIRING.legacy_package(Path("fixture.zip"), self.f12, "0.4.4")["coreBytes"], b"fixture")
+            self.assertEqual(WIRING.legacy_package(Path("fixture.jar"), self.f16, "0.4.4")["coreBytes"], b"fixture")
             provider.assert_called_once_with("legacy_release_package", "package-legacy-forge-release.py")
         with self.assertRaises(ValueError):
-            WIRING.legacy_package(Path("fixture.zip"), dict(self.f12, artifactKind="jar"), "0.4.4")
+            WIRING.legacy_package(Path("fixture.jar"), dict(self.f16, artifactKind="zip"), "0.4.4")
         stub = Stub()
         stub.verify_release = lambda *args: {"coreBytes": b"fixture"}
         with patch.object(WIRING, "module", return_value=stub), self.assertRaises(ValueError):
-            WIRING.legacy_package(Path("fixture.zip"), self.f12, "0.4.4")
+            WIRING.legacy_package(Path("fixture.jar"), self.f16, "0.4.4")
 
     def test_legacy_engine_builder_and_sqlite_match_every_family(self):
         engine = {"dev/openallay/guide/GuideService.class": b"\xca\xfe\xba\xbe\x00\x00\x00=fixture",
                   "dev/openallay/FeatureServices.class": b"\xca\xfe\xba\xbe\x00\x00\x00=fixture"}
         manifests = {name: hashlib.sha256(value).hexdigest() for name, value in engine.items()}
-        families = [self.f12, self.f16]
+        families = [self.f16]
         lock = {"source": {"revision": "6e977110cbe8e0ca0b39c012f0cdfc10bafffef2"}}
         with tempfile.TemporaryDirectory() as folder:
             stage = Path(folder)
@@ -175,23 +182,20 @@ class LegacyRecipeTest(unittest.TestCase):
                  patch.object(WIRING, "legacy_builder", return_value=b"sameBuilder"), \
                  patch.object(WIRING.tokenizer, "verify") as modern_tokenizer:
                 records = WIRING.verify(families, stage, engine_manifest=manifests)
-                self.assertEqual([r["artifactKind"] for r in records], ["zip", "jar"])
+                self.assertEqual([r["artifactKind"] for r in records], ["jar"])
                 modern_tokenizer.assert_not_called()
                 proof["coreBytes"] = archive_bytes(dict(engine, **{"dev/openallay/FeatureServices.class": b"changed"}))
                 with self.assertRaisesRegex(ValueError, "Shared engine"):
                     WIRING.verify(families, stage, engine_manifest=manifests)
                 proof["coreBytes"] = archive_bytes(engine)
-                with patch.object(WIRING, "legacy_builder", side_effect=[b"oneBuilder", b"otherBuilder"]), \
-                     self.assertRaisesRegex(ValueError, "identical universal Builder"):
-                    WIRING.verify(families, stage, engine_manifest=manifests)
 
-    def test_staged_asset_scan_includes_zip_and_cannot_hide_extra_kind(self):
+    def test_staged_asset_scan_cannot_hide_extra_zip(self):
         with tempfile.TemporaryDirectory() as folder:
             stage = Path(folder)
-            (stage / CATALOG.describe(self.f12, WIRING.version())["filename"]).write_bytes(b"zip")
-            (stage / "unselected.jar").write_bytes(b"wrong")
+            (stage / CATALOG.describe(self.f16, WIRING.version())["filename"]).write_bytes(b"jar")
+            (stage / "obsolete-forge12.zip").write_bytes(b"wrong")
             with self.assertRaisesRegex(ValueError, "exactly the selected"):
-                WIRING.verify([self.f12], stage, engine_manifest={"dev/openallay/FeatureServices.class": "a" * 64})
+                WIRING.verify([self.f16], stage, engine_manifest={"dev/openallay/FeatureServices.class": "a" * 64})
 
 
 if __name__ == "__main__":

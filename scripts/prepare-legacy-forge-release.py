@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare current legacy products from source and immutable retained inputs.
 
-Remote-only producer. The final packaging consumer owns public install helpers.
+Remote-only Forge 1.16.5 producer. The final consumer checks package custody.
 Plan mode and fixture tests perform no downloads, compiles, or game launches.
 """
 from __future__ import annotations
@@ -14,7 +14,6 @@ from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
-import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,15 +23,9 @@ BASE = dict(artifactId=11406765949, runId=37450040748,
 PRODUCT16 = dict(artifactId=11435087072, runId=37511014882,
     sourceRevision='ee94284188f21003de589d509e880875cabc5cbc',
     sha256='6adcaac70856c5be46aead86f2b59e4b14713f17dae076c8631729b3b4e063c7')
-BOOT12 = dict(artifactId=11452393244, runId=37549916767,
-    sourceRevision='a3d928dae837d35299bd4e1452ac0fc3c0dce81c',
-    sha256='c1de18d0747c4a588e3e26dd012aecdac836877c6562309af38f7eb7c394ff89')
 BUILDER_SOURCE = '6e977110cbe8e0ca0b39c012f0cdfc10bafffef2'
 BUILDER_SHA = 'bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345'
 PRODUCT16_SHA = '31a8f46c9fe0b020e9a853a75a59d57db3d5da63597b81d8491732cfc6ba7bf6'
-PRODUCT12_SHA = {'featureCore':'e6013460c4b54626d35fdb5117b0bee28906dae7d8759f543a206c4a809adf0a',
-    'lifecycleFacade':'713582bd5e1cad18d25459b9b77b9cfd91afec81ebc9f3c563ab6c8b6ef8cde0',
-    'privateMixin':'6778a3383c7c7ed412934c11d99c641f982ab85fa5be75f15e96e0146e457922'}
 RESOURCE = 'META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar'
 PROVENANCE = 'META-INF/openallay/distribution.json'
 
@@ -313,25 +306,6 @@ def native16(work, closure_ref):
     return Path(metadata['reobf']['path']),{'commands':[first,second],'metadata':metadata}
 
 
-def native12(work, spec):
-    driver=module('release12driver',ROOT/'scripts/build-forge1122-native.py')
-    outside=Path(os.environ['RUNNER_TEMP'])/('legacy-release-native-'+git('rev-parse','HEAD'))
-    request=write(work/'native-request.json',{'canonicalSourceRoot':str(ROOT),'javac17':str(home(17)/'bin/javac'),
-        'java17':str(home(17)/'bin/java'),
-        'closure':[{'role':r['role'],'path':r['path'],'sha256':r['sha256'],
-            'compile':r['role'] in {'engine','sdk','rhino','commonmark','tables','jtokkit'}} for r in spec['artifacts']],
-        'actualMcpUnits':driver.actual_units(),'output':str(outside/'native')})
-    command=[sys.executable,'-B',ROOT/'scripts/run-forge1122-native-census.py','--workspace',outside/'tool',
-        '--output',outside/'inputs','--javap',home(17)/'bin/javap','--native-build-request',request['path']]
-    receipt=execute(command,work/'native-build.log',home(8))
-    metadata=load(outside/'native/native-build-receipt.json')
-    jar=Path(metadata['jar'])
-    require(metadata['nativeRelease']==17 and metadata['engineSha256']==next(r['sha256'] for r in spec['artifacts'] if r['role']=='engine') and
-        sha(jar)==metadata['jarSha256'],'Current normal FG3/AP/reobf producer required')
-    require(sha(outside/'native/namespace-receipt.json')==metadata['namespaceReceiptSha256'], 'FG3 namespace binding')
-    return jar,{'commands':[receipt],'metadata':metadata,'sourceRevision':git('rev-parse','HEAD')}
-
-
 def excluded(name):
     return name in ('META-INF/MANIFEST.MF','module-info.class','mcmod.info','META-INF/mods.toml') or \
         bool(re.fullmatch(r'META-INF/[^/]+\.(?:SF|RSA|DSA|EC)',name,re.I)) or \
@@ -444,92 +418,17 @@ def prepared16(work,spec,native,builder,version):
     return {'product':product}, {'historicalProvider':PRODUCT16,'engineCustody':engine_custody,'nativeCustody':native_custody}
 
 
-def prepared12(work,spec,native,builder,version):
-    pins=ROOT/'native-builds/forge1122-component'
-    product_pin=load(pins/'accepted-product-provider.json')
-    kept=retained(product_pin,work,'accepted-product')
-    paths={role:exact_jar(kept,d) for role,d in PRODUCT12_SHA.items()}
-    payload=entries(paths['featureCore'])
-    ownership=load(one(retained(load(pins/'engine-entry-ownership-provider.json'),work,'ownership'),'entry-ownership.json'))
-    engine_pin=load(pins/'engine-refresh-provider.json')
-    previous=entries(exact_jar(retained(engine_pin['provider'],work,'old-engine'),engine_pin['engineJarSha256']))
-    rows={r['input']:r for r in ownership['inventory'] if r['owner']=='engine'}
-    require(set(rows)==set(previous), 'Complete accepted12 engine input ownership')
-    mapping={n:(r['output'] if r['disposition'] in ('copied','merged-real-service-declarations') else None) for n,r in rows.items()}
-    for n,r in rows.items():
-        if r['disposition']=='identical-byte-duplicate':
-            current=entries(next(a['path'] for a in spec['artifacts'] if a['role']=='engine'))
-            require(current.get(n)==previous[n], 'Shared engine collision changed')
-        require(r['disposition'] in ('copied','merged-real-service-declarations','identical-byte-duplicate','excluded-original-container-metadata'),
-            'Unknown accepted owner disposition')
-    current=entries(next(a['path'] for a in spec['artifacts'] if a['role']=='engine'))
-    payload,engine_custody=replace_owner(payload,previous,current,mapping)
-    native_pin=load(pins/'native-refresh-provider.json')
-    oldnative=entries(exact_jar(retained(native_pin['provider'],work,'old-native'),native_pin['nativeJarSha256']))
-    fresh=entries(native)
-    payload,native_custody=replace_owner(payload,oldnative,fresh,native_mapping(oldnative))
-    distribution(payload,builder);manifest_version(payload,version)
-    final={'featureCore':work/'openallay-feature-core.jar','lifecycleFacade':work/'openallay-lifecycle-facade.jar',
-        'privateMixin':paths['privateMixin']}
-    archive(final['featureCore'],payload)
-    facade=entries(paths['lifecycleFacade']); metadata=json.loads(facade['mcmod.info'])
-    require(len(metadata)==1 and metadata[0]['modid']=='openallay' and metadata[0]['mcversion']=='1.12.2',
-        'Actual lifecycle descriptor identity')
-    metadata[0]['version']=version;facade['mcmod.info']=encoded(metadata);manifest_version(facade,version)
-    archive(final['lifecycleFacade'],facade)
-    return final,{'historicalProvider':product_pin,'engineCustody':engine_custody,'nativeCustody':native_custody,
-        'facadeClassesUnchanged':True,'privateMixinUnchanged':ref(paths['privateMixin'])}
-
-
-def public12(work):
-    packet=ROOT/'scripts/forge1122-runtime-prerequisite'
-    freeze=load(packet/'source-freeze.json'); installer=work/'forge-installer.jar'
-    pin=freeze['installer']; public_download(pin,installer)
-    meta=load(packet/'version.json')
-    result={}
-    with zipfile.ZipFile(installer) as z:
-        forge_pin=next(l['downloads']['artifact'] for l in meta['libraries'] if l['name'].startswith('net.minecraftforge:forge:'))
-        # The original Forge installer carries its exact universal library.
-        names=[n for n in z.namelist() if n.endswith('forge-1.12.2-14.23.5.2864-universal.jar') or n=='maven/'+forge_pin['path']]
-        require(len(names)==1, 'Official Forge installer universal library required')
-        forge=work/'forge.jar';forge.write_bytes(z.read(names[0]))
-        require(sha(forge)=='ff578d670d2c720a72f8fff31ea3d6868595c7e980ecdecba3254f307ef2c2a9', 'Authentic Forge12 SHA256')
-        result['forge']=ref(forge)
-    for role,coordinate in [('launchwrapper','net.minecraft:launchwrapper:1.12'),('stockAsm','org.ow2.asm:asm-debug-all:5.2')]:
-        pin=next(l['downloads']['artifact'] for l in meta['libraries'] if l['name']==coordinate)
-        p=work/(role+'.jar');public_download(pin,p);result[role]=ref(p)
-    accepted=retained(BOOT12,work,'accepted-boot')
-    proof=one(accepted,'pack200-build.json');record=load(proof)
-    require(record['forgeSha256']==result['forge']['sha256'] and record['runtimeJava']==17 and
-        record['genuineUnpack200ExecutableSha256'] and len(record['entries'])>100,
-        'Accepted genuine Pack200 whole-entry proof required')
-    result['acceptedPack200']=ref(proof)
-    result.update(java17Home=str(home(17)),java8Home=str(home(8)))
-    return result
-
-
-def public_download(pin,path):
-    require(pin['url'].startswith('https://'), 'Authentic HTTPS public input required')
-    request=urllib.request.Request(pin['url'],headers={'User-Agent':'OpenAllay-Release'})
-    with urllib.request.urlopen(request,timeout=90) as response, path.open('xb') as out:
-        count=0
-        while chunk:=response.read(65536):
-            count+=len(chunk);require(count<=8*1024*1024,'Public input bound');out.write(chunk)
-    data=path.read_bytes()
-    require(len(data)==pin['size'] and hashlib.sha1(data).hexdigest()==pin['sha1'], 'Public input size/SHA1 differs')
-    if 'sha256' in pin:require(sha(path)==pin['sha256'],'Public input SHA256 differs')
-
-
 def prepare(args):
+    require(args.target == '1.16.5', 'Exact Forge16 release target required')
     version=source_version()
     require(args.version==version and args.family=='forge-'+args.target, 'Source version/family mismatch')
-    suffix='.jar' if args.target=='1.16.5' else '.zip'
+    suffix='.jar'
     require(args.output.name=='openallay-forge-'+args.target+'-'+version+suffix and
         args.receipt==Path(str(args.output)+'.packaging.json'), 'Exact catalog final output/receipt paths required')
     if args.plan:
         return {'target':args.target,'family':args.family,'version':version,
             'output':str(args.output),'receipt':str(args.receipt),'remoteOnly':True,
-            'producer':'normal FG6/17' if args.target=='1.16.5' else 'normal FG3/8 + application17',
+            'producer':'normal FG6/17',
             'consumer':'scripts/package-legacy-forge-release.py','gameExecuted':False}
     require(os.environ.get('GITHUB_ACTIONS')=='true','Remote runner only')
     source=git('rev-parse','HEAD');require(source==os.environ['GITHUB_SHA'],'Actual checkout source SHA required')
@@ -539,8 +438,8 @@ def prepare(args):
     require(not args.output.exists() and not args.receipt.exists(), 'Preserve existing final outputs')
     work=ROOT/'build/legacy-release-inputs'/args.target;work.mkdir(parents=True,exist_ok=False)
     spec,closure_ref,engine_receipt,builder=closure(work,version)
-    native,native_receipt=native16(work,closure_ref) if args.target=='1.16.5' else native12(work,spec)
-    products,custody=prepared16(work,spec,native,builder,version) if args.target=='1.16.5' else prepared12(work,spec,native,builder,version)
+    native,native_receipt=native16(work,closure_ref)
+    products,custody=prepared16(work,spec,native,builder,version)
     # Physical products are current source-produced components. Historical provider
     # identities remain separate and unchanged in this receipt.
     byrole={r['role']:r for r in spec['artifacts']}
@@ -557,13 +456,12 @@ def prepare(args):
         'sqlite':{'artifactSha256':byrole['sqlite']['sha256'],'payloadSha256':digest(json.dumps(inventory(sqlite_payload),sort_keys=True,separators=(',',':')).encode())},
         'sharedRuntimes':shared,'provenance':provenance})
     request={'sourceRoot':str(ROOT),'version':version,'providerReceipt':provider}
-    if args.target=='1.16.5':request['product']=ref(products['product'])
-    else:request.update(components={r:ref(p) for r,p in products.items()},**public12(work))
+    request['product']=ref(products['product'])
     request_ref=write(work/'REQUEST.json',request)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     command=[sys.executable,'-B',ROOT/'scripts/package-legacy-forge-release.py','--target',
-        'forge16165' if args.target=='1.16.5' else 'forge1122','--inputs',request_ref['path'],
-        '--output',args.output,'--receipt',args.receipt,'--work',work/'public-package']
+        'forge16165','--inputs',request_ref['path'],
+        '--output',args.output,'--receipt',args.receipt]
     execute(command,work/'package.log',home(17))
     return {'status':'prepared','sourceRevision':source,'request':request_ref,
         'product':ref(args.output),'receipt':ref(args.receipt),'gameExecuted':False}
@@ -571,7 +469,7 @@ def prepare(args):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--target',choices=['1.16.5','1.12.2'],required=True)
+    p.add_argument('--target',choices=['1.16.5'],required=True)
     p.add_argument('--family',required=True);p.add_argument('--version',required=True)
     p.add_argument('--output',type=Path,required=True);p.add_argument('--receipt',type=Path,required=True)
     p.add_argument('--plan',action='store_true')

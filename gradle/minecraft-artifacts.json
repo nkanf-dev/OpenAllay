@@ -31,20 +31,6 @@
   ],
   "acceptedFamilies": [
     {
-      "buildTarget": "1.12.2",
-      "filenameTemplate": "openallay-forge-1.12.2-{version}.zip",
-      "id": "forge-1.12.2",
-      "loader": "forge",
-      "supportedTargets": [
-        "1.12.2"
-      ],
-      "packagingRecipe": "forge-install",
-      "artifactKind": "zip",
-      "publicationChannels": [
-        "github"
-      ]
-    },
-    {
       "buildTarget": "1.16.5",
       "filenameTemplate": "openallay-forge-1.16.5-{version}.jar",
       "id": "forge-1.16.5",
@@ -579,6 +565,16 @@
       "targets": [
         "1.20.3",
         "1.20.4"
+      ],
+      "publishing": false
+    },
+    {
+      "loaders": [
+        "forge"
+      ],
+      "buildTarget": "1.12.2",
+      "targets": [
+        "1.12.2"
       ],
       "publishing": false
     }

@@ -33,15 +33,6 @@ class PublicationTest(unittest.TestCase):
         self.directory = self.root / "release"
         self.directory.mkdir()
         self.families = deepcopy(json.loads((ROOT / "gradle/minecraft-artifacts.json").read_text())["acceptedFamilies"])
-        # Keep the 33 modern admission entries, then add the two explicit recipes.
-        self.families = [f for f in self.families if f["id"] not in ("forge-1.12.2", "forge-1.16.5")]
-        for family in self.families:
-            family.update(artifactKind="jar", publicationChannels=["github", "modrinth"])
-        for target, kind, channels in (("1.16.5", "jar", ["github", "modrinth"]),
-                                       ("1.12.2", "zip", ["github"])):
-            self.families.append(dict(id="forge-" + target, loader="forge", supportedTargets=[target],
-                                      filenameTemplate="openallay-forge-" + target + "-{version}." + kind,
-                                      artifactKind=kind, publicationChannels=channels))
         self.records = []
         for family in self.families:
             filename = family["filenameTemplate"].replace("{version}", "0.4.4")
@@ -65,13 +56,13 @@ class PublicationTest(unittest.TestCase):
     def test_exact_channel_counts_and_targets(self):
         github = self.select()
         modrinth = self.select("modrinth")
-        self.assertEqual(len(github), 35)
+        self.assertEqual(len(github), 34)
         self.assertEqual(len(modrinth), 34)
-        self.assertEqual(len({target for row in github for target in row["supportedTargets"]}), 27)
+        self.assertEqual(len({target for row in github for target in row["supportedTargets"]}), 26)
         self.assertEqual(len({target for row in modrinth for target in row["supportedTargets"]}), 26)
-        self.assertEqual(sum(len(row["supportedTargets"]) for row in github), 50)
+        self.assertEqual(sum(len(row["supportedTargets"]) for row in github), 49)
         self.assertEqual(sum(len(row["supportedTargets"]) for row in modrinth), 49)
-        self.assertEqual([row["id"] for row in github if row["artifactKind"] == "zip"], ["forge-1.12.2"])
+        self.assertEqual([row["id"] for row in github if row["artifactKind"] == "zip"], [])
         self.assertTrue(all(row["artifactKind"] == "jar" for row in modrinth))
         self.assertIn("forge-1.16.5", [row["id"] for row in modrinth])
 
@@ -85,13 +76,13 @@ class PublicationTest(unittest.TestCase):
         selected = json.loads(result.stdout)
         self.assertEqual(len(selected), 34)
         self.assertNotIn("forge-1.12.2", [row["id"] for row in selected])
-        self.records[-1]["publicationChannels"] = ["github", "modrinth"]
+        self.records[-1]["publicationChannels"] = ["github"]
         result = subprocess.run([sys.executable, "-B", "-", str(self.root), str(self.directory), "v0.4.4", json.dumps(self.records)],
                                 input=match.group(1), text=True, capture_output=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("source family", result.stderr)
 
-    def test_github_command_includes_bundle_and_checksums_not_internal_json(self):
+    def test_github_command_includes_jars_and_checksums_not_internal_json(self):
         (self.root / "release-publication-records.json").write_text(json.dumps(self.records))
         (self.directory / "diagnostics.json").write_text("{}")
         (self.root / "release-notes.md").write_text("Release notes")
@@ -101,31 +92,38 @@ class PublicationTest(unittest.TestCase):
             publisher.main()
         command = run.call_args.args[0]
         assets = command[4:command.index("--notes-file")]
-        self.assertEqual(len(assets), 36)
-        self.assertIn(str(self.directory / "openallay-forge-1.12.2-0.4.4.zip"), assets)
+        self.assertEqual(len(assets), 35)
+        self.assertTrue(all(not name.endswith(".zip") for name in assets))
         self.assertIn(str(self.directory / "SHA256SUMS"), assets)
         self.assertTrue(all(not name.endswith(".json") for name in assets))
         self.assertIn("--verify-tag", command)
 
     def test_old_version_and_ambiguous_source_are_rejected(self):
-        self.records[-1]["filename"] = "openallay-forge-1.12.2-0.4.3.zip"
+        self.records[-1]["filename"] = "openallay-fabric-26.3-0.4.3.jar"
         with self.assertRaisesRegex(ValueError, "current source version"):
             self.select()
         (self.root / "gradle.properties").write_text("version=0.4.4\nversion=0.4.3\n")
         with self.assertRaisesRegex(ValueError, "one safe"):
             self.select()
 
-    def test_record_cannot_add_modrinth_or_change_kind(self):
-        self.records[-1]["publicationChannels"] = ["github", "modrinth"]
+    def test_record_cannot_change_channel_or_kind(self):
+        self.records[-1]["publicationChannels"] = ["github"]
         with self.assertRaisesRegex(ValueError, "source family"):
             self.select("modrinth")
-        self.records[-1]["publicationChannels"] = ["github"]
-        self.records[-1]["artifactKind"] = "jar"
+        self.records[-1]["publicationChannels"] = ["github", "modrinth"]
+        self.records[-1]["artifactKind"] = "zip"
         with self.assertRaisesRegex(ValueError, "source family"):
             self.select()
-        self.families[-1]["publicationChannels"] = ["github", "modrinth"]
+        self.families[-1]["artifactKind"] = "zip"
         self.write_catalog()
         with self.assertRaisesRegex(ValueError, "single-mod JAR"):
+            self.select()
+
+    def test_obsolete_forge12_zip_record_is_not_admitted(self):
+        row = dict(self.records[-1], id="forge-1.12.2",loader="forge",supportedTargets=["1.12.2"],
+                   artifactKind="zip",publicationChannels=["github"])
+        self.records[-1] = row
+        with self.assertRaisesRegex(ValueError, "Unknown or missing"):
             self.select()
 
     def test_checksum_missing_extra_duplicate_and_changed_bytes_rejected(self):

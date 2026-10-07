@@ -91,9 +91,10 @@ run/source identities; only affected declarations and failed classes were rechec
 
 ## Older-anchor decisions
 
-Stock Forge 1.16.5 and 1.12.2 later completed integrated-client adaptation. See
-[the current target records](stock-forge-integrated-clients.md). The following
-prerequisite decisions describe the earlier research checkpoint.
+Stock Forge 1.16.5 and the archived Forge 1.12.2 Java17 target later completed
+integrated-client adaptation. See the [original validation records](stock-forge-integrated-clients.md)
+and the in-progress [Forge 1.12.2 Java8 port](forge1122-java8-port.md).
+The following prerequisite decisions describe the earlier research checkpoint.
 
 ### Stock Forge 1.16.5: native title prerequisite passed; product port deferred
 

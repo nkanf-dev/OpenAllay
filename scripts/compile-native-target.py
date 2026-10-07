@@ -10,7 +10,7 @@ from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
 EARLY = frozenset(("1.20.2", "1.20.3", "1.20.5"))
-LEGACY = {"1.16.5": "forge16165", "1.12.2": "forge1122-component"}
+LEGACY = {"1.16.5": "forge16165"}
 
 
 def target_exists(root, target):
@@ -39,6 +39,8 @@ def java21_environment(environment):
 
 def commands(root, target, *, loaders=None, artifact_ids=None, candidate_ids=None):
     target_exists(root, target)
+    if target == "1.12.2":
+        raise ValueError("Forge 1.12.2 Java8 port is in progress; its release recipe is pending")
     allowed = target_loaders(root, target)["loaders"]
     loaders = tuple(allowed) if loaders is None else tuple(loaders)
     if not loaders or len(set(loaders)) != len(loaders) or any(loader not in allowed for loader in loaders):
@@ -57,7 +59,7 @@ def commands(root, target, *, loaders=None, artifact_ids=None, candidate_ids=Non
         release_version = properties["version"]
         if not re.fullmatch(r"[0-9][0-9A-Za-z]*(?:[.+-][0-9A-Za-z]+)*", release_version):
             raise ValueError("Unsafe source product version")
-        kind = "zip" if target == "1.12.2" else "jar"
+        kind = "jar"
         output = root / "native-builds" / LEGACY[target] / "build/libs" / ("openallay-forge-" + target + "-" + release_version + "." + kind)
         # Compile the one current feature engine, public SDK/Rhino and Builder first.
         # 26.2 only selects the root feature tasks; legacy native sources are never aliased.

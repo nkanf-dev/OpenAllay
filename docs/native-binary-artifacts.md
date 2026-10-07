@@ -2,16 +2,14 @@
 
 ## Release 0.4.4 files
 
-OpenAllay 0.4.4 adds stock Forge **1.16.5 and 1.12.2**. GitHub provides
-**34 JARs and one Forge 1.12.2 runtime ZIP**, covering **27 exact Minecraft
-versions and 50 version/loader pairs**. Modrinth provides the **34 JARs** for
-**26 versions and 49 pairs**, from 1.16.5 through 26.3.
+OpenAllay 0.4.4 adds stock Forge **1.16.5**. Its catalog contains **34 JARs**
+for GitHub and Modrinth, covering **26 exact Minecraft versions and 49
+version/loader pairs**, from 1.16.5 through 26.3.
 Choose the file for your exact version and loader. Fabric requires matching
 Fabric API.
 
 | Exact Minecraft versions | Loader | Java | Download files |
 | --- | --- | --- | --- |
-| `1.12.2` | Forge 14.23.5.2864 | 17 | `openallay-forge-1.12.2-0.4.4.zip` (GitHub); see [Forge setup](forge-runtime-installation.md) |
 | `1.16.5` | Forge 36.2.42 | 17 | `openallay-forge-1.16.5-0.4.4.jar` |
 | `1.18.2` | Forge | 17 | `openallay-forge-1.18.2-0.4.4.jar` |
 | `1.19.2` | Forge | 17 | `openallay-forge-1.19.2-0.4.4.jar` |
@@ -36,17 +34,14 @@ Fabric API.
 
 ### Install the selected file
 
-- **Forge 1.12.2:** install stock Forge **14.23.5.2864**, then use the GitHub ZIP's
-  included installer with **Python 3.11 or later**. Run its check first, then add
-  `--install` to create a new profile. Select **Java 17** in your launcher and sign
-  in normally.
 - **Forge 1.16.5:** use Forge **36.2.42**, select **Java 17**, and put the matching
   OpenAllay JAR in `mods/`.
 - **Other JAR downloads:** install the selected JAR in `mods/` and use the Java
   version listed above. Some files cover multiple exact Minecraft versions.
 
-The [Forge runtime guide](forge-runtime-installation.md) lists the old-Forge
-profile setup. Minecraft **26.2 / Java 25** remains the development mainline.
+The [Forge runtime guide](forge-runtime-installation.md) lists the Forge 1.16.5
+installation steps. The [Forge 1.12.2 Java8 port](verification/forge1122-java8-port.md)
+is an in-progress, nonpublishing candidate. Minecraft **26.2 / Java 25** remains the development mainline.
 Public **Extension API 0.4.0**, bundled **Builder 0.4.0**, and **Skill API 0.2**
 are independent of the product patch version.
 
@@ -122,7 +117,7 @@ on every listed version.
 
 `gradle/minecraft-artifacts.json` is the source catalog for these accepted
 families. Each family owns its loader, build target, supported targets and
-filename. `targetOrder` lists every exact supported version. The catalog rejects
+filename. `targetOrder` lists every exact accepted or candidate version. The catalog rejects
 overlapping families, gaps, unsafe names and duplicate identities. Pending
 candidates remain separate from the published families.
 

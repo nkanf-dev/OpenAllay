@@ -24,29 +24,25 @@
 
 ## 快速上手
 
-OpenAllay **0.4.4** 支持 **27 个 Minecraft 版本**：**1.12.2、1.16.5、1.18.2
+OpenAllay **0.4.4** 支持 **26 个 Minecraft 版本**：**1.16.5、1.18.2
 和 1.19.2 使用 Forge**，**1.20.1 到 26.3 使用 Fabric 或 NeoForge**。请在
 [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.4)
 选择对应 Minecraft 版本和加载器的文件。Fabric 还需要匹配的 **Fabric API**。
 
 | Minecraft 版本 | Java 版本 | 安装方式 |
 | --- | --- | --- |
-| 1.12.2 | 17 | Forge 14.23.5.2864 ZIP，通过安装器创建新启动配置 |
 | 1.16.5 | 17 | Forge 36.2.42 JAR，放入 `mods` |
 | 1.18.2、1.19.2，以及 1.20.1–1.20.4 | 17 | 对应加载器 JAR |
 | 1.20.5–1.20.6，以及 1.21–1.21.11 | 21 | 对应加载器 JAR |
 | 26.1、26.1.1、26.1.2、26.2、26.3 | 25 | 对应加载器 JAR |
 
-GitHub 提供 **34 个 JAR 和 1 个 Forge 1.12.2 ZIP**。Modrinth 提供
-**Minecraft 1.16.5 到 26.3 的 34 个 JAR**。部分 JAR 覆盖多个版本。
+GitHub 和 Modrinth 提供 **Minecraft 1.16.5 到 26.3 的 34 个 JAR**。部分 JAR 覆盖多个版本。
 准确的文件对应关系见[发布兼容表](docs/native-binary-artifacts.md#release-044-files)，
 旧版 Forge 的启动配置见[Forge 安装指南](docs/forge-runtime-installation.md)。
 **Minecraft 26.2 / Java 25** 仍是开发主线。
+[Forge 1.12.2 的 Java8 适配](docs/verification/forge1122-java8-port.md)正在开发。
 
-1. 将下载的 JAR 放入实例的 `mods` 文件夹，启动 Minecraft。Forge 1.12.2 请先安装原版
-   Forge 14.23.5.2864，再解压 GitHub ZIP，选择新的游戏目录。使用 Python 3.11 或更新版本运行检查命令，
-   加上 `--install` 创建新配置。选择 Java 17，在平时使用的启动器中登录并启动游戏。
-   完整步骤见[Forge 安装指南](docs/forge-runtime-installation.md)。
+1. 将对应的 JAR 放入实例的 `mods` 文件夹，启动 Minecraft。
 2. 进入世界，按 **K**，或输入 `/guide`。
 3. 点击齿轮按钮 → **模型**，添加模型配置。
 4. 选择 **OpenAI 兼容 Chat Completions** 或 **Anthropic Messages**，
@@ -97,10 +93,8 @@ Builder 支持单人生存与创造世界。撤销恢复记录中仍匹配的方
 | Minecraft | 可用建造工作流 |
 | --- | --- |
 | 1.16.5 | 几何体、装饰、地形、模板，以及房屋、小屋、风车、农场和码头 |
-| 1.12.2 | 几何体、原生方块变种、地形路径、持久保存的模板、旋转、镜像和方块撤销 |
 
-1.16.5 可选择上表中的五种预设；摩天楼预设需要避雷针。1.12.2 可使用几何体、地形和模板，
-配合当前世界中的方块状态建造。该版本的六种建筑预设需要材料表以外的材料。
+1.16.5 可选择上表中的五种预设；摩天楼预设需要避雷针。
 
 Builder 在
 [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)

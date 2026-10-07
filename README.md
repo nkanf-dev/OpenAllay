@@ -24,31 +24,26 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.4.4** supports **27 Minecraft versions**: Forge on **1.12.2,
-1.16.5, 1.18.2, and 1.19.2**, plus Fabric and NeoForge on **1.20.1 through
+OpenAllay **0.4.4** supports **26 Minecraft versions**: Forge on **1.16.5,
+1.18.2, and 1.19.2**, plus Fabric and NeoForge on **1.20.1 through
 26.3**. Choose the file for your exact Minecraft version and loader from
 [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.4).
 Fabric also needs the matching **Fabric API**.
 
 | Minecraft version | Java version | Installation |
 | --- | --- | --- |
-| 1.12.2 | 17 | Forge 14.23.5.2864 ZIP; install its new launcher profile |
 | 1.16.5 | 17 | Forge 36.2.42 JAR; install in `mods` |
 | 1.18.2, 1.19.2 and 1.20.1–1.20.4 | 17 | Matching loader JAR |
 | 1.20.5–1.20.6 and 1.21–1.21.11 | 21 | Matching loader JAR |
 | 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | 25 | Matching loader JAR |
 
-GitHub provides **34 JARs and one Forge 1.12.2 ZIP**. Modrinth provides the
-**34 JARs** for Minecraft **1.16.5 through 26.3**. Some JARs cover several
+GitHub and Modrinth provide **34 JARs** for Minecraft **1.16.5 through 26.3**. Some JARs cover several
 versions. See the [release compatibility table](docs/native-binary-artifacts.md#release-044-files)
 and [Forge runtime setup](docs/forge-runtime-installation.md).
 Minecraft **26.2 / Java 25** remains the development mainline.
+The [Forge 1.12.2 Java8 port](docs/verification/forge1122-java8-port.md) is in progress.
 
-1. For a JAR download, put it in your instance's `mods` folder and start Minecraft.
-   For Forge 1.12.2, install stock Forge 14.23.5.2864 first, then extract the
-   GitHub ZIP. Choose a new game directory. With Python 3.11 or later, run its
-   check command and add `--install` to create the new profile. Select Java 17 and sign in through your normal launcher.
-   Follow the [Forge setup steps](docs/forge-runtime-installation.md).
+1. Put the matching JAR in your instance's `mods` folder and start Minecraft.
 2. Enter a world and press **K**, or run `/guide`.
 3. Select the gear button, open **Models**, and add a model profile.
 4. Choose **OpenAI-compatible Chat Completions** or **Anthropic Messages**.
@@ -106,12 +101,9 @@ Preset availability follows the game's native materials:
 | Minecraft | Available building workflows |
 | --- | --- |
 | 1.16.5 | Geometry, decoration, terrain, templates, house, cottage, windmill, farm, and dock |
-| 1.12.2 | Geometry, native block variants, terrain paths, persisted templates, rotation, mirroring, and block undo |
 
 On 1.16.5, choose one of the five presets listed above; the skyscraper preset
-requires a lightning rod. On 1.12.2, build with geometry, terrain, and templates
-using the block states available in your world. Its six structure presets require
-materials outside that version's palette.
+requires a lightning rod.
 
 Builder is developed independently in
 [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder).

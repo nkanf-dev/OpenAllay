@@ -1,8 +1,7 @@
 # Development
 
-OpenAllay **0.4.4** supports **27 exact Minecraft versions** and **50
-version/loader pairs**. GitHub distributes 34 JARs plus the Forge 1.12.2
-runtime ZIP; Modrinth distributes 34 JARs. See the
+The OpenAllay **0.4.4** release catalog contains **34 JARs** for GitHub and
+Modrinth, covering **26 exact Minecraft versions** and **49 version/loader pairs**. See the
 [current artifact table](native-binary-artifacts.md#release-044-files) and
 [Forge runtime setup](forge-runtime-installation.md).
 Minecraft **26.2 / Java 25** remains the feature-development mainline.
@@ -90,10 +89,9 @@ stages it under `config/openallay/.bundled-extensions/<sha256>/`, and uses the
 same universal discovery path. It never overwrites a community JAR. Accepted
 classloaders remain open until actual invocation workers finish at shutdown.
 
-Product, Extension, and API versions are independent. Current Forge 1.12.2
-installation uses the runtime ZIP's Java 17 profile; Forge 1.16.5 uses the
+Product, Extension, and API versions are independent. Forge 1.16.5 uses the
 matching Forge JAR and Java 17 profile. See the Forge runtime guide for exact
-setup. Player automation and Baritone remain research work. Agent JVM access
+setup. The [Forge 1.12.2 Java8 port](verification/forge1122-java8-port.md) is in progress. Player automation and Baritone remain research work. Agent JVM access
 is controlled by the player's full-access setting.
 
 Prepare the exact source before a full distribution build:

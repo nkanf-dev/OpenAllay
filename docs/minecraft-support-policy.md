@@ -10,13 +10,14 @@ OpenAllay develops one shared feature implementation against one mainline Minecr
 | Older compatibility | Keep the mainline features usable on supported older targets | Exact native compile/package checks, startup and key regression scenarios at actual API/loader boundaries; no copied feature engines |
 | New-version adaptation | Begin compatibility work promptly after a new game release | Native API, mappings, Mixin and loader/dependency checks, then focused runtime acceptance; candidate support is separate from release acceptance |
 
-The development mainline remains **26.2**. Release **0.4.4** covers **27 exact
-Minecraft versions** from **1.12.2 through 26.3**: Forge on 1.12.2, 1.16.5,
-1.18.2, and 1.19.2; Fabric and NeoForge on 1.20.1 through 26.3. The release
+The development mainline remains **26.2**. The **0.4.4** catalog covers **26 exact
+Minecraft versions** from **1.16.5 through 26.3**: Forge on 1.16.5, 1.18.2,
+and 1.19.2; Fabric and NeoForge on 1.20.1 through 26.3. The release
 [artifact table](native-binary-artifacts.md#release-044-files) lists every exact
-version and loader. Forge 1.12.2 uses the GitHub runtime ZIP and its new-profile
-installer; the other targets use JAR downloads. Native compatibility includes
-26.3 while feature development stays on 26.2.
+version and loader. These targets use JAR downloads. The
+[Forge 1.12.2 Java8 port](verification/forge1122-java8-port.md) is an in-progress
+candidate. Native compatibility includes 26.3 while feature development stays
+on 26.2.
 
 ## Rolling the mainline
 
