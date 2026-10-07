@@ -13,15 +13,20 @@ public interface SkillCatalog {
         StringBuilder prompt = new StringBuilder();
         for (SkillMetadata metadata : metadata()) {
             prompt.append("  <skill>\n")
-                    .append("    <name>").append(xml(metadata.name())).append("</name>\n")
-                    .append("    <description>").append(xml(metadata.description()))
+                    .append("    <name>").append(SkillCatalogText.xml(metadata.name())).append("</name>\n")
+                    .append("    <description>").append(SkillCatalogText.xml(metadata.description()))
                     .append("</description>\n")
                     .append("  </skill>\n");
         }
-        return prompt.toString().stripTrailing();
+        return dev.openallay.util.Java8Strings.stripTrailing(prompt.toString());
     }
 
-    private static String xml(String value) {
+}
+
+/** Package-private helper keeps the catalog interface Java8 without new public methods. */
+final class SkillCatalogText {
+    private SkillCatalogText() {}
+    static String xml(String value) {
         return value.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")

@@ -6,9 +6,41 @@ import java.util.Objects;
 
 /** Immutable source documents; identities are computed once when the catalog is built. */
 public final class SkillDocument {
-    public record Text(String contents, String fingerprint, java.util.List<SkillCatalogManifest.Chunk> chunks) {
-        public Text { chunks = java.util.List.copyOf(chunks); }
+    @dev.openallay.value.ValueType(Text.ValueSchemaProvider.class)
+public static final class Text {
+    private final String contents;
+    private final String fingerprint;
+    private final java.util.List<SkillCatalogManifest.Chunk> chunks;
+    public Text(String contents, String fingerprint, java.util.List<SkillCatalogManifest.Chunk> chunks) {
+ chunks = dev.openallay.util.Java8Collections.listCopyOf(chunks);
+        this.contents = contents;
+        this.fingerprint = fingerprint;
+        this.chunks = chunks;
     }
+    public String contents() { return contents; }
+    public String fingerprint() { return fingerprint; }
+    public java.util.List<SkillCatalogManifest.Chunk> chunks() { return chunks; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Text)) return false;
+        Text that = (Text) other;
+        return java.util.Objects.equals(contents, that.contents) && java.util.Objects.equals(fingerprint, that.fingerprint) && java.util.Objects.equals(chunks, that.chunks);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(contents);
+        hash = 31 * hash + java.util.Objects.hashCode(fingerprint);
+        hash = 31 * hash + java.util.Objects.hashCode(chunks);
+        return hash;
+    }
+    @Override public String toString() { return "Text[contents=" + contents + ", fingerprint=" + fingerprint + ", chunks=" + chunks + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Text> schema() {
+            return new dev.openallay.value.ValueSchema<>(Text.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Text>>asList(new dev.openallay.value.ValueSchema.Component<>(Text.class, "contents", Text::contents), new dev.openallay.value.ValueSchema.Component<>(Text.class, "fingerprint", Text::fingerprint), new dev.openallay.value.ValueSchema.Component<>(Text.class, "chunks", Text::chunks)), arguments -> new Text((String) arguments[0], (String) arguments[1], (java.util.List) arguments[2]));
+        }
+    }
+}
 
     private final SkillMetadata metadata;
     private final String instructions;
@@ -23,17 +55,17 @@ public final class SkillDocument {
 
     private SkillDocument(SkillMetadata metadata, String instructions, Map<String, String> references,
             String sourceFingerprint) {
-        if (instructions == null || instructions.isBlank()) {
+        if (instructions == null || dev.openallay.util.Java8Strings.isBlank(instructions)) {
             throw new IllegalArgumentException("Skill instructions must not be blank");
         }
         this.metadata = Objects.requireNonNull(metadata, "metadata");
         this.sourceFingerprint = sourceFingerprint;
         this.instructions = instructions;
-        this.references = Map.copyOf(references);
+        this.references = dev.openallay.util.Java8Collections.mapCopyOf(references);
         Map<String, Text> captured = new HashMap<>();
         captured.put("SKILL.md", text(instructions));
         this.references.forEach((name, contents) -> captured.put(name, text(contents)));
-        documents = Map.copyOf(captured);
+        documents = dev.openallay.util.Java8Collections.mapCopyOf(captured);
     }
 
     private static Text text(String contents) {
@@ -56,8 +88,9 @@ public final class SkillDocument {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof SkillDocument document
-                && metadata.equals(document.metadata)
+        if (!(other instanceof SkillDocument)) return false;
+        SkillDocument document = (SkillDocument) other;
+        return metadata.equals(document.metadata)
                 && instructions.equals(document.instructions)
                 && references.equals(document.references);
     }

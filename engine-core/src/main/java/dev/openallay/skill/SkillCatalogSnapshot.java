@@ -57,6 +57,6 @@ public final class SkillCatalogSnapshot implements SkillCatalog {
 
     @Override
     public List<SkillMetadata> metadata() {
-        return skills.values().stream().map(SkillDocument::metadata).toList();
+        return dev.openallay.util.Java8Collections.toList(skills.values().stream().map(SkillDocument::metadata));
     }
 }

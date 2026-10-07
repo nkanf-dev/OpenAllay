@@ -12,7 +12,7 @@ public final class RequirementCodec {
     public static final String CAPABILITIES_KEY = "openallay/requires-capabilities";
     public static final String EXTENSIONS_KEY = "openallay/requires-extensions";
     public static final String SKILLS_KEY = "openallay/requires-skills";
-    private static final Set<String> FIELDS = Set.of("capabilities", "extensions", "skills");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("capabilities", "extensions", "skills");
 
     private RequirementCodec() {}
 
@@ -49,11 +49,11 @@ public final class RequirementCodec {
     }
 
     private static Set<String> scalar(String value, RequirementKind kind) {
-        if (value == null || value.isBlank()) {
-            return Set.of();
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
+            return dev.openallay.util.Java8Collections.setOf();
         }
         TreeSet<String> result = new TreeSet<>();
-        for (String id : value.strip().split("\\s+")) {
+        for (String id : dev.openallay.util.Java8Strings.strip(value).split("\\s+")) {
             addUnique(result, id, kind);
         }
         return result;
@@ -62,7 +62,7 @@ public final class RequirementCodec {
     private static Set<String> array(JsonObject object, String field, RequirementKind kind) {
         JsonElement value = object.get(field);
         if (value == null) {
-            return Set.of();
+            return dev.openallay.util.Java8Collections.setOf();
         }
         if (!value.isJsonArray()) {
             throw new IllegalArgumentException("requirements." + field + " must be an array");
