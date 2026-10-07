@@ -44,50 +44,108 @@ public final class RunJavascriptTool
     public static final String ID = "openallay:run_javascript";
 
     @ToolDescription("A JavaScript program body. End with an explicit return statement.")
-    public record Input(
-            String source,
-            @ToolDescription("Opaque result handles from this active request that the script needs to reopen.")
-                    @ToolOptional List<String> handles,
-            @ToolDescription("Short title in the player's language describing the intended work. Include on every new call.")
-                    @ToolOptional String title,
-            @ToolDescription("Short description in the player's language of what this call intends to do, not a result or success claim. Include on every new call.")
-                    @ToolOptional String description) {
-        public Input(String source, List<String> handles) {
+@dev.openallay.value.ValueType(Input.ValueSchemaProvider.class)
+public static final class Input {
+    private final String source;
+    @ToolDescription("Opaque result handles from this active request that the script needs to reopen.") @ToolOptional private final List<String> handles;
+    @ToolDescription("Short title in the player's language describing the intended work. Include on every new call.") @ToolOptional private final String title;
+    @ToolDescription("Short description in the player's language of what this call intends to do, not a result or success claim. Include on every new call.") @ToolOptional private final String description;
+    public Input(String source, List<String> handles, String title, String description) {
+
+            handles = handles == null ? List.of() : List.copyOf(handles);
+
+        this.source = source;
+        this.handles = handles;
+        this.title = title;
+        this.description = description;
+    }
+    public String source() { return source; }
+    public List<String> handles() { return handles; }
+    public String title() { return title; }
+    public String description() { return description; }
+public Input(String source, List<String> handles) {
             this(source, handles, null, null);
         }
-
-        public Input {
-            handles = handles == null ? List.of() : List.copyOf(handles);
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Input)) return false;
+        Input that = (Input) other;
+        return java.util.Objects.equals(source, that.source) && java.util.Objects.equals(handles, that.handles) && java.util.Objects.equals(title, that.title) && java.util.Objects.equals(description, that.description);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + java.util.Objects.hashCode(handles);
+        hash = 31 * hash + java.util.Objects.hashCode(title);
+        hash = 31 * hash + java.util.Objects.hashCode(description);
+        return hash;
+    }
+    @Override public String toString() { return "Input[source=" + source + ", handles=" + handles + ", title=" + title + ", description=" + description + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Input> schema() {
+            return new dev.openallay.value.ValueSchema<>(Input.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Input>>asList(new dev.openallay.value.ValueSchema.Component<>(Input.class, "source", Input::source), new dev.openallay.value.ValueSchema.Component<>(Input.class, "handles", Input::handles), new dev.openallay.value.ValueSchema.Component<>(Input.class, "title", Input::title), new dev.openallay.value.ValueSchema.Component<>(Input.class, "description", Input::description)), arguments -> new Input((String) arguments[0], (List) arguments[1], (String) arguments[2], (String) arguments[3]));
         }
     }
+}
 
-    public record Output(
-            String handle,
-            String resultType,
-            long cardinality,
-            List<String> fields,
-            JsonElement preview,
-            String modelText,
-            JavascriptSemanticKind viewKind,
-            boolean complete,
-            int omittedRows,
-            int omittedFields,
-            dev.openallay.tool.ModelResultView modelView,
-            long elapsedMillis,
-            List<String> modules,
-            List<dev.openallay.context.SourceObservation> sources,
-            List<dev.openallay.model.image.ImageReference> images)
-            implements WorkspaceModelFacingToolOutput, dev.openallay.agent.tool.ModelImageToolOutput {
-        public Output {
+    @dev.openallay.value.ValueType(Output.ValueSchemaProvider.class)
+public static final class Output implements WorkspaceModelFacingToolOutput, dev.openallay.agent.tool.ModelImageToolOutput {
+    private final String handle;
+    private final String resultType;
+    private final long cardinality;
+    private final List<String> fields;
+    private final JsonElement preview;
+    private final String modelText;
+    private final JavascriptSemanticKind viewKind;
+    private final boolean complete;
+    private final int omittedRows;
+    private final int omittedFields;
+    private final dev.openallay.tool.ModelResultView modelView;
+    private final long elapsedMillis;
+    private final List<String> modules;
+    private final List<dev.openallay.context.SourceObservation> sources;
+    private final List<dev.openallay.model.image.ImageReference> images;
+    public Output(String handle, String resultType, long cardinality, List<String> fields, JsonElement preview, String modelText, JavascriptSemanticKind viewKind, boolean complete, int omittedRows, int omittedFields, dev.openallay.tool.ModelResultView modelView, long elapsedMillis, List<String> modules, List<dev.openallay.context.SourceObservation> sources, List<dev.openallay.model.image.ImageReference> images) {
+
             fields = List.copyOf(fields);
             preview = dev.openallay.json.JsonTrees.copy(preview);
             java.util.Objects.requireNonNull(viewKind, "viewKind");
             modules = List.copyOf(modules);
             sources = List.copyOf(sources);
             images = List.copyOf(images);
-        }
 
-        public Output(String handle, String resultType, long cardinality, List<String> fields,
+        this.handle = handle;
+        this.resultType = resultType;
+        this.cardinality = cardinality;
+        this.fields = fields;
+        this.preview = preview;
+        this.modelText = modelText;
+        this.viewKind = viewKind;
+        this.complete = complete;
+        this.omittedRows = omittedRows;
+        this.omittedFields = omittedFields;
+        this.modelView = modelView;
+        this.elapsedMillis = elapsedMillis;
+        this.modules = modules;
+        this.sources = sources;
+        this.images = images;
+    }
+    public String handle() { return handle; }
+    public String resultType() { return resultType; }
+    public long cardinality() { return cardinality; }
+    public List<String> fields() { return fields; }
+    public String modelText() { return modelText; }
+    public JavascriptSemanticKind viewKind() { return viewKind; }
+    public boolean complete() { return complete; }
+    public int omittedRows() { return omittedRows; }
+    public int omittedFields() { return omittedFields; }
+    public dev.openallay.tool.ModelResultView modelView() { return modelView; }
+    public long elapsedMillis() { return elapsedMillis; }
+    public List<String> modules() { return modules; }
+    public List<dev.openallay.context.SourceObservation> sources() { return sources; }
+    public List<dev.openallay.model.image.ImageReference> images() { return images; }
+public Output(String handle, String resultType, long cardinality, List<String> fields,
                 JsonElement preview, String modelText, JavascriptSemanticKind viewKind, boolean complete,
                 int omittedRows, int omittedFields, dev.openallay.tool.ModelResultView modelView,
                 long elapsedMillis, List<String> modules, List<dev.openallay.context.SourceObservation> sources) {
@@ -95,11 +153,42 @@ public final class RunJavascriptTool
                     omittedRows, omittedFields, modelView, elapsedMillis, modules, sources, List.of());
         }
 
-        @Override
         public JsonElement preview() {
             return dev.openallay.json.JsonTrees.copy(preview);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Output)) return false;
+        Output that = (Output) other;
+        return java.util.Objects.equals(handle, that.handle) && java.util.Objects.equals(resultType, that.resultType) && cardinality == that.cardinality && java.util.Objects.equals(fields, that.fields) && java.util.Objects.equals(preview, that.preview) && java.util.Objects.equals(modelText, that.modelText) && java.util.Objects.equals(viewKind, that.viewKind) && complete == that.complete && omittedRows == that.omittedRows && omittedFields == that.omittedFields && java.util.Objects.equals(modelView, that.modelView) && elapsedMillis == that.elapsedMillis && java.util.Objects.equals(modules, that.modules) && java.util.Objects.equals(sources, that.sources) && java.util.Objects.equals(images, that.images);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(handle);
+        hash = 31 * hash + java.util.Objects.hashCode(resultType);
+        hash = 31 * hash + Long.hashCode(cardinality);
+        hash = 31 * hash + java.util.Objects.hashCode(fields);
+        hash = 31 * hash + java.util.Objects.hashCode(preview);
+        hash = 31 * hash + java.util.Objects.hashCode(modelText);
+        hash = 31 * hash + java.util.Objects.hashCode(viewKind);
+        hash = 31 * hash + Boolean.hashCode(complete);
+        hash = 31 * hash + Integer.hashCode(omittedRows);
+        hash = 31 * hash + Integer.hashCode(omittedFields);
+        hash = 31 * hash + java.util.Objects.hashCode(modelView);
+        hash = 31 * hash + Long.hashCode(elapsedMillis);
+        hash = 31 * hash + java.util.Objects.hashCode(modules);
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + java.util.Objects.hashCode(images);
+        return hash;
+    }
+    @Override public String toString() { return "Output[handle=" + handle + ", resultType=" + resultType + ", cardinality=" + cardinality + ", fields=" + fields + ", preview=" + preview + ", modelText=" + modelText + ", viewKind=" + viewKind + ", complete=" + complete + ", omittedRows=" + omittedRows + ", omittedFields=" + omittedFields + ", modelView=" + modelView + ", elapsedMillis=" + elapsedMillis + ", modules=" + modules + ", sources=" + sources + ", images=" + images + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Output> schema() {
+            return new dev.openallay.value.ValueSchema<>(Output.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Output>>asList(new dev.openallay.value.ValueSchema.Component<>(Output.class, "handle", Output::handle), new dev.openallay.value.ValueSchema.Component<>(Output.class, "resultType", Output::resultType), new dev.openallay.value.ValueSchema.Component<>(Output.class, "cardinality", Output::cardinality), new dev.openallay.value.ValueSchema.Component<>(Output.class, "fields", Output::fields), new dev.openallay.value.ValueSchema.Component<>(Output.class, "preview", Output::preview), new dev.openallay.value.ValueSchema.Component<>(Output.class, "modelText", Output::modelText), new dev.openallay.value.ValueSchema.Component<>(Output.class, "viewKind", Output::viewKind), new dev.openallay.value.ValueSchema.Component<>(Output.class, "complete", Output::complete), new dev.openallay.value.ValueSchema.Component<>(Output.class, "omittedRows", Output::omittedRows), new dev.openallay.value.ValueSchema.Component<>(Output.class, "omittedFields", Output::omittedFields), new dev.openallay.value.ValueSchema.Component<>(Output.class, "modelView", Output::modelView), new dev.openallay.value.ValueSchema.Component<>(Output.class, "elapsedMillis", Output::elapsedMillis), new dev.openallay.value.ValueSchema.Component<>(Output.class, "modules", Output::modules), new dev.openallay.value.ValueSchema.Component<>(Output.class, "sources", Output::sources), new dev.openallay.value.ValueSchema.Component<>(Output.class, "images", Output::images)), arguments -> new Output((String) arguments[0], (String) arguments[1], (Long) arguments[2], (List) arguments[3], (JsonElement) arguments[4], (String) arguments[5], (JavascriptSemanticKind) arguments[6], (Boolean) arguments[7], (Integer) arguments[8], (Integer) arguments[9], (dev.openallay.tool.ModelResultView) arguments[10], (Long) arguments[11], (List) arguments[12], (List) arguments[13], (List) arguments[14]));
+        }
+    }
+}
 
     private static final ToolDescriptor<Input, Output> DESCRIPTOR = new ToolDescriptor<>(
             ID,
