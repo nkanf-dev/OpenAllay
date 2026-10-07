@@ -27,11 +27,26 @@ public final class GuideToolPresentation {
         }
         JsonObject value = object(normalized, "value");
         if (value == null) return one(GuideToolMessage.Key.RESULT_VALUE_UNAVAILABLE);
-        return switch (toolName(toolId)) {
-            case "load_skill" -> loadedSkill(value);
-            case "run_javascript" -> javascriptAnalysis(value);
-            default -> one(GuideToolMessage.Key.RESULT_COMPLETED);
-        };
+        {
+java.util.List<dev.openallay.guide.GuideToolMessage> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((toolName(toolId))) {
+case "load_skill":
+{
+$oaSwitch0_exit_result = loadedSkill(value); break $oaSwitch0_exit;
+}
+case "run_javascript":
+{
+$oaSwitch0_exit_result = javascriptAnalysis(value); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = one(GuideToolMessage.Key.RESULT_COMPLETED); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static List<GuideToolMessage> javascriptAnalysis(JsonObject value) {
@@ -45,24 +60,37 @@ public final class GuideToolPresentation {
                 && value.get("complete").getAsBoolean();
         // Completeness describes the preview, never whether the calculation succeeded.
         // Object cardinality counts top-level fields, not nested rows or result records.
-        GuideToolMessage summary = switch (type) {
-            case "array" -> cardinality == 0
+        dev.openallay.guide.GuideToolMessage $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((type)) {
+case "array":
+{
+$oaSwitch2_exit_result = cardinality == 0
                     ? message(GuideToolMessage.Key.ANALYSIS_EMPTY)
                     : complete
                             ? message(GuideToolMessage.Key.ANALYSIS_COMPLETE, Long.toString(cardinality))
                             : message(GuideToolMessage.Key.ANALYSIS_PREVIEW,
                                     Integer.toString(preview != null && preview.isJsonArray()
                                             ? preview.getAsJsonArray().size() : 0),
-                                    Long.toString(cardinality));
-            case "object" -> complete
+                                    Long.toString(cardinality)); break $oaSwitch2_exit;
+}
+case "object":
+{
+$oaSwitch2_exit_result = complete
                     ? message(GuideToolMessage.Key.ANALYSIS_FIELDS_COMPLETE, Long.toString(cardinality))
                     : message(GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW,
                             Integer.toString(preview != null && preview.isJsonObject()
                                     ? preview.getAsJsonObject().size() : 0),
-                            Long.toString(cardinality));
-            default -> message(complete ? GuideToolMessage.Key.ANALYSIS_VALUE_COMPLETE
-                    : GuideToolMessage.Key.ANALYSIS_VALUE_PREVIEW);
-        };
+                            Long.toString(cardinality)); break $oaSwitch2_exit;
+}
+default:
+{
+$oaSwitch2_exit_result = message(complete ? GuideToolMessage.Key.ANALYSIS_VALUE_COMPLETE
+                    : GuideToolMessage.Key.ANALYSIS_VALUE_PREVIEW); break $oaSwitch2_exit;
+}
+}
+}
+GuideToolMessage summary = $oaSwitch2_exit_result;
         // This historical receipt does not imply that an old request's handle is still live.
         return !complete && !string(value, "handle").isBlank()
                 ? List.of(summary, message(GuideToolMessage.Key.ANALYSIS_WORKSPACE))
@@ -80,15 +108,41 @@ public final class GuideToolPresentation {
     }
 
     private static GuideToolMessage.Key friendlyFailure(String code) {
-        return switch (code) {
-            case "stale_reference" -> GuideToolMessage.Key.FAILURE_STALE_REFERENCE;
-            case "capability_unavailable", "tool_unavailable" ->
-                    GuideToolMessage.Key.FAILURE_UNAVAILABLE;
-            case "player_required" -> GuideToolMessage.Key.FAILURE_PLAYER_REQUIRED;
-            case "invalid_arguments", "invalid_tool_arguments" -> GuideToolMessage.Key.FAILURE_INVALID_ARGUMENTS;
-            case "unauthorized", "forbidden" -> GuideToolMessage.Key.FAILURE_FORBIDDEN;
-            default -> GuideToolMessage.Key.FAILURE_GENERIC;
-        };
+        {
+dev.openallay.guide.GuideToolMessage.Key $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((code)) {
+case "stale_reference":
+{
+$oaSwitch1_exit_result = GuideToolMessage.Key.FAILURE_STALE_REFERENCE; break $oaSwitch1_exit;
+}
+case "capability_unavailable":
+case "tool_unavailable":
+{
+$oaSwitch1_exit_result = GuideToolMessage.Key.FAILURE_UNAVAILABLE; break $oaSwitch1_exit;
+}
+case "player_required":
+{
+$oaSwitch1_exit_result = GuideToolMessage.Key.FAILURE_PLAYER_REQUIRED; break $oaSwitch1_exit;
+}
+case "invalid_arguments":
+case "invalid_tool_arguments":
+{
+$oaSwitch1_exit_result = GuideToolMessage.Key.FAILURE_INVALID_ARGUMENTS; break $oaSwitch1_exit;
+}
+case "unauthorized":
+case "forbidden":
+{
+$oaSwitch1_exit_result = GuideToolMessage.Key.FAILURE_FORBIDDEN; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = GuideToolMessage.Key.FAILURE_GENERIC; break $oaSwitch1_exit;
+}
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     private static String toolName(String toolId) {

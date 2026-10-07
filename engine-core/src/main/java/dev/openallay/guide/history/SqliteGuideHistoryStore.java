@@ -532,12 +532,29 @@ if ($oaPattern4_match) throw $oaPattern4_bound;
 
     private static void copyRequestPayload(Connection connection, String scopeId, String table,
             UUID sourceId, UUID targetId) throws SQLException {
-        String columns = switch (table) {
-            case "timeline_entries", "request_sources" -> "ordinal, payload_json";
-            case "request_model_context" -> "payload_json";
-            case "request_context_boundaries" -> "payload_json, checkpoints_json";
-            default -> throw new IllegalArgumentException("unknown fork payload table");
-        };
+        java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((table)) {
+case "timeline_entries":
+case "request_sources":
+{
+$oaSwitch1_exit_result = "ordinal, payload_json"; break $oaSwitch1_exit;
+}
+case "request_model_context":
+{
+$oaSwitch1_exit_result = "payload_json"; break $oaSwitch1_exit;
+}
+case "request_context_boundaries":
+{
+$oaSwitch1_exit_result = "payload_json, checkpoints_json"; break $oaSwitch1_exit;
+}
+default:
+{
+throw new IllegalArgumentException("unknown fork payload table");
+}
+}
+}
+String columns = $oaSwitch1_exit_result;
         try (PreparedStatement copy = connection.prepareStatement("insert into " + table
                 + "(scope_id, request_id, " + columns + ") select scope_id, ?, " + columns
                 + " from " + table + " where scope_id = ? and request_id = ?")) {
@@ -1777,11 +1794,25 @@ if ($oaPattern40_match) {
         if (request.cursor() != null) {
             requireCursor(connection, request);
         }
-        String comparison = switch (request.direction()) {
-            case NEWEST -> "";
-            case BEFORE -> " and sequence < ?";
-            case AFTER -> " and sequence > ?";
-        };
+        java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((request.direction())) {
+case NEWEST:
+{
+$oaSwitch0_exit_result = ""; break $oaSwitch0_exit;
+}
+case BEFORE:
+{
+$oaSwitch0_exit_result = " and sequence < ?"; break $oaSwitch0_exit;
+}
+case AFTER:
+{
+$oaSwitch0_exit_result = " and sequence > ?"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String comparison = $oaSwitch0_exit_result;
         String order = request.direction() == GuideHistoryPageRequest.Direction.AFTER
                 ? " order by sequence asc limit ?"
                 : " order by sequence desc limit ?";

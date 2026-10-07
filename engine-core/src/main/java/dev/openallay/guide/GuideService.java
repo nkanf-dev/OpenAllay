@@ -1974,12 +1974,28 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
         historyDeletionPending = true;
         CompletableFuture<Void> deletion;
         try {
-            deletion = switch (kind) {
-                case PARTITION -> history.delete(
-                        GuideHistoryDeleteScope.partition(historyScope));
-                case ACTOR -> history.delete(GuideHistoryDeleteScope.actor(actor));
-                case DATABASE -> history.resetDatabase();
-            };
+            {
+java.util.concurrent.CompletableFuture<java.lang.Void> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((kind)) {
+case PARTITION:
+{
+$oaSwitch0_exit_result = history.delete(
+                        GuideHistoryDeleteScope.partition(historyScope)); break $oaSwitch0_exit;
+}
+case ACTOR:
+{
+$oaSwitch0_exit_result = history.delete(GuideHistoryDeleteScope.actor(actor)); break $oaSwitch0_exit;
+}
+case DATABASE:
+{
+$oaSwitch0_exit_result = history.resetDatabase(); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+deletion = $oaSwitch0_exit_result;
+}
             Objects.requireNonNull(deletion, "history deletion future");
         } catch (RuntimeException failure) {
             finishHistoryAdministration(failure, result);

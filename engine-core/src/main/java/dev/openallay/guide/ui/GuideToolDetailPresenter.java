@@ -59,10 +59,22 @@ public final class GuideToolDetailPresenter {
         }
         String name = toolName(toolId);
         try {
-            return switch (name) {
-                case "run_javascript" -> javascriptCards(value);
-                default -> new Projection(List.of(), "generic tool projection");
-            };
+            {
+dev.openallay.guide.ui.GuideToolDetailPresenter.Projection $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((name)) {
+case "run_javascript":
+{
+$oaSwitch0_exit_result = javascriptCards(value); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = new Projection(List.of(), "generic tool projection"); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
         } catch (RuntimeException exception) {
             return new Projection(List.of(), "malformed semantic result");
         }
@@ -75,16 +87,40 @@ public final class GuideToolDetailPresenter {
         }
         String viewKind = string(value, "viewKind");
         try {
-            return switch (viewKind) {
-                case "RECIPE" -> javascriptRecipeCards(value, preview);
-                case "ITEM" -> javascriptItemCards(value, preview);
-                case "TABLE" -> javascriptTableCard(value, preview);
-                case "KEY_VALUE" -> javascriptKeyValueCard(value, preview);
-                case "SCALAR" -> new Projection(List.of(new GuideDetailCard.Text(
+            {
+dev.openallay.guide.ui.GuideToolDetailPresenter.Projection $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((viewKind)) {
+case "RECIPE":
+{
+$oaSwitch2_exit_result = javascriptRecipeCards(value, preview); break $oaSwitch2_exit;
+}
+case "ITEM":
+{
+$oaSwitch2_exit_result = javascriptItemCards(value, preview); break $oaSwitch2_exit;
+}
+case "TABLE":
+{
+$oaSwitch2_exit_result = javascriptTableCard(value, preview); break $oaSwitch2_exit;
+}
+case "KEY_VALUE":
+{
+$oaSwitch2_exit_result = javascriptKeyValueCard(value, preview); break $oaSwitch2_exit;
+}
+case "SCALAR":
+{
+$oaSwitch2_exit_result = new Projection(List.of(new GuideDetailCard.Text(
                         "screen.openallay.detail.analysis",
-                        List.of(displayValue(preview)))), "");
-                default -> javascriptFallbackCard(value, preview);
-            };
+                        List.of(displayValue(preview)))), ""); break $oaSwitch2_exit;
+}
+default:
+{
+$oaSwitch2_exit_result = javascriptFallbackCard(value, preview); break $oaSwitch2_exit;
+}
+}
+}
+return $oaSwitch2_exit_result;
+}
         } catch (RuntimeException malformed) {
             return javascriptFallbackCard(value, preview);
         }
@@ -249,11 +285,26 @@ public final class GuideToolDetailPresenter {
     }
 
     private static String titleKey(String toolId) {
-        return switch (toolName(toolId)) {
-            case "run_javascript" -> "screen.openallay.tool.run_javascript";
-            case "load_skill" -> "screen.openallay.tool.load_skill";
-            default -> "screen.openallay.tool.result";
-        };
+        {
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((toolName(toolId))) {
+case "run_javascript":
+{
+$oaSwitch1_exit_result = "screen.openallay.tool.run_javascript"; break $oaSwitch1_exit;
+}
+case "load_skill":
+{
+$oaSwitch1_exit_result = "screen.openallay.tool.load_skill"; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = "screen.openallay.tool.result"; break $oaSwitch1_exit;
+}
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     private static String toolName(String toolId) {

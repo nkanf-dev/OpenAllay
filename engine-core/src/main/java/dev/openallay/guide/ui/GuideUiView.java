@@ -107,17 +107,32 @@ public static GuideUiView from(GuideSnapshot snapshot, GuideDisplayConfig displa
                                 Integer.MAX_VALUE, value.historyWindow().totalRequests()))))
                 .toList();
         List<GuideUiRow> rows = new ArrayList<>();
-        switch (snapshot.persistence().state()) {
-            case LOADING -> rows.add(new GuideUiRow.Persistence(
+        switch ((snapshot.persistence().state())) {
+case LOADING:
+{
+rows.add(new GuideUiRow.Persistence(
                     snapshot.persistence().state(),
                     "screen.openallay.history.loading",
                     null));
-            case UNAVAILABLE -> rows.add(new GuideUiRow.Persistence(
+break;
+}
+case UNAVAILABLE:
+{
+rows.add(new GuideUiRow.Persistence(
                     snapshot.persistence().state(),
                     "screen.openallay.history.unavailable",
                     snapshot.persistence().failure()));
-            case SAVING, DISABLED, AVAILABLE -> { }
-        }
+break;
+}
+case SAVING:
+case DISABLED:
+case AVAILABLE:
+{
+{ }
+break;
+}
+}
+
         for (GuideRequestSnapshot request : selected.requests()) {
             rows.addAll(projectRequestRows(request, displayConfig));
         }

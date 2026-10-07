@@ -39,13 +39,24 @@ public static GuideHistoryScope derive(UUID actorId, Kind kind, String discrimin
         if (discriminator == null || discriminator.isBlank()) {
             throw new IllegalArgumentException("history discriminator must not be blank");
         }
-        String normalized = switch (kind) {
-            case SINGLEPLAYER -> Path.of(discriminator.trim())
+        java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((kind)) {
+case SINGLEPLAYER:
+{
+$oaSwitch0_exit_result = Path.of(discriminator.trim())
                     .toAbsolutePath()
                     .normalize()
-                    .toString();
-            case MULTIPLAYER -> discriminator.trim().toLowerCase(Locale.ROOT);
-        };
+                    .toString(); break $oaSwitch0_exit;
+}
+case MULTIPLAYER:
+{
+$oaSwitch0_exit_result = discriminator.trim().toLowerCase(Locale.ROOT); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String normalized = $oaSwitch0_exit_result;
         String material = actorId + "\0" + kind.name() + "\0" + normalized;
         return new GuideHistoryScope(actorId, kind, digest(material));
     }

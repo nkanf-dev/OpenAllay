@@ -60,16 +60,29 @@ public final class GuideHistoryCodec {
                 GuideModelSelection.Kind.class,
                 string(encoded, "kind"),
                 "model selection kind");
-        return switch (kind) {
-            case CLIENT -> {
+        {
+dev.openallay.guide.GuideModelSelection $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((kind)) {
+case CLIENT:
+{
+{
                 requireFields(encoded, CLIENT_SELECTION_FIELDS, "client model selection");
-                yield GuideModelSelection.client(string(encoded, "profileId"));
+                { $oaSwitch1_exit_result = GuideModelSelection.client(string(encoded, "profileId")); break $oaSwitch1_exit; }
             }
-            case SERVER -> {
+}
+case SERVER:
+{
+{
                 requireFields(encoded, SERVER_SELECTION_FIELDS, "server model selection");
-                yield GuideModelSelection.server();
+                { $oaSwitch1_exit_result = GuideModelSelection.server(); break $oaSwitch1_exit; }
             }
-        };
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     /** Exact current shape; no missing presence flags are silently interpreted as zero. */
@@ -208,13 +221,31 @@ if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTime
 
     private GuideTimelineEntry decodeEntryObject(JsonObject object) {
         String type = string(object, "type");
-        return switch (type) {
-            case "user" -> decodeUser(object);
-            case "assistant" -> decodeAssistant(object);
-            case "tool" -> decodeTool(object);
-            default -> throw new IllegalArgumentException(
+        {
+dev.openallay.guide.GuideTimelineEntry $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((type)) {
+case "user":
+{
+$oaSwitch0_exit_result = decodeUser(object); break $oaSwitch0_exit;
+}
+case "assistant":
+{
+$oaSwitch0_exit_result = decodeAssistant(object); break $oaSwitch0_exit;
+}
+case "tool":
+{
+$oaSwitch0_exit_result = decodeTool(object); break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException(
                     "unknown durable timeline entry type " + type);
-        };
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static JsonObject encodeUser(GuideTimelineEntry.User user) {

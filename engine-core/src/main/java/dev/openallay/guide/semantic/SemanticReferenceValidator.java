@@ -53,13 +53,41 @@ public final class SemanticReferenceValidator {
     }
 
     private static boolean syntax(SemanticReferenceKind kind, String target) {
-        return switch (kind) {
-            case ITEM, BLOCK, FLUID, ENTITY, BIOME, DIMENSION -> isResourceId(target);
-            case TAG -> target.startsWith("#") && isResourceId(target.substring(1));
-            case KEY -> KEY.matcher(target).matches();
-            case RECIPE -> recipe(target);
-            case SOURCE, EVIDENCE -> isResourceId(target);
-        };
+        {
+boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((kind)) {
+case ITEM:
+case BLOCK:
+case FLUID:
+case ENTITY:
+case BIOME:
+case DIMENSION:
+{
+$oaSwitch0_exit_result = isResourceId(target); break $oaSwitch0_exit;
+}
+case TAG:
+{
+$oaSwitch0_exit_result = target.startsWith("#") && isResourceId(target.substring(1)); break $oaSwitch0_exit;
+}
+case KEY:
+{
+$oaSwitch0_exit_result = KEY.matcher(target).matches(); break $oaSwitch0_exit;
+}
+case RECIPE:
+{
+$oaSwitch0_exit_result = recipe(target); break $oaSwitch0_exit;
+}
+case SOURCE:
+case EVIDENCE:
+{
+$oaSwitch0_exit_result = isResourceId(target); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static boolean recipe(String target) {

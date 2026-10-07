@@ -246,16 +246,45 @@ public static GuideRequestProgress legacyProgress(
             Long retryAfterMillis,
             Instant createdAt,
             Instant updatedAt) {
-        GuideRequestPhase phase = switch (status) {
-            case PREPARING -> GuideRequestPhase.PREPARING;
-            case CONTEXT_LOADING -> GuideRequestPhase.CONTEXT_LOADING;
-            case COMPACTING -> GuideRequestPhase.COMPACTING;
-            case RATE_LIMITED -> GuideRequestPhase.ENDPOINT_WAIT;
-            case MODEL_WAIT -> GuideRequestPhase.MODEL_WAIT;
-            case TOOL_WAIT -> GuideRequestPhase.TOOL_WAIT;
-            case COMPLETING, COMPLETED, FAILED, CANCELLED, INTERRUPTED ->
-                    GuideRequestPhase.COMPLETING;
-        };
+        dev.openallay.guide.GuideRequestPhase $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((status)) {
+case PREPARING:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.PREPARING; break $oaSwitch0_exit;
+}
+case CONTEXT_LOADING:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.CONTEXT_LOADING; break $oaSwitch0_exit;
+}
+case COMPACTING:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.COMPACTING; break $oaSwitch0_exit;
+}
+case RATE_LIMITED:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.ENDPOINT_WAIT; break $oaSwitch0_exit;
+}
+case MODEL_WAIT:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.MODEL_WAIT; break $oaSwitch0_exit;
+}
+case TOOL_WAIT:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.TOOL_WAIT; break $oaSwitch0_exit;
+}
+case COMPLETING:
+case COMPLETED:
+case FAILED:
+case CANCELLED:
+case INTERRUPTED:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.COMPLETING; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+GuideRequestPhase phase = $oaSwitch0_exit_result;
         Instant monotonicUpdated = updatedAt.isBefore(createdAt) ? createdAt : updatedAt;
         Instant retryAt = retryAfterMillis == null
                 ? null

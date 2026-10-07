@@ -553,25 +553,79 @@ if ((($oaPattern28_holder.value = timeline.get(index)) instanceof dev.openallay.
     }
 
     private static GuideRequestStatus state(AgentState state) {
-        return switch (state) {
-            case IDLE, PREPARING -> GuideRequestStatus.PREPARING;
-            case COMPACTING -> GuideRequestStatus.COMPACTING;
-            case MODEL_WAIT -> GuideRequestStatus.MODEL_WAIT;
-            case TOOL_WAIT -> GuideRequestStatus.TOOL_WAIT;
-            case COMPLETED -> GuideRequestStatus.COMPLETING;
-            case FAILED -> GuideRequestStatus.FAILED;
-            case CANCELLED -> GuideRequestStatus.CANCELLED;
-        };
+        {
+dev.openallay.guide.GuideRequestStatus $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((state)) {
+case IDLE:
+case PREPARING:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.PREPARING; break $oaSwitch1_exit;
+}
+case COMPACTING:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.COMPACTING; break $oaSwitch1_exit;
+}
+case MODEL_WAIT:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.MODEL_WAIT; break $oaSwitch1_exit;
+}
+case TOOL_WAIT:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.TOOL_WAIT; break $oaSwitch1_exit;
+}
+case COMPLETED:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.COMPLETING; break $oaSwitch1_exit;
+}
+case FAILED:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.FAILED; break $oaSwitch1_exit;
+}
+case CANCELLED:
+{
+$oaSwitch1_exit_result = GuideRequestStatus.CANCELLED; break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     private static GuideRequestPhase phase(AgentState state) {
-        return switch (state) {
-            case IDLE, PREPARING -> GuideRequestPhase.PREPARING;
-            case COMPACTING -> GuideRequestPhase.COMPACTING;
-            case MODEL_WAIT -> GuideRequestPhase.MODEL_WAIT;
-            case TOOL_WAIT -> GuideRequestPhase.TOOL_WAIT;
-            case COMPLETED, FAILED, CANCELLED -> GuideRequestPhase.COMPLETING;
-        };
+        {
+dev.openallay.guide.GuideRequestPhase $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((state)) {
+case IDLE:
+case PREPARING:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.PREPARING; break $oaSwitch0_exit;
+}
+case COMPACTING:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.COMPACTING; break $oaSwitch0_exit;
+}
+case MODEL_WAIT:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.MODEL_WAIT; break $oaSwitch0_exit;
+}
+case TOOL_WAIT:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.TOOL_WAIT; break $oaSwitch0_exit;
+}
+case COMPLETED:
+case FAILED:
+case CANCELLED:
+{
+$oaSwitch0_exit_result = GuideRequestPhase.COMPLETING; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private List<GuideSource> sources(String toolId, JsonObject normalized) {

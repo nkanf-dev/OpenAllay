@@ -249,11 +249,27 @@ if ((($oaPattern10_holder.value = node) instanceof org.commonmark.ext.gfm.tables
             if (alignment == null) {
                 return SemanticBlock.Alignment.NONE;
             }
-            return switch (alignment) {
-                case LEFT -> SemanticBlock.Alignment.LEFT;
-                case CENTER -> SemanticBlock.Alignment.CENTER;
-                case RIGHT -> SemanticBlock.Alignment.RIGHT;
-            };
+            {
+dev.openallay.guide.semantic.SemanticBlock.Alignment $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((alignment)) {
+case LEFT:
+{
+$oaSwitch0_exit_result = SemanticBlock.Alignment.LEFT; break $oaSwitch0_exit;
+}
+case CENTER:
+{
+$oaSwitch0_exit_result = SemanticBlock.Alignment.CENTER; break $oaSwitch0_exit;
+}
+case RIGHT:
+{
+$oaSwitch0_exit_result = SemanticBlock.Alignment.RIGHT; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
         }
 
         private List<SemanticInline> inlines(Node parent, String path) {

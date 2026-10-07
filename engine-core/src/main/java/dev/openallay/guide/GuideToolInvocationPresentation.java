@@ -12,11 +12,26 @@ public final class GuideToolInvocationPresentation {
 
     public static List<GuideToolMessage> messages(String toolId, JsonObject input) {
         String name = toolName(toolId);
-        return switch (name) {
-            case "load_skill" -> loadSkill(input);
-            case "run_javascript" -> javascriptIntent(input);
-            default -> List.of();
-        };
+        {
+java.util.List<dev.openallay.guide.GuideToolMessage> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((name)) {
+case "load_skill":
+{
+$oaSwitch0_exit_result = loadSkill(input); break $oaSwitch0_exit;
+}
+case "run_javascript":
+{
+$oaSwitch0_exit_result = javascriptIntent(input); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = List.of(); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static List<GuideToolMessage> javascriptIntent(JsonObject input) {
