@@ -165,6 +165,12 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
     dependsOn(verifyProductionDependencies)
     dependsOn(':runtime-maven:test')
+    def voiceTlsKeys = providers.environmentVariable('OPENALLAY_VOICE_TLS_KEYS')
+    if (voiceTlsKeys.isPresent()) {
+        // Test-only local HTTPS trust must not replace Gradle's repository trust store.
+        systemProperty('javax.net.ssl.trustStore', voiceTlsKeys.get())
+        systemProperty('javax.net.ssl.trustStorePassword', 'fixture-only')
+    }
 }
 
 // The standalone SQLite packaging probe belongs to the native-free engine tests.

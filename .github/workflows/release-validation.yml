@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers]
         default: skills
         required: true
 permissions:
@@ -524,7 +524,6 @@ jobs:
 
         export OPENALLAY_VOICE_TLS_KEYS="$PWD/engine-core/src/java8Test/voice-http/build/tls/fixture.jks"
 
-        export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=$OPENALLAY_VOICE_TLS_KEYS
         -Djavax.net.ssl.trustStorePassword=fixture-only"
 
         ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.client.voice.HttpSpeechToTextTest
@@ -683,3 +682,32 @@ jobs:
         path: 'runtime-rhino/build/test-results/
 
           engine-core/build/test-results/'
+
+  voice-consumers:
+    if: inputs.scope == 'voice-consumers'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: true}
+      - name: Generate only the legitimate local test TLS identity
+        run: ./gradlew --no-daemon -p engine-core/src/java8Test/voice-http -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" fixtureTls
+      - name: Verify actual voice consumers with test-VM-only trust
+        run: OPENALLAY_VOICE_TLS_KEYS="$PWD/engine-core/src/java8Test/voice-http/build/tls/fixture.jks" ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.client.voice.HttpSpeechToTextTest --tests dev.openallay.client.voice.NativeModelInstallerHttpTest --tests dev.openallay.client.voice.NativeSpeechToTextTest
+      - name: Retain original consumer and TLS-fixture diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: voice-consumers-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: engine-core/build/test-results/
