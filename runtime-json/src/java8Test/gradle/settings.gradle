@@ -1,0 +1,7 @@
+// Standalone fixture settings select only the canonical runtime-json project.
+// No engine or native-loader build is configured for the Java8 proof.
+rootProject.name = 'openallay-runtime-json-java8-proof'
+rootProject.projectDir = file('../../..')
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}

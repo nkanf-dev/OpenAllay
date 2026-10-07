@@ -25,8 +25,8 @@ public final class JsonReaders {
     /** Read-only snapshot for consumers of the host's Iterable JsonArray ABI. */
     public static java.util.List<JsonElement> elements(JsonArray array) {
         java.util.List<JsonElement> values = new java.util.ArrayList<>(array.size());
-        array.forEach(values::add);
-        return java.util.List.copyOf(values);
+        array.forEach(value -> values.add(Objects.requireNonNull(value, "JSON array element")));
+        return java.util.Collections.unmodifiableList(values);
     }
 
     /** The public adapter does not temporarily enable lenient parsing, unlike older JsonParser. */

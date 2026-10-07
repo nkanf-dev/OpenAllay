@@ -9,7 +9,7 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 tasks.withType(JavaCompile).configureEach {
-    options.release = 17
+    options.release = 8
     options.encoding = 'UTF-8'
 }
 tasks.withType(Jar).configureEach {
@@ -34,3 +34,38 @@ tasks.register('verifyProductionDependencies') {
     }
 }
 tasks.named('compileJava') { dependsOn('verifyProductionDependencies') }
+
+// Focused proof runs Java8-compiled production and fixtures on a real Java8 VM.
+// The Gradle daemon/compiler may remain modern. Host Gson changes are test-only.
+sourceSets {
+    java8Test {
+        java.srcDir('src/java8Test/java')
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations.java8TestImplementation.extendsFrom(configurations.implementation, configurations.api)
+def jsonJava8Host = providers.gradleProperty('jsonVerificationGsonVersion').getOrElse('2.8.0')
+configurations.named('java8TestCompileClasspath') {
+    resolutionStrategy.force('com.google.code.gson:gson:2.8.0')
+}
+configurations.named('java8TestRuntimeClasspath') {
+    resolutionStrategy.force("com.google.code.gson:gson:${jsonJava8Host}")
+}
+tasks.register('java8CompatibilityTest', JavaExec) {
+    group = 'verification'
+    description = 'Verify JSON public behavior on the genuine Java8 VM.'
+    dependsOn(tasks.named('java8TestClasses'))
+    classpath = sourceSets.java8Test.runtimeClasspath
+    mainClass = 'dev.openallay.json.JsonJava8CompatibilityTest'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    inputs.property('jsonVerificationGsonVersion', jsonJava8Host)
+    doFirst {
+        def artifacts = configurations.java8TestRuntimeClasspath.resolvedConfiguration.resolvedArtifacts
+                .findAll { it.moduleVersion.id.group == 'com.google.code.gson' && it.name == 'gson' }
+        if (artifacts.size() != 1 || artifacts.first().moduleVersion.id.version != jsonJava8Host) {
+            throw new GradleException("JSON Java8 runtime must contain exactly Gson ${jsonJava8Host}")
+        }
+        logger.lifecycle("JSON Java8 verification runtime: ${artifacts.first().moduleVersion.id}")
+    }
+}
