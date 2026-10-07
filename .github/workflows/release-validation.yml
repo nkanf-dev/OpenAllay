@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types]
         default: skills
         required: true
 permissions:
@@ -2794,3 +2794,45 @@ jobs:
           ${{ runner.temp }}/context-compactor-2.13.2/*-junit-results/
 
           engine-core/build/test-results/'
+
+  record-constructor-types:
+    if: inputs.scope == 'record-constructor-types'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17'
+    - name: Verify constructor type repair and exact former converter output equivalence
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'gh run download 37576452026 --repo nkanf-dev/OpenAllay --name client-settings-record-language-d010622395e0c79ecb2e30a3b9fb3e315b478a53
+        --dir "$RUNNER_TEMP/client-record-baseline"
+
+        python3 -B -c ''from pathlib import Path; import os,subprocess; temp=Path(os.environ["RUNNER_TEMP"]);
+        packets=list((temp/"client-record-baseline").glob("**/source-packet/manifest.json"));
+        assert len(packets)==1,packets; subprocess.run(["python3","-B","build-logic/src/recordConstructorTypeTest/verify.py","--source-root",str(Path.cwd()),"--jdk17",os.environ["JAVA_HOME_17_X64"],"--jdk8",os.environ["JAVA_HOME_8_X64"],"--baseline-packet",str(packets[0].parent),"--output",str(temp/"constructor-type-proof")],check=True)'' '
+    - name: Retain original overload ABI and converter output diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: record-constructor-types-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/constructor-type-proof/receipt.json
+
+          ${{ runner.temp }}/constructor-type-proof/diagnostic-card-java8.patch
+
+          ${{ runner.temp }}/constructor-type-proof/candidate/
+
+          ${{ runner.temp }}/constructor-type-proof/command-*.log'
