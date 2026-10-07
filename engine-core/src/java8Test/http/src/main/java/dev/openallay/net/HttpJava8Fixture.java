@@ -51,8 +51,18 @@ public final class HttpJava8Fixture {
                 require(((header[6] & 255) << 8 | header[7] & 255) == 52, "class major must be 52: " + type);
             }
         }
+        if (args.length != 0) {
+            require(args.length == 2 && "--case".equals(args[0])
+                    && "incomplete-response".equals(args[1]), "unknown fixture case");
+            incompleteErrorBody();
+            waitForThreads();
+            require(UNCAUGHT.get() == null, "uncaught owner failure: " + UNCAUGHT.get());
+            System.out.println("PASS Java8 HTTP incomplete-error response: observed400 IOException closure cleanup Class52 threads");
+            return;
+        }
         values();
         basic();
+        incompleteErrorBody();
         preCancelled();
         System.out.println("CASE blocked response body deadline");
         blockedBody(false);
@@ -133,6 +143,35 @@ public final class HttpJava8Fixture {
                     .timeout(Duration.ofSeconds(Long.MAX_VALUE)).get().build(), new Cancel(), (status, headers, body) -> read(body));
             require(huge.get(3, TimeUnit.SECONDS).equals("GET"), "overflow guarded duration");
             cleanup(huge, 3);
+        }
+    }
+
+    private static void incompleteErrorBody() throws Exception {
+        CountDownLatch decoding = new CountDownLatch(1);
+        AtomicInteger observedStatus = new AtomicInteger(-1);
+        AtomicReference<InputStream> bodyRef = new AtomicReference<>();
+        try (Server server = new Server()) {
+            server.http.createContext("/incomplete-error", exchange -> {
+                exchange.sendResponseHeaders(400, 200);
+                exchange.getResponseBody().write('{');
+                exchange.getResponseBody().flush();
+                try { require(decoding.await(2, TimeUnit.SECONDS), "incomplete-error decoder entered"); }
+                catch (InterruptedException failure) { Thread.currentThread().interrupt(); }
+                finally { exchange.close(); }
+            });
+            server.http.start();
+            CompletableFuture<String> result = transport().execute(request(server, "/incomplete-error", 2), new Cancel(),
+                    (status, headers, body) -> {
+                        observedStatus.set(status);
+                        bodyRef.set(body);
+                        decoding.countDown();
+                        return read(body);
+                    });
+            expect(result, IOException.class);
+            require(observedStatus.get() == 400, "known rejection status must reach decoder");
+            cleanup(result, 3);
+            try { bodyRef.get().read(); throw new AssertionError("incomplete body not closed"); }
+            catch (IOException expected) { }
         }
     }
 

@@ -4,6 +4,7 @@ import dev.openallay.concurrent.NamedThreads;
 import dev.openallay.util.Java8Futures;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -135,6 +136,7 @@ public final class JdkHttpTransport implements HttpTransport {
                 body = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
                 if (body == null) body = new ByteArrayInputStream(new byte[0]);
                 HttpResponseHeaders headers = responseHeaders(connection);
+                body = checkedBody(status, headers, body);
                 check();
                 decoding = true;
                 value = decoder.decode(status, headers, body);
@@ -208,6 +210,67 @@ public final class JdkHttpTransport implements HttpTransport {
             if (stream == null) return;
             try { stream.close(); }
             catch (Throwable failure) { cleanupFailure.compareAndSet(null, failure); }
+        }
+    }
+
+    private static InputStream checkedBody(int status, HttpResponseHeaders headers, InputStream body) {
+        // URLConnection can silently return EOF for a truncated fixed-length response.
+        // Preserve the streaming decoder's IOException boundary without buffering the body.
+        if (status < 200 || status == 204 || status == 304
+                || headers.firstValue("transfer-encoding").isPresent()) return body;
+        String length = headers.firstValue("content-length").orElse(null);
+        if (length == null) return body;
+        try {
+            long expected = Long.parseLong(length.trim());
+            return expected < 0 ? body : new LengthCheckedBody(body, expected);
+        } catch (NumberFormatException invalidLength) {
+            return body;
+        }
+    }
+
+    private static final class LengthCheckedBody extends FilterInputStream {
+        private final long expected;
+        private long received;
+        private long marked;
+
+        LengthCheckedBody(InputStream body, long expected) {
+            super(body);
+            this.expected = expected;
+        }
+
+        @Override public int read() throws IOException {
+            int value = in.read();
+            account(value < 0 ? -1 : 1);
+            return value;
+        }
+
+        @Override public int read(byte[] buffer, int offset, int length) throws IOException {
+            int count = in.read(buffer, offset, length);
+            account(count);
+            return count;
+        }
+
+        @Override public long skip(long count) throws IOException {
+            long skipped = in.skip(count);
+            received += skipped;
+            return skipped;
+        }
+
+        @Override public synchronized void mark(int readLimit) {
+            in.mark(readLimit);
+            marked = received;
+        }
+
+        @Override public synchronized void reset() throws IOException {
+            in.reset();
+            received = marked;
+        }
+
+        private void account(int count) throws IOException {
+            if (count < 0 && received < expected) {
+                throw new IOException("HTTP response body ended before its declared length");
+            }
+            if (count > 0) received += count;
         }
     }
 
