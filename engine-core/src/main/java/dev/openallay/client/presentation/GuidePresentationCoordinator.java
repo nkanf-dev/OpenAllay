@@ -101,17 +101,33 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
                 try {
                     if (!validVoiceTarget(target)) return VoiceRuntime.Insertion.REJECTED;
                     GuideClientUiState.Insertion captured = voiceInsertion(target);
-                    return switch (state.insertTranscript(captured, text, observationForVoice(target).orElse(null))) {
-                        case INSERTED -> {
+                    {
+dev.openallay.client.voice.VoiceRuntime.Insertion $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((state.insertTranscript(captured, text, observationForVoice(target).orElse(null)))) {
+case INSERTED:
+{
+{
                             if (target.sessionId().equals(state.selectedSession())
                                     && host.facts().surface() == GuidePresentationHost.Surface.GUIDE) {
                                 host.focusComposerAfterVoiceDraft();
                             }
-                            yield VoiceRuntime.Insertion.INSERTED;
+                            { $oaSwitch0_exit_result = VoiceRuntime.Insertion.INSERTED; break $oaSwitch0_exit; }
                         }
-                        case PENDING -> VoiceRuntime.Insertion.PENDING;
-                        case REJECTED -> VoiceRuntime.Insertion.REJECTED;
-                    };
+}
+case PENDING:
+{
+$oaSwitch0_exit_result = VoiceRuntime.Insertion.PENDING; break $oaSwitch0_exit;
+}
+case REJECTED:
+{
+$oaSwitch0_exit_result = VoiceRuntime.Insertion.REJECTED; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
                 } finally { releaseVoiceObservation(target); }
             }
             @Override public java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<VoiceRuntime.DeliveryReceipt>> send(

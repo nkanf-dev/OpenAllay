@@ -19,11 +19,27 @@ public String explanationKey() {
     }
 public ImageInputCapability next() {
         if (selected == null) return ImageInputCapability.SUPPORTED;
-        return switch (selected) {
-            case SUPPORTED -> ImageInputCapability.UNSUPPORTED;
-            case UNSUPPORTED -> ImageInputCapability.UNKNOWN;
-            case UNKNOWN -> null;
-        };
+        {
+dev.openallay.model.image.ImageInputCapability $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((selected)) {
+case SUPPORTED:
+{
+$oaSwitch0_exit_result = ImageInputCapability.UNSUPPORTED; break $oaSwitch0_exit;
+}
+case UNSUPPORTED:
+{
+$oaSwitch0_exit_result = ImageInputCapability.UNKNOWN; break $oaSwitch0_exit;
+}
+case UNKNOWN:
+{
+$oaSwitch0_exit_result = null; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

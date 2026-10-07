@@ -187,11 +187,25 @@ static final class Call {
         Path runtime = NativeRuntimeCatalog.directory(call.runtimeRoot());
         List<NativeRuntimeCatalog.Artifact> artifacts = NativeRuntimeCatalog.artifacts();
         NativeModelFiles.Model model = call.model();
-        NativeModelFiles.Role primary = switch (model.family()) {
-            case SENSE_VOICE -> NativeModelFiles.Role.SENSE_VOICE_MODEL;
-            case PARA_FORMER -> NativeModelFiles.Role.PARA_FORMER_MODEL;
-            case WHISPER -> NativeModelFiles.Role.WHISPER_ENCODER;
-        };
+        dev.openallay.client.voice.NativeModelFiles.Role $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((model.family())) {
+case SENSE_VOICE:
+{
+$oaSwitch0_exit_result = NativeModelFiles.Role.SENSE_VOICE_MODEL; break $oaSwitch0_exit;
+}
+case PARA_FORMER:
+{
+$oaSwitch0_exit_result = NativeModelFiles.Role.PARA_FORMER_MODEL; break $oaSwitch0_exit;
+}
+case WHISPER:
+{
+$oaSwitch0_exit_result = NativeModelFiles.Role.WHISPER_ENCODER; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+NativeModelFiles.Role primary = $oaSwitch0_exit_result;
         String secondary = model.family() == NativeModelFiles.ModelFamily.WHISPER
                 ? model.file(call.modelDirectory(), NativeModelFiles.Role.WHISPER_DECODER).toString() : "";
         // Fixed executable and argv; model metadata can never add VM flags or a classpath entry.
@@ -253,20 +267,30 @@ static final class Call {
         private static String recognize(ClassLoader loader, String[] args, int threads, float[] samples) throws Exception {
             Object family;
             String setter;
-            switch (args[0]) {
-                case "SENSE_VOICE" -> {
+            switch ((args[0])) {
+case "SENSE_VOICE":
+{
+{
                     Object builder = builder(loader, "OfflineSenseVoiceModelConfig");
                     invoke(builder, "setModel", new Class<?>[] {String.class}, args[1]);
                     invoke(builder, "setLanguage", new Class<?>[] {String.class}, args[9]);
                     invoke(builder, "setInverseTextNormalization", new Class<?>[] {boolean.class}, true);
                     family = invoke(builder, "build", new Class<?>[0]); setter = "setSenseVoice";
                 }
-                case "PARA_FORMER" -> {
+break;
+}
+case "PARA_FORMER":
+{
+{
                     Object builder = builder(loader, "OfflineParaformerModelConfig");
                     invoke(builder, "setModel", new Class<?>[] {String.class}, args[1]);
                     family = invoke(builder, "build", new Class<?>[0]); setter = "setParaformer";
                 }
-                case "WHISPER" -> {
+break;
+}
+case "WHISPER":
+{
+{
                     Object builder = builder(loader, "OfflineWhisperModelConfig");
                     invoke(builder, "setEncoder", new Class<?>[] {String.class}, args[1]);
                     invoke(builder, "setDecoder", new Class<?>[] {String.class}, args[2]);
@@ -274,8 +298,14 @@ static final class Call {
                     invoke(builder, "setTask", new Class<?>[] {String.class}, "transcribe");
                     family = invoke(builder, "build", new Class<?>[0]); setter = "setWhisper";
                 }
-                default -> throw new IllegalArgumentException("family");
-            }
+break;
+}
+default:
+{
+throw new IllegalArgumentException("family");
+}
+}
+
             Object modelBuilder = builder(loader, "OfflineModelConfig");
             invoke(modelBuilder, setter, new Class<?>[] {family.getClass()}, family);
             invoke(modelBuilder, "setTokens", new Class<?>[] {String.class}, args[3]);

@@ -116,12 +116,31 @@ if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.model.ModelClie
             }
             Integer status = modelFailure.httpStatus();
             if (status != null) {
-                return switch (status) {
-                    case 401, 403 -> failure("connection_auth_failed");
-                    case 404 -> failure("connection_model_unavailable");
-                    case 429 -> failure("connection_rate_limited");
-                    default -> failure("connection_protocol_failed");
-                };
+                {
+dev.openallay.settings.model.ModelConnectionResult.Failure $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((status)) {
+case 401:
+case 403:
+{
+$oaSwitch0_exit_result = failure("connection_auth_failed"); break $oaSwitch0_exit;
+}
+case 404:
+{
+$oaSwitch0_exit_result = failure("connection_model_unavailable"); break $oaSwitch0_exit;
+}
+case 429:
+{
+$oaSwitch0_exit_result = failure("connection_rate_limited"); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = failure("connection_protocol_failed"); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
             }
         }
         return failure("connection_transport_failed");
@@ -141,16 +160,43 @@ if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.model.ModelClie
     }
 
     private static ModelConnectionResult.Failure failure(String code) {
-        return new ModelConnectionResult.Failure(code, switch (code) {
-            case "connection_auth_failed" -> "The model provider rejected authentication";
-            case "connection_model_unavailable" -> "The configured model is unavailable";
-            case "connection_rate_limited" -> "The model provider rate-limited the test";
-            case "connection_timeout" -> "The connection test timed out";
-            case "connection_cancelled" -> "The connection test was cancelled";
-            case "connection_protocol_failed" ->
-                "The model provider returned an invalid test response";
-            default -> "The model provider could not be reached";
-        });
+        {
+final java.lang.String $oaSwitch1_exit_result_prior0 = code;
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((code)) {
+case "connection_auth_failed":
+{
+$oaSwitch1_exit_result = "The model provider rejected authentication"; break $oaSwitch1_exit;
+}
+case "connection_model_unavailable":
+{
+$oaSwitch1_exit_result = "The configured model is unavailable"; break $oaSwitch1_exit;
+}
+case "connection_rate_limited":
+{
+$oaSwitch1_exit_result = "The model provider rate-limited the test"; break $oaSwitch1_exit;
+}
+case "connection_timeout":
+{
+$oaSwitch1_exit_result = "The connection test timed out"; break $oaSwitch1_exit;
+}
+case "connection_cancelled":
+{
+$oaSwitch1_exit_result = "The connection test was cancelled"; break $oaSwitch1_exit;
+}
+case "connection_protocol_failed":
+{
+$oaSwitch1_exit_result = "The model provider returned an invalid test response"; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = "The model provider could not be reached"; break $oaSwitch1_exit;
+}
+}
+}
+return new ModelConnectionResult.Failure($oaSwitch1_exit_result_prior0, $oaSwitch1_exit_result);
+}
     }
 
     private static String safeUnavailableMessage(String code) {

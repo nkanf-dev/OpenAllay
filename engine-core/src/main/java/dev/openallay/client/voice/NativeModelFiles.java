@@ -166,19 +166,35 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
                 total += bytes;
                 files.add(new ModelFile(role, path, bytes, hash));
             }
-            Set<Role> required = switch (family) {
-                case SENSE_VOICE -> dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.SENSE_VOICE_MODEL);
-                case PARA_FORMER -> dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.PARA_FORMER_MODEL);
-                case WHISPER -> dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.WHISPER_ENCODER, Role.WHISPER_DECODER);
-            };
+            java.util.Set<dev.openallay.client.voice.NativeModelFiles.Role> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((family)) {
+case SENSE_VOICE:
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.SENSE_VOICE_MODEL); break $oaSwitch0_exit;
+}
+case PARA_FORMER:
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.PARA_FORMER_MODEL); break $oaSwitch0_exit;
+}
+case WHISPER:
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf(Role.TOKENS, Role.WHISPER_ENCODER, Role.WHISPER_DECODER); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+Set<Role> required = $oaSwitch0_exit_result;
             if (!roles.equals(required) || total > MAX_TOTAL_BYTES) throw new IllegalArgumentException();
             return new Model(name, family, files);
         } catch (RuntimeException | IOException failure) { throw new NativeSpeechToText.Failure("model_integrity", failure); }
     }
     private static void checkJson(com.google.gson.stream.JsonReader reader, int depth) throws IOException {
         if (depth > 4) throw new IllegalArgumentException();
-        switch (reader.peek()) {
-            case BEGIN_OBJECT -> {
+        switch ((reader.peek())) {
+case BEGIN_OBJECT:
+{
+{
                 reader.beginObject(); Set<String> names = new HashSet<>();
                 while (reader.hasNext()) {
                     if (!names.add(reader.nextName())) throw new IllegalArgumentException();
@@ -186,16 +202,39 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
                 }
                 reader.endObject();
             }
-            case BEGIN_ARRAY -> {
+break;
+}
+case BEGIN_ARRAY:
+{
+{
                 reader.beginArray(); int count = 0;
                 while (reader.hasNext()) { if (++count > 16) throw new IllegalArgumentException(); checkJson(reader, depth + 1); }
                 reader.endArray();
             }
-            case STRING, NUMBER -> reader.nextString();
-            case BOOLEAN -> reader.nextBoolean();
-            case NULL -> reader.nextNull();
-            default -> throw new IllegalArgumentException();
-        }
+break;
+}
+case STRING:
+case NUMBER:
+{
+reader.nextString();
+break;
+}
+case BOOLEAN:
+{
+reader.nextBoolean();
+break;
+}
+case NULL:
+{
+reader.nextNull();
+break;
+}
+default:
+{
+throw new IllegalArgumentException();
+}
+}
+
     }
     static String json(Model model) {
         JsonObject object = new JsonObject();

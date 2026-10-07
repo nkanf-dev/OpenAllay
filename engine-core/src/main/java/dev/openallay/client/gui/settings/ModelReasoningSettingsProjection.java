@@ -31,10 +31,21 @@ public final class ModelReasoningSettingsProjection {
 public static ModelReasoningSettingsProjection from(
             ModelProtocol protocol, ModelReasoningEffort effort) {
         List<ModelReasoningEffort> choices = ModelReasoningEffort.choices(protocol);
-        String field = switch (protocol) {
-            case OPENAI_CHAT -> "reasoning_effort";
-            case ANTHROPIC_MESSAGES -> "output_config.effort";
-        };
+        java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((protocol)) {
+case OPENAI_CHAT:
+{
+$oaSwitch0_exit_result = "reasoning_effort"; break $oaSwitch0_exit;
+}
+case ANTHROPIC_MESSAGES:
+{
+$oaSwitch0_exit_result = "output_config.effort"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String field = $oaSwitch0_exit_result;
         String explanation = effort == ModelReasoningEffort.AUTO
                 ? "screen.openallay.settings.models.reasoning.auto_description"
                 : choices.contains(effort)

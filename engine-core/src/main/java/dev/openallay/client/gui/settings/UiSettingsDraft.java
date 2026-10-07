@@ -61,13 +61,26 @@ public final class UiSettingsDraft {
     }
 
     public void reset(UiSettingsProjection.Group group) {
-        switch (group) {
-            case FULLSCREEN -> {
+        switch ((group)) {
+case FULLSCREEN:
+{
+{
                 ui = ui.withFullscreen(GuideUiConfig.Fullscreen.defaults());
                 animations = GuideDisplayConfig.defaults().animationsEnabled();
             }
-            case HUD -> ui = ui.withHud(GuideUiConfig.Hud.defaults());
-            case NOTIFICATIONS -> ui = ui.withNotifications(GuideUiConfig.Notifications.defaults());
-        }
+break;
+}
+case HUD:
+{
+ui = ui.withHud(GuideUiConfig.Hud.defaults());
+break;
+}
+case NOTIFICATIONS:
+{
+ui = ui.withNotifications(GuideUiConfig.Notifications.defaults());
+break;
+}
+}
+
     }
 }

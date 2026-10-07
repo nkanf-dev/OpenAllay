@@ -53,18 +53,40 @@ public final class OpenAllayWidgetTheme {
     }
 
     public static ButtonColors buttonColors(ButtonVisualState state) {
-        return switch (state) {
-            case IDLE -> new ButtonColors(
-                    CHARCOAL_RAISED, SLATE_BORDER, CHARCOAL, WHITE, SLATE_BORDER);
-            case HOVERED -> new ButtonColors(
-                    CHARCOAL_HOVERED, MINT, CHARCOAL, WHITE, MINT);
-            case FOCUSED -> new ButtonColors(
-                    CHARCOAL_HOVERED, AMBER, CHARCOAL, WHITE, AMBER);
-            case SELECTED -> new ButtonColors(
-                    MINT_DARK, MINT, CHARCOAL, WHITE, MINT);
-            case DISABLED -> new ButtonColors(
-                    CHARCOAL_DISABLED, SLATE_DISABLED, CHARCOAL, MUTED, SLATE_DISABLED);
-        };
+        {
+dev.openallay.client.gui.OpenAllayWidgetTheme.ButtonColors $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((state)) {
+case IDLE:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_RAISED, SLATE_BORDER, CHARCOAL, WHITE, SLATE_BORDER); break $oaSwitch0_exit;
+}
+case HOVERED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_HOVERED, MINT, CHARCOAL, WHITE, MINT); break $oaSwitch0_exit;
+}
+case FOCUSED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_HOVERED, AMBER, CHARCOAL, WHITE, AMBER); break $oaSwitch0_exit;
+}
+case SELECTED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    MINT_DARK, MINT, CHARCOAL, WHITE, MINT); break $oaSwitch0_exit;
+}
+case DISABLED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_DISABLED, SLATE_DISABLED, CHARCOAL, MUTED, SLATE_DISABLED); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     public enum ButtonVisualState {

@@ -39,17 +39,31 @@ public final class ClientSettingsHistoryBinding
                     snapshot.activity(),
                     SettingsDiagnosticsAggregator.HistoryScopeKind.NONE);
         }
-        return new ClientSettingsService.HistoryRuntimeState(
-                true,
-                snapshot.guide(),
-                snapshot.activity(),
-                switch (snapshot.scopeKind().orElseThrow()) {
-                    case SINGLEPLAYER ->
-                            SettingsDiagnosticsAggregator.HistoryScopeKind.SINGLEPLAYER_WORLD;
-                    case MULTIPLAYER ->
-                            SettingsDiagnosticsAggregator.HistoryScopeKind.MULTIPLAYER_SERVER;
-                },
+        {
+final boolean $oaSwitch0_exit_result_prior0 = true;
+final java.util.Optional<dev.openallay.guide.GuideSnapshot> $oaSwitch0_exit_result_prior1 = snapshot.guide();
+final dev.openallay.guide.history.GuideHistoryActivity $oaSwitch0_exit_result_prior2 = snapshot.activity();
+dev.openallay.settings.diagnostics.SettingsDiagnosticsAggregator.HistoryScopeKind $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((snapshot.scopeKind().orElseThrow())) {
+case SINGLEPLAYER:
+{
+$oaSwitch0_exit_result = SettingsDiagnosticsAggregator.HistoryScopeKind.SINGLEPLAYER_WORLD; break $oaSwitch0_exit;
+}
+case MULTIPLAYER:
+{
+$oaSwitch0_exit_result = SettingsDiagnosticsAggregator.HistoryScopeKind.MULTIPLAYER_SERVER; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return new ClientSettingsService.HistoryRuntimeState(
+                $oaSwitch0_exit_result_prior0,
+                $oaSwitch0_exit_result_prior1,
+                $oaSwitch0_exit_result_prior2,
+                $oaSwitch0_exit_result,
                 snapshot.estimatedContextTokens());
+}
     }
 
     @Override

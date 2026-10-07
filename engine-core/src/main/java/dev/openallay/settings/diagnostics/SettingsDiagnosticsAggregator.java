@@ -265,21 +265,57 @@ public DiagnosticsInputs(
             status = FriendlyStatus.NOT_CONNECTED;
         } else {
             GuideSnapshot snapshot = inputs.guide().orElseThrow();
-            status = switch (snapshot.persistence().state()) {
-                case UNAVAILABLE -> FriendlyStatus.UNAVAILABLE;
-                case LOADING, SAVING -> FriendlyStatus.WORKING;
-                case DISABLED -> FriendlyStatus.ATTENTION;
-                case AVAILABLE -> selectedSession(snapshot)
+            {
+dev.openallay.settings.diagnostics.SettingsDiagnosticCard.FriendlyStatus $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((snapshot.persistence().state())) {
+case UNAVAILABLE:
+{
+$oaSwitch1_exit_result = FriendlyStatus.UNAVAILABLE; break $oaSwitch1_exit;
+}
+case LOADING:
+case SAVING:
+{
+$oaSwitch1_exit_result = FriendlyStatus.WORKING; break $oaSwitch1_exit;
+}
+case DISABLED:
+{
+$oaSwitch1_exit_result = FriendlyStatus.ATTENTION; break $oaSwitch1_exit;
+}
+case AVAILABLE:
+{
+$oaSwitch1_exit_result = selectedSession(snapshot)
                                 .map(GuideSessionSnapshot::historyWindow)
-                                .map(window -> switch (window.state()) {
-                                    case LOADING -> FriendlyStatus.WORKING;
-                                    case FAILED -> FriendlyStatus.ATTENTION;
-                                    case IDLE -> inputs.historyActivity().idleForDeletion()
+                                .map(window -> {
+dev.openallay.settings.diagnostics.SettingsDiagnosticCard.FriendlyStatus $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((window.state())) {
+case LOADING:
+{
+$oaSwitch0_exit_result = FriendlyStatus.WORKING; break $oaSwitch0_exit;
+}
+case FAILED:
+{
+$oaSwitch0_exit_result = FriendlyStatus.ATTENTION; break $oaSwitch0_exit;
+}
+case IDLE:
+{
+$oaSwitch0_exit_result = inputs.historyActivity().idleForDeletion()
                                                     && guide.activeRequests() == 0
-                                            ? FriendlyStatus.READY : FriendlyStatus.WORKING;
-                                })
-                                .orElse(FriendlyStatus.READY);
-            };
+                                            ? FriendlyStatus.READY : FriendlyStatus.WORKING; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+})
+                                .orElse(FriendlyStatus.READY); break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+status = $oaSwitch1_exit_result;
+}
         }
         List<String> notes = new java.util.ArrayList<>();
         if (inputs.guide().isPresent()) {

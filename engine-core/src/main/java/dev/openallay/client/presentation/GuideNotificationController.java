@@ -240,13 +240,31 @@ public final class GuideNotificationController implements GuidePresentationListe
     }
     private GuideUiConfig.Notifications config() { return Objects.requireNonNull(settings.get(), "notification settings"); }
     private static boolean eligible(GuidePresentationEvent event, GuideUiConfig.Notifications config) {
-        return switch (event.kind()) {
-            case REPLY_FINAL -> config.replyCompleted();
-            case CARD_BATCH -> config.cardBatches();
-            // Task completion is a fallback under the reply option, never an unconfigurable extra toast.
-            case TASK_COMPLETED -> config.replyCompleted();
-            case TASK_FAILED -> config.taskFailures();
-        };
+        {
+boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((event.kind())) {
+case REPLY_FINAL:
+{
+$oaSwitch0_exit_result = config.replyCompleted(); break $oaSwitch0_exit;
+}
+case CARD_BATCH:
+{
+$oaSwitch0_exit_result = config.cardBatches(); break $oaSwitch0_exit;
+}
+case TASK_COMPLETED:
+{
+$oaSwitch0_exit_result = config.replyCompleted(); break $oaSwitch0_exit;
+}
+case TASK_FAILED:
+{
+$oaSwitch0_exit_result = config.taskFailures(); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
     private GuideNotificationPort.Notification notification(Task task, List<GuidePresentationEvent> events,
                                                            int duration, GuideNotificationPort.Fence fence,
@@ -257,15 +275,32 @@ public final class GuideNotificationController implements GuidePresentationListe
         boolean reply = false, complete = false, failed = false;
         for (GuidePresentationEvent event : dev.openallay.util.Java8Collections.toList(events.stream()
                 .sorted(java.util.Comparator.comparingLong(event -> event.key().sequence())))) {
-            switch (event.kind()) {
-                case REPLY_FINAL -> { reply = true; text = event.preview(); }
-                case CARD_BATCH -> {
+            switch ((event.kind())) {
+case REPLY_FINAL:
+{
+{ reply = true; text = event.preview(); }
+break;
+}
+case CARD_BATCH:
+{
+{
                     cards.addAll(event.content());
                     event.cardPreviews().forEach(card -> previews.putIfAbsent(card.source(), card));
                 }
-                case TASK_COMPLETED -> complete = true;
-                case TASK_FAILED -> { failed = true; failure = event.preview(); }
-            }
+break;
+}
+case TASK_COMPLETED:
+{
+complete = true;
+break;
+}
+case TASK_FAILED:
+{
+{ failed = true; failure = event.preview(); }
+break;
+}
+}
+
         }
         return new GuideNotificationPort.Notification(task.generation, task.actor, task.owner,
                 task.session, task.request, failed ? failure : text, cards.size(), dev.openallay.util.Java8Collections.listCopyOf(previews.values()),

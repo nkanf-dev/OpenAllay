@@ -362,23 +362,67 @@ if (failure == null && (($oaPattern0_holder.value = result) instanceof dev.opena
         final class $oaPattern1_Holder { java.lang.Throwable value; AudioPermissionException bound; }
 final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
 if ((($oaPattern1_holder.value = failure) instanceof dev.openallay.client.voice.AudioPermissionException && (($oaPattern1_holder.bound = (AudioPermissionException) $oaPattern1_holder.value) != null))) {
-            return switch ($oaPattern1_holder.bound.diagnostic()) {
-                case DENIED, RESTRICTED -> "microphone_denied";
-                case LAUNCHER_NOT_PREPARED -> "microphone_launcher_unprepared";
-                case CHECK_FAILED -> "microphone_permission_unavailable";
-            };
+            {
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch (($oaPattern1_holder.bound.diagnostic())) {
+case DENIED:
+case RESTRICTED:
+{
+$oaSwitch0_exit_result = "microphone_denied"; break $oaSwitch0_exit;
+}
+case LAUNCHER_NOT_PREPARED:
+{
+$oaSwitch0_exit_result = "microphone_launcher_unprepared"; break $oaSwitch0_exit;
+}
+case CHECK_FAILED:
+{
+$oaSwitch0_exit_result = "microphone_permission_unavailable"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
         }
         final class $oaPattern2_Holder { java.lang.Throwable value; AudioCapture.CaptureException bound; }
 final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
 if ((($oaPattern2_holder.value = failure) instanceof dev.openallay.client.voice.AudioCapture.CaptureException && (($oaPattern2_holder.bound = (AudioCapture.CaptureException) $oaPattern2_holder.value) != null))) {
-            return switch ($oaPattern2_holder.bound.failure()) {
-                case DEVICE_DISCONNECTED, READ_FAILED -> "device_broken";
-                case DEVICE_UNAVAILABLE -> "microphone_device_unavailable";
-                case BACKEND_UNAVAILABLE -> "microphone_backend_unavailable";
-                case UNSUPPORTED_FORMAT -> "microphone_format_unsupported";
-                case OPEN_FAILED -> "microphone_open_failed";
-                case OPEN_TIMEOUT, OPEN_BUSY -> "microphone_open_failed";
-            };
+            {
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch (($oaPattern2_holder.bound.failure())) {
+case DEVICE_DISCONNECTED:
+case READ_FAILED:
+{
+$oaSwitch1_exit_result = "device_broken"; break $oaSwitch1_exit;
+}
+case DEVICE_UNAVAILABLE:
+{
+$oaSwitch1_exit_result = "microphone_device_unavailable"; break $oaSwitch1_exit;
+}
+case BACKEND_UNAVAILABLE:
+{
+$oaSwitch1_exit_result = "microphone_backend_unavailable"; break $oaSwitch1_exit;
+}
+case UNSUPPORTED_FORMAT:
+{
+$oaSwitch1_exit_result = "microphone_format_unsupported"; break $oaSwitch1_exit;
+}
+case OPEN_FAILED:
+{
+$oaSwitch1_exit_result = "microphone_open_failed"; break $oaSwitch1_exit;
+}
+case OPEN_TIMEOUT:
+case OPEN_BUSY:
+{
+$oaSwitch1_exit_result = "microphone_open_failed"; break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch1_exit_result;
+}
         }
         final class $oaPattern3_Holder { java.lang.Throwable value; HttpSpeechToText.Failure bound; }
 final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();

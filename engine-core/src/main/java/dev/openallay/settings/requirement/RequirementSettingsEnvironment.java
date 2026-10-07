@@ -53,12 +53,35 @@ public final class RequirementSettingsEnvironment {
 
         Map<String, RequirementAvailability> extensionFacts = new TreeMap<>();
         for (dev.openallay.settings.extension.ExtensionSettingsView.Extension extension : extensions.extensions()) {
-            extensionFacts.put(extension.id(), fact(extension.name(), switch (extension.state()) {
-                case ACTIVE -> RequirementStatus.SATISFIED;
-                case RESTART_REQUIRED -> RequirementStatus.RESTART_REQUIRED;
-                case COMMUNITY -> RequirementStatus.MISSING;
-                case INCOMPATIBLE, UNAVAILABLE -> RequirementStatus.UNAVAILABLE;
-            }));
+            {
+final java.util.Map<java.lang.String, dev.openallay.requirement.RequirementAvailability> $oaSwitch0_exit_result_prior1 = extensionFacts;
+final java.lang.String $oaSwitch0_exit_result_prior2 = extension.id();
+final java.lang.String $oaSwitch0_exit_result_prior0 = extension.name();
+dev.openallay.requirement.RequirementStatus $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((extension.state())) {
+case ACTIVE:
+{
+$oaSwitch0_exit_result = RequirementStatus.SATISFIED; break $oaSwitch0_exit;
+}
+case RESTART_REQUIRED:
+{
+$oaSwitch0_exit_result = RequirementStatus.RESTART_REQUIRED; break $oaSwitch0_exit;
+}
+case COMMUNITY:
+{
+$oaSwitch0_exit_result = RequirementStatus.MISSING; break $oaSwitch0_exit;
+}
+case INCOMPATIBLE:
+case UNAVAILABLE:
+{
+$oaSwitch0_exit_result = RequirementStatus.UNAVAILABLE; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+$oaSwitch0_exit_result_prior1.put($oaSwitch0_exit_result_prior2, fact($oaSwitch0_exit_result_prior0, $oaSwitch0_exit_result));
+}
         }
         Map<String, RequirementAvailability> skillFacts = new TreeMap<>();
         for (dev.openallay.settings.skill.SkillSettingsView.Skill skill : skills.skills()) {

@@ -39,11 +39,25 @@ public static CapabilitySettingsProjection from(
         Objects.requireNonNull(draft, "draft");
         List<Card> cards = new ArrayList<>();
         for (CapabilitySettingsEntry entry : view.catalog().entries()) {
-            boolean enabled = switch (entry.kind()) {
-                case TOOL -> !draft.disabledTools().contains(entry.id());
-                case SKILL -> !draft.disabledSkills().contains(entry.id());
-                case KNOWLEDGE_SOURCE -> entry.enabled();
-            };
+            boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((entry.kind())) {
+case TOOL:
+{
+$oaSwitch0_exit_result = !draft.disabledTools().contains(entry.id()); break $oaSwitch0_exit;
+}
+case SKILL:
+{
+$oaSwitch0_exit_result = !draft.disabledSkills().contains(entry.id()); break $oaSwitch0_exit;
+}
+case KNOWLEDGE_SOURCE:
+{
+$oaSwitch0_exit_result = entry.enabled(); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+boolean enabled = $oaSwitch0_exit_result;
             boolean toggleable = entry.childPage() == null
                     && (entry.kind() == CapabilityKind.TOOL
                             || entry.kind() == CapabilityKind.SKILL);

@@ -48,13 +48,35 @@ public static DiagnosticsSettingsProjection from(SettingsDiagnosticsSnapshot sna
                         debug)));
     }
 private static String icon(SettingsDiagnosticCard.FriendlyStatus status) {
-        return switch (status) {
-            case READY -> "✓";
-            case WORKING -> "…";
-            case ATTENTION -> "!";
-            case UNAVAILABLE -> "×";
-            case NOT_CONNECTED -> "○";
-        };
+        {
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((status)) {
+case READY:
+{
+$oaSwitch0_exit_result = "✓"; break $oaSwitch0_exit;
+}
+case WORKING:
+{
+$oaSwitch0_exit_result = "…"; break $oaSwitch0_exit;
+}
+case ATTENTION:
+{
+$oaSwitch0_exit_result = "!"; break $oaSwitch0_exit;
+}
+case UNAVAILABLE:
+{
+$oaSwitch0_exit_result = "×"; break $oaSwitch0_exit;
+}
+case NOT_CONNECTED:
+{
+$oaSwitch0_exit_result = "○"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 @dev.openallay.value.ValueType(CardRow.ValueSchemaProvider.class)
 public static final class CardRow {

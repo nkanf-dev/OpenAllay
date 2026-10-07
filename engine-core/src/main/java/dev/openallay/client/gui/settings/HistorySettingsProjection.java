@@ -57,24 +57,55 @@ public static HistorySettingsProjection from(
                     idle && history.databaseResetAvailable(),
                     true));
         }
-        return new HistorySettingsProjection(
-                "screen.openallay.settings.history.title",
-                switch (history.connectionKind()) {
-                    case NONE -> "screen.openallay.settings.history.scope.none";
-                    case SINGLEPLAYER_WORLD -> "screen.openallay.settings.history.scope.world";
-                    case MULTIPLAYER_SERVER -> "screen.openallay.settings.history.scope.server";
-                },
+        {
+final java.lang.String $oaSwitch1_exit_result_prior0 = "screen.openallay.settings.history.title";
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((history.connectionKind())) {
+case NONE:
+{
+$oaSwitch1_exit_result = "screen.openallay.settings.history.scope.none"; break $oaSwitch1_exit;
+}
+case SINGLEPLAYER_WORLD:
+{
+$oaSwitch1_exit_result = "screen.openallay.settings.history.scope.world"; break $oaSwitch1_exit;
+}
+case MULTIPLAYER_SERVER:
+{
+$oaSwitch1_exit_result = "screen.openallay.settings.history.scope.server"; break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return new HistorySettingsProjection(
+                $oaSwitch1_exit_result_prior0,
+                $oaSwitch1_exit_result,
                 "screen.openallay.settings.history.status."
                         + history.health().name().toLowerCase(Locale.ROOT),
                 "screen.openallay.settings.history.narration",
                 actions);
+}
     }
 private static ActionRow row(Action action, boolean enabled, boolean second) {
-        String suffix = switch (action) {
-            case DELETE_CURRENT -> "delete_current";
-            case DELETE_ACTOR -> "delete_actor";
-            case RESET_DATABASE -> "reset_database";
-        };
+        java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch0_exit_result = "delete_current"; break $oaSwitch0_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch0_exit_result = "delete_actor"; break $oaSwitch0_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch0_exit_result = "reset_database"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String suffix = $oaSwitch0_exit_result;
         return new ActionRow(
                 action,
                 "screen.openallay.settings.history.action." + suffix,
