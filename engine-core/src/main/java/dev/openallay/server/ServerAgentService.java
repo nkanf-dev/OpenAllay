@@ -396,9 +396,9 @@ public final class ServerAgentService {
         return imageOperation(requestId, owner, () -> {
             try {
                 requireClientToolImport(requestId, owner, invocationCurrent);
-                for (var attachment : captured) {
+                for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : captured) {
                     requireClientToolImport(requestId, owner, invocationCurrent);
-                    var imported = images.importImage(actor,
+                    dev.openallay.model.image.ImageReference imported = images.importImage(actor,
                             requestImageOwner(owner.imageScope, requestId), attachment.bytes());
                     if (!imported.equals(attachment.reference())) {
                         throw new java.io.IOException("Client Tool image metadata differs from actual image");
@@ -477,7 +477,7 @@ public final class ServerAgentService {
         java.util.List<CompletableFuture<Void>> cleanup = new java.util.ArrayList<>();
         int count = 0;
         Set<Owner> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
-        for (var entry : retained.entrySet()) {
+        for (java.util.Map.Entry<java.util.UUID, dev.openallay.server.ServerAgentService.Owner> entry : retained.entrySet()) {
             Owner owner = entry.getValue();
             if (!seen.add(owner) || !owner.actorId().equals(sender)
                     || (scope != null && !owner.imageScope.equals(scope))) continue;
@@ -536,7 +536,7 @@ public final class ServerAgentService {
                 }
                 // Reserve already exists. Flush synchronously, before any model dispatch or
                 // off-thread S2b event/image retention work can consume this first boundary.
-                for (var pending : owner.inbox.entrySet()) {
+                for (java.util.Map.Entry<java.util.UUID, dev.openallay.model.ModelMessage> pending : owner.inbox.entrySet()) {
                     ToolResult<Boolean> result = sessions.steer(
                             owner.key(), requestId, pending.getKey(), pending.getValue());
                     if (!(result instanceof ToolResult.Success<Boolean> success && success.value())) {
@@ -715,15 +715,15 @@ public final class ServerAgentService {
 
     private void prepareImages(ServerAgentRequestPayload payload, Owner owner) {
         try {
-            for (var attachment : payload.imageAttachments()) {
+            for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : payload.imageAttachments()) {
                 if (!currentImagePreparation(payload.requestId(), owner)) return;
-                var imported = images.importImage(owner.actorId(),
+                dev.openallay.model.image.ImageReference imported = images.importImage(owner.actorId(),
                         requestImageOwner(owner.imageScope, payload.requestId()), attachment.bytes());
                 if (!imported.equals(attachment.reference())) {
                     throw new java.io.IOException("Uploaded metadata does not match the actual image");
                 }
             }
-            for (var reference : owner.requiredImages) {
+            for (dev.openallay.model.image.ImageReference reference : owner.requiredImages) {
                 if (!currentImagePreparation(payload.requestId(), owner)) return;
                 images.read(owner.actorId(), reference);
             }

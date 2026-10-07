@@ -62,7 +62,7 @@ public final class ExpectationMatcher {
                 return false;
             }
             JsonObject actualObject = actual.getAsJsonObject();
-            for (var entry : expected.getAsJsonObject().entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, com.google.gson.JsonElement> entry : expected.getAsJsonObject().entrySet()) {
                 if (!actualObject.has(entry.getKey())
                         || !contains(actualObject.get(entry.getKey()), entry.getValue())) {
                     return false;

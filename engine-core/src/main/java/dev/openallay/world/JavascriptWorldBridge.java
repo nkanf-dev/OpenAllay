@@ -218,7 +218,7 @@ public final class JavascriptWorldBridge {
     }
 
     private Object await(CompletionStage<?> stage) {
-        var future = stage.toCompletableFuture();
+        java.util.concurrent.CompletableFuture<?> future = stage.toCompletableFuture();
         try {
             while (!future.isDone()) {
                 cancellation.throwIfCancelled();

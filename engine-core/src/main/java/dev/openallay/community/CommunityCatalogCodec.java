@@ -75,7 +75,7 @@ public final class CommunityCatalogCodec {
         root.addProperty("schemaVersion", manifest.schemaVersion());
         root.addProperty("kind", manifest.kind());
         root.addProperty("generatedAt", manifest.generatedAt().toString());
-        var packages = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray packages = new com.google.gson.JsonArray();
         for (CommunityCatalogManifest.PackageEntry entry : manifest.packages()) {
             JsonObject encoded = new JsonObject();
             encoded.addProperty("id", entry.id());

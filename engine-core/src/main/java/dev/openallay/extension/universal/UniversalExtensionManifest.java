@@ -55,7 +55,7 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
                     range(target, "minecraftVersionRange"), range(target, "openAllayVersionRange"),
                     range(target, "openAllayApiVersionRange")));
         }
-        var requirements = RequirementCodec.decode(root.get("requirements"));
+        dev.openallay.requirement.RequirementSet requirements = RequirementCodec.decode(root.get("requirements"));
         ExtensionDescriptor descriptor = new ExtensionDescriptor(string(root, "id"), string(root, "name"),
                 string(root, "version"), string(root, "provider"), string(root, "summary"), string(root, "source"),
                 new SupportDeclaration(targets, integer(support, "minimumJavaVersion"),

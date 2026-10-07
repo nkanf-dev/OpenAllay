@@ -94,14 +94,14 @@ public final class BundledUniversalExtensions implements AutoCloseable {
                 Files.move(staged, target);
             } finally { Files.deleteIfExists(staged); }
         }
-        try (var files = Files.list(directory)) {
+        try (java.util.stream.Stream<java.nio.file.Path> files = Files.list(directory)) {
             if (files.anyMatch(file -> file.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar")
                     && !file.equals(target))) {
                 throw new IOException("Bundled Extension cache contains an unexpected package");
             }
         }
         try (JarFile jar = new JarFile(target.toFile(), false)) {
-            var entry = jar.getJarEntry(UniversalExtensionManifest.JAR_PATH);
+            java.util.jar.JarEntry entry = jar.getJarEntry(UniversalExtensionManifest.JAR_PATH);
             if (entry == null) throw new IOException("Bundled Extension manifest is missing");
             UniversalExtensionManifest manifest;
             try (InputStream input = jar.getInputStream(entry)) {
@@ -142,13 +142,13 @@ public final class BundledUniversalExtensions implements AutoCloseable {
     }
     private static void exact(JsonObject value, Set<String> keys) { if (!dev.openallay.json.JsonTrees.keys(value).equals(keys)) throw invalid(); }
     private static String text(JsonObject value, String key) {
-        var item = value.get(key);
+        com.google.gson.JsonElement item = value.get(key);
         if (item == null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()
                 || item.getAsString().isBlank()) throw invalid();
         return item.getAsString();
     }
     private static boolean bool(JsonObject value, String key) {
-        var item = value.get(key);
+        com.google.gson.JsonElement item = value.get(key);
         if (item == null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isBoolean()) throw invalid();
         return item.getAsBoolean();
     }

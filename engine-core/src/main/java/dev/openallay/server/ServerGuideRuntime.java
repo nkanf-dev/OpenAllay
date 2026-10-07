@@ -102,7 +102,7 @@ public record ServerGuideRuntime(
                 dev.openallay.model.ObservingModelClient.observe(raw, config.model()));
         LocalAgentToolExecutor tools = new LocalAgentToolExecutor(runtime.tools(), gson);
         AgentSessionStore sessions = new AgentSessionStore();
-        var estimator = ModelContextTokenEstimator.create(config.protocol(), config.model(), config.tokenEncoding());
+        dev.openallay.model.tokenizer.ModelContextTokenEstimator estimator = ModelContextTokenEstimator.create(config.protocol(), config.model(), config.tokenEncoding());
         ContextCompactor compactor = new ContextCompactor(
                 scheduled, gson, estimator,
                 config.contextBudget(), config.model(), Clock.systemUTC());
@@ -191,7 +191,7 @@ public record ServerGuideRuntime(
         java.util.Map<String, dev.openallay.model.image.ImageReference> needed = new java.util.LinkedHashMap<>();
         userInput.content().stream().filter(dev.openallay.model.ModelContent.Image.class::isInstance)
                 .map(dev.openallay.model.ModelContent.Image.class::cast).forEach(image -> {
-                    var previous = needed.putIfAbsent(image.reference().sha256(), image.reference());
+                    dev.openallay.model.image.ImageReference previous = needed.putIfAbsent(image.reference().sha256(), image.reference());
                     if (previous != null && !previous.equals(image.reference())) {
                         throw new IllegalArgumentException("Conflicting Steer image metadata");
                     }
@@ -200,7 +200,7 @@ public record ServerGuideRuntime(
             throw new IllegalArgumentException("The captured server model has no confirmed image input support");
         }
         java.util.Map<String, dev.openallay.model.image.ImageReference> supplied = new java.util.LinkedHashMap<>();
-        for (var attachment : attachments) {
+        for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : attachments) {
             if (supplied.putIfAbsent(attachment.reference().sha256(), attachment.reference()) != null) {
                 throw new IllegalArgumentException("Duplicate Steer image attachment");
             }
@@ -208,8 +208,8 @@ public record ServerGuideRuntime(
         if (!needed.equals(supplied)) {
             throw new IllegalArgumentException("Steer image attachments must exactly match the message references");
         }
-        for (var attachment : attachments) {
-            var imported = images.importImage(actor, steerImageOwner(requestId), attachment.bytes());
+        for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : attachments) {
+            dev.openallay.model.image.ImageReference imported = images.importImage(actor, steerImageOwner(requestId), attachment.bytes());
             if (!imported.equals(attachment.reference())) {
                 throw new java.io.IOException("Steer image metadata does not match actual image content");
             }

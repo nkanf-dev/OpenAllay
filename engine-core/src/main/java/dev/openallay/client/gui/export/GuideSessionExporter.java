@@ -178,7 +178,7 @@ public final class GuideSessionExporter {
                 Map<String, String> tools = new LinkedHashMap<>();
                 Set<String> recordedCalls = new HashSet<>();
                 boolean firstUserText = true;
-                for (var message : request.originalContext()) {
+                for (dev.openallay.model.ModelMessage message : request.originalContext()) {
                     message.inputObservation().ifPresent(anchor -> {
                         result.append("Player-input reference context\n")
                                 .append(formatText(dev.openallay.model.image.ModelImages.inputObservationLabel(anchor)))
@@ -250,7 +250,7 @@ public final class GuideSessionExporter {
     private static void appendUnrecordedTimeline(
             StringBuilder result, GuideSessionExportSnapshot.Request request,
             Set<String> recordedCalls, boolean hasOriginalContext) {
-        for (var entry : request.timeline()) {
+        for (dev.openallay.guide.export.GuideSessionExportSnapshot.Entry entry : request.timeline()) {
             Objects.requireNonNull(entry);
             if (entry instanceof GuideSessionExportSnapshot.Entry.User user) {
                 if (!hasOriginalContext) {
@@ -284,7 +284,7 @@ public final class GuideSessionExporter {
                 .append(outcome.error() ? " · FAILED\n" : " · SUCCEEDED\n")
                 .append("Invocation ID: ").append(formatText(outcome.toolUseId())).append('\n')
                 .append(outcome.error() ? "Tool error (model-visible)\n" : "Result (model-visible)\n");
-        var value = outcome.value();
+        com.google.gson.JsonElement value = outcome.value();
         String text = value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
                 ? value.getAsString() : value.toString();
         result.append(formatText(text)).append("\n\n");

@@ -107,10 +107,10 @@ public final class NativeSpeechToText implements SpeechToText {
             Path audio = job.resolve("audio.pcm");
             Path transcript = job.resolve("transcript.txt");
             // Restrict the directory before writing PCM. Windows inherits the user's temp ACL.
-            var permissions = Files.getFileAttributeView(job, java.nio.file.attribute.PosixFileAttributeView.class);
+            java.nio.file.attribute.PosixFileAttributeView permissions = Files.getFileAttributeView(job, java.nio.file.attribute.PosixFileAttributeView.class);
             if (permissions != null) permissions.setPermissions(java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
             Files.write(audio, call.request().clip().pcm(), StandardOpenOption.CREATE_NEW);
-            var audioPermissions = Files.getFileAttributeView(audio, java.nio.file.attribute.PosixFileAttributeView.class);
+            java.nio.file.attribute.PosixFileAttributeView audioPermissions = Files.getFileAttributeView(audio, java.nio.file.attribute.PosixFileAttributeView.class);
             if (audioPermissions != null) audioPermissions.setPermissions(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
             cancellation.check();
             List<String> command = command(call, audio, transcript);
@@ -167,7 +167,7 @@ public final class NativeSpeechToText implements SpeechToText {
                 call.request().language(), Integer.toString(call.request().cpuThreads()));
     }
     private static void deleteJob(Path job) {
-        try (var entries = Files.walk(job)) {
+        try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(job)) {
             for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) {
                 try { Files.deleteIfExists(entry); } catch (IOException ignored) { /* Best effort after exit. */ }
             }
@@ -281,7 +281,7 @@ public final class NativeSpeechToText implements SpeechToText {
         private static void extract(ClassLoader loader, String resource, Path target) throws IOException {
             try (InputStream input = loader.getResourceAsStream(resource)) {
                 if (input == null) throw new IOException("Missing official native resource");
-                try (var output = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW)) {
+                try (java.io.OutputStream output = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW)) {
                     byte[] buffer = new byte[64 * 1024]; long bytes = 0; int count;
                     while ((count = input.read(buffer)) != -1) {
                         bytes += count;

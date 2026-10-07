@@ -134,7 +134,7 @@ public final class GameGuideAgent {
             events.accept(new AgentEvent.ContextUpdated(messages, lease.progress().requestMessages()));
             if (compactor != null && !lease.checkpoints().isEmpty()) {
                 for (int index = lease.checkpoints().size() - 1; index >= 0; index--) {
-                    var reused = compactor.reuse(
+                    java.util.Optional<dev.openallay.agent.context.ContextProjection> reused = compactor.reuse(
                             lease.checkpoints().get(index),
                             preparedPrompt,
                             messages,
@@ -296,7 +296,7 @@ public final class GameGuideAgent {
                         lease.cancellation()))
                 .thenCompose(rawTurn -> {
                     lease.cancellation().throwIfCancelled();
-                    var turn = new dev.openallay.model.ModelTurn(
+                    dev.openallay.model.ModelTurn turn = new dev.openallay.model.ModelTurn(
                             rawTurn.providerId(), rawTurn.model(),
                             rawTurn.content().stream().filter(content -> !(content instanceof ModelContent.Reasoning)).toList(),
                             rawTurn.stopReason(), rawTurn.usage());
@@ -434,7 +434,7 @@ public final class GameGuideAgent {
                 // Allocate all successful results against the same full request, not one per-tool
                 // token/byte guess. Keep completed errors exact and the original history untouched.
                 List<ModelMessage> actual = updated;
-                var fitted = compactor.fitResults(
+                java.util.Optional<dev.openallay.agent.context.ContextProjection> fitted = compactor.fitResults(
                         candidate -> promptForProjection(request, lease, candidate),
                         actual, tools.definitions(), freshResults);
                 if (fitted.isPresent()) updated = new ArrayList<>(fitted.orElseThrow().messages());

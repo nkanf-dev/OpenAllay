@@ -1117,7 +1117,7 @@ public final class ClientSettingsService implements AutoCloseable {
                             return;
                         }
                     } else {
-                        var failure = (ToolResult.Failure<Boolean>) completed;
+                        dev.openallay.tool.ToolResult.Failure<java.lang.Boolean> failure = (ToolResult.Failure<Boolean>) completed;
                         notice = SettingsNotice.failure(failure.code(), failure.message());
                     }
                     publishLocked();
@@ -1167,7 +1167,7 @@ public final class ClientSettingsService implements AutoCloseable {
 
     private Optional<RequirementReview> requirementReviewLocked() {
         if (preparedPackage == null || packageReviewToken == null) return Optional.empty();
-        var report = RequirementEvaluator.evaluate(preparedPackage.requirements(),
+        dev.openallay.requirement.RequirementReport report = RequirementEvaluator.evaluate(preparedPackage.requirements(),
                 RequirementSettingsEnvironment.from(capabilityState, skillState, extensionState,
                         commandState, unrestrictedState));
         return Optional.of(new RequirementReview(packageReviewToken, preparedPackage.kind(),
@@ -1253,7 +1253,7 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     public CompletableFuture<ToolResult<Boolean>> saveUnrestrictedJavascript(boolean enabled) {
-        var candidate = new UnrestrictedJavascriptConfig(enabled);
+        dev.openallay.script.UnrestrictedJavascriptConfig candidate = new UnrestrictedJavascriptConfig(enabled);
         Reservation reservation = reserve(SettingsOperation.domain(SettingsOperation.Kind.SAVING_UNRESTRICTED_JAVASCRIPT));
         if (!reservation.accepted()) return CompletableFuture.completedFuture(failed(reservation.failureCode()));
         CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
@@ -1276,7 +1276,7 @@ public final class ClientSettingsService implements AutoCloseable {
                 notice = SettingsNotice.success("unrestricted_javascript_saved", "Unrestricted JavaScript settings saved");
                 result = new ToolResult.Success<>(true);
             } else {
-                var failure = (ToolResult.Failure<UnrestrictedJavascriptConfig>) completed;
+                dev.openallay.tool.ToolResult.Failure<dev.openallay.script.UnrestrictedJavascriptConfig> failure = (ToolResult.Failure<UnrestrictedJavascriptConfig>) completed;
                 notice = SettingsNotice.failure(failure.code(), failure.message());
                 result = new ToolResult.Failure<>(failure.code(), failure.message());
             }

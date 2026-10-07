@@ -122,7 +122,7 @@ public final class WorldObservationRuntime {
     /** Immutable custody metadata for a connection detach; never samples native game state. */
     public java.util.Map<String, List<ImageReference>> producerReferenceSnapshot() {
         java.util.Map<String, List<ImageReference>> snapshot = new java.util.LinkedHashMap<>();
-        for (var entry : List.copyOf(requests.entrySet())) {
+        for (java.util.Map.Entry<java.lang.String, dev.openallay.world.WorldObservationRuntime.Request> entry : List.copyOf(requests.entrySet())) {
             synchronized (entry.getValue()) {
                 snapshot.put(entry.getKey(), entry.getValue().producers.stream()
                         .map(Producer::reference).distinct().toList());
@@ -178,7 +178,7 @@ public final class WorldObservationRuntime {
     public CompletableFuture<Void> detachConnectionState(CompletableFuture<Void> custody) {
         java.util.Objects.requireNonNull(custody, "custody");
         List<Request> detached = new ArrayList<>();
-        for (var entry : List.copyOf(requests.entrySet())) {
+        for (java.util.Map.Entry<java.lang.String, dev.openallay.world.WorldObservationRuntime.Request> entry : List.copyOf(requests.entrySet())) {
             if (requests.remove(entry.getKey(), entry.getValue())) {
                 detached.add(entry.getValue());
                 try { close(entry.getValue()); }
@@ -247,7 +247,7 @@ public final class WorldObservationRuntime {
                         retained = true;
                     }
                     EvidenceMetadata original = source.evidence();
-                    var details = new java.util.TreeMap<>(original.details());
+                    java.util.TreeMap<java.lang.String, java.lang.String> details = new java.util.TreeMap<>(original.details());
                     details.put("openallay:association", anchor.associationId().toString());
                     details.put("openallay:target", WorldViewRequest.Target.ASSOCIATED_UI.name());
                     EvidenceMetadata evidence = new EvidenceMetadata(original.authority(), original.completeness(),

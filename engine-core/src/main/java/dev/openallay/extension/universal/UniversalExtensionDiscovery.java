@@ -72,7 +72,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
             return results;
         }
         List<Path> jars;
-        try (var files = Files.list(directory)) {
+        try (java.util.stream.Stream<java.nio.file.Path> files = Files.list(directory)) {
             jars = files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
                     .sorted(Comparator.comparing(path -> path.getFileName().toString())).toList();
         } catch (IOException failure) {
@@ -116,7 +116,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                 continue;
             }
             // Old registry must also accept the real API range before any class initialization.
-            var target = UniversalExtensionSupport.matchingTarget(descriptor.support(), host.environment()).orElseThrow();
+            dev.openallay.api.extension.SupportTarget target = UniversalExtensionSupport.matchingTarget(descriptor.support(), host.environment()).orElseThrow();
             String legacyIncompatibility = registry.environment().incompatibility(
                     UniversalExtensionSupport.legacyDescriptor(descriptor, target));
             if (!legacyIncompatibility.isEmpty()) {
@@ -141,9 +141,9 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
         long expanded = 0;
         int count = 0;
         try (JarFile jar = new JarFile(path.toFile(), false)) {
-            var entries = jar.entries();
+            java.util.Enumeration<java.util.jar.JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
-                var entry = entries.nextElement();
+                java.util.jar.JarEntry entry = entries.nextElement();
                 String name = entry.getName();
                 if (++count > limits.maximumEntries() || entry.getSize() < 0
                         || entry.getSize() > limits.maximumExpandedBytes() - expanded) {
@@ -160,7 +160,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                     if (entry.getSize() > limits.maximumManifestBytes()) {
                         throw new PackageFailure("extension_package_limit_exceeded");
                     }
-                    try (var input = jar.getInputStream(entry)) {
+                    try (java.io.InputStream input = jar.getInputStream(entry)) {
                         byte[] bytes = input.readNBytes(limits.maximumManifestBytes() + 1);
                         if (bytes.length > limits.maximumManifestBytes()) {
                             throw new PackageFailure("extension_package_limit_exceeded");
@@ -169,7 +169,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                     }
                 }
             }
-            var attributes = jar.getManifest();
+            java.util.jar.Manifest attributes = jar.getManifest();
             if (attributes != null) {
                 String classPath = attributes.getMainAttributes().getValue(java.util.jar.Attributes.Name.CLASS_PATH);
                 if (classPath != null && !classPath.isBlank()) {
@@ -198,13 +198,13 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                     || !OpenAllayExtension.class.isAssignableFrom(type)) {
                 return rejected(filename, id, "extension_entrypoint_invalid");
             }
-            var constructor = type.getConstructor(); // Public no-argument constructor only.
+            java.lang.reflect.Constructor<?> constructor = type.getConstructor(); // Public no-argument constructor only.
             OpenAllayExtension extension = (OpenAllayExtension) constructor.newInstance();
             ExtensionDescriptor declared = Objects.requireNonNull(extension.descriptor(), "descriptor");
             if (!candidate.manifest().descriptor().equals(declared)) {
                 return rejected(filename, id, "extension_descriptor_mismatch");
             }
-            var registration = registry.register(new UniversalExtensionBridge(extension, declared, host));
+            dev.openallay.extension.OpenAllayExtensionRegistry.Registration registration = registry.register(new UniversalExtensionBridge(extension, declared, host));
             if (registration.state() == OpenAllayExtensionState.ACTIVE) {
                 loaders.add(loader);
                 accepted = true;

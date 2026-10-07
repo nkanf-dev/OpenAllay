@@ -41,7 +41,7 @@ public final class NaturalModelView {
             return sample;
         }
         JsonObject result = new JsonObject();
-        for (var entry : value.getAsJsonObject().entrySet())
+        for (java.util.Map.Entry<java.lang.String, com.google.gson.JsonElement> entry : value.getAsJsonObject().entrySet())
             result.add(entry.getKey(), select(entry.getValue(), state, depth + 1));
         return result;
     }

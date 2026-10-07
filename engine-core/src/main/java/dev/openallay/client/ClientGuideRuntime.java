@@ -256,7 +256,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         // Match the Agent's initial actual system delivery, including inline Skill range facts.
         AgentToolExecutor captured = toolExecutor;
         String system = captured.skillSystemPrompt(prompt);
-        var retained = new dev.openallay.skill.RetainedSkillContext();
+        dev.openallay.skill.RetainedSkillContext retained = new dev.openallay.skill.RetainedSkillContext();
         String correlation = "context-budget-" + UUID.randomUUID();
         captured.prepareSystem(system, retained);
         captured.prepareContext(correlation, List.of(), retained);

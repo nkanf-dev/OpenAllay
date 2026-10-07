@@ -323,7 +323,7 @@ public record ExtensionSettingsView(
 
         private static Extension from(
                 OpenAllayExtensionRegistry.ExtensionView extension) {
-            var descriptor = extension.descriptor();
+            dev.openallay.extension.OpenAllayExtensionDescriptor descriptor = extension.descriptor();
             return new Extension(
                     descriptor.id(),
                     descriptor.name(),

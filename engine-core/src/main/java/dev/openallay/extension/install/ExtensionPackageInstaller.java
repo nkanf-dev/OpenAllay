@@ -306,7 +306,7 @@ public final class ExtensionPackageInstaller {
         Set<String> modIds = new HashSet<>();
         ExtensionPackageManifest manifest = null;
         try (JarInputStream jar = new JarInputStream(new ByteArrayInputStream(bytes))) {
-            for (var entry = jar.getNextJarEntry(); entry != null; entry = jar.getNextJarEntry()) {
+            for (java.util.jar.JarEntry entry = jar.getNextJarEntry(); entry != null; entry = jar.getNextJarEntry()) {
                 if (entry.isDirectory()) {
                     continue;
                 }
@@ -318,7 +318,7 @@ public final class ExtensionPackageInstaller {
                     manifest = manifestCodec.decode(new String(
                             jar.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
                 } else if (entry.getName().equals("fabric.mod.json")) {
-                    var root = dev.openallay.json.JsonTrees.parse(
+                    com.google.gson.JsonObject root = dev.openallay.json.JsonTrees.parse(
                                     new java.io.InputStreamReader(
                                             jar, java.nio.charset.StandardCharsets.UTF_8))
                             .getAsJsonObject();

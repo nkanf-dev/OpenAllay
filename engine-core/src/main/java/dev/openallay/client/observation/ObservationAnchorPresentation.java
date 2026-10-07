@@ -18,11 +18,11 @@ public final class ObservationAnchorPresentation {
                     + " · " + itemName(focus.hover().item())));
         }
         if (focus.target().block() != null) {
-            var block = focus.target().block();
+            dev.openallay.world.WorldFocusObservation.Block block = focus.target().block();
             result.add(new Chip("screen.openallay.observation.crosshair", block.id()
                     + " · " + block.position().x() + "," + block.position().y() + "," + block.position().z()));
         } else if (focus.target().entity() != null) {
-            var entity = focus.target().entity();
+            dev.openallay.world.WorldFocusObservation.Entity entity = focus.target().entity();
             result.add(new Chip("screen.openallay.observation.crosshair",
                     entity.name().isBlank() ? entity.type() : entity.name()));
         }

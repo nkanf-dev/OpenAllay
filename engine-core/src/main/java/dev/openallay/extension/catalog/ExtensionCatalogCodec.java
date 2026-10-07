@@ -74,7 +74,7 @@ public final class ExtensionCatalogCodec {
         root.addProperty("schemaVersion", manifest.schemaVersion());
         root.addProperty("kind", manifest.kind());
         root.addProperty("generatedAt", manifest.generatedAt().toString());
-        var entries = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray entries = new com.google.gson.JsonArray();
         for (ExtensionCatalogEntry entry : manifest.extensions()) {
             JsonObject encoded = new JsonObject();
             encoded.addProperty("id", entry.id());
@@ -84,7 +84,7 @@ public final class ExtensionCatalogCodec {
             encoded.addProperty("summary", entry.summary());
             encoded.addProperty("minecraftVersionRange", entry.minecraftVersionRange());
             encoded.addProperty("openAllayApiVersionRange", entry.openAllayApiVersionRange());
-            var artifacts = new com.google.gson.JsonArray();
+            com.google.gson.JsonArray artifacts = new com.google.gson.JsonArray();
             for (ExtensionCatalogArtifact artifact : entry.artifacts()) {
                 JsonObject encodedArtifact = new JsonObject();
                 encodedArtifact.addProperty("loader", artifact.loader());
@@ -158,7 +158,7 @@ public final class ExtensionCatalogCodec {
     }
 
     private static com.google.gson.JsonArray strings(Set<String> values) {
-        var encoded = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray encoded = new com.google.gson.JsonArray();
         values.stream().sorted().forEach(encoded::add);
         return encoded;
     }

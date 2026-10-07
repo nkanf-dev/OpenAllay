@@ -36,7 +36,7 @@ public final class RequirementSettingsEnvironment {
             UnrestrictedJavascriptConfig unrestricted) {
         boolean commandsAvailable = commands.enabled() || unrestricted.enabled();
         Map<String, RequirementAvailability> capabilityFacts = new TreeMap<>();
-        for (var entry : capabilities.catalog().entries()) {
+        for (dev.openallay.capability.CapabilitySettingsEntry entry : capabilities.catalog().entries()) {
             if (entry.kind() == CapabilityKind.SKILL) continue;
             capabilityFacts.put(entry.id(), fact(entry.id(), !entry.available()
                     ? RequirementStatus.UNAVAILABLE
@@ -52,7 +52,7 @@ public final class RequirementSettingsEnvironment {
                 commandsAvailable ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
 
         Map<String, RequirementAvailability> extensionFacts = new TreeMap<>();
-        for (var extension : extensions.extensions()) {
+        for (dev.openallay.settings.extension.ExtensionSettingsView.Extension extension : extensions.extensions()) {
             extensionFacts.put(extension.id(), fact(extension.name(), switch (extension.state()) {
                 case ACTIVE -> RequirementStatus.SATISFIED;
                 case RESTART_REQUIRED -> RequirementStatus.RESTART_REQUIRED;
@@ -61,7 +61,7 @@ public final class RequirementSettingsEnvironment {
             }));
         }
         Map<String, RequirementAvailability> skillFacts = new TreeMap<>();
-        for (var skill : skills.skills()) {
+        for (dev.openallay.settings.skill.SkillSettingsView.Skill skill : skills.skills()) {
             String id = skill.metadata().name();
             boolean runtimeUnavailable = (id.equals("run-game-commands") && !commandsAvailable)
                     || (id.equals("unrestricted-javascript") && !unrestricted.enabled());

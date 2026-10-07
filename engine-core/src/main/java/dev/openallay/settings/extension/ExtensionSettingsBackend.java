@@ -205,7 +205,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         }
         PreparedExtensionInstall candidate = ((ToolResult.Success<PreparedExtensionInstall>) result).value();
         return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
-            var descriptor = candidate.manifest().descriptor();
+            dev.openallay.extension.OpenAllayExtensionDescriptor descriptor = candidate.manifest().descriptor();
             staged.put(descriptor.id(), new StagedPackage(descriptor, entry, candidate.sha256()));
             notice = Optional.empty();
         }));

@@ -175,7 +175,7 @@ public final class NativeModelInstaller {
         Objects.requireNonNull(sourceDirectory); Objects.requireNonNull(cancellation); cancellation.check();
         List<NativeRuntimeCatalog.Artifact> artifacts = NativeRuntimeCatalog.artifacts();
         if (!Files.isDirectory(sourceDirectory, LinkOption.NOFOLLOW_LINKS)) throw new IOException("Invalid runtime source");
-        for (var artifact : artifacts) NativeModelFiles.verifyFile(sourceDirectory, artifact.name(), artifact.bytes(), artifact.sha256(), cancellation);
+        for (dev.openallay.client.voice.NativeRuntimeCatalog.Artifact artifact : artifacts) NativeModelFiles.verifyFile(sourceDirectory, artifact.name(), artifact.bytes(), artifact.sha256(), cancellation);
         Path runtimeRoot = installRoot.resolve("runtime");
         Path destination = NativeRuntimeCatalog.directory(runtimeRoot);
         Files.createDirectories(destination.getParent());
@@ -185,11 +185,11 @@ public final class NativeModelInstaller {
         }
         Path staging = Files.createTempDirectory(destination.getParent(), ".runtime-import-");
         try {
-            for (var artifact : artifacts) {
+            for (dev.openallay.client.voice.NativeRuntimeCatalog.Artifact artifact : artifacts) {
                 cancellation.check();
                 try (InputStream input = Files.newInputStream(sourceDirectory.resolve(artifact.name()));
                         AutoCloseable hook = cancellation.onCancel(() -> close(input));
-                        var output = Files.newOutputStream(staging.resolve(artifact.name()), StandardOpenOption.CREATE_NEW)) {
+                        java.io.OutputStream output = Files.newOutputStream(staging.resolve(artifact.name()), StandardOpenOption.CREATE_NEW)) {
                     byte[] buffer = new byte[64 * 1024]; long bytes = 0; int count;
                     while ((count = input.read(buffer)) != -1) {
                         cancellation.check(); bytes += count;
@@ -281,7 +281,7 @@ public final class NativeModelInstaller {
     private static void close(InputStream input) { try { input.close(); } catch (IOException ignored) {} }
     private static void deleteStaging(Path staging) {
         if (!Files.exists(staging, LinkOption.NOFOLLOW_LINKS)) return;
-        try (var entries = Files.walk(staging)) {
+        try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(staging)) {
             for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(entry);
         } catch (IOException ignored) { /* Never remove an installed model or a world save. */ }
     }

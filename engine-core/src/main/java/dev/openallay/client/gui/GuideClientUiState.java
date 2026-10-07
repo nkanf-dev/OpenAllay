@@ -333,7 +333,7 @@ public final class GuideClientUiState implements AutoCloseable {
 
     public boolean applyPendingInsertion(UUID id) {
         if (closed) return false;
-        for (var entry : drafts.entrySet()) {
+        for (java.util.Map.Entry<java.lang.String, dev.openallay.client.gui.GuideClientUiState.Draft> entry : drafts.entrySet()) {
             PendingInsertion pending = entry.getValue().pending.stream()
                     .filter(value -> value.id.equals(id)).findFirst().orElse(null);
             if (pending == null) continue;
@@ -401,9 +401,9 @@ public final class GuideClientUiState implements AutoCloseable {
         changed();
     }
     private void retainImages() {
-        var draftAnchors = drafts.values().stream().map(value -> value.observation).filter(Objects::nonNull);
-        var heldAnchors = observationLeases.values().stream().flatMap(value -> value.anchor().stream());
-        var pendingAnchors = drafts.values().stream().flatMap(value -> value.pending.stream())
+        java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> draftAnchors = drafts.values().stream().map(value -> value.observation).filter(Objects::nonNull);
+        java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> heldAnchors = observationLeases.values().stream().flatMap(value -> value.anchor().stream());
+        java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> pendingAnchors = drafts.values().stream().flatMap(value -> value.pending.stream())
                 .flatMap(value -> value.observation().stream());
         List<ImageReference> refs = java.util.stream.Stream.concat(images.retainedReferences().stream(),
                 java.util.stream.Stream.concat(java.util.stream.Stream.concat(draftAnchors, heldAnchors), pendingAnchors)

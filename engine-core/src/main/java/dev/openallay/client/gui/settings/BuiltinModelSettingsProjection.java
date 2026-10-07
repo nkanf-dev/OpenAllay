@@ -123,7 +123,7 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
         lines.add(Line.of("image_source." + imageResolution.origin().name()
                 .toLowerCase(java.util.Locale.ROOT)));
         if (imageResolution.source() != null && imageResolution.capturedAt() != null) {
-            var publishedSource = loaded.catalog().sources().get(imageResolution.source());
+            dev.openallay.model.metadata.BuiltinModelCatalog.Source publishedSource = loaded.catalog().sources().get(imageResolution.source());
             String sourceLabel = publishedSource == null
                     ? imageResolution.source().equals("openrouter") ? "OpenRouter" : imageResolution.source()
                     : publishedSource.label();
@@ -150,13 +150,13 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
             lines.add(Line.of("unavailable"));
             return new BuiltinModelSettingsProjection(lines);
         }
-        var matched = loaded.catalog().match(draft.model());
+        java.util.Optional<dev.openallay.model.metadata.BuiltinModelMatcher.Match> matched = loaded.catalog().match(draft.model());
         if (matched.isEmpty()) {
             lines.add(Line.of("unmatched"));
             return new BuiltinModelSettingsProjection(lines);
         }
         BuiltinModelMatcher.Match match = matched.get();
-        var entry = match.entry();
+        dev.openallay.model.metadata.BuiltinModelCatalog.Entry entry = match.entry();
         lines.add(Line.of("match." + match.kind().name().toLowerCase(java.util.Locale.ROOT), entry.id()));
         lines.add(Line.of(draft.automaticContextWindowTokens() == null
                 ? "manual" : "automatic"));
@@ -167,7 +167,7 @@ public record BuiltinModelSettingsProjection(List<Line> lines) {
             lines.add(Line.of("price_unknown"));
         } else {
             lines.add(Line.of("price_estimate"));
-            for (var tier : entry.pricing().tiers()) {
+            for (dev.openallay.model.metadata.BuiltinModelCatalog.Tier tier : entry.pricing().tiers()) {
                 lines.add(Line.of("tier", tier.minInputTokens()));
                 price(lines, "input", tier.input());
                 price(lines, "output_price", tier.output());

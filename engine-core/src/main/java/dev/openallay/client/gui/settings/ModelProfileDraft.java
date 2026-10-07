@@ -194,7 +194,7 @@ public record ModelProfileDraft(
     }
 
     public ModelProfileDraft autoFill(BuiltinModelCatalog catalog) {
-        var matched = catalog.match(model);
+        java.util.Optional<dev.openallay.model.metadata.BuiltinModelMatcher.Match> matched = catalog.match(model);
         Integer context = matched.map(match -> match.entry().contextWindowTokens()).orElse(null);
         Integer output = matched.map(match -> match.entry().maxOutputTokens()).orElse(null);
         return withAutomaticContext(context).withAutomaticOutput(output);

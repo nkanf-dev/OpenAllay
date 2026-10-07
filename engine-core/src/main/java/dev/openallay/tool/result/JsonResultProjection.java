@@ -356,8 +356,8 @@ public final class JsonResultProjection {
 
     private static long countEncodedJson(JsonElement value) {
         CountingOutputStream counter = new CountingOutputStream();
-        try (var writer = new java.io.OutputStreamWriter(counter, StandardCharsets.UTF_8);
-                var json = new com.google.gson.stream.JsonWriter(writer)) {
+        try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(counter, StandardCharsets.UTF_8);
+                com.google.gson.stream.JsonWriter json = new com.google.gson.stream.JsonWriter(writer)) {
             // JsonElement.toString() uses Gson's normal, non-HTML-safe tree encoding.
             json.setHtmlSafe(false);
             json.setLenient(true);

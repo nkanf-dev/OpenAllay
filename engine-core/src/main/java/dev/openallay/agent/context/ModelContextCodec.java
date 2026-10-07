@@ -28,7 +28,7 @@ public final class ModelContextCodec {
                     value.addProperty("text", text.text());
                 } else if (item instanceof ModelContent.Image image) {
                     value.addProperty("type", "image");
-                    var reference = image.reference();
+                    dev.openallay.model.image.ImageReference reference = image.reference();
                     addImageReference(value, reference);
                     if (image.originToolUseId() == null) value.add("originToolUseId", com.google.gson.JsonNull.INSTANCE);
                     else value.addProperty("originToolUseId", image.originToolUseId());
@@ -43,7 +43,7 @@ public final class ModelContextCodec {
                     value.add("value", result.value());
                     value.addProperty("error", result.error());
                     JsonArray images = new JsonArray();
-                    for (var reference : result.images()) {
+                    for (dev.openallay.model.image.ImageReference reference : result.images()) {
                         JsonObject image = new JsonObject();
                         addImageReference(image, reference);
                         images.add(image);

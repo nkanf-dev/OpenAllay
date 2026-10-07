@@ -18,13 +18,13 @@ public record GuideHudReadingLayout(
         // result viewport or paint footer rows outside the card; zero-height strips remain absent.
         int resultTop = Math.min(height, 36);
         int resultBottom = Math.max(resultTop, height - 108);
-        var results = new GuideUiLayout.Rect(x + Math.min(8, width), y + resultTop,
+        dev.openallay.guide.ui.GuideUiLayout.Rect results = new GuideUiLayout.Rect(x + Math.min(8, width), y + resultTop,
                 Math.max(0, inner - 8), resultBottom - resultTop);
-        var notice = strip(x, y, width, height, height - 104, 10);
-        var navigation = strip(x, y, width, height, height - 92, 14);
-        var composer = strip(x, y, width, height, height - 76, 38);
-        var actions = strip(x, y, width, height, height - 30, 20);
-        var scrollbar = new GuideUiLayout.Rect(x + Math.max(0, width - 12), results.y(),
+        dev.openallay.guide.ui.GuideUiLayout.Rect notice = strip(x, y, width, height, height - 104, 10);
+        dev.openallay.guide.ui.GuideUiLayout.Rect navigation = strip(x, y, width, height, height - 92, 14);
+        dev.openallay.guide.ui.GuideUiLayout.Rect composer = strip(x, y, width, height, height - 76, 38);
+        dev.openallay.guide.ui.GuideUiLayout.Rect actions = strip(x, y, width, height, height - 30, 20);
+        dev.openallay.guide.ui.GuideUiLayout.Rect scrollbar = new GuideUiLayout.Rect(x + Math.max(0, width - 12), results.y(),
                 Math.min(5, width), results.height());
         return new GuideHudReadingLayout(results, notice, navigation, composer, actions, scrollbar,
                 width >= 32 && height >= 144);
