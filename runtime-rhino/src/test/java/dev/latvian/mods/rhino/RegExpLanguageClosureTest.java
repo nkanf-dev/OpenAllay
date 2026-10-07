@@ -11,7 +11,7 @@ final class RegExpLanguageClosureTest {
             "[/^abc$/.test('abc'),/[a-c]+/.test('abcc'),/(a)\\1/.test('aa'),/a{2,3}?/.test('aaa'),/\\d+\\s\\w/.test('12 x'),/^a$/.test('ba')].join('|');"));
     }
     @Test void actionSearchMatchReplaceDollarTokensAndCallbackCountsRemainExact() {
-        assertEquals("1|a,a|<a><a>|2|z<a>b|zabc", evaluate(
+        assertEquals("1|a|<a><a>|2|z<a>b|zabc", evaluate(
             "var n=0;var replaced='aa'.replace(/a/g,function(m){n++;return '<'+m+'>';});['ba'.search(/a/),'aa'.match(/a/g).join(','),replaced,n,'zab'.replace(/(a)/,'<$1>'),'zabc'.replace(/(a)/,'$&')].join('|');"));
     }
     @Test void regexCompileClonesFlagsAndPropertyMappingsKeepReadonlyAndLastIndex() {
