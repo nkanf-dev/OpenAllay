@@ -9,6 +9,18 @@ import java.util.*;
 public final class CanonicalRecordBatchMaterializer {
     private static String sha(byte[] bytes)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}
     private static String encoded(String value){return Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));}
+    private static String exactNonblankFormat(String name,String body){
+        boolean exact=switch(name){
+            case "dev/openallay/guide/GuideService.java" -> body.equals(" Objects.requireNonNull(id, \"id\"); ");
+            case "dev/openallay/guide/export/GuideSessionExportSnapshot.java" -> body.equals(" text = text == null ? \"\" : text; ");
+            case "dev/openallay/guide/history/GuideHistoryMutation.java" -> body.equals(" requireSession(sessionId); ");
+            case "dev/openallay/guide/ui/GuideRecipeDetailFacts.java" -> body.equals(" arguments = List.copyOf(arguments); ");
+            case "dev/openallay/guide/ui/GuideToolSummaryGeometry.java" -> body.equals(" capsules = List.copyOf(capsules); ");
+            case "dev/openallay/guide/ui/hud/GuideHudToolCards.java" -> body.equals(" recipes = Map.copyOf(recipes); ");
+            default -> false;
+        };
+        return exact?body.substring(0,body.length()-1):body;
+    }
     public static void main(String[] args)throws Exception{
         if(args.length!=3)throw new IllegalArgumentException("actualSourceRoot exactRequestTSV freshExternalOutput");
         Path root=Paths.get(args[0]).toAbsolutePath().normalize(),output=Paths.get(args[2]).toAbsolutePath().normalize();
@@ -31,15 +43,18 @@ public final class CanonicalRecordBatchMaterializer {
             }
             if(unsupported!=null){statuses.add(name+"\tREJECTED\t"+records.size()+"\t0\t"+encoded(unsupported));}
             else{
-                byte[] raw=text.getBytes(StandardCharsets.UTF_8);StringBuilder normalized=new StringBuilder();
+                byte[] raw=text.getBytes(StandardCharsets.UTF_8);StringBuilder normalized=new StringBuilder();List<String> formatEdits=new ArrayList<>();int sourceLine=0;
                 for(String line:text.split("(?<=\n)",-1)){
+                    sourceLine++;
                     String ending=line.endsWith("\r\n")?"\r\n":line.endsWith("\n")?"\n":"";
                     String body=line.substring(0,line.length()-ending.length());
                     if(!body.isEmpty()&&body.chars().allMatch(c->c==' '||c=='\t'))body="";
+                    String originalBody=body;body=exactNonblankFormat(name,body);
+                    if(!body.equals(originalBody))formatEdits.add(sourceLine+"\t"+encoded(originalBody)+"\t"+encoded(body));
                     normalized.append(body).append(ending);
                 }
                 byte[] canonical=normalized.toString().getBytes(StandardCharsets.UTF_8);after.put(name,canonical);
-                statuses.add(name+"\tSUPPORTED\t"+records.size()+"\t"+converted+"\t"+sha(raw)+"\t"+raw.length+"\t"+sha(canonical)+"\t"+canonical.length);
+                statuses.add(name+"\tSUPPORTED\t"+records.size()+"\t"+converted+"\t"+sha(raw)+"\t"+raw.length+"\t"+sha(canonical)+"\t"+canonical.length+"\t"+encoded(String.join("\n",formatEdits)));
             }
         }
         if(before.isEmpty())throw new IllegalArgumentException("Empty request");

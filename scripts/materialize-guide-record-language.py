@@ -11,6 +11,16 @@ import subprocess
 def sha(blob):return hashlib.sha256(blob).hexdigest()
 
 
+def parse_format_edits(encoded):
+    import base64
+    text=base64.b64decode(encoded,validate=True).decode()
+    edits=[]
+    for line in text.splitlines():
+        number,before,after=line.split("\t")
+        edits.append({"line":int(number),"before":base64.b64decode(before,validate=True).decode(),"after":base64.b64decode(after,validate=True).decode()})
+    return edits
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument("--project",type=Path,required=True);p.add_argument("--javac",type=Path,required=True);p.add_argument("--java",type=Path,required=True);p.add_argument("--output",type=Path,required=True)
     a=p.parse_args();project=a.project.resolve();out=a.output.resolve()
@@ -35,13 +45,13 @@ def main():
         if state=="REJECTED":
             import base64
             status.append({"path":name,"state":state,"records":int(fields[2]),"reason":base64.b64decode(fields[4]).decode()});continue
-        if state!="SUPPORTED" or len(fields)!=8:raise ValueError("Malformed converter classification")
+        if state!="SUPPORTED" or len(fields)!=9:raise ValueError("Malformed converter classification")
         old=(out/"materialized/pre"/name).read_bytes();new=(out/"materialized/post"/name).read_bytes();logical="engine-core/src/main/java/"+name
         if sha(new)!=fields[6] or len(new)!=int(fields[7]):raise ValueError("Materializedpostimage custody differs")
         for side,b in [("pre",old),("post",new)]:
             dest=packet/side/logical;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(b)
         patch+="".join(difflib.unified_diff(old.decode().splitlines(True),new.decode().splitlines(True),fromfile="a/"+logical,tofile="b/"+logical))
-        row={"path":logical,"pre_sha256":sha(old),"pre_bytes":len(old),"post_sha256":sha(new),"post_bytes":len(new),"recordCount":int(fields[2]),"converterRawPostSha256":fields[4],"converterRawPostBytes":int(fields[5])}
+        row={"path":logical,"pre_sha256":sha(old),"pre_bytes":len(old),"post_sha256":sha(new),"post_bytes":len(new),"recordCount":int(fields[2]),"converterRawPostSha256":fields[4],"converterRawPostBytes":int(fields[5]),"exactNonblankFormatEdits":parse_format_edits(fields[8])}
         rows.append(row);status.append({"path":name,"state":state,"records":int(fields[2])})
     if len(status)!=85:raise ValueError("Missingguideowner classification")
     (packet/"source.patch").write_bytes(patch.encode());(packet/"manifest.json").write_text(json.dumps({"scope":contract["scope"],"files":rows,"patch_sha256":sha(patch.encode()),"patch_bytes":len(patch.encode()),"sourceContractSha256":sha(contract_path.read_bytes()),"convertedRecordCount":sum(r["recordCount"] for r in rows),"requestedRecordCount":200,"owners":status,"wholeRuntimeJava8Acceptance":False,"requiredAcceptance":"Actual completeengine modern compilation/tests after canonicalpatch review; no runtime8claim"},indent=2)+"\n")

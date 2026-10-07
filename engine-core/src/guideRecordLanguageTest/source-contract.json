@@ -723,7 +723,7 @@
   },
   "tool": {
     "path": "build-logic/src/main/java/dev/openallay/build/CanonicalRecordBatchMaterializer.java",
-    "sha256": "a0e09d260baf3b5790168f9d59ac8f027622aed9a7e0c9611a0a473f26b8d3a2"
+    "sha256": "b0afdb085143ee46464f14cd0711312e4b5d30a22e798f9e82c6fd28a03ceb97"
   },
   "request": {
     "path": "engine-core/src/guideRecordLanguageTest/request.tsv",
@@ -731,5 +731,6 @@
   },
   "rejectionPolicy": "Rejectedowner receives exactdepth/recordPaths/reason and no productioncandidate; never partialowner conversions",
   "runtimeJava8Acceptance": false,
-  "modernAcceptance": "Root canonicalpatch review + full enginecore modern tests once; APIs/patterns remain authentic laterclosure"
+  "modernAcceptance": "Root canonicalpatch review + full enginecore modern tests once; APIs/patterns remain authentic laterclosure",
+  "exactNonblankFormatting": "Only7 literal compact-constructor suffixes at6named owners; exact line changes/raw converter hashes/final normalized hashes recorded; no general nonblanktrim"
 }
