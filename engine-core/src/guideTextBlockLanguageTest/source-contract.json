@@ -1,0 +1,18 @@
+{
+  "scope": "Exact2wholeGuide SQL/prompt actualpublicLiteralTree.getValue textblock lowering, no SQL/wording changes",
+  "selectedOwners": [
+    "dev/openallay/guide/history/SqliteGuideHistoryStore.java",
+    "dev/openallay/guide/semantic/SemanticPromptGuidance.java"
+  ],
+  "selectedPreimageSha256": {
+    "dev/openallay/guide/history/SqliteGuideHistoryStore.java": "9aaef9cfb3694f2be890b4705e1cfd24d28ab1f1fa1959854c9cb3b9b74d7342",
+    "dev/openallay/guide/semantic/SemanticPromptGuidance.java": "bee9c8cefc7185993768084723de035f661a3aca2ee2af6708383364f6d33f38"
+  },
+  "acceptedToolOracleRun": 37652021045,
+  "toolPins": {
+    "build-logic/src/main/java/dev/openallay/build/CanonicalTextBlockPort.java": "7ebcfe52688b6a8c0147e74341e41a8db7acba6fafe394e5ba0201a941a004db",
+    "scripts/textblock-language-port/CanonicalTextBlockPortFixture.java": "06a2f34e76cd2b961042dc31cda8736361f7fae2b7bfe2a5b919c1ca2dd207a8"
+  },
+  "productionHold": "Currentall702API382cohort rawsnapshot untilclassification/apply sequencing settles",
+  "valuePolicy": "ExactpublicparsedLiteralTree.getValue; no handdedent/escapedtext guesses; sourceUTF16spans only"
+}
