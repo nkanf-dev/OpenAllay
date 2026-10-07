@@ -38,6 +38,7 @@ public final class GuideUiView {
             throw new IllegalArgumentException("at most one model choice may be running");
         }
 
+        rows.forEach(GuideUiRow::requireKnown);
         this.selectedSession = selectedSession;
         this.modelMode = modelMode;
         this.clientModelAvailable = clientModelAvailable;

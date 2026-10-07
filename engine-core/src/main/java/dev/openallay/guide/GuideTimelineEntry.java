@@ -4,8 +4,15 @@ import dev.openallay.guide.semantic.SemanticDocument;
 import dev.openallay.guide.semantic.SemanticMessageParser;
 import java.util.List;
 
-public sealed interface GuideTimelineEntry
-        permits GuideTimelineEntry.User, GuideTimelineEntry.Assistant, GuideTimelineEntry.Tool {
+public interface GuideTimelineEntry {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static GuideTimelineEntry requireKnown(GuideTimelineEntry value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.GuideTimelineEntry.User.class || type == dev.openallay.guide.GuideTimelineEntry.Assistant.class || type == dev.openallay.guide.GuideTimelineEntry.Tool.class) return value;
+        throw new IncompatibleClassChangeError("Unknown GuideTimelineEntry subtype");
+    }
+
     int ordinal();
 
     /** An instruction actually admitted during this request, not a queued draft. */
@@ -16,7 +23,7 @@ public static final class User implements GuideTimelineEntry {
     private final String text;
     public User(int ordinal, java.util.UUID messageId, String text) {
 
-            requireOrdinal(ordinal);
+            GuideTimelineEntryValidation.requireOrdinal(ordinal);
             java.util.Objects.requireNonNull(messageId, "messageId");
             java.util.Objects.requireNonNull(text, "text");
 
@@ -58,7 +65,7 @@ public static final class Assistant implements GuideTimelineEntry {
     private final List<GuideSource> sources;
     public Assistant(int ordinal, String text, SemanticDocument semantic, boolean streaming, List<GuideSource> sources) {
 
-            requireOrdinal(ordinal);
+            GuideTimelineEntryValidation.requireOrdinal(ordinal);
             text = text == null ? "" : text;
             java.util.Objects.requireNonNull(semantic, "semantic");
             sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
@@ -117,7 +124,7 @@ public static final class Tool implements GuideTimelineEntry {
     private final GuideToolActivity activity;
     public Tool(int ordinal, GuideToolActivity activity) {
 
-            requireOrdinal(ordinal);
+            GuideTimelineEntryValidation.requireOrdinal(ordinal);
             java.util.Objects.requireNonNull(activity, "activity");
 
         this.ordinal = ordinal;
@@ -146,7 +153,13 @@ public static final class Tool implements GuideTimelineEntry {
     }
 }
 
-    private static void requireOrdinal(int ordinal) {
+
+}
+
+/** Package-private Java8 helpers for the canonical variant constructors. */
+final class GuideTimelineEntryValidation {
+    private GuideTimelineEntryValidation() {}
+static void requireOrdinal(int ordinal) {
         if (ordinal < 0) {
             throw new IllegalArgumentException("timeline ordinal must not be negative");
         }

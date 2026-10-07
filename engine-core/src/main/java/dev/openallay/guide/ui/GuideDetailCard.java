@@ -4,15 +4,15 @@ import java.util.List;
 import java.util.Objects;
 
 /** Closed set of semantic cards the native guide screen is allowed to render. */
-public sealed interface GuideDetailCard permits
-        GuideDetailCard.Recipe,
-        GuideDetailCard.ItemGrid,
-        GuideDetailCard.Requirements,
-        GuideDetailCard.Table,
-        GuideDetailCard.KeyValue,
-        GuideDetailCard.DataPreview,
-        GuideDetailCard.Text,
-        GuideDetailCard.Error {
+public interface GuideDetailCard {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static GuideDetailCard requireKnown(GuideDetailCard value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.ui.GuideDetailCard.Recipe.class || type == dev.openallay.guide.ui.GuideDetailCard.ItemGrid.class || type == dev.openallay.guide.ui.GuideDetailCard.Requirements.class || type == dev.openallay.guide.ui.GuideDetailCard.Table.class || type == dev.openallay.guide.ui.GuideDetailCard.KeyValue.class || type == dev.openallay.guide.ui.GuideDetailCard.DataPreview.class || type == dev.openallay.guide.ui.GuideDetailCard.Text.class || type == dev.openallay.guide.ui.GuideDetailCard.Error.class) return value;
+        throw new IncompatibleClassChangeError("Unknown GuideDetailCard subtype");
+    }
+
 
     @dev.openallay.value.ValueType(Recipe.ValueSchemaProvider.class)
 public static final class Recipe implements GuideDetailCard {
@@ -50,7 +50,7 @@ public static final class ItemGrid implements GuideDetailCard {
     private final List<GuideItemView> items;
     public ItemGrid(String titleKey, List<GuideItemView> items) {
 
-            titleKey = requireText(titleKey, "titleKey");
+            titleKey = GuideDetailCardValidation.requireText(titleKey, "titleKey");
             items = dev.openallay.util.Java8Collections.listCopyOf(items);
             if (items.isEmpty()) {
                 throw new IllegalArgumentException("item grid must not be empty");
@@ -141,7 +141,7 @@ public static final class Requirement {
     private final List<GuideItemView> alternatives;
     public Requirement(String key, long required, long allocated, long missing, List<GuideItemView> allocatedItems, List<GuideItemView> alternatives) {
 
-            key = requireText(key, "key");
+            key = GuideDetailCardValidation.requireText(key, "key");
             if (required <= 0 || allocated < 0 || missing < 0 || allocated + missing != required) {
                 throw new IllegalArgumentException("requirement counts are inconsistent");
             }
@@ -192,7 +192,7 @@ public static final class Text implements GuideDetailCard {
     private final List<String> lines;
     public Text(String titleKey, List<String> lines) {
 
-            titleKey = requireText(titleKey, "titleKey");
+            titleKey = GuideDetailCardValidation.requireText(titleKey, "titleKey");
             lines = dev.openallay.util.Java8Collections.listCopyOf(lines);
             if (lines.isEmpty() || lines.stream().anyMatch(line -> line == null || dev.openallay.util.Java8Strings.isBlank(line))) {
                 throw new IllegalArgumentException("text card lines must not be blank");
@@ -234,7 +234,7 @@ public static final class Table implements GuideDetailCard {
     private final int omittedFields;
     public Table(String titleKey, List<String> columns, List<List<String>> rows, boolean complete, int omittedRows, int omittedFields) {
 
-            titleKey = requireText(titleKey, "titleKey");
+            titleKey = GuideDetailCardValidation.requireText(titleKey, "titleKey");
             columns = dev.openallay.util.Java8Collections.listCopyOf(columns);
             rows = dev.openallay.util.Java8Collections.toList(rows.stream().map(dev.openallay.util.Java8Collections::listCopyOf));
             int columnCount = columns.size();
@@ -292,7 +292,7 @@ public static final class KeyValue implements GuideDetailCard {
     private final int omittedFields;
     public KeyValue(String titleKey, List<DataCell> entries, boolean complete, int omittedFields) {
 
-            titleKey = requireText(titleKey, "titleKey");
+            titleKey = GuideDetailCardValidation.requireText(titleKey, "titleKey");
             entries = dev.openallay.util.Java8Collections.listCopyOf(entries);
             if (entries.isEmpty() || omittedFields < 0) {
                 throw new IllegalArgumentException("key/value card is invalid");
@@ -341,8 +341,8 @@ public static final class DataPreview implements GuideDetailCard {
     private final int omittedFields;
     public DataPreview(String titleKey, String resultType, long cardinality, List<DataRow> rows, boolean complete, int omittedRows, int omittedFields) {
 
-            titleKey = requireText(titleKey, "titleKey");
-            resultType = requireText(resultType, "resultType");
+            titleKey = GuideDetailCardValidation.requireText(titleKey, "titleKey");
+            resultType = GuideDetailCardValidation.requireText(resultType, "resultType");
             if (cardinality < 0 || omittedRows < 0 || omittedFields < 0) {
                 throw new IllegalArgumentException("preview counts must not be negative");
             }
@@ -428,8 +428,8 @@ public static final class DataCell {
     private final String value;
     public DataCell(String key, String value) {
 
-            key = requireText(key, "key");
-            value = requireText(value, "value");
+            key = GuideDetailCardValidation.requireText(key, "key");
+            value = GuideDetailCardValidation.requireText(value, "value");
             if (key.length() > 80 || value.length() > 260) {
                 throw new IllegalArgumentException("preview cell is too large");
             }
@@ -465,7 +465,7 @@ public static final class Error implements GuideDetailCard {
     private final String message;
     public Error(String message) {
 
-            message = requireText(message, "message");
+            message = GuideDetailCardValidation.requireText(message, "message");
 
         this.message = message;
     }
@@ -490,7 +490,13 @@ public static final class Error implements GuideDetailCard {
     }
 }
 
-    private static String requireText(String value, String label) {
+
+}
+
+/** Package-private Java8 helpers for the canonical variant constructors. */
+final class GuideDetailCardValidation {
+    private GuideDetailCardValidation() {}
+static String requireText(String value, String label) {
         if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " must not be blank");
         }

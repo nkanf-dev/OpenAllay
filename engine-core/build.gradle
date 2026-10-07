@@ -232,3 +232,8 @@ tasks.register('exportCanonicalVarCompileClasspath') {
         println("Canonical CORE compile classpath exported: ${target}")
     }
 }
+
+// Actual closed-union admission vectors run on normal engine production owners.
+def guideUnionAdmissionVectors = objects.sourceDirectorySet('guideUnionAdmissionVectors', 'Guide union admission vectors')
+guideUnionAdmissionVectors.srcDir('src/guideUnionAdmissionTest/java')
+sourceSets.test.java.source(guideUnionAdmissionVectors)

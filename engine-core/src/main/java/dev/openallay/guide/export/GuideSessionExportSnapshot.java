@@ -69,6 +69,7 @@ public static final class Request {
                 throw new IllegalArgumentException("export cannot contain reasoning");
             }
 
+            timeline.forEach(Entry::requireKnown);
         this.requestId = requestId;
         this.createdAt = createdAt;
         this.status = status;
@@ -109,7 +110,15 @@ public static final class Request {
         }
     }
 }
-public sealed interface Entry permits Entry.User, Entry.Assistant, Entry.Tool {
+public interface Entry {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static Entry requireKnown(Entry value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.export.GuideSessionExportSnapshot.Entry.User.class || type == dev.openallay.guide.export.GuideSessionExportSnapshot.Entry.Assistant.class || type == dev.openallay.guide.export.GuideSessionExportSnapshot.Entry.Tool.class) return value;
+        throw new IncompatibleClassChangeError("Unknown Entry subtype");
+    }
+
         @dev.openallay.value.ValueType(User.ValueSchemaProvider.class)
 public static final class User implements Entry {
     private final UUID messageId;

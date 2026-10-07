@@ -3,10 +3,15 @@ package dev.openallay.guide.semantic;
 import java.util.List;
 
 /** Closed safe block subset translated from CommonMark. */
-public sealed interface SemanticBlock
-        permits SemanticBlock.Paragraph, SemanticBlock.Heading, SemanticBlock.ListBlock,
-                SemanticBlock.Quote, SemanticBlock.CodeBlock, SemanticBlock.Table,
-                SemanticBlock.ThematicBreak, SemanticBlock.Component {
+public interface SemanticBlock {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static SemanticBlock requireKnown(SemanticBlock value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.semantic.SemanticBlock.Paragraph.class || type == dev.openallay.guide.semantic.SemanticBlock.Heading.class || type == dev.openallay.guide.semantic.SemanticBlock.ListBlock.class || type == dev.openallay.guide.semantic.SemanticBlock.Quote.class || type == dev.openallay.guide.semantic.SemanticBlock.CodeBlock.class || type == dev.openallay.guide.semantic.SemanticBlock.Table.class || type == dev.openallay.guide.semantic.SemanticBlock.ThematicBreak.class || type == dev.openallay.guide.semantic.SemanticBlock.Component.class) return value;
+        throw new IncompatibleClassChangeError("Unknown SemanticBlock subtype");
+    }
+
     String nodeId();
 
     @dev.openallay.value.ValueType(Paragraph.ValueSchemaProvider.class)
@@ -17,6 +22,7 @@ public static final class Paragraph implements SemanticBlock {
 
             SemanticIds.require(nodeId);
             content = dev.openallay.util.Java8Collections.listCopyOf(content);
+            content.forEach(SemanticInline::requireKnown);
 
         this.nodeId = nodeId;
         this.content = content;
@@ -56,6 +62,7 @@ public static final class Heading implements SemanticBlock {
                 throw new IllegalArgumentException("heading level must be between 1 and 6");
             }
             content = dev.openallay.util.Java8Collections.listCopyOf(content);
+            content.forEach(SemanticInline::requireKnown);
 
         this.nodeId = nodeId;
         this.level = level;
@@ -99,6 +106,7 @@ public static final class ListBlock implements SemanticBlock {
                 throw new IllegalArgumentException("list start must be positive");
             }
             items = dev.openallay.util.Java8Collections.toList(items.stream().map(dev.openallay.util.Java8Collections::listCopyOf));
+            items.forEach(item -> item.forEach(SemanticBlock::requireKnown));
 
         this.nodeId = nodeId;
         this.ordered = ordered;
@@ -140,6 +148,7 @@ public static final class Quote implements SemanticBlock {
 
             SemanticIds.require(nodeId);
             content = dev.openallay.util.Java8Collections.listCopyOf(content);
+            content.forEach(SemanticBlock::requireKnown);
 
         this.nodeId = nodeId;
         this.content = content;
@@ -285,6 +294,7 @@ public static final class TableCell {
 
             java.util.Objects.requireNonNull(alignment, "alignment");
             content = dev.openallay.util.Java8Collections.listCopyOf(content);
+            content.forEach(SemanticInline::requireKnown);
 
         this.alignment = alignment;
         this.content = content;
@@ -352,6 +362,7 @@ public static final class Component implements SemanticBlock {
 
             SemanticIds.require(nodeId);
             java.util.Objects.requireNonNull(component, "component");
+            RichComponent.requireKnown(component);
             if (!nodeId.equals(component.nodeId())) {
                 throw new IllegalArgumentException("component node identity is inconsistent");
             }

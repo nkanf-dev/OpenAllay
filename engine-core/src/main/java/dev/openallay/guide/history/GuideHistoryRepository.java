@@ -117,6 +117,7 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     @Override
     public synchronized CompletableFuture<Void> delete(GuideHistoryDeleteScope scope) {
         Objects.requireNonNull(scope, "scope");
+        GuideHistoryDeleteScope.requireKnown(scope);
         return reserveDeletion(() -> store.delete(scope));
     }
 

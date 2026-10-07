@@ -11,6 +11,7 @@ public final class GuideHistoryCommit {
 
         java.util.Objects.requireNonNull(scope, "scope");
         mutations = dev.openallay.util.Java8Collections.listCopyOf(mutations);
+        mutations.forEach(GuideHistoryMutation::requireKnown);
         if (mutations.isEmpty()) {
             throw new IllegalArgumentException("history commit must not be empty");
         }

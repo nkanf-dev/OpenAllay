@@ -3,9 +3,15 @@ package dev.openallay.guide.semantic;
 import java.util.List;
 
 /** Closed inline subset; links, images, HTML, and actions are not representable. */
-public sealed interface SemanticInline
-        permits SemanticInline.Text, SemanticInline.Emphasis, SemanticInline.Strong,
-                SemanticInline.Code, SemanticInline.Break, SemanticInline.Reference {
+public interface SemanticInline {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static SemanticInline requireKnown(SemanticInline value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.semantic.SemanticInline.Text.class || type == dev.openallay.guide.semantic.SemanticInline.Emphasis.class || type == dev.openallay.guide.semantic.SemanticInline.Strong.class || type == dev.openallay.guide.semantic.SemanticInline.Code.class || type == dev.openallay.guide.semantic.SemanticInline.Break.class || type == dev.openallay.guide.semantic.SemanticInline.Reference.class) return value;
+        throw new IncompatibleClassChangeError("Unknown SemanticInline subtype");
+    }
+
     String nodeId();
 
     @dev.openallay.value.ValueType(Text.ValueSchemaProvider.class)
@@ -51,6 +57,7 @@ public static final class Emphasis implements SemanticInline {
 
             SemanticIds.require(nodeId);
             children = dev.openallay.util.Java8Collections.listCopyOf(children);
+            children.forEach(SemanticInline::requireKnown);
 
         this.nodeId = nodeId;
         this.children = children;
@@ -86,6 +93,7 @@ public static final class Strong implements SemanticInline {
 
             SemanticIds.require(nodeId);
             children = dev.openallay.util.Java8Collections.listCopyOf(children);
+            children.forEach(SemanticInline::requireKnown);
 
         this.nodeId = nodeId;
         this.children = children;

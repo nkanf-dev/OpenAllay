@@ -37,6 +37,7 @@ public final class GuideHudView {
             throw new IllegalArgumentException("otherRunningTasks must not be negative");
         }
 
+        rows.forEach(GuideUiRow::requireKnown);
         this.hud = hud;
         this.assistantName = assistantName;
         this.selectedSession = selectedSession;

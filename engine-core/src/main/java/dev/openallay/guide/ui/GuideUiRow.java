@@ -10,9 +10,15 @@ import java.util.List;
 import java.util.UUID;
 
 /** Visible transcript projection. Reasoning is deliberately not representable. */
-public sealed interface GuideUiRow
-        permits GuideUiRow.Persistence, GuideUiRow.User, GuideUiRow.Assistant,
-                GuideUiRow.Tool, GuideUiRow.Status {
+public interface GuideUiRow {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static GuideUiRow requireKnown(GuideUiRow value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.ui.GuideUiRow.Persistence.class || type == dev.openallay.guide.ui.GuideUiRow.User.class || type == dev.openallay.guide.ui.GuideUiRow.Assistant.class || type == dev.openallay.guide.ui.GuideUiRow.Tool.class || type == dev.openallay.guide.ui.GuideUiRow.Status.class) return value;
+        throw new IncompatibleClassChangeError("Unknown GuideUiRow subtype");
+    }
+
 
     @dev.openallay.value.ValueType(Persistence.ValueSchemaProvider.class)
 public static final class Persistence implements GuideUiRow {

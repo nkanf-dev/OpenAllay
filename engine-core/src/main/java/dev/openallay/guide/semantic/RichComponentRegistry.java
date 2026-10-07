@@ -219,6 +219,7 @@ public static final class Decode {
             if (fallbackText == null || dev.openallay.util.Java8Strings.isBlank(fallbackText)) {
                 throw new IllegalArgumentException("component decode fallback is required");
             }
+            if (component != null) RichComponent.requireKnown(component);
 
         this.component = component;
         this.fallbackText = fallbackText;

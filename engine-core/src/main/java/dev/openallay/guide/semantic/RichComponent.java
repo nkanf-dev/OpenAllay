@@ -4,11 +4,15 @@ import dev.openallay.context.RecipeReference;
 import java.util.List;
 
 /** Closed set of model-selectable components; behavior is inferred by type, never payload code. */
-public sealed interface RichComponent
-        permits RichComponent.ItemRow, RichComponent.RecipeGrid,
-                RichComponent.IngredientCheck, RichComponent.CraftabilitySummary,
-                RichComponent.ProgressSteps, RichComponent.SourceSummary,
-                RichComponent.StatusBadge, RichComponent.ChoiceGroup {
+public interface RichComponent {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static RichComponent requireKnown(RichComponent value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.semantic.RichComponent.ItemRow.class || type == dev.openallay.guide.semantic.RichComponent.RecipeGrid.class || type == dev.openallay.guide.semantic.RichComponent.IngredientCheck.class || type == dev.openallay.guide.semantic.RichComponent.CraftabilitySummary.class || type == dev.openallay.guide.semantic.RichComponent.ProgressSteps.class || type == dev.openallay.guide.semantic.RichComponent.SourceSummary.class || type == dev.openallay.guide.semantic.RichComponent.StatusBadge.class || type == dev.openallay.guide.semantic.RichComponent.ChoiceGroup.class) return value;
+        throw new IncompatibleClassChangeError("Unknown RichComponent subtype");
+    }
+
     String nodeId();
 
     String fallbackText();
@@ -26,8 +30,8 @@ public static final class Item {
             if (!SemanticReferenceValidator.isResourceId(itemId) || count < 0) {
                 throw new IllegalArgumentException("component item is invalid");
             }
-            label = safeLabel(label);
-            originInvocationId = requireOrigin(originInvocationId);
+            label = RichComponentValidation.safeLabel(label);
+            originInvocationId = RichComponentValidation.requireOrigin(originInvocationId);
 
         this.itemId = itemId;
         this.count = count;
@@ -69,7 +73,7 @@ public static final class ItemRow implements RichComponent {
     private final String narration;
     public ItemRow(String nodeId, List<Item> items, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             items = dev.openallay.util.Java8Collections.listCopyOf(items);
             if (items.isEmpty()) throw new IllegalArgumentException("item row must not be empty");
 
@@ -115,10 +119,10 @@ public static final class RecipeGrid implements RichComponent {
     private final String narration;
     public RecipeGrid(String nodeId, RecipeReference recipe, String originInvocationId, String label, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             java.util.Objects.requireNonNull(recipe, "recipe");
-            originInvocationId = requireOrigin(originInvocationId);
-            label = safeLabel(label);
+            originInvocationId = RichComponentValidation.requireOrigin(originInvocationId);
+            label = RichComponentValidation.safeLabel(label);
 
         this.nodeId = nodeId;
         this.recipe = recipe;
@@ -171,8 +175,8 @@ public static final class Ingredient {
                     || required < 0 || available < 0) {
                 throw new IllegalArgumentException("ingredient check entry is invalid");
             }
-            label = safeLabel(label);
-            originInvocationId = requireOrigin(originInvocationId);
+            label = RichComponentValidation.safeLabel(label);
+            originInvocationId = RichComponentValidation.requireOrigin(originInvocationId);
 
         this.itemId = itemId;
         this.required = required;
@@ -217,7 +221,7 @@ public static final class IngredientCheck implements RichComponent {
     private final String narration;
     public IngredientCheck(String nodeId, List<Ingredient> ingredients, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             ingredients = dev.openallay.util.Java8Collections.listCopyOf(ingredients);
             if (ingredients.isEmpty()) {
                 throw new IllegalArgumentException("ingredient check must not be empty");
@@ -268,9 +272,9 @@ public static final class CraftabilitySummary implements RichComponent {
     private final String narration;
     public CraftabilitySummary(String nodeId, RecipeReference recipe, String originInvocationId, boolean craftable, boolean conclusive, long requestedCrafts, long maximumCrafts, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             java.util.Objects.requireNonNull(recipe, "recipe");
-            originInvocationId = requireOrigin(originInvocationId);
+            originInvocationId = RichComponentValidation.requireOrigin(originInvocationId);
             if (requestedCrafts <= 0 || maximumCrafts < 0) {
                 throw new IllegalArgumentException("craftability counts are invalid");
             }
@@ -329,9 +333,9 @@ public static final class Step {
     private final StepState state;
     public Step(String id, String label, StepState state) {
 
-            id = requireLocalId(id);
-            label = requireText(label, "step label");
-            rejectActionText(label);
+            id = RichComponentValidation.requireLocalId(id);
+            label = RichComponentValidation.requireText(label, "step label");
+            RichComponentValidation.rejectActionText(label);
             java.util.Objects.requireNonNull(state, "state");
 
         this.id = id;
@@ -373,7 +377,7 @@ public static final class ProgressSteps implements RichComponent {
     private final String narration;
     public ProgressSteps(String nodeId, List<Step> steps, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             steps = dev.openallay.util.Java8Collections.listCopyOf(steps);
             if (steps.isEmpty() || steps.stream().map(Step::id).distinct().count() != steps.size()) {
                 throw new IllegalArgumentException("progress steps are empty or duplicated");
@@ -421,8 +425,8 @@ public static final class Source {
             if (!SemanticReferenceValidator.isResourceId(sourceId)) {
                 throw new IllegalArgumentException("source ID is invalid");
             }
-            label = safeLabel(label);
-            originInvocationId = requireOrigin(originInvocationId);
+            label = RichComponentValidation.safeLabel(label);
+            originInvocationId = RichComponentValidation.requireOrigin(originInvocationId);
 
         this.sourceId = sourceId;
         this.label = label;
@@ -461,7 +465,7 @@ public static final class SourceSummary implements RichComponent {
     private final String narration;
     public SourceSummary(String nodeId, List<Source> sources, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
             if (sources.isEmpty()) throw new IllegalArgumentException("source summary is empty");
 
@@ -508,10 +512,10 @@ public static final class StatusBadge implements RichComponent {
     private final String narration;
     public StatusBadge(String nodeId, BadgeState state, String label, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
             java.util.Objects.requireNonNull(state, "state");
-            label = requireText(label, "badge label");
-            rejectActionText(label);
+            label = RichComponentValidation.requireText(label, "badge label");
+            RichComponentValidation.rejectActionText(label);
 
         this.nodeId = nodeId;
         this.state = state;
@@ -554,9 +558,9 @@ public static final class Choice {
     private final String label;
     public Choice(String id, String label) {
 
-            id = requireLocalId(id);
-            label = requireText(label, "choice label");
-            rejectActionText(label);
+            id = RichComponentValidation.requireLocalId(id);
+            label = RichComponentValidation.requireText(label, "choice label");
+            RichComponentValidation.rejectActionText(label);
 
         this.id = id;
         this.label = label;
@@ -593,9 +597,9 @@ public static final class ChoiceGroup implements RichComponent {
     private final String narration;
     public ChoiceGroup(String nodeId, String prompt, List<Choice> choices, String fallbackText, String narration) {
 
-            common(nodeId, fallbackText, narration);
-            prompt = requireText(prompt, "choice prompt");
-            rejectActionText(prompt);
+            RichComponentValidation.common(nodeId, fallbackText, narration);
+            prompt = RichComponentValidation.requireText(prompt, "choice prompt");
+            RichComponentValidation.rejectActionText(prompt);
             choices = dev.openallay.util.Java8Collections.listCopyOf(choices);
             if (choices.isEmpty()
                     || choices.stream().map(Choice::id).distinct().count() != choices.size()) {
@@ -637,41 +641,57 @@ public static final class ChoiceGroup implements RichComponent {
     }
 }
 
-    private static void common(String nodeId, String fallback, String narration) {
+
+
+
+
+
+
+
+
+
+
+
+}
+
+/** Package-private Java8 helpers for the canonical variant constructors. */
+final class RichComponentValidation {
+    private RichComponentValidation() {}
+static void common(String nodeId, String fallback, String narration) {
         SemanticIds.require(nodeId);
         requireText(fallback, "component fallback");
         requireText(narration, "component narration");
     }
 
-    private static String safeLabel(String value) {
+static String safeLabel(String value) {
         if (value == null) return "";
         String label = dev.openallay.util.Java8Strings.strip(value);
         rejectActionText(label);
         return label;
     }
 
-    private static String requireText(String value, String label) {
+static String requireText(String value, String label) {
         if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " is required");
         }
         return value;
     }
 
-    private static String requireOrigin(String value) {
+static String requireOrigin(String value) {
         if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException("component reference origin is required");
         }
         return value;
     }
 
-    private static String requireLocalId(String value) {
+static String requireLocalId(String value) {
         if (value == null || !value.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("component-local ID is invalid");
         }
         return value;
     }
 
-    private static void rejectActionText(String value) {
+static void rejectActionText(String value) {
         String lowered = value.toLowerCase(java.util.Locale.ROOT);
         if (lowered.contains("://") || lowered.startsWith("javascript:")
                 || lowered.startsWith("file:")) {

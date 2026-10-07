@@ -95,6 +95,7 @@ public static final class Line {
             if ((kind == Kind.TABLE) != (table != null)) {
                 throw new IllegalArgumentException("semantic table line is inconsistent");
             }
+            if (component != null) RichComponent.requireKnown(component);
 
         this.nodeId = nodeId;
         this.kind = kind;

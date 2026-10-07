@@ -24,6 +24,7 @@ public static final class Summary {
             Objects.requireNonNull(description, "description");
             Objects.requireNonNull(status, "status");
             capsules = dev.openallay.util.Java8Collections.listCopyOf(capsules);
+            capsules.forEach(Capsule::requireKnown);
 
         this.id = id;
         this.title = title;
@@ -64,7 +65,15 @@ public boolean hasDescription() { return !dev.openallay.util.Java8Strings.isBlan
     }
 }
 
-    public sealed interface Capsule permits Item, Recipe {
+    public interface Capsule {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static Capsule requireKnown(Capsule value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.ui.GuideToolSummaryPresenter.Item.class || type == dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe.class) return value;
+        throw new IncompatibleClassChangeError("Unknown Capsule subtype");
+    }
+
         String id();
         String originInvocationId();
         GuideItemView item();

@@ -641,6 +641,7 @@ private static final class RequestBoundary {
     @Override
     public void delete(GuideHistoryDeleteScope scope) {
         Objects.requireNonNull(scope, "scope");
+        GuideHistoryDeleteScope.requireKnown(scope);
         boolean durable = false;
         try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
                 Connection connection = open()) {

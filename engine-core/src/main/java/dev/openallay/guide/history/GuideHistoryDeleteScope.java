@@ -4,7 +4,15 @@ import java.util.Objects;
 import java.util.UUID;
 
 /** Typed durable-history deletion scope; no path or foreign actor is supplied by UI text. */
-public sealed interface GuideHistoryDeleteScope {
+public interface GuideHistoryDeleteScope {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static GuideHistoryDeleteScope requireKnown(GuideHistoryDeleteScope value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.history.GuideHistoryDeleteScope.Partition.class || type == dev.openallay.guide.history.GuideHistoryDeleteScope.Actor.class) return value;
+        throw new IncompatibleClassChangeError("Unknown GuideHistoryDeleteScope subtype");
+    }
+
     @dev.openallay.value.ValueType(Partition.ValueSchemaProvider.class)
 public static final class Partition implements GuideHistoryDeleteScope {
     private final GuideHistoryScope scope;

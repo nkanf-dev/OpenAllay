@@ -11,6 +11,7 @@ public final class SemanticDocument {
     public SemanticDocument(List<SemanticBlock> blocks, String fallbackText, List<SemanticDiagnostic> diagnostics) {
 
         blocks = dev.openallay.util.Java8Collections.listCopyOf(blocks);
+        blocks.forEach(SemanticBlock::requireKnown);
         diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
         String expected = SemanticPlainText.render(blocks);
         if (!expected.equals(fallbackText)) {

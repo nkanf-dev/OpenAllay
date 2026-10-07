@@ -35,6 +35,7 @@ public final class GuideToolDetailView {
         Objects.requireNonNull(displayStatus, "displayStatus");
         failure = Objects.requireNonNull(failure, "failure");
 
+            cards.forEach(GuideDetailCard::requireKnown);
         this.titleKey = titleKey;
         this.status = status;
         this.invocation = invocation;

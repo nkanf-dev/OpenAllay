@@ -35,6 +35,7 @@ public final class GuideRequestSnapshot {
             throw new IllegalArgumentException("userMessage must not be blank");
         }
         timeline = dev.openallay.util.Java8Collections.listCopyOf(timeline);
+        timeline.forEach(GuideTimelineEntry::requireKnown);
         for (int index = 0; index < timeline.size(); index++) {
             if (timeline.get(index).ordinal() != index) {
                 throw new IllegalArgumentException("timeline ordinals must be contiguous");

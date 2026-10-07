@@ -14,22 +14,15 @@ import java.util.List;
 import java.util.UUID;
 
 /** Closed set of minimum durable changes accepted by the history store. */
-public sealed interface GuideHistoryMutation permits
-        GuideHistoryMutation.UpsertPartition,
-        GuideHistoryMutation.UpsertSession,
-        GuideHistoryMutation.UpsertSessionUsage,
-        GuideHistoryMutation.UpsertRequest,
-        GuideHistoryMutation.UpsertMessage,
-        GuideHistoryMutation.UpsertTimelineEntry,
-        GuideHistoryMutation.ReplaceRequestSources,
-        GuideHistoryMutation.ReplaceContext,
-        GuideHistoryMutation.ReplaceRequestContext,
-        GuideHistoryMutation.UpsertCheckpoint,
-        GuideHistoryMutation.AppendCheckpoint,
-        GuideHistoryMutation.CaptureRequestBoundary,
-        GuideHistoryMutation.ForkSession,
-        GuideHistoryMutation.DeleteSession,
-        GuideHistoryMutation.ClearSession {
+public interface GuideHistoryMutation {
+    /** Runtime admission for the exact canonical closed variant family. */
+    static GuideHistoryMutation requireKnown(GuideHistoryMutation value) {
+        java.util.Objects.requireNonNull(value, "value");
+        Class<?> type = value.getClass();
+        if (type == dev.openallay.guide.history.GuideHistoryMutation.UpsertPartition.class || type == dev.openallay.guide.history.GuideHistoryMutation.UpsertSession.class || type == dev.openallay.guide.history.GuideHistoryMutation.UpsertSessionUsage.class || type == dev.openallay.guide.history.GuideHistoryMutation.UpsertRequest.class || type == dev.openallay.guide.history.GuideHistoryMutation.UpsertMessage.class || type == dev.openallay.guide.history.GuideHistoryMutation.UpsertTimelineEntry.class || type == dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestSources.class || type == dev.openallay.guide.history.GuideHistoryMutation.ReplaceContext.class || type == dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestContext.class || type == dev.openallay.guide.history.GuideHistoryMutation.UpsertCheckpoint.class || type == dev.openallay.guide.history.GuideHistoryMutation.AppendCheckpoint.class || type == dev.openallay.guide.history.GuideHistoryMutation.CaptureRequestBoundary.class || type == dev.openallay.guide.history.GuideHistoryMutation.ForkSession.class || type == dev.openallay.guide.history.GuideHistoryMutation.DeleteSession.class || type == dev.openallay.guide.history.GuideHistoryMutation.ClearSession.class) return value;
+        throw new IncompatibleClassChangeError("Unknown GuideHistoryMutation subtype");
+    }
+
 
     @dev.openallay.value.ValueType(UpsertPartition.ValueSchemaProvider.class)
 public static final class UpsertPartition implements GuideHistoryMutation {
@@ -227,6 +220,7 @@ public static final class UpsertTimelineEntry implements GuideHistoryMutation {
 
             java.util.Objects.requireNonNull(requestId, "requestId");
             java.util.Objects.requireNonNull(entry, "entry");
+            GuideTimelineEntry.requireKnown(entry);
 
         this.requestId = requestId;
         this.entry = entry;
