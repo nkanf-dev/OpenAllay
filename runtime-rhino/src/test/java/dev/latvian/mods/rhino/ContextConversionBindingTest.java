@@ -16,7 +16,10 @@ final class ContextConversionBindingTest {
         assertEquals(Integer.valueOf(12), cx.jsToJava("12", TypeInfo.INT));
         assertEquals(Character.valueOf('x'), cx.jsToJava("x", TypeInfo.CHARACTER));
         assertEquals("7", cx.jsToJava(7, TypeInfo.STRING));
-        assertTrue(cx.canConvert("12", TypeInfo.INT));
+        assertFalse(cx.canConvert("12", TypeInfo.INT));
+        assertTrue(cx.canConvert("12", TypeInfo.PRIMITIVE_INT));
+        assertEquals(99, cx.getConversionWeight("12", TypeInfo.INT));
+        assertEquals(4, cx.getConversionWeight("12", TypeInfo.PRIMITIVE_INT));
         assertFalse(cx.canConvert(null, TypeInfo.PRIMITIVE_INT));
     }
     @Test void nativeAndWrappedArraysListsMapsKeepElementConversionsAndIdentity() {
