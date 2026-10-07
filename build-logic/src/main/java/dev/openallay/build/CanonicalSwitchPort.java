@@ -21,6 +21,40 @@ public final class CanonicalSwitchPort {
     private static boolean abrupt(Tree tree){if(tree instanceof ReturnTree||tree instanceof ThrowTree||tree instanceof ContinueTree||tree instanceof BreakTree||tree instanceof YieldTree)return true;if(tree instanceof BlockTree block&&!block.getStatements().isEmpty())return abrupt(block.getStatements().get(block.getStatements().size()-1));if(tree instanceof IfTree branch&&branch.getElseStatement()!=null)return abrupt(branch.getThenStatement())&&abrupt(branch.getElseStatement());return false;}
     private static String labels(CaseTree rule){List<? extends ExpressionTree> expressions=rule.getExpressions();if(expressions.isEmpty())return "default:";List<String> labels=new ArrayList<>();for(ExpressionTree expression:expressions){if(!(expression instanceof LiteralTree||expression instanceof IdentifierTree||expression instanceof UnaryTree))throw new IllegalArgumentException("Unsupported pattern/null switch label");labels.add("case "+expression+":");}return String.join("\n",labels);}
     private static boolean enumSelector(Trees trees,TreePath path,ExpressionTree selector){TypeMirror type=trees.getTypeMirror(new TreePath(path,selector));return type.getKind()==TypeKind.DECLARED&&((DeclaredType)type).asElement().getKind()==ElementKind.ENUM;}
+    private record Lift(TreePath boundary,String expression,int from,int to,String prefix,boolean lambda) {}
+    private static String denotableAt(TreePath path,Trees trees){return AttributedVarTypes.denotable(trees.getTypeMirror(path),false);}
+    private static Lift embeddedLift(Site site,String text,SourcePositions positions,Trees trees,String result,String evaluation){
+        CompilationUnitTree unit=site.unit();Tree child=site.tree();TreePath cursor=site.path().getParentPath();List<Edit> edits=new ArrayList<>();StringBuilder prefix=new StringBuilder();int index=0;
+        edits.add(new Edit(pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),result));
+        while(cursor!=null){Tree parent=cursor.getLeaf();
+            if(parent instanceof ParenthesizedTree){child=parent;cursor=cursor.getParentPath();continue;}
+            if(parent instanceof LambdaExpressionTree lambda&&lambda.getBody()==child&&lambda.getBodyKind()==LambdaExpressionTree.BodyKind.EXPRESSION){
+                String expression=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),prefix+evaluation,true);
+            }
+            if(parent instanceof ReturnTree returned&&returned.getExpression()==child){String expression=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
+            if(parent instanceof ExpressionStatementTree expression&&expression.getExpression()==child){String replacement=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,replacement,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
+            if(parent instanceof VariableTree variable&&variable.getInitializer()==child&&cursor.getParentPath().getLeaf() instanceof BlockTree){String expression=apply(text,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
+            List<? extends ExpressionTree> previous=List.of();
+            if(parent instanceof MethodInvocationTree call){
+                int argument=call.getArguments().indexOf(child);if(argument<0)throw new IllegalArgumentException("Switch in invocation receiver/typearguments requires separate timing proof");
+                List<ExpressionTree> operands=new ArrayList<>();Element method=trees.getElement(cursor);
+                if(!(method instanceof ExecutableElement executable))throw new IllegalArgumentException("Invocation method has no attributed executable");
+                if(call.getMethodSelect() instanceof MemberSelectTree member){TreePath receiverPath=new TreePath(new TreePath(cursor,call.getMethodSelect()),member.getExpression());Element qualifier=trees.getElement(receiverPath);if(!(qualifier instanceof TypeElement))operands.add(member.getExpression());}
+                operands.addAll(call.getArguments().subList(0,argument));previous=operands;
+            }else if(parent instanceof NewClassTree constructor){int argument=constructor.getArguments().indexOf(child);if(argument<0||constructor.getEnclosingExpression()!=null||constructor.getClassBody()!=null)throw new IllegalArgumentException("Qualified/anonymous constructor switch needs evaluation proof");previous=constructor.getArguments().subList(0,argument);
+            }else if(parent instanceof BinaryTree binary&&binary.getKind()==Tree.Kind.PLUS){
+                if(binary.getRightOperand()==child){
+                    javax.lang.model.type.TypeMirror left=trees.getTypeMirror(TreePath.getPath(unit,binary.getLeftOperand()));
+                    if(left.getKind()==javax.lang.model.type.TypeKind.DECLARED && !((TypeElement)((javax.lang.model.type.DeclaredType)left).asElement()).getQualifiedName().contentEquals("java.lang.String"))throw new IllegalArgumentException("Object-toString concatenation timing needs conversion proof before selector");
+                    previous=List.of(binary.getLeftOperand());
+                }else if(binary.getLeftOperand()!=child)throw new IllegalArgumentException("Unknown binary operand");
+            }else throw new IllegalArgumentException("Embedded switch operand parent not proven eager left-to-right: "+parent.getKind());
+            StringBuilder level=new StringBuilder();
+            for(ExpressionTree prior:previous){TreePath operandPath=TreePath.getPath(unit,prior);String type=denotableAt(operandPath,trees),temporary=result+"_prior"+index++;String source=slice(text,unit,positions,prior);level.append("final ").append(type).append(' ').append(temporary).append(" = ").append(source).append(";\n");edits.add(new Edit(pos(positions.getStartPosition(unit,prior)),pos(positions.getEndPosition(unit,prior)),temporary));}
+            prefix.insert(0,level);child=parent;cursor=cursor.getParentPath();
+        }
+        throw new IllegalArgumentException("Embedded switch lacks supported statement/lambda boundary");
+    }
     public static void main(String[] args)throws Exception{
         if(args.length!=4)throw new IllegalArgumentException("completeActualRoot genuineProductionClasspath selectedOwners freshExternalOutput");Path root=Paths.get(args[0]).toAbsolutePath().normalize(),output=Paths.get(args[3]).toAbsolutePath().normalize();if(Files.exists(output)||output.startsWith(root)||root.startsWith(output))throw new IllegalArgumentException("Fresh externaloutput required");Set<String> selected=new TreeSet<>(Files.readAllLines(Paths.get(args[2]),StandardCharsets.UTF_8));List<File> files=new ArrayList<>();try(var stream=Files.walk(root)){stream.filter(p->p.toString().endsWith(".java")).sorted().forEach(p->files.add(p.toFile()));}
         JavaCompiler compiler=ToolProvider.getSystemJavaCompiler();DiagnosticCollector<JavaFileObject> diagnostics=new DiagnosticCollector<>();Map<String,byte[]> before=new TreeMap<>(),after=new TreeMap<>();List<String> rows=new ArrayList<>();
@@ -59,7 +93,13 @@ public final class CanonicalSwitchPort {
                         if(parent instanceof ReturnTree returned&&unparen(returned.getExpression())==site.tree()){from=pos(positions.getStartPosition(unit,parent));to=pos(positions.getEndPosition(unit,parent));replacement="{\n"+evaluation+"return "+result+";\n}";}
                         else if(parent instanceof VariableTree variable&&unparen(variable.getInitializer())==site.tree()&&boundary.getParentPath().getLeaf() instanceof BlockTree){from=pos(positions.getStartPosition(unit,parent));to=pos(positions.getEndPosition(unit,parent));String declaration=slice(text,unit,positions,parent);int relative=pos(positions.getStartPosition(unit,site.tree()))-from;declaration=declaration.substring(0,relative)+result+declaration.substring(pos(positions.getEndPosition(unit,site.tree()))-from);replacement=evaluation+declaration;}
                         else if(parent instanceof AssignmentTree assignment&&unparen(assignment.getExpression())==site.tree()&&assignment.getVariable() instanceof IdentifierTree&&boundary.getParentPath().getLeaf() instanceof ExpressionStatementTree){Tree statement=boundary.getParentPath().getLeaf();from=pos(positions.getStartPosition(unit,statement));to=pos(positions.getEndPosition(unit,statement));replacement="{\n"+evaluation+slice(text,unit,positions,assignment.getVariable())+" = "+result+";\n}";}
-                        else throw new IllegalArgumentException("Embedded switch expression needs left-to-right operand lift proof");
+                        else {
+                            Lift lift=embeddedLift(site,text,positions,trees,result,evaluation);from=lift.from();to=lift.to();Tree boundaryTree=lift.boundary().getLeaf();
+                            if(lift.lambda())replacement="{\n"+lift.prefix()+"return "+lift.expression()+";\n}";
+                            else if(boundaryTree instanceof ReturnTree)replacement="{\n"+lift.prefix()+"return "+lift.expression()+";\n}";
+                            else if(boundaryTree instanceof VariableTree)replacement=lift.prefix()+lift.expression();
+                            else replacement="{\n"+lift.prefix()+lift.expression()+";\n}";
+                        }
                     }
                     List<Edit> nested=new ArrayList<>();for(Edit edit:changes)if(edit.start()>=from&&edit.end()<=to)nested.add(edit);changes.removeAll(nested);changes.add(new Edit(from,to,replacement));
                 }catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,site.tree())+" "+failure.getMessage());}}
