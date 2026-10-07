@@ -6,6 +6,80 @@
 @@ -219 +221 @@
 -			Class<?> valueType = pTypes.getLast();
 +			Class<?> valueType = ListCompat.getLast(pTypes);
+--- a/dev/latvian/mods/rhino/CachedParameters.java
++++ b/dev/latvian/mods/rhino/CachedParameters.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -8 +10,41 @@
+-public record CachedParameters(int count, List<Class<?>> types, List<TypeInfo> typeInfos, boolean firstArgContext, @Nullable TypeInfo varArgType) {
++public final class CachedParameters {
++	private final int count;
++
++	private final List<Class<?>> types;
++
++	private final List<TypeInfo> typeInfos;
++
++	private final boolean firstArgContext;
++
++	@Nullable
++	private final TypeInfo varArgType;
++
++	public CachedParameters(int count, List<Class<?>> types, List<TypeInfo> typeInfos, boolean firstArgContext, @Nullable TypeInfo varArgType) {
++		this.count = count;
++		this.types = types;
++		this.typeInfos = typeInfos;
++		this.firstArgContext = firstArgContext;
++		this.varArgType = varArgType;
++	}
++
++	public int count() {
++		return count;
++	}
++
++	public List<Class<?>> types() {
++		return types;
++	}
++
++	public List<TypeInfo> typeInfos() {
++		return typeInfos;
++	}
++
++	public boolean firstArgContext() {
++		return firstArgContext;
++	}
++
++	@Nullable
++	public TypeInfo varArgType() {
++		return varArgType;
++	}
++
+@@ -28,0 +71,25 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof CachedParameters)) {
++			return false;
++		}
++		CachedParameters that = (CachedParameters) other;
++		return this.count == that.count && Objects.equals(this.types, that.types) && Objects.equals(this.typeInfos, that.typeInfos) && this.firstArgContext == that.firstArgContext && Objects.equals(this.varArgType, that.varArgType);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Integer.hashCode(count);
++		hash = 31 * hash + Objects.hashCode(types);
++		hash = 31 * hash + Objects.hashCode(typeInfos);
++		hash = 31 * hash + Boolean.hashCode(firstArgContext);
++		hash = 31 * hash + Objects.hashCode(varArgType);
++		return hash;
++	}
++
++	@Override
++	public String toString() {
++		return "CachedParameters[count=" + count + ", types=" + types + ", typeInfos=" + typeInfos + ", firstArgContext=" + firstArgContext + ", varArgType=" + varArgType + "]";
++	}
 --- a/dev/latvian/mods/rhino/Context.java
 +++ b/dev/latvian/mods/rhino/Context.java
 @@ -167,5 +167,6 @@
@@ -61,6 +135,61 @@
 +				return JSTYPE_JAVA_OBJECT;
 +			}
 +			return JSTYPE_OBJECT;
+--- a/dev/latvian/mods/rhino/CustomMember.java
++++ b/dev/latvian/mods/rhino/CustomMember.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -5 +7,48 @@
+-public record CustomMember(String name, TypeInfo type, Object value) {
++public final class CustomMember {
++	private final String name;
++
++	private final TypeInfo type;
++
++	private final Object value;
++
++	public CustomMember(String name, TypeInfo type, Object value) {
++		this.name = name;
++		this.type = type;
++		this.value = value;
++	}
++
++	public String name() {
++		return name;
++	}
++
++	public TypeInfo type() {
++		return type;
++	}
++
++	public Object value() {
++		return value;
++	}
++
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof CustomMember)) {
++			return false;
++		}
++		CustomMember that = (CustomMember) other;
++		return Objects.equals(this.name, that.name) && Objects.equals(this.type, that.type) && Objects.equals(this.value, that.value);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(name);
++		hash = 31 * hash + Objects.hashCode(type);
++		hash = 31 * hash + Objects.hashCode(value);
++		return hash;
++	}
++
++	@Override
++	public String toString() {
++		return "CustomMember[name=" + name + ", type=" + type + ", value=" + value + "]";
++	}
 --- a/dev/latvian/mods/rhino/FunctionObject.java
 +++ b/dev/latvian/mods/rhino/FunctionObject.java
 @@ -9,0 +10,2 @@
@@ -334,6 +463,167 @@
 @@ -108 +110 @@
 -		return labels.getFirst();
 +		return ListCompat.getFirst(labels);
+--- a/dev/latvian/mods/rhino/type/JSBasicConstantTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSBasicConstantTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -7 +9,11 @@
+-public record JSBasicConstantTypeInfo(String value) implements TypeInfo {
++public final class JSBasicConstantTypeInfo implements TypeInfo {
++	private final String value;
++
++	public JSBasicConstantTypeInfo(String value) {
++		this.value = value;
++	}
++
++	public String value() {
++		return value;
++	}
++
+@@ -35,0 +48,16 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSBasicConstantTypeInfo)) {
++			return false;
++		}
++		JSBasicConstantTypeInfo that = (JSBasicConstantTypeInfo) other;
++		return Objects.equals(this.value, that.value);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(value);
++		return hash;
++	}
+--- a/dev/latvian/mods/rhino/type/JSFixedArrayTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSFixedArrayTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -7 +9,11 @@
+-public record JSFixedArrayTypeInfo(List<JSOptionalParam> types) implements TypeInfo {
++public final class JSFixedArrayTypeInfo implements TypeInfo {
++	private final List<JSOptionalParam> types;
++
++	public JSFixedArrayTypeInfo(List<JSOptionalParam> types) {
++		this.types = types;
++	}
++
++	public List<JSOptionalParam> types() {
++		return types;
++	}
++
+@@ -36 +48 @@
+-		for (var type : types) {
++		for (JSOptionalParam type : types) {
+@@ -39,0 +52,16 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSFixedArrayTypeInfo)) {
++			return false;
++		}
++		JSFixedArrayTypeInfo that = (JSFixedArrayTypeInfo) other;
++		return Objects.equals(this.types, that.types);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(types);
++		return hash;
++	}
+--- a/dev/latvian/mods/rhino/type/JSNumberConstantTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSNumberConstantTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -7 +9,11 @@
+-public record JSNumberConstantTypeInfo(Number number) implements TypeInfo {
++public final class JSNumberConstantTypeInfo implements TypeInfo {
++	private final Number number;
++
++	public JSNumberConstantTypeInfo(Number number) {
++		this.number = number;
++	}
++
++	public Number number() {
++		return number;
++	}
++
+@@ -30,0 +43,16 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSNumberConstantTypeInfo)) {
++			return false;
++		}
++		JSNumberConstantTypeInfo that = (JSNumberConstantTypeInfo) other;
++		return Objects.equals(this.number, that.number);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(number);
++		return hash;
++	}
+--- a/dev/latvian/mods/rhino/type/JSOptionalParam.java
++++ b/dev/latvian/mods/rhino/type/JSOptionalParam.java
+@@ -3 +3,27 @@
+-public record JSOptionalParam(String name, TypeInfo type, boolean optional) {
++import java.util.Objects;
++
++public final class JSOptionalParam {
++	private final String name;
++
++	private final TypeInfo type;
++
++	private final boolean optional;
++
++	public JSOptionalParam(String name, TypeInfo type, boolean optional) {
++		this.name = name;
++		this.type = type;
++		this.optional = optional;
++	}
++
++	public String name() {
++		return name;
++	}
++
++	public TypeInfo type() {
++		return type;
++	}
++
++	public boolean optional() {
++		return optional;
++	}
++
+@@ -10 +36 @@
+-		var sb = new StringBuilder();
++		StringBuilder sb = new StringBuilder();
+@@ -32,0 +59,18 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSOptionalParam)) {
++			return false;
++		}
++		JSOptionalParam that = (JSOptionalParam) other;
++		return Objects.equals(this.name, that.name) && Objects.equals(this.type, that.type) && this.optional == that.optional;
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(name);
++		hash = 31 * hash + Objects.hashCode(type);
++		hash = 31 * hash + Boolean.hashCode(optional);
++		return hash;
++	}
 --- a/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
 @@ -16 +16,2 @@
@@ -499,6 +789,101 @@
 +			return sb.toString();
 +		}
 +		return o.toString();
+--- a/dev/latvian/mods/rhino/util/WrappedReflectionMethod.java
++++ b/dev/latvian/mods/rhino/util/WrappedReflectionMethod.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -11 +13,11 @@
+-public record WrappedReflectionMethod(CachedMethodInfo method) implements WrappedExecutable {
++public final class WrappedReflectionMethod implements WrappedExecutable {
++	private final CachedMethodInfo method;
++
++	public WrappedReflectionMethod(CachedMethodInfo method) {
++		this.method = method;
++	}
++
++	public CachedMethodInfo method() {
++		return method;
++	}
++
+@@ -35,0 +48,21 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof WrappedReflectionMethod)) {
++			return false;
++		}
++		WrappedReflectionMethod that = (WrappedReflectionMethod) other;
++		return Objects.equals(this.method, that.method);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(method);
++		return hash;
++	}
++
++	@Override
++	public String toString() {
++		return "WrappedReflectionMethod[method=" + method + "]";
++	}
+--- a/dev/latvian/mods/rhino/util/wrap/TypeWrapper.java
++++ b/dev/latvian/mods/rhino/util/wrap/TypeWrapper.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -6 +8,48 @@
+-public record TypeWrapper<T>(Class<T> target, TypeWrapperValidator validator, TypeWrapperFactory<T> factory) {
++public final class TypeWrapper<T> {
++	private final Class<T> target;
++
++	private final TypeWrapperValidator validator;
++
++	private final TypeWrapperFactory<T> factory;
++
++	public TypeWrapper(Class<T> target, TypeWrapperValidator validator, TypeWrapperFactory<T> factory) {
++		this.target = target;
++		this.validator = validator;
++		this.factory = factory;
++	}
++
++	public Class<T> target() {
++		return target;
++	}
++
++	public TypeWrapperValidator validator() {
++		return validator;
++	}
++
++	public TypeWrapperFactory<T> factory() {
++		return factory;
++	}
++
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof TypeWrapper<?>)) {
++			return false;
++		}
++		TypeWrapper<?> that = (TypeWrapper<?>) other;
++		return Objects.equals(this.target, that.target) && Objects.equals(this.validator, that.validator) && Objects.equals(this.factory, that.factory);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(target);
++		hash = 31 * hash + Objects.hashCode(validator);
++		hash = 31 * hash + Objects.hashCode(factory);
++		return hash;
++	}
++
++	@Override
++	public String toString() {
++		return "TypeWrapper[target=" + target + ", validator=" + validator + ", factory=" + factory + "]";
++	}
 --- /dev/null
 +++ b/dev/latvian/mods/rhino/util/ListCompat.java
 @@ -0,0 +1,144 @@

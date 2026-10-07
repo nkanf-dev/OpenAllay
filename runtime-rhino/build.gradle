@@ -22,6 +22,8 @@ dependencies {
     api('com.google.code.gson:gson:2.8.0')
     implementation('com.google.guava:guava:31.1-jre')
     compileOnly('org.jetbrains:annotations:24.1.0')
+    testImplementation('org.junit.jupiter:junit-jupiter:5.11.4')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.4')
 }
 def generatedSources = layout.buildDirectory.dir('generated/upstream')
 def prepare = tasks.register('prepareUpstreamSources', Exec) {
@@ -55,3 +57,5 @@ tasks.register('sourcesJar', Jar) {
     from(['LICENSE-MPL-2.0.txt', 'THIRD-PARTY-NOTICES.txt'])
 }
 tasks.named('assemble') { dependsOn 'sourcesJar' }
+
+tasks.named('test') { useJUnitPlatform() }
