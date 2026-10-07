@@ -1,0 +1,433 @@
+{
+  "originalSource": "2d88b4626478f1dac2fee0a17cf2c5aec1c9d6fc",
+  "converterClass": "dev.openallay.build.RecordValueSourceConverter",
+  "apiPatch": "observation-java8-api-lowering.patch",
+  "apiPatchSha256": "750510a7f0bae359789f57cc9f2a5648cce4d8b4b198a591232357f932491d01",
+  "sources": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/BlockPositionSnapshot.java",
+      "sha256": "4f86dd7a87e6d5d77dabaecd80dd838a168bf32eabf554500232ceb5275d56c4"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/CallerKind.java",
+      "sha256": "2035e2c2ae5c2c4de4d9708053f0ca0e5f52c8ce41f1225385e1c2730e415622"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/CallerSnapshot.java",
+      "sha256": "4f19b36b9b04d19e8dda769ef5be87ffbb6bae61d50260d1b9fd8c770795025a"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextMetrics.java",
+      "sha256": "c351f83cf7e2caedb2aac07b5b92bb7a2bdad106b3fae12cbc5fc6c9ef09a84e"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextValidation.java",
+      "sha256": "413b83e466d050e596533a72b30f323a19d3371aedb0aad15af39d7288deaba1"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataAuthority.java",
+      "sha256": "04b4f8024f76c374d00e6a117c847cabd814d17e93b7b9011928c713c48bacf3"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataCompleteness.java",
+      "sha256": "fbca30849903e1b47448a760a8689496a48fd57631c8057443392f8abfdc684d"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java",
+      "sha256": "95ff0f4885c589039edd39467b85bf008d0b2cf8dca75102e6c8e4de868df65d"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/FluidRequirementSnapshot.java",
+      "sha256": "e9f5f7dc9bd37d21caaa706d18d1015c14cb566979cea24997e258394b8cbb27"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/IngredientAlternativeSnapshot.java",
+      "sha256": "1e071171ebe5d62665768f2c0a2cb5eaa61a2aac5f8d0367bfa734247d85d925"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/IngredientRequirementSnapshot.java",
+      "sha256": "604a1224e7f954754c99d76cacdfa35eb1d1185589f5b3802b8e5061725c2915"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/InventorySlotSnapshot.java",
+      "sha256": "19ce959a1fbcb68cefc6498dd828e99de928f0cff6892c2c1650b267f7ecfc46"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/InventorySnapshot.java",
+      "sha256": "7ca3340084c1da8ef4800fe7d971f010c218354025aed2e96e4417110b32a924"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ItemStackSnapshot.java",
+      "sha256": "096d8e07f68e665ecc0079aeb66fe69e199c0a6b35d8c615c523ecfe88cca3aa"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/PlayerSnapshot.java",
+      "sha256": "266c5118b19112c1aae030682f70e387bc188d1fa86cf7721d7bd1aef9bde473"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeEntrySnapshot.java",
+      "sha256": "dac53862af62218fe0fa119c4dcb8349ffd6431ce03f6b197dc664e3d0b9336d"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeLayoutSnapshot.java",
+      "sha256": "3d4be6c038ba53a8e202d1832f09c5e6416d3d391f643ffae16543797cb6d5dd"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeOutputSnapshot.java",
+      "sha256": "ca3ac5bae653a8b2fdd0a5a9d04caf400fe87708942d8e0c1f0bb985e0aedab2"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeProcessingSnapshot.java",
+      "sha256": "554352d4fcef3e47818bf50f95d52091b75697f8a9f3ce42351c4bd370710444"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeReference.java",
+      "sha256": "e40161fbdfdb989555c07d0c33bca9d494ff3169549b324a498f98e5a8d9c9c4"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeSnapshot.java",
+      "sha256": "7c03f2543491501cc90e75bdf87273c2ba41b49b9d5e26c859d0bc49215d6063"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RegistryEntrySnapshot.java",
+      "sha256": "6ac69f95e29eae76cdb642dbe40cfe7f838e1e95b44df4c31514347ac89288b2"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RegistrySnapshot.java",
+      "sha256": "47e132c2f7d2b761555ae43cc5da5388462945f6808d07c95f5ed4ba2cd62680"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java",
+      "sha256": "75a07799f1657fffea89c708db776c2662657bbb4a4a3c6df504dbb5b0f5081a"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java",
+      "sha256": "08b37d304f42b01789df523ebece0497d9eb996c4aa675b0e09d40e74c2d7d81"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+      "sha256": "638fe24a01f86e13701ad11073c3630938b76778e4138d34f53592c316b3ac60"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+      "sha256": "ba0183b406daac7f1e97ca0d95f1e42b24bb8b7e8ef571d81f833ebd2e24f9ac"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+      "sha256": "0cfb03bb14af4bb564b2884a3b907d53aabe3f63ac65d2d74cc1e7be7d6cc9fa"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java",
+      "sha256": "524317527f54ec8fd62a5c290c23d19892e7d01231590ee96ab9d3c499f0c133"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeCanonicalizer.java",
+      "sha256": "287f2e5abff65d200bb89013d552a8db3e6033b20558815c85272933a78c9047"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeCatalogDiagnostic.java",
+      "sha256": "fcb97c49dc04658276f5286774bb06d0a19d31e58f9c191347c71523da09c912"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderDiagnostic.java",
+      "sha256": "f14d664ff745d1354562ee9fca92fb407029cade886422c78240852b85873913"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderSnapshot.java",
+      "sha256": "20a1013b70aa1333c0304b9acd179184b37f65be83299a5b6a67e9e958ad2adf"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderState.java",
+      "sha256": "b59c6a626d56e4a21ef07ac39b954b154077660368926f30e85602e67b5e1108"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeSemanticGroup.java",
+      "sha256": "2506d137584c841709edab0909c6ea6a1e38cbfcf52ae2187011f3ae14688876"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeUnlockState.java",
+      "sha256": "496ff73b8186079157b9d0a61b150832e791839ff9db8f7479682b8325edc39c"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+      "sha256": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+      "sha256": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+      "sha256": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+      "sha256": "9b32246bcbca946568dac412be35989d27fc84e7f07ed1ecb3c7018d7815ac5a"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+      "sha256": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+      "sha256": "ebdf998a7a3873ec0ae628e8f4dc5ecab6570c5dc94b21e5a0f6aa66bb19267e"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+      "sha256": "77b0a9a769c803d96d62270cf5084ae865ec74a915fd77ee33f28d8c5728257a"
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+      "sha256": "374c7d12e8d02ed33234c8029c2f2717713f92fec90fdde34971242c0730c4aa"
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java",
+      "sha256": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974"
+    }
+  ],
+  "owners": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java",
+      "record": "ObservableGameStateSnapshot",
+      "nestedRecords": [
+        "ObservableGameStateSnapshot.SectionDiagnostic",
+        "ObservableGameStateSnapshot.RuntimeState",
+        "ObservableGameStateSnapshot.ModsState",
+        "ObservableGameStateSnapshot.OptionValue",
+        "ObservableGameStateSnapshot.OptionsState",
+        "ObservableGameStateSnapshot.PackInfo",
+        "ObservableGameStateSnapshot.PacksState",
+        "ObservableGameStateSnapshot.ShaderState",
+        "ObservableGameStateSnapshot.DiagnosticValue",
+        "ObservableGameStateSnapshot.DiagnosticsState",
+        "ObservableGameStateSnapshot.PlayerUiState",
+        "ObservableGameStateSnapshot.QueryValue",
+        "ObservableGameStateSnapshot.WorldQueriesState"
+      ],
+      "originalSha256": "08b37d304f42b01789df523ebece0497d9eb996c4aa675b0e09d40e74c2d7d81",
+      "stage1Sha256": "3b5e47a011f937480c53042d56f260109ca870dec76bf6e569cf455505cfcd82",
+      "stage2Sha256": "ca235cd05161175c8db01c6001f1759eec38485d22f367a2a6f9ff3b7de1cc1d",
+      "apiLoweredSha256": "d15fcdbb12073f9ac0cf54dd5d65a2701e4f4f7bddd92539bdb803300ce91bbf",
+      "blankLineChanges": [
+        {
+          "startLine": 36,
+          "endLine": 37,
+          "beforeHex": "202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 64,
+          "endLine": 65,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 105,
+          "endLine": 106,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 153,
+          "endLine": 154,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 194,
+          "endLine": 195,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 236,
+          "endLine": 237,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 281,
+          "endLine": 282,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 334,
+          "endLine": 335,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 381,
+          "endLine": 382,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 429,
+          "endLine": 430,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 468,
+          "endLine": 469,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 512,
+          "endLine": 513,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 565,
+          "endLine": 566,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 607,
+          "endLine": 608,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        }
+      ],
+      "canonicalSha256": "403d43ddb2a95c1020a58f119cdedd7ebeb934da44829a8aa263b442f45b9012"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java",
+      "record": "ToolInvocationContext",
+      "nestedRecords": [],
+      "originalSha256": "75a07799f1657fffea89c708db776c2662657bbb4a4a3c6df504dbb5b0f5081a",
+      "stage1Sha256": "75a07799f1657fffea89c708db776c2662657bbb4a4a3c6df504dbb5b0f5081a",
+      "stage2Sha256": "f8adb992f458fdb14b78e8322d0122619dc991852f07f7036f862a562e5185a5",
+      "apiLoweredSha256": "dc80a74514ff1c4ab6e9d60702720803afd623681667bc078c43d46bec639928",
+      "blankLineChanges": [
+        {
+          "startLine": 32,
+          "endLine": 33,
+          "beforeHex": "202020200a",
+          "afterHex": "0a"
+        }
+      ],
+      "canonicalSha256": "beadf7c641619dddde7d3b4e379d5b3acb75e5c977fb768eb9cff98511bfd1b2"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java",
+      "record": "InstalledModMetadata",
+      "nestedRecords": [],
+      "originalSha256": "524317527f54ec8fd62a5c290c23d19892e7d01231590ee96ab9d3c499f0c133",
+      "stage1Sha256": "524317527f54ec8fd62a5c290c23d19892e7d01231590ee96ab9d3c499f0c133",
+      "stage2Sha256": "53a97e3a06d491a6bc8ec500e8007da3e025d2323480222d39fc1bd9771ac4ec",
+      "apiLoweredSha256": "be96c266576fef16d4dac9a22207ae2bed7623c2ccdabd1ef3bf274a8d88c517",
+      "blankLineChanges": [
+        {
+          "startLine": 28,
+          "endLine": 29,
+          "beforeHex": "202020200a",
+          "afterHex": "0a"
+        }
+      ],
+      "canonicalSha256": "780b79a98d57b2533f8821662dad769e0b514b67c60e5e65bb3da2186c846114"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+      "record": "WorldFocusObservation",
+      "nestedRecords": [
+        "WorldFocusObservation.Camera",
+        "WorldFocusObservation.Position",
+        "WorldFocusObservation.Target",
+        "WorldFocusObservation.Block",
+        "WorldFocusObservation.Entity",
+        "WorldFocusObservation.Item",
+        "WorldFocusObservation.Screen",
+        "WorldFocusObservation.Menu",
+        "WorldFocusObservation.Hover"
+      ],
+      "originalSha256": "ebdf998a7a3873ec0ae628e8f4dc5ecab6570c5dc94b21e5a0f6aa66bb19267e",
+      "stage1Sha256": "68d39e391ae38ce4dfad62a4595f27a3857981be1ac13fc9bb3864633b69c37c",
+      "stage2Sha256": "7682e8fe9ff54cdf7cb7f27dc73b670c65c58f3877b7eea6d08f7c4bb5599d4e",
+      "apiLoweredSha256": "157120cf57d7640ca4f800821e6f23ec01bd5f2175afbd8c77327b2fa2b4a82d",
+      "blankLineChanges": [
+        {
+          "startLine": 41,
+          "endLine": 42,
+          "beforeHex": "202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 86,
+          "endLine": 87,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 146,
+          "endLine": 147,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 189,
+          "endLine": 190,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 240,
+          "endLine": 241,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 297,
+          "endLine": 298,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 363,
+          "endLine": 364,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 424,
+          "endLine": 425,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 486,
+          "endLine": 487,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        },
+        {
+          "startLine": 559,
+          "endLine": 560,
+          "beforeHex": "20202020202020200a",
+          "afterHex": "0a"
+        }
+      ],
+      "canonicalSha256": "0b16b1b7b595a1113a610822dfb7f5487b9207531e9bf4f54be003d7e67aa905"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+      "record": "WorldPosition",
+      "nestedRecords": [],
+      "originalSha256": "77b0a9a769c803d96d62270cf5084ae865ec74a915fd77ee33f28d8c5728257a",
+      "stage1Sha256": "77b0a9a769c803d96d62270cf5084ae865ec74a915fd77ee33f28d8c5728257a",
+      "stage2Sha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0",
+      "apiLoweredSha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0",
+      "blankLineChanges": [],
+      "canonicalSha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0"
+    }
+  ]
+}
