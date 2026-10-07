@@ -28,7 +28,7 @@ public final class WorldEntitySummary {
     public WorldPosition position() { return position; }
     public boolean alive() { return alive; }
 private static String require(String value, String field) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return value;

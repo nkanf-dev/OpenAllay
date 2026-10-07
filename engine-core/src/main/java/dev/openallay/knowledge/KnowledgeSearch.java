@@ -11,8 +11,8 @@ public final class KnowledgeSearch {
     private final List<EvidenceMetadata> evidence;
     public KnowledgeSearch(List<KnowledgeSearchResult> results, List<EvidenceMetadata> evidence) {
 
-        results = List.copyOf(results);
-        evidence = List.copyOf(evidence);
+        results = dev.openallay.util.Java8Collections.listCopyOf(results);
+        evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
 
         this.results = results;
         this.evidence = evidence;

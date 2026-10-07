@@ -69,10 +69,9 @@ public final class CraftabilityCalculator {
     private static Allocation allocate(
             RecipeEntrySnapshot recipe, Map<String, Long> available, long crafts) {
         List<IngredientRequirementSnapshot> all = requirements(recipe);
-        List<IngredientRequirementSnapshot> consumed = all.stream()
+        List<IngredientRequirementSnapshot> consumed = dev.openallay.util.Java8Collections.toList(all.stream()
                 .filter(IngredientRequirementSnapshot::consumed)
-                .sorted(Comparator.comparing(IngredientRequirementSnapshot::key))
-                .toList();
+                .sorted(Comparator.comparing(IngredientRequirementSnapshot::key)));
         List<MissingRequirement> missing = new ArrayList<>();
 
         all.stream()
@@ -94,12 +93,12 @@ public final class CraftabilityCalculator {
                 });
 
         if (consumed.isEmpty()) {
-            return new Allocation(List.of(), missing);
+            return new Allocation(dev.openallay.util.Java8Collections.listOf(), missing);
         }
 
         Set<String> itemSet = new LinkedHashSet<>();
         consumed.forEach(requirement -> itemSet.addAll(compatibleItems(requirement)));
-        List<String> items = itemSet.stream().sorted().toList();
+        List<String> items = dev.openallay.util.Java8Collections.toList(itemSet.stream().sorted());
         int source = 0;
         int requirementStart = 1;
         int itemStart = requirementStart + consumed.size();
@@ -154,11 +153,11 @@ public final class CraftabilityCalculator {
     private static List<IngredientRequirementSnapshot> requirements(RecipeEntrySnapshot recipe) {
         ArrayList<IngredientRequirementSnapshot> result = new ArrayList<>(recipe.ingredients());
         result.addAll(recipe.catalysts());
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     private static List<String> compatibleItems(IngredientRequirementSnapshot requirement) {
-        return requirement.alternatives().stream()
+        return dev.openallay.util.Java8Collections.toList(requirement.alternatives().stream()
                 .flatMap(alternative -> {
                     if (alternative.kind().equals("item")) {
                         return java.util.stream.Stream.concat(
@@ -168,8 +167,7 @@ public final class CraftabilityCalculator {
                     return alternative.resolvedItems().stream();
                 })
                 .distinct()
-                .sorted()
-                .toList();
+                .sorted());
     }
 
     private static Map<String, Long> inventoryCounts(InventorySnapshot inventory) {

@@ -75,10 +75,10 @@ public static final class Summary {
     public Summary(RecipeReference reference, String id, String type, List<RecipeOutputSnapshot> outputs, String workstation, EvidenceMetadata evidence, List<RecipeReference> references, List<EvidenceMetadata> evidenceRecords) {
 
             Objects.requireNonNull(reference, "reference");
-            outputs = List.copyOf(outputs);
+            outputs = dev.openallay.util.Java8Collections.listCopyOf(outputs);
             Objects.requireNonNull(evidence, "evidence");
-            references = List.copyOf(references);
-            evidenceRecords = List.copyOf(evidenceRecords);
+            references = dev.openallay.util.Java8Collections.listCopyOf(references);
+            evidenceRecords = dev.openallay.util.Java8Collections.listCopyOf(evidenceRecords);
             if (references.isEmpty() || references.size() != evidenceRecords.size()) {
                 throw new IllegalArgumentException("recipe summary references and evidence are incomplete");
             }
@@ -187,7 +187,7 @@ public static final class Usage {
 
     public RecipeCatalog(RecipeSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        recipes = snapshot.recipes().stream().sorted(RECIPE_ORDER).toList();
+        recipes = dev.openallay.util.Java8Collections.toList(snapshot.recipes().stream().sorted(RECIPE_ORDER));
         groups = snapshot.groups();
     }
 
@@ -197,12 +197,11 @@ public static final class Usage {
             throw new IllegalArgumentException("at least one recipe search criterion is required");
         }
         if (!groups.isEmpty()) {
-            return groups.stream()
+            return dev.openallay.util.Java8Collections.toList(groups.stream()
                     .filter(group -> matches(group, query))
-                    .map(RecipeCatalog::summary)
-                    .toList();
+                    .map(RecipeCatalog::summary));
         }
-        return recipes.stream()
+        return dev.openallay.util.Java8Collections.toList(recipes.stream()
                 .filter(recipe -> query.recipeId() == null
                         || recipe.id().equals(query.recipeId())
                         || recipe.reference().recipeId().equals(query.recipeId()))
@@ -213,8 +212,7 @@ public static final class Usage {
                 .filter(recipe -> query.inputItem() == null
                         || matchesRequirements(recipe.ingredients(), query.inputItem())
                         || matchesRequirements(recipe.catalysts(), query.inputItem()))
-                .map(RecipeCatalog::summary)
-                .toList();
+                .map(RecipeCatalog::summary));
     }
 
     public Optional<RecipeEntrySnapshot> get(RecipeReference reference) {
@@ -231,7 +229,7 @@ public static final class Usage {
             addUsage(result, recipe, UsageRole.OUTPUT, matchesOutputs(recipe.outputs(), itemId));
             addUsage(result, recipe, UsageRole.BYPRODUCT, matchesOutputs(recipe.byproducts(), itemId));
         }
-        return result.stream().sorted(USAGE_ORDER).toList();
+        return dev.openallay.util.Java8Collections.toList(result.stream().sorted(USAGE_ORDER));
     }
 
     private static Summary summary(RecipeEntrySnapshot recipe) {
@@ -242,8 +240,8 @@ public static final class Usage {
                 recipe.outputs(),
                 recipe.workstation(),
                 recipe.evidence(),
-                List.of(recipe.reference()),
-                List.of(recipe.evidence()));
+                dev.openallay.util.Java8Collections.listOf(recipe.reference()),
+                dev.openallay.util.Java8Collections.listOf(recipe.evidence()));
     }
 
     private static Summary summary(RecipeSemanticGroup group) {
@@ -295,6 +293,6 @@ public static final class Usage {
     }
 
     private static String normalize(String value) {
-        return value == null || value.isBlank() ? null : value;
+        return value == null || dev.openallay.util.Java8Strings.isBlank(value) ? null : value;
     }
 }

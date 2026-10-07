@@ -7,8 +7,8 @@ import java.util.Locale;
 
 public final class KnowledgeTokenizer {
     public List<String> tokenize(String value) {
-        if (value == null || value.isBlank()) {
-            return List.of();
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
+            return dev.openallay.util.Java8Collections.listOf();
         }
         String normalized = normalize(value);
         LinkedHashSet<String> tokens = new LinkedHashSet<>();
@@ -17,7 +17,7 @@ public final class KnowledgeTokenizer {
         normalized.codePoints().forEach(codePoint -> {
             if (Character.isLetterOrDigit(codePoint)) {
                 Character.UnicodeScript next = Character.UnicodeScript.of(codePoint);
-                if (!run.isEmpty() && splitScript(script[0], next)) {
+                if (!((run).length() == 0) && splitScript(script[0], next)) {
                     flush(run, tokens, script[0]);
                 }
                 run.appendCodePoint(codePoint);
@@ -32,18 +32,18 @@ public final class KnowledgeTokenizer {
                 && normalized.codePoints().anyMatch(codePoint -> !Character.isLetterOrDigit(codePoint))) {
             tokens.add(normalized);
         }
-        return List.copyOf(tokens);
+        return dev.openallay.util.Java8Collections.listCopyOf(tokens);
     }
 
     public String normalize(String value) {
-        return Normalizer.normalize(value, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT).strip();
+        return dev.openallay.util.Java8Strings.strip(Normalizer.normalize(value, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT));
     }
 
     private static void flush(
             StringBuilder run,
             LinkedHashSet<String> tokens,
             Character.UnicodeScript script) {
-        if (!run.isEmpty()) {
+        if (!((run).length() == 0)) {
             String value = run.toString();
             tokens.add(value);
             if (isCjk(script)) {

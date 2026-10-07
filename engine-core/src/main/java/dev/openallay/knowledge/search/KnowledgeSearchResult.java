@@ -21,17 +21,17 @@ public final class KnowledgeSearchResult {
     private final EvidenceMetadata evidence;
     public KnowledgeSearchResult(String sourceId, String documentId, String sectionId, String sectionTitle, KnowledgeKind kind, String title, String excerpt, int score, Set<String> matchedFields, String provenance, EvidenceMetadata evidence) {
 
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || dev.openallay.util.Java8Strings.isBlank(sourceId)) {
             throw new IllegalArgumentException("sourceId must not be blank");
         }
-        if (documentId == null || documentId.isBlank()) {
+        if (documentId == null || dev.openallay.util.Java8Strings.isBlank(documentId)) {
             throw new IllegalArgumentException("documentId must not be blank");
         }
-        if (sectionId == null || sectionId.isBlank()) {
+        if (sectionId == null || dev.openallay.util.Java8Strings.isBlank(sectionId)) {
             throw new IllegalArgumentException("sectionId must not be blank");
         }
         sectionTitle = sectionTitle == null ? "" : sectionTitle;
-        matchedFields = Set.copyOf(matchedFields);
+        matchedFields = dev.openallay.util.Java8Collections.setCopyOf(matchedFields);
         java.util.Objects.requireNonNull(evidence, "evidence");
 
         this.sourceId = sourceId;

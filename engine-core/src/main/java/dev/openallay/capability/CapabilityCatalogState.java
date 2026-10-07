@@ -20,7 +20,7 @@ public final class CapabilityCatalogState {
     public Set<String> unavailableIds() { return unavailableIds; }
     public Set<String> disabledIds() { return disabledIds; }
 public static CapabilityCatalogState defaults() {
-        return new CapabilityCatalogState(Set.of(), Set.of());
+        return new CapabilityCatalogState(dev.openallay.util.Java8Collections.setOf(), dev.openallay.util.Java8Collections.setOf());
     }
 private static Set<String> canonical(Set<String> values, String name) {
         if (values == null) {

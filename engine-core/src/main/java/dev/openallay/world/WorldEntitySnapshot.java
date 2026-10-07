@@ -22,7 +22,7 @@ public final class WorldEntitySnapshot {
         type = require(type, "type");
         name = name == null ? "" : name;
         Objects.requireNonNull(position, "position");
-        data = Map.copyOf(new TreeMap<>(Objects.requireNonNull(data, "data")));
+        data = dev.openallay.util.Java8Collections.mapCopyOf(new TreeMap<>(Objects.requireNonNull(data, "data")));
         Objects.requireNonNull(evidence, "evidence");
 
         this.observationId = observationId;
@@ -41,7 +41,7 @@ public final class WorldEntitySnapshot {
     public Map<String, Object> data() { return data; }
     public EvidenceMetadata evidence() { return evidence; }
 private static String require(String value, String field) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return value;

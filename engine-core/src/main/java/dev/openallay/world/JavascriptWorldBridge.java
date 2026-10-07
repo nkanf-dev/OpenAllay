@@ -186,7 +186,7 @@ public final class JavascriptWorldBridge {
     }
 
     private static String string(Object value, String operation) {
-        if (!(value instanceof CharSequence text) || text.toString().isBlank()) {
+        if (!(value instanceof CharSequence text) || dev.openallay.util.Java8Strings.isBlank(text.toString())) {
             throw invalid(operation + " requires a non-blank string");
         }
         return text.toString();

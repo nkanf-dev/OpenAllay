@@ -69,18 +69,17 @@ public final class MinecraftWikiKnowledgeSource implements OnlineKnowledgeSource
                                 .replace("+", "%20");
                 hits.add(new RawHit(title, excerpt, reference));
             }
-            return List.copyOf(hits);
+            return dev.openallay.util.Java8Collections.listCopyOf(hits);
         });
     }
 
     static String cleanHtml(String value) {
-        return value.replaceAll("(?s)<[^>]*>", "")
+        return dev.openallay.util.Java8Strings.strip(value.replaceAll("(?s)<[^>]*>", "")
                 .replace("&quot;", "\"")
                 .replace("&#39;", "'")
                 .replace("&amp;", "&")
                 .replace("&lt;", "<")
                 .replace("&gt;", ">")
-                .replaceAll("\\s+", " ")
-                .strip();
+                .replaceAll("\\s+", " "));
     }
 }

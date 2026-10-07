@@ -37,12 +37,12 @@ public final class ClientCapabilityResolver {
             // Retain explicitly allowed command guidance even when the current toggle is off.
             // A request may already have frozen the enabled toggle before context loading finishes.
             SkillCatalogSnapshot skillSnapshot = skills.snapshotWithRuntimeEnabled(
-                            policy.disabledSkills(), Set.of(SkillCatalogSnapshot.GAME_COMMANDS))
+                            policy.disabledSkills(), dev.openallay.util.Java8Collections.setOf(SkillCatalogSnapshot.GAME_COMMANDS))
                     .forRequest(false, currentSkills.find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
             SkillCatalogSnapshot eligibleSkills = skillSnapshot.forRequest(true, true);
             List<RegisteredTool> candidate = new ArrayList<>();
             RegisteredTool loadSkillRegistration = null;
-            for (RegisteredTool registration : List.copyOf(registrations)) {
+            for (RegisteredTool registration : dev.openallay.util.Java8Collections.listCopyOf(registrations)) {
                 if (registration.tool().descriptor().id().equals(LOAD_SKILL_ID)) {
                     loadSkillRegistration = registration;
                 } else {

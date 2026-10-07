@@ -26,8 +26,8 @@ public final class RecipeCatalogStatus {
         if (recipeCount < 0 || semanticGroupCount < 0) {
             throw new IllegalArgumentException("recipe catalog counts must not be negative");
         }
-        providers = List.copyOf(providers);
-        conflicts = List.copyOf(conflicts);
+        providers = dev.openallay.util.Java8Collections.listCopyOf(providers);
+        conflicts = dev.openallay.util.Java8Collections.listCopyOf(conflicts);
 
         this.completeness = completeness;
         this.recipeCount = recipeCount;
@@ -45,10 +45,9 @@ public static RecipeCatalogStatus from(RecipeSnapshot snapshot) {
                 snapshot.evidence().completeness(),
                 snapshot.recipes().size(),
                 snapshot.groups().size(),
-                snapshot.providers().stream()
+                dev.openallay.util.Java8Collections.toList(snapshot.providers().stream()
                         .map(RecipeProviderStatus::from)
-                        .sorted(java.util.Comparator.comparing(RecipeProviderStatus::sourceId))
-                        .toList(),
+                        .sorted(java.util.Comparator.comparing(RecipeProviderStatus::sourceId))),
                 snapshot.diagnostics());
     }
     @Override public boolean equals(Object other) {

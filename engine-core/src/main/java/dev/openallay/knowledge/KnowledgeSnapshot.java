@@ -14,11 +14,11 @@ public final class KnowledgeSnapshot {
     private final List<EvidenceMetadata> evidence;
     public KnowledgeSnapshot(List<KnowledgeDocument> documents, Instant createdAt, List<EvidenceMetadata> evidence) {
 
-        documents = List.copyOf(documents);
+        documents = dev.openallay.util.Java8Collections.listCopyOf(documents);
         createdAt = createdAt == null ? Instant.now() : createdAt;
-        evidence = List.copyOf(evidence);
+        evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
         if (evidence.isEmpty()) {
-            evidence = List.of(emptyEvidence(createdAt));
+            evidence = dev.openallay.util.Java8Collections.listOf(emptyEvidence(createdAt));
         }
 
         this.documents = documents;
@@ -32,10 +32,10 @@ public KnowledgeSnapshot(List<KnowledgeDocument> documents, Instant createdAt) {
         this(
                 documents,
                 createdAt,
-                documents.stream().map(KnowledgeDocument::evidence).distinct().toList());
+                dev.openallay.util.Java8Collections.toList(documents.stream().map(KnowledgeDocument::evidence).distinct()));
     }
 public static KnowledgeSnapshot empty() {
-        return new KnowledgeSnapshot(List.of(), Instant.EPOCH, List.of(emptyEvidence(Instant.EPOCH)));
+        return new KnowledgeSnapshot(dev.openallay.util.Java8Collections.listOf(), Instant.EPOCH, dev.openallay.util.Java8Collections.listOf(emptyEvidence(Instant.EPOCH)));
     }
 private static EvidenceMetadata emptyEvidence(Instant createdAt) {
         return new EvidenceMetadata(
@@ -46,7 +46,7 @@ private static EvidenceMetadata emptyEvidence(Instant createdAt) {
                 "openallay:empty_snapshot",
                 "unknown",
                 "unknown",
-                Map.of("openallay:state", "not_loaded"));
+                dev.openallay.util.Java8Collections.mapOf("openallay:state", "not_loaded"));
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

@@ -13,7 +13,7 @@ public final class BlockObservation {
     public BlockObservation(WorldBounds bounds, List<WorldBlockSnapshot> blocks, WorldObservationCoverage coverage, EvidenceMetadata evidence) {
 
         Objects.requireNonNull(bounds, "bounds");
-        blocks = List.copyOf(blocks);
+        blocks = dev.openallay.util.Java8Collections.listCopyOf(blocks);
         Objects.requireNonNull(coverage, "coverage");
         Objects.requireNonNull(evidence, "evidence");
 

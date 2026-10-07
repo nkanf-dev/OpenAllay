@@ -7,8 +7,8 @@ public final class IngredientAllocation {
     private final long count;
     public IngredientAllocation(String requirementKey, String itemId, long count) {
 
-        if (requirementKey == null || requirementKey.isBlank()
-                || itemId == null || itemId.isBlank()
+        if (requirementKey == null || dev.openallay.util.Java8Strings.isBlank(requirementKey)
+                || itemId == null || dev.openallay.util.Java8Strings.isBlank(itemId)
                 || count <= 0) {
             throw new IllegalArgumentException("allocation fields and positive count are required");
         }

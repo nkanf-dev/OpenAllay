@@ -27,7 +27,7 @@ public final class WorldObservationRuntime {
     }
 
     public void capture(String correlationId, WorldObservationCoordinator coordinator) {
-        if (correlationId == null || correlationId.isBlank()) {
+        if (correlationId == null || dev.openallay.util.Java8Strings.isBlank(correlationId)) {
             throw new IllegalArgumentException("correlationId must not be blank");
         }
         WorldObservationCoordinator candidate = java.util.Objects.requireNonNull(coordinator, "coordinator");
@@ -61,11 +61,11 @@ public final class WorldObservationRuntime {
             java.util.function.BooleanSupplier admission) {
         java.util.Objects.requireNonNull(admission, "admission");
         Request request = requests.get(correlationId);
-        if (request == null) return CompletableFuture.failedFuture(unavailable());
+        if (request == null) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
         byte[] bytes = java.util.Objects.requireNonNull(png, "png").clone();
         CompletableFuture<ImageReference> result = new CompletableFuture<>();
         synchronized (request) {
-            if (request.closed) return CompletableFuture.failedFuture(unavailable());
+            if (request.closed) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
             request.imports.add(result);
         }
         try {
@@ -113,22 +113,22 @@ public final class WorldObservationRuntime {
     /** Complete producer references, not a scan of model-returned JSON. */
     public List<ImageReference> producerReferences(String correlationId) {
         Request request = requests.get(correlationId);
-        if (request == null) return List.of();
+        if (request == null) return dev.openallay.util.Java8Collections.listOf();
         synchronized (request) {
-            return request.producers.stream().map(Producer::reference).distinct().toList();
+            return dev.openallay.util.Java8Collections.toList(request.producers.stream().map(Producer::reference).distinct());
         }
     }
 
     /** Immutable custody metadata for a connection detach; never samples native game state. */
     public java.util.Map<String, List<ImageReference>> producerReferenceSnapshot() {
         java.util.Map<String, List<ImageReference>> snapshot = new java.util.LinkedHashMap<>();
-        for (java.util.Map.Entry<java.lang.String, dev.openallay.world.WorldObservationRuntime.Request> entry : List.copyOf(requests.entrySet())) {
+        for (java.util.Map.Entry<java.lang.String, dev.openallay.world.WorldObservationRuntime.Request> entry : dev.openallay.util.Java8Collections.listCopyOf(requests.entrySet())) {
             synchronized (entry.getValue()) {
-                snapshot.put(entry.getKey(), entry.getValue().producers.stream()
-                        .map(Producer::reference).distinct().toList());
+                snapshot.put(entry.getKey(), dev.openallay.util.Java8Collections.toList(entry.getValue().producers.stream()
+                        .map(Producer::reference).distinct()));
             }
         }
-        return java.util.Map.copyOf(snapshot);
+        return dev.openallay.util.Java8Collections.mapCopyOf(snapshot);
     }
 
     /** Stops native work but keeps producer pins until the published transcript owns its images. */
@@ -150,7 +150,7 @@ public final class WorldObservationRuntime {
         CompletableFuture<Void> result = new CompletableFuture<>();
         List<Producer> producers;
         synchronized (request) {
-            producers = List.copyOf(request.producers);
+            producers = dev.openallay.util.Java8Collections.listCopyOf(request.producers);
             request.producers.clear();
         }
         Runnable release = () -> {
@@ -171,14 +171,14 @@ public final class WorldObservationRuntime {
     public void closeRequest(String correlationId) { releaseImageProducers(correlationId); }
 
     public void clearConnectionState() {
-        List.copyOf(requests.keySet()).forEach(this::closeRequest);
+        dev.openallay.util.Java8Collections.listCopyOf(requests.keySet()).forEach(this::closeRequest);
     }
 
     /** Detach exact old requests now. Later custody completion cannot close a replacement. */
     public CompletableFuture<Void> detachConnectionState(CompletableFuture<Void> custody) {
         java.util.Objects.requireNonNull(custody, "custody");
         List<Request> detached = new ArrayList<>();
-        for (java.util.Map.Entry<java.lang.String, dev.openallay.world.WorldObservationRuntime.Request> entry : List.copyOf(requests.entrySet())) {
+        for (java.util.Map.Entry<java.lang.String, dev.openallay.world.WorldObservationRuntime.Request> entry : dev.openallay.util.Java8Collections.listCopyOf(requests.entrySet())) {
             if (requests.remove(entry.getKey(), entry.getValue())) {
                 detached.add(entry.getValue());
                 try { close(entry.getValue()); }
@@ -195,11 +195,11 @@ public final class WorldObservationRuntime {
         List<CompletableFuture<ImageReference>> imports;
         synchronized (request) {
             request.closed = true;
-            imports = List.copyOf(request.imports);
+            imports = dev.openallay.util.Java8Collections.listCopyOf(request.imports);
         }
         imports.forEach(result -> result.completeExceptionally(unavailable()));
         List<CompletableFuture<WorldViewCapture>> associations;
-        synchronized (request) { associations = List.copyOf(request.associations); }
+        synchronized (request) { associations = dev.openallay.util.Java8Collections.listCopyOf(request.associations); }
         associations.forEach(result -> result.completeExceptionally(unavailable()));
         request.coordinator.close();
     }
@@ -217,15 +217,14 @@ public final class WorldObservationRuntime {
 
     public CompletableFuture<WorldViewCapture> associatedCapture(String correlationId, UUID actor) {
         Request request = requests.get(correlationId);
-        if (request == null || request.closed) return CompletableFuture.failedFuture(unavailable());
+        if (request == null || request.closed) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
         ClientObservationAnchor anchor = request.anchor;
-        if (anchor == null || anchor.image().isEmpty()) return CompletableFuture.failedFuture(
-                new JavascriptExecutionException("associated_view_unavailable", "No retained pre-Guide UI frame is associated with this request"));
+        if (anchor == null || anchor.image().isEmpty()) return dev.openallay.util.Java8Futures.failedFuture(new JavascriptExecutionException("associated_view_unavailable", "No retained pre-Guide UI frame is associated with this request"));
         WorldViewCapture source = anchor.image().orElseThrow();
-        if (!actor.equals(source.actorId())) return CompletableFuture.failedFuture(unavailable());
+        if (!actor.equals(source.actorId())) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
         CompletableFuture<WorldViewCapture> result = new CompletableFuture<>();
         synchronized (request) {
-            if (request.closed) return CompletableFuture.failedFuture(unavailable());
+            if (request.closed) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
             request.associations.add(result);
         }
         result.whenComplete((value, failure) -> {
@@ -239,7 +238,7 @@ public final class WorldObservationRuntime {
                 try {
                     store = images.apply(actor);
                     if (store == null) throw unavailable();
-                    store.retain(actor, owner, List.of(source.image()));
+                    store.retain(actor, owner, dev.openallay.util.Java8Collections.listOf(source.image()));
                     synchronized (request) {
                         if (request.closed || request.anchor != anchor || result.isDone()
                                 || requests.get(correlationId) != request) throw unavailable();

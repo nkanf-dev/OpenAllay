@@ -25,7 +25,7 @@ public final class RecipeProviderStatus {
         if (recipeCount < 0) {
             throw new IllegalArgumentException("provider recipe count must not be negative");
         }
-        diagnostics = List.copyOf(diagnostics);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
 
         this.sourceId = sourceId;
         this.generation = generation;

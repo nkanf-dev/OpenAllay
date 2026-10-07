@@ -31,10 +31,10 @@ public final class RecipeViewerProviderRegistry {
         Objects.requireNonNull(platform, "platform");
         List<RecipeKnowledgeProvider> providers = new ArrayList<>();
         FACTORIES.values().forEach(factory -> providers.add(factory.create(capturedAt, platform)));
-        return List.copyOf(providers);
+        return dev.openallay.util.Java8Collections.listCopyOf(providers);
     }
 
     public static synchronized List<String> sourceIds() {
-        return List.copyOf(FACTORIES.keySet());
+        return dev.openallay.util.Java8Collections.listCopyOf(FACTORIES.keySet());
     }
 }

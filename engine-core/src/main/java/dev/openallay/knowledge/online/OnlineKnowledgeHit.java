@@ -12,10 +12,10 @@ public final class OnlineKnowledgeHit {
     private final EvidenceMetadata evidence;
     public OnlineKnowledgeHit(String sourceId, String title, String excerpt, String reference, EvidenceMetadata evidence) {
 
-        if (sourceId == null || sourceId.isBlank()
-                || title == null || title.isBlank()
+        if (sourceId == null || dev.openallay.util.Java8Strings.isBlank(sourceId)
+                || title == null || dev.openallay.util.Java8Strings.isBlank(title)
                 || excerpt == null
-                || reference == null || reference.isBlank()) {
+                || reference == null || dev.openallay.util.Java8Strings.isBlank(reference)) {
             throw new IllegalArgumentException("invalid online knowledge hit");
         }
         java.util.Objects.requireNonNull(evidence, "evidence");

@@ -13,7 +13,7 @@ public final class WorldObservationCoverage {
         if (requestedPositions < 0 || loadedPositions < 0 || loadedPositions > requestedPositions) {
             throw new IllegalArgumentException("Invalid world observation coverage");
         }
-        unavailableSections = List.copyOf(unavailableSections);
+        unavailableSections = dev.openallay.util.Java8Collections.listCopyOf(unavailableSections);
 
         this.requestedPositions = requestedPositions;
         this.loadedPositions = loadedPositions;

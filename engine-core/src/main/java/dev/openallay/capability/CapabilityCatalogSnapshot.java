@@ -7,7 +7,7 @@ public final class CapabilityCatalogSnapshot {
     private final List<CapabilitySettingsEntry> entries;
     public CapabilityCatalogSnapshot(List<CapabilitySettingsEntry> entries) {
 
-        entries = List.copyOf(entries);
+        entries = dev.openallay.util.Java8Collections.listCopyOf(entries);
 
         this.entries = entries;
     }

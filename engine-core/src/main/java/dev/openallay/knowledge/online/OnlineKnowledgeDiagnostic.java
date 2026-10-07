@@ -7,9 +7,9 @@ public final class OnlineKnowledgeDiagnostic {
     private final String message;
     public OnlineKnowledgeDiagnostic(String sourceId, String code, String message) {
 
-        if (sourceId == null || sourceId.isBlank()
-                || code == null || code.isBlank()
-                || message == null || message.isBlank()) {
+        if (sourceId == null || dev.openallay.util.Java8Strings.isBlank(sourceId)
+                || code == null || dev.openallay.util.Java8Strings.isBlank(code)
+                || message == null || dev.openallay.util.Java8Strings.isBlank(message)) {
             throw new IllegalArgumentException("invalid online knowledge diagnostic");
         }
 

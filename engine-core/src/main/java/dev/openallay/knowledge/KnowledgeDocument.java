@@ -29,8 +29,8 @@ public final class KnowledgeDocument {
         require(title, "title");
         body = body == null ? "" : body;
         namespace = namespace == null ? "" : namespace;
-        itemIds = Set.copyOf(itemIds);
-        recipeIds = Set.copyOf(recipeIds);
+        itemIds = dev.openallay.util.Java8Collections.setCopyOf(itemIds);
+        recipeIds = dev.openallay.util.Java8Collections.setCopyOf(recipeIds);
         require(provenance, "provenance");
         java.util.Objects.requireNonNull(evidence, "evidence");
 
@@ -91,13 +91,13 @@ public KnowledgeDocument(
                         "openallay:knowledge_fixture",
                         "test",
                         "common-test",
-                        Map.of("openallay:fixture_provenance", provenance)));
+                        dev.openallay.util.Java8Collections.mapOf("openallay:fixture_provenance", provenance)));
     }
 public String key() {
         return sourceId + ":" + documentId;
     }
 private static void require(String value, String field) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
     }

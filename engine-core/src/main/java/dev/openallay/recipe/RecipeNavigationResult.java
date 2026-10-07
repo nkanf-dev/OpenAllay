@@ -7,7 +7,7 @@ public final class RecipeNavigationResult {
     private final String message;
     public RecipeNavigationResult(boolean opened, String code, String message) {
 
-        if (code == null || !code.matches("[a-z0-9_]+") || message == null || message.isBlank()) {
+        if (code == null || !code.matches("[a-z0-9_]+") || message == null || dev.openallay.util.Java8Strings.isBlank(message)) {
             throw new IllegalArgumentException("recipe navigation result is invalid");
         }
 

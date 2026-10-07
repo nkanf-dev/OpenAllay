@@ -22,7 +22,7 @@ public final class RecipeClientConfig {
     public RecipeClientConfig(RecipeVisibilityPolicy visibility, String preferredViewer, Set<String> disabledSources) {
 
         Objects.requireNonNull(visibility, "visibility");
-        if (preferredViewer == null || preferredViewer.isBlank()) {
+        if (preferredViewer == null || dev.openallay.util.Java8Strings.isBlank(preferredViewer)) {
             throw new IllegalArgumentException("preferredViewer must not be blank");
         }
         if (!AUTO.equals(preferredViewer)) {
@@ -50,7 +50,7 @@ public static RecipeClientConfig defaults() {
         return new RecipeClientConfig(
                 RecipeVisibilityPolicy.ALL_KNOWN,
                 AUTO,
-                Set.of());
+                dev.openallay.util.Java8Collections.setOf());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

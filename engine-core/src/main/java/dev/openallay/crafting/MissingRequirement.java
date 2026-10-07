@@ -11,14 +11,14 @@ public final class MissingRequirement {
     private final List<String> alternatives;
     public MissingRequirement(String requirementKey, long required, long allocated, long missing, List<String> alternatives) {
 
-        if (requirementKey == null || requirementKey.isBlank()
+        if (requirementKey == null || dev.openallay.util.Java8Strings.isBlank(requirementKey)
                 || required <= 0
                 || allocated < 0
                 || missing <= 0
                 || allocated + missing != required) {
             throw new IllegalArgumentException("missing requirement counts are inconsistent");
         }
-        alternatives = List.copyOf(alternatives);
+        alternatives = dev.openallay.util.Java8Collections.listCopyOf(alternatives);
 
         this.requirementKey = requirementKey;
         this.required = required;

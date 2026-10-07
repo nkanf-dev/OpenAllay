@@ -17,8 +17,8 @@ public final class WorldBlockSnapshot {
         id = require(id, "id");
         Objects.requireNonNull(position, "position");
         Objects.requireNonNull(relative, "relative");
-        state = Map.copyOf(new TreeMap<>(Objects.requireNonNull(state, "state")));
-        fluid = fluid == null ? "" : fluid.strip();
+        state = dev.openallay.util.Java8Collections.mapCopyOf(new TreeMap<>(Objects.requireNonNull(state, "state")));
+        fluid = fluid == null ? "" : dev.openallay.util.Java8Strings.strip(fluid);
 
         this.id = id;
         this.position = position;
@@ -34,7 +34,7 @@ public final class WorldBlockSnapshot {
     public String fluid() { return fluid; }
     public boolean blockEntity() { return blockEntity; }
 private static String require(String value, String field) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return value;

@@ -9,15 +9,15 @@ import java.util.Set;
 
 public final class KnowledgeRegistry {
     private volatile PublishedKnowledge published = published(KnowledgeSnapshot.empty());
-    private volatile List<KnowledgeDiagnostic> diagnostics = List.of();
+    private volatile List<KnowledgeDiagnostic> diagnostics = dev.openallay.util.Java8Collections.listOf();
     private volatile KnowledgeSourceSnapshot sourceSnapshot = KnowledgeSourceSnapshot.notLoaded();
     private long sourceGeneration;
-    private List<KnowledgeSourceProvider> primaryProviders = List.of();
-    private List<KnowledgeSourceProvider> supplementalProviders = List.of();
-    private Set<String> disabledPrimaryProviderIds = Set.of();
+    private List<KnowledgeSourceProvider> primaryProviders = dev.openallay.util.Java8Collections.listOf();
+    private List<KnowledgeSourceProvider> supplementalProviders = dev.openallay.util.Java8Collections.listOf();
+    private Set<String> disabledPrimaryProviderIds = dev.openallay.util.Java8Collections.setOf();
 
     public synchronized boolean reload(List<? extends KnowledgeSourceProvider> providers) {
-        List<KnowledgeSourceProvider> candidate = List.copyOf(providers);
+        List<KnowledgeSourceProvider> candidate = dev.openallay.util.Java8Collections.listCopyOf(providers);
         if (!load(enabledPrimary(candidate, disabledPrimaryProviderIds), supplementalProviders)) {
             return false;
         }
@@ -43,11 +43,11 @@ public final class KnowledgeRegistry {
     public synchronized boolean replaceProviderConfiguration(
             Set<String> sourceIds,
             List<? extends KnowledgeSourceProvider> supplemental) {
-        Set<String> candidate = Set.copyOf(sourceIds);
-        if (candidate.stream().anyMatch(id -> id == null || id.isBlank())) {
+        Set<String> candidate = dev.openallay.util.Java8Collections.setCopyOf(sourceIds);
+        if (candidate.stream().anyMatch(id -> id == null || dev.openallay.util.Java8Strings.isBlank(id))) {
             throw new IllegalArgumentException("Disabled knowledge source IDs must not be blank");
         }
-        List<KnowledgeSourceProvider> supplementalCandidate = List.copyOf(supplemental);
+        List<KnowledgeSourceProvider> supplementalCandidate = dev.openallay.util.Java8Collections.listCopyOf(supplemental);
         if (!load(enabledPrimary(primaryProviders, candidate), supplementalCandidate)) {
             return false;
         }
@@ -58,9 +58,8 @@ public final class KnowledgeRegistry {
 
     private static List<KnowledgeSourceProvider> enabledPrimary(
             List<KnowledgeSourceProvider> providers, Set<String> disabled) {
-        return providers.stream()
-                .filter(provider -> !disabled.contains(provider.sourceId()))
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(providers.stream()
+                .filter(provider -> !disabled.contains(provider.sourceId())));
     }
 
     private boolean load(
@@ -100,11 +99,11 @@ public final class KnowledgeRegistry {
             }
             documents.sort(java.util.Comparator.comparing(KnowledgeDocument::key));
             KnowledgeSnapshot nextSnapshot = new KnowledgeSnapshot(
-                    documents, Instant.now(), evidence.stream().distinct().toList());
+                    documents, Instant.now(), dev.openallay.util.Java8Collections.toList(evidence.stream().distinct()));
             failureCode = "index_failure";
             PublishedKnowledge next = published(nextSnapshot);
             published = next;
-            diagnostics = List.copyOf(nextDiagnostics);
+            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(nextDiagnostics);
             sourceGeneration++;
             sourceSnapshot = new KnowledgeSourceSnapshot(true, false, null, sourceStates);
             return true;
@@ -124,7 +123,7 @@ public final class KnowledgeRegistry {
                         source, null, KnowledgeSourceSnapshot.State.FAILED, null, failureCode));
             }
             sourceSnapshot = new KnowledgeSourceSnapshot(true, hasRetained, failureCode, retained);
-            diagnostics = List.of(new KnowledgeDiagnostic(
+            diagnostics = dev.openallay.util.Java8Collections.listOf(new KnowledgeDiagnostic(
                     source,
                     failureCode,
                     failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage(),
@@ -153,10 +152,10 @@ public final class KnowledgeRegistry {
     /** Drops connection-captured data/handles without loading providers or changing saved policy. */
     public synchronized void clearConnectionState() {
         published = published(KnowledgeSnapshot.empty());
-        diagnostics = List.of();
+        diagnostics = dev.openallay.util.Java8Collections.listOf();
         sourceSnapshot = KnowledgeSourceSnapshot.notLoaded();
         sourceGeneration = 0;
-        primaryProviders = List.of();
+        primaryProviders = dev.openallay.util.Java8Collections.listOf();
         // Supplemental configuration and explicit primary-source deny choices survive reconnect.
     }
 

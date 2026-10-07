@@ -10,9 +10,9 @@ public final class KnowledgeLoad {
     private final List<EvidenceMetadata> evidence;
     public KnowledgeLoad(List<KnowledgeDocument> documents, List<KnowledgeDiagnostic> diagnostics, List<EvidenceMetadata> evidence) {
 
-        documents = List.copyOf(documents);
-        diagnostics = List.copyOf(diagnostics);
-        evidence = List.copyOf(evidence);
+        documents = dev.openallay.util.Java8Collections.listCopyOf(documents);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+        evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
 
         this.documents = documents;
         this.diagnostics = diagnostics;
@@ -26,13 +26,13 @@ public KnowledgeLoad(
         this(
                 documents,
                 diagnostics,
-                documents.stream().map(KnowledgeDocument::evidence).distinct().toList());
+                dev.openallay.util.Java8Collections.toList(documents.stream().map(KnowledgeDocument::evidence).distinct()));
     }
 public static KnowledgeLoad of(List<KnowledgeDocument> documents) {
         return new KnowledgeLoad(
                 documents,
-                List.of(),
-                documents.stream().map(KnowledgeDocument::evidence).distinct().toList());
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.toList(documents.stream().map(KnowledgeDocument::evidence).distinct()));
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

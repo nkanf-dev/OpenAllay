@@ -21,7 +21,7 @@ public final class CapabilitySettingsCatalog {
     public synchronized void register(
             String ownerId, Collection<CapabilitySettingsDescriptor> descriptors) {
         String owner = CapabilitySettingsDescriptor.requireIdentity(ownerId, "owner id");
-        List<CapabilitySettingsDescriptor> candidate = List.copyOf(descriptors);
+        List<CapabilitySettingsDescriptor> candidate = dev.openallay.util.Java8Collections.listCopyOf(descriptors);
         Set<String> batchIds = new HashSet<>();
         for (CapabilitySettingsDescriptor descriptor : candidate) {
             Objects.requireNonNull(descriptor, "descriptor");
@@ -36,7 +36,7 @@ public final class CapabilitySettingsCatalog {
 
     public synchronized CapabilityCatalogSnapshot snapshot(CapabilityCatalogState state) {
         Objects.requireNonNull(state, "state");
-        List<Registration> ordered = registrations.values().stream().sorted(ORDER).toList();
+        List<Registration> ordered = dev.openallay.util.Java8Collections.toList(registrations.values().stream().sorted(ORDER));
         List<CapabilitySettingsEntry> entries = new ArrayList<>(ordered.size());
         for (Registration registration : ordered) {
             CapabilitySettingsDescriptor descriptor = registration.descriptor();

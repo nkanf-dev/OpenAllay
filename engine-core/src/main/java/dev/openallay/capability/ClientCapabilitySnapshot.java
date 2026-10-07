@@ -19,7 +19,7 @@ public final class ClientCapabilitySnapshot {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(localTools, "localTools");
         Objects.requireNonNull(skills, "skills");
-        requiredContext = Set.copyOf(requiredContext);
+        requiredContext = dev.openallay.util.Java8Collections.setCopyOf(requiredContext);
         Set<ContextCapability> derived = localTools.descriptors().stream()
                 .flatMap(descriptor -> descriptor.requiredContext().stream())
                 .collect(Collectors.toUnmodifiableSet());
@@ -54,15 +54,15 @@ public boolean commandCapabilityAvailable(String correlationId) {
                 .orElse(false);
     }
 private ClientCapabilitySnapshot withRequestSkills(SkillCatalogSnapshot requestSkills) {
-        java.util.List<dev.openallay.tool.RegisteredTool> registrations = localTools.registrations().stream()
+        java.util.List<dev.openallay.tool.RegisteredTool> registrations = dev.openallay.util.Java8Collections.toList(localTools.registrations().stream()
                 .filter(registration -> !requestSkills.metadata().isEmpty()
                         || !registration.tool().descriptor().id().equals(ClientCapabilityResolver.LOAD_SKILL_ID))
                 .map(registration -> registration.tool() instanceof dev.openallay.skill.LoadSkillTool
                         ? new dev.openallay.tool.RegisteredTool(registration.providerId(),
                                 new dev.openallay.skill.LoadSkillTool(requestSkills, "client"))
-                        : registration).toList();
+                        : registration));
         return new ClientCapabilitySnapshot(policy,
-                ToolRuntimeCatalog.from(registrations, Set.of()), requestSkills, requiredContext);
+                ToolRuntimeCatalog.from(registrations, dev.openallay.util.Java8Collections.setOf()), requestSkills, requiredContext);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

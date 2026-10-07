@@ -15,7 +15,7 @@ public final class OnlineKnowledgeSearchService {
     private final List<OnlineKnowledgeSource> sources;
 
     public OnlineKnowledgeSearchService(List<? extends OnlineKnowledgeSource> sources) {
-        this.sources = List.copyOf(sources);
+        this.sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
     }
 
     public CompletableFuture<OnlineKnowledgeSearch> search(
@@ -23,12 +23,11 @@ public final class OnlineKnowledgeSearchService {
             int limit,
             ToolInvocationContext context,
             HttpCancellation cancellation) {
-        List<CompletableFuture<SourceOutcome>> pending = sources.stream()
+        List<CompletableFuture<SourceOutcome>> pending = dev.openallay.util.Java8Collections.toList(sources.stream()
                 .map(source -> source.search(query, limit, cancellation)
                         .handle((hits, failure) -> failure == null
                                 ? SourceOutcome.success(source, hits)
-                                : SourceOutcome.failure(source, unwrap(failure))))
-                .toList();
+                                : SourceOutcome.failure(source, unwrap(failure)))));
         return CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
                 .thenApply(ignored -> combine(pending, context));
     }
@@ -82,7 +81,7 @@ public final class OnlineKnowledgeSearchService {
                 source.provenance(),
                 gameVersion,
                 loader,
-                Map.of("openallay:scope", "public_search_excerpt"));
+                dev.openallay.util.Java8Collections.mapOf("openallay:scope", "public_search_excerpt"));
     }
 
     private static String playerSafeMessage(String code) {
@@ -118,10 +117,10 @@ private static final class SourceOutcome {
     public Throwable failure() { return failure; }
 private static SourceOutcome success(
                 OnlineKnowledgeSource source, List<OnlineKnowledgeSource.RawHit> hits) {
-            return new SourceOutcome(source, List.copyOf(hits), null);
+            return new SourceOutcome(source, dev.openallay.util.Java8Collections.listCopyOf(hits), null);
         }
 private static SourceOutcome failure(OnlineKnowledgeSource source, Throwable failure) {
-            return new SourceOutcome(source, List.of(), failure);
+            return new SourceOutcome(source, dev.openallay.util.Java8Collections.listOf(), failure);
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

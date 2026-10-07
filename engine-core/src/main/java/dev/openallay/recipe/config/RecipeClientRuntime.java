@@ -144,10 +144,9 @@ public final class RecipeClientRuntime {
     }
 
     private List<RecipeViewerNavigator> availableNavigators() {
-        return List.copyOf(navigators.get()).stream()
+        return dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(navigators.get()).stream()
                 .filter(value -> sourceEnabled(value.viewerId()))
-                .sorted(Comparator.comparing(RecipeViewerNavigator::viewerId))
-                .toList();
+                .sorted(Comparator.comparing(RecipeViewerNavigator::viewerId)));
     }
 
     private RecipeNavigationResult unavailable() {

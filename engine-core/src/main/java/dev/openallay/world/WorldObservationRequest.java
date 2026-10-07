@@ -10,7 +10,7 @@ public final class WorldObservationRequest {
     public WorldObservationRequest(WorldBounds bounds, boolean includeAir, String entityType) {
 
         Objects.requireNonNull(bounds, "bounds");
-        entityType = entityType == null ? "" : entityType.strip();
+        entityType = entityType == null ? "" : dev.openallay.util.Java8Strings.strip(entityType);
 
         this.bounds = bounds;
         this.includeAir = includeAir;

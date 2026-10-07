@@ -25,7 +25,7 @@ public final class CapabilityPolicy {
 private static final Pattern TOOL_ID = Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
 private static final Pattern SKILL_NAME = Pattern.compile("[a-z0-9][a-z0-9-]*");
 public static CapabilityPolicy defaults() {
-        return new CapabilityPolicy(Set.of(), Set.of());
+        return new CapabilityPolicy(dev.openallay.util.Java8Collections.setOf(), dev.openallay.util.Java8Collections.setOf());
     }
 public static String requireToolId(String value) {
         if (value == null || !TOOL_ID.matcher(value).matches()) {

@@ -19,9 +19,9 @@ public static final class RawHit {
     private final String reference;
     public RawHit(String title, String excerpt, String reference) {
 
-            if (title == null || title.isBlank()
+            if (title == null || dev.openallay.util.Java8Strings.isBlank(title)
                     || excerpt == null
-                    || reference == null || reference.isBlank()) {
+                    || reference == null || dev.openallay.util.Java8Strings.isBlank(reference)) {
                 throw new IllegalArgumentException("invalid raw online knowledge hit");
             }
 

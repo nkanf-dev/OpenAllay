@@ -22,15 +22,15 @@ public final class KnowledgeIndex {
     }
 
     public List<KnowledgeSearchResult> search(String query, Integer limit) {
-        if (query == null || query.isBlank()) {
-            return List.of();
+        if (query == null || dev.openallay.util.Java8Strings.isBlank(query)) {
+            return dev.openallay.util.Java8Collections.listOf();
         }
         if (limit != null && limit <= 0) {
             throw new IllegalArgumentException("limit must be positive when present");
         }
-        List<KnowledgeSearchResult> results = List.copyOf(retriever.retrieve(query));
+        List<KnowledgeSearchResult> results = dev.openallay.util.Java8Collections.listCopyOf(retriever.retrieve(query));
         return limit == null || limit >= results.size()
                 ? results
-                : List.copyOf(results.subList(0, limit));
+                : dev.openallay.util.Java8Collections.listCopyOf(results.subList(0, limit));
     }
 }

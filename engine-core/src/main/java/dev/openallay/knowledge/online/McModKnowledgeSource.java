@@ -60,7 +60,7 @@ public final class McModKnowledgeSource implements OnlineKnowledgeSource {
                 throw new OnlineKnowledgeException(
                         "online_parse_failed", "MC百科 response has no readable result list");
             }
-            return List.copyOf(hits);
+            return dev.openallay.util.Java8Collections.listCopyOf(hits);
         });
     }
 }

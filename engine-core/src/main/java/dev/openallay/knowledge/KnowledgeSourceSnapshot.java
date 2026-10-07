@@ -12,7 +12,7 @@ public final class KnowledgeSourceSnapshot {
     private final List<Source> sources;
     public KnowledgeSourceSnapshot(boolean loaded, boolean retained, String failureCode, List<Source> sources) {
 
-        sources = List.copyOf(sources);
+        sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
         if (!loaded && (retained || failureCode != null || !sources.isEmpty())) {
             throw new IllegalArgumentException("Unloaded knowledge has no observed sources");
         }
@@ -28,7 +28,7 @@ public final class KnowledgeSourceSnapshot {
     public List<Source> sources() { return sources; }
 public enum State { AVAILABLE, PARTIAL, UNAVAILABLE, FAILED }
 public static KnowledgeSourceSnapshot notLoaded() {
-        return new KnowledgeSourceSnapshot(false, false, null, List.of());
+        return new KnowledgeSourceSnapshot(false, false, null, dev.openallay.util.Java8Collections.listOf());
     }
 @dev.openallay.value.ValueType(Source.ValueSchemaProvider.class)
 public static final class Source {

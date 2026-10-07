@@ -12,12 +12,11 @@ import java.util.Objects;
 public final class RecipeProviderReadinessGate {
     public RecipeProviderReadiness evaluate(
             List<String> requiredSourceIds, List<RecipeKnowledgeProvider> providers) {
-        List<String> required = List.copyOf(requiredSourceIds).stream()
+        List<String> required = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(requiredSourceIds).stream()
                 .map(RecipeReference::requireSourceId)
                 .distinct()
-                .sorted()
-                .toList();
-        List<RecipeKnowledgeProvider> available = List.copyOf(providers);
+                .sorted());
+        List<RecipeKnowledgeProvider> available = dev.openallay.util.Java8Collections.listCopyOf(providers);
 
         for (String sourceId : required) {
             RecipeKnowledgeProvider provider = available.stream()

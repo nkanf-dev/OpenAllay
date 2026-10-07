@@ -18,6 +18,6 @@ public final class RecipeViewerNavigatorRegistry {
     }
 
     public static synchronized List<RecipeViewerNavigator> navigators() {
-        return List.copyOf(NAVIGATORS.values());
+        return dev.openallay.util.Java8Collections.listCopyOf(NAVIGATORS.values());
     }
 }

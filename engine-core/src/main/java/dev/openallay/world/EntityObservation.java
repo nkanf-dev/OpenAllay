@@ -13,7 +13,7 @@ public final class EntityObservation {
     public EntityObservation(WorldBounds bounds, List<WorldEntitySummary> entities, WorldObservationCoverage coverage, EvidenceMetadata evidence) {
 
         Objects.requireNonNull(bounds, "bounds");
-        entities = List.copyOf(entities);
+        entities = dev.openallay.util.Java8Collections.listCopyOf(entities);
         Objects.requireNonNull(coverage, "coverage");
         Objects.requireNonNull(evidence, "evidence");
 

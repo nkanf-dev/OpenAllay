@@ -38,7 +38,7 @@ public static RecipeProviderReadiness failed(String code, String message) {
     }
 private static String require(String value, String name) {
         Objects.requireNonNull(value, name);
-        if (value.isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
         return value;

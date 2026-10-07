@@ -8,8 +8,8 @@ public final class OnlineKnowledgeSearch {
     private final List<OnlineKnowledgeDiagnostic> diagnostics;
     public OnlineKnowledgeSearch(List<OnlineKnowledgeHit> hits, List<OnlineKnowledgeDiagnostic> diagnostics) {
 
-        hits = List.copyOf(hits);
-        diagnostics = List.copyOf(diagnostics);
+        hits = dev.openallay.util.Java8Collections.listCopyOf(hits);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
 
         this.hits = hits;
         this.diagnostics = diagnostics;

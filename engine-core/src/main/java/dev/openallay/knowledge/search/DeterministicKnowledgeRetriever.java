@@ -34,16 +34,15 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
     public DeterministicKnowledgeRetriever(KnowledgeSnapshot snapshot, KnowledgeTokenizer tokenizer) {
         Objects.requireNonNull(snapshot, "snapshot");
         this.tokenizer = Objects.requireNonNull(tokenizer, "tokenizer");
-        this.sections = snapshot.documents().stream()
-                .flatMap(document -> sections(document).stream())
-                .toList();
+        this.sections = dev.openallay.util.Java8Collections.toList(snapshot.documents().stream()
+                .flatMap(document -> sections(document).stream()));
         this.corpus = Corpus.from(sections);
     }
 
     @Override
     public List<KnowledgeSearchResult> retrieve(String query) {
-        if (query == null || query.isBlank()) {
-            return List.of();
+        if (query == null || dev.openallay.util.Java8Strings.isBlank(query)) {
+            return dev.openallay.util.Java8Collections.listOf();
         }
         String normalizedQuery = tokenizer.normalize(query);
         List<String> terms = significantTerms(tokenizer.tokenize(query));
@@ -63,7 +62,7 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
                 .thenComparing(hit -> hit.section().document().sourceId())
                 .thenComparing(hit -> hit.section().document().documentId())
                 .thenComparing(hit -> hit.section().sectionId()));
-        return ranked.stream().map(hit -> result(hit, normalizedQuery, terms)).toList();
+        return dev.openallay.util.Java8Collections.toList(ranked.stream().map(hit -> result(hit, normalizedQuery, terms)));
     }
 
     private RankedSection score(
@@ -126,7 +125,7 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
         }
         return priority == 0 && lexical == 0.0d
                 ? null
-                : new RankedSection(section, priority, lexical, Set.copyOf(matched));
+                : new RankedSection(section, priority, lexical, dev.openallay.util.Java8Collections.setCopyOf(matched));
     }
 
     private double fieldScore(
@@ -191,7 +190,7 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
         addAliases(aliases, document.key());
         document.itemIds().forEach(value -> addAliases(aliases, value));
         document.recipeIds().forEach(value -> addAliases(aliases, value));
-        return Set.copyOf(aliases);
+        return dev.openallay.util.Java8Collections.setCopyOf(aliases);
     }
 
     private void addAliases(Set<String> aliases, String value) {
@@ -219,7 +218,7 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
         char fence = 0;
         int fenceLength = 0;
         for (String line : document.body().split("\\R", -1)) {
-            String stripped = line.stripLeading();
+            String stripped = dev.openallay.util.Java8Strings.stripLeading(line);
             int indentation = line.length() - stripped.length();
             int markerLength = fenceMarkerLength(stripped);
             if (indentation <= 3 && markerLength >= 3) {
@@ -235,13 +234,13 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
             Matcher matcher = ATX_HEADING.matcher(line);
             if (fence == 0 && markerLength == 0 && matcher.matches()) {
                 addSection(result, document, sectionId, heading, body.toString());
-                heading = matcher.group(2).strip();
+                heading = dev.openallay.util.Java8Strings.strip(matcher.group(2));
                 String baseId = slug(heading);
                 int occurrence = duplicateIds.merge(baseId, 1, Integer::sum);
                 sectionId = occurrence == 1 ? baseId : baseId + "-" + occurrence;
                 body.setLength(0);
             } else {
-                if (!body.isEmpty()) {
+                if (!((body).length() == 0)) {
                     body.append('\n');
                 }
                 body.append(line);
@@ -269,8 +268,8 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
             String sectionId,
             String heading,
             String body) {
-        if (!result.isEmpty() || !body.isBlank() || sectionId.equals("document")) {
-            result.add(indexed(document, sectionId, heading, body.strip()));
+        if (!result.isEmpty() || !dev.openallay.util.Java8Strings.isBlank(body) || sectionId.equals("document")) {
+            result.add(indexed(document, sectionId, heading, dev.openallay.util.Java8Strings.strip(body)));
         }
     }
 
@@ -302,7 +301,7 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
         boolean separator = false;
         for (int codePoint : normalized.codePoints().toArray()) {
             if (Character.isLetterOrDigit(codePoint)) {
-                if (separator && !slug.isEmpty()) {
+                if (separator && !((slug).length() == 0)) {
                     slug.append('-');
                 }
                 slug.appendCodePoint(codePoint);
@@ -311,7 +310,7 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
                 separator = true;
             }
         }
-        return slug.isEmpty() ? "section" : slug.toString();
+        return ((slug).length() == 0) ? "section" : slug.toString();
     }
 
     private static RankedSection better(RankedSection first, RankedSection second) {
@@ -323,17 +322,16 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
     }
 
     private static List<String> significantTerms(List<String> tokens) {
-        List<String> distinct = tokens.stream().distinct().toList();
+        List<String> distinct = dev.openallay.util.Java8Collections.toList(tokens.stream().distinct());
         if (distinct.stream().noneMatch(term -> term.codePointCount(0, term.length()) > 1)) {
             return distinct;
         }
-        return distinct.stream()
-                .filter(term -> term.codePointCount(0, term.length()) > 1)
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(distinct.stream()
+                .filter(term -> term.codePointCount(0, term.length()) > 1));
     }
 
     private static String excerpt(String body, String query, List<String> terms) {
-        if (body.isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(body)) {
             return "";
         }
         String normalized = body.toLowerCase(Locale.ROOT);
@@ -516,7 +514,7 @@ private static Corpus from(List<IndexedSection> sections) {
             int count = sections.size();
             return new Corpus(
                     count,
-                    Map.copyOf(frequencies),
+                    dev.openallay.util.Java8Collections.mapCopyOf(frequencies),
                     average(titleLength, count),
                     average(headingLength, count),
                     average(identityLength, count),
