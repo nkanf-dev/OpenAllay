@@ -21,7 +21,7 @@ public enum ImageInputCapability {
     /** A missing input list is unknown; other multimodal flags are not evidence. */
     public static ImageInputCapability fromInputModalities(List<String> modalities) {
         if (modalities == null) return UNKNOWN;
-        if (modalities.stream().anyMatch(value -> value == null || value.isBlank())) {
+        if (modalities.stream().anyMatch(value -> value == null || dev.openallay.util.Java8Strings.isBlank(value))) {
             throw new IllegalArgumentException("input modalities must be nonblank text");
         }
         return modalities.contains("image") ? SUPPORTED : UNSUPPORTED;
