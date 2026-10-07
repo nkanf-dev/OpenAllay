@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8]
         default: skills
         required: true
 permissions:
@@ -1025,3 +1025,59 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: engine-core/build/test-results/
+
+  observation-java8:
+    if: inputs.scope == 'observation-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Authenticate converter replay and verify the complete genuine Java 8 observation
+        frontier
+      run: 'python3 -B engine-core/src/worldObservationJava8Test/test_stage_observation_replay.py
+
+        ./gradlew --no-daemon -p build-logic/src/recordConversionTest/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64"
+        classes
+
+        python3 -B engine-core/src/worldObservationJava8Test/stage-observation-replay.py
+        --source-root "$PWD" --original-source 2d88b4626478f1dac2fee0a17cf2c5aec1c9d6fc
+        --java "$JAVA_HOME_21_X64/bin/java" --converter-classpath "$PWD/build-logic/src/recordConversionTest/gradle/build/classes/java/main"
+        --output "$PWD/build/observation-replay"
+
+        ./gradlew --no-daemon -p engine-core/src/worldObservationJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64"
+        originalObservationOracle -PoriginalObservationSourceRoot="$PWD/build/observation-replay/original-source"
+
+        ./gradlew --no-daemon -p engine-core/src/worldObservationJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64"
+        java8WorldObservationTest -PoriginalObservationReport="$PWD/engine-core/src/worldObservationJava8Test/gradle/build/observation-original-modern.txt"
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.context.ToolInvocationContextTest
+        --tests dev.openallay.context.GroundedSnapshotTest --tests dev.openallay.world.WorldObservationToolTest
+        --tests dev.openallay.world.WorldFocusObservationTest --tests dev.openallay.script.data.MinecraftAgentHostGraphTest
+        --tests dev.openallay.script.schema.HostSchemaCatalogTest'
+    - name: Retain exact conversion, oracle and actual consumer receipts
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: observation-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'build/observation-replay/
+
+          engine-core/src/worldObservationJava8Test/gradle/build/
+
+          engine-core/build/test-results/'
