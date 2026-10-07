@@ -12,9 +12,13 @@ public final class RecordFixtureValues {
     }
     private record PrivateValue(String value) {}
     public static Object privateValue(String value) { return new PrivateValue(value); }
-    public interface Marker {}
+    public interface Marker {
+        static void require(java.util.List<String> values) {
+            if (values == null) throw new IllegalArgumentException("marker input required");
+        }
+    }
     public record MarkerCopy(List<String> input) implements Marker {
-        public MarkerCopy { input = dev.openallay.util.Java8Collections.listCopyOf(input); }
+        public MarkerCopy { Marker.require(input); input = dev.openallay.util.Java8Collections.listCopyOf(input); }
         @Override public List<String> input() { return new java.util.ArrayList<>(input); }
     }
     public record Empty() {}

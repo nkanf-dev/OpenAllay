@@ -238,7 +238,8 @@ public final class RecordValueSourceConverter {
             ClassTree contract = declarations.get(((IdentifierTree) implemented).getName().toString());
             if (contract == null || !contract.getImplementsClause().isEmpty()) return false;
             // ClassTree uses implements-clause for interface extends-clause in the public API.
-            if (contract.getMembers().stream().anyMatch(member -> member instanceof MethodTree)) return false;
+            if (contract.getMembers().stream().anyMatch(member -> member instanceof MethodTree
+                    && !((MethodTree) member).getModifiers().getFlags().contains(javax.lang.model.element.Modifier.STATIC))) return false;
         }
         return true;
     }
