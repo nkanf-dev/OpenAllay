@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool]
         default: skills
         required: true
 permissions:
@@ -956,3 +956,48 @@ jobs:
         path: 'engine-core/src/toolSchemaJava8Test/gradle/build/
 
           engine-core/build/test-results/'
+
+  rhino-var-tool:
+    if: inputs.scope == 'rhino-var-tool'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Attribute real canonical Rhino sources and emit review-only language packet
+      run: 'mkdir -p build/rhino-var-inputs
+
+        curl --fail --location https://maven.latvian.dev/releases/dev/latvian/mods/rhino/2101.2.8-build.91/rhino-2101.2.8-build.91-sources.jar
+        --output build/rhino-var-inputs/rhino-sources.jar
+
+        printf ''%s  %s\n'' bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8
+        build/rhino-var-inputs/rhino-sources.jar | sha256sum --check
+
+        ./gradlew --no-daemon -q :runtime-rhino:printRhinoPortCompileClasspath > build/rhino-var-inputs/classpath.txt
+
+        python3 -B -c ''from pathlib import Path; import os, subprocess; lines=Path("build/rhino-var-inputs/classpath.txt").read_text().splitlines();
+        cp=[line for line in lines if line.startswith("/") and ".jar" in line]; assert
+        len(cp)==1, lines; home=Path(os.environ["JAVA_HOME_21_X64"]); subprocess.run(["python3","-B","scripts/port-rhino-var-sources.py","build/rhino-var-inputs/rhino-sources.jar","--javac",str(home/"bin/javac"),"--java",str(home/"bin/java"),"--classpath",cp[0],"--output","build/rhino-var-first-proof"],check=True)''
+
+        '
+    - name: Retain source attribution receipts and exact candidates
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-var-tool-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'build/rhino-var-inputs/
+
+          build/rhino-var-first-proof/'
