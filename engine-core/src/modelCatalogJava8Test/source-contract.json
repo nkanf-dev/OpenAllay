@@ -609,6 +609,10 @@
         {
           "old": "var direct =",
           "new": "BuiltinModelCatalog.Entry direct ="
+        },
+        {
+          "old": ".orElseThrow()",
+          "new": ".orElseThrow(java.util.NoSuchElementException::new)"
         }
       ]
     },
@@ -645,5 +649,35 @@
       "sha256": "7b8922174f15c212b45f5fa8e3397ebb19da1377e0412eefc85ed3a618d6cf4d"
     }
   ],
-  "runner_sha256": "d22c199289fb7db9784b5e42c15affcd12a130a00a959e72be9b3240b47aa29a"
+  "runner_sha256": "110e4518729ef1cc8b09fe36252f6c870fa392fe45a4d5a067b1bf1d4883c318",
+  "dependency_pins": {
+    "gson": [
+      {
+        "name": "gson-2.8.0.jar",
+        "bytes": 231952,
+        "digest_algorithm": "sha1",
+        "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+      },
+      {
+        "name": "gson-2.13.2.jar",
+        "bytes": 289901,
+        "digest_algorithm": "sha256",
+        "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+      }
+    ],
+    "junit_console": [
+      {
+        "name": "junit-platform-console-standalone-1.11.4.jar",
+        "bytes": 2809597,
+        "digest_algorithm": "sha256",
+        "digest": "b016ef6b1c3454d6d7c2c88ce081dabf289699686af6622d6e4e2e1b54b4a2fc",
+        "artifact_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar.sha256"
+      }
+    ]
+  }
 }

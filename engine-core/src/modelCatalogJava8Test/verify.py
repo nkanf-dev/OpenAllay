@@ -20,6 +20,22 @@ root = args.source_root.resolve()
 contract = json.loads((Path(__file__).parent / "source-contract.json").read_text())
 sha = lambda data: hashlib.sha256(data).hexdigest()
 assert sha(Path(__file__).read_bytes()) == contract["runner_sha256"], "Runner source differs"
+def verify_dependency(path, allowed):
+    blob = path.read_bytes()
+    size = len(blob)
+    digests = {"sha1": hashlib.sha1(blob).hexdigest(), "sha256": sha(blob)}
+    matched = [pin for pin in allowed
+               if size == pin["bytes"] and digests[pin["digest_algorithm"]] == pin["digest"]]
+    if len(matched) != 1:
+        raise ValueError("Dependency size/digest is not allowlisted: " + str(path))
+    return {"name": matched[0]["name"], "bytes": size, "sha1": digests["sha1"],
+            "sha256": digests["sha256"], "matched_digest_algorithm": matched[0]["digest_algorithm"]}
+
+# Fail before staging/compilation, independent of filename and without trusting receipt hashes.
+dependency_admission = {
+    "gson": verify_dependency(args.gson, contract["dependency_pins"]["gson"]),
+    "junit_console": verify_dependency(args.junit_console, contract["dependency_pins"]["junit_console"]),
+}
 def run(command):
     result = subprocess.run(list(map(str, command)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if result.returncode:
@@ -129,6 +145,7 @@ for name, text in logs.items(): (args.output / (name + ".log")).write_text(text)
 receipt = {"scope": contract["scope"], "changed_java8_owner_count": 10, "modern_boundary_owner_count": 1,
            "actual_production_compile_frontier_count": len(support) + 10, "explicit_schema_count": 24,
            "gson_sha256": sha(args.gson.read_bytes()), "junit_console_sha256": sha(args.junit_console.read_bytes()),
+           "dependency_admission": dependency_admission,
            "jdk_versions": versions, "class_majors": majors, "same_fixture_original_git_vs_actual8_vectors_equal": True,
            "behavior_vector_count": len(vectors["modern"].splitlines()), "standalone_existing_tests": contract["standalone_existing_tests"],
            "accepted_converter_source_sha256": converter["sha256"],
