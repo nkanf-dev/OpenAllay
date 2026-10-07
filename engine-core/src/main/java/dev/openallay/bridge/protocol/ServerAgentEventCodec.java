@@ -28,29 +28,49 @@ public final class ServerAgentEventCodec {
         String type = type(event);
         boolean terminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
         String eventJson;
-        if (event instanceof AgentEvent.SteerApplied applied) {
+        final class $oaPattern0_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.SteerApplied bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = event) instanceof dev.openallay.agent.AgentEvent.SteerApplied && (($oaPattern0_holder.bound = (AgentEvent.SteerApplied) $oaPattern0_holder.value) != null))) {
             JsonObject body = new JsonObject();
-            body.addProperty("messageId", applied.messageId().toString());
-            body.add("message", BridgeJsonCodec.encodeHistoryMessage(gson, ServerAgentHistoryMessage.from(applied.message())));
+            body.addProperty("messageId", $oaPattern0_holder.bound.messageId().toString());
+            body.add("message", BridgeJsonCodec.encodeHistoryMessage(gson, ServerAgentHistoryMessage.from($oaPattern0_holder.bound.message())));
             eventJson = body.toString();
-        } else if (event instanceof AgentEvent.ContextCompacted compacted) {
-            eventJson = checkpoints.encode(compacted.checkpoint());
-        } else if (event instanceof AgentEvent.ContextUpdated updated) {
-            JsonObject context = new JsonObject();
-            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode(updated.messages())));
-            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode(updated.requestMessages())));
-            eventJson = context.toString();
-        } else if (event instanceof AgentEvent.ContextFinalized finalized) {
-            JsonObject context = new JsonObject();
-            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode(finalized.messages())));
-            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode(finalized.requestMessages())));
-            eventJson = context.toString();
-        } else if (event instanceof AgentEvent.ToolStarted started) {
-            eventJson = encodeToolStarted(started).toString();
         } else {
-            Object body = event instanceof AgentEvent.ModelProgress progress ? progress.event() : event;
+final class $oaPattern1_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextCompacted bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextCompacted && (($oaPattern1_holder.bound = (AgentEvent.ContextCompacted) $oaPattern1_holder.value) != null))) {
+            eventJson = checkpoints.encode($oaPattern1_holder.bound.checkpoint());
+        } else {
+final class $oaPattern2_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextUpdated bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextUpdated && (($oaPattern2_holder.bound = (AgentEvent.ContextUpdated) $oaPattern2_holder.value) != null))) {
+            JsonObject context = new JsonObject();
+            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern2_holder.bound.messages())));
+            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern2_holder.bound.requestMessages())));
+            eventJson = context.toString();
+        } else {
+final class $oaPattern3_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextFinalized bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextFinalized && (($oaPattern3_holder.bound = (AgentEvent.ContextFinalized) $oaPattern3_holder.value) != null))) {
+            JsonObject context = new JsonObject();
+            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern3_holder.bound.messages())));
+            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern3_holder.bound.requestMessages())));
+            eventJson = context.toString();
+        } else {
+final class $oaPattern4_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ToolStarted bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ToolStarted && (($oaPattern4_holder.bound = (AgentEvent.ToolStarted) $oaPattern4_holder.value) != null))) {
+            eventJson = encodeToolStarted($oaPattern4_holder.bound).toString();
+        } else {
+            final class $oaPattern5_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelProgress bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+Object body = (($oaPattern5_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelProgress && (($oaPattern5_holder.bound = (AgentEvent.ModelProgress) $oaPattern5_holder.value) != null)) ? $oaPattern5_holder.bound.event() : event;
             eventJson = gson.toJson(body);
         }
+}
+}
+}
+}
         return new ServerAgentEventPayload(
                 requestId, type, eventJson, terminal);
     }
@@ -271,8 +291,10 @@ public final class ServerAgentEventCodec {
         if (event instanceof AgentEvent.RequestReleased) return "request_released";
         if (event instanceof AgentEvent.ModelUsageStarted) return "model_usage_started";
         if (event instanceof AgentEvent.ModelUsageObserved) return "model_usage_observed";
-        if (event instanceof AgentEvent.ModelProgress progress) {
-            ModelEvent modelEvent = Objects.requireNonNull(progress.event());
+        final class $oaPattern6_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelProgress bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelProgress && (($oaPattern6_holder.bound = (AgentEvent.ModelProgress) $oaPattern6_holder.value) != null))) {
+            ModelEvent modelEvent = Objects.requireNonNull($oaPattern6_holder.bound.event());
             if (modelEvent instanceof ModelEvent.TextDelta) return "text_delta";
             if (modelEvent instanceof ModelEvent.ReasoningDelta) return "reasoning_delta";
             if (modelEvent instanceof ModelEvent.ToolUseComplete) return "tool_use_complete";

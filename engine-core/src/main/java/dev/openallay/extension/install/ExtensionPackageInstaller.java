@@ -71,8 +71,10 @@ public final class ExtensionPackageInstaller {
 
     private ExtensionInstallResult commitPrepared(
             String id, ToolResult<PreparedExtensionInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedExtensionInstall> failure) {
-            return failed(id, failure.code());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.install.PreparedExtensionInstall> value; ToolResult.Failure<PreparedExtensionInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<PreparedExtensionInstall>) $oaPattern0_holder.value) != null))) {
+            return failed(id, $oaPattern0_holder.bound.code());
         }
         try (PreparedExtensionInstall prepared =
                 ((ToolResult.Success<PreparedExtensionInstall>) result).value()) {
@@ -141,10 +143,12 @@ public final class ExtensionPackageInstaller {
                 return preparationFailure("extension_install_failed");
             }
             ToolResult<PreparedExtensionInstall> result = prepare(Optional.of(entry), download.bytes(), cancellation);
-            if (result instanceof ToolResult.Success<PreparedExtensionInstall> success) {
-                cancellation.onCancel(success.value()::close);
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.install.PreparedExtensionInstall> value; ToolResult.Success<PreparedExtensionInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<PreparedExtensionInstall>) $oaPattern1_holder.value) != null))) {
+                cancellation.onCancel($oaPattern1_holder.bound.value()::close);
                 if (cancellation.isCancelled()) {
-                    success.value().close();
+                    $oaPattern1_holder.bound.value().close();
                     return preparationFailure("extension_install_cancelled");
                 }
             }

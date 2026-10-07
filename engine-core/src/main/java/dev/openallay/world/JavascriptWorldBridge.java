@@ -74,8 +74,10 @@ public final class JavascriptWorldBridge {
                 arguments -> observed(await(context, coordinator.focus(cancellation))), adapter);
         define(context, scope, world, "capture", 0, 1,
                 arguments -> observed(await(context, coordinator.capture(viewRequest(context, arguments), cancellation))), adapter);
-        if (world instanceof ScriptableObject object) {
-            object.preventExtensions();
+        final class $oaPattern0_Holder { dev.latvian.mods.rhino.Scriptable value; ScriptableObject bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = world) instanceof dev.latvian.mods.rhino.ScriptableObject && (($oaPattern0_holder.bound = (ScriptableObject) $oaPattern0_holder.value) != null))) {
+            $oaPattern0_holder.bound.preventExtensions();
         }
         return world;
     }
@@ -84,7 +86,9 @@ public final class JavascriptWorldBridge {
         if (arguments.length == 0) return WorldViewRequest.defaults();
         Scriptable options = scriptable(arguments[0], "world.capture options");
         for (Object id : options.getIds(context)) {
-            if (!(id instanceof String key) || !key.equals("target")) {
+            final class $oaPattern1_Holder { java.lang.Object value; String bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = id) instanceof java.lang.String && (($oaPattern1_holder.bound = (String) $oaPattern1_holder.value) != null))) || !$oaPattern1_holder.bound.equals("target")) {
                 throw invalid("world.capture has an unknown option");
             }
         }
@@ -156,10 +160,12 @@ public final class JavascriptWorldBridge {
     }
 
     private static Scriptable scriptable(Object value, String operation) {
-        if (!(value instanceof Scriptable scriptable)) {
+        final class $oaPattern2_Holder { java.lang.Object value; Scriptable bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if (!((($oaPattern2_holder.value = value) instanceof dev.latvian.mods.rhino.Scriptable && (($oaPattern2_holder.bound = (Scriptable) $oaPattern2_holder.value) != null)))) {
             throw invalid(operation + " requires an object");
         }
-        return scriptable;
+        return $oaPattern2_holder.bound;
     }
 
     private static Object property(
@@ -186,21 +192,41 @@ public final class JavascriptWorldBridge {
     }
 
     private static String string(Object value, String operation) {
-        if (!(value instanceof CharSequence text) || dev.openallay.util.Java8Strings.isBlank(text.toString())) {
+        final class $oaPattern3_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if (!((($oaPattern3_holder.value = value) instanceof java.lang.CharSequence && (($oaPattern3_holder.bound = (CharSequence) $oaPattern3_holder.value) != null))) || dev.openallay.util.Java8Strings.isBlank($oaPattern3_holder.bound.toString())) {
             throw invalid(operation + " requires a non-blank string");
         }
-        return text.toString();
+        return $oaPattern3_holder.bound.toString();
     }
 
     private Object observed(Object value) {
-        if (value instanceof BlockObservation blocks) evidence.accept(blocks.evidence());
-        else if (value instanceof EntityObservation entities) evidence.accept(entities.evidence());
-        else if (value instanceof WorldEntitySnapshot entity) evidence.accept(entity.evidence());
-        else if (value instanceof WorldFocusObservation focus) evidence.accept(focus.evidence());
-        else if (value instanceof WorldViewCapture capture) {
-            evidence.accept(capture.evidence());
-            images.accept(capture.image());
+        final class $oaPattern4_Holder { java.lang.Object value; BlockObservation bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = value) instanceof dev.openallay.world.BlockObservation && (($oaPattern4_holder.bound = (BlockObservation) $oaPattern4_holder.value) != null))) evidence.accept($oaPattern4_holder.bound.evidence());
+        else {
+final class $oaPattern5_Holder { java.lang.Object value; EntityObservation bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = value) instanceof dev.openallay.world.EntityObservation && (($oaPattern5_holder.bound = (EntityObservation) $oaPattern5_holder.value) != null))) evidence.accept($oaPattern5_holder.bound.evidence());
+        else {
+final class $oaPattern6_Holder { java.lang.Object value; WorldEntitySnapshot bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = value) instanceof dev.openallay.world.WorldEntitySnapshot && (($oaPattern6_holder.bound = (WorldEntitySnapshot) $oaPattern6_holder.value) != null))) evidence.accept($oaPattern6_holder.bound.evidence());
+        else {
+final class $oaPattern7_Holder { java.lang.Object value; WorldFocusObservation bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = value) instanceof dev.openallay.world.WorldFocusObservation && (($oaPattern7_holder.bound = (WorldFocusObservation) $oaPattern7_holder.value) != null))) evidence.accept($oaPattern7_holder.bound.evidence());
+        else {
+final class $oaPattern8_Holder { java.lang.Object value; WorldViewCapture bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = value) instanceof dev.openallay.world.WorldViewCapture && (($oaPattern8_holder.bound = (WorldViewCapture) $oaPattern8_holder.value) != null))) {
+            evidence.accept($oaPattern8_holder.bound.evidence());
+            images.accept($oaPattern8_holder.bound.image());
         }
+}
+}
+}
+}
         return value;
     }
 
@@ -239,11 +265,15 @@ public final class JavascriptWorldBridge {
                     interrupted);
         } catch (ExecutionException | CompletionException failure) {
             Throwable cause = failure.getCause();
-            if (cause instanceof JavascriptExecutionException rejected) {
-                throw rejected;
+            final class $oaPattern9_Holder { java.lang.Throwable value; JavascriptExecutionException bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = cause) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern9_holder.bound = (JavascriptExecutionException) $oaPattern9_holder.value) != null))) {
+                throw $oaPattern9_holder.bound;
             }
-            if (cause instanceof ModelClientException cancelled) {
-                throw cancelled;
+            final class $oaPattern10_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern10_holder.bound = (ModelClientException) $oaPattern10_holder.value) != null))) {
+                throw $oaPattern10_holder.bound;
             }
             throw new JavascriptExecutionException(
                     "world_observation_failed",

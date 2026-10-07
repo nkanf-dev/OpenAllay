@@ -35,8 +35,10 @@ public final class CapabilityPolicyStore {
 
     public ToolResult<CapabilityPolicy> load() {
         ToolResult<CapabilityPolicy> result = loader.load(path);
-        if (result instanceof ToolResult.Success<CapabilityPolicy> success) {
-            current = success.value();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.CapabilityPolicy> value; ToolResult.Success<CapabilityPolicy> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<CapabilityPolicy>) $oaPattern0_holder.value) != null))) {
+            current = $oaPattern0_holder.bound.value();
         }
         return result;
     }
@@ -48,8 +50,10 @@ public final class CapabilityPolicyStore {
         try {
             encoded = writer.encode(candidate);
             ToolResult<CapabilityPolicy> decoded = loader.load(new StringReader(encoded));
-            if (decoded instanceof ToolResult.Failure<CapabilityPolicy> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.CapabilityPolicy> value; ToolResult.Failure<CapabilityPolicy> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<CapabilityPolicy>) $oaPattern1_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
             }
             validated = ((ToolResult.Success<CapabilityPolicy>) decoded).value();
         } catch (RuntimeException failure) {

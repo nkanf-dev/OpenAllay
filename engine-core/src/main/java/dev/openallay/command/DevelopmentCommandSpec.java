@@ -63,8 +63,10 @@ public static final class Route {
 
     public static List<String> traceSuggestions(Source source) {
         ToolResult<List<String>> result = source.traceIds();
-        if (result instanceof ToolResult.Success<List<String>> success) {
-            return success.value();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.util.List<java.lang.String>> value; ToolResult.Success<List<String>> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<List<String>>) $oaPattern0_holder.value) != null))) {
+            return $oaPattern0_holder.bound.value();
         }
         return dev.openallay.util.Java8Collections.listOf();
     }
@@ -82,9 +84,11 @@ public static final class Route {
             }
             case REPLAY -> {
                 ToolResult<ReplayReport> result = source.replay(value);
-                if (result instanceof ToolResult.Success<ReplayReport> success) {
-                    success.value().chatLines().forEach(source::success);
-                    yield success.value().passed() ? 1 : 0;
+                final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.trace.replay.ReplayReport> value; ToolResult.Success<ReplayReport> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<ReplayReport>) $oaPattern1_holder.value) != null))) {
+                    $oaPattern1_holder.bound.value().chatLines().forEach(source::success);
+                    yield $oaPattern1_holder.bound.value().passed() ? 1 : 0;
                 }
                 ToolResult.Failure<ReplayReport> failure = (ToolResult.Failure<ReplayReport>) result;
                 source.failure("FAILURE " + failure.code() + ": " + failure.message());

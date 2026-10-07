@@ -243,7 +243,9 @@ public final class RhinoJavascriptRuntime {
             if (unrestricted) installJavaBridge(context, scope);
             RhinoHostAdapter adapter = new RhinoHostAdapter(context, scope);
             defineGlobal(context, scope, "mc", adapter.adapt(minecraftRoots));
-            defineGlobal(
+            final class $oaPattern0_Holder { java.util.Map<java.lang.String, java.lang.Object> value; DeclaredHostRoots bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+defineGlobal(
                     context,
                     scope,
                     "schema",
@@ -251,8 +253,8 @@ public final class RhinoJavascriptRuntime {
                             context,
                             scope,
                             adapter,
-                            minecraftRoots instanceof DeclaredHostRoots declared
-                                    ? declared.schemaCatalog()
+                            (($oaPattern0_holder.value = minecraftRoots) instanceof dev.openallay.script.schema.DeclaredHostRoots && (($oaPattern0_holder.bound = (DeclaredHostRoots) $oaPattern0_holder.value) != null))
+                                    ? $oaPattern0_holder.bound.schemaCatalog()
                                     : new HostSchemaCatalog(dev.openallay.util.Java8Collections.listOf())));
             defineGlobal(
                     context,
@@ -357,21 +359,23 @@ public final class RhinoJavascriptRuntime {
                     Scriptable callScope,
                     Scriptable thisObject,
                     Object[] arguments) {
-                if (arguments.length != 1 || !(arguments[0] instanceof CharSequence handle)) {
+                final class $oaPattern1_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (arguments.length != 1 || !((($oaPattern1_holder.value = arguments[0]) instanceof java.lang.CharSequence && (($oaPattern1_holder.bound = (CharSequence) $oaPattern1_holder.value) != null)))) {
                     throw new JavascriptExecutionException(
                             "workspace_handle_unavailable",
                             "workspace.open requires one selected result handle");
                 }
-                JsonElement value = values.get(handle.toString());
+                JsonElement value = values.get($oaPattern1_holder.bound.toString());
                 if (value == null) {
                     throw new JavascriptExecutionException(
                             "workspace_handle_unavailable",
                             "Result handle is unavailable in this execution");
                 }
-                if (opened.add(handle.toString())) {
-                    sources.getOrDefault(handle.toString(), dev.openallay.util.Java8Collections.listOf()).forEach(sourceRecorder);
+                if (opened.add($oaPattern1_holder.bound.toString())) {
+                    sources.getOrDefault($oaPattern1_holder.bound.toString(), dev.openallay.util.Java8Collections.listOf()).forEach(sourceRecorder);
                 }
-                JavascriptResultShape shape = shapes.get(handle.toString());
+                JavascriptResultShape shape = shapes.get($oaPattern1_holder.bound.toString());
                 return shape == null
                         ? adapter.adapt(value)
                         : adapter.adaptWorkspace(value, shape);
@@ -391,8 +395,10 @@ public final class RhinoJavascriptRuntime {
                 open,
                 ScriptableObject.READONLY | ScriptableObject.PERMANENT,
                 context);
-        if (workspace instanceof ScriptableObject object) {
-            object.preventExtensions();
+        final class $oaPattern2_Holder { dev.latvian.mods.rhino.Scriptable value; ScriptableObject bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = workspace) instanceof dev.latvian.mods.rhino.ScriptableObject && (($oaPattern2_holder.bound = (ScriptableObject) $oaPattern2_holder.value) != null))) {
+            $oaPattern2_holder.bound.preventExtensions();
         }
         return workspace;
     }
@@ -437,15 +443,17 @@ public final class RhinoJavascriptRuntime {
                     Scriptable callScope,
                     Scriptable thisObject,
                     Object[] arguments) {
-                if (arguments.length != 1 || !(arguments[0] instanceof CharSequence path)) {
+                final class $oaPattern3_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if (arguments.length != 1 || !((($oaPattern3_holder.value = arguments[0]) instanceof java.lang.CharSequence && (($oaPattern3_holder.bound = (CharSequence) $oaPattern3_holder.value) != null)))) {
                     throw new JavascriptExecutionException(
                             "javascript_schema_invalid",
                             "schema.describe requires one exact declared path");
                 }
-                Object described = catalog.describe(path.toString())
+                Object described = catalog.describe($oaPattern3_holder.bound.toString())
                         .orElseThrow(() -> new JavascriptExecutionException(
                                 "javascript_schema_unavailable",
-                                "Declared JavaScript schema path is unavailable: " + path));
+                                "Declared JavaScript schema path is unavailable: " + $oaPattern3_holder.bound));
                 return adapter.adapt(described);
             }
         };
@@ -461,8 +469,10 @@ public final class RhinoJavascriptRuntime {
                 describe,
                 ScriptableObject.READONLY | ScriptableObject.PERMANENT,
                 context);
-        if (api instanceof ScriptableObject object) {
-            object.preventExtensions();
+        final class $oaPattern4_Holder { dev.latvian.mods.rhino.Scriptable value; ScriptableObject bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = api) instanceof dev.latvian.mods.rhino.ScriptableObject && (($oaPattern4_holder.bound = (ScriptableObject) $oaPattern4_holder.value) != null))) {
+            $oaPattern4_holder.bound.preventExtensions();
         }
         return api;
     }
@@ -488,12 +498,14 @@ public final class RhinoJavascriptRuntime {
                     Scriptable callScope,
                     Scriptable thisObject,
                     Object[] arguments) {
-                if (arguments.length != 1 || !(arguments[0] instanceof CharSequence idValue)) {
+                final class $oaPattern5_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if (arguments.length != 1 || !((($oaPattern5_holder.value = arguments[0]) instanceof java.lang.CharSequence && (($oaPattern5_holder.bound = (CharSequence) $oaPattern5_holder.value) != null)))) {
                     throw new JavascriptExecutionException(
                             "javascript_module_unavailable",
                             "require needs one exact bundled module id");
                 }
-                String id = idValue.toString();
+                String id = $oaPattern5_holder.bound.toString();
                 Scriptable binding = extensionBindings.get(id);
                 if (binding != null) {
                     usedModules.add(id);

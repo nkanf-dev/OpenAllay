@@ -31,10 +31,12 @@ public final class BenchmarkVerifier {
     private static JsonElement resolve(JsonElement root, String path) {
         JsonElement current = root;
         for (String segment : path.split("\\.")) {
-            if (!(current instanceof JsonObject object) || !object.has(segment)) {
+            final class $oaPattern0_Holder { com.google.gson.JsonElement value; JsonObject bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = current) instanceof com.google.gson.JsonObject && (($oaPattern0_holder.bound = (JsonObject) $oaPattern0_holder.value) != null))) || !$oaPattern0_holder.bound.has(segment)) {
                 return null;
             }
-            current = object.get(segment);
+            current = $oaPattern0_holder.bound.get(segment);
         }
         return current;
     }
@@ -44,13 +46,15 @@ public final class BenchmarkVerifier {
     }
 
     private static boolean answerContains(JsonElement canonicalResult, String expected) {
-        if (!(canonicalResult instanceof JsonObject object)
-                || !object.has("answer")
-                || !object.get("answer").isJsonPrimitive()
-                || !object.getAsJsonPrimitive("answer").isString()) {
+        final class $oaPattern1_Holder { com.google.gson.JsonElement value; JsonObject bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = canonicalResult) instanceof com.google.gson.JsonObject && (($oaPattern1_holder.bound = (JsonObject) $oaPattern1_holder.value) != null)))
+                || !$oaPattern1_holder.bound.has("answer")
+                || !$oaPattern1_holder.bound.get("answer").isJsonPrimitive()
+                || !$oaPattern1_holder.bound.getAsJsonPrimitive("answer").isString()) {
             return false;
         }
-        return contains(object.get("answer").getAsString(), expected);
+        return contains($oaPattern1_holder.bound.get("answer").getAsString(), expected);
     }
 
     @dev.openallay.value.ValueType(Verification.ValueSchemaProvider.class)

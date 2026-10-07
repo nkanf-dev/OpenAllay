@@ -310,12 +310,15 @@ public static final class Connection {
             if (catalogs == null) return false;
             dev.openallay.tool.ToolResult<ClientToolExecutionEndpoint.OpenedRequest> opened =
                     endpoint.open(request.requestId(), request.sessionId(), catalogs.get());
-            if (!(opened instanceof dev.openallay.tool.ToolResult.Success<
-                    ClientToolExecutionEndpoint.OpenedRequest> success)) {
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.bridge.client.ClientToolExecutionEndpoint.OpenedRequest> value; dev.openallay.tool.ToolResult.Success<
+                    ClientToolExecutionEndpoint.OpenedRequest> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = opened) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (dev.openallay.tool.ToolResult.Success<
+                    ClientToolExecutionEndpoint.OpenedRequest>) $oaPattern0_holder.value) != null)))) {
                 return false;
             }
             outbound = request.withClientTools(
-                    success.value().clientToolIds(), success.value().skillDocuments());
+                    $oaPattern0_holder.bound.value().clientToolIds(), $oaPattern0_holder.bound.value().skillDocuments());
         }
         synchronized (serverRequestLock) {
             Optional<Connection> connection = host.captureConnection();

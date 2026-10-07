@@ -105,11 +105,13 @@ public final class JavascriptDataModuleRegistry {
                 values.put(module.id(), snapshot.value());
                 evidence.addAll(snapshot.evidence());
             } catch (RuntimeException failure) {
-                diagnostics.add(new Diagnostic(
+                final class $oaPattern0_Holder { java.lang.RuntimeException value; HostAccessException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+diagnostics.add(new Diagnostic(
                         module.id(),
                         registered.providerId(),
-                        failure instanceof HostAccessException hostFailure
-                                ? hostFailure.code()
+                        (($oaPattern0_holder.value = failure) instanceof dev.openallay.script.host.HostAccessException && (($oaPattern0_holder.bound = (HostAccessException) $oaPattern0_holder.value) != null))
+                                ? $oaPattern0_holder.bound.code()
                                 : "module_capture_failed"));
             }
         }

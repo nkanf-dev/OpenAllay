@@ -174,24 +174,30 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
     }
 
     private static Optional<?> optional(Object value) {
-        if (!(value instanceof Optional<?> optional)) {
+        final class $oaPattern0_Holder { java.lang.Object value; Optional<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = value) instanceof java.util.Optional && (($oaPattern0_holder.bound = (Optional<?>) $oaPattern0_holder.value) != null)))) {
             throw new IllegalArgumentException("Expected Optional from getTeamData");
         }
-        return optional;
+        return $oaPattern0_holder.bound;
     }
 
     private static List<Object> list(Object value) {
-        if (!(value instanceof Collection<?> collection)) {
+        final class $oaPattern1_Holder { java.lang.Object value; Collection<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = value) instanceof java.util.Collection && (($oaPattern1_holder.bound = (Collection<?>) $oaPattern1_holder.value) != null)))) {
             throw new IllegalArgumentException("Expected Collection from FTB Quests API");
         }
-        return new ArrayList<>(collection);
+        return new ArrayList<>($oaPattern1_holder.bound);
     }
 
     private static Stream<?> stream(Object value) {
-        if (!(value instanceof Stream<?> stream)) {
+        final class $oaPattern2_Holder { java.lang.Object value; Stream<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if (!((($oaPattern2_holder.value = value) instanceof java.util.stream.Stream && (($oaPattern2_holder.bound = (Stream<?>) $oaPattern2_holder.value) != null)))) {
             throw new IllegalArgumentException("Expected Stream from streamDependencies");
         }
-        return stream;
+        return $oaPattern2_holder.bound;
     }
 
     @dev.openallay.value.ValueType(MethodKey.ValueSchemaProvider.class)

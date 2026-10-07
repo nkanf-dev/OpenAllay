@@ -297,8 +297,10 @@ public final class PlayerClientToolRouter {
                 }
                 ToolResult<LoadSkillTool.Input> decoded = argumentsCodec.decode(
                         arguments, LoadSkillTool.Input.class);
-                if (decoded instanceof ToolResult.Failure<LoadSkillTool.Input> failure) {
-                    return completedFailure(toolId, failure.code(), failure.message());
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.skill.LoadSkillTool.Input> value; ToolResult.Failure<LoadSkillTool.Input> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<LoadSkillTool.Input>) $oaPattern0_holder.value) != null))) {
+                    return completedFailure(toolId, $oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
                 }
                 skillInput = ((ToolResult.Success<LoadSkillTool.Input>) decoded).value();
                 RetainedSkillContext bound = retained.get(context.correlationId());
@@ -649,9 +651,11 @@ private static final class ValidatedResult {
         try {
             Object value = gson.fromJson(normalized.get("value"), tool.descriptor().outputType());
             // The structured value is authoritative; rebuild any model projection locally.
-            List<dev.openallay.model.image.ImageReference> images =
-                    value instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
-                            ? dev.openallay.util.Java8Collections.listCopyOf(visual.images()) : dev.openallay.util.Java8Collections.listOf();
+            final class $oaPattern1_Holder { java.lang.Object value; dev.openallay.agent.tool.ModelImageToolOutput bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+List<dev.openallay.model.image.ImageReference> images =
+                    (($oaPattern1_holder.value = value) instanceof dev.openallay.agent.tool.ModelImageToolOutput && (($oaPattern1_holder.bound = (dev.openallay.agent.tool.ModelImageToolOutput) $oaPattern1_holder.value) != null))
+                            ? dev.openallay.util.Java8Collections.listCopyOf($oaPattern1_holder.bound.images()) : dev.openallay.util.Java8Collections.listOf();
             dev.openallay.model.image.ModelImages.unique(images);
             return new ValidatedResult(normalizer.normalize(
                     new ToolResult.Success<>(value), tool.descriptor().outputType()), images);

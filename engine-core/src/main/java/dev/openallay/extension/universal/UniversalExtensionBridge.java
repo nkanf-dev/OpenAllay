@@ -162,8 +162,10 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
             String code, String summary) {
         // The request tombstone wins over a late foreign failure, including an SDK diagnostic.
         if (context != null) context.requireActive();
-        if (failure instanceof ModelClientException cancelled
-                && "agent_cancelled".equals(cancelled.failure().code())) {
+        final class $oaPattern0_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = failure) instanceof dev.openallay.model.ModelClientException && (($oaPattern0_holder.bound = (ModelClientException) $oaPattern0_holder.value) != null))
+                && "agent_cancelled".equals($oaPattern0_holder.bound.failure().code())) {
             return new ModelClientException(new dev.openallay.model.ModelFailure(
                     "agent_cancelled", "Agent request was cancelled", null));
         }
@@ -171,8 +173,10 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
             return new ModelClientException(new dev.openallay.model.ModelFailure(
                     "agent_cancelled", "Agent request was cancelled", null));
         }
-        if (failure instanceof ExtensionException declared) {
-            return new JavascriptExecutionException(declared.code(), declared.summary());
+        final class $oaPattern1_Holder { java.lang.Throwable value; ExtensionException bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = failure) instanceof dev.openallay.api.extension.ExtensionException && (($oaPattern1_holder.bound = (ExtensionException) $oaPattern1_holder.value) != null))) {
+            return new JavascriptExecutionException($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.summary());
         }
         return new JavascriptExecutionException(code, summary);
     }

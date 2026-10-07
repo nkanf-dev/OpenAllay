@@ -41,8 +41,10 @@ public final class OnlineKnowledgeSearchService {
             SourceOutcome outcome = future.join();
             if (outcome.failure() != null) {
                 Throwable failure = outcome.failure();
-                String code = failure instanceof OnlineKnowledgeException online
-                        ? online.code()
+                final class $oaPattern0_Holder { java.lang.Throwable value; OnlineKnowledgeException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+String code = (($oaPattern0_holder.value = failure) instanceof dev.openallay.knowledge.online.OnlineKnowledgeException && (($oaPattern0_holder.bound = (OnlineKnowledgeException) $oaPattern0_holder.value) != null))
+                        ? $oaPattern0_holder.bound.code()
                         : "online_source_unavailable";
                 diagnostics.add(new OnlineKnowledgeDiagnostic(
                         outcome.source().sourceId(), code, playerSafeMessage(code)));

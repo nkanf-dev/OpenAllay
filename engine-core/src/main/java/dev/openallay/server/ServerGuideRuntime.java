@@ -89,8 +89,10 @@ public static ToolResult<ServerGuideRuntime> create(
             PlayerClientToolRouter.Transport clientToolTransport,
             Path worldImageDirectory) {
         ToolResult<ModelConfig> loaded = new ModelConfigLoader().load(configPath, environment);
-        if (loaded instanceof ToolResult.Failure<ModelConfig> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelConfig> value; ToolResult.Failure<ModelConfig> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<ModelConfig>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         ModelConfig config = ((ToolResult.Success<ModelConfig>) loaded).value();
         if (!config.enabled()) {
@@ -133,9 +135,10 @@ public static ToolResult<ServerGuideRuntime> create(
                             payload.clientToolIds(),
                             requestSkills,
                             payload.skillDocuments());
-                    if (opened instanceof ToolResult.Failure<dev.openallay.agent.tool.AgentToolExecutor>
-                            failure) {
-                        return new ToolResult.Failure<>(failure.code(), failure.message());
+                    final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.agent.tool.AgentToolExecutor> value; ToolResult.Failure<dev.openallay.agent.tool.AgentToolExecutor> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = opened) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<dev.openallay.agent.tool.AgentToolExecutor>) $oaPattern1_holder.value) != null))) {
+                        return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
                     }
                     dev.openallay.agent.tool.AgentToolExecutor requestTools =
                             ((ToolResult.Success<dev.openallay.agent.tool.AgentToolExecutor>) opened)

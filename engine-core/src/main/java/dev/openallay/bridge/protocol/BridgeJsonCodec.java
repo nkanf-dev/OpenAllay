@@ -27,24 +27,32 @@ public final class BridgeJsonCodec {
         if (!FIELDS.containsKey(payload.getClass())) {
             throw new IllegalArgumentException("Unsupported bridge payload " + payload.getClass().getName());
         }
-        if (payload instanceof ToolExecutionMessage message) {
+        final class $oaPattern0_Holder { java.lang.Object value; ToolExecutionMessage bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = payload) instanceof dev.openallay.bridge.protocol.ToolExecutionMessage && (($oaPattern0_holder.bound = (ToolExecutionMessage) $oaPattern0_holder.value) != null))) {
             // Keep explicit nulls in normalized JSON. Reflective Gson serialization would
             // drop them and could turn a malformed optional field into an absent field.
             JsonObject object = new JsonObject();
-            object.add("result", message.result());
-            object.add("imageAttachments", gson.toJsonTree(message.imageAttachments()));
+            object.add("result", $oaPattern0_holder.bound.result());
+            object.add("imageAttachments", gson.toJsonTree($oaPattern0_holder.bound.imageAttachments()));
             return object.toString();
         }
         JsonObject encoded = gson.toJsonTree(payload).getAsJsonObject();
-        if (payload instanceof ServerAgentSteerPayload steer) {
-            encoded.add("message", steer.message() == null ? com.google.gson.JsonNull.INSTANCE
-                    : encodeHistoryMessage(gson, steer.message()));
-        } else if (payload instanceof ServerAgentRequestPayload request) {
+        final class $oaPattern1_Holder { java.lang.Object value; ServerAgentSteerPayload bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = payload) instanceof dev.openallay.bridge.protocol.ServerAgentSteerPayload && (($oaPattern1_holder.bound = (ServerAgentSteerPayload) $oaPattern1_holder.value) != null))) {
+            encoded.add("message", $oaPattern1_holder.bound.message() == null ? com.google.gson.JsonNull.INSTANCE
+                    : encodeHistoryMessage(gson, $oaPattern1_holder.bound.message()));
+        } else {
+final class $oaPattern2_Holder { java.lang.Object value; ServerAgentRequestPayload bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = payload) instanceof dev.openallay.bridge.protocol.ServerAgentRequestPayload && (($oaPattern2_holder.bound = (ServerAgentRequestPayload) $oaPattern2_holder.value) != null))) {
             com.google.gson.JsonArray history = new com.google.gson.JsonArray();
-            for (ServerAgentHistoryMessage message : request.history()) history.add(encodeHistoryMessage(gson, message));
+            for (ServerAgentHistoryMessage message : $oaPattern2_holder.bound.history()) history.add(encodeHistoryMessage(gson, message));
             encoded.add("history", history);
-            encoded.add("userInput", encodeHistoryMessage(gson, request.userInput()));
+            encoded.add("userInput", encodeHistoryMessage(gson, $oaPattern2_holder.bound.userInput()));
         }
+}
         return encoded.toString();
     }
 

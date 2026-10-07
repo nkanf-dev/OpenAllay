@@ -72,8 +72,10 @@ public final class RecipeClientRuntime {
             return new ToolResult.Success<>(config);
         }
         ToolResult<RecipeClientConfig> loaded = loader.load(path);
-        if (loaded instanceof ToolResult.Success<RecipeClientConfig> success) {
-            config = success.value();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.recipe.config.RecipeClientConfig> value; ToolResult.Success<RecipeClientConfig> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<RecipeClientConfig>) $oaPattern0_holder.value) != null))) {
+            config = $oaPattern0_holder.bound.value();
             failure = null;
         } else {
             failure = (ToolResult.Failure<RecipeClientConfig>) loaded;

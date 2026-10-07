@@ -117,7 +117,9 @@ final class UnrestrictedJavaAccess {
     }
 
     private void checkBudget() {
-        if (context instanceof OpenAllayRhinoContext openContext) openContext.checkBudget();
+        final class $oaPattern0_Holder { dev.latvian.mods.rhino.Context value; OpenAllayRhinoContext bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = context) instanceof dev.openallay.script.OpenAllayRhinoContext && (($oaPattern0_holder.bound = (OpenAllayRhinoContext) $oaPattern0_holder.value) != null))) $oaPattern0_holder.bound.checkBudget();
     }
 
     private Object get(Object targetValue, Object selectorValue) throws ReflectiveOperationException {
@@ -161,8 +163,12 @@ final class UnrestrictedJavaAccess {
 
     private Object wrap(Object value, Class<?> type) {
         if (type == void.class) return Undefined.INSTANCE;
-        if (value instanceof Character character) return character.toString();
-        if (value instanceof Class<?> javaClass) return context.wrapJavaClass(scope, javaClass);
+        final class $oaPattern1_Holder { java.lang.Object value; Character bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = value) instanceof java.lang.Character && (($oaPattern1_holder.bound = (Character) $oaPattern1_holder.value) != null))) return $oaPattern1_holder.bound.toString();
+        final class $oaPattern2_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = value) instanceof java.lang.Class && (($oaPattern2_holder.bound = (Class<?>) $oaPattern2_holder.value) != null))) return context.wrapJavaClass(scope, $oaPattern2_holder.bound);
         return context.wrap(scope, value, TypeInfo.of(type));
     }
 
@@ -205,13 +211,19 @@ private static final class Target {
         if (raw instanceof Scriptable && !(value instanceof Wrapper)) {
             throw invalid("Java target must be a Java class, wrapped Java instance, or scalar, not a JavaScript object");
         }
-        return raw instanceof Class<?> type ? new Target(type, null) : new Target(raw.getClass(), raw);
+        final class $oaPattern3_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+return (($oaPattern3_holder.value = raw) instanceof java.lang.Class && (($oaPattern3_holder.bound = (Class<?>) $oaPattern3_holder.value) != null)) ? new Target($oaPattern3_holder.bound, null) : new Target(raw.getClass(), raw);
     }
 
     /** Host-side unwrap only; never requests a guest-visible .class/getClass property. */
     private static Object unwrap(Object value) {
-        if (value instanceof NativeJavaClass javaClass) return javaClass.getClassObject();
-        return value instanceof Wrapper wrapper ? wrapper.unwrap() : value;
+        final class $oaPattern4_Holder { java.lang.Object value; NativeJavaClass bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = value) instanceof dev.latvian.mods.rhino.NativeJavaClass && (($oaPattern4_holder.bound = (NativeJavaClass) $oaPattern4_holder.value) != null))) return $oaPattern4_holder.bound.getClassObject();
+        final class $oaPattern5_Holder { java.lang.Object value; Wrapper bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+return (($oaPattern5_holder.value = value) instanceof dev.latvian.mods.rhino.Wrapper && (($oaPattern5_holder.bound = (Wrapper) $oaPattern5_holder.value) != null)) ? $oaPattern5_holder.bound.unwrap() : value;
     }
 
     private Object receiver(Target target, int modifiers, String member) {
@@ -285,8 +297,10 @@ private static final class Selector {
     }
 
     private Object property(Object value, String name) {
-        Object result = value instanceof Scriptable scriptable
-                ? ScriptableObject.getProperty(scriptable, name, context)
+        final class $oaPattern6_Holder { java.lang.Object value; Scriptable bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+Object result = (($oaPattern6_holder.value = value) instanceof dev.latvian.mods.rhino.Scriptable && (($oaPattern6_holder.bound = (Scriptable) $oaPattern6_holder.value) != null))
+                ? ScriptableObject.getProperty($oaPattern6_holder.bound, name, context)
                 : ((Map<?, ?>) value).get(name);
         return result == Scriptable.NOT_FOUND || Undefined.isUndefined(result) ? null : result;
     }
@@ -341,7 +355,9 @@ private static final class Selector {
     private Class<?> declaringClass(Target target, Object value) {
         Object raw = unwrap(value);
         for (Class<?> declaration : hierarchy(target.type())) {
-            if (raw instanceof Class<?> type ? declaration == type
+            final class $oaPattern7_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = raw) instanceof java.lang.Class && (($oaPattern7_holder.bound = (Class<?>) $oaPattern7_holder.value) != null)) ? declaration == $oaPattern7_holder.bound
                     : declaration.getName().equals(name(raw, "declaringClass"))) return declaration;
         }
         throw invalid("Descriptor declaringClass is not in the target hierarchy");
@@ -382,7 +398,9 @@ private static final class Selector {
             // JS numbers have only 53 exact bits. A decimal string preserves the full Java long range.
             if (type == long.class || type == Long.class) {
                 if (raw instanceof Long) return raw;
-                if (raw instanceof CharSequence text) return Long.parseLong(text.toString());
+                final class $oaPattern8_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = raw) instanceof java.lang.CharSequence && (($oaPattern8_holder.bound = (CharSequence) $oaPattern8_holder.value) != null))) return Long.parseLong($oaPattern8_holder.bound.toString());
             }
             return context.jsToJava(value, TypeInfo.of(type));
         } catch (RuntimeException failure) {
@@ -398,15 +416,21 @@ private static final class Selector {
             for (int index = 0; index < entries.length; index++) entries[index] = Array.get(raw, index);
             return entries;
         }
-        if (raw instanceof List<?> list) return list.toArray();
-        if (raw instanceof Scriptable scriptable) {
-            Object length = ScriptableObject.getProperty(scriptable, "length", context);
-            if (length instanceof Number number && number.doubleValue() >= 0
-                    && number.doubleValue() <= Integer.MAX_VALUE
-                    && number.doubleValue() == Math.rint(number.doubleValue())) {
-                Object[] entries = new Object[number.intValue()];
+        final class $oaPattern9_Holder { java.lang.Object value; List<?> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = raw) instanceof java.util.List && (($oaPattern9_holder.bound = (List<?>) $oaPattern9_holder.value) != null))) return $oaPattern9_holder.bound.toArray();
+        final class $oaPattern10_Holder { java.lang.Object value; Scriptable bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = raw) instanceof dev.latvian.mods.rhino.Scriptable && (($oaPattern10_holder.bound = (Scriptable) $oaPattern10_holder.value) != null))) {
+            Object length = ScriptableObject.getProperty($oaPattern10_holder.bound, "length", context);
+            final class $oaPattern11_Holder { java.lang.Object value; Number bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = length) instanceof java.lang.Number && (($oaPattern11_holder.bound = (Number) $oaPattern11_holder.value) != null)) && $oaPattern11_holder.bound.doubleValue() >= 0
+                    && $oaPattern11_holder.bound.doubleValue() <= Integer.MAX_VALUE
+                    && $oaPattern11_holder.bound.doubleValue() == Math.rint($oaPattern11_holder.bound.doubleValue())) {
+                Object[] entries = new Object[$oaPattern11_holder.bound.intValue()];
                 for (int index = 0; index < entries.length; index++) {
-                    Object entry = ScriptableObject.getProperty(scriptable, index, context);
+                    Object entry = ScriptableObject.getProperty($oaPattern10_holder.bound, index, context);
                     entries[index] = entry == Scriptable.NOT_FOUND ? Undefined.INSTANCE : entry;
                 }
                 return entries;
@@ -417,7 +441,9 @@ private static final class Selector {
 
     private Class<?> resolveType(Object value, ClassLoader loader) throws ClassNotFoundException {
         Object raw = unwrap(value);
-        if (raw instanceof Class<?> type) return type;
+        final class $oaPattern12_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if ((($oaPattern12_holder.value = raw) instanceof java.lang.Class && (($oaPattern12_holder.bound = (Class<?>) $oaPattern12_holder.value) != null))) return $oaPattern12_holder.bound;
         return resolveName(name(raw, "type"), loader, false);
     }
 
@@ -446,10 +472,12 @@ private static final class Selector {
     }
 
     private String name(Object value, String label) {
-        if (!(value instanceof CharSequence text) || ((text).length() == 0)) {
+        final class $oaPattern13_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+if (!((($oaPattern13_holder.value = value) instanceof java.lang.CharSequence && (($oaPattern13_holder.bound = (CharSequence) $oaPattern13_holder.value) != null))) || (($oaPattern13_holder.bound).length() == 0)) {
             throw invalid(label + " must be a nonempty string");
         }
-        return text.toString();
+        return $oaPattern13_holder.bound.toString();
     }
 
     /** Class chain first, then inherited interfaces. No accessible flags or shared caches are changed. */

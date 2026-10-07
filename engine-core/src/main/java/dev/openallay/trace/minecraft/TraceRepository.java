@@ -115,9 +115,11 @@ public Optional<AgentTrace> find(String id) {
                 return new ToolResult.Failure<>(
                         "invalid_trace", "Unable to read " + source.name() + ": " + exception.getMessage());
             }
-            if (parsed instanceof ToolResult.Failure<AgentTrace> failure) {
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.trace.model.AgentTrace> value; ToolResult.Failure<AgentTrace> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = parsed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<AgentTrace>) $oaPattern0_holder.value) != null))) {
                 return new ToolResult.Failure<>(
-                        "invalid_trace", source.name() + ": " + failure.message());
+                        "invalid_trace", source.name() + ": " + $oaPattern0_holder.bound.message());
             }
 
             AgentTrace trace = ((ToolResult.Success<AgentTrace>) parsed).value();

@@ -66,27 +66,41 @@ final class RhinoJsonNormalizer {
             throw invalid("JavaScript result is undefined. Return an explicit JSON value; check the "
                     + "selected roots and documented fields. This alone does not mean game data is unavailable.");
         }
-        if (value instanceof Boolean booleanValue) {
-            return ordinary(new JsonPrimitive(booleanValue), JavascriptSemanticKind.SCALAR);
+        final class $oaPattern0_Holder { java.lang.Object value; Boolean bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = value) instanceof java.lang.Boolean && (($oaPattern0_holder.bound = (Boolean) $oaPattern0_holder.value) != null))) {
+            return ordinary(new JsonPrimitive($oaPattern0_holder.bound), JavascriptSemanticKind.SCALAR);
         }
-        if (value instanceof CharSequence sequence) {
-            String text = sequence.toString();
+        final class $oaPattern1_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = value) instanceof java.lang.CharSequence && (($oaPattern1_holder.bound = (CharSequence) $oaPattern1_holder.value) != null))) {
+            String text = $oaPattern1_holder.bound.toString();
             budget.string(text.length());
             return ordinary(new JsonPrimitive(text), JavascriptSemanticKind.SCALAR);
         }
-        if (value instanceof Number number) {
-            double numeric = number.doubleValue();
+        final class $oaPattern2_Holder { java.lang.Object value; Number bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = value) instanceof java.lang.Number && (($oaPattern2_holder.bound = (Number) $oaPattern2_holder.value) != null))) {
+            double numeric = $oaPattern2_holder.bound.doubleValue();
             if (!Double.isFinite(numeric)) {
                 throw invalid("JavaScript result contains a non-finite number");
             }
-            return ordinary(new JsonPrimitive(number), JavascriptSemanticKind.SCALAR);
+            return ordinary(new JsonPrimitive($oaPattern2_holder.bound), JavascriptSemanticKind.SCALAR);
         }
-        if (value instanceof Wrapper wrapper) {
+        final class $oaPattern3_Holder { java.lang.Object value; Wrapper bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = value) instanceof dev.latvian.mods.rhino.Wrapper && (($oaPattern3_holder.bound = (Wrapper) $oaPattern3_holder.value) != null))) {
             if (budget.hostTransport) throw invalid("Extension host values cannot contain Java wrappers");
-            Object unwrapped = wrapper.unwrap();
-            if (unwrapped instanceof CharSequence text) return ordinary(new JsonPrimitive(text.toString()), JavascriptSemanticKind.SCALAR);
-            if (unwrapped instanceof Number number && Double.isFinite(number.doubleValue())) return ordinary(new JsonPrimitive(number), JavascriptSemanticKind.SCALAR);
-            if (unwrapped instanceof Boolean bool) return ordinary(new JsonPrimitive(bool), JavascriptSemanticKind.SCALAR);
+            Object unwrapped = $oaPattern3_holder.bound.unwrap();
+            final class $oaPattern4_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = unwrapped) instanceof java.lang.CharSequence && (($oaPattern4_holder.bound = (CharSequence) $oaPattern4_holder.value) != null))) return ordinary(new JsonPrimitive($oaPattern4_holder.bound.toString()), JavascriptSemanticKind.SCALAR);
+            final class $oaPattern5_Holder { java.lang.Object value; Number bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = unwrapped) instanceof java.lang.Number && (($oaPattern5_holder.bound = (Number) $oaPattern5_holder.value) != null)) && Double.isFinite($oaPattern5_holder.bound.doubleValue())) return ordinary(new JsonPrimitive($oaPattern5_holder.bound), JavascriptSemanticKind.SCALAR);
+            final class $oaPattern6_Holder { java.lang.Object value; Boolean bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = unwrapped) instanceof java.lang.Boolean && (($oaPattern6_holder.bound = (Boolean) $oaPattern6_holder.value) != null))) return ordinary(new JsonPrimitive($oaPattern6_holder.bound), JavascriptSemanticKind.SCALAR);
             if (unwrapped == null) return ordinary(JsonNull.INSTANCE, JavascriptSemanticKind.SCALAR);
             return ordinary(new JsonPrimitive(String.valueOf(unwrapped)), JavascriptSemanticKind.SCALAR);
         }
@@ -98,8 +112,10 @@ final class RhinoJsonNormalizer {
         if (value instanceof NativePromise || value instanceof Symbol) {
             throw invalid("JavaScript result contains an unsupported host or executable value");
         }
-        if (value instanceof NativeArray array) {
-            long length = array.getLength();
+        final class $oaPattern7_Holder { java.lang.Object value; NativeArray bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = value) instanceof dev.latvian.mods.rhino.NativeArray && (($oaPattern7_holder.bound = (NativeArray) $oaPattern7_holder.value) != null))) {
+            long length = $oaPattern7_holder.bound.getLength();
             if (length > limits.maxArrayLength()) {
                 throw exceeded("JavaScript result exceeds the array-length budget");
             }
@@ -111,7 +127,7 @@ final class RhinoJsonNormalizer {
                     // NativeArray's Iterable Java view maps undefined/hole entries to null.
                     // Read actual indexed guest values instead, preserving invalidity.
                     for (int index = 0; index < length; index++) {
-                        Object item = array.get(context, index, array);
+                        Object item = $oaPattern7_holder.bound.get(context, index, $oaPattern7_holder.bound);
                         if (item == Scriptable.NOT_FOUND) throw invalid(
                                 "Extension host arguments cannot contain array holes");
                         Result child = normalize(item, context, ancestors, depth + 1, budget);
@@ -120,7 +136,7 @@ final class RhinoJsonNormalizer {
                     }
                     return new Result(result, arrayShape(aggregate));
                 }
-                for (Object item : array) {
+                for (Object item : $oaPattern7_holder.bound) {
                     if (budget.hostTransport && item == Undefined.INSTANCE) {
                         throw invalid("Extension host arguments cannot contain undefined array values");
                     }
@@ -135,8 +151,10 @@ final class RhinoJsonNormalizer {
                 ancestors.remove(value);
             }
         }
-        if (value instanceof NativeObject object) {
-            if (object.entrySet().size() > limits.maxObjectFields()) {
+        final class $oaPattern8_Holder { java.lang.Object value; NativeObject bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = value) instanceof dev.latvian.mods.rhino.NativeObject && (($oaPattern8_holder.bound = (NativeObject) $oaPattern8_holder.value) != null))) {
+            if ($oaPattern8_holder.bound.entrySet().size() > limits.maxObjectFields()) {
                 throw exceeded("JavaScript result exceeds the object-field budget");
             }
             enter(value, ancestors);
@@ -145,18 +163,20 @@ final class RhinoJsonNormalizer {
                 if (budget.hostTransport) {
                     // NativeObject's Java Map view omits undefined entries. Use actual own
                     // JavaScript keys so transport cannot silently remove malformed fields.
-                    for (Object id : object.getIds(context)) {
+                    for (Object id : $oaPattern8_holder.bound.getIds(context)) {
                         if (!(id instanceof String) && !(id instanceof Integer)) {
                             throw invalid("Extension host arguments require ordinary JSON keys");
                         }
                         String key = id.toString();
-                        Object child = id instanceof Integer index
-                                ? object.get(context, index, object) : object.get(context, key, object);
+                        final class $oaPattern9_Holder { java.lang.Object value; Integer bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+Object child = (($oaPattern9_holder.value = id) instanceof java.lang.Integer && (($oaPattern9_holder.bound = (Integer) $oaPattern9_holder.value) != null))
+                                ? $oaPattern8_holder.bound.get(context, $oaPattern9_holder.bound, $oaPattern8_holder.bound) : $oaPattern8_holder.bound.get(context, key, $oaPattern8_holder.bound);
                         result.add(key, normalize(child, context, ancestors, depth + 1, budget).value());
                     }
                     return ordinary(result, JavascriptSemanticKind.KEY_VALUE);
                 }
-                for (Object rawEntry : object.entrySet()) {
+                for (Object rawEntry : $oaPattern8_holder.bound.entrySet()) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) rawEntry;
                     String key = String.valueOf(entry.getKey());
                     budget.string(key.length());
@@ -175,17 +195,19 @@ final class RhinoJsonNormalizer {
                 ancestors.remove(value);
             }
         }
-        if (value instanceof HostListView list) {
-            if (list.length() > limits.maxArrayLength()) {
+        final class $oaPattern10_Holder { java.lang.Object value; HostListView bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = value) instanceof dev.openallay.script.host.HostListView && (($oaPattern10_holder.bound = (HostListView) $oaPattern10_holder.value) != null))) {
+            if ($oaPattern10_holder.bound.length() > limits.maxArrayLength()) {
                 throw exceeded("JavaScript result exceeds the array-length budget");
             }
             enter(value, ancestors);
             try {
                 JsonArray result = new JsonArray();
                 JavascriptResultShape aggregate = null;
-                for (int index = 0; index < list.length(); index++) {
+                for (int index = 0; index < $oaPattern10_holder.bound.length(); index++) {
                     Result child = normalize(
-                            list.get(context, index, list),
+                            $oaPattern10_holder.bound.get(context, index, $oaPattern10_holder.bound),
                             context,
                             ancestors,
                             depth + 1,
@@ -198,8 +220,10 @@ final class RhinoJsonNormalizer {
                 ancestors.remove(value);
             }
         }
-        if (value instanceof HostObjectView object) {
-            Object[] ids = object.getIds(context);
+        final class $oaPattern11_Holder { java.lang.Object value; HostObjectView bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = value) instanceof dev.openallay.script.host.HostObjectView && (($oaPattern11_holder.bound = (HostObjectView) $oaPattern11_holder.value) != null))) {
+            Object[] ids = $oaPattern11_holder.bound.getIds(context);
             if (ids.length > limits.maxObjectFields()) {
                 throw exceeded("JavaScript result exceeds the object-field budget");
             }
@@ -209,7 +233,7 @@ final class RhinoJsonNormalizer {
                 for (Object id : ids) {
                     String key = String.valueOf(id);
                     budget.string(key.length());
-                    Object child = object.get(context, key, object);
+                    Object child = $oaPattern11_holder.bound.get(context, key, $oaPattern11_holder.bound);
                     if (budget.hostTransport && child == Undefined.INSTANCE) {
                         throw invalid("Extension host arguments cannot contain undefined fields");
                     }
@@ -218,7 +242,7 @@ final class RhinoJsonNormalizer {
                                 child, context, ancestors, depth + 1, budget).value());
                     }
                 }
-                return new Result(result, object.resultShape());
+                return new Result(result, $oaPattern11_holder.bound.resultShape());
             } finally {
                 ancestors.remove(value);
             }

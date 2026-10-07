@@ -204,8 +204,10 @@ public final class RemoteToolServer {
         }
         com.google.gson.JsonObject object = parsed.getAsJsonObject();
         ToolResult<?> decoded = arguments.decode(object, tool.descriptor().inputType());
-        if (decoded instanceof ToolResult.Failure<?> failure) {
-            return CompletableFuture.completedFuture(failure);
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<?>) $oaPattern0_holder.value) != null))) {
+            return CompletableFuture.completedFuture($oaPattern0_holder.bound);
         }
         cancellation.throwIfCancelled();
         return invokeTypedAsync(
@@ -242,11 +244,15 @@ public final class RemoteToolServer {
                 && current.getCause() != null) {
             current = current.getCause();
         }
-        if (current instanceof dev.openallay.script.JavascriptExecutionException failure) {
-            return failure.code();
+        final class $oaPattern1_Holder { java.lang.Throwable value; dev.openallay.script.JavascriptExecutionException bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = current) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern1_holder.bound = (dev.openallay.script.JavascriptExecutionException) $oaPattern1_holder.value) != null))) {
+            return $oaPattern1_holder.bound.code();
         }
-        if (current instanceof dev.openallay.model.ModelClientException failure) {
-            return failure.failure().code();
+        final class $oaPattern2_Holder { java.lang.Throwable value; dev.openallay.model.ModelClientException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = current) instanceof dev.openallay.model.ModelClientException && (($oaPattern2_holder.bound = (dev.openallay.model.ModelClientException) $oaPattern2_holder.value) != null))) {
+            return $oaPattern2_holder.bound.failure().code();
         }
         return "remote_tool_failure";
     }

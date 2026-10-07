@@ -846,7 +846,9 @@ private static final class DeclaredTypes {
 
         @Override
         public boolean containsKey(Object key) {
-            return key instanceof String name && names.contains(name);
+            final class $oaPattern0_Holder { java.lang.Object value; String bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return (($oaPattern0_holder.value = key) instanceof java.lang.String && (($oaPattern0_holder.bound = (String) $oaPattern0_holder.value) != null)) && names.contains($oaPattern0_holder.bound);
         }
 
         @Override
