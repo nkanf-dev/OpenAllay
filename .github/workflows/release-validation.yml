@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof, attributed-remaining-records, java8-objects-oracle, client-settings-switch-language]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof, attributed-remaining-records, java8-objects-oracle, client-settings-switch-language, client-native-speech-java8-api, whole-engine-java8-diagnostic, rhino-native-api-consumers, rhino-existing-default-prototype]
         default: skills
         required: true
 permissions:
@@ -3644,3 +3644,161 @@ jobs:
         path: '${{ runner.temp }}/client-switch-materialization/source-packet/
 
           ${{ runner.temp }}/client-switch-materialization/command-*.log'
+
+  rhino-native-api-consumers:
+    if: inputs.scope == 'rhino-native-api-consumers'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify native record metadata, public access, exception text and retained
+        modern defaults
+      run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
+        --tests dev.latvian.mods.rhino.NativeApiCompatibilityTest --tests dev.latvian.mods.rhino.VMBridgeRecordSyntaxTest
+        --tests dev.latvian.mods.rhino.type.NativeRecordCarrierSyntaxTest
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
+        --tests dev.openallay.script.schema.HostSchemaCatalogTest'
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-native-api-consumers-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'runtime-rhino/build/test-results/
+
+          engine-core/build/test-results/'
+  client-native-speech-java8-api:
+    if: inputs.scope == 'client-native-speech-java8-api'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Classify the complete held native speech owner from its actual switch postimage
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/native-api-classpath.json"
+
+        python3 -B scripts/materialize-client-native-speech-java8-api.py --project "$PWD"
+        --classpath-metadata "$RUNNER_TEMP/native-api-classpath.json" --javac "$JAVA_HOME_21_X64/bin/javac"
+        --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/native-api-materialization"'
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: client-native-speech-java8-api-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/native-api-materialization/source-packet/
+
+          ${{ runner.temp }}/native-api-materialization/command-*.log'
+  whole-engine-java8-diagnostic:
+    if: inputs.scope == 'whole-engine-java8-diagnostic'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Capture full actual engine source and external runtime Java 8 blockers
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/whole-engine-classpath.json"
+
+        python3 -B scripts/diagnose-engine-java8-frontier.py --project "$PWD" --classpath-metadata
+        "$RUNNER_TEMP/whole-engine-classpath.json" --javac "$JAVA_HOME_21_X64/bin/javac"
+        --javac8 "$JAVA_HOME_8_X64/bin/javac" --output "$RUNNER_TEMP/whole-engine-java8-diagnostic"'
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: whole-engine-java8-diagnostic-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/whole-engine-java8-diagnostic/*.json
+
+          ${{ runner.temp }}/whole-engine-java8-diagnostic/*.log
+
+          ${{ runner.temp }}/whole-engine-java8-diagnostic/*sources.args
+
+          ${{ runner.temp }}/whole-engine-classpath.json'
+  rhino-existing-default-prototype:
+    if: inputs.scope == 'rhino-existing-default-prototype'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Prove genuine Java 8 public child lookup using actual all-source canonical
+        Rhino and its existing loader
+      run: 'curl --fail --location https://maven.latvian.dev/releases/dev/latvian/mods/rhino/2101.2.8-build.91/rhino-2101.2.8-build.91-sources.jar
+        --output "$RUNNER_TEMP/rhino-sources.jar"
+
+        ./gradlew --no-daemon -q :runtime-rhino:printRhinoPortCompileClasspath > "$RUNNER_TEMP/rhino-classpath.txt"
+
+        python3 -B -c ''from pathlib import Path; import os,subprocess; temp=Path(os.environ["RUNNER_TEMP"]);
+        lines=(temp/"rhino-classpath.txt").read_text().splitlines(); cp=[line for line
+        in lines if line.startswith("/") and ".jar" in line]; assert len(cp)==1,lines;
+        subprocess.run(["python3","-B","scripts/rhino-default-existing-loader-prototype/run-prototype.py",str(temp/"rhino-sources.jar"),"--project",os.getcwd(),"--api-recipe",os.getcwd()+"/runtime-rhino/patches","--javac",os.environ["JAVA_HOME_21_X64"]+"/bin/javac","--java8",os.environ["JAVA_HOME_8_X64"]+"/bin/java","--classpath",cp[0],"--output",str(temp/"rhino-default-prototype")],check=True)'''
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-existing-default-prototype-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/rhino-default-prototype/receipt.json
+
+          ${{ runner.temp }}/rhino-default-prototype/java8.*.log
+
+          ${{ runner.temp }}/rhino-default-prototype/source-list.txt'
