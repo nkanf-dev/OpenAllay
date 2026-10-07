@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 229977,
-    "sha256": "dc7f7890da59b1d3c3867c60207b33099e1882a5ba8f743287534f67c546e43c",
-    "modified_upstream_files": 108,
+    "bytes": 238051,
+    "sha256": "dfb8ac0ba0094d4f2e8c9d79d5ccdc2f26ad9d8c98ff4269207cb31184f304aa",
+    "modified_upstream_files": 110,
     "added_source_files": 1,
-    "hunks": 512,
+    "hunks": 525,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Actual34compilererrorrouting Context2/Kit4Objectarraybinding+Parser1colonlabel lowered; realcapabilityAPIsremaining/fullrelease17.",
+  "source_only_status": "Rebasedexactfrozena29RegExpoperationpostimagesaftera28cleanup, no newalgorithms/fullrelease17pendingcapabilities.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -3041,9 +3041,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.regexp.NativeRegExp",
       "source_bytes": 86110,
       "source_sha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093",
-      "patched_bytes": 86110,
-      "patched_sha256": "56f0ba77db1268bde4aba2c5f1e1427d5fa90d448f089104a679ae0957115093",
-      "modified": false,
+      "patched_bytes": 86891,
+      "patched_sha256": "03052bdf3676f05fa93184bd38c295ea0413ea235eda274c4da49de62789994e",
+      "modified": true,
       "line_count": 2895,
       "license_evidence": [
         "MPL-2.0 header"
@@ -3083,9 +3083,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.regexp.RegExp",
       "source_bytes": 19444,
       "source_sha256": "387bf6caa13da7bb5caaec92eedf1c98ff0d6fc96ad58a52f89106e7d2eaeabe",
-      "patched_bytes": 19444,
-      "patched_sha256": "387bf6caa13da7bb5caaec92eedf1c98ff0d6fc96ad58a52f89106e7d2eaeabe",
-      "modified": false,
+      "patched_bytes": 19491,
+      "patched_sha256": "edf60f660356affce62fbaeb5db53944186aa18bafda23fee10bee31adc1a770",
+      "modified": true,
       "line_count": 642,
       "license_evidence": [
         "MPL-2.0 header"

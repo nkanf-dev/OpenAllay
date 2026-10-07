@@ -5126,6 +5126,298 @@
 +					break;
 +				}
 +				default: throw new ParseException("Unexpected character in string: '\\" + c + "'");
+--- a/dev/latvian/mods/rhino/regexp/NativeRegExp.java
++++ b/dev/latvian/mods/rhino/regexp/NativeRegExp.java
+@@ -240,3 +240,6 @@
+-			case REOP_UCFLAT1, REOP_UCFLAT1i -> regexp.anchorCh = (char) getIndex(regexp.program, 1);
+-			case REOP_FLAT1, REOP_FLAT1i -> regexp.anchorCh = (char) (regexp.program[1] & 0xFF);
+-			case REOP_FLAT, REOP_FLATi -> {
++			case REOP_UCFLAT1:
++			case REOP_UCFLAT1i: regexp.anchorCh = (char) getIndex(regexp.program, 1); break;
++			case REOP_FLAT1:
++			case REOP_FLAT1i: regexp.anchorCh = (char) (regexp.program[1] & 0xFF); break;
++			case REOP_FLAT:
++			case REOP_FLATi: {
+@@ -245,3 +248,5 @@
+-			}
+-			case REOP_BOL -> regexp.anchorCh = ANCHOR_BOL;
+-			case REOP_ALT -> {
++
++				break;
++			}
++			case REOP_BOL: regexp.anchorCh = ANCHOR_BOL; break;
++			case REOP_ALT: {
+@@ -251,0 +257,2 @@
++
++				break;
+@@ -671 +678 @@
+-			case '^' -> {
++			case '^': {
+@@ -676 +683 @@
+-			case '$' -> {
++			case '$': {
+@@ -681 +688 @@
+-			case '\\' -> {
++			case '\\': {
+@@ -859 +866 @@
+-			case '(' -> {
++			case '(': {
+@@ -895 +902 @@
+-			case ')' -> {
++			case ')': {
+@@ -899 +906 @@
+-			case '[' -> {
++			case '[': {
+@@ -927,2 +934,4 @@
+-			}
+-			case '.' -> {
++
++				break;
++			}
++			case '.': {
+@@ -931,2 +940,6 @@
+-			}
+-			case '*', '+', '?' -> {
++
++				break;
++			}
++			case '*':
++			case '+':
++			case '?': {
+@@ -936 +949 @@
+-			default -> {
++			default: {
+@@ -941,0 +955,2 @@
++
++				break;
+@@ -951 +966 @@
+-			case '+' -> {
++			case '+': {
+@@ -958,2 +973,4 @@
+-			}
+-			case '*' -> {
++
++				break;
++			}
++			case '*': {
+@@ -966,2 +983,4 @@
+-			}
+-			case '?' -> {
++
++				break;
++			}
++			case '?': {
+@@ -974,2 +993,4 @@
+-			}
+-			case '{' ->  /* balance '}' */ {
++
++				break;
++			}
++			case '{':  /* balance '}' */ {
+@@ -2316 +2337,3 @@
+-		if (args.length >= 1 && args[0] instanceof NativeRegExp thatObj && (args.length == 1 || args[1] == Undefined.INSTANCE)) {
++		Object firstArgument = args.length >= 1 ? args[0] : Undefined.INSTANCE;
++		if (args.length >= 1 && firstArgument instanceof NativeRegExp && (args.length == 1 || args[1] == Undefined.INSTANCE)) {
++			NativeRegExp thatObj = (NativeRegExp) firstArgument;
+@@ -2323,4 +2345,0 @@
+-			} else if (args[0] instanceof NativeRegExp thatObj) {
+-				// Passing a regex and flags is allowed in ES6, but was forbidden in ES5 and lower.
+-				// Spec ref: 22.2.4.1 in ES6
+-				pattern = new String(thatObj.re.source);
+@@ -2328 +2347,9 @@
+-				pattern = escapeRegExp(cx, args[0]);
++				Object patternArgument = args[0];
++				if (patternArgument instanceof NativeRegExp) {
++					NativeRegExp thatObj = (NativeRegExp) patternArgument;
++					// Passing a regex and flags is allowed in ES6, but was forbidden in ES5 and lower.
++					// Spec ref: 22.2.4.1 in ES6
++					pattern = new String(thatObj.re.source);
++				} else {
++					pattern = escapeRegExp(cx, args[0]);
++				}
+@@ -2517,10 +2544,19 @@
+-		int id = switch (s) {
+-			case "lastIndex" -> Id_lastIndex;
+-			case "source" -> Id_source;
+-			case "flags" -> Id_flags;
+-			case "global" -> Id_global;
+-			case "ignoreCase" -> Id_ignoreCase;
+-			case "multiline" -> Id_multiline;
+-			case "sticky" -> Id_sticky;
+-			default -> 0;
+-		};
++		int id;
++		switch (s) {
++			case "lastIndex":
++				id = Id_lastIndex; break;
++			case "source":
++				id = Id_source; break;
++			case "flags":
++				id = Id_flags; break;
++			case "global":
++				id = Id_global; break;
++			case "ignoreCase":
++				id = Id_ignoreCase; break;
++			case "multiline":
++				id = Id_multiline; break;
++			case "sticky":
++				id = Id_sticky; break;
++			default:
++				id = 0; break;
++		}
+@@ -2532,5 +2568,14 @@
+-		int attr = switch (id) {
+-			case Id_lastIndex -> lastIndexAttr;
+-			case Id_source, Id_flags, Id_global, Id_ignoreCase, Id_multiline, Id_sticky -> PERMANENT | READONLY | DONTENUM;
+-			default -> throw new IllegalStateException();
+-		};
++		int attr;
++		switch (id) {
++			case Id_lastIndex:
++				attr = lastIndexAttr; break;
++			case Id_source:
++			case Id_flags:
++			case Id_global:
++			case Id_ignoreCase:
++			case Id_multiline:
++			case Id_sticky:
++				attr = PERMANENT | READONLY | DONTENUM; break;
++			default:
++				throw new IllegalStateException();
++		}
+@@ -2542,10 +2587,18 @@
+-		return switch (id) {
+-			case Id_lastIndex -> "lastIndex";
+-			case Id_source -> "source";
+-			case Id_flags -> "flags";
+-			case Id_global -> "global";
+-			case Id_ignoreCase -> "ignoreCase";
+-			case Id_multiline -> "multiline";
+-			case Id_sticky -> "sticky";
+-			default -> super.getInstanceIdName(id);
+-		};
++		switch (id) {
++			case Id_lastIndex:
++				return "lastIndex";
++			case Id_source:
++				return "source";
++			case Id_flags:
++				return "flags";
++			case Id_global:
++				return "global";
++			case Id_ignoreCase:
++				return "ignoreCase";
++			case Id_multiline:
++				return "multiline";
++			case Id_sticky:
++				return "sticky";
++			default:
++				return super.getInstanceIdName(id);
++		}
+@@ -2556,4 +2609,6 @@
+-		return switch (id) {
+-			case Id_lastIndex -> lastIndex;
+-			case Id_source -> new String(re.source);
+-			case Id_flags -> {
++		switch (id) {
++			case Id_lastIndex:
++				return lastIndex;
++			case Id_source:
++				return new String(re.source);
++			case Id_flags: {
+@@ -2562,8 +2617,13 @@
+-				yield buf.toString();
+-			}
+-			case Id_global -> (re.flags & JSREG_GLOB) != 0;
+-			case Id_ignoreCase -> (re.flags & JSREG_FOLD) != 0;
+-			case Id_multiline -> (re.flags & JSREG_MULTILINE) != 0;
+-			case Id_sticky -> (re.flags & JSREG_STICKY) != 0;
+-			default -> super.getInstanceIdValue(id, cx);
+-		};
++				return buf.toString();
++			}
++			case Id_global:
++				return (re.flags & JSREG_GLOB) != 0;
++			case Id_ignoreCase:
++				return (re.flags & JSREG_FOLD) != 0;
++			case Id_multiline:
++				return (re.flags & JSREG_MULTILINE) != 0;
++			case Id_sticky:
++				return (re.flags & JSREG_STICKY) != 0;
++			default:
++				return super.getInstanceIdValue(id, cx);
++		}
+@@ -2623 +2683 @@
+-			case Id_compile -> {
++			case Id_compile: {
+@@ -2626,2 +2686,4 @@
+-			}
+-			case Id_toString -> {
++
++				break;
++			}
++			case Id_toString: {
+@@ -2630,2 +2692,4 @@
+-			}
+-			case Id_toSource -> {
++
++				break;
++			}
++			case Id_toSource: {
+@@ -2634,2 +2698,4 @@
+-			}
+-			case Id_exec -> {
++
++				break;
++			}
++			case Id_exec: {
+@@ -2638,2 +2704,4 @@
+-			}
+-			case Id_test -> {
++
++				break;
++			}
++			case Id_test: {
+@@ -2642,2 +2710,4 @@
+-			}
+-			case Id_prefix -> {
++
++				break;
++			}
++			case Id_prefix: {
+@@ -2646,2 +2716,4 @@
+-			}
+-			default -> throw new IllegalArgumentException(String.valueOf(id));
++
++				break;
++			}
++			default: throw new IllegalArgumentException(String.valueOf(id));
+@@ -2709,9 +2781,16 @@
+-		return switch (s) {
+-			case "compile" -> Id_compile;
+-			case "toString" -> Id_toString;
+-			case "toSource" -> Id_toSource;
+-			case "exec" -> Id_exec;
+-			case "test" -> Id_test;
+-			case "prefix" -> Id_prefix;
+-			default -> 0;
+-		};
++		switch (s) {
++			case "compile":
++				return Id_compile;
++			case "toString":
++				return Id_toString;
++			case "toSource":
++				return Id_toSource;
++			case "exec":
++				return Id_exec;
++			case "test":
++				return Id_test;
++			case "prefix":
++				return Id_prefix;
++			default:
++				return 0;
++		}
 --- a/dev/latvian/mods/rhino/regexp/NativeRegExpCtor.java
 +++ b/dev/latvian/mods/rhino/regexp/NativeRegExpCtor.java
 @@ -104,24 +104,47 @@
@@ -5292,6 +5584,44 @@
 +				default:
 +					return super.getInstanceIdName(id);
 +			}
+--- a/dev/latvian/mods/rhino/regexp/RegExp.java
++++ b/dev/latvian/mods/rhino/regexp/RegExp.java
+@@ -230,8 +230,14 @@
+-		return switch (dc) {
+-			case '$' -> new SubString("$");
+-			case '&' -> res.lastMatch;
+-			case '+' -> res.lastParen;
+-			case '`' -> res.leftContext;
+-			case '\'' -> res.rightContext;
+-			default -> null;
+-		};
++		switch (dc) {
++			case '$':
++				return new SubString("$");
++			case '&':
++				return res.lastMatch;
++			case '+':
++				return res.lastParen;
++			case '`':
++				return res.leftContext;
++			case '\'':
++				return res.rightContext;
++			default:
++				return null;
++		}
+@@ -365 +371 @@
+-			case RA_MATCH -> {
++			case RA_MATCH: {
+@@ -371 +377 @@
+-			case RA_SEARCH -> {
++			case RA_SEARCH: {
+@@ -376 +382,2 @@
+-			case RA_REPLACE, RA_REPLACE_ALL -> {
++			case RA_REPLACE:
++			case RA_REPLACE_ALL: {
+@@ -458 +465 @@
+-			default -> throw Kit.codeBug();
++			default:  throw Kit.codeBug();
 --- a/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
 @@ -28 +28 @@
