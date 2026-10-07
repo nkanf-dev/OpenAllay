@@ -248,7 +248,7 @@ def closure(work, version):
         p=original.parent/(row['role']+'.jar')
         require(sha(p)==row['sha256'], 'Retained constituent SHA256 differs: '+row['role'])
         row['path']=str(p)
-    pins=load(ROOT/'native-builds/forge1122-component/builder-candidate-provider.json')
+    pins=load(ROOT/'distribution/builder-candidate-provider.json')
     require(pins['extensionSource']==BUILDER_SOURCE and pins['jarSha256']==BUILDER_SHA,
         'One universal accepted Builder source required')
     lock=load(ROOT/'distribution/extensions.lock.json')
@@ -450,7 +450,7 @@ def prepare(args):
     provenance={'releaseSource':{'revision':source,'sourceRoot':str(ROOT),'version':version},
         'engine':engine_receipt,'native':native_receipt,'custody':custody,
         'builder':{'sourceRevision':BUILDER_SOURCE,'sha256':BUILDER_SHA,
-            'provider':load(ROOT/'native-builds/forge1122-component/builder-candidate-provider.json')}}
+            'provider':load(ROOT/'distribution/builder-candidate-provider.json')}}
     provider=write(work/'provider-receipt.json',{'version':version,
         'components':{role:{'sha256':sha(path),'entries':physical_inventory(entries(path))} for role,path in products.items()},
         'sqlite':{'artifactSha256':byrole['sqlite']['sha256'],'payloadSha256':digest(json.dumps(inventory(sqlite_payload),sort_keys=True,separators=(',',':')).encode())},

@@ -1,5 +1,0 @@
-lang:zh_cn
-guiScale:1
-fullscreen:false
-maxFps:30
-pauseOnLostFocus:false

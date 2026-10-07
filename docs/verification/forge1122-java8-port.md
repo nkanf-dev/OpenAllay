@@ -26,9 +26,9 @@ producer/consumer branches have been retired. The shared feature engine and
 Forge 1.12.2 native typed block operations remain source owners for the Java8 port.
 The runtime-json work is separate from this packaging retirement.
 
-Diagnostic component boot runners still use
-`scripts/forge1122-runtime-prerequisite`. These sources are held temporarily for
-that dependency, not used by the accepted release recipes. Retire the dependent
-Java17 component runners and their dedicated prerequisites in a follow-up batch
-when the Java8 runner is ready. Preserve the archived source and durable evidence
-before removing those active-source paths.
+The dedicated Java17 component packaging, instrumentation prerequisites and
+boot/refresh/repair drivers have been removed from active source, together with
+their workflow jobs and dispatch options. Their source remains in the archived
+Java17 branch above. The genuine FG3 census, native source selection and reobf
+tooling remain for native adaptation. Shared Forge16 producers read the unchanged
+universal Builder provider pin from `distribution/builder-candidate-provider.json`.

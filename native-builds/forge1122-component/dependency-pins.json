@@ -1,8 +1,0 @@
-{
-  "org.spongepowered:mixin:0.8.5": "ca15a907e4d1f6b38cefed51d7df96a83347dcfb0bc8ced53111519e991d887d",
-  "org.ow2.asm:asm:9.6": "3c6fac2424db3d4a853b669f4e3d1d9c3c552235e19a319673f887083c2303a1",
-  "org.ow2.asm:asm-tree:9.6": "c43ecf17b539c777e15da7b5b86553b377e2d39a683de6285567d5283888e7ef",
-  "org.ow2.asm:asm-commons:9.6": "7aefd0d5c0901701c69f7513feda765fb6be33af2ce7aa17c5781fc87657c511",
-  "org.ow2.asm:asm-util:9.6": "c635a7402f4aa9bf66b2f4230cea62025a0fe1cd63e8729adefc9b1994fac4c3",
-  "org.ow2.asm:asm-analysis:9.6": "d92832d7c37edc07c60e2559ac6118b31d642e337a6671edcb7ba9fae68edbbb"
-}

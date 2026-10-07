@@ -16,6 +16,11 @@ Forge 1.16.5 remains in the current release catalog.
 
 ## Historical Forge 1.12.2 Java17 validation
 
+The source described below is preserved in
+[`legacy/forge1122-java17-20261007`](https://github.com/nkanf-dev/OpenAllay/tree/66f010368bbba90acd223fcd3b1eb325604fcbe9).
+The dedicated component and instrumentation delivery paths are retired from
+active source. Their original runtime receipts below retain their identities.
+
 The original accepted topology was the stock client with an integrated server. Genuine
 ForgeGradle 3.0.197 and its Java 8 tooling island perform native compilation,
 annotation processing and reobfuscation. Product feature classes use Java 17.

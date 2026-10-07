@@ -7,9 +7,9 @@ SOURCE='fe6422454450ceb739d1174d87c681e76df1ab84'
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def main():
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote only')
-    parser=argparse.ArgumentParser();parser.add_argument('--target',choices=['1.16.5','1.12.2'],default='1.16.5');args=parser.parse_args()
-    selected_source=SOURCE if args.target=='1.16.5' else '6e977110cbe8e0ca0b39c012f0cdfc10bafffef2'
-    out=ROOT/('build/forge16165-builder-candidate' if args.target=='1.16.5' else 'build/forge1122-builder-candidate');out.mkdir(parents=True,exist_ok=False)
+    parser=argparse.ArgumentParser();parser.add_argument('--target',choices=['1.16.5'],default='1.16.5');args=parser.parse_args()
+    selected_source=SOURCE
+    out=ROOT/'build/forge16165-builder-candidate';out.mkdir(parents=True,exist_ok=False)
     a=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/artifacts/11406765949']))
     if a['expired'] or a['workflow_run']['id']!=37450040748 or a['digest']!='sha256:6d1ac947f59d983ea1b88db15d456cec3b7ddffd2b8f26320836a5b04de83802':raise ValueError('SDK provider mismatch')
     archive=out/'retained.zip'
