@@ -5,10 +5,10 @@
     {
       "path": "engine-core/src/main/java/dev/openallay/model/metadata/BuiltinModelCatalog.java",
       "pre_sha256": "4f307b7dea923ce71afb696f24fa0498fc2d0f67762919a1f7242290ff7aa263",
-      "post_sha256": "21c7f008f4716d3a1efa5712a13f562ed2a32ffd2c009c09438c744cddc47f60",
+      "post_sha256": "94b5b0b8dbe69b12226df6e6875ce68d305b0afb7549917c99e1a11d8b1f7575",
       "git_blob": "c4af3be1c1780745edb0f076c40967156cc95399",
       "pre_bytes": 13013,
-      "post_bytes": 28177,
+      "post_bytes": 28176,
       "java8_compile": true,
       "converter_expected_sha256": "beb28575e70a25569b99b96f10a1d1f2d773aee8bf69c7c86f5feafdc1bf69fc"
     },
@@ -350,6 +350,10 @@
       {
         "old": "        return switch (reader.peek()) {\n            case BEGIN_OBJECT -> {\n                reader.beginObject();\n                JsonObject value = new JsonObject();\n                while (reader.hasNext()) {\n                    String name = reader.nextName();\n                    if (value.has(name)) throw invalid();\n                    value.add(name, read(reader));\n                }\n                reader.endObject();\n                yield value;\n            }\n            case BEGIN_ARRAY -> {\n                reader.beginArray();\n                JsonArray value = new JsonArray();\n                while (reader.hasNext()) value.add(read(reader));\n                reader.endArray();\n                yield value;\n            }\n            case STRING -> new JsonPrimitive(reader.nextString());\n            case NUMBER -> new JsonPrimitive(new BigDecimal(reader.nextString()));\n            case BOOLEAN -> new JsonPrimitive(reader.nextBoolean());\n            case NULL -> { reader.nextNull(); yield JsonNull.INSTANCE; }\n            default -> throw invalid();\n        };",
         "new": "        switch (reader.peek()) {\n            case BEGIN_OBJECT: {\n                reader.beginObject();\n                JsonObject value = new JsonObject();\n                while (reader.hasNext()) {\n                    String name = reader.nextName();\n                    if (value.has(name)) throw invalid();\n                    value.add(name, read(reader));\n                }\n                reader.endObject();\n                return value;\n            }\n            case BEGIN_ARRAY: {\n                reader.beginArray();\n                JsonArray value = new JsonArray();\n                while (reader.hasNext()) value.add(read(reader));\n                reader.endArray();\n                return value;\n            }\n            case STRING: return new JsonPrimitive(reader.nextString());\n            case NUMBER: return new JsonPrimitive(new BigDecimal(reader.nextString()));\n            case BOOLEAN: return new JsonPrimitive(reader.nextBoolean());\n            case NULL: reader.nextNull(); return JsonNull.INSTANCE;\n            default: throw invalid();\n        }"
+      },
+      {
+        "old": " tiers = dev.openallay.util.Java8Collections.listCopyOf(tiers); ",
+        "new": " tiers = dev.openallay.util.Java8Collections.listCopyOf(tiers);"
       }
     ],
     "engine-core/src/main/java/dev/openallay/model/metadata/BuiltinModelMatcher.java": [
