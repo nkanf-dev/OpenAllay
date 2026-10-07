@@ -20,7 +20,7 @@ public interface GuideContextProvider {
 
     /** Typed producer references; no images are inferred from model-returned JSON. */
     default java.util.List<dev.openallay.model.image.ImageReference> observationImageReferences(String correlationId) {
-        return java.util.List.of();
+        return dev.openallay.util.Java8Collections.listOf();
     }
 
     /** Internal custody barrier. Call only after the published transcript owns its images. */

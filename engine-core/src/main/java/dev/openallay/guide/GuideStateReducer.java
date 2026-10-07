@@ -99,7 +99,7 @@ if ((($oaPattern7_holder.value = event) instanceof dev.openallay.agent.AgentEven
             ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
             next.add(new GuideTimelineEntry.User(next.size(), $oaPattern7_holder.bound.messageId(),
                     GuidePendingMessage.displayText($oaPattern7_holder.bound.message())));
-            timeline = List.copyOf(next);
+            timeline = dev.openallay.util.Java8Collections.listCopyOf(next);
         } else {
 final class $oaPattern8_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextCompacted bound; }
 final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
@@ -169,7 +169,7 @@ if ((($oaPattern10_holder.value = event) instanceof dev.openallay.agent.AgentEve
                     toolSources);
             ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
             next.set(match, new GuideTimelineEntry.Tool(running.ordinal(), replacement));
-            timeline = List.copyOf(next);
+            timeline = dev.openallay.util.Java8Collections.listCopyOf(next);
             sources = mergeSources(sources, toolSources);
             progress = progress.advance(GuideRequestPhase.TOOL_WAIT, now);
         } else {
@@ -396,9 +396,9 @@ if (!next.isEmpty()
                     SemanticReferenceIndex.from(requestId, timeline));
             semanticStates.put(new SegmentKey(requestId, ordinal), state);
             next.add(new GuideTimelineEntry.Assistant(
-                    ordinal, text, state.document(), true, List.of()));
+                    ordinal, text, state.document(), true, dev.openallay.util.Java8Collections.listOf()));
         }
-        return List.copyOf(next);
+        return dev.openallay.util.Java8Collections.listCopyOf(next);
     }
 
     private static List<GuideTimelineEntry> startTool(
@@ -415,8 +415,8 @@ if (!next.isEmpty()
                 started.arguments(),
                 null,
                 started.presentationMessages(),
-                List.of())));
-        return List.copyOf(next);
+                dev.openallay.util.Java8Collections.listOf())));
+        return dev.openallay.util.Java8Collections.listCopyOf(next);
     }
 
     private static List<GuideToolMessage> mergePresentationMessages(
@@ -432,7 +432,7 @@ if (!next.isEmpty()
                 messages.add(message);
             }
         }
-        return List.copyOf(messages);
+        return dev.openallay.util.Java8Collections.listCopyOf(messages);
     }
 
     private List<GuideTimelineEntry> closeAssistant(
@@ -456,14 +456,14 @@ if (timeline.isEmpty()
         next.set(next.size() - 1, new GuideTimelineEntry.Assistant(
                 $oaPattern26_holder.bound.ordinal(), $oaPattern26_holder.bound.text(), state.document(), false,
                 $oaPattern26_holder.bound.sources()));
-        return List.copyOf(next);
+        return dev.openallay.util.Java8Collections.listCopyOf(next);
     }
 
     private List<GuideTimelineEntry> reconcileFinal(
             UUID requestId, List<GuideTimelineEntry> timeline, String text) {
         ArrayList<GuideTimelineEntry> next = new ArrayList<>(timeline);
         int ordinal = next.size();
-        List<GuideSource> sources = List.of();
+        List<GuideSource> sources = dev.openallay.util.Java8Collections.listOf();
         final class $oaPattern27_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
 final $oaPattern27_Holder $oaPattern27_holder = new $oaPattern27_Holder();
 if (!next.isEmpty()
@@ -484,7 +484,7 @@ if (!next.isEmpty()
         } else {
             next.add(reconciled);
         }
-        return List.copyOf(next);
+        return dev.openallay.util.Java8Collections.listCopyOf(next);
     }
 
     private void clearSemanticStates(UUID requestId) {
@@ -630,13 +630,13 @@ return $oaSwitch0_exit_result;
 
     private List<GuideSource> sources(String toolId, JsonObject normalized) {
         if (!normalized.has("value") || !normalized.get("value").isJsonObject()) {
-            return List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         boolean javascript = "openallay:run_javascript".equals(decodedModelToolId(toolId));
         JsonElement values = normalized.getAsJsonObject("value")
                 .get(javascript ? "sources" : "evidence");
         if (values == null || !values.isJsonArray()) {
-            return List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         SourceObservationCollector observations = new SourceObservationCollector();
         for (JsonElement item : values.getAsJsonArray()) {
@@ -646,16 +646,15 @@ return $oaSwitch0_exit_result;
                 observations.add(gson.fromJson(item, EvidenceMetadata.class));
             }
         }
-        return observations.snapshot().stream()
+        return dev.openallay.util.Java8Collections.toList(observations.snapshot().stream()
                 .map(source -> new GuideSource(
-                        toolId, source.evidence(), source.lastCapturedAt()))
-                .toList();
+                        toolId, source.evidence(), source.lastCapturedAt())));
     }
 
     private static List<GuideSource> mergeSources(
             List<GuideSource> existing, List<GuideSource> additions) {
         Map<String, SourceObservationCollector> byTool = new LinkedHashMap<>();
-        for (List<GuideSource> sources : List.of(existing, additions)) {
+        for (List<GuideSource> sources : dev.openallay.util.Java8Collections.listOf(existing, additions)) {
             for (GuideSource source : sources) {
                 byTool.computeIfAbsent(source.toolId(), ignored -> new SourceObservationCollector())
                         .add(new SourceObservation(
@@ -670,7 +669,7 @@ return $oaSwitch0_exit_result;
                 .comparing((GuideSource value) -> value.evidence().sourceId())
                 .thenComparing(value -> value.evidence().provenance())
                 .thenComparing(GuideSource::toolId));
-        return List.copyOf(merged);
+        return dev.openallay.util.Java8Collections.listCopyOf(merged);
     }
 
     private static String decodedModelToolId(String value) {

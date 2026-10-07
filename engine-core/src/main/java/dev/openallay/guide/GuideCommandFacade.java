@@ -43,7 +43,7 @@ public final class GuideCommandFacade {
             for (GuideToolActivity tool : request.tools()) {
                 if (seenTools.add(tool.invocationId())) {
                     GuideToolIntent intent = tool.intent();
-                    String actionText = (intent != null && !intent.empty() && !intent.title().isBlank())
+                    String actionText = (intent != null && !intent.empty() && !dev.openallay.util.Java8Strings.isBlank(intent.title()))
                             ? "正在执行：" + intent.title()
                             : "正在执行操作……";
                     notices.accept(GuideNotice.info(actionText));
@@ -122,8 +122,8 @@ if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResul
 
     public void sessions(UUID actor, Consumer<GuideNotice> notices) {
         GuideSnapshot snapshot = services.forActor(actor).snapshot();
-        notices.accept(GuideNotice.info("会话 " + snapshot.sessions().stream()
-                .map(GuideSessionSnapshot::sessionId).toList()
+        notices.accept(GuideNotice.info("会话 " + dev.openallay.util.Java8Collections.toList(snapshot.sessions().stream()
+                .map(GuideSessionSnapshot::sessionId))
                 + "；当前 " + snapshot.selectedSession()));
     }
 
@@ -178,8 +178,8 @@ if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResul
     }
 
     public void skills(Consumer<GuideNotice> notices) {
-        notices.accept(GuideNotice.info("Skills: " + runtime.skills().metadata().stream()
-                .map(value -> value.name()).toList()));
+        notices.accept(GuideNotice.info("Skills: " + dev.openallay.util.Java8Collections.toList(runtime.skills().metadata().stream()
+                .map(value -> value.name()))));
     }
 
     public void sources(Consumer<GuideNotice> notices) {
@@ -190,8 +190,8 @@ if ((($oaPattern1_holder.value = refreshed) instanceof dev.openallay.tool.ToolRe
             failure($oaPattern1_holder.bound, notices);
             return;
         }
-        notices.accept(GuideNotice.info("知识来源: " + runtime.knowledge().snapshot().documents().stream()
-                .map(value -> value.sourceId()).distinct().sorted().toList()));
+        notices.accept(GuideNotice.info("知识来源: " + dev.openallay.util.Java8Collections.toList(runtime.knowledge().snapshot().documents().stream()
+                .map(value -> value.sourceId()).distinct().sorted())));
     }
 
     private static GuideRequestSnapshot find(GuideSnapshot snapshot, UUID requestId) {

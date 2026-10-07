@@ -18,10 +18,10 @@ public final class GuideSessionSnapshot {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid sessionId");
         }
-        messages = List.copyOf(messages);
-        requests = List.copyOf(requests);
-        checkpoints = List.copyOf(checkpoints);
-        pendingMessages = List.copyOf(pendingMessages);
+        messages = dev.openallay.util.Java8Collections.listCopyOf(messages);
+        requests = dev.openallay.util.Java8Collections.listCopyOf(requests);
+        checkpoints = dev.openallay.util.Java8Collections.listCopyOf(checkpoints);
+        pendingMessages = dev.openallay.util.Java8Collections.listCopyOf(pendingMessages);
         java.util.Objects.requireNonNull(modelSelection, "modelSelection");
         java.util.Objects.requireNonNull(historyWindow, "historyWindow");
 
@@ -49,7 +49,7 @@ public GuideSessionSnapshot(
             List<ContextCheckpoint> checkpoints,
             GuideModelSelection modelSelection,
             GuideHistoryWindowSnapshot historyWindow) {
-        this(sessionId, messages, requests, checkpoints, modelSelection, historyWindow, List.of(), null);
+        this(sessionId, messages, requests, checkpoints, modelSelection, historyWindow, dev.openallay.util.Java8Collections.listOf(), null);
     }
 public GuideSessionSnapshot(
             String sessionId,
@@ -66,7 +66,7 @@ public GuideSessionSnapshot(
             List<GuideMessage> messages,
             List<GuideRequestSnapshot> requests) {
         this(
-                sessionId, messages, requests, List.of(),
+                sessionId, messages, requests, dev.openallay.util.Java8Collections.listOf(),
                 GuideModelSelection.client("default"),
                 GuideHistoryWindowSnapshot.disabled(requests.size()));
     }

@@ -23,14 +23,14 @@ public final class GuideToolDetailView {
     private final Optional<Failure> failure;
     public GuideToolDetailView(String titleKey, GuideToolStatus status, GuideToolInvocationView invocation, GuideToolIntent intent, List<GuideDetailCard> cards, List<GuideToolMessage> narration, Optional<Debug> debug, GuideToolDisplayStatus displayStatus, Optional<Failure> failure) {
 
-        if (titleKey == null || titleKey.isBlank()) {
+        if (titleKey == null || dev.openallay.util.Java8Strings.isBlank(titleKey)) {
             throw new IllegalArgumentException("titleKey must not be blank");
         }
         Objects.requireNonNull(status, "status");
         Objects.requireNonNull(invocation, "invocation");
         Objects.requireNonNull(intent, "intent");
-        cards = List.copyOf(cards);
-        narration = List.copyOf(narration);
+        cards = dev.openallay.util.Java8Collections.listCopyOf(cards);
+        narration = dev.openallay.util.Java8Collections.listCopyOf(narration);
         debug = Objects.requireNonNull(debug, "debug");
         Objects.requireNonNull(displayStatus, "displayStatus");
         failure = Objects.requireNonNull(failure, "failure");
@@ -77,7 +77,7 @@ public GuideToolDetailView(
 public GuideToolDetailView forRequest(boolean terminal) {
         GuideToolDisplayStatus projected = GuideToolDisplayStatus.from(status, terminal);
         return new GuideToolDetailView(titleKey, status, invocation, intent, cards,
-                projected == GuideToolDisplayStatus.NO_RESULT_RECORDED ? List.of() : narration,
+                projected == GuideToolDisplayStatus.NO_RESULT_RECORDED ? dev.openallay.util.Java8Collections.listOf() : narration,
                 debug, projected, failure);
     }
 public GuideToolDetailView(
@@ -131,8 +131,8 @@ public static final class Debug {
     private final String validationDiagnostic;
     public Debug(String invocationId, String toolId, JsonObject invocationArguments, JsonObject normalized, String validationDiagnostic) {
 
-            if (invocationId == null || invocationId.isBlank()
-                    || toolId == null || toolId.isBlank()) {
+            if (invocationId == null || dev.openallay.util.Java8Strings.isBlank(invocationId)
+                    || toolId == null || dev.openallay.util.Java8Strings.isBlank(toolId)) {
                 throw new IllegalArgumentException("debug identity must not be blank");
             }
             invocationArguments =

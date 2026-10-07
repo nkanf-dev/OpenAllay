@@ -44,7 +44,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
     private static final String INTERRUPTION_MESSAGE =
             "The previous client process ended before this request completed";
     private static final ModelMessage INTERRUPTION_NOTE = new ModelMessage(ModelRole.ASSISTANT,
-            List.of(new ModelContent.Text(
+            dev.openallay.util.Java8Collections.listOf(new ModelContent.Text(
                     "[OpenAllay request ended: request_interrupted] " + INTERRUPTION_MESSAGE)));
     private static final Map<String, List<ColumnSignature>>
             HISTORY_LAYOUT = historyLayout();
@@ -173,8 +173,8 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 Connection connection = open()) {
             ensureImageOwnership(connection, request.scope());
             List<SequencedRequest> loaded = readPage(connection, request);
-            List<GuideRequestSnapshot> snapshots = loaded.stream()
-                    .map(SequencedRequest::request).toList();
+            List<GuideRequestSnapshot> snapshots = dev.openallay.util.Java8Collections.toList(loaded.stream()
+                    .map(SequencedRequest::request));
             GuideHistoryCursor first = loaded.isEmpty() ? null : loaded.get(0).cursor();
             GuideHistoryCursor last = loaded.isEmpty() ? null : loaded.get(loaded.size() - 1).cursor();
             boolean hasEarlier = first != null && requestExists(
@@ -201,15 +201,15 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 Connection connection = open()) {
             ensureImageOwnership(connection, request.scope());
             if (readHeader(connection, request.scope()) == null) {
-                return new GuideHistoryContextSeed(request.sessionId(), List.of(), List.of(), 0);
+                return new GuideHistoryContextSeed(request.sessionId(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), 0);
             }
             List<ModelMessage> messages = readContext(
                     connection, request.scope().scopeId(), request.sessionId());
             if (messages.isEmpty()) {
-                return new GuideHistoryContextSeed(request.sessionId(), List.of(), List.of(), 0);
+                return new GuideHistoryContextSeed(request.sessionId(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), 0);
             }
             // Do not discard over-budget structural units. Agent owns reduction and compaction.
-            int estimated = request.estimator().estimate("", messages, List.of());
+            int estimated = request.estimator().estimate("", messages, dev.openallay.util.Java8Collections.listOf());
             List<ContextCheckpoint> checkpoints = readApplicableCheckpoint(
                     connection, request.scope().scopeId(), request.sessionId(),
                     request.modelIdentifier(), messages);
@@ -232,7 +232,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 Connection connection = open()) {
             ensureImageOwnership(connection, scope);
             if (readHeader(connection, scope) == null) {
-                return List.of();
+                return dev.openallay.util.Java8Collections.listOf();
             }
             return readRequestContext(connection, scope.scopeId(), requestId);
         } catch (SQLException | IOException failure) {
@@ -254,7 +254,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             query.setString(2, requestId.toString());
             try (ResultSet result = query.executeQuery()) {
                 return result.next() ? modelContexts.decode(result.getString("payload_json"))
-                        : List.of();
+                        : dev.openallay.util.Java8Collections.listOf();
             }
         }
     }
@@ -268,7 +268,7 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
             query.setString(2, sessionId);
             try (ResultSet result = query.executeQuery()) {
                 return result.next() ? modelContexts.decode(result.getString("payload_json"))
-                        : List.of();
+                        : dev.openallay.util.Java8Collections.listOf();
             }
         }
     }
@@ -347,7 +347,7 @@ if ($oaPattern3_match) throw $oaPattern3_bound;
             boolean removed = commit.mutations().stream().anyMatch(mutation ->
                     mutation instanceof GuideHistoryMutation.DeleteSession
                             || mutation instanceof GuideHistoryMutation.ClearSession);
-            if (ownershipChanges) finishDurableImages(connection, List.of(commit.scope()), removed);
+            if (ownershipChanges) finishDurableImages(connection, dev.openallay.util.Java8Collections.listOf(commit.scope()), removed);
         } catch (SQLException | IOException failure) {
             if (durable) return; // Closing a durable JDBC transaction is not a failed commit.
             throw new GuideHistoryException(
@@ -396,7 +396,7 @@ if ($oaPattern4_match) throw $oaPattern4_bound;
             }
             // A fork cannot safely be replayed after durability. Manifest failures leave the
             // source+target write pins retained and still return the committed fork result.
-            finishDurableImages(connection, List.of(request.scope()), false);
+            finishDurableImages(connection, dev.openallay.util.Java8Collections.listOf(request.scope()), false);
             return durableResult;
         } catch (SQLException | IOException failure) {
             if (durableResult != null) return durableResult;
@@ -468,8 +468,7 @@ if ($oaPattern4_match) throw $oaPattern4_bound;
             identities.put(row.request().requestId(), targetId);
             GuideRequestSnapshot target = forkRequest(row.request(), targetId, fork.sessionId());
             upsertRequest(connection, scopeId, row.cursor().sequence(), target);
-            for (String table : List.of("timeline_entries", "request_sources", "request_model_context",
-                    "request_context_boundaries")) {
+            for (String table : dev.openallay.util.Java8Collections.listOf("timeline_entries", "request_sources", "request_model_context", "request_context_boundaries")) {
                 copyRequestPayload(connection, scopeId, table, row.request().requestId(), targetId);
             }
         }
@@ -512,7 +511,7 @@ if ($oaPattern4_match) throw $oaPattern4_bound;
         GuideHistoryCursor first = cursor(connection, scopeId, fork.sessionId(), source.get(0).cursor().sequence());
         GuideHistoryCursor last = cursor(connection, scopeId, fork.sessionId(), fork.cutoff().sequence());
         GuideHistoryPage page = new GuideHistoryPage(fork.sessionId(),
-                window.stream().map(SequencedRequest::request).toList(),
+                dev.openallay.util.Java8Collections.toList(window.stream().map(SequencedRequest::request)),
                 window.get(0).cursor(), window.get(window.size() - 1).cursor(), source.size() > window.size(), false);
         return new GuideHistoryForkResult(new GuideHistoryMetadata.Session(
                 fork.sessionId(), ordinal, fork.modelSelection(), source.size(), first, last,
@@ -603,7 +602,7 @@ String columns = $oaSwitch1_exit_result;
                     checkpoints.add(codec.decodeCheckpoint(value.toString()));
                 }
                 return new RequestBoundary(modelContexts.decode(result.getString("payload_json")),
-                        List.copyOf(checkpoints));
+                        dev.openallay.util.Java8Collections.listCopyOf(checkpoints));
             }
         }
     }
@@ -651,14 +650,14 @@ final java.lang.Object $oaPattern5_value = scope;
 final boolean $oaPattern5_match = $oaPattern5_value instanceof GuideHistoryDeleteScope.Partition;
 GuideHistoryDeleteScope.Partition $oaPattern5_bound = $oaPattern5_match ? (GuideHistoryDeleteScope.Partition) $oaPattern5_value : null;
 if ($oaPattern5_match) {
-                affected = List.of($oaPattern5_bound.scope());
+                affected = dev.openallay.util.Java8Collections.listOf($oaPattern5_bound.scope());
             } else {
 final java.lang.Object $oaPattern6_value = scope;
 final boolean $oaPattern6_match = $oaPattern6_value instanceof GuideHistoryDeleteScope.Actor;
 GuideHistoryDeleteScope.Actor $oaPattern6_bound = $oaPattern6_match ? (GuideHistoryDeleteScope.Actor) $oaPattern6_value : null;
 if ($oaPattern6_match) {
-                affected = readScopes(connection).stream()
-                        .filter(existing -> existing.actorId().equals($oaPattern6_bound.actorId())).toList();
+                affected = dev.openallay.util.Java8Collections.toList(readScopes(connection).stream()
+                        .filter(existing -> existing.actorId().equals($oaPattern6_bound.actorId())));
             } else {
                 throw new IncompatibleClassChangeError();
             }
@@ -714,7 +713,7 @@ if ($oaPattern9_match) throw $oaPattern9_bound;
             try {
                 affected = readScopes(connection);
             } catch (SQLException | IllegalArgumentException unreadable) {
-                affected = List.of();
+                affected = dev.openallay.util.Java8Collections.listOf();
             }
             try (Statement statement = connection.createStatement()) {
                 statement.execute("pragma foreign_keys=off");
@@ -773,7 +772,7 @@ if ($oaPattern10_match
                 }
             }
         }
-        return Map.copyOf(owners);
+        return dev.openallay.util.Java8Collections.mapCopyOf(owners);
     }
 
     private static boolean changesImageOwnership(GuideHistoryMutation mutation) {
@@ -913,7 +912,7 @@ if ($oaPattern25_match) {
                     GuideHistoryScope.Kind.valueOf(result.getString("connection_kind")),
                     result.getString("scope_id")));
         }
-        return List.copyOf(scopes);
+        return dev.openallay.util.Java8Collections.listCopyOf(scopes);
     }
 
     private void recoverPinsAfterRollback(
@@ -934,8 +933,8 @@ if ($oaPattern25_match) {
             Set<UUID> actors = changed.stream().map(GuideHistoryScope::actorId)
                     .collect(java.util.stream.Collectors.toSet());
             List<GuideHistoryScope> scopes = new ArrayList<>(changed);
-            if (collect) scopes.addAll(readScopes(connection).stream()
-                    .filter(scope -> actors.contains(scope.actorId())).toList());
+            if (collect) scopes.addAll(dev.openallay.util.Java8Collections.toList(readScopes(connection).stream()
+                    .filter(scope -> actors.contains(scope.actorId()))));
             for (GuideHistoryScope scope : new java.util.LinkedHashSet<>(scopes)) {
                 reconcileScope(connection, scope);
             }
@@ -1022,7 +1021,7 @@ if ($oaPattern25_match) {
             return;
         }
         List<String> differences = new ArrayList<>();
-        Set<String> actualTables = Set.copyOf(tables);
+        Set<String> actualTables = dev.openallay.util.Java8Collections.setCopyOf(tables);
         Set<String> missingTables = new java.util.TreeSet<>(HISTORY_LAYOUT.keySet());
         missingTables.removeAll(actualTables);
         Set<String> extraTables = new java.util.TreeSet<>(actualTables);
@@ -1083,12 +1082,10 @@ if ($oaPattern25_match) {
 
     private static Map<String, List<ForeignKeySignature>> historyOwnership() {
         Map<String, List<ForeignKeySignature>> tables = new LinkedHashMap<>();
-        tables.put("partitions", List.of());
-        tables.put("sessions", List.of(foreignKey(0, "partitions", "scope_id")));
-        List<ForeignKeySignature> sessionOwner = List.of(
-                foreignKey(0, "sessions", "scope_id"), foreignKey(1, "sessions", "session_id"));
-        List<ForeignKeySignature> requestOwner = List.of(
-                foreignKey(0, "requests", "scope_id"), foreignKey(1, "requests", "request_id"));
+        tables.put("partitions", dev.openallay.util.Java8Collections.listOf());
+        tables.put("sessions", dev.openallay.util.Java8Collections.listOf(foreignKey(0, "partitions", "scope_id")));
+        List<ForeignKeySignature> sessionOwner = dev.openallay.util.Java8Collections.listOf(foreignKey(0, "sessions", "scope_id"), foreignKey(1, "sessions", "session_id"));
+        List<ForeignKeySignature> requestOwner = dev.openallay.util.Java8Collections.listOf(foreignKey(0, "requests", "scope_id"), foreignKey(1, "requests", "request_id"));
         tables.put("requests", sortedForeignKeys(sessionOwner));
         List<ForeignKeySignature> messageOwners = new ArrayList<>(sessionOwner);
         messageOwners.addAll(requestOwner);
@@ -1099,7 +1096,7 @@ if ($oaPattern25_match) {
         tables.put("model_context", sortedForeignKeys(sessionOwner));
         tables.put("request_model_context", sortedForeignKeys(requestOwner));
         tables.put("request_context_boundaries", sortedForeignKeys(requestOwner));
-        return Map.copyOf(tables);
+        return dev.openallay.util.Java8Collections.mapCopyOf(tables);
     }
 
     private static ForeignKeySignature foreignKey(int sequence, String owner, String column) {
@@ -1107,7 +1104,7 @@ if ($oaPattern25_match) {
     }
 
     private static List<ForeignKeySignature> sortedForeignKeys(List<ForeignKeySignature> keys) {
-        return keys.stream().sorted(java.util.Comparator.comparing(ForeignKeySignature::toString)).toList();
+        return dev.openallay.util.Java8Collections.toList(keys.stream().sorted(java.util.Comparator.comparing(ForeignKeySignature::toString)));
     }
 
     private static List<ColumnSignature> tableSignature(Connection connection, String table)
@@ -1125,7 +1122,7 @@ if ($oaPattern25_match) {
                         result.getInt("hidden")));
             }
         }
-        return List.copyOf(columns);
+        return dev.openallay.util.Java8Collections.listCopyOf(columns);
     }
 
     private static Map<String, List<ColumnSignature>> historyLayout() {
@@ -1190,7 +1187,7 @@ if ($oaPattern25_match) {
                 column("request_id", "TEXT", true, 2),
                 column("payload_json", "TEXT", true, 0),
                 column("checkpoints_json", "TEXT", true, 0)));
-        return Map.copyOf(tables);
+        return dev.openallay.util.Java8Collections.mapCopyOf(tables);
     }
 
     private static List<ColumnSignature> payloadTableSignature() {
@@ -1202,7 +1199,7 @@ if ($oaPattern25_match) {
     }
 
     private static List<ColumnSignature> columns(ColumnSignature... columns) {
-        return List.of(columns);
+        return dev.openallay.util.Java8Collections.listOf(columns);
     }
 
     private static ColumnSignature column(
@@ -1406,7 +1403,7 @@ if ($oaPattern25_match) {
                 tables.add(result.getString(1));
             }
         }
-        return List.copyOf(tables);
+        return dev.openallay.util.Java8Collections.listCopyOf(tables);
     }
 
     private static String quoteIdentifier(String identifier) {
@@ -1528,7 +1525,7 @@ if ($oaPattern32_match) {
                     insert.setString(2, $oaPattern32_bound.requestId().toString());
                     insert.setInt(3, ordinal);
                     insert.setString(4, codec.encodeSources(
-                            List.of($oaPattern32_bound.sources().get(ordinal))));
+                            dev.openallay.util.Java8Collections.listOf($oaPattern32_bound.sources().get(ordinal))));
                     insert.executeUpdate();
                 }
             }
@@ -1652,7 +1649,7 @@ GuideHistoryMutation.ClearSession $oaPattern40_bound = $oaPattern40_match ? (Gui
 if ($oaPattern40_match) {
             applyMutation(connection, scope, new GuideHistoryMutation.UpsertSessionUsage(
                     $oaPattern40_bound.sessionId(), GuideUsageSnapshot.empty()));
-            for (String table : List.of("messages", "compaction_checkpoints", "model_context")) {
+            for (String table : dev.openallay.util.Java8Collections.listOf("messages", "compaction_checkpoints", "model_context")) {
                 try (PreparedStatement statement = connection.prepareStatement(
                         "delete from " + table + " where scope_id = ? and session_id = ?")) {
                     statement.setString(1, scopeId);
@@ -1838,7 +1835,7 @@ String comparison = $oaSwitch0_exit_result;
         if (request.direction() != GuideHistoryPageRequest.Direction.AFTER) {
             java.util.Collections.reverse(loaded);
         }
-        return List.copyOf(loaded);
+        return dev.openallay.util.Java8Collections.listCopyOf(loaded);
     }
 
     private void requireCursor(Connection connection, GuideHistoryPageRequest request)
@@ -1961,12 +1958,12 @@ String comparison = $oaSwitch0_exit_result;
                                     == checkpoint.sourceToIndexExclusive());
                     if (boundary && checkpoint.sourceHash().equals(ContextSourceHash.compute(
                             dev.openallay.json.EngineJson.create(), messages.subList(0, checkpoint.sourceToIndexExclusive())))) {
-                        return List.of(checkpoint);
+                        return dev.openallay.util.Java8Collections.listOf(checkpoint);
                     }
                 }
             }
         }
-        return List.of();
+        return dev.openallay.util.Java8Collections.listOf();
     }
 
     private void recoverInterruptedRows(Connection connection, GuideHistoryScope scope)
@@ -2052,7 +2049,7 @@ if ($oaPattern41_match
                 ModelMessage acceptedUser = ModelMessage.userText(request.userMessage());
                 if (missingOriginal) {
                     // Accepted request text is known input, not a reversed display/tool projection.
-                    original = List.of(acceptedUser);
+                    original = dev.openallay.util.Java8Collections.listOf(acceptedUser);
                 }
                 List<ModelMessage> recoveredOriginal = withInterruptionNote(original);
                 applyMutation(connection, scope, new GuideHistoryMutation.ReplaceRequestContext(
@@ -2068,7 +2065,7 @@ if ($oaPattern41_match
                                     && current.get(current.size() - 2).equals(acceptedUser))) {
                         List<ModelMessage> withUser = new ArrayList<>(current);
                         withUser.add(acceptedUser);
-                        current = List.copyOf(withUser);
+                        current = dev.openallay.util.Java8Collections.listCopyOf(withUser);
                     }
                     List<ModelMessage> recoveredCurrent = withInterruptionNote(current);
                     applyMutation(connection, scope, new GuideHistoryMutation.ReplaceContext(
@@ -2077,7 +2074,7 @@ if ($oaPattern41_match
                     // any unrecorded tool step, and this boundary can seed an independent fork.
                     captureRequestBoundary(connection, scope.scopeId(),
                             new GuideHistoryMutation.CaptureRequestBoundary(
-                                    request.requestId(), recoveredCurrent, List.of()));
+                                    request.requestId(), recoveredCurrent, dev.openallay.util.Java8Collections.listOf()));
                 }
             }
             if (changed) {
@@ -2091,7 +2088,7 @@ if ($oaPattern41_match
                 failureInjector.beforeCommit(Mutation.RECOVER);
             }
             connection.commit();
-            finishDurableImages(connection, List.of(scope), false);
+            finishDurableImages(connection, dev.openallay.util.Java8Collections.listOf(scope), false);
         } catch (SQLException | IOException | RuntimeException failure) {
             if (rollback(connection, failure)) recoverPinsAfterRollback(connection, scope, failure);
             throw failure;
@@ -2106,7 +2103,7 @@ if ($oaPattern41_match
         }
         List<ModelMessage> retained = new ArrayList<>(messages);
         retained.add(INTERRUPTION_NOTE);
-        return List.copyOf(retained);
+        return dev.openallay.util.Java8Collections.listCopyOf(retained);
     }
 
     private static PartitionHeader readHeader(Connection connection, GuideHistoryScope scope)
@@ -2159,7 +2156,7 @@ if ($oaPattern41_match
                 throw new IllegalArgumentException("durable timeline ordinals are not contiguous");
             }
         }
-        return List.copyOf(timeline);
+        return dev.openallay.util.Java8Collections.listCopyOf(timeline);
     }
 
     private List<GuideSource> readSources(
@@ -2185,7 +2182,7 @@ if ($oaPattern41_match
                 }
             }
         }
-        return List.copyOf(sources);
+        return dev.openallay.util.Java8Collections.listCopyOf(sources);
     }
 
     private static Long nullableLong(ResultSet result, String field) throws SQLException {

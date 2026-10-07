@@ -19,11 +19,11 @@ public final class GuideClientE2EConfig {
     private final int historySeedRequests;
     public GuideClientE2EConfig(String scenario, String sessionId, String question, GuideModelMode modelMode, Path reportPath, Path tracePath, boolean shutdownAfterReport, int historySeedRequests) {
 
-        if (scenario == null || scenario.isBlank()) throw new IllegalArgumentException("scenario is required");
+        if (scenario == null || dev.openallay.util.Java8Strings.isBlank(scenario)) throw new IllegalArgumentException("scenario is required");
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid sessionId");
         }
-        if (question == null || question.isBlank()) throw new IllegalArgumentException("question is required");
+        if (question == null || dev.openallay.util.Java8Strings.isBlank(question)) throw new IllegalArgumentException("question is required");
         java.util.Objects.requireNonNull(modelMode, "modelMode");
         java.util.Objects.requireNonNull(reportPath, "reportPath");
         java.util.Objects.requireNonNull(tracePath, "tracePath");
@@ -72,7 +72,7 @@ public GuideClientE2EConfig(
                 question,
                 modelMode,
                 reportPath,
-                Path.of(reportPath.toString() + ".trace.json"),
+                java.nio.file.Paths.get(reportPath.toString() + ".trace.json"),
                 shutdownAfterReport,
                 historySeedRequests);
     }
@@ -87,8 +87,8 @@ public static Optional<GuideClientE2EConfig> from(Properties properties) {
                 properties.getProperty("openallay.e2e.session", "e2e"),
                 required(properties, "openallay.e2e.question"),
                 GuideModelMode.valueOf(mode),
-                Path.of(required(properties, "openallay.e2e.report")),
-                Path.of(properties.getProperty(
+                java.nio.file.Paths.get(required(properties, "openallay.e2e.report")),
+                java.nio.file.Paths.get(properties.getProperty(
                         "openallay.e2e.trace",
                         required(properties, "openallay.e2e.report") + ".trace.json")),
                 Boolean.parseBoolean(properties.getProperty("openallay.e2e.shutdown", "true")),
@@ -96,7 +96,7 @@ public static Optional<GuideClientE2EConfig> from(Properties properties) {
     }
 private static String required(Properties properties, String key) {
         String value = properties.getProperty(key);
-        if (value == null || value.isBlank()) throw new IllegalArgumentException(key + " is required");
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) throw new IllegalArgumentException(key + " is required");
         return value;
     }
 private static int nonNegativeInteger(Properties properties, String key, int fallback) {

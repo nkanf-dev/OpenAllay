@@ -16,9 +16,8 @@ import java.util.UUID;
 
 /** Same-request allowlist derived only from validated tool results and evidence sources. */
 public final class SemanticReferenceIndex {
-    private static final java.util.Set<String> ITEM_FIELDS = java.util.Set.of(
-            "itemId", "resolvedItems", "counts", "alternatives");
-    private static final java.util.Set<String> SOURCE_FIELDS = java.util.Set.of("sourceId");
+    private static final java.util.Set<String> ITEM_FIELDS = dev.openallay.util.Java8Collections.setOf("itemId", "resolvedItems", "counts", "alternatives");
+    private static final java.util.Set<String> SOURCE_FIELDS = dev.openallay.util.Java8Collections.setOf("sourceId");
 
     private final UUID requestId;
     private final Map<SemanticReferenceKind, Map<String, String>> origins;
@@ -28,13 +27,13 @@ public final class SemanticReferenceIndex {
         this.requestId = requestId;
         EnumMap<SemanticReferenceKind, Map<String, String>> copied =
                 new EnumMap<>(SemanticReferenceKind.class);
-        origins.forEach((kind, values) -> copied.put(kind, Map.copyOf(values)));
-        this.origins = Map.copyOf(copied);
+        origins.forEach((kind, values) -> copied.put(kind, dev.openallay.util.Java8Collections.mapCopyOf(values)));
+        this.origins = dev.openallay.util.Java8Collections.mapCopyOf(copied);
     }
 
     public static SemanticReferenceIndex empty(UUID requestId) {
         return new SemanticReferenceIndex(
-                java.util.Objects.requireNonNull(requestId, "requestId"), Map.of());
+                java.util.Objects.requireNonNull(requestId, "requestId"), dev.openallay.util.Java8Collections.mapOf());
     }
 
     public static SemanticReferenceIndex from(
@@ -42,7 +41,7 @@ public final class SemanticReferenceIndex {
         java.util.Objects.requireNonNull(requestId, "requestId");
         EnumMap<SemanticReferenceKind, Map<String, String>> values =
                 new EnumMap<>(SemanticReferenceKind.class);
-        for (GuideTimelineEntry entry : List.copyOf(timeline)) {
+        for (GuideTimelineEntry entry : dev.openallay.util.Java8Collections.listCopyOf(timeline)) {
             final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
 final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
 if (!((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern0_holder.bound = (GuideTimelineEntry.Tool) $oaPattern0_holder.value) != null)))) {
@@ -88,7 +87,7 @@ if (!((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTi
                     origin));
             if ("sources".equals(field)) {
                 String sourceId = string(object, "id");
-                if (!sourceId.isBlank()) {
+                if (!dev.openallay.util.Java8Strings.isBlank(sourceId)) {
                     put(values, SemanticReferenceKind.SOURCE, sourceId, origin);
                 }
             }
@@ -118,9 +117,9 @@ if (!((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTi
     }
 
     private static Optional<RecipeReference> recipe(JsonObject object) {
-        if (!string(object, "sourceId").isBlank()
-                && !string(object, "generation").isBlank()
-                && !string(object, "recipeId").isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(string(object, "sourceId"))
+                && !dev.openallay.util.Java8Strings.isBlank(string(object, "generation"))
+                && !dev.openallay.util.Java8Strings.isBlank(string(object, "recipeId"))) {
             try {
                 return Optional.of(new RecipeReference(
                         string(object, "sourceId"),

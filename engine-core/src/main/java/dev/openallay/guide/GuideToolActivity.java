@@ -16,8 +16,8 @@ public final class GuideToolActivity {
     private final List<GuideSource> sources;
     public GuideToolActivity(String invocationId, int index, String toolId, GuideToolStatus status, JsonObject invocationArguments, GuideToolInvocationView invocation, JsonObject normalized, List<GuideToolMessage> presentationMessages, List<GuideSource> sources) {
 
-        if (invocationId == null || invocationId.isBlank()
-                || index < 0 || toolId == null || toolId.isBlank()) {
+        if (invocationId == null || dev.openallay.util.Java8Strings.isBlank(invocationId)
+                || index < 0 || toolId == null || dev.openallay.util.Java8Strings.isBlank(toolId)) {
             throw new IllegalArgumentException("tool activity identity is invalid");
         }
         java.util.Objects.requireNonNull(status, "status");
@@ -25,8 +25,8 @@ public final class GuideToolActivity {
                 invocationArguments == null ? null : dev.openallay.json.JsonTrees.copy(invocationArguments);
         invocation = java.util.Objects.requireNonNull(invocation, "invocation");
         normalized = normalized == null ? null : dev.openallay.json.JsonTrees.copy(normalized);
-        presentationMessages = List.copyOf(presentationMessages);
-        sources = List.copyOf(sources);
+        presentationMessages = dev.openallay.util.Java8Collections.listCopyOf(presentationMessages);
+        sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
 
         this.invocationId = invocationId;
         this.index = index;

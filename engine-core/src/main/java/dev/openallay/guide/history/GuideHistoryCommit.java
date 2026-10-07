@@ -10,7 +10,7 @@ public final class GuideHistoryCommit {
     public GuideHistoryCommit(GuideHistoryScope scope, List<GuideHistoryMutation> mutations) {
 
         java.util.Objects.requireNonNull(scope, "scope");
-        mutations = List.copyOf(mutations);
+        mutations = dev.openallay.util.Java8Collections.listCopyOf(mutations);
         if (mutations.isEmpty()) {
             throw new IllegalArgumentException("history commit must not be empty");
         }

@@ -127,7 +127,7 @@ public final class GuideHudPresenter {
             if (request.status() != GuideRequestStatus.COMPLETED || request.terminalAt() == null
                     || latest != null && (latest.request() == request || compare(request, latest) < 0)) continue;
             String text = assistantPreview(request, false);
-            if (text.isBlank()) continue;
+            if (dev.openallay.util.Java8Strings.isBlank(text)) continue;
             latest = new Reply(request, text);
         }
         if (latest != null) replies.put(session.sessionId(), latest);
@@ -149,8 +149,8 @@ public final class GuideHudPresenter {
     private List<GuideUiRow> rows(GuideRequestSnapshot request, GuideDisplayConfig config) {
         Projected cached = projected.get(request.requestId());
         if (cached == null || cached.request() != request || cached.debug() != config.debugMode()) {
-            cached = new Projected(request, config.debugMode(), GuideUiView.projectRequestRows(request, config)
-                    .stream().filter(row -> !(row instanceof GuideUiRow.User)).toList());
+            cached = new Projected(request, config.debugMode(), dev.openallay.util.Java8Collections.toList(GuideUiView.projectRequestRows(request, config)
+                    .stream().filter(row -> !(row instanceof GuideUiRow.User))));
             projected.put(request.requestId(), cached);
         }
         return cached.rows();

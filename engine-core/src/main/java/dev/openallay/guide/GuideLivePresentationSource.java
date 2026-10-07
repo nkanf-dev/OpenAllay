@@ -69,8 +69,8 @@ if ((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTime
                             GuideToolIntent summary = cardSummary(detail.cards().get(ordinal));
                             add(admission, cards, previews, $oaPattern0_holder.bound.ordinal(),
                                     "tool:" + $oaPattern0_holder.bound.activity().invocationId() + ":card:" + ordinal,
-                                    detail.intent().title().isBlank() ? summary.title() : detail.intent().title(),
-                                    detail.intent().description().isBlank() ? summary.description() : detail.intent().description());
+                                    dev.openallay.util.Java8Strings.isBlank(detail.intent().title()) ? summary.title() : detail.intent().title(),
+                                    dev.openallay.util.Java8Strings.isBlank(detail.intent().description()) ? summary.description() : detail.intent().description());
                         }
                     }
                 } else {
@@ -90,8 +90,8 @@ if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTime
 final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
 if ((($oaPattern3_holder.value = after.timeline().get(index)) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern3_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern3_holder.value) != null))) {
                         String text = $oaPattern3_holder.bound.semantic().fallbackText();
-                        if (!text.isBlank()) emit(admission, after, GuidePresentationEvent.Kind.REPLY_FINAL,
-                                List.of(new GuidePresentationEvent.ContentRef($oaPattern3_holder.bound.ordinal(), "reply")), text, List.of());
+                        if (!dev.openallay.util.Java8Strings.isBlank(text)) emit(admission, after, GuidePresentationEvent.Kind.REPLY_FINAL,
+                                dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef($oaPattern3_holder.bound.ordinal(), "reply")), text, dev.openallay.util.Java8Collections.listOf());
                         break;
                     }
                 }
@@ -99,15 +99,15 @@ if ((($oaPattern3_holder.value = after.timeline().get(index)) instanceof dev.ope
             List<GuidePresentationEvent.ContentRef> completedContent = after.timeline().stream()
                     .filter(GuideTimelineEntry.Assistant.class::isInstance)
                     .map(GuideTimelineEntry.Assistant.class::cast)
-                    .filter(assistant -> !assistant.semantic().fallbackText().isBlank())
+                    .filter(assistant -> !dev.openallay.util.Java8Strings.isBlank(assistant.semantic().fallbackText()))
                     .reduce((first, second) -> second)
-                    .map(assistant -> List.of(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")))
-                    .orElse(List.of(new GuidePresentationEvent.ContentRef(-1, "task-completed")));
-            emit(admission, after, GuidePresentationEvent.Kind.TASK_COMPLETED, completedContent, "", List.of());
+                    .map(assistant -> dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")))
+                    .orElse(dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef(-1, "task-completed")));
+            emit(admission, after, GuidePresentationEvent.Kind.TASK_COMPLETED, completedContent, "", dev.openallay.util.Java8Collections.listOf());
         } else if (after.status() == GuideRequestStatus.FAILED && after.terminal()) {
             emit(admission, after, GuidePresentationEvent.Kind.TASK_FAILED,
-                    List.of(new GuidePresentationEvent.ContentRef(-1, "task-failed")),
-                    after.failure() == null ? "" : after.failure().message(), List.of());
+                    dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef(-1, "task-failed")),
+                    after.failure() == null ? "" : after.failure().message(), dev.openallay.util.Java8Collections.listOf());
         }
         if (after.terminal()) admitted.remove(after.requestId());
     }
@@ -123,7 +123,7 @@ if ((($oaPattern4_holder.value = block) instanceof dev.openallay.guide.semantic.
                 RichComponent value = $oaPattern4_holder.bound.component();
                 String title = componentTitle(value);
                 add(admission, cards, previews, ordinal, "node:" + $oaPattern4_holder.bound.nodeId(),
-                        title.isBlank() ? value.fallbackText() : title, value.fallbackText());
+                        dev.openallay.util.Java8Strings.isBlank(title) ? value.fallbackText() : title, value.fallbackText());
             } else {
 final class $oaPattern5_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Table bound; }
 final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
@@ -161,17 +161,17 @@ if ((($oaPattern9_holder.value = value) instanceof dev.openallay.guide.semantic.
 final class $oaPattern10_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.ItemRow bound; }
 final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
 if ((($oaPattern10_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.ItemRow && (($oaPattern10_holder.bound = (RichComponent.ItemRow) $oaPattern10_holder.value) != null))) {
-            return labels($oaPattern10_holder.bound.items().stream().map(RichComponent.Item::label).toList());
+            return labels(dev.openallay.util.Java8Collections.toList($oaPattern10_holder.bound.items().stream().map(RichComponent.Item::label)));
         } else {
 final class $oaPattern11_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.IngredientCheck bound; }
 final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
 if ((($oaPattern11_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.IngredientCheck && (($oaPattern11_holder.bound = (RichComponent.IngredientCheck) $oaPattern11_holder.value) != null))) {
-            return labels($oaPattern11_holder.bound.ingredients().stream().map(RichComponent.Ingredient::label).toList());
+            return labels(dev.openallay.util.Java8Collections.toList($oaPattern11_holder.bound.ingredients().stream().map(RichComponent.Ingredient::label)));
         } else {
 final class $oaPattern12_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.SourceSummary bound; }
 final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
 if ((($oaPattern12_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.SourceSummary && (($oaPattern12_holder.bound = (RichComponent.SourceSummary) $oaPattern12_holder.value) != null))) {
-            return labels($oaPattern12_holder.bound.sources().stream().map(RichComponent.Source::label).toList());
+            return labels(dev.openallay.util.Java8Collections.toList($oaPattern12_holder.bound.sources().stream().map(RichComponent.Source::label)));
         }
 }
 }
@@ -180,7 +180,7 @@ if ((($oaPattern12_holder.value = value) instanceof dev.openallay.guide.semantic
         return "";
     }
     private static String labels(List<String> labels) {
-        return labels.stream().filter(label -> !label.isBlank()).distinct()
+        return labels.stream().filter(label -> !dev.openallay.util.Java8Strings.isBlank(label)).distinct()
                 .reduce((first, next) -> first + ", " + next).orElse("");
     }
     private static GuideToolIntent cardSummary(GuideDetailCard card) {
@@ -190,7 +190,7 @@ if ((($oaPattern12_holder.value = value) instanceof dev.openallay.guide.semantic
 final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
 if ((($oaPattern13_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.ItemGrid && (($oaPattern13_holder.bound = (GuideDetailCard.ItemGrid) $oaPattern13_holder.value) != null))) {
             return new GuideToolIntent(
-                    labels($oaPattern13_holder.bound.items().stream().map(dev.openallay.guide.ui.GuideItemView::displayName).toList()),
+                    labels(dev.openallay.util.Java8Collections.toList($oaPattern13_holder.bound.items().stream().map(dev.openallay.guide.ui.GuideItemView::displayName))),
                     $oaPattern13_holder.bound.items().stream().map(item -> item.displayName() + " × " + item.count())
                             .reduce((first, next) -> first + ", " + next).orElse(""));
         } else {
@@ -198,7 +198,7 @@ final class $oaPattern14_Holder { dev.openallay.guide.ui.GuideDetailCard value; 
 final $oaPattern14_Holder $oaPattern14_holder = new $oaPattern14_Holder();
 if ((($oaPattern14_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Recipe && (($oaPattern14_holder.bound = (GuideDetailCard.Recipe) $oaPattern14_holder.value) != null))) {
             return new GuideToolIntent(
-                    labels($oaPattern14_holder.bound.recipe().outputs().stream().map(dev.openallay.guide.ui.GuideRecipeCard.Output::displayName).toList()),
+                    labels(dev.openallay.util.Java8Collections.toList($oaPattern14_holder.bound.recipe().outputs().stream().map(dev.openallay.guide.ui.GuideRecipeCard.Output::displayName))),
                     $oaPattern14_holder.bound.recipe().outputs().stream().map(output -> output.displayName() + " × " + output.count())
                             .reduce((first, next) -> first + ", " + next).orElse(""));
         }
@@ -211,7 +211,7 @@ if ((($oaPattern14_holder.value = card) instanceof dev.openallay.guide.ui.GuideD
         GuidePresentationEvent.ContentRef ref = new GuidePresentationEvent.ContentRef(ordinal, id);
         if (!admission.content.add(ref)) return;
         cards.add(ref);
-        if (!title.isBlank() && !description.isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(title) && !dev.openallay.util.Java8Strings.isBlank(description)) {
             previews.add(new GuidePresentationEvent.CardPreview(ref, title, description));
         }
     }

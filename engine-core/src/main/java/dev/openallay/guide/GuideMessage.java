@@ -13,7 +13,7 @@ public final class GuideMessage {
 
         java.util.Objects.requireNonNull(requestId, "requestId");
         java.util.Objects.requireNonNull(role, "role");
-        if (text == null || text.isBlank()) {
+        if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) {
             throw new IllegalArgumentException("message text must not be blank");
         }
         java.util.Objects.requireNonNull(createdAt, "createdAt");

@@ -91,7 +91,7 @@ public static final class Assistant implements GuideUiRow {
     public Assistant(UUID requestId, int ordinal, String text, SemanticDocument semantic, boolean streaming, List<GuideSource> sources) {
 
             java.util.Objects.requireNonNull(semantic, "semantic");
-            sources = List.copyOf(sources);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
 
         this.requestId = requestId;
         this.ordinal = ordinal;

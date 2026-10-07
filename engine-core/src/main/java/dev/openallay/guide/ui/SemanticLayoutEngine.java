@@ -74,7 +74,7 @@ if ((($oaPattern3_holder.value = block) instanceof dev.openallay.guide.semantic.
             String[] codeLines = $oaPattern3_holder.bound.code().split("\\R", -1);
             for (int index = 0; index < codeLines.length; index++) {
                 addWrapped($oaPattern3_holder.bound.nodeId() + "-" + index, SemanticLayout.Kind.CODE, indent + 4,
-                        List.of(new SemanticLayout.Run(
+                        dev.openallay.util.Java8Collections.listOf(new SemanticLayout.Run(
                                 codeLines[index], SemanticLayout.Style.CODE, null)),
                         width, measurer, output);
             }
@@ -95,7 +95,7 @@ if ((($oaPattern4_holder.value = block) instanceof dev.openallay.guide.semantic.
                             SemanticLayout.Kind.TEXT,
                             indent,
                             measurer.lineHeight(SemanticLayout.Kind.TEXT),
-                            List.of(new SemanticLayout.Run(
+                            dev.openallay.util.Java8Collections.listOf(new SemanticLayout.Run(
                                     marker, SemanticLayout.Style.STRONG, null)),
                             null));
                 }
@@ -123,21 +123,21 @@ if ((($oaPattern5_holder.value = block) instanceof dev.openallay.guide.semantic.
             SemanticLayout.TableBox table = table($oaPattern5_holder.bound, Math.max(1, width - indent), measurer);
             output.add(new SemanticLayout.Line(
                     $oaPattern5_holder.bound.nodeId(), SemanticLayout.Kind.TABLE, indent,
-                    table.height(), List.of(), null, table));
+                    table.height(), dev.openallay.util.Java8Collections.listOf(), null, table));
         } else {
 final class $oaPattern6_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.ThematicBreak bound; }
 final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
 if ((($oaPattern6_holder.value = block) instanceof dev.openallay.guide.semantic.SemanticBlock.ThematicBreak && (($oaPattern6_holder.bound = (SemanticBlock.ThematicBreak) $oaPattern6_holder.value) != null))) {
             output.add(new SemanticLayout.Line(
                     $oaPattern6_holder.bound.nodeId(), SemanticLayout.Kind.RULE, indent,
-                    measurer.lineHeight(SemanticLayout.Kind.RULE), List.of(), null));
+                    measurer.lineHeight(SemanticLayout.Kind.RULE), dev.openallay.util.Java8Collections.listOf(), null));
         } else {
 final class $oaPattern7_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Component bound; }
 final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
 if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.SemanticBlock.Component && (($oaPattern7_holder.bound = (SemanticBlock.Component) $oaPattern7_holder.value) != null))) {
             output.add(new SemanticLayout.Line(
                     $oaPattern7_holder.bound.nodeId(), SemanticLayout.Kind.COMPONENT, indent,
-                    componentHeight($oaPattern7_holder.bound.component(), measurer), List.of(), $oaPattern7_holder.bound.component()));
+                    componentHeight($oaPattern7_holder.bound.component(), measurer), dev.openallay.util.Java8Collections.listOf(), $oaPattern7_holder.bound.component()));
         } else {
             throw new IncompatibleClassChangeError();
         }
@@ -210,7 +210,7 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
                 SemanticBlock.TableCell sourceCell = cell(source, column);
                 cells.add(new SemanticLayout.TableCell(
                         column, cellX, rowY, widths[column], rowHeight,
-                        sourceCell.alignment(), List.of(), wrapped.get(column)));
+                        sourceCell.alignment(), dev.openallay.util.Java8Collections.listOf(), wrapped.get(column)));
                 cellX += widths[column];
             }
             rows.add(new SemanticLayout.TableRow(header, rowY, rowHeight, cells));
@@ -228,7 +228,7 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
             Measurer measurer) {
         int lineHeight = measurer.lineHeight(SemanticLayout.Kind.TABLE);
         List<SemanticBlock.TableRow> dataRows = table.rows().isEmpty()
-                ? List.of(table.header()) : table.rows();
+                ? dev.openallay.util.Java8Collections.listOf(table.header()) : table.rows();
         ArrayList<SemanticLayout.TableRow> rows = new ArrayList<>();
         int cardY = 0;
         for (int rowIndex = 0; rowIndex < dataRows.size(); rowIndex++) {
@@ -269,7 +269,7 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
     private static SemanticBlock.TableCell cell(SemanticBlock.TableRow row, int column) {
         return column < row.cells().size()
                 ? row.cells().get(column)
-                : new SemanticBlock.TableCell(SemanticBlock.Alignment.NONE, List.of());
+                : new SemanticBlock.TableCell(SemanticBlock.Alignment.NONE, dev.openallay.util.Java8Collections.listOf());
     }
 
     private static int[] distributeColumns(int[] desired, int available) {
@@ -306,7 +306,7 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
             result.add(new SemanticLayout.CellLine(
                     index * lineHeight, runWidth(line, measurer), line));
         }
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     private static int runWidth(List<SemanticLayout.Run> runs, Measurer measurer) {
@@ -325,16 +325,16 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
                 String value = new String(Character.toChars(codePoint));
                 if (codePoint == '\n') {
                     flushChunk(line, chunk, run);
-                    output.add(List.copyOf(line));
+                    output.add(dev.openallay.util.Java8Collections.listCopyOf(line));
                     line = new ArrayList<>();
                     used = 0;
                     offset += Character.charCount(codePoint);
                     continue;
                 }
                 int valueWidth = Math.max(1, measurer.width(value, run.style()));
-                if (used + valueWidth > width && (!line.isEmpty() || !chunk.isEmpty())) {
+                if (used + valueWidth > width && (!line.isEmpty() || !((chunk).length() == 0))) {
                     flushChunk(line, chunk, run);
-                    output.add(List.copyOf(line));
+                    output.add(dev.openallay.util.Java8Collections.listCopyOf(line));
                     line = new ArrayList<>();
                     used = 0;
                 }
@@ -344,15 +344,15 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
             }
             flushChunk(line, chunk, run);
         }
-        if (!line.isEmpty() || output.isEmpty()) output.add(List.copyOf(line));
-        return List.copyOf(output);
+        if (!line.isEmpty() || output.isEmpty()) output.add(dev.openallay.util.Java8Collections.listCopyOf(line));
+        return dev.openallay.util.Java8Collections.listCopyOf(output);
     }
 
     private static void flushChunk(
             List<SemanticLayout.Run> line,
             StringBuilder chunk,
             SemanticLayout.Run source) {
-        if (chunk.isEmpty()) return;
+        if (((chunk).length() == 0)) return;
         line.add(new SemanticLayout.Run(
                 chunk.toString(), source.style(), source.reference()));
         chunk.setLength(0);
@@ -390,7 +390,7 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
                 int codePoint = run.text().codePointAt(offset);
                 String value = new String(Character.toChars(codePoint));
                 if (codePoint == '\n') {
-                    if (!chunk.isEmpty()) {
+                    if (!((chunk).length() == 0)) {
                         line.add(new SemanticLayout.Run(
                                 chunk.toString(), run.style(), run.reference()));
                         chunk.setLength(0);
@@ -404,8 +404,8 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
                     continue;
                 }
                 int valueWidth = Math.max(1, measurer.width(value, run.style()));
-                if (used + valueWidth > available && (!line.isEmpty() || !chunk.isEmpty())) {
-                    if (!chunk.isEmpty()) {
+                if (used + valueWidth > available && (!line.isEmpty() || !((chunk).length() == 0))) {
+                    if (!((chunk).length() == 0)) {
                         line.add(new SemanticLayout.Run(
                                 chunk.toString(), run.style(), run.reference()));
                         chunk.setLength(0);
@@ -420,7 +420,7 @@ if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.
                 used += valueWidth;
                 offset += Character.charCount(codePoint);
             }
-            if (!chunk.isEmpty()) line.add(new SemanticLayout.Run(
+            if (!((chunk).length() == 0)) line.add(new SemanticLayout.Run(
                     chunk.toString(), run.style(), run.reference()));
         }
         if (!line.isEmpty() || output.size() == initialOutputSize) {
@@ -492,7 +492,7 @@ if ((($oaPattern13_holder.value = inline) instanceof dev.openallay.guide.semanti
 }
 }
         }
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     private static int componentHeight(RichComponent component, Measurer measurer) {

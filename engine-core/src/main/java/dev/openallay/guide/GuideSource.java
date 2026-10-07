@@ -11,7 +11,7 @@ public final class GuideSource {
     private final Instant lastCapturedAt;
     public GuideSource(String toolId, EvidenceMetadata evidence, Instant lastCapturedAt) {
 
-        if (toolId == null || toolId.isBlank()) {
+        if (toolId == null || dev.openallay.util.Java8Strings.isBlank(toolId)) {
             throw new IllegalArgumentException("toolId must not be blank");
         }
         new SourceObservation(evidence, lastCapturedAt);

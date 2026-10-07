@@ -22,7 +22,7 @@ public final class GuideHudView {
     private final boolean animationsEnabled;
     public GuideHudView(GuideUiConfig.Hud hud, String assistantName, String selectedSession, String latestReply, String streamingPreview, GuideUiProgress progress, int otherRunningTasks, List<GuideUiRow> rows, GuideUiConfig.Fullscreen presentation, boolean animationsEnabled) {
 
-        rows = List.copyOf(rows);
+        rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
         Objects.requireNonNull(presentation, "presentation");
         if (rows.stream().anyMatch(row -> row instanceof GuideUiRow.User
                 || row instanceof GuideUiRow.Persistence)) {
@@ -61,16 +61,16 @@ public final class GuideHudView {
 public GuideHudView(GuideUiConfig.Hud hud, String assistantName, String selectedSession,
             String latestReply, String streamingPreview, GuideUiProgress progress, int otherRunningTasks) {
         this(hud, assistantName, selectedSession, latestReply, streamingPreview, progress,
-                otherRunningTasks, List.of(), GuideUiConfig.Fullscreen.defaults(), false);
+                otherRunningTasks, dev.openallay.util.Java8Collections.listOf(), GuideUiConfig.Fullscreen.defaults(), false);
     }
 public static GuideHudView empty(GuideDisplayConfig config) {
         Objects.requireNonNull(config, "config");
         return new GuideHudView(config.ui().hud(), config.assistantName(), "", "", "", null, 0,
-                List.of(), config.ui().fullscreen(), config.animationsEnabled());
+                dev.openallay.util.Java8Collections.listOf(), config.ui().fullscreen(), config.animationsEnabled());
     }
 public boolean hasContent() {
         return !rows.isEmpty() || progress != null || otherRunningTasks > 0
-                || !latestReply.isBlank() || !streamingPreview.isBlank();
+                || !dev.openallay.util.Java8Strings.isBlank(latestReply) || !dev.openallay.util.Java8Strings.isBlank(streamingPreview);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

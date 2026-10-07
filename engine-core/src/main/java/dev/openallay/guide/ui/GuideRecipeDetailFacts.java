@@ -10,7 +10,7 @@ public static final class Line {
     private final String key;
     private final List<String> arguments;
     public Line(String key, List<String> arguments) {
- arguments = List.copyOf(arguments);
+ arguments = dev.openallay.util.Java8Collections.listCopyOf(arguments);
         this.key = key;
         this.arguments = arguments;
     }
@@ -41,7 +41,7 @@ public static final class Line {
     public static List<Line> project(GuideRecipeCard recipe) {
         List<Line> lines = new ArrayList<>();
         lines.add(line("screen.openallay.recipe.identity", recipe.id(), recipe.type()));
-        if (!recipe.workstation().isBlank()) lines.add(line("screen.openallay.recipe.workstation", recipe.workstation()));
+        if (!dev.openallay.util.Java8Strings.isBlank(recipe.workstation())) lines.add(line("screen.openallay.recipe.workstation", recipe.workstation()));
         for (GuideRecipeCard.Output output : recipe.outputs()) {
             lines.add(line("screen.openallay.recipe.output", output.displayName(), output.itemId(), output.count()));
         }
@@ -54,7 +54,7 @@ public static final class Line {
         if (processing.durationTicks() != null) lines.add(line("screen.openallay.native.recipe.duration", processing.durationTicks()));
         if (processing.energy() != null) lines.add(line("screen.openallay.native.recipe.energy", processing.energy()));
         if (processing.temperature() != null) lines.add(line("screen.openallay.native.recipe.temperature", processing.temperature()));
-        return List.copyOf(lines);
+        return dev.openallay.util.Java8Collections.listCopyOf(lines);
     }
     private static void ingredient(List<Line> lines, GuideRecipeCard.Ingredient ingredient) {
         lines.add(line(ingredient.consumed() ? "screen.openallay.recipe.ingredient"
@@ -65,6 +65,6 @@ public static final class Line {
         }
     }
     private static Line line(String key, Object... arguments) {
-        return new Line(key, java.util.Arrays.stream(arguments).map(String::valueOf).toList());
+        return new Line(key, dev.openallay.util.Java8Collections.toList(java.util.Arrays.stream(arguments).map(String::valueOf)));
     }
 }

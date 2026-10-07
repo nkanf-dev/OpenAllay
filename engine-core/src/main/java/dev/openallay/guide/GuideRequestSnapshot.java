@@ -31,17 +31,17 @@ public final class GuideRequestSnapshot {
             throw new IllegalArgumentException("invalid sessionId");
         }
         java.util.Objects.requireNonNull(topology, "topology");
-        if (userMessage == null || userMessage.isBlank()) {
+        if (userMessage == null || dev.openallay.util.Java8Strings.isBlank(userMessage)) {
             throw new IllegalArgumentException("userMessage must not be blank");
         }
-        timeline = List.copyOf(timeline);
+        timeline = dev.openallay.util.Java8Collections.listCopyOf(timeline);
         for (int index = 0; index < timeline.size(); index++) {
             if (timeline.get(index).ordinal() != index) {
                 throw new IllegalArgumentException("timeline ordinals must be contiguous");
             }
         }
         java.util.Objects.requireNonNull(status, "status");
-        sources = List.copyOf(sources);
+        sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
         java.util.Objects.requireNonNull(usage, "usage");
         if (retryAfterMillis != null && retryAfterMillis < 0) {
             throw new IllegalArgumentException("retryAfterMillis must not be negative");
@@ -206,9 +206,9 @@ public static GuideRequestSnapshot start(
                 sessionId,
                 topology,
                 userMessage,
-                List.of(),
+                dev.openallay.util.Java8Collections.listOf(),
                 GuideRequestStatus.PREPARING,
-                List.of(),
+                dev.openallay.util.Java8Collections.listOf(),
                 ModelUsage.empty(),
                 null,
                 null,
@@ -235,11 +235,10 @@ if ($oaPattern0_match) {
         return "";
     }
 public List<GuideToolActivity> tools() {
-        return timeline.stream()
+        return dev.openallay.util.Java8Collections.toList(timeline.stream()
                 .filter(GuideTimelineEntry.Tool.class::isInstance)
                 .map(GuideTimelineEntry.Tool.class::cast)
-                .map(GuideTimelineEntry.Tool::activity)
-                .toList();
+                .map(GuideTimelineEntry.Tool::activity));
     }
 public static GuideRequestProgress legacyProgress(
             GuideRequestStatus status,

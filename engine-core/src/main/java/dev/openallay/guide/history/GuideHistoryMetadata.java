@@ -15,10 +15,10 @@ public final class GuideHistoryMetadata {
     public GuideHistoryMetadata(GuideHistoryScope scope, String selectedSession, List<Session> sessions, Instant updatedAt) {
 
         java.util.Objects.requireNonNull(scope, "scope");
-        if (selectedSession == null || selectedSession.isBlank()) {
+        if (selectedSession == null || dev.openallay.util.Java8Strings.isBlank(selectedSession)) {
             throw new IllegalArgumentException("selected session is required");
         }
-        sessions = List.copyOf(sessions);
+        sessions = dev.openallay.util.Java8Collections.listCopyOf(sessions);
         if (sessions.stream().noneMatch(value -> value.sessionId().equals(selectedSession))) {
             throw new IllegalArgumentException("selected session is absent from metadata");
         }

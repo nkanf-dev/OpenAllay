@@ -120,7 +120,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
     public boolean ask(
             UUID requestId, String sessionId, dev.openallay.model.ModelMessage userInput,
             dev.openallay.model.image.ImagePayloadResolver images, Consumer<AgentEvent> consumer) {
-        return askWithContext(requestId, sessionId, userInput, images, List.of(), consumer);
+        return askWithContext(requestId, sessionId, userInput, images, dev.openallay.util.Java8Collections.listOf(), consumer);
     }
 
     @Override
@@ -144,11 +144,11 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
                             ? "image_input_unknown" : "image_input_unsupported",
                     "The server model has no confirmed image input support. Select an image-capable model or remove images from this conversation.");
         }
-        List<ServerAgentHistoryMessage> detached = history.stream()
-                .map(ServerAgentHistoryMessage::from).toList();
+        List<ServerAgentHistoryMessage> detached = dev.openallay.util.Java8Collections.toList(history.stream()
+                .map(ServerAgentHistoryMessage::from));
         if (references.isEmpty()) {
             return send(new ServerAgentRequestPayload(
-                    requestId, sessionId, userInput, true, detached, List.of()), consumer);
+                    requestId, sessionId, userInput, true, detached, dev.openallay.util.Java8Collections.listOf()), consumer);
         }
         RemoteRequest pending = prepareRequest(requestId, consumer);
         if (pending == null) return false;
@@ -236,7 +236,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
             });
             if (!sent) { pending.sent = false; return false; }
             if (requests.get(pending.requestId) != pending) return true;
-            List<Runnable> staged = List.copyOf(pending.staged.values());
+            List<Runnable> staged = dev.openallay.util.Java8Collections.listCopyOf(pending.staged.values());
             pending.staged.clear();
             staged.forEach(payloadWorker::execute);
             return true;
@@ -336,7 +336,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
                 try {
                     java.util.Map<String, dev.openallay.model.image.ImageReference> references =
                             new java.util.LinkedHashMap<>();
-                    dev.openallay.model.image.ModelImages.uniqueReferences(List.of(message))
+                    dev.openallay.model.image.ModelImages.uniqueReferences(dev.openallay.util.Java8Collections.listOf(message))
                             .forEach(image -> references.put(image.sha256(), image));
                     List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
                             new java.util.ArrayList<>();
@@ -439,7 +439,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
     public void disconnect() {
         List<RemoteRequest> detached;
         synchronized (requestLock) {
-            detached = List.copyOf(requests.values());
+            detached = dev.openallay.util.Java8Collections.listCopyOf(requests.values());
             detached.forEach(pending -> {
                 pending.cancelled = true;
                 pending.operations.clear();

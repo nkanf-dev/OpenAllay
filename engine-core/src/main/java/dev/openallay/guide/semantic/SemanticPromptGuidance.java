@@ -24,6 +24,6 @@ public final class SemanticPromptGuidance {
                 %s
                 A controlled component is presentation only: it never adds factual authority, permissions, callbacks, or execution.
                 Use plain prose when a component would not make the answer clearer.
-                """.formatted(catalog.toString().stripTrailing());
+                """.formatted(dev.openallay.util.Java8Strings.stripTrailing(catalog.toString()));
     }
 }

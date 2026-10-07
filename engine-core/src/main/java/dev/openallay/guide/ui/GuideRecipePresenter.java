@@ -28,7 +28,7 @@ public final class GuideRecipePresenter {
                 // Invalid semantic data remains available in the text presentation only.
             }
         }
-        return List.copyOf(cards);
+        return dev.openallay.util.Java8Collections.listCopyOf(cards);
     }
 
     private static GuideRecipeCard card(JsonObject recipe) {
@@ -74,7 +74,7 @@ public final class GuideRecipePresenter {
                     bool(ingredient, "consumed", true),
                     alternatives));
         }
-        return List.copyOf(ingredients);
+        return dev.openallay.util.Java8Collections.listCopyOf(ingredients);
     }
 
     private static List<GuideRecipeCard.Output> outputs(JsonObject recipe, String field) {
@@ -87,7 +87,7 @@ public final class GuideRecipePresenter {
                     positiveInteger(stack, "count"),
                     string(stack, "displayName")));
         }
-        return List.copyOf(outputs);
+        return dev.openallay.util.Java8Collections.listCopyOf(outputs);
     }
 
     private static GuideRecipeCard.Processing processing(JsonObject recipe) {
@@ -103,7 +103,7 @@ public final class GuideRecipePresenter {
             JsonObject recipe, RecipeReference primary) {
         JsonArray encoded = array(recipe, "references");
         if ((encoded.size() == 0)) {
-            return List.of(primary);
+            return dev.openallay.util.Java8Collections.listOf(primary);
         }
         List<RecipeReference> references = new ArrayList<>();
         for (JsonElement element : encoded) {
@@ -116,7 +116,7 @@ public final class GuideRecipePresenter {
         if (!references.contains(primary)) {
             references.add(0, primary);
         }
-        return List.copyOf(references);
+        return dev.openallay.util.Java8Collections.listCopyOf(references);
     }
 
     private static List<JsonObject> objects(JsonArray array) {
@@ -193,7 +193,7 @@ public final class GuideRecipePresenter {
 
     private static String requiredString(JsonObject value, String field) {
         String result = string(value, field);
-        if (result.isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(result)) {
             throw new IllegalArgumentException(field + " is required");
         }
         return result;

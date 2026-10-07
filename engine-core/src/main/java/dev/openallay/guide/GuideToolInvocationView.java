@@ -13,8 +13,8 @@ public final class GuideToolInvocationView {
     private final boolean liveArgumentsAvailable;
     public GuideToolInvocationView(List<String> handles, List<String> modules, boolean liveArgumentsAvailable) {
 
-        handles = List.copyOf(handles);
-        modules = List.copyOf(modules);
+        handles = dev.openallay.util.Java8Collections.listCopyOf(handles);
+        modules = dev.openallay.util.Java8Collections.listCopyOf(modules);
 
         this.handles = handles;
         this.modules = modules;
@@ -24,12 +24,12 @@ public final class GuideToolInvocationView {
     public List<String> modules() { return modules; }
     public boolean liveArgumentsAvailable() { return liveArgumentsAvailable; }
 public static GuideToolInvocationView none() {
-        return new GuideToolInvocationView(List.of(), List.of(), false);
+        return new GuideToolInvocationView(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), false);
     }
 public static GuideToolInvocationView from(
             String toolId, JsonObject arguments, JsonObject normalized) {
         if (toolId == null || !toolId.endsWith(":run_javascript")) {
-            return new GuideToolInvocationView(List.of(), List.of(), arguments != null);
+            return new GuideToolInvocationView(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), arguments != null);
         }
         return new GuideToolInvocationView(
                 strings(arguments, "handles"),
@@ -58,7 +58,7 @@ private static JsonObject value(JsonObject normalized) {
     }
 private static List<String> strings(JsonObject object, String field) {
         if (object == null || !object.has(field) || !object.get(field).isJsonArray()) {
-            return List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         ArrayList<String> values = new ArrayList<>();
         for (JsonElement value : object.getAsJsonArray(field)) {
@@ -67,7 +67,7 @@ private static List<String> strings(JsonObject object, String field) {
                 values.add(value.getAsString());
             }
         }
-        return List.copyOf(values);
+        return dev.openallay.util.Java8Collections.listCopyOf(values);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

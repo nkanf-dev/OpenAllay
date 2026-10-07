@@ -9,7 +9,7 @@ final class SemanticPlainText {
     static String render(List<SemanticBlock> blocks) {
         List<String> rendered = new ArrayList<>();
         for (SemanticBlock block : blocks) {
-            String text = block(block, 0).stripTrailing();
+            String text = dev.openallay.util.Java8Strings.stripTrailing(block(block, 0));
             if (!text.isEmpty()) {
                 rendered.add(text);
             }
@@ -115,7 +115,7 @@ if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic
     }
 
     private static String blocks(List<SemanticBlock> values, int depth) {
-        return values.stream().map(value -> block(value, depth)).filter(value -> !value.isBlank())
+        return values.stream().map(value -> block(value, depth)).filter(value -> !dev.openallay.util.Java8Strings.isBlank(value))
                 .reduce((left, right) -> left + "\n" + right).orElse("");
     }
 
@@ -125,9 +125,9 @@ if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic
             if (index > 0) {
                 text.append('\n');
             }
-            text.append("  ".repeat(depth));
+            text.append(dev.openallay.util.Java8Strings.repeat("  ", depth));
             text.append(list.ordered() ? (list.start() + index) + ". " : "- ");
-            text.append(blocks(list.items().get(index), depth + 1).strip());
+            text.append(dev.openallay.util.Java8Strings.strip(blocks(list.items().get(index), depth + 1)));
         }
         return text.toString();
     }
@@ -142,12 +142,12 @@ if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic
     }
 
     private static String tableRow(SemanticBlock.TableRow row) {
-        return row.cells().stream().map(cell -> inline(cell.content()).strip())
+        return row.cells().stream().map(cell -> dev.openallay.util.Java8Strings.strip(inline(cell.content())))
                 .reduce((left, right) -> left + " | " + right).orElse("");
     }
 
     private static String prefix(String value, String prefix) {
-        return value.lines().map(line -> prefix + line).reduce((left, right) -> left + "\n" + right)
-                .orElse(prefix.stripTrailing());
+        return dev.openallay.util.Java8Strings.lines(value).map(line -> prefix + line).reduce((left, right) -> left + "\n" + right)
+                .orElse(dev.openallay.util.Java8Strings.stripTrailing(prefix));
     }
 }

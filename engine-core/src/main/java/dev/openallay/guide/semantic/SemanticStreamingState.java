@@ -20,13 +20,13 @@ public final class SemanticStreamingState {
             SemanticDocument document) {
         this.source = source;
         this.completedSource = completedSource;
-        this.completedBlocks = List.copyOf(completedBlocks);
-        this.completedDiagnostics = List.copyOf(completedDiagnostics);
+        this.completedBlocks = dev.openallay.util.Java8Collections.listCopyOf(completedBlocks);
+        this.completedDiagnostics = dev.openallay.util.Java8Collections.listCopyOf(completedDiagnostics);
         this.document = document;
     }
 
     public static SemanticStreamingState empty() {
-        return new SemanticStreamingState("", "", List.of(), List.of(), SemanticDocument.empty());
+        return new SemanticStreamingState("", "", dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), SemanticDocument.empty());
     }
 
     public SemanticStreamingState update(
@@ -55,13 +55,13 @@ public final class SemanticStreamingState {
             nextCompleted.addAll(completedBlocks);
             nextDiagnostics.addAll(completedDiagnostics);
             String appended = replacement.substring(completedSource.length(), boundary);
-            if (!appended.isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(appended)) {
                 SemanticDocument parsed = parser.parseFragment(
                         appended, nextCompleted.size(), references);
                 nextCompleted.addAll(parsed.blocks());
                 nextDiagnostics.addAll(parsed.diagnostics());
             }
-        } else if (!nextCompletedSource.isBlank()) {
+        } else if (!dev.openallay.util.Java8Strings.isBlank(nextCompletedSource)) {
             SemanticDocument parsed = parser.parseFragment(nextCompletedSource, 0, references);
             nextCompleted.addAll(parsed.blocks());
             nextDiagnostics.addAll(parsed.diagnostics());
@@ -70,14 +70,14 @@ public final class SemanticStreamingState {
         String tail = replacement.substring(boundary);
         List<SemanticBlock> allBlocks = new ArrayList<>(nextCompleted);
         List<SemanticDiagnostic> allDiagnostics = new ArrayList<>(nextDiagnostics);
-        if (!tail.isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(tail)) {
             // A partial CommonMark block can change type and measured height on every byte.
             // Keep the mutable tail literal until completedBoundary validates a whole block.
             String path = "streaming-tail-" + allBlocks.size();
             SemanticInline.Text literal = new SemanticInline.Text(
                     SemanticIds.create(path + ".s0", "text", "literal"), tail);
             allBlocks.add(new SemanticBlock.Paragraph(
-                    SemanticIds.create(path, "paragraph", "literal"), List.of(literal)));
+                    SemanticIds.create(path, "paragraph", "literal"), dev.openallay.util.Java8Collections.listOf(literal)));
         }
         return new SemanticStreamingState(
                 replacement,
@@ -108,7 +108,7 @@ public final class SemanticStreamingState {
             int newline = source.indexOf('\n', offset);
             int end = newline < 0 ? source.length() : newline;
             String line = source.substring(offset, end);
-            String stripped = line.stripLeading();
+            String stripped = dev.openallay.util.Java8Strings.stripLeading(line);
             int candidateLength = fenceLength(stripped);
             if (candidateLength >= 3) {
                 char candidate = stripped.charAt(0);
@@ -122,7 +122,7 @@ public final class SemanticStreamingState {
                         lastBoundary = newline + 1;
                     }
                 }
-            } else if (fence == 0 && line.isBlank() && newline >= 0) {
+            } else if (fence == 0 && dev.openallay.util.Java8Strings.isBlank(line) && newline >= 0) {
                 lastBoundary = newline + 1;
             }
             if (newline < 0) {

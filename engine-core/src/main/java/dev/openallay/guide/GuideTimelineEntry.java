@@ -61,7 +61,7 @@ public static final class Assistant implements GuideTimelineEntry {
             requireOrdinal(ordinal);
             text = text == null ? "" : text;
             java.util.Objects.requireNonNull(semantic, "semantic");
-            sources = List.copyOf(sources);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
 
         this.ordinal = ordinal;
         this.text = text;

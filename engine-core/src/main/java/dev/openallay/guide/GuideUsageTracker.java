@@ -93,7 +93,7 @@ AgentEvent.ModelUsageObserved $oaPattern1_bound = $oaPattern1_match ? (AgentEven
 if (!($oaPattern1_match)) return false;
         UUID startedOwner = pendingCalls.get($oaPattern1_bound.callId());
         if (startedOwner != null && !startedOwner.equals(owner) || !calls.add($oaPattern1_bound.callId())) return false;
-        String model = $oaPattern1_bound.modelIdentifier() == null || $oaPattern1_bound.modelIdentifier().isBlank()
+        String model = $oaPattern1_bound.modelIdentifier() == null || dev.openallay.util.Java8Strings.isBlank($oaPattern1_bound.modelIdentifier())
                 ? requestModels.get(owner) : $oaPattern1_bound.modelIdentifier();
         GuideUsageSnapshot delta = project($oaPattern1_bound.usage(), pricing(model));
         requests.merge(owner, delta, GuideUsageSnapshot::plus);

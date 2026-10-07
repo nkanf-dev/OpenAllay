@@ -43,7 +43,7 @@ public interface GuideHistoryAccess {
     GuideHistoryActivity activity();
 
     private static <T> CompletableFuture<T> unsupported() {
-        return CompletableFuture.failedFuture(new GuideHistoryException(
+        return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                 "history_operation_unsupported", "History operation is unavailable"));
     }
 }

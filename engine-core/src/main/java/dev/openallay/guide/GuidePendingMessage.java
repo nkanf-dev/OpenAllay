@@ -55,7 +55,7 @@ public static String displayText(ModelMessage message) {
         String text = message.content().stream().filter(ModelContent.Text.class::isInstance)
                 .map(ModelContent.Text.class::cast).map(ModelContent.Text::text)
                 .collect(java.util.stream.Collectors.joining("\n"));
-        return text.isBlank() ? "[Image attachment]" : text;
+        return dev.openallay.util.Java8Strings.isBlank(text) ? "[Image attachment]" : text;
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

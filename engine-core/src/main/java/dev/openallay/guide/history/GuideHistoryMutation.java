@@ -37,7 +37,7 @@ public static final class UpsertPartition implements GuideHistoryMutation {
     private final Instant updatedAt;
     public UpsertPartition(String selectedSession, Instant updatedAt) {
 
-            if (selectedSession == null || selectedSession.isBlank()) {
+            if (selectedSession == null || dev.openallay.util.Java8Strings.isBlank(selectedSession)) {
                 throw new IllegalArgumentException("selected session is required");
             }
             java.util.Objects.requireNonNull(updatedAt, "updatedAt");
@@ -261,7 +261,7 @@ public static final class ReplaceRequestSources implements GuideHistoryMutation 
     public ReplaceRequestSources(UUID requestId, List<GuideSource> sources) {
 
             java.util.Objects.requireNonNull(requestId, "requestId");
-            sources = List.copyOf(sources);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
 
         this.requestId = requestId;
         this.sources = sources;
@@ -447,7 +447,7 @@ public static final class CaptureRequestBoundary implements GuideHistoryMutation
 
             java.util.Objects.requireNonNull(requestId, "requestId");
             messages = ModelContextCodec.safe(messages);
-            checkpoints = List.copyOf(checkpoints);
+            checkpoints = dev.openallay.util.Java8Collections.listCopyOf(checkpoints);
 
         this.requestId = requestId;
         this.messages = messages;

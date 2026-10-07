@@ -12,7 +12,7 @@ public final class GuideDisplayConfig {
         if (assistantName == null) {
             throw new IllegalArgumentException("assistantName must be a string");
         }
-        assistantName = assistantName.strip();
+        assistantName = dev.openallay.util.Java8Strings.strip(assistantName);
         if (assistantName.isEmpty()) {
             throw new IllegalArgumentException("assistantName must not be blank");
         }

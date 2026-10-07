@@ -16,7 +16,7 @@ public final class GuideHistoryPage {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid session ID");
         }
-        requests = List.copyOf(requests);
+        requests = dev.openallay.util.Java8Collections.listCopyOf(requests);
         if (requests.isEmpty() ? first != null || last != null : first == null || last == null) {
             throw new IllegalArgumentException("history page cursor metadata is inconsistent");
         }

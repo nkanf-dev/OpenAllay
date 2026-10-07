@@ -34,20 +34,20 @@ public final class GuideE2EReport {
     private final Map<String, String> payloadHashes;
     public GuideE2EReport(String loader, String gameVersion, String modVersion, String scenario, GuideTopology topology, UUID requestId, String sessionId, List<GuideRequestStatus> transitions, List<String> toolIds, List<ToolProbe> toolProbes, List<EvidenceMetadata> evidence, List<String> timelineKinds, Map<String, Long> semanticMetrics, List<String> semanticDiagnosticCodes, List<String> controlledComponentTypes, String historyPageState, Map<String, Long> historyMetrics, GuideRequestStatus outcome, String failureCode, String failureMessage, Map<String, Long> timingsMillis, Map<String, String> payloadHashes) {
 
-        transitions = List.copyOf(transitions);
-        toolIds = List.copyOf(toolIds);
-        toolProbes = List.copyOf(toolProbes);
-        evidence = List.copyOf(evidence);
-        timelineKinds = List.copyOf(timelineKinds);
-        semanticMetrics = Map.copyOf(semanticMetrics);
-        semanticDiagnosticCodes = List.copyOf(semanticDiagnosticCodes);
-        controlledComponentTypes = List.copyOf(controlledComponentTypes);
-        if (historyPageState == null || historyPageState.isBlank()) {
+        transitions = dev.openallay.util.Java8Collections.listCopyOf(transitions);
+        toolIds = dev.openallay.util.Java8Collections.listCopyOf(toolIds);
+        toolProbes = dev.openallay.util.Java8Collections.listCopyOf(toolProbes);
+        evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
+        timelineKinds = dev.openallay.util.Java8Collections.listCopyOf(timelineKinds);
+        semanticMetrics = dev.openallay.util.Java8Collections.mapCopyOf(semanticMetrics);
+        semanticDiagnosticCodes = dev.openallay.util.Java8Collections.listCopyOf(semanticDiagnosticCodes);
+        controlledComponentTypes = dev.openallay.util.Java8Collections.listCopyOf(controlledComponentTypes);
+        if (historyPageState == null || dev.openallay.util.Java8Strings.isBlank(historyPageState)) {
             throw new IllegalArgumentException("historyPageState is required");
         }
-        historyMetrics = Map.copyOf(historyMetrics);
-        timingsMillis = Map.copyOf(timingsMillis);
-        payloadHashes = Map.copyOf(payloadHashes);
+        historyMetrics = dev.openallay.util.Java8Collections.mapCopyOf(historyMetrics);
+        timingsMillis = dev.openallay.util.Java8Collections.mapCopyOf(timingsMillis);
+        payloadHashes = dev.openallay.util.Java8Collections.mapCopyOf(payloadHashes);
 
         this.loader = loader;
         this.gameVersion = gameVersion;

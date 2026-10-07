@@ -70,7 +70,7 @@ public static final class ItemRow implements RichComponent {
     public ItemRow(String nodeId, List<Item> items, String fallbackText, String narration) {
 
             common(nodeId, fallbackText, narration);
-            items = List.copyOf(items);
+            items = dev.openallay.util.Java8Collections.listCopyOf(items);
             if (items.isEmpty()) throw new IllegalArgumentException("item row must not be empty");
 
         this.nodeId = nodeId;
@@ -218,7 +218,7 @@ public static final class IngredientCheck implements RichComponent {
     public IngredientCheck(String nodeId, List<Ingredient> ingredients, String fallbackText, String narration) {
 
             common(nodeId, fallbackText, narration);
-            ingredients = List.copyOf(ingredients);
+            ingredients = dev.openallay.util.Java8Collections.listCopyOf(ingredients);
             if (ingredients.isEmpty()) {
                 throw new IllegalArgumentException("ingredient check must not be empty");
             }
@@ -374,7 +374,7 @@ public static final class ProgressSteps implements RichComponent {
     public ProgressSteps(String nodeId, List<Step> steps, String fallbackText, String narration) {
 
             common(nodeId, fallbackText, narration);
-            steps = List.copyOf(steps);
+            steps = dev.openallay.util.Java8Collections.listCopyOf(steps);
             if (steps.isEmpty() || steps.stream().map(Step::id).distinct().count() != steps.size()) {
                 throw new IllegalArgumentException("progress steps are empty or duplicated");
             }
@@ -462,7 +462,7 @@ public static final class SourceSummary implements RichComponent {
     public SourceSummary(String nodeId, List<Source> sources, String fallbackText, String narration) {
 
             common(nodeId, fallbackText, narration);
-            sources = List.copyOf(sources);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
             if (sources.isEmpty()) throw new IllegalArgumentException("source summary is empty");
 
         this.nodeId = nodeId;
@@ -596,7 +596,7 @@ public static final class ChoiceGroup implements RichComponent {
             common(nodeId, fallbackText, narration);
             prompt = requireText(prompt, "choice prompt");
             rejectActionText(prompt);
-            choices = List.copyOf(choices);
+            choices = dev.openallay.util.Java8Collections.listCopyOf(choices);
             if (choices.isEmpty()
                     || choices.stream().map(Choice::id).distinct().count() != choices.size()) {
                 throw new IllegalArgumentException("choices are empty or duplicated");
@@ -645,20 +645,20 @@ public static final class ChoiceGroup implements RichComponent {
 
     private static String safeLabel(String value) {
         if (value == null) return "";
-        String label = value.strip();
+        String label = dev.openallay.util.Java8Strings.strip(value);
         rejectActionText(label);
         return label;
     }
 
     private static String requireText(String value, String label) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " is required");
         }
         return value;
     }
 
     private static String requireOrigin(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException("component reference origin is required");
         }
         return value;

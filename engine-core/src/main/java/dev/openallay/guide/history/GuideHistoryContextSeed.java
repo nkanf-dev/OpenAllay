@@ -22,7 +22,7 @@ public final class GuideHistoryContextSeed {
             throw new IllegalArgumentException("invalid session ID");
         }
         messages = ModelContextCodec.safe(messages);
-        checkpoints = List.copyOf(checkpoints);
+        checkpoints = dev.openallay.util.Java8Collections.listCopyOf(checkpoints);
         if (estimatedTokens < 0) {
             throw new IllegalArgumentException("context estimate must not be negative");
         }

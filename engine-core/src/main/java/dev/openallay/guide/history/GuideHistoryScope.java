@@ -36,7 +36,7 @@ public enum Kind {
 public static GuideHistoryScope derive(UUID actorId, Kind kind, String discriminator) {
         Objects.requireNonNull(actorId, "actorId");
         Objects.requireNonNull(kind, "kind");
-        if (discriminator == null || discriminator.isBlank()) {
+        if (discriminator == null || dev.openallay.util.Java8Strings.isBlank(discriminator)) {
             throw new IllegalArgumentException("history discriminator must not be blank");
         }
         java.lang.String $oaSwitch0_exit_result;
@@ -44,7 +44,7 @@ $oaSwitch0_exit: {
 switch ((kind)) {
 case SINGLEPLAYER:
 {
-$oaSwitch0_exit_result = Path.of(discriminator.trim())
+$oaSwitch0_exit_result = java.nio.file.Paths.get(discriminator.trim())
                     .toAbsolutePath()
                     .normalize()
                     .toString(); break $oaSwitch0_exit;
@@ -62,7 +62,7 @@ String normalized = $oaSwitch0_exit_result;
     }
 private static String digest(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+            return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("JDK does not provide SHA-256", impossible);

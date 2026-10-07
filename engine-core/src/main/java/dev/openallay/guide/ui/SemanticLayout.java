@@ -15,7 +15,7 @@ public final class SemanticLayout {
     public SemanticLayout(int width, int height, List<Line> lines, String narration) {
 
         if (width <= 0 || height < 0) throw new IllegalArgumentException("invalid semantic layout");
-        lines = List.copyOf(lines);
+        lines = dev.openallay.util.Java8Collections.listCopyOf(lines);
         narration = narration == null ? "" : narration;
         if (lines.stream().mapToInt(Line::height).sum() != height) {
             throw new IllegalArgumentException("semantic layout height is inconsistent");
@@ -84,11 +84,11 @@ public static final class Line {
     private final TableBox table;
     public Line(String nodeId, Kind kind, int indent, int height, List<Run> runs, RichComponent component, TableBox table) {
 
-            if (nodeId == null || nodeId.isBlank() || indent < 0 || height <= 0) {
+            if (nodeId == null || dev.openallay.util.Java8Strings.isBlank(nodeId) || indent < 0 || height <= 0) {
                 throw new IllegalArgumentException("semantic line geometry is invalid");
             }
             java.util.Objects.requireNonNull(kind, "kind");
-            runs = List.copyOf(runs);
+            runs = dev.openallay.util.Java8Collections.listCopyOf(runs);
             if ((kind == Kind.COMPONENT) != (component != null)) {
                 throw new IllegalArgumentException("semantic component line is inconsistent");
             }
@@ -158,7 +158,7 @@ public static final class TableBox {
             if (width <= 0 || height <= 0 || lineHeight <= 0) {
                 throw new IllegalArgumentException("semantic table geometry is invalid");
             }
-            rows = List.copyOf(rows);
+            rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
             if (rows.isEmpty()) {
                 throw new IllegalArgumentException("semantic table must contain a row");
             }
@@ -209,7 +209,7 @@ public static final class TableRow {
             if (y < 0 || height <= 0) {
                 throw new IllegalArgumentException("semantic table row geometry is invalid");
             }
-            cells = List.copyOf(cells);
+            cells = dev.openallay.util.Java8Collections.listCopyOf(cells);
             if (cells.isEmpty()) {
                 throw new IllegalArgumentException("semantic table row must contain a cell");
             }
@@ -261,8 +261,8 @@ public static final class TableCell {
                 throw new IllegalArgumentException("semantic table cell geometry is invalid");
             }
             java.util.Objects.requireNonNull(alignment, "alignment");
-            labelLines = List.copyOf(labelLines);
-            valueLines = List.copyOf(valueLines);
+            labelLines = dev.openallay.util.Java8Collections.listCopyOf(labelLines);
+            valueLines = dev.openallay.util.Java8Collections.listCopyOf(valueLines);
             if (valueLines.isEmpty()) {
                 throw new IllegalArgumentException("semantic table cell value must contain a line");
             }
@@ -320,7 +320,7 @@ public static final class CellLine {
             if (y < 0 || width < 0) {
                 throw new IllegalArgumentException("semantic table text geometry is invalid");
             }
-            runs = List.copyOf(runs);
+            runs = dev.openallay.util.Java8Collections.listCopyOf(runs);
 
         this.y = y;
         this.width = width;

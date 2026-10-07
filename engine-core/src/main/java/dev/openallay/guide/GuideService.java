@@ -72,8 +72,8 @@ public final class GuideService implements GuideHistoryAdministration {
     private final CopyOnWriteArrayList<Consumer<GuideSnapshot>> listeners =
             new CopyOnWriteArrayList<>();
     private volatile GuideSnapshot snapshot;
-    private volatile Map<String, SessionState> publishedSessions = Map.of();
-    private volatile Map<UUID, Map<String, List<dev.openallay.model.image.ImageReference>>> publishedObservationImages = Map.of();
+    private volatile Map<String, SessionState> publishedSessions = dev.openallay.util.Java8Collections.mapOf();
+    private volatile Map<UUID, Map<String, List<dev.openallay.model.image.ImageReference>>> publishedObservationImages = dev.openallay.util.Java8Collections.mapOf();
     private volatile GuideTelemetrySnapshot telemetry;
     private String selectedSession = "main";
     private String compactSelectedSession = "main";
@@ -148,7 +148,7 @@ public final class GuideService implements GuideHistoryAdministration {
         persistence = history == null
                 ? GuidePersistenceSnapshot.disabled()
                 : GuidePersistenceSnapshot.loading();
-        publishedSessions = Map.copyOf(sessions);
+        publishedSessions = dev.openallay.util.Java8Collections.mapCopyOf(sessions);
         snapshot = buildSnapshot();
         if (history != null) {
             startHistoryLoad();
@@ -254,7 +254,7 @@ public final class GuideService implements GuideHistoryAdministration {
             dev.openallay.model.image.ImageReference reference) {
         if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Success<>(false));
         return imageOperation(() -> {
-            for (java.util.Map.Entry<java.lang.String, dev.openallay.model.image.ImageReference> entry : List.copyOf(importedImageReferences.entrySet())) {
+            for (java.util.Map.Entry<java.lang.String, dev.openallay.model.image.ImageReference> entry : dev.openallay.util.Java8Collections.listCopyOf(importedImageReferences.entrySet())) {
                 if (entry.getValue().equals(reference)) {
                     attachmentStore.release(actor, entry.getKey());
                     importedImageReferences.remove(entry.getKey(), entry.getValue());
@@ -267,9 +267,9 @@ public final class GuideService implements GuideHistoryAdministration {
 
     /** Original typed Tool images, never inferred from normalized result JSON. */
     public List<dev.openallay.model.image.ImageReference> observationImages(UUID requestId, String toolUseId) {
-        if (requestId == null || toolUseId == null) return List.of();
-        return publishedObservationImages.getOrDefault(requestId, Map.of())
-                .getOrDefault(toolUseId, List.of());
+        if (requestId == null || toolUseId == null) return dev.openallay.util.Java8Collections.listOf();
+        return publishedObservationImages.getOrDefault(requestId, dev.openallay.util.Java8Collections.mapOf())
+                .getOrDefault(toolUseId, dev.openallay.util.Java8Collections.listOf());
     }
 
     public CompletableFuture<ToolResult<byte[]>> readImage(
@@ -281,16 +281,16 @@ public final class GuideService implements GuideHistoryAdministration {
 
     public CompletableFuture<ToolResult<Boolean>> retainDraftImages(
             String owner, List<dev.openallay.model.image.ImageReference> references) {
-        if (owner == null || owner.isBlank()) return CompletableFuture.completedFuture(
+        if (owner == null || dev.openallay.util.Java8Strings.isBlank(owner)) return CompletableFuture.completedFuture(
                 new ToolResult.Failure<>("invalid_image_owner", "Image draft owner is required"));
-        List<dev.openallay.model.image.ImageReference> captured = List.copyOf(references);
+        List<dev.openallay.model.image.ImageReference> captured = dev.openallay.util.Java8Collections.listCopyOf(references);
         if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                 "image_store_unavailable", "Image attachments are unavailable on this connection"));
         imageDraftOwners.add(imageOwnerPrefix + "draft:" + owner);
         return imageOperation(() -> {
             attachmentStore.retain(actor, imageOwnerPrefix + "draft:" + owner, captured);
             // Publish the durable draft pin before removing the short import lease.
-            for (java.util.Map.Entry<java.lang.String, dev.openallay.model.image.ImageReference> entry : List.copyOf(importedImageReferences.entrySet())) {
+            for (java.util.Map.Entry<java.lang.String, dev.openallay.model.image.ImageReference> entry : dev.openallay.util.Java8Collections.listCopyOf(importedImageReferences.entrySet())) {
                 if (captured.contains(entry.getValue())) {
                     attachmentStore.release(actor, entry.getKey());
                     importedImageReferences.remove(entry.getKey(), entry.getValue());
@@ -322,7 +322,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 && !actor.equals(input.inputObservation().orElseThrow().focus().actorId())) {
             return new ToolResult.Failure<>("input_source_actor_mismatch", "Input reference belongs to another player");
         }
-        boolean images = dev.openallay.model.image.ModelImages.hasImages(List.of(input));
+        boolean images = dev.openallay.model.image.ModelImages.hasImages(dev.openallay.util.Java8Collections.listOf(input));
         if (!images) return new ToolResult.Success<>(true);
         return validateImageCapability(input, snapshot.imageInputCapability(selection));
     }
@@ -353,7 +353,7 @@ public final class GuideService implements GuideHistoryAdministration {
     private ToolResult<Boolean> validateImageCapability(
             dev.openallay.model.ModelMessage input,
             dev.openallay.model.image.ImageInputCapability capability) {
-        if (!dev.openallay.model.image.ModelImages.hasImages(List.of(input))) {
+        if (!dev.openallay.model.image.ModelImages.hasImages(dev.openallay.util.Java8Collections.listOf(input))) {
             return new ToolResult.Success<>(true);
         }
         if (capability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
@@ -385,7 +385,7 @@ public final class GuideService implements GuideHistoryAdministration {
         String sessionId = requestSessions.get(requestId);
         SessionState session = sessionId == null ? null : sessions.get(sessionId);
         if (session == null) throw new IllegalArgumentException("Image request owner is unavailable");
-        return retainSessionImages(session, imageReferences(List.of(input)));
+        return retainSessionImages(session, imageReferences(dev.openallay.util.Java8Collections.listOf(input)));
     }
 
     private String sessionImageOwner(SessionState session) {
@@ -398,20 +398,20 @@ public final class GuideService implements GuideHistoryAdministration {
         session.originalContext.values().forEach(messages::addAll);
         session.forkBoundaries.values().forEach(boundary -> messages.addAll(boundary.messages()));
         // Checkpoints contain text and source indices, not independent image references.
-        return retainSessionImages(session, imageReferences(List.copyOf(messages)));
+        return retainSessionImages(session, imageReferences(dev.openallay.util.Java8Collections.listCopyOf(messages)));
     }
 
     private CompletableFuture<Void> retainSessionImages(SessionState session,
             List<dev.openallay.model.image.ImageReference> references) {
         String owner = sessionImageOwner(session);
         List<dev.openallay.model.image.ImageReference> union = new ArrayList<>(
-                retainedImages.getOrDefault(owner, List.of()));
+                retainedImages.getOrDefault(owner, dev.openallay.util.Java8Collections.listOf()));
         for (dev.openallay.model.image.ImageReference reference : references) if (!union.contains(reference)) union.add(reference);
         if (union.isEmpty()) return session.imageCustody;
-        List<dev.openallay.model.image.ImageReference> captured = List.copyOf(union);
+        List<dev.openallay.model.image.ImageReference> captured = dev.openallay.util.Java8Collections.listCopyOf(union);
         retainedImages.put(owner, captured);
         CompletableFuture<Void> retained = attachmentStore == null
-                ? CompletableFuture.failedFuture(new java.io.IOException(
+                ? dev.openallay.util.Java8Futures.failedFuture(new java.io.IOException(
                         "Published image attachments are unavailable on this connection"))
                 : CompletableFuture.runAsync(() -> {
                     try { attachmentStore.retain(actor, owner, captured); }
@@ -428,13 +428,11 @@ public final class GuideService implements GuideHistoryAdministration {
 
     private CompletableFuture<Void> releaseObservationImages(SessionState session, UUID requestId) {
         return observationReleases.computeIfAbsent(requestId, ignored -> {
-            List<dev.openallay.model.image.ImageReference> produced = List.copyOf(
-                    contexts.observationImageReferences(requestId.toString()));
+            List<dev.openallay.model.image.ImageReference> produced = dev.openallay.util.Java8Collections.listCopyOf(contexts.observationImageReferences(requestId.toString()));
             CompletableFuture<Void> retained = retainPublishedImages(session);
             List<dev.openallay.model.image.ImageReference> published = retainedImages.getOrDefault(
-                    sessionImageOwner(session), List.of());
-            if (!published.containsAll(produced)) return CompletableFuture.failedFuture(
-                    new java.io.IOException("Produced observation images have no authoritative transcript custody receipt"));
+                    sessionImageOwner(session), dev.openallay.util.Java8Collections.listOf());
+            if (!published.containsAll(produced)) return dev.openallay.util.Java8Futures.failedFuture(new java.io.IOException("Produced observation images have no authoritative transcript custody receipt"));
             return retained.thenCompose(receipt -> Objects.requireNonNull(
                     contexts.releaseObservationImages(requestId.toString()), "observation image release future"));
         });
@@ -456,10 +454,9 @@ public final class GuideService implements GuideHistoryAdministration {
     /** Pin receipt before acknowledging a queued message or steer. Caller commits state after completion. */
     private CompletableFuture<Void> transferImageInput(
             String sessionId, UUID receipt, dev.openallay.model.ModelMessage input) {
-        List<dev.openallay.model.image.ImageReference> references = imageReferences(List.of(input));
+        List<dev.openallay.model.image.ImageReference> references = imageReferences(dev.openallay.util.Java8Collections.listOf(input));
         if (references.isEmpty()) return CompletableFuture.completedFuture(null);
-        if (attachmentStore == null) return CompletableFuture.failedFuture(
-                new java.io.IOException("Image attachments are unavailable on this connection"));
+        if (attachmentStore == null) return dev.openallay.util.Java8Futures.failedFuture(new java.io.IOException("Image attachments are unavailable on this connection"));
         String owner = imageOwnerPrefix + "receipt:" + receipt;
         retainedImages.put(owner, references);
         return CompletableFuture.runAsync(() -> {
@@ -698,9 +695,7 @@ if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolRes
                         failure == null ? "The selected session or model changed" : "Unable to save the prepared summary");
                 return;
             }
-            GuideHistoryCommit commit = new GuideHistoryCommit(historyScope, List.of(
-                    new GuideHistoryMutation.ReplaceContext(control.session.id, prepared.projection()),
-                    new GuideHistoryMutation.AppendCheckpoint(control.session.id,
+            GuideHistoryCommit commit = new GuideHistoryCommit(historyScope, dev.openallay.util.Java8Collections.listOf(new GuideHistoryMutation.ReplaceContext(control.session.id, prepared.projection()), new GuideHistoryMutation.AppendCheckpoint(control.session.id,
                             prepared.outcome().checkpoint())));
             control.saving = true;
             try {
@@ -740,9 +735,7 @@ if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolRes
                 ContextCheckpoint.Status.FAILED, null, "compact_stale",
                 "The prepared summary was not published because its control snapshot changed",
                 control.prepared.outcome().beforeTokens());
-        GuideHistoryCommit restore = new GuideHistoryCommit(historyScope, List.of(
-                new GuideHistoryMutation.ReplaceContext(control.session.id, control.original),
-                new GuideHistoryMutation.AppendCheckpoint(control.session.id, discarded)));
+        GuideHistoryCommit restore = new GuideHistoryCommit(historyScope, dev.openallay.util.Java8Collections.listOf(new GuideHistoryMutation.ReplaceContext(control.session.id, control.original), new GuideHistoryMutation.AppendCheckpoint(control.session.id, discarded)));
         control.saving = true;
         try {
             history.commit(restore).whenComplete((ignored, failure) -> dispatcher.execute(() -> {
@@ -815,8 +808,7 @@ if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolRes
         }
         if (outcome != null) control.result.complete(new ToolResult.Success<>(outcome));
         else {
-            String publicCode = Set.of("compact_busy", "compact_unavailable", "compact_cancelled",
-                    "compact_stale", "compact_failed").contains(code) ? code : "compact_failed";
+            String publicCode = dev.openallay.util.Java8Collections.setOf("compact_busy", "compact_unavailable", "compact_cancelled", "compact_stale", "compact_failed").contains(code) ? code : "compact_failed";
             control.result.complete(new ToolResult.Failure<>(publicCode, message));
         }
         if (!disconnected && sessions.get(control.session.id) == control.session) {
@@ -859,7 +851,7 @@ if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolRes
         private final List<dev.openallay.model.ModelMessage> initialContext;
         private final CompletableFuture<ToolResult<GuideCompactResult>> result;
         private final dev.openallay.model.CancellationSignal cancellation = new dev.openallay.model.CancellationSignal();
-        private List<dev.openallay.model.ModelMessage> original = List.of();
+        private List<dev.openallay.model.ModelMessage> original = dev.openallay.util.Java8Collections.listOf();
         private GuidePreparedCompaction prepared;
         private boolean preparing;
         private boolean saving;
@@ -1067,7 +1059,7 @@ if ((($oaPattern4_holder.value = valid) instanceof dev.openallay.tool.ToolResult
 
     public List<GuidePendingMessage> pendingMessages(String sessionId) {
         return snapshot.sessions().stream().filter(session -> session.sessionId().equals(sessionId))
-                .map(GuideSessionSnapshot::pendingMessages).findFirst().orElse(List.of());
+                .map(GuideSessionSnapshot::pendingMessages).findFirst().orElse(dev.openallay.util.Java8Collections.listOf());
     }
 
     public CompletableFuture<ToolResult<Boolean>> editPending(UUID id, String text) {
@@ -1166,11 +1158,11 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                     && session.preparingContextRequest.equals(active.requestId());
             if (preparingContext) session.unresolvedForkContext.add(active.requestId());
             dev.openallay.model.ModelMessage note = new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
-                    List.of(new dev.openallay.model.ModelContent.Text(
+                    dev.openallay.util.Java8Collections.listOf(new dev.openallay.model.ModelContent.Text(
                             "[OpenAllay request ended: agent_cancelled] Agent request was cancelled")));
             List<dev.openallay.model.ModelMessage> current = new ArrayList<>(session.modelContext);
             List<dev.openallay.model.ModelMessage> original = new ArrayList<>(
-                    session.originalContext.getOrDefault(active.requestId(), List.of()));
+                    session.originalContext.getOrDefault(active.requestId(), dev.openallay.util.Java8Collections.listOf()));
             if (original.isEmpty()) {
                 original.add(userInput(active.requestId()));
                 current.add(userInput(active.requestId()));
@@ -1180,12 +1172,12 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             if (!preparingContext) {
                 pendingCancelledFinalization.put(active.requestId(), new CancelledFinalization(
                         session.id, Objects.requireNonNull(session.requestSequences.get(active.requestId())),
-                        List.copyOf(session.checkpoints)));
+                        dev.openallay.util.Java8Collections.listCopyOf(session.checkpoints)));
             }
             if (preparingContext) {
                 // Durable predecessor context is still being loaded. Do not replace it with
                 // the current question and cancellation note, or archive that as a fork boundary.
-                session.originalContext.put(active.requestId(), List.copyOf(original));
+                session.originalContext.put(active.requestId(), dev.openallay.util.Java8Collections.listCopyOf(original));
                 if (incrementalHistory) {
                     pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
                             active.requestId(), original));
@@ -1232,8 +1224,8 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             }
             SessionState session = sessions.get(request.sessionId());
             dev.openallay.model.ModelMessage input = submittedInputs.get(request.requestId());
-            if (input == null) input = (session == null ? List.<dev.openallay.model.ModelMessage>of()
-                    : session.originalContext.getOrDefault(request.requestId(), List.of()))
+            if (input == null) input = (session == null ? dev.openallay.util.Java8Collections.<dev.openallay.model.ModelMessage>listOf()
+                    : session.originalContext.getOrDefault(request.requestId(), dev.openallay.util.Java8Collections.listOf()))
                     .stream().filter(message -> message.role() == dev.openallay.model.ModelRole.USER)
                     .findFirst().orElse(dev.openallay.model.ModelMessage.userText(request.userMessage()));
             submit(request.sessionId(), input, result);
@@ -1363,7 +1355,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                     UUID sourceId = source.requestSequences.entrySet().stream()
                             .filter(entry -> entry.getValue() == sequence).map(Map.Entry::getKey)
                             .findFirst().orElseThrow();
-                    originals.put(inherited.requestId(), source.originalContext.getOrDefault(sourceId, List.of()));
+                    originals.put(inherited.requestId(), source.originalContext.getOrDefault(sourceId, dev.openallay.util.Java8Collections.listOf()));
                     GuideHistoryMutation.CaptureRequestBoundary boundary = source.forkBoundaries.get(sourceId);
                     if (boundary != null) boundaries.put(inherited.requestId(),
                             new GuideHistoryMutation.CaptureRequestBoundary(inherited.requestId(),
@@ -1428,7 +1420,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             GuideHistoryMutation.ForkSession mutation, GuideHistoryForkResult fork, Throwable failure,
             CompletableFuture<ToolResult<String>> result) {
         completeFork(source, sourceEpoch, capturedSelection, capturedSelectionGeneration, nonce,
-                mutation, fork, failure, result, Map.of(), Map.of());
+                mutation, fork, failure, result, dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.mapOf());
     }
 
     private void completeFork(SessionState source, long sourceEpoch, String capturedSelection,
@@ -1476,7 +1468,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             target.originalContext.putAll(originals);
             target.forkBoundaries.putAll(boundaries);
         }
-        for (DurableProjection projection : List.of(capturedProjection, durableProjection)) {
+        for (DurableProjection projection : dev.openallay.util.Java8Collections.listOf(capturedProjection, durableProjection)) {
             projection.sessions.put(target.id, new SessionProjection(fork.session().ordinal(), target.modelSelection));
             projection.controlUsage.put(target.id, fork.session().controlUsage());
             for (int index = 0; index < target.checkpoints.size(); index++) {
@@ -1514,7 +1506,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             if (sequence > mutation.cutoff().sequence()) continue;
             if (!original.terminal()) throw new GuideHistoryException(
                     "fork_boundary_unavailable", "Fork requires a completed request prefix");
-            if (source.originalContext.getOrDefault(original.requestId(), List.of()).isEmpty()) {
+            if (source.originalContext.getOrDefault(original.requestId(), dev.openallay.util.Java8Collections.listOf()).isEmpty()) {
                 throw new GuideHistoryException("fork_context_unavailable",
                         "An inherited request has no original model transcript");
             }
@@ -1536,11 +1528,11 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                         .reduce(GuideUsageSnapshot.empty(), GuideUsageSnapshot::plus),
                 GuideUsageSnapshot.empty(), inheritedMessageCount),
                 new GuideHistoryPage(mutation.sessionId(), inherited, cursors.get(0), cursors.get(cursors.size() - 1), false, false),
-                boundary.messages(), boundary.checkpoints().stream().map(checkpoint ->
+                boundary.messages(), dev.openallay.util.Java8Collections.toList(boundary.checkpoints().stream().map(checkpoint ->
                         new ContextCheckpoint(UUID.randomUUID(), checkpoint.sourceFromIndex(),
                                 checkpoint.sourceToIndexExclusive(), checkpoint.sourceHash(), checkpoint.modelIdentifier(),
                                 checkpoint.createdAt(), checkpoint.status(), checkpoint.summary(), checkpoint.failureCode(),
-                                checkpoint.failureMessage(), checkpoint.estimatedProjectionTokens())).toList(),
+                                checkpoint.failureMessage(), checkpoint.estimatedProjectionTokens()))),
                 inheritedMessageCount);
     }
 
@@ -1637,16 +1629,16 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                 String capturedSession = session.id;
                 Instant capturedAt = clock.instant();
                 List<GuideSessionExportCollector.SequencedRequest> captured =
-                        session.requests.stream().map(request ->
+                        dev.openallay.util.Java8Collections.toList(session.requests.stream().map(request ->
                                 new GuideSessionExportCollector.SequencedRequest(
                                         Objects.requireNonNull(
                                                 session.requestSequences.get(request.requestId()),
                                                 "request sequence"),
-                                        request)).toList();
+                                        request)));
                 GuideSessionExportCollector collector =
                         new GuideSessionExportCollector(historyScope, history);
                 collector.collect(capturedSession, captured,
-                                Map.copyOf(session.originalContext),
+                                dev.openallay.util.Java8Collections.mapCopyOf(session.originalContext),
                                 session.nextRequestSequence - 1, capturedAt)
                         .whenComplete((export, failure) -> dispatcher.execute(() -> {
                             if (failure == null) {
@@ -1669,7 +1661,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             GuideSessionExportSnapshot export,
             CompletableFuture<ToolResult<GuideSessionExportSnapshot>> result) {
         List<dev.openallay.model.image.ImageReference> references = imageReferences(
-                export.requests().stream().flatMap(request -> request.originalContext().stream()).toList());
+                dev.openallay.util.Java8Collections.toList(export.requests().stream().flatMap(request -> request.originalContext().stream())));
         if (references.isEmpty()) {
             result.complete(new ToolResult.Success<>(export));
             return;
@@ -1746,7 +1738,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             session.forkEpoch++;
             pendingCancelledFinalization.entrySet().removeIf(
                     entry -> entry.getValue().sessionId().equals(session.id));
-            session.modelContext = List.of();
+            session.modelContext = dev.openallay.util.Java8Collections.listOf();
             session.contextGeneration++;
             session.requestSequences.clear();
             session.totalRequests = 0;
@@ -1849,19 +1841,19 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
         CompletableFuture<Void> result = new CompletableFuture<>();
         disconnectFuture = result;
         dispatcher.execute(() -> {
-            List<ManualCompaction> detachedControls = sessions.values().stream()
-                    .map(session -> session.manualCompaction).filter(Objects::nonNull).toList();
+            List<ManualCompaction> detachedControls = dev.openallay.util.Java8Collections.toList(sessions.values().stream()
+                    .map(session -> session.manualCompaction).filter(Objects::nonNull));
             detachedControls.forEach(control -> control.detachedOnDisconnect = true);
             sessions.values().forEach(this::revokePending);
             sessions.values().forEach(this::cancelManualCompaction);
-            List<GuideRequestSnapshot> activeRequests = sessions.values().stream()
-                    .map(GuideService::active).filter(Objects::nonNull).toList();
+            List<GuideRequestSnapshot> activeRequests = dev.openallay.util.Java8Collections.toList(sessions.values().stream()
+                    .map(GuideService::active).filter(Objects::nonNull));
             for (GuideRequestSnapshot active : activeRequests) {
                 SessionState session = sessions.get(active.sessionId());
                 if (session != null && session.endpointRequests.contains(active.requestId())) {
                     pendingCancelledFinalization.putIfAbsent(active.requestId(), new CancelledFinalization(
                             session.id, Objects.requireNonNull(session.requestSequences.get(active.requestId())),
-                            List.copyOf(session.checkpoints)));
+                            dev.openallay.util.Java8Collections.listCopyOf(session.checkpoints)));
                 }
                 stopObservations(active.requestId());
                 if (active.topology() == GuideTopology.SERVER) remote.cancel(active.requestId());
@@ -1873,7 +1865,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             // A vanished server cannot supply a new transcript; captured client producers stay
             // retained if that receipt does not contain their references.
             remote.disconnect();
-            List<CompletableFuture<Void>> endpointBarriers = List.copyOf(endpointSettled.values());
+            List<CompletableFuture<Void>> endpointBarriers = dev.openallay.util.Java8Collections.listCopyOf(endpointSettled.values());
             CompletableFuture.allOf(endpointBarriers.toArray(CompletableFuture[]::new))
                     .whenComplete((ignored, failure) -> dispatcher.execute(() ->
                             finishDisconnect(detachedControls, result)));
@@ -1900,8 +1892,8 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                         ? history.flush() : CompletableFuture.completedFuture(null));
         sessions.values().forEach(session -> invalidatePageLoad(
                 session, "history_page_cancelled", "History page request was cancelled by disconnect"));
-        historyWriteBarriers.stream().map(HistoryWriteBarrier::requestId)
-                .filter(Objects::nonNull).toList().forEach(this::cancelHistoryContextBarrier);
+        dev.openallay.util.Java8Collections.toList(historyWriteBarriers.stream().map(HistoryWriteBarrier::requestId)
+                .filter(Objects::nonNull)).forEach(this::cancelHistoryContextBarrier);
         List<String> transientImageOwners = new ArrayList<>(imageImportOwners);
         transientImageOwners.addAll(imageDraftOwners);
         retainedImages.keySet().stream().filter(owner -> !owner.contains(":export:"))
@@ -2169,7 +2161,7 @@ deletion = $oaSwitch0_exit_result;
         session.pending.clear();
         session.pendingOrder.clear();
         session.pendingReceipts.clear();
-        List<Runnable> ready = List.copyOf(session.readyAdmissions.values());
+        List<Runnable> ready = dev.openallay.util.Java8Collections.listCopyOf(session.readyAdmissions.values());
         session.readyAdmissions.clear();
         session.admissions.clear();
         ready.forEach(Runnable::run);
@@ -2177,9 +2169,9 @@ deletion = $oaSwitch0_exit_result;
 
     private void putPendingOrdered(SessionState session, GuidePendingMessage message) {
         session.pending.put(message.id(), message);
-        List<GuidePendingMessage> ordered = session.pending.values().stream()
+        List<GuidePendingMessage> ordered = dev.openallay.util.Java8Collections.toList(session.pending.values().stream()
                 .sorted(java.util.Comparator.comparingLong(pending ->
-                        session.pendingOrder.getOrDefault(pending.id(), Long.MAX_VALUE))).toList();
+                        session.pendingOrder.getOrDefault(pending.id(), Long.MAX_VALUE))));
         session.pending.clear();
         ordered.forEach(pending -> session.pending.put(pending.id(), pending));
     }
@@ -2352,7 +2344,7 @@ if ((($oaPattern8_holder.value = valid) instanceof dev.openallay.tool.ToolResult
         captureImageCapability(requestId, capturedSelection);
         session.workingRequest = requestId;
         session.usage.begin(requestId, capturedSelection, publicModelIdentifier(capturedSelection));
-        session.originalContext.put(requestId, List.of());
+        session.originalContext.put(requestId, dev.openallay.util.Java8Collections.listOf());
         long requestSequence = session.nextRequestSequence++;
         session.requestSequences.put(requestId, requestSequence);
         session.totalRequests++;
@@ -2715,7 +2707,7 @@ if ((($oaPattern12_holder.value = event) instanceof dev.openallay.agent.AgentEve
 final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
 if ((($oaPattern13_holder.value = event) instanceof dev.openallay.agent.AgentEvent.StateChanged && (($oaPattern13_holder.bound = (AgentEvent.StateChanged) $oaPattern13_holder.value) != null))
                 && $oaPattern13_holder.bound.state() == dev.openallay.agent.AgentState.PREPARING) {
-            List.copyOf(session.pending.values()).stream()
+            dev.openallay.util.Java8Collections.listCopyOf(session.pending.values()).stream()
                     .filter(pending -> requestId.equals(pending.requestId()))
                     .forEach(pending -> sendSteer(session, pending));
         }
@@ -2763,7 +2755,7 @@ if ((($oaPattern15_holder.value = event) instanceof dev.openallay.agent.AgentEve
             captureForkBoundary(session, requestId);
         }
         if (after.status() == GuideRequestStatus.COMPLETED
-                && !after.assistantText().isBlank()) {
+                && !dev.openallay.util.Java8Strings.isBlank(after.assistantText())) {
             session.messages.add(new GuideMessage(
                     after.requestId(),
                     GuideMessage.Role.ASSISTANT,
@@ -2837,7 +2829,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
 
     private void publishWithoutSave() {
         fenceManualCompactionSelection();
-        publishedSessions = Map.copyOf(sessions);
+        publishedSessions = dev.openallay.util.Java8Collections.mapCopyOf(sessions);
         Map<UUID, List<dev.openallay.model.ModelMessage>> originalImages = new LinkedHashMap<>();
         sessions.values().forEach(session -> originalImages.putAll(session.originalContext));
         publishedObservationImages = ToolObservationImageIndex.build(originalImages);
@@ -2853,7 +2845,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
     }
 
     private GuideSnapshot buildSnapshot() {
-        List<GuideSessionSnapshot> copies = sessions.values().stream()
+        List<GuideSessionSnapshot> copies = dev.openallay.util.Java8Collections.toList(sessions.values().stream()
                 .map(session -> new GuideSessionSnapshot(
                         session.id,
                         session.messages,
@@ -2861,11 +2853,10 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
                         session.checkpoints,
                         session.modelSelection,
                         historyWindow(session),
-                        List.copyOf(session.pending.values()),
-                        session.workingRequest))
-                .toList();
+                        dev.openallay.util.Java8Collections.listCopyOf(session.pending.values()),
+                        session.workingRequest)));
         GuideModelSelection currentSelection = sessions.get(selectedSession).modelSelection;
-        List<GuideClientModelProfile> profiles = local == null ? List.of() : local.profiles();
+        List<GuideClientModelProfile> profiles = local == null ? dev.openallay.util.Java8Collections.listOf() : local.profiles();
         return new GuideSnapshot(
                 actor,
                 selectedSession,
@@ -3002,7 +2993,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
                             "history_page_superseded", "A newer history page was requested")));
         }
         long generation = ++session.windowGeneration;
-        PageLoad load = new PageLoad(key, generation, new ArrayList<>(List.of(result)));
+        PageLoad load = new PageLoad(key, generation, new ArrayList<>(dev.openallay.util.Java8Collections.listOf(result)));
         session.pageLoad = load;
         session.pageState = GuideHistoryPageState.LOADING;
         session.pageFailure = null;
@@ -3056,8 +3047,8 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
             GuideHistoryPageRequest.Direction direction,
             int neighborhoodCount,
             GuideHistoryPage page) {
-        List<GuideRequestSnapshot> active = session.requests.stream()
-                .filter(request -> !request.terminal()).toList();
+        List<GuideRequestSnapshot> active = dev.openallay.util.Java8Collections.toList(session.requests.stream()
+                .filter(request -> !request.terminal()));
         List<GuideRequestSnapshot> durable = session.requests.stream()
                 .filter(GuideRequestSnapshot::terminal).collect(java.util.stream.Collectors.toCollection(
                         ArrayList::new));
@@ -3097,8 +3088,8 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
                 session.requestSequences.put(request.requestId(), sequence++);
             }
         }
-        List<GuideRequestSnapshot> loadedDurable = session.requests.stream()
-                .filter(GuideRequestSnapshot::terminal).toList();
+        List<GuideRequestSnapshot> loadedDurable = dev.openallay.util.Java8Collections.toList(session.requests.stream()
+                .filter(GuideRequestSnapshot::terminal));
         session.firstLoaded = loadedDurable.isEmpty() ? null : cursor(
                 session, loadedDurable.get(0));
         session.lastLoaded = loadedDurable.isEmpty() ? null : cursor(
@@ -3119,13 +3110,13 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
     private void registerPageBaseline(GuideHistoryPage page) {
         for (GuideRequestSnapshot original : page.requests()) {
             GuideRequestSnapshot request = durableRequest(original);
-            for (DurableProjection projection : List.of(durableProjection, capturedProjection)) {
+            for (DurableProjection projection : dev.openallay.util.Java8Collections.listOf(durableProjection, capturedProjection)) {
                 projection.requests.putIfAbsent(request.requestId(), rowProjection(request));
                 for (GuideTimelineEntry entry : request.timeline()) {
                     projection.timeline.putIfAbsent(
                             new TimelineKey(request.requestId(), entry.ordinal()), entry);
                 }
-                projection.sources.putIfAbsent(request.requestId(), List.copyOf(request.sources()));
+                projection.sources.putIfAbsent(request.requestId(), dev.openallay.util.Java8Collections.listCopyOf(request.sources()));
             }
         }
     }
@@ -3214,7 +3205,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
             return CompletableFuture.completedFuture(null);
         }
         if (inFlightHistoryWrite == null && persistence.failure() != null) {
-            return CompletableFuture.failedFuture(new GuideHistoryException(
+            return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                     persistence.failure().code(), persistence.failure().message()));
         }
         CompletableFuture<Void> completion = new CompletableFuture<>();
@@ -3224,8 +3215,8 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
     }
 
     private void cancelHistoryContextBarrier(UUID requestId) {
-        List<HistoryWriteBarrier> cancelled = historyWriteBarriers.stream()
-                .filter(barrier -> requestId.equals(barrier.requestId())).toList();
+        List<HistoryWriteBarrier> cancelled = dev.openallay.util.Java8Collections.toList(historyWriteBarriers.stream()
+                .filter(barrier -> requestId.equals(barrier.requestId())));
         historyWriteBarriers.removeAll(cancelled);
         for (HistoryWriteBarrier barrier : cancelled) {
             barrier.completion().completeExceptionally(new GuideHistoryException(
@@ -3234,10 +3225,10 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
     }
 
     private void finishHistoryWriteBarriers(Throwable failure, boolean newerWork) {
-        List<HistoryWriteBarrier> completed = historyWriteBarriers.stream()
+        List<HistoryWriteBarrier> completed = dev.openallay.util.Java8Collections.toList(historyWriteBarriers.stream()
                 .filter(barrier -> failure == null
                         ? barrier.generation() <= persistence.committedGeneration()
-                        : barrier.requestId() != null || !newerWork).toList();
+                        : barrier.requestId() != null || !newerWork));
         historyWriteBarriers.removeAll(completed);
         for (HistoryWriteBarrier barrier : completed) {
             if (failure == null) barrier.completion().complete(null);
@@ -3298,8 +3289,8 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
         if (mutations.isEmpty() && selectedSession.equals(capturedProjection.selectedSession)) {
             return null;
         }
-        List<GuideHistoryMutation> boundaries = mutations.stream()
-                .filter(value -> value instanceof GuideHistoryMutation.CaptureRequestBoundary).toList();
+        List<GuideHistoryMutation> boundaries = dev.openallay.util.Java8Collections.toList(mutations.stream()
+                .filter(value -> value instanceof GuideHistoryMutation.CaptureRequestBoundary));
         mutations.removeAll(boundaries);
         mutations.addAll(boundaries);
         mutations.add(0, new GuideHistoryMutation.UpsertPartition(
@@ -3313,7 +3304,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
     private static GuideRequestSnapshot rowProjection(GuideRequestSnapshot request) {
         return new GuideRequestSnapshot(
                 request.requestId(), request.sessionId(), request.topology(), request.userMessage(),
-                List.of(), request.status(), List.of(), request.usage(),
+                dev.openallay.util.Java8Collections.listOf(), request.status(), dev.openallay.util.Java8Collections.listOf(), request.usage(),
                 request.retryAfterMillis(), request.failure(), request.createdAt(),
                 request.updatedAt(), request.terminalAt(), request.modelSelection(),
                 GuideRequestSnapshot.legacyProgress(request.status(), request.retryAfterMillis(),
@@ -3348,7 +3339,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
     }
 
     private static GuideRequestSnapshot durableRequest(GuideRequestSnapshot request) {
-        List<GuideTimelineEntry> timeline = request.timeline().stream()
+        List<GuideTimelineEntry> timeline = dev.openallay.util.Java8Collections.toList(request.timeline().stream()
                 .map(entry -> {
 final class $oaPattern17_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
 final $oaPattern17_Holder $oaPattern17_holder = new $oaPattern17_Holder();
@@ -3366,8 +3357,7 @@ return (($oaPattern17_holder.value = entry) instanceof dev.openallay.guide.Guide
                                         $oaPattern17_holder.bound.activity().presentationMessages(),
                                         $oaPattern17_holder.bound.activity().sources()))
                         : entry;
-})
-                .toList();
+}));
         return new GuideRequestSnapshot(
                 request.requestId(),
                 request.sessionId(),
@@ -3519,7 +3509,7 @@ if ((($oaPattern18_holder.value = current) instanceof dev.openallay.guide.histor
         private long queueGeneration;
         private boolean drainingPending;
         private final List<ContextCheckpoint> checkpoints = new ArrayList<>();
-        private List<dev.openallay.model.ModelMessage> modelContext = List.of();
+        private List<dev.openallay.model.ModelMessage> modelContext = dev.openallay.util.Java8Collections.listOf();
         private final Map<UUID, List<dev.openallay.model.ModelMessage>> originalContext =
                 new LinkedHashMap<>();
         private final Map<UUID, GuideHistoryMutation.CaptureRequestBoundary> forkBoundaries = new LinkedHashMap<>();
@@ -3563,7 +3553,7 @@ private static final class CancelledFinalization {
     private final List<ContextCheckpoint> checkpoints;
     private CancelledFinalization(String sessionId, long sequence, List<ContextCheckpoint> checkpoints) {
 
-            checkpoints = List.copyOf(checkpoints);
+            checkpoints = dev.openallay.util.Java8Collections.listCopyOf(checkpoints);
 
         this.sessionId = sessionId;
         this.sequence = sequence;
@@ -4162,7 +4152,7 @@ if ((($oaPattern51_holder.value = mutation) instanceof dev.openallay.guide.histo
         }
 
         private List<GuideHistoryMutation> take() {
-            List<GuideHistoryMutation> batch = List.copyOf(mutations.values());
+            List<GuideHistoryMutation> batch = dev.openallay.util.Java8Collections.listCopyOf(mutations.values());
             mutations.clear();
             return batch;
         }

@@ -15,8 +15,8 @@ public final class RichComponentEnvelope {
             throw new IllegalArgumentException("rich component type is invalid");
         }
         properties = dev.openallay.json.JsonTrees.copy(java.util.Objects.requireNonNull(properties, "properties"));
-        if (fallbackText == null || fallbackText.isBlank()
-                || narration == null || narration.isBlank()) {
+        if (fallbackText == null || dev.openallay.util.Java8Strings.isBlank(fallbackText)
+                || narration == null || dev.openallay.util.Java8Strings.isBlank(narration)) {
             throw new IllegalArgumentException("rich component fallback and narration are required");
         }
 

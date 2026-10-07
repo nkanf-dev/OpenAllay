@@ -14,7 +14,7 @@ public final class GuideToolSummaryGeometry {
     private final List<GuideUiLayout.Rect> capsules;
     private final int rowHeight;
     public GuideToolSummaryGeometry(GuideUiLayout.Rect card, GuideUiLayout.Rect icon, GuideUiLayout.Rect title, GuideUiLayout.Rect status, GuideUiLayout.Rect description, List<GuideUiLayout.Rect> capsules, int rowHeight) {
- capsules = List.copyOf(capsules);
+ capsules = dev.openallay.util.Java8Collections.listCopyOf(capsules);
         this.card = card;
         this.icon = icon;
         this.title = title;

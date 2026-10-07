@@ -37,7 +37,7 @@ import org.commonmark.parser.Parser;
 public final class SemanticMessageParser {
     private static final java.util.UUID EMPTY_REQUEST = new java.util.UUID(0, 0);
     private final Parser parser = Parser.builder()
-            .extensions(List.of(TablesExtension.create()))
+            .extensions(dev.openallay.util.Java8Collections.listOf(TablesExtension.create()))
             .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
             .build();
     private final SemanticReferenceValidator references = new SemanticReferenceValidator();
@@ -117,7 +117,7 @@ public final class SemanticMessageParser {
                     index++;
                 }
             }
-            return List.copyOf(result);
+            return dev.openallay.util.Java8Collections.listCopyOf(result);
         }
 
         private SemanticBlock block(Node node, String path) {
@@ -154,7 +154,7 @@ if ((($oaPattern4_holder.value = node) instanceof org.commonmark.node.BlockQuote
             final class $oaPattern5_Holder { org.commonmark.node.Node value; FencedCodeBlock bound; }
 final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
 if ((($oaPattern5_holder.value = node) instanceof org.commonmark.node.FencedCodeBlock && (($oaPattern5_holder.bound = (FencedCodeBlock) $oaPattern5_holder.value) != null))) {
-                if ("openallay-component".equals($oaPattern5_holder.bound.getInfo().strip())) {
+                if ("openallay-component".equals(dev.openallay.util.Java8Strings.strip($oaPattern5_holder.bound.getInfo()))) {
                     return component($oaPattern5_holder.bound, path);
                 }
                 return new SemanticBlock.CodeBlock(
@@ -187,7 +187,7 @@ if ((($oaPattern7_holder.value = node) instanceof org.commonmark.ext.gfm.tables.
             diagnostics.add(new SemanticDiagnostic(decoded.failureCode(), nodeId));
             SemanticInline.Text fallback = new SemanticInline.Text(
                     id(path + ".s0", "text", decoded.fallbackText()), decoded.fallbackText());
-            return new SemanticBlock.Paragraph(nodeId, List.of(fallback));
+            return new SemanticBlock.Paragraph(nodeId, dev.openallay.util.Java8Collections.listOf(fallback));
         }
 
         private SemanticBlock list(Node node, String path, boolean ordered, int start) {
@@ -199,7 +199,7 @@ final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
 if ((($oaPattern8_holder.value = child) instanceof org.commonmark.node.ListItem && (($oaPattern8_holder.bound = (ListItem) $oaPattern8_holder.value) != null))) {
                     items.add(blocks($oaPattern8_holder.bound, path + ".i" + index++));
                 } else {
-                    items.add(List.of(unsafeBlock(child, path + ".i" + index++)));
+                    items.add(dev.openallay.util.Java8Collections.listOf(unsafeBlock(child, path + ".i" + index++)));
                 }
             }
             return new SemanticBlock.ListBlock(
@@ -210,7 +210,7 @@ if ((($oaPattern8_holder.value = child) instanceof org.commonmark.node.ListItem 
         }
 
         private SemanticBlock table(TableBlock table, String path) {
-            SemanticBlock.TableRow header = new SemanticBlock.TableRow(List.of());
+            SemanticBlock.TableRow header = new SemanticBlock.TableRow(dev.openallay.util.Java8Collections.listOf());
             List<SemanticBlock.TableRow> body = new ArrayList<>();
             int rowIndex = 0;
             for (Node section = table.getFirstChild(); section != null; section = section.getNext()) {
@@ -314,7 +314,7 @@ if ((($oaPattern14_holder.value = node) instanceof org.commonmark.node.Code && (
 }
 }
             }
-            return List.copyOf(result);
+            return dev.openallay.util.Java8Collections.listCopyOf(result);
         }
 
         private List<SemanticInline> text(String text, String path) {
@@ -345,7 +345,7 @@ if ((($oaPattern14_holder.value = node) instanceof org.commonmark.node.Code && (
                 result.add(new SemanticInline.Text(
                         id(path + ".p" + part, "text", literal), literal));
             }
-            return List.copyOf(result);
+            return dev.openallay.util.Java8Collections.listCopyOf(result);
         }
 
         private SemanticInline unsafeInline(Node node, String path) {
@@ -361,7 +361,7 @@ if ((($oaPattern14_holder.value = node) instanceof org.commonmark.node.Code && (
             diagnostics.add(new SemanticDiagnostic("semantic_content_unsupported", nodeId));
             SemanticInline.Text text = new SemanticInline.Text(
                     id(path + ".s0", "text", literal), literal);
-            return new SemanticBlock.Paragraph(nodeId, List.of(text));
+            return new SemanticBlock.Paragraph(nodeId, dev.openallay.util.Java8Collections.listOf(text));
         }
 
         private String literal(Node node) {
@@ -371,7 +371,7 @@ if ((($oaPattern14_holder.value = node) instanceof org.commonmark.node.Code && (
                 int end = Math.max(start, Math.min(source.length(), start + span.getLength()));
                 value.append(source, start, end);
             }
-            if (!value.isEmpty()) {
+            if (!((value).length() == 0)) {
                 return value.toString();
             }
             final class $oaPattern15_Holder { org.commonmark.node.Node value; HtmlBlock bound; }

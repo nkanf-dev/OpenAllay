@@ -39,9 +39,8 @@ public static List<Group> groups(List<GuideSource> sources) {
         for (GuideSource source : sources) {
             grouped.computeIfAbsent(Identity.from(source), ignored -> new ArrayList<>()).add(source);
         }
-        return grouped.entrySet().stream()
-                .map(entry -> new Group(entry.getKey(), entry.getValue()))
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(grouped.entrySet().stream()
+                .map(entry -> new Group(entry.getKey(), entry.getValue())));
     }
 @dev.openallay.value.ValueType(Group.ValueSchemaProvider.class)
 public static final class Group {
@@ -52,7 +51,7 @@ public static final class Group {
     public Group(Identity identity, List<GuideSource> records, Instant firstCapturedAt, Instant lastCapturedAt) {
 
             Objects.requireNonNull(identity, "identity");
-            records = List.copyOf(records);
+            records = dev.openallay.util.Java8Collections.listCopyOf(records);
             if (records.isEmpty()) throw new IllegalArgumentException("source group must not be empty");
             Objects.requireNonNull(firstCapturedAt, "firstCapturedAt");
             Objects.requireNonNull(lastCapturedAt, "lastCapturedAt");

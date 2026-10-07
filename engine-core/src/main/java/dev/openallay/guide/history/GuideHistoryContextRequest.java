@@ -22,7 +22,7 @@ public final class GuideHistoryContextRequest {
         if (promptAndToolTokens < 0 || promptAndToolTokens >= budget.inputTokens()) {
             throw new IllegalArgumentException("prompt/tool reservation exhausts model input");
         }
-        if (modelIdentifier == null || modelIdentifier.isBlank()) {
+        if (modelIdentifier == null || dev.openallay.util.Java8Strings.isBlank(modelIdentifier)) {
             throw new IllegalArgumentException("model identifier is required");
         }
 

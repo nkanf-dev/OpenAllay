@@ -19,7 +19,7 @@ public final class GuideUiProgress {
     public GuideUiProgress(GuideRequestPhase phase, String activityTranslationKey, Instant requestStartedAt, Instant phaseStartedAt, Instant lastProgressAt, int attempt, Instant retryAt, Instant deadlineAt) {
 
         Objects.requireNonNull(phase, "phase");
-        if (activityTranslationKey == null || activityTranslationKey.isBlank()) {
+        if (activityTranslationKey == null || dev.openallay.util.Java8Strings.isBlank(activityTranslationKey)) {
             throw new IllegalArgumentException("progress translation key must not be blank");
         }
         Objects.requireNonNull(requestStartedAt, "requestStartedAt");

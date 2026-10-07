@@ -48,14 +48,14 @@ public final class GuideToolDetailPresenter {
 
     private static Projection projectCards(String toolId, JsonObject normalized) {
         if (normalized == null) {
-            return new Projection(List.of(), "restored result detail is unavailable");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "restored result detail is unavailable");
         }
         if (!"success".equals(string(normalized, "status"))) {
-            return new Projection(List.of(), "tool returned a normalized failure");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "tool returned a normalized failure");
         }
         JsonObject value = object(normalized, "value");
         if (value == null) {
-            return new Projection(List.of(), "value is missing");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "value is missing");
         }
         String name = toolName(toolId);
         try {
@@ -69,21 +69,21 @@ $oaSwitch0_exit_result = javascriptCards(value); break $oaSwitch0_exit;
 }
 default:
 {
-$oaSwitch0_exit_result = new Projection(List.of(), "generic tool projection"); break $oaSwitch0_exit;
+$oaSwitch0_exit_result = new Projection(dev.openallay.util.Java8Collections.listOf(), "generic tool projection"); break $oaSwitch0_exit;
 }
 }
 }
 return $oaSwitch0_exit_result;
 }
         } catch (RuntimeException exception) {
-            return new Projection(List.of(), "malformed semantic result");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "malformed semantic result");
         }
     }
 
     private static Projection javascriptCards(JsonObject value) {
         JsonElement preview = value.get("preview");
         if (preview == null || preview.isJsonNull()) {
-            return new Projection(List.of(), "analysis preview is missing");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "analysis preview is missing");
         }
         String viewKind = string(value, "viewKind");
         try {
@@ -109,9 +109,9 @@ $oaSwitch2_exit_result = javascriptKeyValueCard(value, preview); break $oaSwitch
 }
 case "SCALAR":
 {
-$oaSwitch2_exit_result = new Projection(List.of(new GuideDetailCard.Text(
+$oaSwitch2_exit_result = new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.Text(
                         "screen.openallay.detail.analysis",
-                        List.of(displayValue(preview)))), ""); break $oaSwitch2_exit;
+                        dev.openallay.util.Java8Collections.listOf(displayValue(preview)))), ""); break $oaSwitch2_exit;
 }
 default:
 {
@@ -133,11 +133,10 @@ return $oaSwitch2_exit_result;
         } else if (preview.isJsonObject()) {
             recipes.add(preview);
         }
-        List<GuideDetailCard> cards = GuideRecipePresenter
+        List<GuideDetailCard> cards = dev.openallay.util.Java8Collections.toList(GuideRecipePresenter
                 .cards(recipes)
                 .stream()
-                .<GuideDetailCard>map(GuideDetailCard.Recipe::new)
-                .toList();
+                .<GuideDetailCard>map(GuideDetailCard.Recipe::new));
         return cards.isEmpty()
                 ? javascriptFallbackCard(value, preview)
                 : new Projection(cards, "");
@@ -146,7 +145,7 @@ return $oaSwitch2_exit_result;
     private static Projection javascriptItemCards(JsonObject value, JsonElement preview) {
         List<JsonElement> encoded = preview.isJsonArray()
                 ? dev.openallay.json.JsonReaders.elements(preview.getAsJsonArray())
-                : List.of(preview);
+                : dev.openallay.util.Java8Collections.listOf(preview);
         List<GuideItemView> items = new ArrayList<>();
         for (JsonElement element : encoded) {
             if (!element.isJsonObject()) {
@@ -154,10 +153,10 @@ return $oaSwitch2_exit_result;
             }
             JsonObject object = element.getAsJsonObject();
             String id = string(object, "itemId");
-            if (id.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(id)) {
                 id = string(object, "id");
             }
-            if (id.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(id)) {
                 continue;
             }
             String displayName = string(object, "displayName");
@@ -166,7 +165,7 @@ return $oaSwitch2_exit_result;
         }
         return items.isEmpty()
                 ? javascriptFallbackCard(value, preview)
-                : new Projection(List.of(new GuideDetailCard.ItemGrid(
+                : new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.ItemGrid(
                         "screen.openallay.detail.analysis.items", items)), "");
     }
 
@@ -204,11 +203,10 @@ return $oaSwitch2_exit_result;
                 return javascriptFallbackCard(value, preview);
             }
             JsonObject row = element.getAsJsonObject();
-            rows.add(columns.stream()
-                    .map(column -> displayValue(row.get(column)))
-                    .toList());
+            rows.add(dev.openallay.util.Java8Collections.toList(columns.stream()
+                    .map(column -> displayValue(row.get(column)))));
         }
-        return new Projection(List.of(new GuideDetailCard.Table(
+        return new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.Table(
                 "screen.openallay.detail.analysis.table",
                 columns,
                 rows,
@@ -221,13 +219,12 @@ return $oaSwitch2_exit_result;
         if (!preview.isJsonObject()) {
             return javascriptFallbackCard(value, preview);
         }
-        List<GuideDetailCard.DataCell> entries = preview.getAsJsonObject().entrySet().stream()
+        List<GuideDetailCard.DataCell> entries = dev.openallay.util.Java8Collections.toList(preview.getAsJsonObject().entrySet().stream()
                 .map(entry -> new GuideDetailCard.DataCell(
-                        clip(entry.getKey(), 80), displayValue(entry.getValue())))
-                .toList();
+                        clip(entry.getKey(), 80), displayValue(entry.getValue()))));
         return entries.isEmpty()
                 ? javascriptFallbackCard(value, preview)
-                : new Projection(List.of(new GuideDetailCard.KeyValue(
+                : new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.KeyValue(
                         "screen.openallay.detail.analysis.fields",
                         entries,
                         bool(value, "complete"),
@@ -245,10 +242,9 @@ return $oaSwitch2_exit_result;
             rows.add(dataRow(preview, "value"));
         }
         if (rows.isEmpty()) {
-            rows.add(new GuideDetailCard.DataRow(List.of(
-                    new GuideDetailCard.DataCell("result", "(empty)"))));
+            rows.add(new GuideDetailCard.DataRow(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.DataCell("result", "(empty)"))));
         }
-        return new Projection(List.of(new GuideDetailCard.DataPreview(
+        return new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.DataPreview(
                 "screen.openallay.detail.analysis",
                 requiredString(value, "resultType"),
                 nonnegativeLong(value.get("cardinality")),
@@ -319,7 +315,7 @@ return $oaSwitch1_exit_result;
 
     private static String requiredString(JsonObject value, String field) {
         String result = string(value, field);
-        if (result.isBlank()) throw new IllegalArgumentException(field + " is required");
+        if (dev.openallay.util.Java8Strings.isBlank(result)) throw new IllegalArgumentException(field + " is required");
         return result;
     }
 
@@ -377,7 +373,7 @@ private static final class Projection {
     private final String diagnostic;
     private Projection(List<GuideDetailCard> cards, String diagnostic) {
 
-            cards = List.copyOf(cards);
+            cards = dev.openallay.util.Java8Collections.listCopyOf(cards);
             diagnostic = diagnostic == null ? "" : diagnostic;
 
         this.cards = cards;

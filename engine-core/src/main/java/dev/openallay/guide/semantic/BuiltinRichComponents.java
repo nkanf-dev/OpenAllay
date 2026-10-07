@@ -7,56 +7,48 @@ import java.util.Map;
 import java.util.Set;
 
 final class BuiltinRichComponents {
-    private static final List<Definition> DEFINITIONS = List.of(
-            new Definition(
+    private static final List<Definition> DEFINITIONS = dev.openallay.util.Java8Collections.listOf(new Definition(
                     "item_row",
                     BuiltinRichComponents::itemRow,
                     "Use for a compact row of evidenced items. Exact properties: "
                             + "{\"items\":[{\"itemId\":string,\"count\":nonnegative integer,"
                             + "\"label\":string|null}]}; items must be non-empty and every itemId "
-                            + "must copy an item reference already returned by a Tool."),
-            new Definition(
+                            + "must copy an item reference already returned by a Tool."), new Definition(
                     "recipe_grid",
                     BuiltinRichComponents::recipeGrid,
                     "Use to show one evidenced recipe. Exact properties: "
                             + "{\"sourceId\":string,\"generation\":string,\"recipeId\":string,"
                             + "\"label\":string|null}; copy the complete sourceId/generation/recipeId "
-                            + "handle from one exact recipe Tool result."),
-            new Definition(
+                            + "handle from one exact recipe Tool result."), new Definition(
                     "ingredient_check",
                     BuiltinRichComponents::ingredientCheck,
                     "Use to compare required and available evidenced items. Exact properties: "
                             + "{\"ingredients\":[{\"itemId\":string,\"required\":nonnegative integer,"
                             + "\"available\":nonnegative integer,\"label\":string|null}]}; ingredients "
-                            + "must be non-empty and every itemId must already be Tool-evidenced."),
-            new Definition(
+                            + "must be non-empty and every itemId must already be Tool-evidenced."), new Definition(
                     "craftability_summary",
                     BuiltinRichComponents::craftability,
                     "Use only for a deterministic craftability Tool result. Exact properties: "
                             + "{\"sourceId\":string,\"generation\":string,\"recipeId\":string,"
                             + "\"craftable\":boolean,\"conclusive\":boolean,"
                             + "\"requestedCrafts\":positive integer,\"maximumCrafts\":nonnegative integer}; "
-                            + "copy the recipe handle and all computed values unchanged from Tool evidence."),
-            new Definition(
+                            + "copy the recipe handle and all computed values unchanged from Tool evidence."), new Definition(
                     "progress_steps",
                     BuiltinRichComponents::progressSteps,
                     "Use for a short explanatory workflow, never as factual evidence. Exact properties: "
                             + "{\"steps\":[{\"id\":local-id,\"label\":string,"
                             + "\"state\":PENDING|ACTIVE|COMPLETE|FAILED}]}; steps must be non-empty "
-                            + "and IDs unique."),
-            new Definition(
+                            + "and IDs unique."), new Definition(
                     "source_summary",
                     BuiltinRichComponents::sourceSummary,
                     "Use to summarize evidenced knowledge or recipe sources. Exact properties: "
                             + "{\"sources\":[{\"sourceId\":string,\"label\":string|null}]}; sources "
-                            + "must be non-empty and every sourceId must copy a Tool-returned source reference."),
-            new Definition(
+                            + "must be non-empty and every sourceId must copy a Tool-returned source reference."), new Definition(
                     "status_badge",
                     BuiltinRichComponents::statusBadge,
                     "Use for a concise display-only status. Exact properties: "
                             + "{\"state\":INFO|SUCCESS|WARNING|ERROR,\"label\":string}; "
-                            + "the badge is not factual evidence."),
-            new Definition(
+                            + "the badge is not factual evidence."), new Definition(
                     "choice_group",
                     BuiltinRichComponents::choiceGroup,
                     "Use for inert suggested follow-ups only. Exact properties: "
@@ -72,14 +64,13 @@ final class BuiltinRichComponents {
                 throw new IllegalStateException("duplicate built-in rich component " + definition.type());
             }
         }
-        return Map.copyOf(values);
+        return dev.openallay.util.Java8Collections.mapCopyOf(values);
     }
 
     static List<PromptCatalogEntry> promptCatalog() {
-        return DEFINITIONS.stream()
+        return dev.openallay.util.Java8Collections.toList(DEFINITIONS.stream()
                 .map(definition -> new PromptCatalogEntry(
-                        definition.type(), definition.guidance()))
-                .toList();
+                        definition.type(), definition.guidance())));
     }
 
     @dev.openallay.value.ValueType(PromptCatalogEntry.ValueSchemaProvider.class)
@@ -91,7 +82,7 @@ static final class PromptCatalogEntry {
             if (type == null || !type.matches("[a-z][a-z0-9_]*")) {
                 throw new IllegalArgumentException("prompt component type is invalid");
             }
-            if (guidance == null || guidance.isBlank()) {
+            if (guidance == null || dev.openallay.util.Java8Strings.isBlank(guidance)) {
                 throw new IllegalArgumentException("prompt component guidance is required");
             }
 
@@ -165,10 +156,10 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of("items"));
-        List<RichComponent.Item> items = RichComponentRegistry.objects(
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("items"));
+        List<RichComponent.Item> items = dev.openallay.util.Java8Collections.toList(RichComponentRegistry.objects(
                 RichComponentRegistry.array(properties, "items")).stream()
-                .map(value -> RichComponentRegistry.item(value, references)).toList();
+                .map(value -> RichComponentRegistry.item(value, references)));
         return new RichComponent.ItemRow(
                 nodeId, items, envelope.fallbackText(), envelope.narration());
     }
@@ -179,7 +170,7 @@ private static final class Definition {
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
         RichComponentRegistry.exact(
-                properties, Set.of("sourceId", "generation", "recipeId", "label"));
+                properties, dev.openallay.util.Java8Collections.setOf("sourceId", "generation", "recipeId", "label"));
         RichComponentRegistry.RecipeBinding recipe = RichComponentRegistry.recipe(
                 properties, references);
         return new RichComponent.RecipeGrid(
@@ -196,10 +187,10 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of("ingredients"));
-        List<RichComponent.Ingredient> ingredients = RichComponentRegistry.objects(
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("ingredients"));
+        List<RichComponent.Ingredient> ingredients = dev.openallay.util.Java8Collections.toList(RichComponentRegistry.objects(
                         RichComponentRegistry.array(properties, "ingredients")).stream()
-                .map(value -> ingredient(value, references)).toList();
+                .map(value -> ingredient(value, references)));
         return new RichComponent.IngredientCheck(
                 nodeId, ingredients, envelope.fallbackText(), envelope.narration());
     }
@@ -207,7 +198,7 @@ private static final class Definition {
     private static RichComponent.Ingredient ingredient(
             JsonObject value, SemanticReferenceIndex references) {
         RichComponentRegistry.exact(
-                value, Set.of("itemId", "required", "available", "label"));
+                value, dev.openallay.util.Java8Collections.setOf("itemId", "required", "available", "label"));
         String itemId = RichComponentRegistry.string(value, "itemId");
         return new RichComponent.Ingredient(
                 itemId,
@@ -223,9 +214,7 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of(
-                "sourceId", "generation", "recipeId", "craftable", "conclusive",
-                "requestedCrafts", "maximumCrafts"));
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("sourceId", "generation", "recipeId", "craftable", "conclusive", "requestedCrafts", "maximumCrafts"));
         RichComponentRegistry.RecipeBinding recipe = RichComponentRegistry.recipe(
                 properties, references);
         return new RichComponent.CraftabilitySummary(
@@ -245,16 +234,16 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of("steps"));
-        List<RichComponent.Step> steps = RichComponentRegistry.objects(
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("steps"));
+        List<RichComponent.Step> steps = dev.openallay.util.Java8Collections.toList(RichComponentRegistry.objects(
                         RichComponentRegistry.array(properties, "steps")).stream()
-                .map(BuiltinRichComponents::step).toList();
+                .map(BuiltinRichComponents::step));
         return new RichComponent.ProgressSteps(
                 nodeId, steps, envelope.fallbackText(), envelope.narration());
     }
 
     private static RichComponent.Step step(JsonObject value) {
-        RichComponentRegistry.exact(value, Set.of("id", "label", "state"));
+        RichComponentRegistry.exact(value, dev.openallay.util.Java8Collections.setOf("id", "label", "state"));
         return new RichComponent.Step(
                 RichComponentRegistry.string(value, "id"),
                 RichComponentRegistry.string(value, "label"),
@@ -267,17 +256,17 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of("sources"));
-        List<RichComponent.Source> sources = RichComponentRegistry.objects(
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("sources"));
+        List<RichComponent.Source> sources = dev.openallay.util.Java8Collections.toList(RichComponentRegistry.objects(
                         RichComponentRegistry.array(properties, "sources")).stream()
-                .map(value -> source(value, references)).toList();
+                .map(value -> source(value, references)));
         return new RichComponent.SourceSummary(
                 nodeId, sources, envelope.fallbackText(), envelope.narration());
     }
 
     private static RichComponent.Source source(
             JsonObject value, SemanticReferenceIndex references) {
-        RichComponentRegistry.exact(value, Set.of("sourceId", "label"));
+        RichComponentRegistry.exact(value, dev.openallay.util.Java8Collections.setOf("sourceId", "label"));
         String sourceId = RichComponentRegistry.string(value, "sourceId");
         return new RichComponent.Source(
                 sourceId,
@@ -291,7 +280,7 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of("state", "label"));
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("state", "label"));
         return new RichComponent.StatusBadge(
                 nodeId,
                 RichComponent.BadgeState.valueOf(
@@ -306,10 +295,10 @@ private static final class Definition {
             RichComponentEnvelope envelope,
             SemanticReferenceIndex references) {
         JsonObject properties = envelope.properties();
-        RichComponentRegistry.exact(properties, Set.of("prompt", "choices"));
-        List<RichComponent.Choice> choices = RichComponentRegistry.objects(
+        RichComponentRegistry.exact(properties, dev.openallay.util.Java8Collections.setOf("prompt", "choices"));
+        List<RichComponent.Choice> choices = dev.openallay.util.Java8Collections.toList(RichComponentRegistry.objects(
                         RichComponentRegistry.array(properties, "choices")).stream()
-                .map(BuiltinRichComponents::choice).toList();
+                .map(BuiltinRichComponents::choice));
         return new RichComponent.ChoiceGroup(
                 nodeId,
                 RichComponentRegistry.string(properties, "prompt"),
@@ -319,7 +308,7 @@ private static final class Definition {
     }
 
     private static RichComponent.Choice choice(JsonObject value) {
-        RichComponentRegistry.exact(value, Set.of("id", "label"));
+        RichComponentRegistry.exact(value, dev.openallay.util.Java8Collections.setOf("id", "label"));
         return new RichComponent.Choice(
                 RichComponentRegistry.string(value, "id"),
                 RichComponentRegistry.string(value, "label"));

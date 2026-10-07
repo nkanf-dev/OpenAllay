@@ -55,7 +55,7 @@ private static String plainText(String value) {
             if (Character.isISOControl(codePoint)) text.append(' ');
             else text.appendCodePoint(codePoint);
         });
-        return text.toString().strip();
+        return dev.openallay.util.Java8Strings.strip(text.toString());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

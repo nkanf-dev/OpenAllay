@@ -28,9 +28,9 @@ public final class GuideUiView {
     private final String capabilityMessage;
     public GuideUiView(String selectedSession, GuideModelMode modelMode, boolean clientModelAvailable, boolean serverModelAvailable, boolean canSend, boolean canCancel, boolean canRetry, GuideUiProgress progress, List<GuideUiSession> sessions, List<GuideUiRow> rows, List<GuideUiModelChoice> modelChoices, String capabilityMessage) {
 
-        sessions = List.copyOf(sessions);
-        rows = List.copyOf(rows);
-        modelChoices = List.copyOf(modelChoices);
+        sessions = dev.openallay.util.Java8Collections.listCopyOf(sessions);
+        rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
+        modelChoices = dev.openallay.util.Java8Collections.listCopyOf(modelChoices);
         if (modelChoices.stream().filter(GuideUiModelChoice::selected).count() != 1) {
             throw new IllegalArgumentException("exactly one model choice must be selected");
         }
@@ -98,14 +98,13 @@ public static GuideUiView from(GuideSnapshot snapshot, GuideDisplayConfig displa
                 .filter(GuideUiModelChoice::selected)
                 .findFirst().orElseThrow();
         boolean targetAvailable = selectedModel.available();
-        List<GuideUiSession> sessions = snapshot.sessions().stream()
+        List<GuideUiSession> sessions = dev.openallay.util.Java8Collections.toList(snapshot.sessions().stream()
                 .map(value -> new GuideUiSession(
                         value.sessionId(),
                         value.sessionId().equals(snapshot.selectedSession()),
                         value.requests().stream().anyMatch(request -> !request.terminal()),
                         Math.toIntExact(Math.min(
-                                Integer.MAX_VALUE, value.historyWindow().totalRequests()))))
-                .toList();
+                                Integer.MAX_VALUE, value.historyWindow().totalRequests())))));
         List<GuideUiRow> rows = new ArrayList<>();
         switch ((snapshot.persistence().state())) {
 case LOADING:
@@ -215,7 +214,7 @@ if ($oaPattern2_match) {
                     request.failure() == null ? request.status().name() : request.failure().message(),
                     request.failure()));
         }
-        return List.copyOf(rows);
+        return dev.openallay.util.Java8Collections.listCopyOf(rows);
     }
 private static List<GuideUiModelChoice> modelChoices(
             GuideSnapshot snapshot, GuideRequestSnapshot active) {
@@ -260,7 +259,7 @@ private static List<GuideUiModelChoice> modelChoices(
                     snapshot.serverModelAvailable()));
         }
         GuideModelSelection running = active == null ? null : active.modelSelection();
-        return seeds.stream().map(seed -> new GuideUiModelChoice(
+        return dev.openallay.util.Java8Collections.toList(seeds.stream().map(seed -> new GuideUiModelChoice(
                 seed.selection(),
                 seed.displayName(),
                 seed.origin(),
@@ -274,7 +273,7 @@ private static List<GuideUiModelChoice> modelChoices(
                         : snapshot.clientProfiles().stream()
                                 .filter(profile -> profile.id().equals(seed.selection().profileId()))
                                 .map(GuideClientModelProfile::imageInputSource)
-                                .filter(java.util.Objects::nonNull).findFirst().orElse(null))).toList();
+                                .filter(java.util.Objects::nonNull).findFirst().orElse(null))));
     }
 private static void ensureClientChoice(
             List<ChoiceSeed> seeds,

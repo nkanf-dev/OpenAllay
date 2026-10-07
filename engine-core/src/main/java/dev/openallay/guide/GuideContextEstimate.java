@@ -17,7 +17,7 @@ public final class GuideContextEstimate {
         Objects.requireNonNull(requestId, "requestId");
         if (estimatedTokens < 0) throw new IllegalArgumentException("Estimate must not be negative");
         if ((budget == null) != (modelIdentifier == null)
-                || modelIdentifier != null && modelIdentifier.isBlank()) {
+                || modelIdentifier != null && dev.openallay.util.Java8Strings.isBlank(modelIdentifier)) {
             throw new IllegalArgumentException("Captured budget and model identity must be supplied together");
         }
 

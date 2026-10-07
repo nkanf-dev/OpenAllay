@@ -50,7 +50,7 @@ public static final class Emphasis implements SemanticInline {
     public Emphasis(String nodeId, List<SemanticInline> children) {
 
             SemanticIds.require(nodeId);
-            children = List.copyOf(children);
+            children = dev.openallay.util.Java8Collections.listCopyOf(children);
 
         this.nodeId = nodeId;
         this.children = children;
@@ -85,7 +85,7 @@ public static final class Strong implements SemanticInline {
     public Strong(String nodeId, List<SemanticInline> children) {
 
             SemanticIds.require(nodeId);
-            children = List.copyOf(children);
+            children = dev.openallay.util.Java8Collections.listCopyOf(children);
 
         this.nodeId = nodeId;
         this.children = children;

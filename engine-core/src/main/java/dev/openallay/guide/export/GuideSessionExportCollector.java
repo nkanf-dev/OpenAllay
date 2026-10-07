@@ -78,10 +78,10 @@ public static final class SequencedRequest {
             Instant capturedAt) {
         requireSession(sessionId);
         if (upperSequence < -1) throw new IllegalArgumentException("invalid export sequence boundary");
-        captured = List.copyOf(captured);
+        captured = dev.openallay.util.Java8Collections.listCopyOf(captured);
         Map<UUID, List<ModelMessage>> copiedOriginals = new LinkedHashMap<>();
-        originals.forEach((id, messages) -> copiedOriginals.put(id, List.copyOf(messages)));
-        Map<UUID, List<ModelMessage>> liveOriginals = Map.copyOf(copiedOriginals);
+        originals.forEach((id, messages) -> copiedOriginals.put(id, dev.openallay.util.Java8Collections.listCopyOf(messages)));
+        Map<UUID, List<ModelMessage>> liveOriginals = dev.openallay.util.Java8Collections.mapCopyOf(copiedOriginals);
         Objects.requireNonNull(capturedAt, "capturedAt");
         for (SequencedRequest value : captured) {
             if (!value.request().sessionId().equals(sessionId)) {
@@ -117,14 +117,14 @@ public static final class SequencedRequest {
             UUID id = request.requestId();
             if (!live.containsKey(id)) {
                 loaded = loaded.thenCompose(ignored -> history.requestContext(scope, id)
-                        .thenAccept(messages -> contexts.put(id, List.copyOf(messages))));
+                        .thenAccept(messages -> contexts.put(id, dev.openallay.util.Java8Collections.listCopyOf(messages))));
             }
         }
         return loaded.handle((ignored, failure) -> {
             if (failure != null) {
                 throw new java.util.concurrent.CompletionException(exportFailure(failure));
             }
-            return Map.copyOf(contexts);
+            return dev.openallay.util.Java8Collections.mapCopyOf(contexts);
         });
     }
 
@@ -143,7 +143,7 @@ public static final class SequencedRequest {
         try {
             loading = Objects.requireNonNull(history.page(request), "history page future");
         } catch (RuntimeException failure) {
-            return CompletableFuture.failedFuture(exportFailure(failure));
+            return dev.openallay.util.Java8Futures.failedFuture(exportFailure(failure));
         }
         return loading.handle((page, failure) -> {
                     if (failure != null) throw new java.util.concurrent.CompletionException(
@@ -169,7 +169,7 @@ public static final class SequencedRequest {
                     GuideHistoryCursor next = page.first();
                     if (next == null || !visited.add(next)
                             || before != null && next.sequence() >= before.sequence()) {
-                        return CompletableFuture.failedFuture(exportFailure(
+                        return dev.openallay.util.Java8Futures.failedFuture(exportFailure(
                                 new IllegalStateException("history cursor did not progress")));
                     }
                     return loadEarlier(sessionId, next, ordered, visited, upperSequence);
@@ -209,16 +209,15 @@ public static final class SequencedRequest {
             Instant capturedAt) {
         return new GuideSessionExportSnapshot(
                 sessionId,
-                ordered.values().stream().map(request -> project(
-                        request, originals.getOrDefault(request.requestId(), List.of()))).toList(),
+                dev.openallay.util.Java8Collections.toList(ordered.values().stream().map(request -> project(
+                        request, originals.getOrDefault(request.requestId(), dev.openallay.util.Java8Collections.listOf())))),
                 capturedAt);
     }
 
     private static GuideSessionExportSnapshot.Request project(
             GuideRequestSnapshot request, List<ModelMessage> originalContext) {
-        List<GuideSessionExportSnapshot.Entry> timeline = request.timeline().stream()
-                .map(GuideSessionExportCollector::projectEntry)
-                .toList();
+        List<GuideSessionExportSnapshot.Entry> timeline = dev.openallay.util.Java8Collections.toList(request.timeline().stream()
+                .map(GuideSessionExportCollector::projectEntry));
         return new GuideSessionExportSnapshot.Request(
                 request.requestId(), request.createdAt(), request.status(), request.userMessage(),
                 timeline, originalContext, request.failure());

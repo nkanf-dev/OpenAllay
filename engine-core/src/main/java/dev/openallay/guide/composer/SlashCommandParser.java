@@ -73,23 +73,23 @@ public static final class Suggestion {
 }
 
     public static Parsed parse(String draft) {
-        String text = draft == null ? "" : draft.strip();
+        String text = draft == null ? "" : dev.openallay.util.Java8Strings.strip(draft);
         if (!text.startsWith("/")) return new Parsed(Kind.TEXT, text, null);
         if (text.startsWith("//")) return new Parsed(Kind.TEXT, text.substring(1), null);
         int separator = 1;
         while (separator < text.length() && !Character.isWhitespace(text.charAt(separator))) separator++;
         String command = text.substring(1, separator);
         if (!"compact".equals(command)) return new Parsed(Kind.ERROR, text, "unknown_slash_command");
-        if (!text.substring(separator).isBlank()) return new Parsed(Kind.ERROR, text, "invalid_slash_arguments");
+        if (!dev.openallay.util.Java8Strings.isBlank(text.substring(separator))) return new Parsed(Kind.ERROR, text, "invalid_slash_arguments");
         return new Parsed(Kind.COMMAND, command, null);
     }
 
     public static List<Suggestion> suggestions(String draft) {
-        String text = draft == null ? "" : draft.stripLeading();
+        String text = draft == null ? "" : dev.openallay.util.Java8Strings.stripLeading(draft);
         if (!text.startsWith("/") || text.startsWith("//") || text.chars().anyMatch(Character::isWhitespace)) {
-            return List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         return "/compact".startsWith(text)
-                ? List.of(new Suggestion("/compact", "openallay.guide.slash.compact.help")) : List.of();
+                ? dev.openallay.util.Java8Collections.listOf(new Suggestion("/compact", "openallay.guide.slash.compact.help")) : dev.openallay.util.Java8Collections.listOf();
     }
 }

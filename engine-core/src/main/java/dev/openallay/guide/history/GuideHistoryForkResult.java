@@ -27,7 +27,7 @@ public final class GuideHistoryForkResult {
             throw new IllegalArgumentException("fork page belongs to another session");
         }
         messages = ModelContextCodec.safe(messages);
-        checkpoints = List.copyOf(checkpoints);
+        checkpoints = dev.openallay.util.Java8Collections.listCopyOf(checkpoints);
 
         this.session = session;
         this.page = page;
@@ -48,7 +48,7 @@ public static List<ContextCheckpoint> reusableCheckpoints(
             List<ContextCheckpoint> checkpoints, List<ModelMessage> messages) {
         List<dev.openallay.agent.context.ContextStructure.Unit> units =
                 dev.openallay.agent.context.ContextStructure.units(messages);
-        return checkpoints.stream().filter(checkpoint -> {
+        return dev.openallay.util.Java8Collections.toList(checkpoints.stream().filter(checkpoint -> {
             if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED
                     || checkpoint.sourceToIndexExclusive() > messages.size()) return false;
             try {
@@ -62,7 +62,7 @@ public static List<ContextCheckpoint> reusableCheckpoints(
             return checkpoint.sourceHash().equals(dev.openallay.agent.context.ContextSourceHash.compute(
                     dev.openallay.json.EngineJson.create(),
                     messages.subList(checkpoint.sourceFromIndex(), checkpoint.sourceToIndexExclusive())));
-        }).toList();
+        }));
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

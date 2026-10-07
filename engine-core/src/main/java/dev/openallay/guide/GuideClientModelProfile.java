@@ -17,8 +17,8 @@ public final class GuideClientModelProfile {
         if (id == null || !id.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid model profile id");
         }
-        if (displayName == null || displayName.isBlank()
-                || modelIdentifier == null || modelIdentifier.isBlank()) {
+        if (displayName == null || dev.openallay.util.Java8Strings.isBlank(displayName)
+                || modelIdentifier == null || dev.openallay.util.Java8Strings.isBlank(modelIdentifier)) {
             throw new IllegalArgumentException("model profile labels must not be blank");
         }
         if (available == (failure != null)) {

@@ -25,7 +25,7 @@ public static final class Projection {
     private final SemanticDocument document;
     private final Map<String, GuideRecipeCard> recipes;
     public Projection(SemanticDocument document, Map<String, GuideRecipeCard> recipes) {
- recipes = Map.copyOf(recipes);
+ recipes = dev.openallay.util.Java8Collections.mapCopyOf(recipes);
         this.document = document;
         this.recipes = recipes;
     }
@@ -72,7 +72,7 @@ if ($oaPattern0_match) {
                     GuideItemView item = $oaPattern0_bound.items().get(i);
                     String id = id(key + ":item:" + i);
                     RichComponent.ItemRow component = new RichComponent.ItemRow(id,
-                            List.of(item(item, origin)), item.displayName() + " ×" + item.count(),
+                            dev.openallay.util.Java8Collections.listOf(item(item, origin)), item.displayName() + " ×" + item.count(),
                             item.displayName() + " ×" + item.count());
                     blocks.add(new SemanticBlock.Component(id, component));
                 }
@@ -95,8 +95,8 @@ GuideDetailCard.Table $oaPattern2_bound = $oaPattern2_match ? (GuideDetailCard.T
 if ($oaPattern2_match) {
                 paragraph(blocks, key + ":title", translate.apply($oaPattern2_bound.titleKey()));
                 blocks.add(new SemanticBlock.Table(id(key), tableRow(key + ":header", $oaPattern2_bound.columns()),
-                        java.util.stream.IntStream.range(0, $oaPattern2_bound.rows().size())
-                                .mapToObj(i -> tableRow(key + ":row:" + i, $oaPattern2_bound.rows().get(i))).toList()));
+                        dev.openallay.util.Java8Collections.toList(java.util.stream.IntStream.range(0, $oaPattern2_bound.rows().size())
+                                .mapToObj(i -> tableRow(key + ":row:" + i, $oaPattern2_bound.rows().get(i))))));
             } else {
 final java.lang.Object $oaPattern3_value = card;
 final boolean $oaPattern3_match = $oaPattern3_value instanceof GuideDetailCard.KeyValue;
@@ -149,7 +149,7 @@ if ($oaPattern7_match) {
                     if (!items.isEmpty()) {
                         String id = id(requirementKey + ":items");
                         blocks.add(new SemanticBlock.Component(id, new RichComponent.ItemRow(id,
-                                items.stream().map(item -> item(item, origin)).toList(),
+                                dev.openallay.util.Java8Collections.toList(items.stream().map(item -> item(item, origin))),
                                 items.toString(), requirement.key())));
                     }
                 }
@@ -165,24 +165,24 @@ if ($oaPattern7_match) {
 }
 }
         }
-        return new Projection(SemanticDocument.of(blocks, List.of()), recipes);
+        return new Projection(SemanticDocument.of(blocks, dev.openallay.util.Java8Collections.listOf()), recipes);
     }
 
     private static RichComponent.Item item(GuideItemView item, String origin) {
         return new RichComponent.Item(item.itemId(), item.count(), item.displayName(), origin);
     }
     private static SemanticBlock.TableRow tableRow(String key, List<String> values) {
-        return new SemanticBlock.TableRow(java.util.stream.IntStream.range(0, values.size())
+        return new SemanticBlock.TableRow(dev.openallay.util.Java8Collections.toList(java.util.stream.IntStream.range(0, values.size())
                 .mapToObj(i -> new SemanticBlock.TableCell(SemanticBlock.Alignment.LEFT,
-                        List.of(new SemanticInline.Text(id(key + ":" + i), values.get(i))))).toList());
+                        dev.openallay.util.Java8Collections.listOf(new SemanticInline.Text(id(key + ":" + i), values.get(i)))))));
     }
     private static void paragraph(List<SemanticBlock> blocks, String key, String text) {
         blocks.add(new SemanticBlock.Paragraph(id(key),
-                List.of(new SemanticInline.Text(id(key + ":text"), text))));
+                dev.openallay.util.Java8Collections.listOf(new SemanticInline.Text(id(key + ":text"), text))));
     }
     private static String id(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+            return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }

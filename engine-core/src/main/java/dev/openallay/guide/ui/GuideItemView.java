@@ -8,10 +8,10 @@ public final class GuideItemView {
     private final long count;
     public GuideItemView(String itemId, String displayName, long count) {
 
-        if (itemId == null || itemId.isBlank()) {
+        if (itemId == null || dev.openallay.util.Java8Strings.isBlank(itemId)) {
             throw new IllegalArgumentException("itemId must not be blank");
         }
-        displayName = displayName == null || displayName.isBlank() ? itemId : displayName;
+        displayName = displayName == null || dev.openallay.util.Java8Strings.isBlank(displayName) ? itemId : displayName;
         if (count < 0) {
             throw new IllegalArgumentException("count must not be negative");
         }

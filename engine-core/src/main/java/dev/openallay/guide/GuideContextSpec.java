@@ -16,7 +16,7 @@ public final class GuideContextSpec {
         if (promptAndToolTokens < 0 || promptAndToolTokens >= budget.inputTokens()) {
             throw new IllegalArgumentException("prompt/tool reservation exhausts model input");
         }
-        if (canonicalModelId == null || canonicalModelId.isBlank()) {
+        if (canonicalModelId == null || dev.openallay.util.Java8Strings.isBlank(canonicalModelId)) {
             throw new IllegalArgumentException("canonical model ID is required");
         }
 

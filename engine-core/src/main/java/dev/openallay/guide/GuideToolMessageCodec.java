@@ -9,7 +9,7 @@ import java.util.Set;
 
 /** Strict JSON codec for the closed Tool presentation vocabulary. */
 public final class GuideToolMessageCodec {
-    private static final Set<String> FIELDS = Set.of("key", "arguments");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("key", "arguments");
 
     private GuideToolMessageCodec() {}
 
@@ -56,6 +56,6 @@ public final class GuideToolMessageCodec {
             }
             messages.add(new GuideToolMessage(key, arguments));
         }
-        return List.copyOf(messages);
+        return dev.openallay.util.Java8Collections.listCopyOf(messages);
     }
 }

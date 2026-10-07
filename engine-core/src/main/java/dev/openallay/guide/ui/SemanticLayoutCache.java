@@ -130,7 +130,7 @@ private static final class Key {
     }
 
     private static String require(String value) {
-        if (value == null || value.isBlank()) throw new IllegalArgumentException("cache identity is required");
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) throw new IllegalArgumentException("cache identity is required");
         return value;
     }
 }

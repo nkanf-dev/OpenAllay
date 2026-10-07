@@ -25,9 +25,9 @@ public final class SemanticReferenceValidator {
         } catch (IllegalArgumentException unknown) {
             return Validation.failure("semantic_reference_unsupported");
         }
-        String target = matcher.group(2).strip();
-        String label = matcher.group(3) == null ? "" : matcher.group(3).strip();
-        if (target.isBlank() || (matcher.group(3) != null && label.isBlank())) {
+        String target = dev.openallay.util.Java8Strings.strip(matcher.group(2));
+        String label = matcher.group(3) == null ? "" : dev.openallay.util.Java8Strings.strip(matcher.group(3));
+        if (dev.openallay.util.Java8Strings.isBlank(target) || (matcher.group(3) != null && dev.openallay.util.Java8Strings.isBlank(label))) {
             return Validation.failure("semantic_content_invalid");
         }
         if (!syntax(kind, target)) {

@@ -12,12 +12,12 @@ import java.util.Set;
 /** Strict durable codec for the OpenAllay-owned semantic AST. */
 public final class SemanticDocumentCodec {
     private static final Set<String> DOCUMENT_FIELDS =
-            Set.of("blocks", "fallbackText", "diagnostics");
-    private static final Set<String> DIAGNOSTIC_FIELDS = Set.of("code", "nodeId");
+            dev.openallay.util.Java8Collections.setOf("blocks", "fallbackText", "diagnostics");
+    private static final Set<String> DIAGNOSTIC_FIELDS = dev.openallay.util.Java8Collections.setOf("code", "nodeId");
     private static final Set<String> REFERENCE_FIELDS =
-            Set.of("kind", "target", "label", "grounded", "originInvocationId");
+            dev.openallay.util.Java8Collections.setOf("kind", "target", "label", "grounded", "originInvocationId");
     private static final Set<String> COMPONENT_FIELDS =
-            Set.of("type", "nodeId", "properties", "fallbackText", "narration");
+            dev.openallay.util.Java8Collections.setOf("type", "nodeId", "properties", "fallbackText", "narration");
 
     public String encode(SemanticDocument document) {
         return encodeObject(document).toString();
@@ -146,18 +146,18 @@ if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.semantic.
             String nodeId = string(object, "nodeId");
             decoded.add(switch (type) {
                 case "paragraph" -> {
-                    exact(object, Set.of("type", "nodeId", "content"), "paragraph");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "content"), "paragraph");
                     yield new SemanticBlock.Paragraph(
                             nodeId, decodeInlines(array(object, "content")));
                 }
                 case "heading" -> {
-                    exact(object, Set.of("type", "nodeId", "level", "content"), "heading");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "level", "content"), "heading");
                     yield new SemanticBlock.Heading(
                             nodeId, integer(object, "level"),
                             decodeInlines(array(object, "content")));
                 }
                 case "list" -> {
-                    exact(object, Set.of("type", "nodeId", "ordered", "start", "items"), "list");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "ordered", "start", "items"), "list");
                     List<List<SemanticBlock>> items = new ArrayList<>();
                     for (JsonElement item : array(object, "items")) {
                         if (!item.isJsonArray()) {
@@ -169,16 +169,16 @@ if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.semantic.
                             nodeId, bool(object, "ordered"), integer(object, "start"), items);
                 }
                 case "quote" -> {
-                    exact(object, Set.of("type", "nodeId", "content"), "quote");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "content"), "quote");
                     yield new SemanticBlock.Quote(nodeId, decodeBlocks(array(object, "content")));
                 }
                 case "code" -> {
-                    exact(object, Set.of("type", "nodeId", "info", "code"), "code block");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "info", "code"), "code block");
                     yield new SemanticBlock.CodeBlock(
                             nodeId, string(object, "info"), string(object, "code"));
                 }
                 case "table" -> {
-                    exact(object, Set.of("type", "nodeId", "header", "rows"), "table");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "header", "rows"), "table");
                     List<SemanticBlock.TableRow> rows = new ArrayList<>();
                     for (JsonElement row : array(object, "rows")) {
                         rows.add(decodeRow(object(row, "table row")));
@@ -189,18 +189,18 @@ if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.semantic.
                             rows);
                 }
                 case "thematic_break" -> {
-                    exact(object, Set.of("type", "nodeId"), "thematic break");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId"), "thematic break");
                     yield new SemanticBlock.ThematicBreak(nodeId);
                 }
                 case "component" -> {
-                    exact(object, Set.of("type", "nodeId", "component"), "component block");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "component"), "component block");
                     yield new SemanticBlock.Component(
                             nodeId, decodeComponent(object(object.get("component"), "component")));
                 }
                 default -> throw new IllegalArgumentException("unknown semantic block type " + type);
             });
         }
-        return List.copyOf(decoded);
+        return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
 
     private static JsonArray inlines(List<SemanticInline> values) {
@@ -264,36 +264,36 @@ if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic
             String nodeId = string(object, "nodeId");
             decoded.add(switch (type) {
                 case "text" -> {
-                    exact(object, Set.of("type", "nodeId", "text"), "text inline");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "text"), "text inline");
                     yield new SemanticInline.Text(nodeId, string(object, "text"));
                 }
                 case "emphasis" -> {
-                    exact(object, Set.of("type", "nodeId", "children"), "emphasis inline");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "children"), "emphasis inline");
                     yield new SemanticInline.Emphasis(
                             nodeId, decodeInlines(array(object, "children")));
                 }
                 case "strong" -> {
-                    exact(object, Set.of("type", "nodeId", "children"), "strong inline");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "children"), "strong inline");
                     yield new SemanticInline.Strong(
                             nodeId, decodeInlines(array(object, "children")));
                 }
                 case "code" -> {
-                    exact(object, Set.of("type", "nodeId", "text"), "code inline");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "text"), "code inline");
                     yield new SemanticInline.Code(nodeId, string(object, "text"));
                 }
                 case "break" -> {
-                    exact(object, Set.of("type", "nodeId", "hard"), "break inline");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "hard"), "break inline");
                     yield new SemanticInline.Break(nodeId, bool(object, "hard"));
                 }
                 case "reference" -> {
-                    exact(object, Set.of("type", "nodeId", "reference"), "reference inline");
+                    exact(object, dev.openallay.util.Java8Collections.setOf("type", "nodeId", "reference"), "reference inline");
                     yield new SemanticInline.Reference(
                             nodeId, decodeReference(object(object.get("reference"), "reference")));
                 }
                 default -> throw new IllegalArgumentException("unknown semantic inline type " + type);
             });
         }
-        return List.copyOf(decoded);
+        return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
 
     private static JsonObject reference(SemanticReference value) {
@@ -334,11 +334,11 @@ if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic
     }
 
     private static SemanticBlock.TableRow decodeRow(JsonObject object) {
-        exact(object, Set.of("cells"), "table row");
+        exact(object, dev.openallay.util.Java8Collections.setOf("cells"), "table row");
         List<SemanticBlock.TableCell> cells = new ArrayList<>();
         for (JsonElement value : array(object, "cells")) {
             JsonObject cell = object(value, "table cell");
-            exact(cell, Set.of("alignment", "content"), "table cell");
+            exact(cell, dev.openallay.util.Java8Collections.setOf("alignment", "content"), "table cell");
             cells.add(new SemanticBlock.TableCell(
                     enumValue(SemanticBlock.Alignment.class,
                             string(cell, "alignment"), "table alignment"),
@@ -515,11 +515,11 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
         JsonObject properties = object(object.get("properties"), "component properties");
         return switch (type) {
             case "item_row" -> {
-                exact(properties, Set.of("items"), "item row properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("items"), "item row properties");
                 List<RichComponent.Item> items = new ArrayList<>();
                 for (JsonElement value : array(properties, "items")) {
                     JsonObject item = object(value, "component item");
-                    exact(item, Set.of("itemId", "count", "label", "originInvocationId"), "component item");
+                    exact(item, dev.openallay.util.Java8Collections.setOf("itemId", "count", "label", "originInvocationId"), "component item");
                     items.add(new RichComponent.Item(
                             string(item, "itemId"), longValue(item, "count"),
                             string(item, "label"), string(item, "originInvocationId")));
@@ -527,17 +527,17 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                 yield new RichComponent.ItemRow(nodeId, items, fallback, narration);
             }
             case "recipe_grid" -> {
-                exact(properties, Set.of("sourceId", "generation", "recipeId", "originInvocationId", "label"), "recipe grid properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("sourceId", "generation", "recipeId", "originInvocationId", "label"), "recipe grid properties");
                 yield new RichComponent.RecipeGrid(
                         nodeId, recipe(properties), string(properties, "originInvocationId"),
                         string(properties, "label"), fallback, narration);
             }
             case "ingredient_check" -> {
-                exact(properties, Set.of("ingredients"), "ingredient check properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("ingredients"), "ingredient check properties");
                 List<RichComponent.Ingredient> ingredients = new ArrayList<>();
                 for (JsonElement value : array(properties, "ingredients")) {
                     JsonObject item = object(value, "component ingredient");
-                    exact(item, Set.of("itemId", "required", "available", "label", "originInvocationId"), "component ingredient");
+                    exact(item, dev.openallay.util.Java8Collections.setOf("itemId", "required", "available", "label", "originInvocationId"), "component ingredient");
                     ingredients.add(new RichComponent.Ingredient(
                             string(item, "itemId"), longValue(item, "required"),
                             longValue(item, "available"), string(item, "label"),
@@ -546,7 +546,7 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                 yield new RichComponent.IngredientCheck(nodeId, ingredients, fallback, narration);
             }
             case "craftability_summary" -> {
-                exact(properties, Set.of("sourceId", "generation", "recipeId", "originInvocationId", "craftable", "conclusive", "requestedCrafts", "maximumCrafts"), "craftability properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("sourceId", "generation", "recipeId", "originInvocationId", "craftable", "conclusive", "requestedCrafts", "maximumCrafts"), "craftability properties");
                 yield new RichComponent.CraftabilitySummary(
                         nodeId, recipe(properties), string(properties, "originInvocationId"),
                         bool(properties, "craftable"), bool(properties, "conclusive"),
@@ -554,11 +554,11 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                         longValue(properties, "maximumCrafts"), fallback, narration);
             }
             case "progress_steps" -> {
-                exact(properties, Set.of("steps"), "progress properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("steps"), "progress properties");
                 List<RichComponent.Step> steps = new ArrayList<>();
                 for (JsonElement value : array(properties, "steps")) {
                     JsonObject step = object(value, "component step");
-                    exact(step, Set.of("id", "label", "state"), "component step");
+                    exact(step, dev.openallay.util.Java8Collections.setOf("id", "label", "state"), "component step");
                     steps.add(new RichComponent.Step(
                             string(step, "id"), string(step, "label"),
                             enumValue(RichComponent.StepState.class,
@@ -567,11 +567,11 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                 yield new RichComponent.ProgressSteps(nodeId, steps, fallback, narration);
             }
             case "source_summary" -> {
-                exact(properties, Set.of("sources"), "source summary properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("sources"), "source summary properties");
                 List<RichComponent.Source> sources = new ArrayList<>();
                 for (JsonElement value : array(properties, "sources")) {
                     JsonObject source = object(value, "component source");
-                    exact(source, Set.of("sourceId", "label", "originInvocationId"), "component source");
+                    exact(source, dev.openallay.util.Java8Collections.setOf("sourceId", "label", "originInvocationId"), "component source");
                     sources.add(new RichComponent.Source(
                             string(source, "sourceId"), string(source, "label"),
                             string(source, "originInvocationId")));
@@ -579,7 +579,7 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                 yield new RichComponent.SourceSummary(nodeId, sources, fallback, narration);
             }
             case "status_badge" -> {
-                exact(properties, Set.of("state", "label"), "status badge properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("state", "label"), "status badge properties");
                 yield new RichComponent.StatusBadge(
                         nodeId,
                         enumValue(RichComponent.BadgeState.class,
@@ -587,11 +587,11 @@ if ((($oaPattern29_holder.value = value) instanceof dev.openallay.guide.semantic
                         string(properties, "label"), fallback, narration);
             }
             case "choice_group" -> {
-                exact(properties, Set.of("prompt", "choices"), "choice group properties");
+                exact(properties, dev.openallay.util.Java8Collections.setOf("prompt", "choices"), "choice group properties");
                 List<RichComponent.Choice> choices = new ArrayList<>();
                 for (JsonElement value : array(properties, "choices")) {
                     JsonObject choice = object(value, "component choice");
-                    exact(choice, Set.of("id", "label"), "component choice");
+                    exact(choice, dev.openallay.util.Java8Collections.setOf("id", "label"), "component choice");
                     choices.add(new RichComponent.Choice(
                             string(choice, "id"), string(choice, "label")));
                 }

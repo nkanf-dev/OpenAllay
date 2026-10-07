@@ -23,7 +23,7 @@ public static final class Summary {
             Objects.requireNonNull(titleKey, "titleKey");
             Objects.requireNonNull(description, "description");
             Objects.requireNonNull(status, "status");
-            capsules = List.copyOf(capsules);
+            capsules = dev.openallay.util.Java8Collections.listCopyOf(capsules);
 
         this.id = id;
         this.title = title;
@@ -38,7 +38,7 @@ public static final class Summary {
     public String description() { return description; }
     public GuideToolDisplayStatus status() { return status; }
     public List<Capsule> capsules() { return capsules; }
-public boolean hasDescription() { return !description.isBlank(); }
+public boolean hasDescription() { return !dev.openallay.util.Java8Strings.isBlank(description); }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
         if (!(other instanceof Summary)) return false;

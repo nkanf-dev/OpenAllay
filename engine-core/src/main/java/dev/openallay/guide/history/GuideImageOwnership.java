@@ -73,7 +73,7 @@ final class GuideImageOwnership {
     static List<ImageReference> references(Map<String, List<ImageReference>> owners) {
         LinkedHashSet<ImageReference> refs = new LinkedHashSet<>();
         owners.values().forEach(refs::addAll);
-        return List.copyOf(refs);
+        return dev.openallay.util.Java8Collections.listCopyOf(refs);
     }
 
     void pin(GuideHistoryScope scope, List<ImageReference> refs) throws IOException {
@@ -82,7 +82,7 @@ final class GuideImageOwnership {
             return;
         }
         images.reconcile(scope.actorId(), writeNamespace(scope.scopeId()),
-                refs.isEmpty() ? Map.of() : Map.of("pending", List.copyOf(refs)));
+                refs.isEmpty() ? dev.openallay.util.Java8Collections.mapOf() : dev.openallay.util.Java8Collections.mapOf("pending", dev.openallay.util.Java8Collections.listCopyOf(refs)));
     }
 
     void reconcile(GuideHistoryScope scope, Map<String, List<ImageReference>> owners)
@@ -90,7 +90,7 @@ final class GuideImageOwnership {
         if (!enabled()) return;
         // The replacement verifies every asset before removing any existing history owners.
         images.reconcile(scope.actorId(), "scope:" + scope.scopeId(), owners);
-        images.reconcile(scope.actorId(), writeNamespace(scope.scopeId()), Map.of());
+        images.reconcile(scope.actorId(), writeNamespace(scope.scopeId()), dev.openallay.util.Java8Collections.mapOf());
     }
 
     void collect(UUID actor) throws IOException {

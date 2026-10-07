@@ -19,18 +19,18 @@ public final class GuideRecipeCard {
     public GuideRecipeCard(RecipeReference reference, List<RecipeReference> references, String id, String type, String workstation, List<Output> outputs, List<Ingredient> ingredients, List<Ingredient> catalysts, List<Output> byproducts, Processing processing) {
 
         java.util.Objects.requireNonNull(reference, "reference");
-        references = List.copyOf(references);
+        references = dev.openallay.util.Java8Collections.listCopyOf(references);
         if (references.isEmpty() || !references.contains(reference)) {
             throw new IllegalArgumentException("recipe card references are incomplete");
         }
-        if (id == null || id.isBlank() || type == null || type.isBlank()) {
+        if (id == null || dev.openallay.util.Java8Strings.isBlank(id) || type == null || dev.openallay.util.Java8Strings.isBlank(type)) {
             throw new IllegalArgumentException("recipe card identity is invalid");
         }
         workstation = workstation == null ? "" : workstation;
-        outputs = List.copyOf(outputs);
-        ingredients = List.copyOf(ingredients);
-        catalysts = List.copyOf(catalysts);
-        byproducts = List.copyOf(byproducts);
+        outputs = dev.openallay.util.Java8Collections.listCopyOf(outputs);
+        ingredients = dev.openallay.util.Java8Collections.listCopyOf(ingredients);
+        catalysts = dev.openallay.util.Java8Collections.listCopyOf(catalysts);
+        byproducts = dev.openallay.util.Java8Collections.listCopyOf(byproducts);
         processing = java.util.Objects.requireNonNull(processing, "processing");
 
         this.reference = reference;
@@ -62,7 +62,7 @@ public GuideRecipeCard(
             String workstation,
             List<Output> outputs) {
         this(reference, references, id, type, workstation, outputs,
-                List.of(), List.of(), List.of(), Processing.unknown());
+                dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), Processing.unknown());
     }
 @dev.openallay.value.ValueType(Output.ValueSchemaProvider.class)
 public static final class Output {
@@ -71,10 +71,10 @@ public static final class Output {
     private final String displayName;
     public Output(String itemId, int count, String displayName) {
 
-            if (itemId == null || itemId.isBlank() || count <= 0) {
+            if (itemId == null || dev.openallay.util.Java8Strings.isBlank(itemId) || count <= 0) {
                 throw new IllegalArgumentException("recipe card output is invalid");
             }
-            displayName = displayName == null || displayName.isBlank() ? itemId : displayName;
+            displayName = displayName == null || dev.openallay.util.Java8Strings.isBlank(displayName) ? itemId : displayName;
 
         this.itemId = itemId;
         this.count = count;
@@ -112,10 +112,10 @@ public static final class Ingredient {
     private final List<Alternative> alternatives;
     public Ingredient(String key, long count, boolean consumed, List<Alternative> alternatives) {
 
-            if (key == null || key.isBlank() || count <= 0) {
+            if (key == null || dev.openallay.util.Java8Strings.isBlank(key) || count <= 0) {
                 throw new IllegalArgumentException("recipe ingredient is invalid");
             }
-            alternatives = List.copyOf(alternatives);
+            alternatives = dev.openallay.util.Java8Collections.listCopyOf(alternatives);
             if (alternatives.isEmpty()) {
                 throw new IllegalArgumentException("recipe ingredient has no alternatives");
             }
@@ -158,10 +158,10 @@ public static final class Alternative {
     private final List<String> resolvedItems;
     public Alternative(String kind, String id, List<String> resolvedItems) {
 
-            if (kind == null || kind.isBlank() || id == null || id.isBlank()) {
+            if (kind == null || dev.openallay.util.Java8Strings.isBlank(kind) || id == null || dev.openallay.util.Java8Strings.isBlank(id)) {
                 throw new IllegalArgumentException("recipe alternative is invalid");
             }
-            resolvedItems = List.copyOf(resolvedItems);
+            resolvedItems = dev.openallay.util.Java8Collections.listCopyOf(resolvedItems);
 
         this.kind = kind;
         this.id = id;

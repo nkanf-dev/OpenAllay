@@ -21,8 +21,7 @@ public final class RichComponentRegistry {
                 SemanticReferenceIndex references);
     }
 
-    private static final Set<String> ENVELOPE_KEYS = Set.of(
-            "type", "properties", "fallback", "narration");
+    private static final Set<String> ENVELOPE_KEYS = dev.openallay.util.Java8Collections.setOf("type", "properties", "fallback", "narration");
     private final Map<String, Decoder> decoders;
 
     public RichComponentRegistry(Map<String, Decoder> decoders) {
@@ -35,7 +34,7 @@ public final class RichComponentRegistry {
                 throw new IllegalArgumentException("rich component type is duplicated");
             }
         });
-        this.decoders = Map.copyOf(copy);
+        this.decoders = dev.openallay.util.Java8Collections.mapCopyOf(copy);
     }
 
     public static RichComponentRegistry builtins() {
@@ -48,8 +47,8 @@ public final class RichComponentRegistry {
 
     public Decode decode(String encoded, String nodeId, SemanticReferenceIndex references) {
         Objects.requireNonNull(references, "references");
-        String fallback = encoded == null || encoded.isBlank()
-                ? "Unsupported component" : encoded.strip();
+        String fallback = encoded == null || dev.openallay.util.Java8Strings.isBlank(encoded)
+                ? "Unsupported component" : dev.openallay.util.Java8Strings.strip(encoded);
         try {
             JsonElement parsed = dev.openallay.json.JsonTrees.parse(encoded);
             if (!parsed.isJsonObject()) {
@@ -59,7 +58,7 @@ public final class RichComponentRegistry {
             JsonElement fallbackElement = object.get("fallback");
             if (fallbackElement != null && fallbackElement.isJsonPrimitive()
                     && fallbackElement.getAsJsonPrimitive().isString()
-                    && !fallbackElement.getAsString().isBlank()) {
+                    && !dev.openallay.util.Java8Strings.isBlank(fallbackElement.getAsString())) {
                 fallback = fallbackElement.getAsString();
             }
             exact(object, ENVELOPE_KEYS);
@@ -79,7 +78,7 @@ public final class RichComponentRegistry {
     }
 
     static RichComponent.Item item(JsonObject object, SemanticReferenceIndex references) {
-        exact(object, Set.of("itemId", "count", "label"));
+        exact(object, dev.openallay.util.Java8Collections.setOf("itemId", "count", "label"));
         String itemId = string(object, "itemId");
         String origin = requireOrigin(references, SemanticReferenceKind.ITEM, itemId);
         return new RichComponent.Item(
@@ -121,7 +120,7 @@ public final class RichComponentRegistry {
     static String string(JsonObject object, String field) {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be a non-empty string");
         }
         return value.getAsString();
@@ -167,7 +166,7 @@ public final class RichComponentRegistry {
             if (!value.isJsonObject()) throw new IllegalArgumentException("array entry must be object");
             result.add(value.getAsJsonObject());
         }
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     static String requireOrigin(
@@ -217,7 +216,7 @@ public static final class Decode {
             if ((component == null) == (failureCode == null)) {
                 throw new IllegalArgumentException("component decode must succeed or fail");
             }
-            if (fallbackText == null || fallbackText.isBlank()) {
+            if (fallbackText == null || dev.openallay.util.Java8Strings.isBlank(fallbackText)) {
                 throw new IllegalArgumentException("component decode fallback is required");
             }
 

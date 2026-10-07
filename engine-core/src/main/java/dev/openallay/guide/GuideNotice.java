@@ -7,7 +7,7 @@ public final class GuideNotice {
     public GuideNotice(Level level, String message) {
 
         java.util.Objects.requireNonNull(level, "level");
-        if (message == null || message.isBlank()) {
+        if (message == null || dev.openallay.util.Java8Strings.isBlank(message)) {
             throw new IllegalArgumentException("notice message must not be blank");
         }
 

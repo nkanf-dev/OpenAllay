@@ -18,7 +18,7 @@ public final class GuideUiModelChoice {
 
         java.util.Objects.requireNonNull(imageInput, "imageInput");
         java.util.Objects.requireNonNull(selection, "selection");
-        if (displayName == null || displayName.isBlank()) {
+        if (displayName == null || dev.openallay.util.Java8Strings.isBlank(displayName)) {
             throw new IllegalArgumentException("model choice display name must not be blank");
         }
         java.util.Objects.requireNonNull(origin, "origin");

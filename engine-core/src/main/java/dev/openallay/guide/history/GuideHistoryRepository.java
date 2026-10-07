@@ -213,12 +213,12 @@ private static final class ReservationFutures<T> {
 }
 
     private static <T> CompletableFuture<T> busyFailure() {
-        return CompletableFuture.failedFuture(new GuideHistoryException(
+        return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                 "history_delete_busy", "Guide history is busy"));
     }
 
     private static <T> CompletableFuture<T> closedFailure() {
-        return CompletableFuture.failedFuture(new GuideHistoryException(
+        return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                 "history_repository_closed", "Guide history repository is closed"));
     }
 

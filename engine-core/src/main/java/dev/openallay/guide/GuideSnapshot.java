@@ -25,17 +25,16 @@ public final class GuideSnapshot {
 
         java.util.Objects.requireNonNull(serverImageInputCapability, "serverImageInputCapability");
         java.util.Objects.requireNonNull(actorId, "actorId");
-        if (selectedSession == null || selectedSession.isBlank()) {
+        if (selectedSession == null || dev.openallay.util.Java8Strings.isBlank(selectedSession)) {
             throw new IllegalArgumentException("selectedSession must not be blank");
         }
         java.util.Objects.requireNonNull(modelMode, "modelMode");
         java.util.Objects.requireNonNull(persistence, "persistence");
-        sessions = sessions.stream()
-                .sorted(Comparator.comparing(GuideSessionSnapshot::sessionId))
-                .toList();
+        sessions = dev.openallay.util.Java8Collections.toList(sessions.stream()
+                .sorted(Comparator.comparing(GuideSessionSnapshot::sessionId)));
         java.util.Objects.requireNonNull(updatedAt, "updatedAt");
         java.util.Objects.requireNonNull(modelSelection, "modelSelection");
-        clientProfiles = List.copyOf(clientProfiles);
+        clientProfiles = dev.openallay.util.Java8Collections.listCopyOf(clientProfiles);
         serverModel = java.util.Objects.requireNonNull(serverModel, "serverModel");
         if (modelMode != modelSelection.modelMode()) {
             throw new IllegalArgumentException("modelMode must match the selected session model");
@@ -133,7 +132,7 @@ public GuideSnapshot(
                 modelMode == GuideModelMode.SERVER
                         ? GuideModelSelection.server()
                         : GuideModelSelection.client("default"),
-                List.of(),
+                dev.openallay.util.Java8Collections.listOf(),
                 Optional.empty());
     }
 public GuideSnapshot(
@@ -156,7 +155,7 @@ public GuideSnapshot(
                 modelMode == GuideModelMode.SERVER
                         ? GuideModelSelection.server()
                         : GuideModelSelection.client("default"),
-                List.of());
+                dev.openallay.util.Java8Collections.listOf());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

@@ -13,7 +13,7 @@ public static final class Row {
     private final int height;
     public Row(String id, int height) {
 
-            if (id == null || id.isBlank() || height <= 0) {
+            if (id == null || dev.openallay.util.Java8Strings.isBlank(id) || height <= 0) {
                 throw new IllegalArgumentException("virtual row identity and height are required");
             }
 
@@ -83,12 +83,12 @@ public static final class Window {
     }
 }
 
-    private List<Row> rows = List.of();
+    private List<Row> rows = dev.openallay.util.Java8Collections.listOf();
     private int[] offsets = {0};
-    private Map<String, Integer> indexes = Map.of();
+    private Map<String, Integer> indexes = dev.openallay.util.Java8Collections.mapOf();
 
     public void update(List<Row> replacement) {
-        replacement = List.copyOf(replacement);
+        replacement = dev.openallay.util.Java8Collections.listCopyOf(replacement);
         LinkedHashMap<String, Integer> nextIndexes = new LinkedHashMap<>();
         int[] nextOffsets = new int[replacement.size() + 1];
         for (int index = 0; index < replacement.size(); index++) {

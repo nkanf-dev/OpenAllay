@@ -7,7 +7,7 @@ public final class GuideViewportAnchor {
     private final int pixelOffset;
     public GuideViewportAnchor(String rowId, int pixelOffset) {
 
-        if (rowId == null || rowId.isBlank()) {
+        if (rowId == null || dev.openallay.util.Java8Strings.isBlank(rowId)) {
             throw new IllegalArgumentException("viewport anchor row is required");
         }
         if (pixelOffset < 0) {

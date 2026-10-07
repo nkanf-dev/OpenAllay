@@ -268,8 +268,8 @@ static Header calculate(
                     Rect.EMPTY, Rect.EMPTY, Rect.EMPTY, model, Rect.EMPTY, settingsRect, overflow, headerHeight);
         }
 public List<Rect> controls() {
-            return List.of(sessions, model, overflow, settings).stream()
-                    .filter(rect -> rect.width() > 0 && rect.height() > 0).toList();
+            return dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listOf(sessions, model, overflow, settings).stream()
+                    .filter(rect -> rect.width() > 0 && rect.height() > 0));
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

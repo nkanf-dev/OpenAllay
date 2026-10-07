@@ -22,7 +22,7 @@ public final class GuideSessionExportSnapshot implements AutoCloseable {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid export session ID");
         }
-        requests = List.copyOf(requests);
+        requests = dev.openallay.util.Java8Collections.listCopyOf(requests);
         java.util.Objects.requireNonNull(capturedAt, "capturedAt");
         java.util.Objects.requireNonNull(imagePayloadResolver, "imagePayloadResolver");
 
@@ -59,11 +59,11 @@ public static final class Request {
             java.util.Objects.requireNonNull(requestId, "requestId");
             java.util.Objects.requireNonNull(createdAt, "createdAt");
             java.util.Objects.requireNonNull(status, "status");
-            if (userMessage == null || userMessage.isBlank()) {
+            if (userMessage == null || dev.openallay.util.Java8Strings.isBlank(userMessage)) {
                 throw new IllegalArgumentException("export user message is blank");
             }
-            timeline = List.copyOf(timeline);
-            originalContext = List.copyOf(originalContext);
+            timeline = dev.openallay.util.Java8Collections.listCopyOf(timeline);
+            originalContext = dev.openallay.util.Java8Collections.listCopyOf(originalContext);
             if (originalContext.stream().flatMap(message -> message.content().stream())
                     .anyMatch(ModelContent.Reasoning.class::isInstance)) {
                 throw new IllegalArgumentException("export cannot contain reasoning");
@@ -184,10 +184,10 @@ public static final class Tool implements Entry {
     private final GuideToolStatus status;
     public Tool(String invocationId, String toolId, GuideToolStatus status) {
 
-                if (invocationId == null || invocationId.isBlank()) {
+                if (invocationId == null || dev.openallay.util.Java8Strings.isBlank(invocationId)) {
                     throw new IllegalArgumentException("export invocation ID is blank");
                 }
-                if (toolId == null || toolId.isBlank()) {
+                if (toolId == null || dev.openallay.util.Java8Strings.isBlank(toolId)) {
                     throw new IllegalArgumentException("export Tool ID is blank");
                 }
                 java.util.Objects.requireNonNull(status, "status");

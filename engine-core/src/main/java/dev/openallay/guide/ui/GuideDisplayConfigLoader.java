@@ -11,8 +11,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class GuideDisplayConfigLoader {
-    private static final Set<String> FIELDS = Set.of(
-            "debugMode", "animationsEnabled", "assistantName", "ui");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("debugMode", "animationsEnabled", "assistantName", "ui");
 
     @dev.openallay.value.ValueType(Load.ValueSchemaProvider.class)
 public static final class Load {
@@ -89,15 +88,10 @@ public static final class Load {
     }
 
     private static GuideUiConfig ui(JsonElement value) {
-        JsonObject ui = object(value, "ui", Set.of("fullscreen", "hud", "notifications"));
-        JsonObject full = object(ui.get("fullscreen"), "fullscreen", Set.of(
-                "density", "sessionRailVisible", "theme"));
-        JsonObject hud = object(ui.get("hud"), "hud", Set.of(
-                "enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale",
-                "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply",
-                "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"));
-        JsonObject notifications = object(ui.get("notifications"), "notifications", Set.of(
-                "enabled", "policy", "replyCompleted", "cardBatches", "taskFailures", "durationSeconds"));
+        JsonObject ui = object(value, "ui", dev.openallay.util.Java8Collections.setOf("fullscreen", "hud", "notifications"));
+        JsonObject full = object(ui.get("fullscreen"), "fullscreen", dev.openallay.util.Java8Collections.setOf("density", "sessionRailVisible", "theme"));
+        JsonObject hud = object(ui.get("hud"), "hud", dev.openallay.util.Java8Collections.setOf("enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale", "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply", "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"));
+        JsonObject notifications = object(ui.get("notifications"), "notifications", dev.openallay.util.Java8Collections.setOf("enabled", "policy", "replyCompleted", "cardBatches", "taskFailures", "durationSeconds"));
         return new GuideUiConfig(
                 new GuideUiConfig.Fullscreen(
                         enumeration(full, "density", GuideUiConfig.Density.class),
@@ -157,7 +151,7 @@ public static final class Load {
                 GuideDisplayConfig.defaults(),
                 new GuideFailure(
                         "invalid_display_config",
-                        message == null || message.isBlank()
+                        message == null || dev.openallay.util.Java8Strings.isBlank(message)
                                 ? "Invalid display configuration"
                                 : message));
     }

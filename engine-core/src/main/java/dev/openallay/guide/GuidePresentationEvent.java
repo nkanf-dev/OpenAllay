@@ -18,9 +18,9 @@ public final class GuidePresentationEvent {
 
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(kind, "kind");
-        content = List.copyOf(content);
+        content = dev.openallay.util.Java8Collections.listCopyOf(content);
         preview = Objects.requireNonNull(preview, "preview");
-        cardPreviews = List.copyOf(cardPreviews);
+        cardPreviews = dev.openallay.util.Java8Collections.listCopyOf(cardPreviews);
         if (kind != Kind.CARD_BATCH && !cardPreviews.isEmpty()) {
             throw new IllegalArgumentException("card previews require a card batch");
         }
@@ -46,7 +46,7 @@ public final class GuidePresentationEvent {
     public List<CardPreview> cardPreviews() { return cardPreviews; }
     public Instant createdAt() { return createdAt; }
 public GuidePresentationEvent(Key key, Kind kind, List<ContentRef> content, String preview, Instant createdAt) {
-        this(key, kind, content, preview, List.of(), createdAt);
+        this(key, kind, content, preview, dev.openallay.util.Java8Collections.listOf(), createdAt);
     }
 @dev.openallay.value.ValueType(Key.ValueSchemaProvider.class)
 public static final class Key {
@@ -109,7 +109,7 @@ public static final class ContentRef {
     public ContentRef(int timelineOrdinal, String contentId) {
 
             if (timelineOrdinal < -1) throw new IllegalArgumentException("invalid timeline ordinal");
-            if (contentId == null || contentId.isBlank()) throw new IllegalArgumentException("content ID required");
+            if (contentId == null || dev.openallay.util.Java8Strings.isBlank(contentId)) throw new IllegalArgumentException("content ID required");
 
         this.timelineOrdinal = timelineOrdinal;
         this.contentId = contentId;
@@ -144,7 +144,7 @@ public static final class CardPreview {
     public CardPreview(ContentRef source, String title, String description) {
 
             Objects.requireNonNull(source, "source");
-            if (title == null || title.isBlank() || description == null || description.isBlank()) {
+            if (title == null || dev.openallay.util.Java8Strings.isBlank(title) || description == null || dev.openallay.util.Java8Strings.isBlank(description)) {
                 throw new IllegalArgumentException("card preview title and description must not be blank");
             }
             title = bounded(title, 160);

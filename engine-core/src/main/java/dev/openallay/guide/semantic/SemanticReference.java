@@ -11,14 +11,14 @@ public final class SemanticReference {
     public SemanticReference(SemanticReferenceKind kind, String target, String label, boolean grounded, String originInvocationId) {
 
         java.util.Objects.requireNonNull(kind, "kind");
-        if (target == null || target.isBlank()) {
+        if (target == null || dev.openallay.util.Java8Strings.isBlank(target)) {
             throw new IllegalArgumentException("semantic reference target is required");
         }
-        label = label == null ? "" : label.strip();
+        label = label == null ? "" : dev.openallay.util.Java8Strings.strip(label);
         if (!grounded && originInvocationId != null) {
             throw new IllegalArgumentException("ungrounded reference cannot name an invocation");
         }
-        if (grounded && (originInvocationId == null || originInvocationId.isBlank())) {
+        if (grounded && (originInvocationId == null || dev.openallay.util.Java8Strings.isBlank(originInvocationId))) {
             throw new IllegalArgumentException("grounded reference requires its invocation origin");
         }
 
@@ -34,7 +34,7 @@ public final class SemanticReference {
     public boolean grounded() { return grounded; }
     public String originInvocationId() { return originInvocationId; }
 public String displayText() {
-        return label.isBlank() ? target : label;
+        return dev.openallay.util.Java8Strings.isBlank(label) ? target : label;
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

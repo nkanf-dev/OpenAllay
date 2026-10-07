@@ -10,8 +10,8 @@ public final class SemanticDocument {
     private final List<SemanticDiagnostic> diagnostics;
     public SemanticDocument(List<SemanticBlock> blocks, String fallbackText, List<SemanticDiagnostic> diagnostics) {
 
-        blocks = List.copyOf(blocks);
-        diagnostics = List.copyOf(diagnostics);
+        blocks = dev.openallay.util.Java8Collections.listCopyOf(blocks);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
         String expected = SemanticPlainText.render(blocks);
         if (!expected.equals(fallbackText)) {
             throw new IllegalArgumentException("semantic fallback does not match document");
@@ -26,12 +26,12 @@ public final class SemanticDocument {
     public List<SemanticDiagnostic> diagnostics() { return diagnostics; }
 public static SemanticDocument of(
             List<SemanticBlock> blocks, List<SemanticDiagnostic> diagnostics) {
-        List<SemanticBlock> copied = List.copyOf(blocks);
+        List<SemanticBlock> copied = dev.openallay.util.Java8Collections.listCopyOf(blocks);
         return new SemanticDocument(
                 copied, SemanticPlainText.render(copied), diagnostics);
     }
 public static SemanticDocument empty() {
-        return of(List.of(), List.of());
+        return of(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

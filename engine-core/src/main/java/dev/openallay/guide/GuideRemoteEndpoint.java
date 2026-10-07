@@ -39,7 +39,7 @@ public interface GuideRemoteEndpoint {
     default boolean ask(
             UUID requestId, String sessionId, ModelMessage userInput,
             dev.openallay.model.image.ImagePayloadResolver images, Consumer<AgentEvent> events) {
-        return askWithContext(requestId, sessionId, userInput, images, List.of(), events);
+        return askWithContext(requestId, sessionId, userInput, images, dev.openallay.util.Java8Collections.listOf(), events);
     }
 
     default boolean askWithContext(
@@ -48,7 +48,7 @@ public interface GuideRemoteEndpoint {
             Consumer<AgentEvent> events) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
         boolean containsImages = dev.openallay.model.image.ModelImages.hasImages(
-                java.util.stream.Stream.concat(history.stream(), java.util.stream.Stream.of(userInput)).toList());
+                dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(history.stream(), java.util.stream.Stream.of(userInput))));
         if (containsImages) {
             throw new GuideModelProfileException(
                     "image_input_unsupported", "This remote endpoint does not support typed image input");

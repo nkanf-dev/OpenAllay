@@ -92,16 +92,14 @@ $oaSwitch2_exit_result = message(complete ? GuideToolMessage.Key.ANALYSIS_VALUE_
 }
 GuideToolMessage summary = $oaSwitch2_exit_result;
         // This historical receipt does not imply that an old request's handle is still live.
-        return !complete && !string(value, "handle").isBlank()
-                ? List.of(summary, message(GuideToolMessage.Key.ANALYSIS_WORKSPACE))
-                : List.of(summary);
+        return !complete && !dev.openallay.util.Java8Strings.isBlank(string(value, "handle"))
+                ? dev.openallay.util.Java8Collections.listOf(summary, message(GuideToolMessage.Key.ANALYSIS_WORKSPACE))
+                : dev.openallay.util.Java8Collections.listOf(summary);
     }
 
     private static List<GuideToolMessage> loadedSkill(JsonObject value) {
         JsonArray allowed = array(value, "allowedTools");
-        return List.of(
-                message(GuideToolMessage.Key.SKILL_LOADED, string(value, "name")),
-                message(
+        return dev.openallay.util.Java8Collections.listOf(message(GuideToolMessage.Key.SKILL_LOADED, string(value, "name")), message(
                         GuideToolMessage.Key.SKILL_TOOLS,
                         Integer.toString(allowed.size()),
                         string(value, "provenance")));
@@ -166,7 +164,7 @@ return $oaSwitch1_exit_result;
     }
 
     private static List<GuideToolMessage> one(GuideToolMessage.Key key) {
-        return List.of(message(key));
+        return dev.openallay.util.Java8Collections.listOf(message(key));
     }
 
     private static GuideToolMessage message(
@@ -184,6 +182,6 @@ return $oaSwitch1_exit_result;
             if (Character.isISOControl(codePoint)) safe.append(' ');
             else safe.appendCodePoint(codePoint);
         });
-        return safe.toString().strip();
+        return dev.openallay.util.Java8Strings.strip(safe.toString());
     }
 }
