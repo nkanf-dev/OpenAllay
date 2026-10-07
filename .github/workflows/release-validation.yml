@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8]
         default: skills
         required: true
 permissions:
@@ -263,6 +263,11 @@ jobs:
           cache-read-only: true
       - name: Compile and verify the full canonical parser runtime on Java 8
         run: ./gradlew --no-daemon -p runtime-commonmark -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64,$JAVA_HOME_21_X64" java8Proof -PcommonmarkJava8Executable="$JAVA_HOME_8_X64/bin/java"
+      - name: Verify generated source output ownership guards
+        run: >-
+          python3 -B runtime-commonmark/src/java8Test/ProvenanceGuards.py --source-root "$PWD"
+          --source-core "$(find "$HOME/.gradle/caches/modules-2/files-2.1/org.commonmark/commonmark/0.28.0" -name '*-sources.jar' -print -quit)"
+          --source-tables "$(find "$HOME/.gradle/caches/modules-2/files-2.1/org.commonmark/commonmark-ext-gfm-tables/0.28.0" -name '*-sources.jar' -print -quit)"
       - name: Retain full parser API and golden behavior evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -274,3 +279,37 @@ jobs:
             runtime-commonmark/build/java8-proof/
             runtime-commonmark/build/libs/
             runtime-commonmark/build/reports/
+
+  http-java8:
+    if: inputs.scope == 'http-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Verify actual Java 8 sockets, streaming, blocked POST and cancellation cleanup
+        run: ./gradlew --no-daemon -p engine-core/src/java8Test/http -Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.java.installations.auto-download=false -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" java8CompatibilityTest
+      - name: Verify actual shared transport and model consumer contracts
+        run: ./gradlew --max-workers=2 --no-daemon :engine-core:test --tests dev.openallay.net.JdkHttpTransportTest --tests dev.openallay.model.catalog.ProviderModelCatalogClientTest --tests dev.openallay.model.http.ModelTransportDiagnosticsTest --tests dev.openallay.model.scheduling.ModelUpstreamRecoveryHttpTest
+      - name: Retain transport result and blocked-owner diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-http-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            engine-core/src/java8Test/http/build/
+            engine-core/build/test-results/
