@@ -1,0 +1,777 @@
+{
+  "scope": "Explicit current record-converter caller admission; authoritative equivalence63completeclient/settingsowners122records only",
+  "acceptedSourceProofRun": 37577964254,
+  "acceptedSourceProofHead": "1eea0963af73c0245a4d2a0d9ef37a37c9c4f80c",
+  "acceptedSourceProofReceiptSha256": "11a715adc52961433e04f1d2ff5e0101421cab9eb553bbd6de2b2359165a5504",
+  "acceptedRootReceiptSha256": "e33e8e9e70052055699542e4f28e370a282efda39b0c8723b3181ca159321440",
+  "currentConverter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "2dd4016060b060fce6e1505d2ee41948ae55cd59bdef30acd6f0c82cf2c52dc0",
+    "admittedCurrentCaller": {
+      "path": "build-logic/src/recordConstructorTypeTest/verify.py",
+      "sha256": "d26b755f9dfee9c01be89287f5dd5bed06ff8e6b954296f69189c68b9b8cd13c",
+      "contract_path": "build-logic/src/recordConstructorTypeTest/source-contract.json",
+      "contract_sha256": "855668311984ca7aeb40dfa60e6792248adc1e18a15b18d4a0e8b762b447d371"
+    },
+    "futureCallerRequirement": "Pin this exact currentconverter bytes and exactwholeowner originals; new domains must establish actualconversion/API/modern ortrue8 scope. No claim of prior otherdomain equivalence."
+  },
+  "historicalConverter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+    "git_blob": "e6a54f8a16270efbe788d74dbc5f7314fa99d6f1",
+    "custody_commit": "4d6feb458365e333ce74be9347a2d62740c5e76a",
+    "reproduction": "git cat-file blob of exact pinned immutable old Git blob, SHA256 verify before tooling compile; use frozen historical recipe/original owner support. Do not substitute current tool or rewrite old recipe pin.",
+    "currentCompilePinMismatch": "Historical recipes intentionally do not admit current converter path bytes. Historical workflow reruns must recover pinned old tool from Git, not silently waive the hash."
+  },
+  "provedCurrentEquivalence": {
+    "completeOwnerCount": 63,
+    "recordCount": 122,
+    "originalClientMaterializerRun": 37576452026,
+    "originalManifestSha256": "5372326a0e09602ddc5c14a6d418ff203b182c71c45362614a04e9bd1875752e",
+    "owners": [
+      {
+        "path": "dev/openallay/client/ClientGuideRuntime.java",
+        "originalSha256": "a20ac0ac2d304540b21d92be3dda547013896ec698272c3641d818bed1cab64f",
+        "acceptedOldRawOutputSha256": "cf8153afcf43498b130f251bff4d4a5bc76ea8125aa205c5f2496110a5d7e6c8",
+        "actualNewRawOutputSha256": "cf8153afcf43498b130f251bff4d4a5bc76ea8125aa205c5f2496110a5d7e6c8",
+        "recordPaths": [
+          "ClientGuideRuntime.PromptModes",
+          "ClientGuideRuntime.EndpointRuntime"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/ClientModelRuntimeRegistry.java",
+        "originalSha256": "37d20d908a5b5cf42b54714fc58dcbf0111b87a602bb73e6e3cc276656775858",
+        "acceptedOldRawOutputSha256": "854a7865ac47bab7347129bf40bbf0348ebae5b2fc525b756491f168a1e84df2",
+        "actualNewRawOutputSha256": "854a7865ac47bab7347129bf40bbf0348ebae5b2fc525b756491f168a1e84df2",
+        "recordPaths": [
+          "ClientModelRuntimeRegistry.State"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/GuideClientUiState.java",
+        "originalSha256": "d647884716451757954a9d2c5a3e68c17437470cb60e7b7c29aced79e670d101",
+        "acceptedOldRawOutputSha256": "0593e61269056e449e9dd9efe85f29370f9606d1f1edcba6d94d654841370cad",
+        "actualNewRawOutputSha256": "0593e61269056e449e9dd9efe85f29370f9606d1f1edcba6d94d654841370cad",
+        "recordPaths": [
+          "GuideClientUiState.DraftIntent",
+          "GuideClientUiState.IntentCapture",
+          "GuideClientUiState.ObservationCapture",
+          "GuideClientUiState.Insertion",
+          "GuideClientUiState.PendingInsertion"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/GuideInputCharacter.java",
+        "originalSha256": "e2c1cbe93b2ac6b0e1aef1068cf1f0b10d9015d4b6e7404f14a2abb46a1c490a",
+        "acceptedOldRawOutputSha256": "02a50386c362805ede1f873c3180e5e3fef9939ef2e6f7fc005aa1f16c1b276b",
+        "actualNewRawOutputSha256": "02a50386c362805ede1f873c3180e5e3fef9939ef2e6f7fc005aa1f16c1b276b",
+        "recordPaths": [
+          "GuideInputCharacter"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/GuideInputKey.java",
+        "originalSha256": "a32e968196b4f7d52761a22f7fc28e325abdde7bb96c9c11734bced76eeb57f7",
+        "acceptedOldRawOutputSha256": "0de4876b699d1e61ba7cd585266636a534b09e9e5c985a444b392f296c5a8eff",
+        "actualNewRawOutputSha256": "0de4876b699d1e61ba7cd585266636a534b09e9e5c985a444b392f296c5a8eff",
+        "recordPaths": [
+          "GuideInputKey"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/GuideInputMouse.java",
+        "originalSha256": "ec38b5101e89934714967faa4bb61b77463c937a4234adcad0218c84b203c7cb",
+        "acceptedOldRawOutputSha256": "b6f0e5c3ee719d3f15a06df20400e86d036f5c4d7621b408d6ed4bb3ac8ccc3d",
+        "actualNewRawOutputSha256": "b6f0e5c3ee719d3f15a06df20400e86d036f5c4d7621b408d6ed4bb3ac8ccc3d",
+        "recordPaths": [
+          "GuideInputMouse"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/OpenAllayWidgetTheme.java",
+        "originalSha256": "6bffb05d7f29f9fa38f824036bce3b734e8c0428d0a9bc0644811ec315a50ac0",
+        "acceptedOldRawOutputSha256": "b7312d566652dfe136eea009bfefc591db22c21d5c2e1517bc7ba4b08e88e188",
+        "actualNewRawOutputSha256": "b7312d566652dfe136eea009bfefc591db22c21d5c2e1517bc7ba4b08e88e188",
+        "recordPaths": [
+          "OpenAllayWidgetTheme.ButtonColors"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/export/GuideSessionExporter.java",
+        "originalSha256": "54f1f2c4252b0f007c77fb042dd776853108cc89971b4156709c1df93b572a34",
+        "acceptedOldRawOutputSha256": "3334729e5d2a41a4f907cf883f18e68167fdaa56f1bc50170b75bd1eb1388d52",
+        "actualNewRawOutputSha256": "3334729e5d2a41a4f907cf883f18e68167fdaa56f1bc50170b75bd1eb1388d52",
+        "recordPaths": [
+          "GuideSessionExporter.ExportedFile"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/hud/GuideHudLayout.java",
+        "originalSha256": "5929f3a5995a0cd37f08b1d782428f5adbbd9344ffbc81cdc4d8b5257287bd68",
+        "acceptedOldRawOutputSha256": "2055361220384d4eb50e438f593ec6ab4d2154ca88e91c9df12ed8c7cbf8fe67",
+        "actualNewRawOutputSha256": "2055361220384d4eb50e438f593ec6ab4d2154ca88e91c9df12ed8c7cbf8fe67",
+        "recordPaths": [
+          "GuideHudLayout.Rect"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/hud/GuideHudReadingLayout.java",
+        "originalSha256": "d1be5561c2206be948fb8b30be76647f19fca13eca544c8b0d5f7183714ea163",
+        "acceptedOldRawOutputSha256": "dd9567160b5b761fc0da38a297d6ece4042948b409111e537306572bd5b32a55",
+        "actualNewRawOutputSha256": "dd9567160b5b761fc0da38a297d6ece4042948b409111e537306572bd5b32a55",
+        "recordPaths": [
+          "GuideHudReadingLayout"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/nativeview/NativeDomainViewBinding.java",
+        "originalSha256": "f28c5b5a3bf355076f663be816a42a0ac18570d5ca141c4a21bb526c5de47404",
+        "acceptedOldRawOutputSha256": "8016373e25f22ff3dcd86068b1cad22c1fa77c02600a2375672656323a3eda10",
+        "actualNewRawOutputSha256": "8016373e25f22ff3dcd86068b1cad22c1fa77c02600a2375672656323a3eda10",
+        "recordPaths": [
+          "NativeDomainViewBinding.Recipe"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/nativeview/NativeDomainViewDiagnostic.java",
+        "originalSha256": "1fe89412af37edf11a855ac09df5af964d2a1d94ebfdfd4a8b49c7f6b14e68c1",
+        "acceptedOldRawOutputSha256": "c391914feabb18203e7a045d0603867be10dc457da919e1e983ee43be091e09c",
+        "actualNewRawOutputSha256": "c391914feabb18203e7a045d0603867be10dc457da919e1e983ee43be091e09c",
+        "recordPaths": [
+          "NativeDomainViewDiagnostic"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/BuiltinModelSettingsProjection.java",
+        "originalSha256": "ad2dc5ac4d3abe94b8b322e9289714ed1db26f1221efb6378fe8366d6230adef",
+        "acceptedOldRawOutputSha256": "2d3edea57839f240b1a5b4daea4d31b6c93ae81ad4103427d9043e52ee8380d8",
+        "actualNewRawOutputSha256": "2d3edea57839f240b1a5b4daea4d31b6c93ae81ad4103427d9043e52ee8380d8",
+        "recordPaths": [
+          "BuiltinModelSettingsProjection",
+          "BuiltinModelSettingsProjection.Line"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/CapabilitySettingsProjection.java",
+        "originalSha256": "ca90316deb271be08bb7deabe677d273d9f9d892f872abb2a9c07198fc1b4caf",
+        "acceptedOldRawOutputSha256": "26d83b4b318c4f95a69b561c36ac9e2c1dbc177ff8fea7e1c1bb158685341c12",
+        "actualNewRawOutputSha256": "26d83b4b318c4f95a69b561c36ac9e2c1dbc177ff8fea7e1c1bb158685341c12",
+        "recordPaths": [
+          "CapabilitySettingsProjection",
+          "CapabilitySettingsProjection.Card"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/DiagnosticsSettingsProjection.java",
+        "originalSha256": "0a9d0e2d725d7b5c564d2f4064b1ea6524e5f33e6f735da5485069be1e28a978",
+        "acceptedOldRawOutputSha256": "01e6a360cc799dd5e41b3fdadcca9b7a5ba46982d878733b2d6145272210e61f",
+        "actualNewRawOutputSha256": "01e6a360cc799dd5e41b3fdadcca9b7a5ba46982d878733b2d6145272210e61f",
+        "recordPaths": [
+          "DiagnosticsSettingsProjection",
+          "DiagnosticsSettingsProjection.CardRow",
+          "DiagnosticsSettingsProjection.DebugSection"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/ExtensionSettingsProjection.java",
+        "originalSha256": "ba7e28bd9d90b4aca2bf5a11620db369e8f0a046b06bf99c1564250de96c1821",
+        "acceptedOldRawOutputSha256": "00e82a7d07faa69996c136dca323b488cd9d34b375eb7f404b54e2c179e817bb",
+        "actualNewRawOutputSha256": "00e82a7d07faa69996c136dca323b488cd9d34b375eb7f404b54e2c179e817bb",
+        "recordPaths": [
+          "ExtensionSettingsProjection",
+          "ExtensionSettingsProjection.RuntimeCard",
+          "ExtensionSettingsProjection.RootCard",
+          "ExtensionSettingsProjection.ModuleCard",
+          "ExtensionSettingsProjection.AdapterCard",
+          "ExtensionSettingsProjection.CatalogCard",
+          "ExtensionSettingsProjection.ExtensionCard"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/GeneralSettingsProjection.java",
+        "originalSha256": "3cb713b8fe2cad631c17f4bde002e11bf72489d7f793e11eb0147d05e7ef5138",
+        "acceptedOldRawOutputSha256": "e7a695f740ca7777d7f67f15f5650a29a005d1dc1d3de9663bbe83f8437ba260",
+        "actualNewRawOutputSha256": "e7a695f740ca7777d7f67f15f5650a29a005d1dc1d3de9663bbe83f8437ba260",
+        "recordPaths": [
+          "GeneralSettingsProjection"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/HistorySettingsProjection.java",
+        "originalSha256": "cce71418a09656bd895d0850bca67ab86acf23f0e5c7491b61c9321010f5c418",
+        "acceptedOldRawOutputSha256": "6c3f2084184167eb1a13a66f8895bcc1314e3be923b27bd265ad8b71ef60e407",
+        "actualNewRawOutputSha256": "6c3f2084184167eb1a13a66f8895bcc1314e3be923b27bd265ad8b71ef60e407",
+        "recordPaths": [
+          "HistorySettingsProjection",
+          "HistorySettingsProjection.ActionRow"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/ModelImageSettingsProjection.java",
+        "originalSha256": "c6b4f48f42c51a482bacf847365e169b4bad0e2342af9890491e80fab8b4e316",
+        "acceptedOldRawOutputSha256": "31edceef2d65e8a72619dd5fcb9b30371f18d84f485df6e17d390f98dbafb81f",
+        "actualNewRawOutputSha256": "31edceef2d65e8a72619dd5fcb9b30371f18d84f485df6e17d390f98dbafb81f",
+        "recordPaths": [
+          "ModelImageSettingsProjection"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/ModelProfileDraft.java",
+        "originalSha256": "b594b3c992326a5138fab04894bb2318673dbba89111c0a28966d5e7c7436333",
+        "acceptedOldRawOutputSha256": "dd5985872e8e4d878019088bb9fe95b117b095ff38ee94ba0bc3370125ce5877",
+        "actualNewRawOutputSha256": "dd5985872e8e4d878019088bb9fe95b117b095ff38ee94ba0bc3370125ce5877",
+        "recordPaths": [
+          "ModelProfileDraft"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/ModelReasoningSettingsProjection.java",
+        "originalSha256": "c5ae3187436491dfe7d5ddaa6fe977037cebf878b5ac278f8ce54bb3c02a3d35",
+        "acceptedOldRawOutputSha256": "d7d37368a48006d48466c5d91851aafc098f91c6a6cc5426c535ebc252e5c4c6",
+        "actualNewRawOutputSha256": "d7d37368a48006d48466c5d91851aafc098f91c6a6cc5426c535ebc252e5c4c6",
+        "recordPaths": [
+          "ModelReasoningSettingsProjection"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/ModelSettingsProjection.java",
+        "originalSha256": "a55eb6b5d2aa70b4b49f6c84fb431c60eb766416fd15f71c717fcec7da04496d",
+        "acceptedOldRawOutputSha256": "d0e009a243c277f103b98b3addf0e950e9275395d3fa8cf63234b4410330c7c6",
+        "actualNewRawOutputSha256": "d0e009a243c277f103b98b3addf0e950e9275395d3fa8cf63234b4410330c7c6",
+        "recordPaths": [
+          "ModelSettingsProjection",
+          "ModelSettingsProjection.ModelCard"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/RecipeSettingsProjection.java",
+        "originalSha256": "9fe2836b713e75735ae0af1888aa155bf52705a7ad973ebe884a8985ff97e2af",
+        "acceptedOldRawOutputSha256": "bd38f4fa2e91fe2885c995cd5088af9fcde9b15e683c9f4fd32ed9394b479655",
+        "actualNewRawOutputSha256": "bd38f4fa2e91fe2885c995cd5088af9fcde9b15e683c9f4fd32ed9394b479655",
+        "recordPaths": [
+          "RecipeSettingsProjection",
+          "RecipeSettingsProjection.SourceRow"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/RequirementSettingsProjection.java",
+        "originalSha256": "5539bb1dd5243e899ed024eb4f349cf732e78e79c7e16dbedca9cac6bef5dcb0",
+        "acceptedOldRawOutputSha256": "0493d9ca249ac672f5928d5c2ea24f1af4a822ac626fc69803f6f5bdb163b2c6",
+        "actualNewRawOutputSha256": "0493d9ca249ac672f5928d5c2ea24f1af4a822ac626fc69803f6f5bdb163b2c6",
+        "recordPaths": [
+          "RequirementSettingsProjection",
+          "RequirementSettingsProjection.Row"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/SettingsLayout.java",
+        "originalSha256": "11ef9a926ff871a50d7f4feb0e1a15467ecd79959baf85330101706a4a325a1b",
+        "acceptedOldRawOutputSha256": "3dd717ddc53142f735acd016e9e0400cc332d3d10a342d38d13d3aa0029c95b2",
+        "actualNewRawOutputSha256": "3dd717ddc53142f735acd016e9e0400cc332d3d10a342d38d13d3aa0029c95b2",
+        "recordPaths": [
+          "SettingsLayout",
+          "SettingsLayout.Rect"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/SkillSettingsProjection.java",
+        "originalSha256": "dfe2725382dc225b08dafe357ee29c9658e69c0724fce60e494881837c24bbf0",
+        "acceptedOldRawOutputSha256": "740adc59132d28e9b5e1bcb5213af243d2173bde8f38927b1f77639fa038751f",
+        "actualNewRawOutputSha256": "740adc59132d28e9b5e1bcb5213af243d2173bde8f38927b1f77639fa038751f",
+        "recordPaths": [
+          "SkillSettingsProjection",
+          "SkillSettingsProjection.Skill",
+          "SkillSettingsProjection.Community",
+          "SkillSettingsProjection.Package",
+          "SkillSettingsProjection.Notice"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/gui/settings/UiSettingsProjection.java",
+        "originalSha256": "b9c1fc74a6982fc38e4a31f915340624b292738dffba03608aea3f5319e8fd5e",
+        "acceptedOldRawOutputSha256": "7a1050daf55c92ff4f89b0fe0717e9b39a5c70137f4092b2d1d356042b3a348c",
+        "actualNewRawOutputSha256": "7a1050daf55c92ff4f89b0fe0717e9b39a5c70137f4092b2d1d356042b3a348c",
+        "recordPaths": [
+          "UiSettingsProjection"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/observation/ObservationAnchorPresentation.java",
+        "originalSha256": "13c223b6aa6c7f9386d8e747b306c82336398dd6e50670b784413791026e869d",
+        "acceptedOldRawOutputSha256": "c16338e56a335442de157a84d22398f6b61b23044f130b57a9b6c2ddf365c45d",
+        "actualNewRawOutputSha256": "c16338e56a335442de157a84d22398f6b61b23044f130b57a9b6c2ddf365c45d",
+        "recordPaths": [
+          "ObservationAnchorPresentation.Chip"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/observation/ObservationComposerLayout.java",
+        "originalSha256": "4ee1811b2de7c471afa55ab7d061ac07e68529f0f8623c89faf3aa60f6b3b8e0",
+        "acceptedOldRawOutputSha256": "523144626eedb2301f18f794aad5839467ea5d73c9699895e8991ffbb5f9a949",
+        "actualNewRawOutputSha256": "523144626eedb2301f18f794aad5839467ea5d73c9699895e8991ffbb5f9a949",
+        "recordPaths": [
+          "ObservationComposerLayout"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/presentation/GuideNotificationController.java",
+        "originalSha256": "8da94ae3944a4982f914b354adba6ca49fdc1eaa195693cda76cf67466560d38",
+        "acceptedOldRawOutputSha256": "869ae4a3cd5e8974e33e734144733fec9fe75c5dc2951cc4472bd75957731daa",
+        "actualNewRawOutputSha256": "869ae4a3cd5e8974e33e734144733fec9fe75c5dc2951cc4472bd75957731daa",
+        "recordPaths": [
+          "GuideNotificationController.Task"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/presentation/GuideNotificationPort.java",
+        "originalSha256": "db59511ec755d73e6399b81e87d7ded42b20ad82181b6a06f9bc44a8e9304949",
+        "acceptedOldRawOutputSha256": "66a2c072cac3dd4455430f82e853a08e79b3cd8264411d7c58691f13b5a5b85c",
+        "actualNewRawOutputSha256": "66a2c072cac3dd4455430f82e853a08e79b3cd8264411d7c58691f13b5a5b85c",
+        "recordPaths": [
+          "GuideNotificationPort.Notification"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/presentation/GuidePresentationHost.java",
+        "originalSha256": "0587bafc6d467d57d5fc5d289e129f6920c257289ded0d1389ee78280bed9303",
+        "acceptedOldRawOutputSha256": "183ad4b36c8a6a5f2846d72ab50e0796e5d640eb6b18c7aab6987e8d72549113",
+        "actualNewRawOutputSha256": "183ad4b36c8a6a5f2846d72ab50e0796e5d640eb6b18c7aab6987e8d72549113",
+        "recordPaths": [
+          "GuidePresentationHost.Facts",
+          "GuidePresentationHost.Input",
+          "GuidePresentationHost.View"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/resource/ClientResource.java",
+        "originalSha256": "15046056a0e9f9e2cac3221c256200c75a20ae7139a2721d1ac95bba887310c7",
+        "acceptedOldRawOutputSha256": "9c615a25dba44b0c241109eee58fa86716b0a96f5e484bac7a1fd39b41a0d999",
+        "actualNewRawOutputSha256": "9c615a25dba44b0c241109eee58fa86716b0a96f5e484bac7a1fd39b41a0d999",
+        "recordPaths": [
+          "ClientResource"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/AudioCapture.java",
+        "originalSha256": "977365590251ad133dd3389bfca2193ee8effa51c1f85d6fdc4d7ab26fd2b8a3",
+        "acceptedOldRawOutputSha256": "3853cd638f8d27d3fb893a4fa23596e7f46db8b7fa1faa819cdfa39be00242f1",
+        "actualNewRawOutputSha256": "3853cd638f8d27d3fb893a4fa23596e7f46db8b7fa1faa819cdfa39be00242f1",
+        "recordPaths": [
+          "AudioCapture.Device"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/NativeModelFiles.java",
+        "originalSha256": "5e9b0f38d09414563b7647360252f8ac3294cabb60b4f2898651801fa4915c13",
+        "acceptedOldRawOutputSha256": "66ffb39a1255b71e6bea037afe130580fa4287436b035a6d3f2803c428805e2f",
+        "actualNewRawOutputSha256": "66ffb39a1255b71e6bea037afe130580fa4287436b035a6d3f2803c428805e2f",
+        "recordPaths": [
+          "NativeModelFiles.ModelFile",
+          "NativeModelFiles.Model"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/NativeModelInstaller.java",
+        "originalSha256": "61c4dd2f8e94009925967f972a50d7c097687697633ab73434665f3534055f06",
+        "acceptedOldRawOutputSha256": "fa2414622da364f0dfbcbc9e8ff69c4212a317bb17c77f8598520ada8ff6e9e8",
+        "actualNewRawOutputSha256": "fa2414622da364f0dfbcbc9e8ff69c4212a317bb17c77f8598520ada8ff6e9e8",
+        "recordPaths": [
+          "NativeModelInstaller.Download"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/NativeRuntimeCatalog.java",
+        "originalSha256": "2a289b3a9c6b212626ef67c3a37cd8437cdae5a2e896652146c42c7a09f24078",
+        "acceptedOldRawOutputSha256": "fe79c84aff109fbd078a0ab30b0f1b84e9298a833cc0f14fc59938560b04e14f",
+        "actualNewRawOutputSha256": "fe79c84aff109fbd078a0ab30b0f1b84e9298a833cc0f14fc59938560b04e14f",
+        "recordPaths": [
+          "NativeRuntimeCatalog.Artifact"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/NativeRuntimeNotices.java",
+        "originalSha256": "870dfa4b72da9afff569b6ff009a71f1a05b26d5094164c8de862b641ad385eb",
+        "acceptedOldRawOutputSha256": "4d85c81b77515f54e0d1561501c3b681c4704a4850d0eb2de6cc149021440181",
+        "actualNewRawOutputSha256": "4d85c81b77515f54e0d1561501c3b681c4704a4850d0eb2de6cc149021440181",
+        "recordPaths": [
+          "NativeRuntimeNotices.Notice"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/NativeSpeechToText.java",
+        "originalSha256": "8ac09c0e5e7d70f45a19bafcb53a11816f11b33652221aa8cb5c0bcfb6dcf1e7",
+        "acceptedOldRawOutputSha256": "97c753bc98e34f0d35ae724345675fdd98c789b8d6ae67da38d9ca0265432405",
+        "actualNewRawOutputSha256": "97c753bc98e34f0d35ae724345675fdd98c789b8d6ae67da38d9ca0265432405",
+        "recordPaths": [
+          "NativeSpeechToText.Call"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/VoiceConfig.java",
+        "originalSha256": "c91ddbd4e8d0219fefaa00b4c4455f20e15026f87063701f9b49a8d26842db46",
+        "acceptedOldRawOutputSha256": "66a79d60b836c1c6b65c3a7825a50f1a57695f12b61c12380e3a4310065d7a67",
+        "actualNewRawOutputSha256": "66a79d60b836c1c6b65c3a7825a50f1a57695f12b61c12380e3a4310065d7a67",
+        "recordPaths": [
+          "VoiceConfig"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/VoiceRuntime.java",
+        "originalSha256": "11c5c4eefff51437619b9120c1e38f0c97608d80df53b23676552cfe9130109c",
+        "acceptedOldRawOutputSha256": "60d92abc589dbd1d0ca6cffcbc97acc2e7b0e10c986747a0d1ed6133d5843100",
+        "actualNewRawOutputSha256": "60d92abc589dbd1d0ca6cffcbc97acc2e7b0e10c986747a0d1ed6133d5843100",
+        "recordPaths": [
+          "VoiceRuntime.DeliveryReceipt",
+          "VoiceRuntime.DraftTarget",
+          "VoiceRuntime.Status"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/VoiceSettingsView.java",
+        "originalSha256": "6efe6208699074c65c2dda6a98c2630c30f7f1e97476c8f23ec9c1b93ec0b13b",
+        "acceptedOldRawOutputSha256": "df8dc24693029796ee6e2eb7c075ee7a662a63ded3b00bfef4d2cb7ca32beb7c",
+        "actualNewRawOutputSha256": "df8dc24693029796ee6e2eb7c075ee7a662a63ded3b00bfef4d2cb7ca32beb7c",
+        "recordPaths": [
+          "VoiceSettingsView"
+        ]
+      },
+      {
+        "path": "dev/openallay/client/voice/VoiceStatusPresentation.java",
+        "originalSha256": "f3d41c6753afcfddf17948cfbf276977d4d226357b19f9452f1fba675e34ae44",
+        "acceptedOldRawOutputSha256": "3872b82bb5c67fd0448972386a139ca87d17fe12646263aa6189b44970380418",
+        "actualNewRawOutputSha256": "3872b82bb5c67fd0448972386a139ca87d17fe12646263aa6189b44970380418",
+        "recordPaths": [
+          "VoiceStatusPresentation.Notice"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/ClientSettingsRuntime.java",
+        "originalSha256": "ae91da64557b7a3c9ca7e3ce39219c50be2569d9f0e7c4a922e0bc384c42c172",
+        "acceptedOldRawOutputSha256": "944cdfdaa76224aa17b69bd5f2c00fecd80d8ad115713edbe1e1bafef77b04b8",
+        "actualNewRawOutputSha256": "944cdfdaa76224aa17b69bd5f2c00fecd80d8ad115713edbe1e1bafef77b04b8",
+        "recordPaths": [
+          "ClientSettingsRuntime"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/ClientSettingsService.java",
+        "originalSha256": "23a19651b8d08b30aeeb840e00feb80c7cb79b7d3c60596495cbd51271e4cba1",
+        "acceptedOldRawOutputSha256": "986e37eb39b38e188a44b676dd6badfe52182bbb34b22044ac5e27331c8ffc16",
+        "actualNewRawOutputSha256": "986e37eb39b38e188a44b676dd6badfe52182bbb34b22044ac5e27331c8ffc16",
+        "recordPaths": [
+          "ClientSettingsService.HistoryRuntimeState",
+          "ClientSettingsService.ModelState",
+          "ClientSettingsService.PreparedModels",
+          "ClientSettingsService.ActivePackagePreparation",
+          "ClientSettingsService.Reservation",
+          "ClientSettingsService.ActiveProbe",
+          "ClientSettingsService.ActiveCatalog"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/ClientSettingsSnapshot.java",
+        "originalSha256": "c68f661bdeb820e9f2d8a9721894b975dec9eb7a35670aa238745fc1c3f1dfbd",
+        "acceptedOldRawOutputSha256": "6ec3ab63efec4a6a932c74ba9dd1620262ac9f02bd90249b911d37e1d3f93355",
+        "actualNewRawOutputSha256": "6ec3ab63efec4a6a932c74ba9dd1620262ac9f02bd90249b911d37e1d3f93355",
+        "recordPaths": [
+          "ClientSettingsSnapshot"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/SettingsNotice.java",
+        "originalSha256": "0a718e6ab1be6ceae7b97f99778a0fd96c4cd1b145bf9665372c4d2d2f3fa019",
+        "acceptedOldRawOutputSha256": "27aec6d475d306cc405bce2fa4ee8ea2bb2335d136d962bef4a21b33aba03e52",
+        "actualNewRawOutputSha256": "27aec6d475d306cc405bce2fa4ee8ea2bb2335d136d962bef4a21b33aba03e52",
+        "recordPaths": [
+          "SettingsNotice"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/SettingsOperation.java",
+        "originalSha256": "c9c1af43c2ecff04f3030d7ba001faa635076bebad7674222038788aecf631e7",
+        "acceptedOldRawOutputSha256": "3b3c3c34c2534d827fbc7bf9d67c34256ef37be35b4b829e3e6284db4023e10f",
+        "actualNewRawOutputSha256": "3b3c3c34c2534d827fbc7bf9d67c34256ef37be35b4b829e3e6284db4023e10f",
+        "recordPaths": [
+          "SettingsOperation"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/capability/CapabilitySettingsView.java",
+        "originalSha256": "b050ce3a05a6a36252b4e5f0e1a24f9dd7c0934ae0031a01ecfcab40ebaece8b",
+        "acceptedOldRawOutputSha256": "3f44f176c5085d5c00f67618c304f8f651d2b4f7531d709d536c5164f78588da",
+        "actualNewRawOutputSha256": "3f44f176c5085d5c00f67618c304f8f651d2b4f7531d709d536c5164f78588da",
+        "recordPaths": [
+          "CapabilitySettingsView"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/capability/RecipeSettingsView.java",
+        "originalSha256": "0c9b84b76db30587cee79bec5208b077492f0f4799ba82bfcd69de5ca57348db",
+        "acceptedOldRawOutputSha256": "ceb1dbd30b237c5f34710d099398ea21681a4b57520061526fe2b68154af1e53",
+        "actualNewRawOutputSha256": "ceb1dbd30b237c5f34710d099398ea21681a4b57520061526fe2b68154af1e53",
+        "recordPaths": [
+          "RecipeSettingsView",
+          "RecipeSettingsView.Source"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticsAggregator.java",
+        "originalSha256": "f1fbc16f94e89adbe56ba239e6c095ab76e46b39d2a66fde128906c30964dc0c",
+        "acceptedOldRawOutputSha256": "4e601f67f3a8c2db7ee71e73cf5627df5ec3c55afda9ac5552de95834d2f27a1",
+        "actualNewRawOutputSha256": "4e601f67f3a8c2db7ee71e73cf5627df5ec3c55afda9ac5552de95834d2f27a1",
+        "recordPaths": [
+          "SettingsDiagnosticsAggregator.SourceStatus",
+          "SettingsDiagnosticsAggregator.DiagnosticsInputs",
+          "SettingsDiagnosticsAggregator.GuideSummary"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticsSnapshot.java",
+        "originalSha256": "ccdbd244c3cebc612cf8ffa70d53aa09d8ba44316e14f0bea1499b9b88cd2c49",
+        "acceptedOldRawOutputSha256": "0e91cb5ec8497abcf8948fb6df0a2d99238de59503979416b1cc878f378b5659",
+        "actualNewRawOutputSha256": "0e91cb5ec8497abcf8948fb6df0a2d99238de59503979416b1cc878f378b5659",
+        "recordPaths": [
+          "SettingsDiagnosticsSnapshot",
+          "SettingsDiagnosticsSnapshot.DebugSettingsDiagnostics",
+          "SettingsDiagnosticsSnapshot.DebugModelProfile",
+          "SettingsDiagnosticsSnapshot.DebugCapabilities",
+          "SettingsDiagnosticsSnapshot.DebugGuide",
+          "SettingsDiagnosticsSnapshot.DebugRequest",
+          "SettingsDiagnosticsSnapshot.DebugContext",
+          "SettingsDiagnosticsSnapshot.DebugHistory",
+          "SettingsDiagnosticsSnapshot.DebugSource"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/extension/ExtensionSettingsBackend.java",
+        "originalSha256": "92523af3a7a233363282a9b4ef9689b1b981be42ff13e933dabff2b5969a1a0d",
+        "acceptedOldRawOutputSha256": "18b447354ea8624dd58d5aa53799d95f8f389eebea46e133b0ad5409f47b7066",
+        "actualNewRawOutputSha256": "18b447354ea8624dd58d5aa53799d95f8f389eebea46e133b0ad5409f47b7066",
+        "recordPaths": [
+          "ExtensionSettingsBackend.StagedPackage"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/extension/ExtensionSettingsView.java",
+        "originalSha256": "964ddea54fba003a0acd0cd98db228596a12ddc8953ca566a00329f3e127fe6b",
+        "acceptedOldRawOutputSha256": "bde8a6e31251ce293d209e2adec2d2d4ac9b1c99bff95886f7c81af1d732c17c",
+        "actualNewRawOutputSha256": "bde8a6e31251ce293d209e2adec2d2d4ac9b1c99bff95886f7c81af1d732c17c",
+        "recordPaths": [
+          "ExtensionSettingsView",
+          "ExtensionSettingsView.Root",
+          "ExtensionSettingsView.Adapter",
+          "ExtensionSettingsView.Notice",
+          "ExtensionSettingsView.Catalog",
+          "ExtensionSettingsView.PackageInfo",
+          "ExtensionSettingsView.Contributions",
+          "ExtensionSettingsView.Extension"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/history/HistorySettingsView.java",
+        "originalSha256": "2898e89c04560ed200b1c600f9b3aa9d85ce37c04b3f1c3a88d27e77a7d7bf3e",
+        "acceptedOldRawOutputSha256": "dd685758648893c4bb1404557f87cab0b42dfc9780a9f2f265cfddc11571057b",
+        "actualNewRawOutputSha256": "dd685758648893c4bb1404557f87cab0b42dfc9780a9f2f265cfddc11571057b",
+        "recordPaths": [
+          "HistorySettingsView"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/model/ModelConnectionResult.java",
+        "originalSha256": "565c4417ace8f8aa5c01bc75bc8b413c04ce7cf5408edb1d0eabc0f06d11b8ab",
+        "acceptedOldRawOutputSha256": "749bfa38dff833670fe46c539013f65bdfbba6992913d7faaaa9cdb8a8ec616b",
+        "actualNewRawOutputSha256": "749bfa38dff833670fe46c539013f65bdfbba6992913d7faaaa9cdb8a8ec616b",
+        "recordPaths": [
+          "ModelConnectionResult.Success",
+          "ModelConnectionResult.Failure"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/model/ModelProfileSettingsView.java",
+        "originalSha256": "957b8abe9cdf79cfd2269013947e2f88bacee81d6f6fe79ef84b38e4d370befe",
+        "acceptedOldRawOutputSha256": "11712f3cc8c7e4514f3f100d07db90ca173177cf15684d3f50422cf9af216d77",
+        "actualNewRawOutputSha256": "11712f3cc8c7e4514f3f100d07db90ca173177cf15684d3f50422cf9af216d77",
+        "recordPaths": [
+          "ModelProfileSettingsView",
+          "ModelProfileSettingsView.Resolution",
+          "ModelProfileSettingsView.Profile"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/model/ServerModelSettingsView.java",
+        "originalSha256": "6403f5f4645931339977701b2111b6a697e7fdebb1cd2c03352bf09345b65af5",
+        "acceptedOldRawOutputSha256": "7b5d41f53368e1acdfcfb0401ba16d4703fc85cd557aff23be4b7e223c28b6e7",
+        "actualNewRawOutputSha256": "7b5d41f53368e1acdfcfb0401ba16d4703fc85cd557aff23be4b7e223c28b6e7",
+        "recordPaths": [
+          "ServerModelSettingsView"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/requirement/RequirementChange.java",
+        "originalSha256": "b519bd14f5f1ff2ac676b38a8a1b1fe6ee38b8ae302c0e9e38dd31f2c727bb24",
+        "acceptedOldRawOutputSha256": "aef118c86ec7ad05bc8673a98a3ea1eaa034d498c4ee51039595fd4b18fe7e63",
+        "actualNewRawOutputSha256": "aef118c86ec7ad05bc8673a98a3ea1eaa034d498c4ee51039595fd4b18fe7e63",
+        "recordPaths": [
+          "RequirementChange"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/requirement/RequirementReview.java",
+        "originalSha256": "90270591113dafa76e239e194e0d8ac7b145d4b3ded0d46a68e95424d142114f",
+        "acceptedOldRawOutputSha256": "14972efeffc635fb9b935772c84cdd103ed8c9ac699def1412b2dc0dc632d4f5",
+        "actualNewRawOutputSha256": "14972efeffc635fb9b935772c84cdd103ed8c9ac699def1412b2dc0dc632d4f5",
+        "recordPaths": [
+          "RequirementReview"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/skill/SkillCommunityView.java",
+        "originalSha256": "5aeecb17b5659f0afbbe048870182d31a027b8b2d7a559310b3ff2a015fc9cbf",
+        "acceptedOldRawOutputSha256": "e09d450b8a800877597477655d545c5173f439adad201721f1eefa00d93c7f2a",
+        "actualNewRawOutputSha256": "e09d450b8a800877597477655d545c5173f439adad201721f1eefa00d93c7f2a",
+        "recordPaths": [
+          "SkillCommunityView",
+          "SkillCommunityView.Package",
+          "SkillCommunityView.Notice"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/skill/SkillSettingsBackend.java",
+        "originalSha256": "3a77460c252f43ee763f5af7019dfab42d22b991fa56636c9d0240fcd092d6d9",
+        "acceptedOldRawOutputSha256": "a5146a2a52489bbee1e4d753c2cf0bf2bdda10eb46aa411cba26b43ac9f1a33e",
+        "actualNewRawOutputSha256": "a5146a2a52489bbee1e4d753c2cf0bf2bdda10eb46aa411cba26b43ac9f1a33e",
+        "recordPaths": [
+          "SkillSettingsBackend.ParsedSource"
+        ]
+      },
+      {
+        "path": "dev/openallay/settings/skill/SkillSettingsView.java",
+        "originalSha256": "e99387b29c51a11826640a91198573988e212b09d5e9c48a0135178b74c8065b",
+        "acceptedOldRawOutputSha256": "44e5a363952745109c8f640727277d8e9da1cbe2c0d42a4e0f648b8b949508eb",
+        "actualNewRawOutputSha256": "44e5a363952745109c8f640727277d8e9da1cbe2c0d42a4e0f648b8b949508eb",
+        "recordPaths": [
+          "SkillSettingsView",
+          "SkillSettingsView.Skill"
+        ]
+      }
+    ],
+    "restriction": "Only these exactwholeoriginalowners/record paths were provedbyteidentical. Not124records, not123records, nototherrecorddomains, not all accepted historical recipes."
+  },
+  "newActualOwnerProof": {
+    "path": "engine-core/src/main/java/dev/openallay/settings/diagnostics/SettingsDiagnosticCard.java",
+    "originalSha256": "d9809d86c37dc2f73bd1a04344a3b65a5e4f454dc31c233835e7c8e0fddf6e4b",
+    "converterRawPostSha256": "17e268ccd818bb5803893545019b616b4976ddaa9b70565d176960d40c7e35c8",
+    "loweredPostSha256": "cb59957cc6aba1f24ff3601d56ed1515fee02d6a83fdc980dce67c2f1016a3ad",
+    "apiLowering": [
+      {
+        "old": "List.copyOf(",
+        "new": "dev.openallay.util.Java8Collections.listCopyOf("
+      },
+      {
+        "old": "noteKeys = noteKeys.stream().map(value -> key(value, \"noteKey\")).toList();",
+        "new": "noteKeys = dev.openallay.util.Java8Collections.toList(noteKeys.stream().map(value -> key(value, \"noteKey\")));"
+      }
+    ],
+    "actualProductionSources": 6,
+    "schemas": 2,
+    "vectors": 53,
+    "originalModernRelease8Genuine8Equal": true,
+    "productionApplied": "root-owned subsequent step; proof alone is not application receipt"
+  },
+  "historicalRecipeBindings": [
+    {
+      "path": "engine-core/src/guideRecordLanguageTest/source-contract.json",
+      "sha256": "85f2277049e93520280c730afd636043da217c17d79fedd2db74915bc837cc28",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/contextCompactorJava8Test/source-contract.json",
+      "sha256": "02461ac6f94083b62177d432a00a020c8d79c28623e1f4a5872e6582839efe7c",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/clientSettingsRecordLanguageTest/source-contract.json",
+      "sha256": "df6760ccd0c095f4029f1ccee5fe99d7ee8afeec4884fe28c082a0e1f334fdb4",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "proved only for listed client63support rows"
+    },
+    {
+      "path": "engine-core/src/bridgeHistoryJava8Test/source-contract.json",
+      "sha256": "391c76b5874a02f1492e341a52dc80105712c23fda1d7e5e521c4dcf834afc06",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/providerCodecJava8Test/recipe.json",
+      "sha256": "3fbaa3f2ffe6f9d3fd468811c7087669cba5b2978aed3be9a70998dd949ca8b7",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/retainedSkillJava8Test/recipe.json",
+      "sha256": "6bf01bcaf04f1eac15886067f939710a88429d8eb1f8db63d5c856dac05ad246",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/imageAttachmentPasteJava8Test/source-contract.json",
+      "sha256": "f975255d719ded0d52054488c1a01b754213f14be6fa1d604ac5b7375277a104",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/agentSessionJava8Test/source-contract.json",
+      "sha256": "51fc06c69c1bbf516b61f826cab1ccdc12a7f9d0371dee4b2afdf81b0f38d776",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/modelMessageImageJava8Test/source-contract.json",
+      "sha256": "36ef8416a120beaef0b5ebd0cc7d4e04f3af11387f3ba3306c7a86d9be73dcb2",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/agentRequestJava8Test/source-contract.json",
+      "sha256": "cf933c19e3fd202ce795ddecb27dc2ffb26b7c9c18ce71d36ec880653f7a90b1",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/modelCatalogJava8Test/source-contract.json",
+      "sha256": "791526e81c05a6c0f5d7d228675ebdb5f39e4650acf86758d8213b92a5f46568",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/bridgeTransportJava8Test/source-contract.json",
+      "sha256": "18770a80a9a6c3508c78a5671a6aeb1303fa60c543ce8225704c67ae92bbbc80",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    },
+    {
+      "path": "engine-core/src/modelProfilesJava8Test/recipe.json",
+      "sha256": "c0a4097ab9fcb864a555dd4b3cb50ae3485b422c95c98444c560f5be7dea7812",
+      "converter_sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+      "mode": "historical-only exact old tool; no current-converter pin replacement",
+      "conversion_equivalence_to_new_tool": "not asserted; this domain was not part of37577964254 sourceequivalence"
+    }
+  ],
+  "noBlanketHistoricalRuntimeReplay": true,
+  "wholeClientSettingsJava8Accepted": false
+}
