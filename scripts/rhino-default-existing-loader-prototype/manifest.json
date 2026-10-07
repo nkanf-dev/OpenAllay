@@ -6,8 +6,8 @@
       "path": "dev/latvian/mods/rhino/classfile/ClassFileWriter.java",
       "pre_bytes": 129687,
       "pre_sha256": "69dc5d60d3d8d4beaa049a6d614a4f548f4ebfb830523767d023e2817eb63bcf",
-      "post_bytes": 130364,
-      "post_sha256": "6eeba1a64ebfeb1bfeaca750eb826c8ef446aabbcd0e8b8bf200b656db6394d2"
+      "post_bytes": 130415,
+      "post_sha256": "1fefdcc8453f2ece6d04cab7a5914d79b891d1513cc537a7633ada5c4ba96ca1"
     }
   ],
   "observable_changes": [
@@ -33,8 +33,8 @@
     },
     {
       "path": "ExistingLoaderDefaultPrototype.java",
-      "bytes": 5475,
-      "sha256": "46667200390261c678d5239d3bdf6b49d7459a42eb39d862fb8dadee2b05f4ea"
+      "bytes": 5531,
+      "sha256": "c20857e9114fbdfd4b1190465795b4ff93ecd60024589ae638f745912a8a8e4c"
     },
     {
       "path": "post/dev/latvian/mods/rhino/VMBridge.java",
@@ -43,8 +43,8 @@
     },
     {
       "path": "post/dev/latvian/mods/rhino/classfile/ClassFileWriter.java",
-      "bytes": 130364,
-      "sha256": "6eeba1a64ebfeb1bfeaca750eb826c8ef446aabbcd0e8b8bf200b656db6394d2"
+      "bytes": 130415,
+      "sha256": "1fefdcc8453f2ece6d04cab7a5914d79b891d1513cc537a7633ada5c4ba96ca1"
     },
     {
       "path": "pre/dev/latvian/mods/rhino/VMBridge.java",

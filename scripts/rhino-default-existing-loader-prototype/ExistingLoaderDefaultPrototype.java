@@ -27,6 +27,7 @@ public final class ExistingLoaderDefaultPrototype {
             if (!Modifier.isPublic(outer.getModifiers())) throw new IllegalArgumentException("Nonpublic enclosing owner");
         }
         ClassFileWriter writer = new ClassFileWriter(name, "java/lang/Object", "default-prototype", 52, 0);
+        check(ClassFileWriter.ACC_INTERFACE == 0x0200);
         writer.setFlags((short) (ClassFileWriter.ACC_PUBLIC | ClassFileWriter.ACC_INTERFACE | ClassFileWriter.ACC_ABSTRACT));
         writer.addInterface(root.getName());
         writer.startMethod("ownerLookup", "()Ljava/lang/invoke/MethodHandles$Lookup;", (short) (ClassFileWriter.ACC_PUBLIC | ClassFileWriter.ACC_STATIC));

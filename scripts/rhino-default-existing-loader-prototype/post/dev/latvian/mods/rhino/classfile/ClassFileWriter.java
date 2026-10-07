@@ -35,6 +35,7 @@ public class ClassFileWriter {
 	public static final short ACC_VOLATILE = 0x0040;
 	public static final short ACC_TRANSIENT = 0x0080;
 	public static final short ACC_NATIVE = 0x0100;
+	public static final short ACC_INTERFACE = 0x0200;
 	public static final short ACC_ABSTRACT = 0x0400;
 	private static final int SuperBlockStartsSize = 4;
 	private static final int LineNumberTableSize = 16;
