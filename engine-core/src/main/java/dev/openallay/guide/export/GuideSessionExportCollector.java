@@ -226,25 +226,37 @@ public static final class SequencedRequest {
 
     private static GuideSessionExportSnapshot.Entry projectEntry(GuideTimelineEntry entry) {
         Objects.requireNonNull(entry);
-        if (entry instanceof GuideTimelineEntry.User user) {
-            return new GuideSessionExportSnapshot.Entry.User(user.messageId(), user.text());
-        } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+        final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.User bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.User && (($oaPattern0_holder.bound = (GuideTimelineEntry.User) $oaPattern0_holder.value) != null))) {
+            return new GuideSessionExportSnapshot.Entry.User($oaPattern0_holder.bound.messageId(), $oaPattern0_holder.bound.text());
+        } else {
+final class $oaPattern1_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern1_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern1_holder.value) != null))) {
             return new GuideSessionExportSnapshot.Entry.Assistant(
-                    assistant.text(), assistant.streaming());
-        } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+                    $oaPattern1_holder.bound.text(), $oaPattern1_holder.bound.streaming());
+        } else {
+final class $oaPattern2_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern2_holder.bound = (GuideTimelineEntry.Tool) $oaPattern2_holder.value) != null))) {
             return new GuideSessionExportSnapshot.Entry.Tool(
-                    tool.activity().invocationId(), tool.activity().toolId(),
-                    tool.activity().status());
+                    $oaPattern2_holder.bound.activity().invocationId(), $oaPattern2_holder.bound.activity().toolId(),
+                    $oaPattern2_holder.bound.activity().status());
         }
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
     private static GuideHistoryException exportFailure(Throwable failure) {
         Throwable cause = unwrap(failure);
-        return cause instanceof GuideHistoryException historyFailure
-                && (historyFailure.code().equals("history_export_failed")
-                        || historyFailure.code().equals("history_layout_unsupported"))
-                ? historyFailure
+        final class $oaPattern3_Holder { java.lang.Throwable value; GuideHistoryException bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+return (($oaPattern3_holder.value = cause) instanceof dev.openallay.guide.history.GuideHistoryException && (($oaPattern3_holder.bound = (GuideHistoryException) $oaPattern3_holder.value) != null))
+                && ($oaPattern3_holder.bound.code().equals("history_export_failed")
+                        || $oaPattern3_holder.bound.code().equals("history_layout_unsupported"))
+                ? $oaPattern3_holder.bound
                 : new GuideHistoryException(
                         "history_export_failed",
                         "Unable to read the complete guide session for export",

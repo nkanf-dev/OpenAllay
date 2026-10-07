@@ -43,10 +43,12 @@ public final class SemanticReferenceIndex {
         EnumMap<SemanticReferenceKind, Map<String, String>> values =
                 new EnumMap<>(SemanticReferenceKind.class);
         for (GuideTimelineEntry entry : List.copyOf(timeline)) {
-            if (!(entry instanceof GuideTimelineEntry.Tool tool)) {
+            final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern0_holder.bound = (GuideTimelineEntry.Tool) $oaPattern0_holder.value) != null)))) {
                 continue;
             }
-            GuideToolActivity activity = tool.activity();
+            GuideToolActivity activity = $oaPattern0_holder.bound.activity();
             String origin = activity.invocationId();
             for (GuideSource source : activity.sources()) {
                 put(values, SemanticReferenceKind.SOURCE, source.evidence().sourceId(), origin);

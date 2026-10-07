@@ -624,8 +624,11 @@ public final class GuideService implements GuideHistoryAdministration {
                 if (error != null || prepared == null) {
                     finishManualCompaction(control, null, control.cancellation.isCancelled()
                             ? "compact_cancelled" : "compact_failed", "Manual compaction did not complete");
-                } else if (prepared instanceof ToolResult.Failure<GuidePreparedCompaction> rejected) {
-                    finishManualCompaction(control, null, rejected.code(), rejected.message());
+                } else {
+final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.GuidePreparedCompaction> value; ToolResult.Failure<GuidePreparedCompaction> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<GuidePreparedCompaction>) $oaPattern0_holder.value) != null))) {
+                    finishManualCompaction(control, null, $oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
                 } else {
                     GuidePreparedCompaction value = ((ToolResult.Success<GuidePreparedCompaction>) prepared).value();
                     if (control.result.isDone()) {
@@ -639,6 +642,7 @@ public final class GuideService implements GuideHistoryAdministration {
                         }
                     } else saveManualCompaction(control, value);
                 }
+}
             }));
         }));
     }
@@ -890,8 +894,10 @@ public final class GuideService implements GuideHistoryAdministration {
             }
             if (rejectStateChange(result)) return;
             ToolResult<Boolean> valid = validateUserInput(message, captured.modelSelection);
-            if (valid instanceof ToolResult.Failure<Boolean> failure) {
-                result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = valid) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern1_holder.value) != null))) {
+                result.complete(new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message())); return;
             }
             UUID receipt = UUID.randomUUID();
             admitInput(captured, receipt, message, result,
@@ -964,8 +970,10 @@ public static final class InputReceipt {
             }
             if (rejectStateChange(result)) return;
             ToolResult<Boolean> valid = validateUserInput(message, captured.modelSelection);
-            if (valid instanceof ToolResult.Failure<Boolean> failure) {
-                result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = valid) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern2_holder.value) != null))) {
+                result.complete(new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message())); return;
             }
             UUID receipt = UUID.randomUUID();
             captured.pendingOrder.put(receipt, captured.nextPendingOrder++);
@@ -977,8 +985,10 @@ public static final class InputReceipt {
                     CompletableFuture<ToolResult<UUID>> submitted = new CompletableFuture<>();
                     submit(sessionId, message, receipt, submitted);
                     submitted.thenAccept(admitted -> {
-                        if (admitted instanceof ToolResult.Success<UUID> success) {
-                            result.complete(new ToolResult.Success<>(new InputReceipt(success.value(), false)));
+                        final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<java.util.UUID> value; ToolResult.Success<UUID> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = admitted) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern3_holder.bound = (ToolResult.Success<UUID>) $oaPattern3_holder.value) != null))) {
+                            result.complete(new ToolResult.Success<>(new InputReceipt($oaPattern3_holder.bound.value(), false)));
                         } else {
                             ToolResult.Failure<UUID> failure = (ToolResult.Failure<UUID>) admitted;
                             result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
@@ -1024,8 +1034,10 @@ public static final class InputReceipt {
             ToolResult<Boolean> valid = steer && running != null && !running.terminal()
                     ? validateCapturedUserInput(message, running.requestId())
                     : validateUserInput(message, selection);
-            if (valid instanceof ToolResult.Failure<Boolean> failure) {
-                result.complete(new ToolResult.Failure<>(failure.code(), failure.message()));
+            final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = valid) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern4_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern4_holder.value) != null))) {
+                result.complete(new ToolResult.Failure<>($oaPattern4_holder.bound.code(), $oaPattern4_holder.bound.message()));
                 return;
             }
             UUID id = UUID.randomUUID();
@@ -1075,8 +1087,10 @@ public static final class InputReceipt {
             ToolResult<Boolean> valid = pending.kind() == GuidePendingMessage.Kind.STEER && request != null
                     ? validateCapturedUserInput(message, request.requestId())
                     : validateUserInput(message, session.modelSelection);
-            if (valid instanceof ToolResult.Failure<Boolean> failure) {
-                result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+            final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern5_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern5_holder.value) != null))) {
+                result.complete(new ToolResult.Failure<>($oaPattern5_holder.bound.code(), $oaPattern5_holder.bound.message())); return;
             }
             // A new receipt retains an edited image until the original receipt can be replaced.
             UUID transfer = UUID.randomUUID();
@@ -2173,7 +2187,9 @@ public static final class InputReceipt {
             } else if (local != null) {
                 ToolResult<Boolean> result = local.steer(actor, session.id,
                         request.requestId(), pending.id(), pending.message());
-                accepted = result instanceof ToolResult.Success<Boolean> success && success.value();
+                final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+accepted = (($oaPattern6_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern6_holder.bound = (ToolResult.Success<Boolean>) $oaPattern6_holder.value) != null)) && $oaPattern6_holder.bound.value();
             }
         } catch (RuntimeException ignored) {
             // The player's instruction remains visible and becomes a follow-up after cleanup.
@@ -2236,11 +2252,13 @@ public static final class InputReceipt {
                 int requestCount = session.requests.size();
                 UUID receipt = session.pendingReceipts.get(next.id());
                 submit(session.id, next.message(), receipt, dispatched);
-                if (session.requests.size() == requestCount
-                        && dispatched.getNow(null) instanceof ToolResult.Failure<UUID> failure) {
+                final class $oaPattern7_Holder { dev.openallay.tool.ToolResult<java.util.UUID> value; ToolResult.Failure<UUID> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if (session.requests.size() == requestCount
+                        && (($oaPattern7_holder.value = dispatched.getNow(null)) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern7_holder.bound = (ToolResult.Failure<UUID>) $oaPattern7_holder.value) != null))) {
                     // Capability/attachment validation may have changed while queued. Keep the draft.
                     LinkedHashMap<UUID, GuidePendingMessage> restored = new LinkedHashMap<>();
-                    restored.put(next.id(), next.failed(new GuideFailure(failure.code(), failure.message())));
+                    restored.put(next.id(), next.failed(new GuideFailure($oaPattern7_holder.bound.code(), $oaPattern7_holder.bound.message())));
                     restored.putAll(session.pending);
                     session.pending.clear();
                     session.pending.putAll(restored);
@@ -2275,8 +2293,10 @@ public static final class InputReceipt {
             result.complete(new ToolResult.Failure<>("invalid_session", "Guide session does not exist")); return;
         }
         ToolResult<Boolean> valid = validateUserInput(input, session.modelSelection);
-        if (valid instanceof ToolResult.Failure<Boolean> failure) {
-            result.complete(new ToolResult.Failure<>(failure.code(), failure.message())); return;
+        final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = valid) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern8_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern8_holder.value) != null))) {
+            result.complete(new ToolResult.Failure<>($oaPattern8_holder.bound.code(), $oaPattern8_holder.bound.message())); return;
         }
         String question = GuidePendingMessage.displayText(input);
         if (active(session) != null || session.workingRequest != null || session.manualCompaction != null) {
@@ -2525,8 +2545,10 @@ public static final class InputReceipt {
         contexts.associateInputObservation(requestId.toString(), userInput(requestId).inputObservation());
         ToolResult<ToolInvocationContext> captured =
                 contexts.capture(requiredContext, requestId.toString());
-        if (captured instanceof ToolResult.Failure<ToolInvocationContext> failure) {
-            apply(requestId, new AgentEvent.Failed(failure.code(), failure.message()));
+        final class $oaPattern9_Holder { dev.openallay.tool.ToolResult<dev.openallay.context.ToolInvocationContext> value; ToolResult.Failure<ToolInvocationContext> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = captured) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern9_holder.bound = (ToolResult.Failure<ToolInvocationContext>) $oaPattern9_holder.value) != null))) {
+            apply(requestId, new AgentEvent.Failed($oaPattern9_holder.bound.code(), $oaPattern9_holder.bound.message()));
             return;
         }
         ToolInvocationContext context =
@@ -2594,24 +2616,26 @@ public static final class InputReceipt {
             releaseRequest(releasedSession == null ? null : sessions.get(releasedSession), requestId);
             return;
         }
-        if (event instanceof AgentEvent.ContextFinalized finalized) {
+        final class $oaPattern10_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextFinalized bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextFinalized && (($oaPattern10_holder.bound = (AgentEvent.ContextFinalized) $oaPattern10_holder.value) != null))) {
             CancelledFinalization pending = pendingCancelledFinalization.remove(requestId);
             if (disconnected || pending == null) return;
             SessionState session = sessions.get(pending.sessionId());
             if (session == null) return;
-            session.originalContext.put(requestId, finalized.requestMessages());
+            session.originalContext.put(requestId, $oaPattern10_holder.bound.requestMessages());
             if (incrementalHistory) {
                 pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
-                        requestId, finalized.requestMessages()));
+                        requestId, $oaPattern10_holder.bound.requestMessages()));
             }
             if (pending.sequence() == session.nextRequestSequence - 1) {
-                session.modelContext = finalized.messages();
+                session.modelContext = $oaPattern10_holder.bound.messages();
                 if (incrementalHistory) {
                     pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceContext(
-                            pending.sessionId(), finalized.messages()));
+                            pending.sessionId(), $oaPattern10_holder.bound.messages()));
                 }
             }
-            captureForkBoundary(session, requestId, finalized.messages(), pending.checkpoints());
+            captureForkBoundary(session, requestId, $oaPattern10_holder.bound.messages(), pending.checkpoints());
             retainPublishedImages(session);
             publish();
             return;
@@ -2643,8 +2667,10 @@ public static final class InputReceipt {
             return;
         }
         if (index < 0) return;
-        if (event instanceof AgentEvent.SteerRejected rejected) {
-            GuidePendingMessage pending = session.pending.get(rejected.messageId());
+        final class $oaPattern11_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.SteerRejected bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = event) instanceof dev.openallay.agent.AgentEvent.SteerRejected && (($oaPattern11_holder.bound = (AgentEvent.SteerRejected) $oaPattern11_holder.value) != null))) {
+            GuidePendingMessage pending = session.pending.get($oaPattern11_holder.bound.messageId());
             if (pending != null && requestId.equals(pending.requestId())) {
                 session.pending.put(pending.id(), pending.followUp());
                 publishWithoutSave();
@@ -2652,10 +2678,12 @@ public static final class InputReceipt {
             return;
         }
         boolean pendingSteerChanged = false;
-        if (event instanceof AgentEvent.SteerApplied applied) {
-            GuidePendingMessage pending = session.pending.get(applied.messageId());
+        final class $oaPattern12_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.SteerApplied bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if ((($oaPattern12_holder.value = event) instanceof dev.openallay.agent.AgentEvent.SteerApplied && (($oaPattern12_holder.bound = (AgentEvent.SteerApplied) $oaPattern12_holder.value) != null))) {
+            GuidePendingMessage pending = session.pending.get($oaPattern12_holder.bound.messageId());
             if (pending != null && requestId.equals(pending.requestId())) {
-                if (pending.message().equals(applied.message())) {
+                if (pending.message().equals($oaPattern12_holder.bound.message())) {
                     session.pending.remove(pending.id());
                     releasePendingReceipt(session, pending.id());
                 }
@@ -2667,27 +2695,33 @@ public static final class InputReceipt {
             if (pendingSteerChanged) publishWithoutSave();
             return;
         }
-        if (event instanceof AgentEvent.StateChanged changed
-                && changed.state() == dev.openallay.agent.AgentState.PREPARING) {
+        final class $oaPattern13_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.StateChanged bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+if ((($oaPattern13_holder.value = event) instanceof dev.openallay.agent.AgentEvent.StateChanged && (($oaPattern13_holder.bound = (AgentEvent.StateChanged) $oaPattern13_holder.value) != null))
+                && $oaPattern13_holder.bound.state() == dev.openallay.agent.AgentState.PREPARING) {
             List.copyOf(session.pending.values()).stream()
                     .filter(pending -> requestId.equals(pending.requestId()))
                     .forEach(pending -> sendSteer(session, pending));
         }
-        if (event instanceof AgentEvent.ContextUpdated updated) {
-            session.modelContext = updated.messages();
-            session.originalContext.put(requestId, updated.requestMessages());
+        final class $oaPattern14_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextUpdated bound; }
+final $oaPattern14_Holder $oaPattern14_holder = new $oaPattern14_Holder();
+if ((($oaPattern14_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextUpdated && (($oaPattern14_holder.bound = (AgentEvent.ContextUpdated) $oaPattern14_holder.value) != null))) {
+            session.modelContext = $oaPattern14_holder.bound.messages();
+            session.originalContext.put(requestId, $oaPattern14_holder.bound.requestMessages());
             if (incrementalHistory) {
                 pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceContext(
-                        sessionId, updated.messages()));
+                        sessionId, $oaPattern14_holder.bound.messages()));
                 pendingHistoryMutations.add(new GuideHistoryMutation.ReplaceRequestContext(
-                        requestId, updated.requestMessages()));
+                        requestId, $oaPattern14_holder.bound.requestMessages()));
             }
             retainPublishedImages(session);
             publish();
             return;
         }
-        if (event instanceof AgentEvent.ContextCompacted compacted) {
-            ContextCheckpoint checkpoint = compacted.checkpoint();
+        final class $oaPattern15_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextCompacted bound; }
+final $oaPattern15_Holder $oaPattern15_holder = new $oaPattern15_Holder();
+if ((($oaPattern15_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextCompacted && (($oaPattern15_holder.bound = (AgentEvent.ContextCompacted) $oaPattern15_holder.value) != null))) {
+            ContextCheckpoint checkpoint = $oaPattern15_holder.bound.checkpoint();
             int existing = -1;
             for (int ordinal = 0; ordinal < session.checkpoints.size(); ordinal++) {
                 if (session.checkpoints.get(ordinal).checkpointId().equals(checkpoint.checkpointId())) {
@@ -2739,9 +2773,11 @@ public static final class InputReceipt {
         GuideRequestSnapshot request = find(requestId);
         if (request != null && !request.terminal()) {
             Throwable failure = unwrap(throwable);
-            if (failure instanceof GuideModelProfileException profileFailure) {
+            final class $oaPattern16_Holder { java.lang.Throwable value; GuideModelProfileException bound; }
+final $oaPattern16_Holder $oaPattern16_holder = new $oaPattern16_Holder();
+if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideModelProfileException && (($oaPattern16_holder.bound = (GuideModelProfileException) $oaPattern16_holder.value) != null))) {
                 apply(requestId, new AgentEvent.Failed(
-                        profileFailure.code(), profileFailure.getMessage()));
+                        $oaPattern16_holder.bound.code(), $oaPattern16_holder.bound.getMessage()));
             } else {
                 apply(requestId, new AgentEvent.Failed("agent_failure", message(failure)));
             }
@@ -3297,20 +3333,24 @@ public static final class InputReceipt {
 
     private static GuideRequestSnapshot durableRequest(GuideRequestSnapshot request) {
         List<GuideTimelineEntry> timeline = request.timeline().stream()
-                .map(entry -> entry instanceof GuideTimelineEntry.Tool tool
+                .map(entry -> {
+final class $oaPattern17_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern17_Holder $oaPattern17_holder = new $oaPattern17_Holder();
+return (($oaPattern17_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern17_holder.bound = (GuideTimelineEntry.Tool) $oaPattern17_holder.value) != null))
                         ? new GuideTimelineEntry.Tool(
-                                tool.ordinal(),
+                                $oaPattern17_holder.bound.ordinal(),
                                 new GuideToolActivity(
-                                        tool.activity().invocationId(),
-                                        tool.activity().index(),
-                                        tool.activity().toolId(),
-                                        tool.activity().status(),
+                                        $oaPattern17_holder.bound.activity().invocationId(),
+                                        $oaPattern17_holder.bound.activity().index(),
+                                        $oaPattern17_holder.bound.activity().toolId(),
+                                        $oaPattern17_holder.bound.activity().status(),
                                         null,
-                                        tool.activity().invocation().restored(),
+                                        $oaPattern17_holder.bound.activity().invocation().restored(),
                                         null,
-                                        tool.activity().presentationMessages(),
-                                        tool.activity().sources()))
-                        : entry)
+                                        $oaPattern17_holder.bound.activity().presentationMessages(),
+                                        $oaPattern17_holder.bound.activity().sources()))
+                        : entry;
+})
                 .toList();
         return new GuideRequestSnapshot(
                 request.requestId(),
@@ -3370,12 +3410,14 @@ public static final class InputReceipt {
                 && current.getCause() != null) {
             current = current.getCause();
         }
-        if (current instanceof GuideHistoryException historyFailure) {
+        final class $oaPattern18_Holder { java.lang.Throwable value; GuideHistoryException bound; }
+final $oaPattern18_Holder $oaPattern18_holder = new $oaPattern18_Holder();
+if ((($oaPattern18_holder.value = current) instanceof dev.openallay.guide.history.GuideHistoryException && (($oaPattern18_holder.bound = (GuideHistoryException) $oaPattern18_holder.value) != null))) {
             return new GuideFailure(
-                    historyFailure.code(),
-                    historyFailure.getMessage() == null
+                    $oaPattern18_holder.bound.code(),
+                    $oaPattern18_holder.bound.getMessage() == null
                             ? "Durable guide history is unavailable"
-                            : historyFailure.getMessage());
+                            : $oaPattern18_holder.bound.getMessage());
         }
         return new GuideFailure(fallbackCode, "Durable guide history is unavailable");
     }
@@ -3876,16 +3918,24 @@ private static final class MutationKey {
 
         private void addAll(List<GuideHistoryMutation> changes) {
             for (GuideHistoryMutation change : changes) {
-                if (change instanceof GuideHistoryMutation.UpsertRequest row) {
-                    unacknowledgedOwners.put(row.request().requestId(), row.request().sessionId());
+                final class $oaPattern19_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertRequest bound; }
+final $oaPattern19_Holder $oaPattern19_holder = new $oaPattern19_Holder();
+if ((($oaPattern19_holder.value = change) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertRequest && (($oaPattern19_holder.bound = (GuideHistoryMutation.UpsertRequest) $oaPattern19_holder.value) != null))) {
+                    unacknowledgedOwners.put($oaPattern19_holder.bound.request().requestId(), $oaPattern19_holder.bound.request().sessionId());
                 }
             }
             for (GuideHistoryMutation change : changes) {
-                if (change instanceof GuideHistoryMutation.DeleteSession deleted) {
-                    discardSession(deleted.sessionId(), true);
-                } else if (change instanceof GuideHistoryMutation.ClearSession cleared) {
-                    discardSession(cleared.sessionId(), false);
+                final class $oaPattern20_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.DeleteSession bound; }
+final $oaPattern20_Holder $oaPattern20_holder = new $oaPattern20_Holder();
+if ((($oaPattern20_holder.value = change) instanceof dev.openallay.guide.history.GuideHistoryMutation.DeleteSession && (($oaPattern20_holder.bound = (GuideHistoryMutation.DeleteSession) $oaPattern20_holder.value) != null))) {
+                    discardSession($oaPattern20_holder.bound.sessionId(), true);
+                } else {
+final class $oaPattern21_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ClearSession bound; }
+final $oaPattern21_Holder $oaPattern21_holder = new $oaPattern21_Holder();
+if ((($oaPattern21_holder.value = change) instanceof dev.openallay.guide.history.GuideHistoryMutation.ClearSession && (($oaPattern21_holder.bound = (GuideHistoryMutation.ClearSession) $oaPattern21_holder.value) != null))) {
+                    discardSession($oaPattern21_holder.bound.sessionId(), false);
                 }
+}
                 mutations.put(key(change), change);
             }
         }
@@ -3901,37 +3951,95 @@ private static final class MutationKey {
 
         private String sessionOf(GuideHistoryMutation mutation) {
             Objects.requireNonNull(mutation);
-            if (mutation instanceof GuideHistoryMutation.UpsertSession row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.UpsertMessage row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.ReplaceContext row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.DeleteSession row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.ClearSession row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.UpsertRequest row) {
-                return row.request().sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry row) {
-                return sessionOf(row.requestId());
-            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources row) {
-                return sessionOf(row.requestId());
-            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext row) {
-                return sessionOf(row.requestId());
-            } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary row) {
-                return sessionOf(row.requestId());
-            } else if (mutation instanceof GuideHistoryMutation.ForkSession row) {
-                return row.sessionId();
-            } else if (mutation instanceof GuideHistoryMutation.UpsertPartition ignored) {
+            final class $oaPattern22_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertSession bound; }
+final $oaPattern22_Holder $oaPattern22_holder = new $oaPattern22_Holder();
+if ((($oaPattern22_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertSession && (($oaPattern22_holder.bound = (GuideHistoryMutation.UpsertSession) $oaPattern22_holder.value) != null))) {
+                return $oaPattern22_holder.bound.sessionId();
+            } else {
+final class $oaPattern23_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertSessionUsage bound; }
+final $oaPattern23_Holder $oaPattern23_holder = new $oaPattern23_Holder();
+if ((($oaPattern23_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertSessionUsage && (($oaPattern23_holder.bound = (GuideHistoryMutation.UpsertSessionUsage) $oaPattern23_holder.value) != null))) {
+                return $oaPattern23_holder.bound.sessionId();
+            } else {
+final class $oaPattern24_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertMessage bound; }
+final $oaPattern24_Holder $oaPattern24_holder = new $oaPattern24_Holder();
+if ((($oaPattern24_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertMessage && (($oaPattern24_holder.bound = (GuideHistoryMutation.UpsertMessage) $oaPattern24_holder.value) != null))) {
+                return $oaPattern24_holder.bound.sessionId();
+            } else {
+final class $oaPattern25_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceContext bound; }
+final $oaPattern25_Holder $oaPattern25_holder = new $oaPattern25_Holder();
+if ((($oaPattern25_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceContext && (($oaPattern25_holder.bound = (GuideHistoryMutation.ReplaceContext) $oaPattern25_holder.value) != null))) {
+                return $oaPattern25_holder.bound.sessionId();
+            } else {
+final class $oaPattern26_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertCheckpoint bound; }
+final $oaPattern26_Holder $oaPattern26_holder = new $oaPattern26_Holder();
+if ((($oaPattern26_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertCheckpoint && (($oaPattern26_holder.bound = (GuideHistoryMutation.UpsertCheckpoint) $oaPattern26_holder.value) != null))) {
+                return $oaPattern26_holder.bound.sessionId();
+            } else {
+final class $oaPattern27_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.AppendCheckpoint bound; }
+final $oaPattern27_Holder $oaPattern27_holder = new $oaPattern27_Holder();
+if ((($oaPattern27_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.AppendCheckpoint && (($oaPattern27_holder.bound = (GuideHistoryMutation.AppendCheckpoint) $oaPattern27_holder.value) != null))) {
+                return $oaPattern27_holder.bound.sessionId();
+            } else {
+final class $oaPattern28_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.DeleteSession bound; }
+final $oaPattern28_Holder $oaPattern28_holder = new $oaPattern28_Holder();
+if ((($oaPattern28_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.DeleteSession && (($oaPattern28_holder.bound = (GuideHistoryMutation.DeleteSession) $oaPattern28_holder.value) != null))) {
+                return $oaPattern28_holder.bound.sessionId();
+            } else {
+final class $oaPattern29_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ClearSession bound; }
+final $oaPattern29_Holder $oaPattern29_holder = new $oaPattern29_Holder();
+if ((($oaPattern29_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ClearSession && (($oaPattern29_holder.bound = (GuideHistoryMutation.ClearSession) $oaPattern29_holder.value) != null))) {
+                return $oaPattern29_holder.bound.sessionId();
+            } else {
+final class $oaPattern30_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertRequest bound; }
+final $oaPattern30_Holder $oaPattern30_holder = new $oaPattern30_Holder();
+if ((($oaPattern30_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertRequest && (($oaPattern30_holder.bound = (GuideHistoryMutation.UpsertRequest) $oaPattern30_holder.value) != null))) {
+                return $oaPattern30_holder.bound.request().sessionId();
+            } else {
+final class $oaPattern31_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertTimelineEntry bound; }
+final $oaPattern31_Holder $oaPattern31_holder = new $oaPattern31_Holder();
+if ((($oaPattern31_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertTimelineEntry && (($oaPattern31_holder.bound = (GuideHistoryMutation.UpsertTimelineEntry) $oaPattern31_holder.value) != null))) {
+                return sessionOf($oaPattern31_holder.bound.requestId());
+            } else {
+final class $oaPattern32_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceRequestSources bound; }
+final $oaPattern32_Holder $oaPattern32_holder = new $oaPattern32_Holder();
+if ((($oaPattern32_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestSources && (($oaPattern32_holder.bound = (GuideHistoryMutation.ReplaceRequestSources) $oaPattern32_holder.value) != null))) {
+                return sessionOf($oaPattern32_holder.bound.requestId());
+            } else {
+final class $oaPattern33_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceRequestContext bound; }
+final $oaPattern33_Holder $oaPattern33_holder = new $oaPattern33_Holder();
+if ((($oaPattern33_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestContext && (($oaPattern33_holder.bound = (GuideHistoryMutation.ReplaceRequestContext) $oaPattern33_holder.value) != null))) {
+                return sessionOf($oaPattern33_holder.bound.requestId());
+            } else {
+final class $oaPattern34_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.CaptureRequestBoundary bound; }
+final $oaPattern34_Holder $oaPattern34_holder = new $oaPattern34_Holder();
+if ((($oaPattern34_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.CaptureRequestBoundary && (($oaPattern34_holder.bound = (GuideHistoryMutation.CaptureRequestBoundary) $oaPattern34_holder.value) != null))) {
+                return sessionOf($oaPattern34_holder.bound.requestId());
+            } else {
+final class $oaPattern35_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ForkSession bound; }
+final $oaPattern35_Holder $oaPattern35_holder = new $oaPattern35_Holder();
+if ((($oaPattern35_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ForkSession && (($oaPattern35_holder.bound = (GuideHistoryMutation.ForkSession) $oaPattern35_holder.value) != null))) {
+                return $oaPattern35_holder.bound.sessionId();
+            } else {
+final class $oaPattern36_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertPartition bound; }
+final $oaPattern36_Holder $oaPattern36_holder = new $oaPattern36_Holder();
+if ((($oaPattern36_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertPartition && (($oaPattern36_holder.bound = (GuideHistoryMutation.UpsertPartition) $oaPattern36_holder.value) != null))) {
                 return null;
             }
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
             throw new IncompatibleClassChangeError();
         }
 
@@ -3945,37 +4053,95 @@ private static final class MutationKey {
 
         private MutationKey key(GuideHistoryMutation mutation) {
             Objects.requireNonNull(mutation);
-            if (mutation instanceof GuideHistoryMutation.UpsertPartition ignored) {
+            final class $oaPattern37_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertPartition bound; }
+final $oaPattern37_Holder $oaPattern37_holder = new $oaPattern37_Holder();
+if ((($oaPattern37_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertPartition && (($oaPattern37_holder.bound = (GuideHistoryMutation.UpsertPartition) $oaPattern37_holder.value) != null))) {
                 return new MutationKey(mutation.getClass(), "partition", 0);
-            } else if (mutation instanceof GuideHistoryMutation.UpsertSession row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.UpsertRequest row) {
-                return new MutationKey(mutation.getClass(), row.request().requestId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.UpsertMessage row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
-            } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry row) {
-                return new MutationKey(mutation.getClass(), row.requestId(), row.entry().ordinal());
-            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources row) {
-                return new MutationKey(mutation.getClass(), row.requestId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.ReplaceContext row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext row) {
-                return new MutationKey(mutation.getClass(), row.requestId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary row) {
-                return new MutationKey(mutation.getClass(), row.requestId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.ForkSession row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint row) {
-                return new MutationKey(mutation.getClass(), row.checkpoint().checkpointId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), row.ordinal());
-            } else if (mutation instanceof GuideHistoryMutation.DeleteSession row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
-            } else if (mutation instanceof GuideHistoryMutation.ClearSession row) {
-                return new MutationKey(mutation.getClass(), row.sessionId(), 0);
+            } else {
+final class $oaPattern38_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertSession bound; }
+final $oaPattern38_Holder $oaPattern38_holder = new $oaPattern38_Holder();
+if ((($oaPattern38_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertSession && (($oaPattern38_holder.bound = (GuideHistoryMutation.UpsertSession) $oaPattern38_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern38_holder.bound.sessionId(), 0);
+            } else {
+final class $oaPattern39_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertSessionUsage bound; }
+final $oaPattern39_Holder $oaPattern39_holder = new $oaPattern39_Holder();
+if ((($oaPattern39_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertSessionUsage && (($oaPattern39_holder.bound = (GuideHistoryMutation.UpsertSessionUsage) $oaPattern39_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern39_holder.bound.sessionId(), 0);
+            } else {
+final class $oaPattern40_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertRequest bound; }
+final $oaPattern40_Holder $oaPattern40_holder = new $oaPattern40_Holder();
+if ((($oaPattern40_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertRequest && (($oaPattern40_holder.bound = (GuideHistoryMutation.UpsertRequest) $oaPattern40_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern40_holder.bound.request().requestId(), 0);
+            } else {
+final class $oaPattern41_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertMessage bound; }
+final $oaPattern41_Holder $oaPattern41_holder = new $oaPattern41_Holder();
+if ((($oaPattern41_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertMessage && (($oaPattern41_holder.bound = (GuideHistoryMutation.UpsertMessage) $oaPattern41_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern41_holder.bound.sessionId(), $oaPattern41_holder.bound.ordinal());
+            } else {
+final class $oaPattern42_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertTimelineEntry bound; }
+final $oaPattern42_Holder $oaPattern42_holder = new $oaPattern42_Holder();
+if ((($oaPattern42_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertTimelineEntry && (($oaPattern42_holder.bound = (GuideHistoryMutation.UpsertTimelineEntry) $oaPattern42_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern42_holder.bound.requestId(), $oaPattern42_holder.bound.entry().ordinal());
+            } else {
+final class $oaPattern43_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceRequestSources bound; }
+final $oaPattern43_Holder $oaPattern43_holder = new $oaPattern43_Holder();
+if ((($oaPattern43_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestSources && (($oaPattern43_holder.bound = (GuideHistoryMutation.ReplaceRequestSources) $oaPattern43_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern43_holder.bound.requestId(), 0);
+            } else {
+final class $oaPattern44_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceContext bound; }
+final $oaPattern44_Holder $oaPattern44_holder = new $oaPattern44_Holder();
+if ((($oaPattern44_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceContext && (($oaPattern44_holder.bound = (GuideHistoryMutation.ReplaceContext) $oaPattern44_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern44_holder.bound.sessionId(), 0);
+            } else {
+final class $oaPattern45_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceRequestContext bound; }
+final $oaPattern45_Holder $oaPattern45_holder = new $oaPattern45_Holder();
+if ((($oaPattern45_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestContext && (($oaPattern45_holder.bound = (GuideHistoryMutation.ReplaceRequestContext) $oaPattern45_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern45_holder.bound.requestId(), 0);
+            } else {
+final class $oaPattern46_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.CaptureRequestBoundary bound; }
+final $oaPattern46_Holder $oaPattern46_holder = new $oaPattern46_Holder();
+if ((($oaPattern46_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.CaptureRequestBoundary && (($oaPattern46_holder.bound = (GuideHistoryMutation.CaptureRequestBoundary) $oaPattern46_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern46_holder.bound.requestId(), 0);
+            } else {
+final class $oaPattern47_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ForkSession bound; }
+final $oaPattern47_Holder $oaPattern47_holder = new $oaPattern47_Holder();
+if ((($oaPattern47_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ForkSession && (($oaPattern47_holder.bound = (GuideHistoryMutation.ForkSession) $oaPattern47_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern47_holder.bound.sessionId(), 0);
+            } else {
+final class $oaPattern48_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.AppendCheckpoint bound; }
+final $oaPattern48_Holder $oaPattern48_holder = new $oaPattern48_Holder();
+if ((($oaPattern48_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.AppendCheckpoint && (($oaPattern48_holder.bound = (GuideHistoryMutation.AppendCheckpoint) $oaPattern48_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern48_holder.bound.checkpoint().checkpointId(), 0);
+            } else {
+final class $oaPattern49_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertCheckpoint bound; }
+final $oaPattern49_Holder $oaPattern49_holder = new $oaPattern49_Holder();
+if ((($oaPattern49_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertCheckpoint && (($oaPattern49_holder.bound = (GuideHistoryMutation.UpsertCheckpoint) $oaPattern49_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern49_holder.bound.sessionId(), $oaPattern49_holder.bound.ordinal());
+            } else {
+final class $oaPattern50_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.DeleteSession bound; }
+final $oaPattern50_Holder $oaPattern50_holder = new $oaPattern50_Holder();
+if ((($oaPattern50_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.DeleteSession && (($oaPattern50_holder.bound = (GuideHistoryMutation.DeleteSession) $oaPattern50_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern50_holder.bound.sessionId(), 0);
+            } else {
+final class $oaPattern51_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ClearSession bound; }
+final $oaPattern51_Holder $oaPattern51_holder = new $oaPattern51_Holder();
+if ((($oaPattern51_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ClearSession && (($oaPattern51_holder.bound = (GuideHistoryMutation.ClearSession) $oaPattern51_holder.value) != null))) {
+                return new MutationKey(mutation.getClass(), $oaPattern51_holder.bound.sessionId(), 0);
             }
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
             throw new IncompatibleClassChangeError();
         }
 
@@ -4013,39 +4179,97 @@ private static final class MutationKey {
         private void acknowledge(List<GuideHistoryMutation> changes) {
             for (GuideHistoryMutation mutation : changes) {
                 Objects.requireNonNull(mutation);
-                if (mutation instanceof GuideHistoryMutation.UpsertPartition row) {
-                    selectedSession = row.selectedSession();
-                } else if (mutation instanceof GuideHistoryMutation.UpsertSession row) {
+                final class $oaPattern52_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertPartition bound; }
+final $oaPattern52_Holder $oaPattern52_holder = new $oaPattern52_Holder();
+if ((($oaPattern52_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertPartition && (($oaPattern52_holder.bound = (GuideHistoryMutation.UpsertPartition) $oaPattern52_holder.value) != null))) {
+                    selectedSession = $oaPattern52_holder.bound.selectedSession();
+                } else {
+final class $oaPattern53_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertSession bound; }
+final $oaPattern53_Holder $oaPattern53_holder = new $oaPattern53_Holder();
+if ((($oaPattern53_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertSession && (($oaPattern53_holder.bound = (GuideHistoryMutation.UpsertSession) $oaPattern53_holder.value) != null))) {
                     sessions.put(
-                            row.sessionId(), new SessionProjection(row.ordinal(), row.modelSelection()));
-                } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage row) {
-                    controlUsage.put(row.sessionId(), row.controlUsage());
-                } else if (mutation instanceof GuideHistoryMutation.UpsertRequest row) {
-                    requests.put(row.request().requestId(), row.request());
-                } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry row) {
-                    timeline.put(new TimelineKey(row.requestId(), row.entry().ordinal()), row.entry());
-                } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources row) {
-                    sources.put(row.requestId(), row.sources());
-                } else if (mutation instanceof GuideHistoryMutation.UpsertMessage row) {
-                    messages.put(new MessageKey(row.sessionId(), row.ordinal()), row.message());
-                } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint row) {
-                    checkpoints.put(new CheckpointKey(row.sessionId(), row.ordinal()), row.checkpoint());
-                    checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
-                    checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
-                } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint row) {
-                    checkpointPayloads.put(row.checkpoint().checkpointId(), row.checkpoint());
-                    checkpointSessions.put(row.checkpoint().checkpointId(), row.sessionId());
-                } else if (mutation instanceof GuideHistoryMutation.DeleteSession row) {
-                    removeSession(row.sessionId());
-                } else if (mutation instanceof GuideHistoryMutation.ClearSession row) {
-                    clearSession(row.sessionId());
-                } else if (mutation instanceof GuideHistoryMutation.ReplaceContext ignored) {
-                } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext ignored) {
-                } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary ignored) {
-                } else if (mutation instanceof GuideHistoryMutation.ForkSession ignored) {
+                            $oaPattern53_holder.bound.sessionId(), new SessionProjection($oaPattern53_holder.bound.ordinal(), $oaPattern53_holder.bound.modelSelection()));
+                } else {
+final class $oaPattern54_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertSessionUsage bound; }
+final $oaPattern54_Holder $oaPattern54_holder = new $oaPattern54_Holder();
+if ((($oaPattern54_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertSessionUsage && (($oaPattern54_holder.bound = (GuideHistoryMutation.UpsertSessionUsage) $oaPattern54_holder.value) != null))) {
+                    controlUsage.put($oaPattern54_holder.bound.sessionId(), $oaPattern54_holder.bound.controlUsage());
+                } else {
+final class $oaPattern55_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertRequest bound; }
+final $oaPattern55_Holder $oaPattern55_holder = new $oaPattern55_Holder();
+if ((($oaPattern55_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertRequest && (($oaPattern55_holder.bound = (GuideHistoryMutation.UpsertRequest) $oaPattern55_holder.value) != null))) {
+                    requests.put($oaPattern55_holder.bound.request().requestId(), $oaPattern55_holder.bound.request());
+                } else {
+final class $oaPattern56_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertTimelineEntry bound; }
+final $oaPattern56_Holder $oaPattern56_holder = new $oaPattern56_Holder();
+if ((($oaPattern56_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertTimelineEntry && (($oaPattern56_holder.bound = (GuideHistoryMutation.UpsertTimelineEntry) $oaPattern56_holder.value) != null))) {
+                    timeline.put(new TimelineKey($oaPattern56_holder.bound.requestId(), $oaPattern56_holder.bound.entry().ordinal()), $oaPattern56_holder.bound.entry());
+                } else {
+final class $oaPattern57_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceRequestSources bound; }
+final $oaPattern57_Holder $oaPattern57_holder = new $oaPattern57_Holder();
+if ((($oaPattern57_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestSources && (($oaPattern57_holder.bound = (GuideHistoryMutation.ReplaceRequestSources) $oaPattern57_holder.value) != null))) {
+                    sources.put($oaPattern57_holder.bound.requestId(), $oaPattern57_holder.bound.sources());
+                } else {
+final class $oaPattern58_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertMessage bound; }
+final $oaPattern58_Holder $oaPattern58_holder = new $oaPattern58_Holder();
+if ((($oaPattern58_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertMessage && (($oaPattern58_holder.bound = (GuideHistoryMutation.UpsertMessage) $oaPattern58_holder.value) != null))) {
+                    messages.put(new MessageKey($oaPattern58_holder.bound.sessionId(), $oaPattern58_holder.bound.ordinal()), $oaPattern58_holder.bound.message());
+                } else {
+final class $oaPattern59_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.UpsertCheckpoint bound; }
+final $oaPattern59_Holder $oaPattern59_holder = new $oaPattern59_Holder();
+if ((($oaPattern59_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.UpsertCheckpoint && (($oaPattern59_holder.bound = (GuideHistoryMutation.UpsertCheckpoint) $oaPattern59_holder.value) != null))) {
+                    checkpoints.put(new CheckpointKey($oaPattern59_holder.bound.sessionId(), $oaPattern59_holder.bound.ordinal()), $oaPattern59_holder.bound.checkpoint());
+                    checkpointPayloads.put($oaPattern59_holder.bound.checkpoint().checkpointId(), $oaPattern59_holder.bound.checkpoint());
+                    checkpointSessions.put($oaPattern59_holder.bound.checkpoint().checkpointId(), $oaPattern59_holder.bound.sessionId());
+                } else {
+final class $oaPattern60_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.AppendCheckpoint bound; }
+final $oaPattern60_Holder $oaPattern60_holder = new $oaPattern60_Holder();
+if ((($oaPattern60_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.AppendCheckpoint && (($oaPattern60_holder.bound = (GuideHistoryMutation.AppendCheckpoint) $oaPattern60_holder.value) != null))) {
+                    checkpointPayloads.put($oaPattern60_holder.bound.checkpoint().checkpointId(), $oaPattern60_holder.bound.checkpoint());
+                    checkpointSessions.put($oaPattern60_holder.bound.checkpoint().checkpointId(), $oaPattern60_holder.bound.sessionId());
+                } else {
+final class $oaPattern61_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.DeleteSession bound; }
+final $oaPattern61_Holder $oaPattern61_holder = new $oaPattern61_Holder();
+if ((($oaPattern61_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.DeleteSession && (($oaPattern61_holder.bound = (GuideHistoryMutation.DeleteSession) $oaPattern61_holder.value) != null))) {
+                    removeSession($oaPattern61_holder.bound.sessionId());
+                } else {
+final class $oaPattern62_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ClearSession bound; }
+final $oaPattern62_Holder $oaPattern62_holder = new $oaPattern62_Holder();
+if ((($oaPattern62_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ClearSession && (($oaPattern62_holder.bound = (GuideHistoryMutation.ClearSession) $oaPattern62_holder.value) != null))) {
+                    clearSession($oaPattern62_holder.bound.sessionId());
+                } else {
+final class $oaPattern63_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceContext bound; }
+final $oaPattern63_Holder $oaPattern63_holder = new $oaPattern63_Holder();
+if ((($oaPattern63_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceContext && (($oaPattern63_holder.bound = (GuideHistoryMutation.ReplaceContext) $oaPattern63_holder.value) != null))) {
+                } else {
+final class $oaPattern64_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ReplaceRequestContext bound; }
+final $oaPattern64_Holder $oaPattern64_holder = new $oaPattern64_Holder();
+if ((($oaPattern64_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ReplaceRequestContext && (($oaPattern64_holder.bound = (GuideHistoryMutation.ReplaceRequestContext) $oaPattern64_holder.value) != null))) {
+                } else {
+final class $oaPattern65_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.CaptureRequestBoundary bound; }
+final $oaPattern65_Holder $oaPattern65_holder = new $oaPattern65_Holder();
+if ((($oaPattern65_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.CaptureRequestBoundary && (($oaPattern65_holder.bound = (GuideHistoryMutation.CaptureRequestBoundary) $oaPattern65_holder.value) != null))) {
+                } else {
+final class $oaPattern66_Holder { dev.openallay.guide.history.GuideHistoryMutation value; GuideHistoryMutation.ForkSession bound; }
+final $oaPattern66_Holder $oaPattern66_holder = new $oaPattern66_Holder();
+if ((($oaPattern66_holder.value = mutation) instanceof dev.openallay.guide.history.GuideHistoryMutation.ForkSession && (($oaPattern66_holder.bound = (GuideHistoryMutation.ForkSession) $oaPattern66_holder.value) != null))) {
                 } else {
                     throw new IncompatibleClassChangeError();
                 }
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
             }
         }
 

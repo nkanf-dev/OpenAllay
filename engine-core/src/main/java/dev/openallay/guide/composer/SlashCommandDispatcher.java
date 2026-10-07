@@ -104,14 +104,18 @@ public static final class Completion {
             Objects.requireNonNull(compact.get(), "compact future").whenComplete((result, failure) -> {
                 if (failure != null || result == null) {
                     completion.accept(new Completion(false, "compact_failed", null));
-                } else if (result instanceof ToolResult.Failure<GuideCompactResult> rejected) {
-                    completion.accept(new Completion(false, rejected.code(), null));
+                } else {
+final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.GuideCompactResult> value; ToolResult.Failure<GuideCompactResult> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<GuideCompactResult>) $oaPattern0_holder.value) != null))) {
+                    completion.accept(new Completion(false, $oaPattern0_holder.bound.code(), null));
                 } else {
                     GuideCompactResult value = ((ToolResult.Success<GuideCompactResult>) result).value();
                     completion.accept(new Completion(true,
                             value.status() == GuideCompactResult.Status.COMPACTED
                                     ? "compact_completed" : "compact_not_needed", value));
                 }
+}
             });
         } catch (RuntimeException failure) {
             completion.accept(new Completion(false, "compact_failed", null));

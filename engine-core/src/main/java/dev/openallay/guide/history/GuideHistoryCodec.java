@@ -186,13 +186,23 @@ public final class GuideHistoryCodec {
 
     private JsonObject encodeEntryObject(GuideTimelineEntry entry) {
         java.util.Objects.requireNonNull(entry);
-        if (entry instanceof GuideTimelineEntry.User user) {
-            return encodeUser(user);
-        } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
-            return encodeAssistant(assistant);
-        } else if (entry instanceof GuideTimelineEntry.Tool tool) {
-            return encodeTool(tool);
+        final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.User bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.User && (($oaPattern0_holder.bound = (GuideTimelineEntry.User) $oaPattern0_holder.value) != null))) {
+            return encodeUser($oaPattern0_holder.bound);
+        } else {
+final class $oaPattern1_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern1_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern1_holder.value) != null))) {
+            return encodeAssistant($oaPattern1_holder.bound);
+        } else {
+final class $oaPattern2_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern2_holder.bound = (GuideTimelineEntry.Tool) $oaPattern2_holder.value) != null))) {
+            return encodeTool($oaPattern2_holder.bound);
         }
+}
+}
         throw new IncompatibleClassChangeError();
     }
 

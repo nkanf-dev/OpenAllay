@@ -21,44 +21,96 @@ final class SemanticPlainText {
         StringBuilder text = new StringBuilder();
         for (SemanticInline value : values) {
             java.util.Objects.requireNonNull(value);
-            if (value instanceof SemanticInline.Text literal) {
-                text.append(literal.text());
-            } else if (value instanceof SemanticInline.Emphasis emphasis) {
-                text.append(inline(emphasis.children()));
-            } else if (value instanceof SemanticInline.Strong strong) {
-                text.append(inline(strong.children()));
-            } else if (value instanceof SemanticInline.Code code) {
-                text.append(code.text());
-            } else if (value instanceof SemanticInline.Break ignored) {
+            final class $oaPattern0_Holder { dev.openallay.guide.semantic.SemanticInline value; SemanticInline.Text bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticInline.Text && (($oaPattern0_holder.bound = (SemanticInline.Text) $oaPattern0_holder.value) != null))) {
+                text.append($oaPattern0_holder.bound.text());
+            } else {
+final class $oaPattern1_Holder { dev.openallay.guide.semantic.SemanticInline value; SemanticInline.Emphasis bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticInline.Emphasis && (($oaPattern1_holder.bound = (SemanticInline.Emphasis) $oaPattern1_holder.value) != null))) {
+                text.append(inline($oaPattern1_holder.bound.children()));
+            } else {
+final class $oaPattern2_Holder { dev.openallay.guide.semantic.SemanticInline value; SemanticInline.Strong bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticInline.Strong && (($oaPattern2_holder.bound = (SemanticInline.Strong) $oaPattern2_holder.value) != null))) {
+                text.append(inline($oaPattern2_holder.bound.children()));
+            } else {
+final class $oaPattern3_Holder { dev.openallay.guide.semantic.SemanticInline value; SemanticInline.Code bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticInline.Code && (($oaPattern3_holder.bound = (SemanticInline.Code) $oaPattern3_holder.value) != null))) {
+                text.append($oaPattern3_holder.bound.text());
+            } else {
+final class $oaPattern4_Holder { dev.openallay.guide.semantic.SemanticInline value; SemanticInline.Break bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticInline.Break && (($oaPattern4_holder.bound = (SemanticInline.Break) $oaPattern4_holder.value) != null))) {
                 text.append('\n');
-            } else if (value instanceof SemanticInline.Reference reference) {
-                text.append(reference.reference().displayText());
+            } else {
+final class $oaPattern5_Holder { dev.openallay.guide.semantic.SemanticInline value; SemanticInline.Reference bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticInline.Reference && (($oaPattern5_holder.bound = (SemanticInline.Reference) $oaPattern5_holder.value) != null))) {
+                text.append($oaPattern5_holder.bound.reference().displayText());
             } else {
                 throw new IncompatibleClassChangeError();
             }
+}
+}
+}
+}
+}
         }
         return text.toString();
     }
 
     private static String block(SemanticBlock value, int depth) {
         java.util.Objects.requireNonNull(value);
-        if (value instanceof SemanticBlock.Paragraph paragraph) {
-            return inline(paragraph.content());
-        } else if (value instanceof SemanticBlock.Heading heading) {
-            return inline(heading.content());
-        } else if (value instanceof SemanticBlock.Quote quote) {
-            return prefix(blocks(quote.content(), depth + 1), "> ");
-        } else if (value instanceof SemanticBlock.CodeBlock code) {
-            return code.code();
-        } else if (value instanceof SemanticBlock.ThematicBreak ignored) {
+        final class $oaPattern6_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Paragraph bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.Paragraph && (($oaPattern6_holder.bound = (SemanticBlock.Paragraph) $oaPattern6_holder.value) != null))) {
+            return inline($oaPattern6_holder.bound.content());
+        } else {
+final class $oaPattern7_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Heading bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.Heading && (($oaPattern7_holder.bound = (SemanticBlock.Heading) $oaPattern7_holder.value) != null))) {
+            return inline($oaPattern7_holder.bound.content());
+        } else {
+final class $oaPattern8_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Quote bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.Quote && (($oaPattern8_holder.bound = (SemanticBlock.Quote) $oaPattern8_holder.value) != null))) {
+            return prefix(blocks($oaPattern8_holder.bound.content(), depth + 1), "> ");
+        } else {
+final class $oaPattern9_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.CodeBlock bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.CodeBlock && (($oaPattern9_holder.bound = (SemanticBlock.CodeBlock) $oaPattern9_holder.value) != null))) {
+            return $oaPattern9_holder.bound.code();
+        } else {
+final class $oaPattern10_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.ThematicBreak bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.ThematicBreak && (($oaPattern10_holder.bound = (SemanticBlock.ThematicBreak) $oaPattern10_holder.value) != null))) {
             return "---";
-        } else if (value instanceof SemanticBlock.ListBlock list) {
-            return list(list, depth);
-        } else if (value instanceof SemanticBlock.Table table) {
-            return table(table);
-        } else if (value instanceof SemanticBlock.Component component) {
-            return component.component().fallbackText();
+        } else {
+final class $oaPattern11_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.ListBlock bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.ListBlock && (($oaPattern11_holder.bound = (SemanticBlock.ListBlock) $oaPattern11_holder.value) != null))) {
+            return list($oaPattern11_holder.bound, depth);
+        } else {
+final class $oaPattern12_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Table bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if ((($oaPattern12_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.Table && (($oaPattern12_holder.bound = (SemanticBlock.Table) $oaPattern12_holder.value) != null))) {
+            return table($oaPattern12_holder.bound);
+        } else {
+final class $oaPattern13_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Component bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+if ((($oaPattern13_holder.value = value) instanceof dev.openallay.guide.semantic.SemanticBlock.Component && (($oaPattern13_holder.bound = (SemanticBlock.Component) $oaPattern13_holder.value) != null))) {
+            return $oaPattern13_holder.bound.component().fallbackText();
         }
+}
+}
+}
+}
+}
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
