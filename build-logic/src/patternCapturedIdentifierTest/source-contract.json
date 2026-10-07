@@ -1,0 +1,42 @@
+{
+  "scope": "Narrowpattern publicTypes directidentifier declaredwildcard denotation proof; no Object/raw operand widening or othercaptures admission",
+  "sources": [
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java",
+      "sha256": "fda0d01ba3183a39bb5bf4b55bbfabcadf1f7111b2ee586c8893e4f0144383c4"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java",
+      "sha256": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c"
+    },
+    {
+      "path": "scripts/pattern-language-port/CanonicalCapturedIdentifierFixture.java",
+      "sha256": "a28c38fefa38db69009932e3f01c63c592fbb6f60cec514c1b2ea042c591d021"
+    }
+  ],
+  "runner_sha256": "b209f25e2604d442d5a4cb2c80af391ca571d141a7d540d1549fed79c8cfb55b",
+  "previousAcceptedPatternToolSha256": "7be4fe30793ed7c8235d388f23019136e41b3d0b87cd36160e3cb8ff05d76bd7",
+  "previousAcceptedPatternOracleRun": 37577421648,
+  "previousAcceptedOracleReexecuted": false,
+  "policy": {
+    "where": "CanonicalPatternPort operand type helper only; do not change shared AttributedVarTypes global capture policy",
+    "default": "Existing exact expression TypeMirror denotation/accessibility path unchanged",
+    "fallback_boundary": "Only direct IdentifierTree resolving to VariableElement with ElementKind.PARAMETER or LOCAL_VARIABLE; no memberselect/methodcall/array/access/nestedexpression fallback",
+    "symbol_proofs": [
+      "Retrieve declared variable TypeMirror from Trees.getElement(expressionPath).asType(), not source text or guessedObject",
+      "Types.isAssignable(expressionMirror,declaredMirror) must be true",
+      "Types.isSameType(Types.erasure(expressionMirror),Types.erasure(declaredMirror)) must be true",
+      "Declared TypeMirror must pass exactshared denotable renderer and Trees.isAccessible at actualpattern scope",
+      "Require original renderer failure is captured-variable rejection, otherwise keep originalfailure"
+    ],
+    "evaluation": "The generated holder.value assignment stays inside original instanceof booleanexpression; directidentifier read still evaluates once onlywhen reached. Fullbindingtype Success<?> and erasedinstanceof Success retainactualcompiler symbols. No broader runtime erasure of operand, no guessedObject.",
+    "fail_closed": "All other captured/inaccessible/nondenotable operand shapes remainwholeowner rejected"
+  },
+  "futureWholeOwner": {
+    "path": "engine-core/src/main/java/dev/openallay/client/gui/GuideClientUiState.java",
+    "rawSha256": "ccf24951967d4338116f91b857d8e8c3ff88c7f8aa25f36fee3220b1fc040095",
+    "remainingPatternCount": 1,
+    "requirement": "Afteractualneworaclepass, full701sourcecurrentnativeclasspath attributedmaterialization ofcompleteowner. No extractedmethod productionreplacement or manualpartialowner."
+  },
+  "unchangedPriorSupportedPath": "Existing successful renderer path returns originalexpression TypeMirror unchanged; fallback executes onlyexactCaptured variable rejection. No old20/94runtime rerun or otherdomain equivalence assertion."
+}

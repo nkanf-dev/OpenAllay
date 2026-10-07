@@ -50,6 +50,28 @@ public final class CanonicalPatternPort {
             default -> { /* shared renderer rejects unsupported denotations */ }
         }
     }
+    /** Preserve a declared wildcard identifier type when javac captures its read expression. */
+    private static javax.lang.model.type.TypeMirror operandType(Candidate site, JavacTask task, Trees trees) {
+        TreePath expressionPath = new TreePath(site.patternPath(), site.pattern().getExpression());
+        javax.lang.model.type.TypeMirror expression = trees.getTypeMirror(expressionPath);
+        Scope scope = trees.getScope(site.patternPath());
+        accessible(expression, scope, trees);
+        if (expression.getKind() == javax.lang.model.type.TypeKind.NULL) return expression;
+        try { AttributedVarTypes.denotable(expression, false); return expression; }
+        catch (IllegalArgumentException captured) {
+            if (captured.getMessage() == null || !captured.getMessage().startsWith("Captured variable:")
+                    || !(site.pattern().getExpression() instanceof IdentifierTree)) throw captured;
+            Element symbol = trees.getElement(expressionPath);
+            if (!(symbol instanceof VariableElement variable)
+                    || !(symbol.getKind() == ElementKind.PARAMETER || symbol.getKind() == ElementKind.LOCAL_VARIABLE)) throw captured;
+            javax.lang.model.type.TypeMirror declared = variable.asType();
+            if (!task.getTypes().isAssignable(expression, declared)
+                    || !task.getTypes().isSameType(task.getTypes().erasure(expression), task.getTypes().erasure(declared))) throw captured;
+            accessible(declared, scope, trees);
+            AttributedVarTypes.denotable(declared, false);
+            return declared;
+        }
+    }
     private static int position(long value){if(value<0||value>Integer.MAX_VALUE)throw new IllegalArgumentException("Missing public AST source position");return(int)value;}
     private static String apply(String text,int base,int end,List<Edit> edits){
         StringBuilder out=new StringBuilder(text.substring(base,end));List<Edit> sorted=new ArrayList<>(edits);sorted.sort(Comparator.comparingInt(Edit::start).reversed());int previous=end;
@@ -77,9 +99,7 @@ public final class CanonicalPatternPort {
                 if(!reasons.isEmpty()){rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
                 for(Candidate site:sites){
                     try{
-                        javax.lang.model.type.TypeMirror mirror=trees.getTypeMirror(new TreePath(site.patternPath(),site.pattern().getExpression()));
-                        accessible(mirror,trees.getScope(site.patternPath()),trees);
-                        if(mirror.getKind()!=javax.lang.model.type.TypeKind.NULL)AttributedVarTypes.denotable(mirror,false);
+                        operandType(site,task,trees);
                     }catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,site.pattern())+" "+failure.getMessage());}
                 }
                 if(!reasons.isEmpty()){rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
@@ -89,7 +109,7 @@ public final class CanonicalPatternPort {
                     int exprStart=position(positions.getStartPosition(unit,site.pattern().getExpression())),exprEnd=position(positions.getEndPosition(unit,site.pattern().getExpression()));Tree type=site.binding().getVariable().getType();String typeText=text.substring(position(positions.getStartPosition(unit,type)),position(positions.getEndPosition(unit,type)));String operand=text.substring(exprStart,exprEnd);
                     javax.lang.model.type.TypeMirror patternMirror=trees.getTypeMirror(TreePath.getPath(unit,type));
                     String runtimeType=AttributedVarTypes.denotable(task.getTypes().erasure(patternMirror),false);
-                    javax.lang.model.type.TypeMirror operandMirror=trees.getTypeMirror(new TreePath(site.patternPath(),site.pattern().getExpression()));accessible(operandMirror,trees.getScope(site.patternPath()),trees);String operandType=operandMirror.getKind()==javax.lang.model.type.TypeKind.NULL?"java.lang.Object":AttributedVarTypes.denotable(operandMirror,false);
+                    javax.lang.model.type.TypeMirror operandMirror=operandType(site,task,trees);String operandType=operandMirror.getKind()==javax.lang.model.type.TypeKind.NULL?"java.lang.Object":AttributedVarTypes.denotable(operandMirror,false);
                     String declaration="final class "+localClass+" { "+operandType+" value; "+typeText+" bound; }\nfinal "+localClass+" "+holder+" = new "+localClass+"();\n";
                     declarations.computeIfAbsent(site.owner(),ignored->new ArrayList<>()).add(declaration);boundaries.put(site.owner(),site.ownerPath());
                     String test="(("+holder+".value = "+operand+") instanceof "+runtimeType+" && (("+holder+".bound = ("+typeText+") "+holder+".value) != null))";
