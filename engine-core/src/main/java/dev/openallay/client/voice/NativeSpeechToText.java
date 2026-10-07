@@ -1,5 +1,7 @@
 package dev.openallay.client.voice;
 
+
+import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -116,7 +118,7 @@ static final class Call {
             Request nativeRequest = new Request(request.clip(), language, request.cpuThreads());
             String text = worker.recognize(new Call(modelDirectory, runtimeRoot, model, nativeRequest), cancellation);
             cancellation.check();
-            if (text == null || text.isBlank()) throw new Failure("no_speech");
+            if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) throw new Failure("no_speech");
             try { return new Result(text, "native:" + model.name(), new Usage(request.clip().durationSeconds(), null, null)); }
             catch (IllegalArgumentException invalid) { throw new Failure("native_failed", invalid); }
         } catch (InterruptedException interrupted) {
@@ -127,9 +129,9 @@ static final class Call {
         if (!language.matches("auto|[a-z]{2,3}(-[A-Z]{2})?")) throw new Failure("unsupported_language");
         String base = language.equals("auto") ? "" : language.split("-", 2)[0];
         if (family == NativeModelFiles.ModelFamily.SENSE_VOICE
-                && !List.of("", "zh", "en", "ja", "ko", "yue").contains(base)) throw new Failure("unsupported_language");
+                && !dev.openallay.util.Java8Collections.listOf("", "zh", "en", "ja", "ko", "yue").contains(base)) throw new Failure("unsupported_language");
         if (family == NativeModelFiles.ModelFamily.PARA_FORMER
-                && !List.of("", "zh", "en").contains(base)) throw new Failure("unsupported_language");
+                && !dev.openallay.util.Java8Collections.listOf("", "zh", "en").contains(base)) throw new Failure("unsupported_language");
         return base;
     }
     @FunctionalInterface interface ProcessLauncher { Process start(Path job, List<String> command) throws IOException; }
@@ -179,11 +181,11 @@ static final class Call {
     }
     static List<String> command(Call call, Path audio, Path transcript) throws Exception {
         String javaName = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win") ? "java.exe" : "java";
-        Path java = Path.of(System.getProperty("java.home"), "bin", javaName);
+        Path java = Paths.get(System.getProperty("java.home"), "bin", javaName);
         if (!Files.isRegularFile(java)) throw new Failure("native_unavailable");
         URL codeSource = Worker.class.getProtectionDomain().getCodeSource().getLocation();
         if (!codeSource.getProtocol().equals("file")) throw new Failure("native_unavailable");
-        Path classes = Path.of(codeSource.toURI());
+        Path classes = Paths.get(codeSource.toURI());
         Path runtime = NativeRuntimeCatalog.directory(call.runtimeRoot());
         List<NativeRuntimeCatalog.Artifact> artifacts = NativeRuntimeCatalog.artifacts();
         NativeModelFiles.Model model = call.model();
@@ -209,17 +211,11 @@ NativeModelFiles.Role primary = $oaSwitch0_exit_result;
         String secondary = model.family() == NativeModelFiles.ModelFamily.WHISPER
                 ? model.file(call.modelDirectory(), NativeModelFiles.Role.WHISPER_DECODER).toString() : "";
         // Fixed executable and argv; model metadata can never add VM flags or a classpath entry.
-        return List.of(java.toString(), "-Xms32m", "-Xmx256m", "--enable-native-access=ALL-UNNAMED",
-                "-Djava.io.tmpdir=" + audio.getParent(), "-cp", classes.toString(), Worker.class.getName(),
-                model.family().name(), model.file(call.modelDirectory(), primary).toString(), secondary,
-                model.file(call.modelDirectory(), NativeModelFiles.Role.TOKENS).toString(),
-                runtime.resolve(artifacts.get(0).name()).toString(), runtime.resolve(artifacts.get(1).name()).toString(),
-                NativeRuntimeCatalog.platform(), audio.toString(), transcript.toString(),
-                call.request().language(), Integer.toString(call.request().cpuThreads()));
+        return dev.openallay.util.Java8Collections.listOf(java.toString(), "-Xms32m", "-Xmx256m", "--enable-native-access=ALL-UNNAMED", "-Djava.io.tmpdir=" + audio.getParent(), "-cp", classes.toString(), Worker.class.getName(), model.family().name(), model.file(call.modelDirectory(), primary).toString(), secondary, model.file(call.modelDirectory(), NativeModelFiles.Role.TOKENS).toString(), runtime.resolve(artifacts.get(0).name()).toString(), runtime.resolve(artifacts.get(1).name()).toString(), NativeRuntimeCatalog.platform(), audio.toString(), transcript.toString(), call.request().language(), Integer.toString(call.request().cpuThreads()));
     }
     private static void deleteJob(Path job) {
         try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(job)) {
-            for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) {
+            for (Path entry : dev.openallay.util.Java8Collections.toList(entries.sorted(Comparator.reverseOrder()))) {
                 try { Files.deleteIfExists(entry); } catch (IOException ignored) { /* Best effort after exit. */ }
             }
         } catch (IOException ignored) { /* Only a temporary voice operation directory. */ }
@@ -234,7 +230,7 @@ NativeModelFiles.Role primary = $oaSwitch0_exit_result;
                 if (args.length != 11) throw new IllegalArgumentException("arguments");
                 int threads = Integer.parseInt(args[10]);
                 if (threads < 1 || threads > 8) throw new IllegalArgumentException("threads");
-                Path audio = Path.of(args[7]);
+                Path audio = java.nio.file.Paths.get(args[7]);
                 if (Files.size(audio) == 0 || Files.size(audio) > 1_920_000 || Files.size(audio) % 2 != 0) {
                     throw new IllegalArgumentException("audio");
                 }
@@ -243,7 +239,7 @@ NativeModelFiles.Role primary = $oaSwitch0_exit_result;
                 float[] samples = new float[pcm.length / 2];
                 for (int i = 0; i < samples.length; i++) samples[i] = input.getShort() / 32768.0f;
                 try (IsolatedLoader loader = new IsolatedLoader(new URL[] {
-                        Path.of(args[4]).toUri().toURL(), Path.of(args[5]).toUri().toURL() })) {
+                        java.nio.file.Paths.get(args[4]).toUri().toURL(), java.nio.file.Paths.get(args[5]).toUri().toURL() })) {
                     invoke(loader.loadClass(PACKAGE + "LibraryLoader"), "setAutoLoadEnabled", new Class<?>[] {boolean.class}, false);
                     Path nativeDirectory = audio.getParent().resolve("native");
                     Files.createDirectory(nativeDirectory);
@@ -257,7 +253,7 @@ NativeModelFiles.Role primary = $oaSwitch0_exit_result;
                     invoke(utils, "load", new Class<?>[0]);
                     String text = recognize(loader, args, threads, samples);
                     if (text == null || text.length() > 32_768) throw new IllegalArgumentException("text");
-                    Files.writeString(Path.of(args[8]), text, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+                    Files.writeString(java.nio.file.Paths.get(args[8]), text, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
                 }
             } catch (Throwable failure) {
                 // No native diagnostics, audio, filesystem paths or model data enter the chat.
