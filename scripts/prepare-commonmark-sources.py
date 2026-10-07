@@ -88,10 +88,15 @@ def prepare(core, tables, manifest_path, hunks_path, output):
         raise ValueError("Produced Java source count differs")
     # Nothing is written until every input and postimage has passed validation.
     marker = output / ".commonmark-generated-sources"
+    if output.is_symlink():
+        raise ValueError("Refusing a symlink source output directory")
     if output.exists():
-        if not marker.is_file() or marker.read_text(encoding="utf-8") != "OpenAllay CommonMark generated source output\n":
-            raise ValueError("Refusing to remove an unowned source output directory")
-        shutil.rmtree(output)
+        if not output.is_dir():
+            raise ValueError("Source output must be a directory")
+        if any(output.iterdir()):
+            if marker.is_symlink() or not marker.is_file() or marker.read_text(encoding="utf-8") != "OpenAllay CommonMark generated source output\n":
+                raise ValueError("Refusing to remove an unowned source output directory")
+            shutil.rmtree(output)
     output.mkdir(parents=True, exist_ok=True)
     marker.write_text("OpenAllay CommonMark generated source output\n", encoding="utf-8")
     for path, blob in produced.items():
