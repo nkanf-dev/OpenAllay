@@ -15,10 +15,10 @@ public final class JavascriptHostMethod {
     public JavascriptHostMethod(String name, List<JavascriptHostValueType> parameters, JavascriptHostValueType result, Invoker invoker) {
 
         if (name == null || !name.matches("[a-zA-Z_$][a-zA-Z0-9_$]*")
-                || Set.of("constructor", "__proto__", "prototype").contains(name)) {
+                || dev.openallay.util.Java8Collections.setOf("constructor", "__proto__", "prototype").contains(name)) {
             throw new IllegalArgumentException("Invalid controlled host method name");
         }
-        parameters = List.copyOf(parameters);
+        parameters = dev.openallay.util.Java8Collections.listCopyOf(parameters);
         Objects.requireNonNull(result, "result");
         Objects.requireNonNull(invoker, "invoker");
 

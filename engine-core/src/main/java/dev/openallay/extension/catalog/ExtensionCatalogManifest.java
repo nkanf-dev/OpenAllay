@@ -19,10 +19,9 @@ public final class ExtensionCatalogManifest {
             throw new IllegalArgumentException("Unsupported Extension catalog schema or kind");
         }
         Objects.requireNonNull(generatedAt, "generatedAt");
-        extensions = List.copyOf(extensions).stream()
+        extensions = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(extensions).stream()
                 .sorted(Comparator.comparing(ExtensionCatalogEntry::id)
-                        .thenComparing(ExtensionCatalogEntry::version))
-                .toList();
+                        .thenComparing(ExtensionCatalogEntry::version)));
         HashSet<String> identities = new HashSet<>();
         for (ExtensionCatalogEntry extension : extensions) {
             if (!identities.add(extension.id() + "\0" + extension.version())) {

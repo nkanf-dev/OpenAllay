@@ -5,10 +5,10 @@ import java.util.Map;
 import java.util.Optional;
 
 public final class PatchouliMultiblockStore {
-    private volatile Map<String, PatchouliMultiblock> snapshot = Map.of();
+    private volatile Map<String, PatchouliMultiblock> snapshot = dev.openallay.util.Java8Collections.mapOf();
 
     public void replace(Map<String, PatchouliMultiblock> multiblocks) {
-        snapshot = Map.copyOf(multiblocks);
+        snapshot = dev.openallay.util.Java8Collections.mapCopyOf(multiblocks);
     }
 
     public Optional<PatchouliMultiblock> find(String id) {
@@ -16,6 +16,6 @@ public final class PatchouliMultiblockStore {
     }
 
     public List<String> ids() {
-        return snapshot.keySet().stream().sorted().toList();
+        return dev.openallay.util.Java8Collections.toList(snapshot.keySet().stream().sorted());
     }
 }

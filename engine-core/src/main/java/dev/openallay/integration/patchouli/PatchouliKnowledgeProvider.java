@@ -14,7 +14,7 @@ public final class PatchouliKnowledgeProvider implements KnowledgeSourceProvider
     private final String gameVersion;
     private final String loader;
     private volatile PatchouliParseResult latest = new PatchouliParseResult(
-            java.util.List.of(), java.util.Map.of(), java.util.List.of());
+            dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.listOf());
 
     public PatchouliKnowledgeProvider(ClientResourceAccess resources, String locale) {
         this(resources, locale, null, "unknown", "unknown");
@@ -53,12 +53,12 @@ public final class PatchouliKnowledgeProvider implements KnowledgeSourceProvider
                 "patchouli:book_parser",
                 gameVersion,
                 loader,
-                java.util.Map.of("patchouli:scope", "selected_resource_stack"));
+                dev.openallay.util.Java8Collections.mapOf("patchouli:scope", "selected_resource_stack"));
         latest = new PatchouliBookParser().parse(resources, locale, evidence);
         if (store != null) {
             store.replace(latest.multiblocks());
         }
-        return new KnowledgeLoad(latest.documents(), latest.diagnostics(), java.util.List.of(evidence));
+        return new KnowledgeLoad(latest.documents(), latest.diagnostics(), dev.openallay.util.Java8Collections.listOf(evidence));
     }
 
     public PatchouliParseResult latest() {

@@ -33,7 +33,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
     private BundledUniversalExtensions(UniversalExtensionDiscovery discovery,
             List<UniversalExtensionDiscovery.DiscoveryResult> results, String digest) {
         this.discovery = discovery;
-        this.results = List.copyOf(results);
+        this.results = dev.openallay.util.Java8Collections.listCopyOf(results);
         this.artifactSha256 = digest;
     }
 
@@ -46,19 +46,19 @@ public final class BundledUniversalExtensions implements AutoCloseable {
         Objects.requireNonNull(resources, "resources");
         JsonObject provenance;
         try (InputStream input = resources.open(PROVENANCE)) {
-            if (input == null) return new BundledUniversalExtensions(null, List.of(), "");
+            if (input == null) return new BundledUniversalExtensions(null, dev.openallay.util.Java8Collections.listOf(), "");
             provenance = object(UniversalExtensionJson.parse(new String(input.readAllBytes(), StandardCharsets.UTF_8)));
         }
-        exact(provenance, Set.of("source", "project", "version", "extensionId", "openAllayApiVersion", "artifact"));
+        exact(provenance, dev.openallay.util.Java8Collections.setOf("source", "project", "version", "extensionId", "openAllayApiVersion", "artifact"));
         JsonObject source = object(provenance.get("source"));
-        exact(source, Set.of("repository", "revision", "dirty", "pinned"));
+        exact(source, dev.openallay.util.Java8Collections.setOf("repository", "revision", "dirty", "pinned"));
         text(source, "repository");
         if (!text(source, "revision").matches("[0-9a-f]{40}")) throw invalid();
         bool(source, "dirty"); bool(source, "pinned");
         text(provenance, "project"); text(provenance, "openAllayApiVersion");
         String id = text(provenance, "extensionId"), version = text(provenance, "version");
         JsonObject artifact = object(provenance.get("artifact"));
-        exact(artifact, Set.of("path", "sha256"));
+        exact(artifact, dev.openallay.util.Java8Collections.setOf("path", "sha256"));
         String path = text(artifact, "path"), digest = text(artifact, "sha256");
         if (!digest.matches("[0-9a-f]{64}") || !path.startsWith(RESOURCE_ROOT)
                 || path.substring(RESOURCE_ROOT.length()).contains("/")
@@ -67,7 +67,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
         // It takes precedence; no cache or community file is written in this branch.
         if (registry.snapshot().extensions().stream().anyMatch(value -> value.state() == OpenAllayExtensionState.ACTIVE
                 && value.descriptor().id().equals(id))) {
-            return new BundledUniversalExtensions(null, List.of(new UniversalExtensionDiscovery.DiscoveryResult(
+            return new BundledUniversalExtensions(null, dev.openallay.util.Java8Collections.listOf(new UniversalExtensionDiscovery.DiscoveryResult(
                     path, id, OpenAllayExtensionState.ACTIVE, "bundled_extension_overridden")), digest);
         }
         byte[] bytes;
@@ -133,7 +133,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
         if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) throw new IOException("Bundled cache is not a directory");
     }
     private static String sha256(byte[] bytes) {
-        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
+        try { return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
         catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
     private static JsonObject object(com.google.gson.JsonElement value) {
@@ -144,7 +144,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
     private static String text(JsonObject value, String key) {
         com.google.gson.JsonElement item = value.get(key);
         if (item == null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()
-                || item.getAsString().isBlank()) throw invalid();
+                || dev.openallay.util.Java8Strings.isBlank(item.getAsString())) throw invalid();
         return item.getAsString();
     }
     private static boolean bool(JsonObject value, String key) {

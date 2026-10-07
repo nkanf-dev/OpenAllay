@@ -62,14 +62,14 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
         contributionAttempted = true;
         try {
             dev.openallay.api.extension.ExtensionContribution declared = Objects.requireNonNull(delegate.contribution(host), "contribution");
-            java.util.List<dev.openallay.extension.JavascriptModuleSource> modules = declared.javascriptModules().stream().map(value ->
-                    new dev.openallay.extension.JavascriptModuleSource(value.id(), value.source())).toList();
-            java.util.List<dev.openallay.skill.SkillSource> skills = declared.skills().stream().map(value ->
+            java.util.List<dev.openallay.extension.JavascriptModuleSource> modules = dev.openallay.util.Java8Collections.toList(declared.javascriptModules().stream().map(value ->
+                    new dev.openallay.extension.JavascriptModuleSource(value.id(), value.source())));
+            java.util.List<dev.openallay.skill.SkillSource> skills = dev.openallay.util.Java8Collections.toList(declared.skills().stream().map(value ->
                     new dev.openallay.skill.SkillSource(value.provenance(), value.entryPath(), value.files(),
-                            dev.openallay.skill.SkillSource.Origin.valueOf(value.origin().name()))).toList();
-            List<JavascriptResultViewProvider> views = declared.resultViews().stream().map(value ->
+                            dev.openallay.skill.SkillSource.Origin.valueOf(value.origin().name()))));
+            List<JavascriptResultViewProvider> views = dev.openallay.util.Java8Collections.toList(declared.resultViews().stream().map(value ->
                     (JavascriptResultViewProvider) new JavascriptResultViewProvider.Declaration(value.id(),
-                            JavascriptSemanticKind.valueOf(value.kind().name()), value.summary())).toList();
+                            JavascriptSemanticKind.valueOf(value.kind().name()), value.summary())));
             List<JavascriptInvocationParticipant> participants = new ArrayList<>();
             for (dev.openallay.api.extension.JavascriptInvocationParticipant value : declared.javascriptInvocationParticipants()) {
                 String id = value.id(); // Capture the only foreign declaration accessor exactly once.
@@ -94,10 +94,10 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                     }
                 });
             }
-            List<JavascriptHostBinding> bindings = declared.hostBindings().stream().map(binding ->
-                    new JavascriptHostBinding(binding.id(), binding.methods().stream().map(method -> {
-                        List<JavascriptHostValueType> parameters = method.parameters().stream()
-                                .map(type -> JavascriptHostValueType.valueOf(type.name())).toList();
+            List<JavascriptHostBinding> bindings = dev.openallay.util.Java8Collections.toList(declared.hostBindings().stream().map(binding ->
+                    new JavascriptHostBinding(binding.id(), dev.openallay.util.Java8Collections.toList(binding.methods().stream().map(method -> {
+                        List<JavascriptHostValueType> parameters = dev.openallay.util.Java8Collections.toList(method.parameters().stream()
+                                .map(type -> JavascriptHostValueType.valueOf(type.name())));
                         JavascriptHostValueType result = JavascriptHostValueType.valueOf(method.result().name());
                         return new JavascriptHostMethod(method.name(), parameters, result,
                                 (context, arguments) -> {
@@ -115,7 +115,7 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                                     String returned;
                                     try {
                                         returned = method.invoker().invoke(context.sdkInvocation(),
-                                                List.copyOf(json));
+                                                dev.openallay.util.Java8Collections.listCopyOf(json));
                                     } catch (Throwable failure) {
                                         throw safeFailure(context, failure, "javascript_extension_host_failed",
                                                 "Extension host method failed");
@@ -128,8 +128,8 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
                                         return parsed;
                                     } catch (RuntimeException invalid) { throw invalidHost(); }
                                 });
-                    }).toList())).toList();
-            contribution = new OpenAllayExtensionContribution(List.of(), modules, skills, views,
+                    })))));
+            contribution = new OpenAllayExtensionContribution(dev.openallay.util.Java8Collections.listOf(), modules, skills, views,
                     participants, bindings);
             return contribution;
         } catch (Throwable failure) {

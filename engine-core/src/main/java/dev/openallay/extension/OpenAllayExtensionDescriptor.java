@@ -29,13 +29,13 @@ public final class OpenAllayExtensionDescriptor {
         provider = require(provider, "provider");
         summary = require(summary, "summary");
         TreeSet<String> normalizedLoaders = new TreeSet<>();
-        for (String loader : Set.copyOf(loaders)) {
+        for (String loader : dev.openallay.util.Java8Collections.setCopyOf(loaders)) {
             normalizedLoaders.add(require(loader, "loader").toLowerCase(java.util.Locale.ROOT));
         }
         if (normalizedLoaders.isEmpty()) {
             throw new IllegalArgumentException("Extension must declare at least one loader");
         }
-        loaders = Set.copyOf(normalizedLoaders);
+        loaders = dev.openallay.util.Java8Collections.setCopyOf(normalizedLoaders);
         minecraftVersionRange = ExtensionCompatibility.requireRange(
                 minecraftVersionRange, "minecraftVersionRange");
         openAllayApiVersionRange = ExtensionCompatibility.requireRange(
@@ -73,10 +73,10 @@ public OpenAllayExtensionDescriptor(
                 openAllayApiVersionRange, source, RequirementSet.EMPTY);
     }
 private static String require(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
-        return value.strip();
+        return dev.openallay.util.Java8Strings.strip(value);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

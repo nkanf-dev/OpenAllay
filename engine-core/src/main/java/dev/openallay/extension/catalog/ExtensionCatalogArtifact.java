@@ -14,11 +14,11 @@ public final class ExtensionCatalogArtifact {
     private final Set<String> modIds;
     public ExtensionCatalogArtifact(String loader, URI artifact, String sha256, Set<String> modIds) {
 
-        if (loader == null || loader.isBlank()) {
+        if (loader == null || dev.openallay.util.Java8Strings.isBlank(loader)) {
             throw new IllegalArgumentException("Extension artifact loader is required");
         }
-        loader = loader.strip().toLowerCase(java.util.Locale.ROOT);
-        if (!Set.of("fabric", "neoforge").contains(loader)) {
+        loader = dev.openallay.util.Java8Strings.strip(loader).toLowerCase(java.util.Locale.ROOT);
+        if (!dev.openallay.util.Java8Collections.setOf("fabric", "neoforge").contains(loader)) {
             throw new IllegalArgumentException(
                     "Unsupported Extension artifact loader: " + loader);
         }
@@ -28,7 +28,7 @@ public final class ExtensionCatalogArtifact {
                     "Extension SHA-256 must be 64 lowercase hex digits");
         }
         TreeSet<String> normalizedModIds = new TreeSet<>();
-        for (String modId : Set.copyOf(modIds)) {
+        for (String modId : dev.openallay.util.Java8Collections.setCopyOf(modIds)) {
             if (modId == null || !MOD_ID.matcher(modId).matches()) {
                 throw new IllegalArgumentException("Invalid Extension mod ID: " + modId);
             }
@@ -38,7 +38,7 @@ public final class ExtensionCatalogArtifact {
             throw new IllegalArgumentException(
                     "Extension artifact must declare at least one mod ID");
         }
-        modIds = Set.copyOf(normalizedModIds);
+        modIds = dev.openallay.util.Java8Collections.setCopyOf(normalizedModIds);
 
         this.loader = loader;
         this.artifact = artifact;

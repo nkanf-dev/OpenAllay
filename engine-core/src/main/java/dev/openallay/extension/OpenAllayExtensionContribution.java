@@ -16,12 +16,12 @@ public final class OpenAllayExtensionContribution {
     private final List<JavascriptHostBinding> hostBindings;
     public OpenAllayExtensionContribution(List<JavascriptDataModule> dataModules, List<JavascriptModuleSource> javascriptModules, List<SkillSource> skills, List<JavascriptResultViewProvider> resultViews, List<JavascriptInvocationParticipant> javascriptInvocationParticipants, List<JavascriptHostBinding> hostBindings) {
 
-        dataModules = List.copyOf(dataModules);
-        javascriptModules = List.copyOf(javascriptModules);
-        skills = List.copyOf(skills);
-        resultViews = List.copyOf(resultViews);
-        javascriptInvocationParticipants = List.copyOf(javascriptInvocationParticipants);
-        hostBindings = List.copyOf(hostBindings);
+        dataModules = dev.openallay.util.Java8Collections.listCopyOf(dataModules);
+        javascriptModules = dev.openallay.util.Java8Collections.listCopyOf(javascriptModules);
+        skills = dev.openallay.util.Java8Collections.listCopyOf(skills);
+        resultViews = dev.openallay.util.Java8Collections.listCopyOf(resultViews);
+        javascriptInvocationParticipants = dev.openallay.util.Java8Collections.listCopyOf(javascriptInvocationParticipants);
+        hostBindings = dev.openallay.util.Java8Collections.listCopyOf(hostBindings);
 
         this.dataModules = dataModules;
         this.javascriptModules = javascriptModules;
@@ -41,7 +41,7 @@ public OpenAllayExtensionContribution(
             List<JavascriptModuleSource> javascriptModules,
             List<SkillSource> skills,
             List<JavascriptResultViewProvider> resultViews) {
-        this(dataModules, javascriptModules, skills, resultViews, List.of(), List.of());
+        this(dataModules, javascriptModules, skills, resultViews, dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
     }
 public OpenAllayExtensionContribution(
             List<JavascriptDataModule> dataModules,
@@ -50,10 +50,10 @@ public OpenAllayExtensionContribution(
             List<JavascriptResultViewProvider> resultViews,
             List<JavascriptInvocationParticipant> javascriptInvocationParticipants) {
         this(dataModules, javascriptModules, skills, resultViews,
-                javascriptInvocationParticipants, List.of());
+                javascriptInvocationParticipants, dev.openallay.util.Java8Collections.listOf());
     }
 public static OpenAllayExtensionContribution empty() {
-        return new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of());
+        return new OpenAllayExtensionContribution(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

@@ -31,7 +31,7 @@ public final class PatchouliBookParser {
                 "patchouli:book_parser",
                 "test",
                 "common-test",
-                Map.of()));
+                dev.openallay.util.Java8Collections.mapOf()));
     }
 
     public PatchouliParseResult parse(
@@ -128,7 +128,7 @@ public final class PatchouliBookParser {
                     entry.documentId,
                     structureRef == null ? KnowledgeKind.GUIDE_ENTRY : KnowledgeKind.STRUCTURE,
                     title,
-                    String.join("\n\n", body.stream().filter(value -> !value.isBlank()).toList()),
+                    String.join("\n\n", dev.openallay.util.Java8Collections.toList(body.stream().filter(value -> !dev.openallay.util.Java8Strings.isBlank(value)))),
                     entry.namespace,
                     items,
                     recipes,
@@ -175,7 +175,7 @@ public final class PatchouliBookParser {
                     String row = rows.get(z).getAsString();
                     for (int x = 0; x < row.length(); x++) {
                         String symbol = String.valueOf(row.charAt(x));
-                        if (!symbol.isBlank() && mapping.has(symbol)) {
+                        if (!dev.openallay.util.Java8Strings.isBlank(symbol) && mapping.has(symbol)) {
                             blocks.add(new PatchouliMultiblock.Block(
                                     x, y, z, state(mapping.get(symbol))));
                         }
@@ -219,7 +219,7 @@ public final class PatchouliBookParser {
     private void append(JsonObject object, String field, List<String> output) {
         if (object.has(field) && object.get(field).isJsonPrimitive()) {
             String normalized = text.normalize(object.get(field).getAsString());
-            if (!normalized.isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(normalized)) {
                 output.add(normalized);
             }
         }
@@ -284,12 +284,12 @@ public final class PatchouliBookParser {
 
     private static List<String> localeOrder(String active) {
         LinkedHashSet<String> locales = new LinkedHashSet<>();
-        if (active != null && !active.isBlank()) {
+        if (active != null && !dev.openallay.util.Java8Strings.isBlank(active)) {
             locales.add(active.toLowerCase(java.util.Locale.ROOT));
         }
         locales.add("zh_cn");
         locales.add("en_us");
-        return List.copyOf(locales);
+        return dev.openallay.util.Java8Collections.listCopyOf(locales);
     }
 
     private static EntryResource choose(List<EntryResource> candidates, List<String> locales) {

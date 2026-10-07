@@ -133,17 +133,16 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
         }
         List<Object> values = new ArrayList<>(arguments.length + 1);
         values.add(receiver);
-        values.addAll(List.of(arguments));
+        values.addAll(dev.openallay.util.Java8Collections.listOf(arguments));
         return handle.invokeWithArguments(values);
     }
 
     private static Method unique(Class<?> type, String name, int arity, boolean requireStatic) {
-        List<Method> matches = Stream.of(type.getMethods())
+        List<Method> matches = dev.openallay.util.Java8Collections.toList(Stream.of(type.getMethods())
                 .filter(method -> method.getName().equals(name)
                         && method.getParameterCount() == arity
                         && Modifier.isPublic(method.getModifiers())
-                        && Modifier.isStatic(method.getModifiers()) == requireStatic)
-                .toList();
+                        && Modifier.isStatic(method.getModifiers()) == requireStatic));
         if (matches.size() != 1) {
             throw new IllegalArgumentException(
                     "Expected one public " + name + "/" + arity + " on " + type.getName());

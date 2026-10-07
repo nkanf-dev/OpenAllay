@@ -12,20 +12,11 @@ import java.util.Set;
 /** Strict schema-2 codec; package ordering is canonicalized by the manifest. */
 public final class CommunityCatalogCodec {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("schemaVersion", "kind", "generatedAt", "packages");
+            dev.openallay.util.Java8Collections.setOf("schemaVersion", "kind", "generatedAt", "packages");
     private static final Set<String> PACKAGE_FIELDS =
-            Set.of(
-                    "id",
-                    "displayName",
-                    "description",
-                    "publisher",
-                    "version",
-                    "archive",
-                    "sha256",
-                    "compatibility",
-                    "source");
+            dev.openallay.util.Java8Collections.setOf("id", "displayName", "description", "publisher", "version", "archive", "sha256", "compatibility", "source");
     private static final Set<String> COMPATIBILITY_FIELDS =
-            Set.of("minecraft", "openallayApi");
+            dev.openallay.util.Java8Collections.setOf("minecraft", "openallayApi");
     private final Gson gson = dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting());
 
     public CommunityCatalogManifest decode(String json) {
@@ -107,7 +98,7 @@ public final class CommunityCatalogCodec {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be a non-blank string");
         }
         return value.getAsString();

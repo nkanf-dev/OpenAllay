@@ -12,7 +12,7 @@ public final class JavascriptModuleSource {
         if (id == null || !ID.matcher(id).matches()) {
             throw new IllegalArgumentException("Invalid JavaScript module ID: " + id);
         }
-        if (source == null || source.isBlank()) {
+        if (source == null || dev.openallay.util.Java8Strings.isBlank(source)) {
             throw new IllegalArgumentException("JavaScript module source must not be blank");
         }
 

@@ -41,7 +41,7 @@ public final class SkillPackageInstaller {
     private final Set<String> installedMods;
 
     public SkillPackageInstaller(Path managedRoot, SkillParser parser, String minecraftVersion) {
-        this(managedRoot, parser, minecraftVersion, Set.of());
+        this(managedRoot, parser, minecraftVersion, dev.openallay.util.Java8Collections.setOf());
     }
 
     public SkillPackageInstaller(
@@ -53,7 +53,7 @@ public final class SkillPackageInstaller {
                         java.time.Duration.ofSeconds(15), "openallay-skill-package-http")),
                 minecraftVersion,
                 OpenAllayConstants.SKILL_API_VERSION,
-                Set.of("openallay:run_javascript", "openallay:load_skill"),
+                dev.openallay.util.Java8Collections.setOf("openallay:run_javascript", "openallay:load_skill"),
                 installedMods);
     }
 
@@ -69,8 +69,8 @@ public final class SkillPackageInstaller {
                 transport,
                 minecraftVersion,
                 openallayApiVersion,
-                Set.of("openallay:run_javascript", "openallay:load_skill"),
-                Set.of());
+                dev.openallay.util.Java8Collections.setOf("openallay:run_javascript", "openallay:load_skill"),
+                dev.openallay.util.Java8Collections.setOf());
     }
 
     public SkillPackageInstaller(
@@ -87,8 +87,8 @@ public final class SkillPackageInstaller {
         this.transport = Objects.requireNonNull(transport, "transport");
         this.minecraftVersion = requireText(minecraftVersion, "minecraftVersion");
         this.openallayApiVersion = requireText(openallayApiVersion, "openallayApiVersion");
-        this.availableTools = Set.copyOf(availableTools);
-        this.installedMods = Set.copyOf(installedMods);
+        this.availableTools = dev.openallay.util.Java8Collections.setCopyOf(availableTools);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
     }
 
     public CompletableFuture<ToolResult<InstallResult>> install(
@@ -282,7 +282,7 @@ public final class SkillPackageInstaller {
         Map<String, byte[]> files = new java.util.TreeMap<>();
         Set<String> directories = new java.util.TreeSet<>();
         try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(root)) {
-            for (Path path : paths.sorted().toList()) {
+            for (Path path : dev.openallay.util.Java8Collections.toList(paths.sorted())) {
                 if (path.equals(root)) {
                     continue;
                 }
@@ -309,7 +309,7 @@ public final class SkillPackageInstaller {
                         .getBytes(StandardCharsets.UTF_8));
                 digest.update(file.getValue());
             }
-            return new CapturedTree(files, directories, java.util.HexFormat.of().formatHex(digest.digest()));
+            return new CapturedTree(files, directories, dev.openallay.util.Java8Hex.formatHex(digest.digest()));
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 unavailable", impossible);
         }
@@ -361,9 +361,8 @@ private static final class CapturedTree {
     private Candidate candidate(Path extracted) throws IOException {
         java.util.List<Path> entries;
         try (java.util.stream.Stream<java.nio.file.Path> stream = Files.walk(extracted)) {
-            entries = stream.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
-                            && path.getFileName().toString().equals("SKILL.md"))
-                    .toList();
+            entries = dev.openallay.util.Java8Collections.toList(stream.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+                            && path.getFileName().toString().equals("SKILL.md")));
         }
         if (entries.size() != 1) {
             throw new IllegalArgumentException("Skill package must contain exactly one SKILL.md");
@@ -448,7 +447,7 @@ private static final class CapturedTree {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
                 String raw = entry.getName();
-                if (raw.isBlank() || raw.startsWith("/") || raw.contains("\\")) {
+                if (dev.openallay.util.Java8Strings.isBlank(raw) || raw.startsWith("/") || raw.contains("\\")) {
                     throw new IOException("Unsafe ZIP entry");
                 }
                 Path destination = target.resolve(raw).normalize();
@@ -471,7 +470,7 @@ private static final class CapturedTree {
             return;
         }
         try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(root)) {
-            for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+            for (Path path : dev.openallay.util.Java8Collections.toList(paths.sorted(java.util.Comparator.reverseOrder()))) {
                 Files.deleteIfExists(path);
             }
         } catch (IOException ignored) {
@@ -482,7 +481,7 @@ private static final class CapturedTree {
     private static String sha256(byte[] bytes) {
         try {
             byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
-            return java.util.HexFormat.of().formatHex(digest);
+            return dev.openallay.util.Java8Hex.formatHex(digest);
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 unavailable", impossible);
         }
@@ -495,7 +494,7 @@ private static final class CapturedTree {
     }
 
     private static String requireText(String value, String label) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " must not be blank");
         }
         return value;
@@ -507,8 +506,8 @@ public static final class InstallResult {
     private final String provenance;
     public InstallResult(String skillName, String provenance) {
 
-            if (skillName == null || skillName.isBlank()
-                    || provenance == null || provenance.isBlank()) {
+            if (skillName == null || dev.openallay.util.Java8Strings.isBlank(skillName)
+                    || provenance == null || dev.openallay.util.Java8Strings.isBlank(provenance)) {
                 throw new IllegalArgumentException("Installed Skill identity is required");
             }
 

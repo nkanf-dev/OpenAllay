@@ -22,10 +22,9 @@ public final class CommunityCatalogManifest {
             throw new IllegalArgumentException("Unsupported community catalog schema or kind");
         }
         Objects.requireNonNull(generatedAt, "generatedAt");
-        packages = List.copyOf(packages).stream()
+        packages = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(packages).stream()
                 .sorted(Comparator.comparing(PackageEntry::id)
-                        .thenComparing(PackageEntry::version))
-                .toList();
+                        .thenComparing(PackageEntry::version)));
         HashSet<String> identities = new HashSet<>();
         for (PackageEntry entry : packages) {
             if (!identities.add(entry.id() + "\0" + entry.version())) {
@@ -57,10 +56,10 @@ public static final class PackageEntry {
     public PackageEntry(String id, String displayName, String description, String publisher, String version, URI archive, String sha256, Compatibility compatibility, URI source) {
 
             if (id == null || !ID.matcher(id).matches()
-                    || displayName == null || displayName.isBlank()
-                    || description == null || description.isBlank()
-                    || publisher == null || publisher.isBlank()
-                    || version == null || version.isBlank()
+                    || displayName == null || dev.openallay.util.Java8Strings.isBlank(displayName)
+                    || description == null || dev.openallay.util.Java8Strings.isBlank(description)
+                    || publisher == null || dev.openallay.util.Java8Strings.isBlank(publisher)
+                    || version == null || dev.openallay.util.Java8Strings.isBlank(version)
                     || sha256 == null || !SHA256.matcher(sha256).matches()) {
                 throw new IllegalArgumentException("Invalid community package identity");
             }
@@ -122,8 +121,8 @@ public static final class Compatibility {
     private final String openallayApi;
     public Compatibility(String minecraft, String openallayApi) {
 
-            if (minecraft == null || minecraft.isBlank()
-                    || openallayApi == null || openallayApi.isBlank()) {
+            if (minecraft == null || dev.openallay.util.Java8Strings.isBlank(minecraft)
+                    || openallayApi == null || dev.openallay.util.Java8Strings.isBlank(openallayApi)) {
                 throw new IllegalArgumentException("Community package compatibility is required");
             }
             minecraft = ExtensionCompatibility.requireRange(minecraft, "minecraft");

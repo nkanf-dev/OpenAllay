@@ -36,7 +36,7 @@ public static final class Result {
     private final List<String> availableReferences;
     public Result(Operation operation, String name, SkillSource.Origin origin, List<String> availableReferences) {
 
-            availableReferences = List.copyOf(availableReferences);
+            availableReferences = dev.openallay.util.Java8Collections.listCopyOf(availableReferences);
 
         this.operation = operation;
         this.name = name;
@@ -88,9 +88,9 @@ public static final class Result {
         this.root = Objects.requireNonNull(root, "root").toAbsolutePath().normalize();
         this.repository = Objects.requireNonNull(repository, "repository");
         this.parser = Objects.requireNonNull(parser, "parser");
-        this.bundled = List.copyOf(bundled);
-        this.installedMods = Set.copyOf(installedMods);
-        this.availableTools = Set.copyOf(availableTools);
+        this.bundled = dev.openallay.util.Java8Collections.listCopyOf(bundled);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
+        this.availableTools = dev.openallay.util.Java8Collections.setCopyOf(availableTools);
     }
 
     public synchronized Result create(
@@ -162,8 +162,8 @@ public static final class Result {
                     name,
                     revealed == null ? SkillSource.Origin.LOCAL : revealed.metadata().origin(),
                     revealed == null
-                            ? List.of()
-                            : revealed.references().keySet().stream().sorted().toList());
+                            ? dev.openallay.util.Java8Collections.listOf()
+                            : dev.openallay.util.Java8Collections.toList(revealed.references().keySet().stream().sorted()));
             deleteTreeQuietly(tombstone);
             return result;
         } catch (RuntimeException failure) {
@@ -187,19 +187,19 @@ public static final class Result {
                 operation,
                 published.metadata().name(),
                 published.metadata().origin(),
-                published.references().keySet().stream().sorted().toList());
+                dev.openallay.util.Java8Collections.toList(published.references().keySet().stream().sorted()));
     }
 
     private SkillSource candidate(
             String name, String markdown, Map<String, String> references) {
-        if (markdown == null || markdown.isBlank()) {
+        if (markdown == null || dev.openallay.util.Java8Strings.isBlank(markdown)) {
             throw new SkillManagementException(
                     "skill_invalid", "Skill Markdown must not be blank");
         }
         Map<String, String> files = new LinkedHashMap<>();
         files.put(name + "/SKILL.md", markdown);
         Map<String, String> safeReferences =
-                references == null ? Map.of() : Map.copyOf(references);
+                references == null ? dev.openallay.util.Java8Collections.mapOf() : dev.openallay.util.Java8Collections.mapCopyOf(references);
         safeReferences.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .forEach(entry -> {
@@ -438,7 +438,7 @@ private void commit() {
             return;
         }
         try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(path)) {
-            for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) {
+            for (Path entry : dev.openallay.util.Java8Collections.toList(entries.sorted(Comparator.reverseOrder()))) {
                 Files.deleteIfExists(entry);
             }
         }

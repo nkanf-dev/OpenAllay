@@ -12,9 +12,9 @@ public final class PatchouliParseResult {
     private final List<KnowledgeDiagnostic> diagnostics;
     public PatchouliParseResult(List<KnowledgeDocument> documents, Map<String, PatchouliMultiblock> multiblocks, List<KnowledgeDiagnostic> diagnostics) {
 
-        documents = List.copyOf(documents);
-        multiblocks = Map.copyOf(multiblocks);
-        diagnostics = List.copyOf(diagnostics);
+        documents = dev.openallay.util.Java8Collections.listCopyOf(documents);
+        multiblocks = dev.openallay.util.Java8Collections.mapCopyOf(multiblocks);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
 
         this.documents = documents;
         this.multiblocks = multiblocks;

@@ -24,7 +24,7 @@ public final class ExtensionPackageManifest {
         }
         java.util.Objects.requireNonNull(descriptor, "descriptor");
         TreeSet<String> normalized = new TreeSet<>();
-        for (String modId : Set.copyOf(modIds)) {
+        for (String modId : dev.openallay.util.Java8Collections.setCopyOf(modIds)) {
             if (modId == null || !MOD_ID.matcher(modId).matches()) {
                 throw new IllegalArgumentException("Invalid Extension mod ID: " + modId);
             }
@@ -34,7 +34,7 @@ public final class ExtensionPackageManifest {
             throw new IllegalArgumentException(
                     "Extension package must declare at least one mod ID");
         }
-        modIds = Set.copyOf(normalized);
+        modIds = dev.openallay.util.Java8Collections.setCopyOf(normalized);
 
         this.schemaVersion = schemaVersion;
         this.descriptor = descriptor;

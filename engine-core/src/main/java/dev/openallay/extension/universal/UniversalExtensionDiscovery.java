@@ -64,23 +64,23 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
         if (results != null) return results;
         List<DiscoveryResult> discovered = new ArrayList<>();
         if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
-            results = List.of();
+            results = dev.openallay.util.Java8Collections.listOf();
             return results;
         }
         if (Files.isSymbolicLink(directory) || !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
-            results = List.of(rejected("", "", "extension_directory_invalid"));
+            results = dev.openallay.util.Java8Collections.listOf(rejected("", "", "extension_directory_invalid"));
             return results;
         }
         List<Path> jars;
         try (java.util.stream.Stream<java.nio.file.Path> files = Files.list(directory)) {
-            jars = files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
-                    .sorted(Comparator.comparing(path -> path.getFileName().toString())).toList();
+            jars = dev.openallay.util.Java8Collections.toList(files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString())));
         } catch (IOException failure) {
-            results = List.of(rejected("", "", "extension_directory_unavailable"));
+            results = dev.openallay.util.Java8Collections.listOf(rejected("", "", "extension_directory_unavailable"));
             return results;
         }
         if (jars.size() > limits.maximumCandidates()) {
-            results = List.of(rejected("", "", "extension_package_limit_exceeded"));
+            results = dev.openallay.util.Java8Collections.listOf(rejected("", "", "extension_package_limit_exceeded"));
             return results;
         }
         List<Candidate> candidates = new ArrayList<>();
@@ -126,7 +126,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
             }
             discovered.add(load(candidate));
         }
-        results = List.copyOf(discovered);
+        results = dev.openallay.util.Java8Collections.listCopyOf(discovered);
         return results;
     }
 
@@ -172,7 +172,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
             java.util.jar.Manifest attributes = jar.getManifest();
             if (attributes != null) {
                 String classPath = attributes.getMainAttributes().getValue(java.util.jar.Attributes.Name.CLASS_PATH);
-                if (classPath != null && !classPath.isBlank()) {
+                if (classPath != null && !dev.openallay.util.Java8Strings.isBlank(classPath)) {
                     throw new PackageFailure("extension_package_external_classpath");
                 }
             }

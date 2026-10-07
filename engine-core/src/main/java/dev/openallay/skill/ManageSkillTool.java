@@ -21,7 +21,7 @@ public static final class Input {
     @ToolDescription("Optional Markdown references keyed as references/name.md.") @ToolOptional private final Map<String, String> references;
     public Input(AgentSkillManager.Operation operation, String name, String markdown, Map<String, String> references) {
 
-            references = references == null ? Map.of() : Map.copyOf(references);
+            references = references == null ? dev.openallay.util.Java8Collections.mapOf() : dev.openallay.util.Java8Collections.mapCopyOf(references);
 
         this.operation = operation;
         this.name = name;
@@ -64,7 +64,7 @@ public static final class Output {
     private final String activation;
     public Output(String operation, String name, String origin, List<String> availableReferences, String activation) {
 
-            availableReferences = List.copyOf(availableReferences);
+            availableReferences = dev.openallay.util.Java8Collections.listCopyOf(availableReferences);
 
         this.operation = operation;
         this.name = name;

@@ -11,7 +11,7 @@ public final class JavascriptHostBinding {
     public JavascriptHostBinding(String id, List<JavascriptHostMethod> methods) {
 
         id = requireId(id);
-        methods = List.copyOf(methods);
+        methods = dev.openallay.util.Java8Collections.listCopyOf(methods);
         java.util.HashSet<java.lang.String> names = new HashSet<String>();
         for (JavascriptHostMethod method : methods) {
             if (!names.add(method.name())) throw new IllegalArgumentException("Duplicate host method");

@@ -13,7 +13,7 @@ public final class RequirementAssessment {
 
         Objects.requireNonNull(kind, "kind");
         RequirementSet.requireId(id, kind);
-        if (name == null || name.isBlank()) {
+        if (name == null || dev.openallay.util.Java8Strings.isBlank(name)) {
             throw new IllegalArgumentException("Requirement name must not be blank");
         }
         Objects.requireNonNull(status, "status");

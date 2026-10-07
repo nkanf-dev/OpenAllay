@@ -32,7 +32,7 @@ public final class OpenAllayExtensionRegistry {
     private final Set<JavascriptInvocationScope> liveInvocations = new HashSet<>();
     private boolean closing;
     private java.util.concurrent.CompletableFuture<Void> shutdown;
-    private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = List.of();
+    private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = dev.openallay.util.Java8Collections.listOf();
     private long generation;
 
     public OpenAllayExtensionRegistry(
@@ -45,7 +45,7 @@ public final class OpenAllayExtensionRegistry {
         this.dataModules = Objects.requireNonNull(dataModules, "dataModules");
         this.javascriptModules = Objects.requireNonNull(javascriptModules, "javascriptModules");
         this.skills = Objects.requireNonNull(skills, "skills");
-        this.installedMods = Set.copyOf(installedMods);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
     }
 
     public synchronized Registration register(OpenAllayExtension extension) {
@@ -71,10 +71,9 @@ public final class OpenAllayExtensionRegistry {
             // Capture foreign IDs only after identity and compatibility admission, before mutation.
             contribution = new OpenAllayExtensionContribution(
                     declared.dataModules(), declared.javascriptModules(), declared.skills(),
-                    declared.resultViews(), declared.javascriptInvocationParticipants().stream()
+                    declared.resultViews(), dev.openallay.util.Java8Collections.toList(declared.javascriptInvocationParticipants().stream()
                             .map(participant -> (JavascriptInvocationParticipant)
-                                    new RegisteredParticipant(participant.id(), participant))
-                            .toList(), declared.hostBindings());
+                                    new RegisteredParticipant(participant.id(), participant))), declared.hostBindings());
             validateContribution(descriptor.id(), contribution);
             publish(descriptor, contribution);
             generation++;
@@ -96,9 +95,8 @@ public final class OpenAllayExtensionRegistry {
     public synchronized Snapshot snapshot() {
         return new Snapshot(
                 generation,
-                active.values().stream()
-                        .map(RegisteredExtension::view)
-                        .toList());
+                dev.openallay.util.Java8Collections.toList(active.values().stream()
+                        .map(RegisteredExtension::view)));
     }
 
     public synchronized List<JavascriptInvocationParticipant> javascriptInvocationParticipants() {
@@ -124,16 +122,16 @@ public final class OpenAllayExtensionRegistry {
         Set<JavascriptInvocationScope> scopes =
                 invocations.computeIfAbsent(requestId, ignored -> new HashSet<>());
         JavascriptInvocationScope[] reference = new JavascriptInvocationScope[1];
-        List<JavascriptInvocationScope.Participant> participants = active.values().stream()
+        List<JavascriptInvocationScope.Participant> participants = dev.openallay.util.Java8Collections.toList(active.values().stream()
                 .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream()
                         .map(participant -> new JavascriptInvocationScope.Participant(
-                                value.descriptor().id(), participant))).toList();
-        List<JavascriptInvocationScope.Binding> bindings = active.values().stream()
+                                value.descriptor().id(), participant))));
+        List<JavascriptInvocationScope.Binding> bindings = dev.openallay.util.Java8Collections.toList(active.values().stream()
                 .flatMap(value -> value.contribution().hostBindings().stream()
                         .map(binding -> new JavascriptInvocationScope.Binding(
-                                value.descriptor().id(), binding))).toList();
+                                value.descriptor().id(), binding))));
         JavascriptInvocationScope scope = new JavascriptInvocationScope(
-                invocation, cancellation, participants, bindings, Set.copyOf(active.keySet()),
+                invocation, cancellation, participants, bindings, dev.openallay.util.Java8Collections.setCopyOf(active.keySet()),
                 () -> releaseInvocation(requestId, reference[0]));
         reference[0] = scope;
         scopes.add(scope);
@@ -161,7 +159,7 @@ public final class OpenAllayExtensionRegistry {
         synchronized (this) {
             if (shutdown != null) return shutdown;
             closing = true;
-            captured = List.copyOf(liveInvocations);
+            captured = dev.openallay.util.Java8Collections.listCopyOf(liveInvocations);
             shutdown = new java.util.concurrent.CompletableFuture<>();
             receipt = shutdown;
         }
@@ -202,7 +200,7 @@ public final class OpenAllayExtensionRegistry {
             Objects.requireNonNull(view, "resultView");
             claim(extensionId, view.id(), batch);
             Objects.requireNonNull(view.kind(), "resultView.kind");
-            if (view.summary() == null || view.summary().isBlank()) {
+            if (view.summary() == null || dev.openallay.util.Java8Strings.isBlank(view.summary())) {
                 throw new IllegalArgumentException("Result view summary is required");
             }
         }
@@ -227,7 +225,7 @@ public final class OpenAllayExtensionRegistry {
     }
 
     private void claim(String extensionId, String contributionId, Set<String> batch) {
-        if (contributionId == null || contributionId.isBlank()) {
+        if (contributionId == null || dev.openallay.util.Java8Strings.isBlank(contributionId)) {
             throw new IllegalArgumentException("Contribution ID is required");
         }
         if (!batch.add(contributionId)) {
@@ -260,9 +258,8 @@ public final class OpenAllayExtensionRegistry {
         contribution.hostBindings().forEach(binding ->
                 contributionOwners.put(binding.id(), descriptor.id()));
         active.put(descriptor.id(), registered);
-        javascriptInvocationParticipants = active.values().stream()
-                .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream())
-                .toList();
+        javascriptInvocationParticipants = dev.openallay.util.Java8Collections.toList(active.values().stream()
+                .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream()));
     }
 
     private Registration rejected(
@@ -315,7 +312,7 @@ public static final class Snapshot {
     private final List<ExtensionView> extensions;
     public Snapshot(long generation, List<ExtensionView> extensions) {
 
-            extensions = List.copyOf(extensions);
+            extensions = dev.openallay.util.Java8Collections.listCopyOf(extensions);
 
         this.generation = generation;
         this.extensions = extensions;
@@ -355,12 +352,12 @@ public static final class ExtensionView {
     private final List<String> hostBindings;
     public ExtensionView(OpenAllayExtensionDescriptor descriptor, OpenAllayExtensionState state, List<String> dataModules, List<String> javascriptModules, List<String> skills, List<String> resultViews, String diagnostic, List<String> hostBindings) {
 
-            dataModules = List.copyOf(dataModules);
-            javascriptModules = List.copyOf(javascriptModules);
-            skills = List.copyOf(skills);
-            resultViews = List.copyOf(resultViews);
+            dataModules = dev.openallay.util.Java8Collections.listCopyOf(dataModules);
+            javascriptModules = dev.openallay.util.Java8Collections.listCopyOf(javascriptModules);
+            skills = dev.openallay.util.Java8Collections.listCopyOf(skills);
+            resultViews = dev.openallay.util.Java8Collections.listCopyOf(resultViews);
             diagnostic = diagnostic == null ? "" : diagnostic;
-            hostBindings = List.copyOf(hostBindings);
+            hostBindings = dev.openallay.util.Java8Collections.listCopyOf(hostBindings);
 
         this.descriptor = descriptor;
         this.state = state;
@@ -383,7 +380,7 @@ public ExtensionView(OpenAllayExtensionDescriptor descriptor, OpenAllayExtension
                 List<String> dataModules, List<String> javascriptModules, List<String> skills,
                 List<String> resultViews, String diagnostic) {
             this(descriptor, state, dataModules, javascriptModules, skills, resultViews,
-                    diagnostic, List.of());
+                    diagnostic, dev.openallay.util.Java8Collections.listOf());
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -426,21 +423,18 @@ private ExtensionView view() {
             return new ExtensionView(
                     descriptor,
                     OpenAllayExtensionState.ACTIVE,
-                    contribution.dataModules().stream().map(JavascriptDataModule::id).sorted().toList(),
-                    contribution.javascriptModules().stream()
+                    dev.openallay.util.Java8Collections.toList(contribution.dataModules().stream().map(JavascriptDataModule::id).sorted()),
+                    dev.openallay.util.Java8Collections.toList(contribution.javascriptModules().stream()
                             .map(JavascriptModuleSource::id)
-                            .sorted()
-                            .toList(),
-                    contribution.skills().stream()
+                            .sorted()),
+                    dev.openallay.util.Java8Collections.toList(contribution.skills().stream()
                             .map(source -> source.directoryName())
-                            .sorted()
-                            .toList(),
-                    contribution.resultViews().stream()
+                            .sorted()),
+                    dev.openallay.util.Java8Collections.toList(contribution.resultViews().stream()
                             .map(JavascriptResultViewProvider::id)
-                            .sorted()
-                            .toList(),
+                            .sorted()),
                     "",
-                    contribution.hostBindings().stream().map(JavascriptHostBinding::id).sorted().toList());
+                    dev.openallay.util.Java8Collections.toList(contribution.hostBindings().stream().map(JavascriptHostBinding::id).sorted()));
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

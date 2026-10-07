@@ -347,13 +347,12 @@ public final class ExtensionPackageInstaller {
         if (modIds.isEmpty()) {
             throw new IllegalArgumentException("Extension JAR has no loader metadata");
         }
-        return new InspectedPackage(manifest, Set.copyOf(modIds));
+        return new InspectedPackage(manifest, dev.openallay.util.Java8Collections.setCopyOf(modIds));
     }
 
     private static String sha256(byte[] bytes) {
         try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("SHA-256").digest(bytes));
+            return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }

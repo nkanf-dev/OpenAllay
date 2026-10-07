@@ -32,7 +32,7 @@ public final class RecipeViewerExtensionSnapshot {
         if (available != (state == RecipeProviderState.AVAILABLE)) {
             throw new IllegalArgumentException("availability must match provider state");
         }
-        if (available && (generation == null || generation.isBlank())) {
+        if (available && (generation == null || dev.openallay.util.Java8Strings.isBlank(generation))) {
             throw new IllegalArgumentException("available provider requires a generation");
         }
         if (!available && generation != null) {
@@ -41,9 +41,9 @@ public final class RecipeViewerExtensionSnapshot {
         if (recipeCount < 0) {
             throw new IllegalArgumentException("recipeCount must be non-negative");
         }
-        categories = List.copyOf(categories);
-        recipes = List.copyOf(recipes);
-        diagnostics = List.copyOf(diagnostics);
+        categories = dev.openallay.util.Java8Collections.listCopyOf(categories);
+        recipes = dev.openallay.util.Java8Collections.listCopyOf(recipes);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
         if (recipeCount != recipes.size()) {
             throw new IllegalArgumentException("recipeCount must match recipes");
         }
@@ -157,10 +157,10 @@ public static final class Diagnostic {
     }
 }
 private static String require(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
-        return value.strip();
+        return dev.openallay.util.Java8Strings.strip(value);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

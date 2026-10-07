@@ -10,9 +10,9 @@ public final class RequirementEnvironment {
     private final Map<String, RequirementAvailability> skills;
     public RequirementEnvironment(Map<String, RequirementAvailability> capabilities, Map<String, RequirementAvailability> extensions, Map<String, RequirementAvailability> skills) {
 
-        capabilities = Map.copyOf(capabilities);
-        extensions = Map.copyOf(extensions);
-        skills = Map.copyOf(skills);
+        capabilities = dev.openallay.util.Java8Collections.mapCopyOf(capabilities);
+        extensions = dev.openallay.util.Java8Collections.mapCopyOf(extensions);
+        skills = dev.openallay.util.Java8Collections.mapCopyOf(skills);
 
         this.capabilities = capabilities;
         this.extensions = extensions;

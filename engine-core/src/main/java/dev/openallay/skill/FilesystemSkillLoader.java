@@ -15,9 +15,7 @@ import java.util.stream.Stream;
 
 /** Read-only discovery of local Agent Skills below one trusted configuration root. */
 public final class FilesystemSkillLoader {
-    private static final Set<String> EXECUTABLE_EXTENSIONS = Set.of(
-            "sh", "bash", "zsh", "command", "bat", "cmd", "ps1", "exe", "dll", "dylib",
-            "so", "class", "jar", "py", "pyc", "js", "mjs", "cjs");
+    private static final Set<String> EXECUTABLE_EXTENSIONS = dev.openallay.util.Java8Collections.setOf("sh", "bash", "zsh", "command", "bat", "cmd", "ps1", "exe", "dll", "dylib", "so", "class", "jar", "py", "pyc", "js", "mjs", "cjs");
 
     @dev.openallay.value.ValueType(RejectedSkill.ValueSchemaProvider.class)
 public static final class RejectedSkill {
@@ -25,7 +23,7 @@ public static final class RejectedSkill {
     private final SkillDiagnostic diagnostic;
     public RejectedSkill(String skillName, SkillDiagnostic diagnostic) {
 
-            if (skillName == null || skillName.isBlank()) {
+            if (skillName == null || dev.openallay.util.Java8Strings.isBlank(skillName)) {
                 throw new IllegalArgumentException("Rejected Skill name must not be blank");
             }
             diagnostic = java.util.Objects.requireNonNull(diagnostic, "diagnostic");
@@ -62,8 +60,8 @@ public static final class LoadResult {
     private final List<RejectedSkill> rejected;
     public LoadResult(List<SkillSource> sources, List<RejectedSkill> rejected) {
 
-            sources = List.copyOf(sources);
-            rejected = List.copyOf(rejected);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
+            rejected = dev.openallay.util.Java8Collections.listCopyOf(rejected);
 
         this.sources = sources;
         this.rejected = rejected;
@@ -96,7 +94,7 @@ public static final class LoadResult {
                 .toAbsolutePath()
                 .normalize();
         if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
-            return new LoadResult(List.of(), List.of());
+            return new LoadResult(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
         }
         if (Files.isSymbolicLink(root) || !Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
             return rootFailure(root, "Skill configuration root must be a real directory");
@@ -104,7 +102,7 @@ public static final class LoadResult {
         List<SkillSource> sources = new ArrayList<>();
         List<RejectedSkill> rejected = new ArrayList<>();
         try (Stream<Path> children = Files.list(root)) {
-            for (Path child : children.sorted(Comparator.comparing(path -> path.getFileName().toString())).toList()) {
+            for (Path child : dev.openallay.util.Java8Collections.toList(children.sorted(Comparator.comparing(path -> path.getFileName().toString())))) {
                 if (child.getFileName().toString().startsWith(".")) {
                     // Atomic settings staging/tombstones are never discoverable Skill packages.
                     continue;
@@ -141,7 +139,7 @@ public static final class LoadResult {
         }
         Map<String, String> files = new LinkedHashMap<>();
         try (Stream<Path> tree = Files.walk(directory)) {
-            for (Path path : tree.sorted().toList()) {
+            for (Path path : dev.openallay.util.Java8Collections.toList(tree.sorted())) {
                 if (path.equals(directory)) {
                     continue;
                 }
@@ -190,7 +188,7 @@ public static final class LoadResult {
     }
 
     private static RejectedSkill rejected(Path directory, String message) {
-        String safeMessage = message == null || message.isBlank()
+        String safeMessage = message == null || dev.openallay.util.Java8Strings.isBlank(message)
                 ? "Unable to read local Skill"
                 : message;
         return new RejectedSkill(
@@ -201,8 +199,8 @@ public static final class LoadResult {
 
     private static LoadResult rootFailure(Path root, String message) {
         return new LoadResult(
-                List.of(),
-                List.of(new RejectedSkill(
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(new RejectedSkill(
                         ".",
                         new SkillDiagnostic("skill_discovery_failed", message, "local:" + root))));
     }

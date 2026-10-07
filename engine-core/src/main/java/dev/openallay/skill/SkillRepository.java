@@ -11,16 +11,16 @@ import java.util.TreeMap;
 public final class SkillRepository implements SkillCatalog {
     private final SkillParser parser;
     private final Set<String> availableTools;
-    private volatile Map<String, SkillDocument> skills = Map.of();
-    private volatile List<SkillDiagnostic> diagnostics = List.of();
-    private volatile Set<String> runtimeDisabledSkills = Set.of();
+    private volatile Map<String, SkillDocument> skills = dev.openallay.util.Java8Collections.mapOf();
+    private volatile List<SkillDiagnostic> diagnostics = dev.openallay.util.Java8Collections.listOf();
+    private volatile Set<String> runtimeDisabledSkills = dev.openallay.util.Java8Collections.setOf();
     // Originals are retained independently of local overrides and settings reload generations.
-    private Map<String, SkillSource> externalSources = Map.of();
-    private Set<String> baseSkillNames = Set.of();
+    private Map<String, SkillSource> externalSources = dev.openallay.util.Java8Collections.mapOf();
+    private Set<String> baseSkillNames = dev.openallay.util.Java8Collections.setOf();
 
     public SkillRepository(SkillParser parser, Collection<String> availableTools) {
         this.parser = parser;
-        this.availableTools = Set.copyOf(availableTools);
+        this.availableTools = dev.openallay.util.Java8Collections.setCopyOf(availableTools);
     }
 
     public synchronized boolean reload(Collection<SkillSource> sources, Set<String> installedMods) {
@@ -28,7 +28,7 @@ public final class SkillRepository implements SkillCatalog {
         Set<String> nextBaseNames = new java.util.HashSet<>();
         List<SkillDiagnostic> nextDiagnostics = new ArrayList<>();
         try {
-            for (SkillSource source : List.copyOf(sources)) {
+            for (SkillSource source : dev.openallay.util.Java8Collections.listCopyOf(sources)) {
                 SkillDocument document = validated(source, installedMods, nextDiagnostics);
                 if (document == null) {
                     continue;
@@ -42,13 +42,13 @@ public final class SkillRepository implements SkillCatalog {
                 }
             }
             mergeExternal(candidate, installedMods, nextDiagnostics);
-            skills = Map.copyOf(candidate);
-            baseSkillNames = Set.copyOf(nextBaseNames);
-            diagnostics = List.copyOf(nextDiagnostics);
+            skills = dev.openallay.util.Java8Collections.mapCopyOf(candidate);
+            baseSkillNames = dev.openallay.util.Java8Collections.setCopyOf(nextBaseNames);
+            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(nextDiagnostics);
             return true;
         } catch (RuntimeException failure) {
             String provenance = sources.isEmpty() ? "skill-reload" : sources.iterator().next().provenance();
-            diagnostics = List.of(new SkillDiagnostic(
+            diagnostics = dev.openallay.util.Java8Collections.listOf(new SkillDiagnostic(
                     "skill_validation_failed", failure.getMessage(), provenance));
             return false;
         }
@@ -68,7 +68,7 @@ public final class SkillRepository implements SkillCatalog {
             }
         });
         List<SkillDiagnostic> ignoredDiagnostics = new ArrayList<>();
-        for (SkillSource source : List.copyOf(sources)) {
+        for (SkillSource source : dev.openallay.util.Java8Collections.listCopyOf(sources)) {
             SkillDocument document = validated(source, installedMods, ignoredDiagnostics);
             if (document == null) {
                 throw new IllegalArgumentException(
@@ -87,7 +87,7 @@ public final class SkillRepository implements SkillCatalog {
      */
     public synchronized void registerExternal(
             Collection<SkillSource> sources, Set<String> installedMods) {
-        List<SkillSource> batch = List.copyOf(sources);
+        List<SkillSource> batch = dev.openallay.util.Java8Collections.listCopyOf(sources);
         validateExternal(batch, installedMods);
         Map<String, SkillDocument> candidate = new TreeMap<>(skills);
         Map<String, SkillSource> nextExternal = new TreeMap<>(externalSources);
@@ -102,15 +102,15 @@ public final class SkillRepository implements SkillCatalog {
             candidate.putIfAbsent(document.metadata().name(), document);
             nextExternal.put(document.metadata().name(), source);
         }
-        skills = Map.copyOf(candidate);
-        externalSources = Map.copyOf(nextExternal);
-        diagnostics = List.copyOf(nextDiagnostics);
+        skills = dev.openallay.util.Java8Collections.mapCopyOf(candidate);
+        externalSources = dev.openallay.util.Java8Collections.mapCopyOf(nextExternal);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(nextDiagnostics);
     }
 
     /** Immutable registered originals, including references, for settings display and overrides. */
     public synchronized List<SkillSource> externalSources() {
-        return externalSources.entrySet().stream().sorted(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue).toList();
+        return dev.openallay.util.Java8Collections.toList(externalSources.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue));
     }
 
     /**
@@ -126,7 +126,7 @@ public final class SkillRepository implements SkillCatalog {
         Set<String> nextBaseNames = new java.util.HashSet<>();
         List<SkillDiagnostic> nextDiagnostics = new ArrayList<>();
         try {
-            for (SkillSource source : List.copyOf(bundledSources)) {
+            for (SkillSource source : dev.openallay.util.Java8Collections.listCopyOf(bundledSources)) {
                 SkillDocument document = validated(source, installedMods, nextDiagnostics);
                 if (document == null) {
                     continue;
@@ -142,7 +142,7 @@ public final class SkillRepository implements SkillCatalog {
             String provenance = bundledSources.isEmpty()
                     ? "openallay:bundled"
                     : bundledSources.iterator().next().provenance();
-            diagnostics = List.of(new SkillDiagnostic(
+            diagnostics = dev.openallay.util.Java8Collections.listOf(new SkillDiagnostic(
                     "skill_validation_failed", failure.getMessage(), provenance));
             return false;
         }
@@ -165,9 +165,9 @@ public final class SkillRepository implements SkillCatalog {
             retainLastValidLocal(rejected.skillName(), candidate, installedMods);
             nextDiagnostics.add(rejected.diagnostic());
         }
-        skills = Map.copyOf(candidate);
-        baseSkillNames = Set.copyOf(nextBaseNames);
-        diagnostics = List.copyOf(nextDiagnostics);
+        skills = dev.openallay.util.Java8Collections.mapCopyOf(candidate);
+        baseSkillNames = dev.openallay.util.Java8Collections.setCopyOf(nextBaseNames);
+        diagnostics = dev.openallay.util.Java8Collections.listCopyOf(nextDiagnostics);
         return true;
     }
 
@@ -222,7 +222,7 @@ public final class SkillRepository implements SkillCatalog {
     }
 
     public List<SkillMetadata> metadata() {
-        return skills.values().stream().map(SkillDocument::metadata).toList();
+        return dev.openallay.util.Java8Collections.toList(skills.values().stream().map(SkillDocument::metadata));
     }
 
     public List<SkillDiagnostic> diagnostics() {
@@ -263,6 +263,6 @@ public final class SkillRepository implements SkillCatalog {
      * Existing request snapshots remain immutable.
      */
     public void setRuntimeDisabledSkills(Set<String> disabledSkills) {
-        runtimeDisabledSkills = Set.copyOf(disabledSkills);
+        runtimeDisabledSkills = dev.openallay.util.Java8Collections.setCopyOf(disabledSkills);
     }
 }

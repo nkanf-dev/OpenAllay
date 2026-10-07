@@ -34,12 +34,9 @@ public final class UniversalExtensionManifest {
     public String entrypoint() { return entrypoint; }
     public ExtensionDescriptor descriptor() { return descriptor; }
 public static final String JAR_PATH = "META-INF/openallay-extension.json";
-private static final Set<String> FIELDS = Set.of("schemaVersion", "id", "name", "version", "provider",
-            "summary", "source", "entrypoint", "support");
-private static final Set<String> SUPPORT_FIELDS = Set.of("targets", "minimumJavaVersion",
-            "requiredHostFeatures", "validatedTargetIds");
-private static final Set<String> TARGET_FIELDS = Set.of("loader", "minecraftVersionRange",
-            "openAllayVersionRange", "openAllayApiVersionRange");
+private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("schemaVersion", "id", "name", "version", "provider", "summary", "source", "entrypoint", "support");
+private static final Set<String> SUPPORT_FIELDS = dev.openallay.util.Java8Collections.setOf("targets", "minimumJavaVersion", "requiredHostFeatures", "validatedTargetIds");
+private static final Set<String> TARGET_FIELDS = dev.openallay.util.Java8Collections.setOf("loader", "minecraftVersionRange", "openAllayVersionRange", "openAllayApiVersionRange");
 public static UniversalExtensionManifest decode(String json) {
         JsonObject root = object(UniversalExtensionJson.parse(json));
         Set<String> fields = new HashSet<>(dev.openallay.json.JsonTrees.keys(root));
@@ -83,7 +80,7 @@ private static JsonObject object(JsonElement value) {
 private static String string(JsonObject value, String field) {
         JsonElement encoded = value.get(field);
         if (encoded == null || !encoded.isJsonPrimitive() || !encoded.getAsJsonPrimitive().isString()
-                || encoded.getAsString().isBlank()) throw new IllegalArgumentException("Expected package string");
+                || dev.openallay.util.Java8Strings.isBlank(encoded.getAsString())) throw new IllegalArgumentException("Expected package string");
         return encoded.getAsString();
     }
 private static int integer(JsonObject value, String field) {
@@ -102,7 +99,7 @@ private static Set<String> strings(JsonObject value, String field) {
             if (!item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()
                     || !values.add(item.getAsString())) throw new IllegalArgumentException("Expected unique strings");
         }
-        return Set.copyOf(values);
+        return dev.openallay.util.Java8Collections.setCopyOf(values);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

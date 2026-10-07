@@ -15,7 +15,7 @@ public final class PatchouliMultiblock {
     private final EvidenceMetadata evidence;
     public PatchouliMultiblock(String id, List<Block> blocks, String provenance, EvidenceMetadata evidence) {
 
-        blocks = List.copyOf(blocks);
+        blocks = dev.openallay.util.Java8Collections.listCopyOf(blocks);
         java.util.Objects.requireNonNull(evidence, "evidence");
 
         this.id = id;
@@ -40,7 +40,7 @@ public PatchouliMultiblock(String id, List<Block> blocks, String provenance) {
                         "openallay:patchouli_fixture",
                         "test",
                         "common-test",
-                        Map.of("openallay:fixture_provenance", provenance)));
+                        dev.openallay.util.Java8Collections.mapOf("openallay:fixture_provenance", provenance)));
     }
 @dev.openallay.value.ValueType(Block.ValueSchemaProvider.class)
 public static final class Block {

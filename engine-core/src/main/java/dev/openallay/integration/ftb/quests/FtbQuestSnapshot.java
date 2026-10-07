@@ -15,7 +15,7 @@ public final class FtbQuestSnapshot {
     private final String provenance;
     public FtbQuestSnapshot(String questId, String chapterId, String chapterTitle, String title, String description, Set<String> dependencyIds, boolean completed, String provenance) {
 
-        dependencyIds = Set.copyOf(dependencyIds);
+        dependencyIds = dev.openallay.util.Java8Collections.setCopyOf(dependencyIds);
 
         this.questId = questId;
         this.chapterId = chapterId;
@@ -42,7 +42,7 @@ public static final class Result {
     private final String diagnosticMessage;
     public Result(boolean available, List<FtbQuestSnapshot> quests, String diagnosticCode, String diagnosticMessage) {
 
-            quests = List.copyOf(quests);
+            quests = dev.openallay.util.Java8Collections.listCopyOf(quests);
 
         this.available = available;
         this.quests = quests;
@@ -54,7 +54,7 @@ public static final class Result {
     public String diagnosticCode() { return diagnosticCode; }
     public String diagnosticMessage() { return diagnosticMessage; }
 public static Result unavailable(String code, String message) {
-            return new Result(false, List.of(), code, message);
+            return new Result(false, dev.openallay.util.Java8Collections.listOf(), code, message);
         }
 public static Result available(List<FtbQuestSnapshot> quests) {
             return new Result(true, quests, null, null);

@@ -55,7 +55,7 @@ public final class UniversalExtensionSupport {
         }
         dev.openallay.api.extension.ExtensionRequirements requirements = descriptor.requirements();
         return new OpenAllayExtensionDescriptor(descriptor.id(), descriptor.name(), descriptor.version(),
-                descriptor.provider(), descriptor.summary(), Set.of(target.loader()),
+                descriptor.provider(), descriptor.summary(), dev.openallay.util.Java8Collections.setOf(target.loader()),
                 target.minecraftVersionRange(), target.openAllayApiVersionRange(), descriptor.source(),
                 new RequirementSet(requirements.capabilities(), requirements.extensions(), requirements.skills()));
     }

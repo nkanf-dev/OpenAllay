@@ -23,7 +23,7 @@ public final class ExtensionCatalogEntry {
     public ExtensionCatalogEntry(String id, String name, String version, String provider, String summary, String minecraftVersionRange, String openAllayApiVersionRange, List<ExtensionCatalogArtifact> artifacts, String source, RequirementSet requirements) {
 
         TreeMap<String, ExtensionCatalogArtifact> byLoader = new TreeMap<>();
-        for (ExtensionCatalogArtifact artifact : List.copyOf(artifacts)) {
+        for (ExtensionCatalogArtifact artifact : dev.openallay.util.Java8Collections.listCopyOf(artifacts)) {
             java.util.Objects.requireNonNull(artifact, "artifact");
             if (byLoader.putIfAbsent(artifact.loader(), artifact) != null) {
                 throw new IllegalArgumentException(
@@ -34,7 +34,7 @@ public final class ExtensionCatalogEntry {
             throw new IllegalArgumentException(
                     "Extension catalog entry must declare at least one artifact");
         }
-        artifacts = List.copyOf(byLoader.values());
+        artifacts = dev.openallay.util.Java8Collections.listCopyOf(byLoader.values());
         OpenAllayExtensionDescriptor descriptor = new OpenAllayExtensionDescriptor(
                 id,
                 name,
@@ -92,7 +92,7 @@ public Optional<ExtensionCatalogArtifact> artifactFor(String loader) {
         if (loader == null) {
             return Optional.empty();
         }
-        String normalized = loader.strip().toLowerCase(java.util.Locale.ROOT);
+        String normalized = dev.openallay.util.Java8Strings.strip(loader).toLowerCase(java.util.Locale.ROOT);
         return artifacts.stream()
                 .filter(artifact -> artifact.loader().equals(normalized))
                 .findFirst();
@@ -119,7 +119,7 @@ public OpenAllayExtensionDescriptor descriptorFor(String loader) {
                 version,
                 provider,
                 summary,
-                Set.of(selected.loader()),
+                dev.openallay.util.Java8Collections.setOf(selected.loader()),
                 minecraftVersionRange,
                 openAllayApiVersionRange,
                 source, requirements);

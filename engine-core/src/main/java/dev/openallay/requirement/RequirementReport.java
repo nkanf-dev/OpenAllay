@@ -8,7 +8,7 @@ public final class RequirementReport {
     private final List<RequirementAssessment> entries;
     public RequirementReport(List<RequirementAssessment> entries) {
 
-        entries = List.copyOf(entries);
+        entries = dev.openallay.util.Java8Collections.listCopyOf(entries);
 
         this.entries = entries;
     }
@@ -17,7 +17,7 @@ public boolean allSatisfied() {
         return entries.stream().allMatch(entry -> entry.status() == RequirementStatus.SATISFIED);
     }
 public List<RequirementAssessment> unmet() {
-        return entries.stream().filter(entry -> entry.status() != RequirementStatus.SATISFIED).toList();
+        return dev.openallay.util.Java8Collections.toList(entries.stream().filter(entry -> entry.status() != RequirementStatus.SATISFIED));
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

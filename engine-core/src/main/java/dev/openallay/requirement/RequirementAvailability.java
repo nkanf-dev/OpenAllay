@@ -10,7 +10,7 @@ public final class RequirementAvailability {
     private final String detail;
     public RequirementAvailability(String name, RequirementStatus status, String detail) {
 
-        if (name == null || name.isBlank()) {
+        if (name == null || dev.openallay.util.Java8Strings.isBlank(name)) {
             throw new IllegalArgumentException("Requirement name must not be blank");
         }
         Objects.requireNonNull(status, "status");

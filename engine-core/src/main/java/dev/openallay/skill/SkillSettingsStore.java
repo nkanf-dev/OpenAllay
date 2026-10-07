@@ -171,7 +171,7 @@ public final class SkillSettingsStore {
             return;
         }
         try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(path)) {
-            for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) {
+            for (Path entry : dev.openallay.util.Java8Collections.toList(entries.sorted(Comparator.reverseOrder()))) {
                 Files.deleteIfExists(entry);
             }
         }

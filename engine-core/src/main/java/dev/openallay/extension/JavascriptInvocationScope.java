@@ -34,8 +34,8 @@ public final class JavascriptInvocationScope implements AutoCloseable {
             Set<String> activeOwners,
             Runnable release) {
         context = new JavascriptInvocationContext(invocation, cancellation);
-        this.participants = List.copyOf(participants);
-        Set.copyOf(activeOwners).forEach(owner -> extensionContexts.put(
+        this.participants = dev.openallay.util.Java8Collections.listCopyOf(participants);
+        dev.openallay.util.Java8Collections.setCopyOf(activeOwners).forEach(owner -> extensionContexts.put(
                 owner, context.forExtension(owner)));
         bindings.forEach(binding -> this.bindings.put(binding.declaration().id(), binding));
         this.release = release;
@@ -83,7 +83,7 @@ public final class JavascriptInvocationScope implements AutoCloseable {
 
     /** Trusted immutable method declarations only. This list contains no invocation context. */
     public List<JavascriptHostBinding> hostBindings() {
-        return bindings.values().stream().map(Binding::declaration).toList();
+        return dev.openallay.util.Java8Collections.toList(bindings.values().stream().map(Binding::declaration));
     }
 
     /** Called by the controlled Rhino bridge on the opening worker. Never accepts script callbacks. */

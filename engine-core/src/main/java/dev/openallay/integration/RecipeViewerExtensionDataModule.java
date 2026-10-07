@@ -76,22 +76,20 @@ public final class RecipeViewerExtensionDataModule implements JavascriptDataModu
         if (provider == null) {
             return new Snapshot(
                     unavailableProjection(),
-                    List.copyOf(evidence));
+                    dev.openallay.util.Java8Collections.listCopyOf(evidence));
         }
 
         TreeSet<String> categories = new TreeSet<>();
-        List<RecipeViewerExtensionSnapshot.Recipe> recipes = provider.recipes().stream()
+        List<RecipeViewerExtensionSnapshot.Recipe> recipes = dev.openallay.util.Java8Collections.toList(provider.recipes().stream()
                 .sorted(Comparator.comparing(recipe -> recipe.reference().recipeId()))
                 .peek(recipe -> {
                     categories.add(recipe.type());
                     evidence.add(recipe.evidence());
                 })
-                .map(RecipeViewerExtensionDataModule::project)
-                .toList();
+                .map(RecipeViewerExtensionDataModule::project));
         List<RecipeViewerExtensionSnapshot.Diagnostic> diagnostics =
-                provider.diagnostics().stream()
-                        .map(RecipeViewerExtensionDataModule::project)
-                        .toList();
+                dev.openallay.util.Java8Collections.toList(provider.diagnostics().stream()
+                        .map(RecipeViewerExtensionDataModule::project));
         RecipeViewerExtensionSnapshot value = new RecipeViewerExtensionSnapshot(
                 sourceId,
                 provider.state() == RecipeProviderState.AVAILABLE,
@@ -99,13 +97,13 @@ public final class RecipeViewerExtensionDataModule implements JavascriptDataModu
                 provider.completeness(),
                 provider.generation(),
                 recipes.size(),
-                List.copyOf(categories),
+                dev.openallay.util.Java8Collections.listCopyOf(categories),
                 recipes,
                 focusSupported,
                 navigationSupported,
                 exactNavigationSupported,
                 diagnostics);
-        return new Snapshot(value, List.copyOf(evidence));
+        return new Snapshot(value, dev.openallay.util.Java8Collections.listCopyOf(evidence));
     }
 
     private RecipeViewerExtensionSnapshot unavailableProjection() {
@@ -116,12 +114,12 @@ public final class RecipeViewerExtensionDataModule implements JavascriptDataModu
                 dev.openallay.context.DataCompleteness.UNKNOWN,
                 null,
                 0,
-                List.of(),
-                List.of(),
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(),
                 focusSupported,
                 navigationSupported,
                 exactNavigationSupported,
-                List.of(new RecipeViewerExtensionSnapshot.Diagnostic(
+                dev.openallay.util.Java8Collections.listOf(new RecipeViewerExtensionSnapshot.Diagnostic(
                         "provider_not_captured",
                         "The recipe viewer did not contribute a provider snapshot to this request")));
     }
@@ -142,9 +140,9 @@ public final class RecipeViewerExtensionDataModule implements JavascriptDataModu
     }
 
     private static String require(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
-        return value.strip();
+        return dev.openallay.util.Java8Strings.strip(value);
     }
 }

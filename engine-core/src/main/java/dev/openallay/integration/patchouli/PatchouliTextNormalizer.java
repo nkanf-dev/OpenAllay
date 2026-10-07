@@ -2,7 +2,7 @@ package dev.openallay.integration.patchouli;
 
 public final class PatchouliTextNormalizer {
     public String normalize(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) {
             return "";
         }
         String value = text.replace("$(br2)", "\n\n")
@@ -11,6 +11,6 @@ public final class PatchouliTextNormalizer {
                 .replace("$()", "");
         value = value.replaceAll("\\$\\([^)]*\\)", "");
         value = value.replaceAll("[ \\t]+\\n", "\n").replaceAll("\\n{3,}", "\n\n");
-        return value.strip();
+        return dev.openallay.util.Java8Strings.strip(value);
     }
 }
