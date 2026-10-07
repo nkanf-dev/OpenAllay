@@ -1185,6 +1185,46 @@
 +			case BOTH: return cx.newArray(scope, new Object[]{e.key, e.value});
 +			default: throw new IncompatibleClassChangeError();
 +		}
+--- a/dev/latvian/mods/rhino/NativeError.java
++++ b/dev/latvian/mods/rhino/NativeError.java
+@@ -268 +268 @@
+-			case Id_constructor -> {
++			case Id_constructor: {
+@@ -271,2 +271,3 @@
+-			}
+-			case Id_toString -> {
++				break;
++			}
++			case Id_toString: {
+@@ -275,2 +276,3 @@
+-			}
+-			case Id_toSource -> {
++				break;
++			}
++			case Id_toSource: {
+@@ -279,2 +281,3 @@
+-			}
+-			default -> throw new IllegalArgumentException(String.valueOf(id));
++				break;
++			}
++			default: throw new IllegalArgumentException(String.valueOf(id));
+@@ -386,6 +389,10 @@
+-		return switch (s) {
+-			case "constructor" -> Id_constructor;
+-			case "toString" -> Id_toString;
+-			case "toSource" -> Id_toSource;
+-			default -> 0;
+-		};
++		switch (s) {
++			case "constructor":
++				return Id_constructor;
++			case "toString":
++				return Id_toString;
++			case "toSource":
++				return Id_toSource;
++			default:
++				return 0;
++		}
 --- a/dev/latvian/mods/rhino/NativeGSON.java
 +++ b/dev/latvian/mods/rhino/NativeGSON.java
 @@ -7,0 +8,2 @@
@@ -1476,6 +1516,28 @@
 -		if (functionObj instanceof IdFunctionObject f) {
 +		if (functionObj instanceof IdFunctionObject) {
 +			IdFunctionObject f = (IdFunctionObject) functionObj;
+--- a/dev/latvian/mods/rhino/Node.java
++++ b/dev/latvian/mods/rhino/Node.java
+@@ -854,7 +854,12 @@
+-				return switch (first.type) {
+-					case Token.LABEL -> first.endCheckLabel();
+-					case Token.IFNE -> first.endCheckIf();
+-					case Token.SWITCH -> first.endCheckSwitch();
+-					case Token.TRY -> first.endCheckTry();
+-					default -> endCheckBlock();
+-				};
++				switch (first.type) {
++					case Token.LABEL:
++						return first.endCheckLabel();
++					case Token.IFNE:
++						return first.endCheckIf();
++					case Token.SWITCH:
++						return first.endCheckSwitch();
++					case Token.TRY:
++						return first.endCheckTry();
++					default:
++						return endCheckBlock();
++				}
 --- a/dev/latvian/mods/rhino/ObjArray.java
 +++ b/dev/latvian/mods/rhino/ObjArray.java
 @@ -95,8 +95,8 @@
@@ -2016,6 +2078,88 @@
 @@ -21 +21 @@
 -		return o instanceof Wrapper w ? unwrapped(w.unwrap()) : o;
 +		return o instanceof Wrapper ? unwrapped(((Wrapper) o).unwrap()) : o;
+--- a/dev/latvian/mods/rhino/ast/AstNode.java
++++ b/dev/latvian/mods/rhino/ast/AstNode.java
+@@ -262,5 +262,74 @@
+-		return switch (getType()) {         // Avoid cascaded error messages
+-			case Token.ASSIGN, Token.ASSIGN_ADD, Token.ASSIGN_BITAND, Token.ASSIGN_BITOR, Token.ASSIGN_BITXOR, Token.ASSIGN_DIV, Token.ASSIGN_LSH, Token.ASSIGN_MOD, Token.ASSIGN_MUL, Token.ASSIGN_RSH, Token.ASSIGN_SUB, Token.ASSIGN_URSH, Token.ASSIGN_NULLISH, Token.ASSIGN_POW, Token.BLOCK, Token.BREAK, Token.CALL, Token.CATCH, Token.CATCH_SCOPE, Token.CONST, Token.CONTINUE, Token.DEC, Token.DELPROP, Token.DEL_REF, Token.DO, Token.ELSE, Token.ENTERWITH, Token.ERROR, Token.EXPORT, Token.EXPR_RESULT, Token.FINALLY, Token.FUNCTION, Token.FOR, Token.GOTO, Token.IF, Token.IFEQ, Token.IFNE, Token.IMPORT, Token.INC, Token.JSR, Token.LABEL, Token.LEAVEWITH, Token.LET, Token.LETEXPR, Token.LOCAL_BLOCK, Token.LOOP, Token.NEW, Token.REF_CALL, Token.RETHROW, Token.RETURN, Token.RETURN_RESULT, Token.SEMI, Token.SETELEM, Token.SETELEM_OP, Token.SETNAME, Token.SETPROP, Token.SETPROP_OP, Token.SETVAR, Token.SET_REF, Token.SET_REF_OP, Token.SWITCH, Token.TARGET, Token.THROW, Token.TRY, Token.VAR, Token.WHILE, Token.WITH, Token.WITHEXPR,
+-				 Token.YIELD, Token.YIELD_STAR -> true;
+-			default -> false;
+-		};
++		switch (getType()) { // Avoid cascaded error messages
++			case Token.ASSIGN:
++			case Token.ASSIGN_ADD:
++			case Token.ASSIGN_BITAND:
++			case Token.ASSIGN_BITOR:
++			case Token.ASSIGN_BITXOR:
++			case Token.ASSIGN_DIV:
++			case Token.ASSIGN_LSH:
++			case Token.ASSIGN_MOD:
++			case Token.ASSIGN_MUL:
++			case Token.ASSIGN_RSH:
++			case Token.ASSIGN_SUB:
++			case Token.ASSIGN_URSH:
++			case Token.ASSIGN_NULLISH:
++			case Token.ASSIGN_POW:
++			case Token.BLOCK:
++			case Token.BREAK:
++			case Token.CALL:
++			case Token.CATCH:
++			case Token.CATCH_SCOPE:
++			case Token.CONST:
++			case Token.CONTINUE:
++			case Token.DEC:
++			case Token.DELPROP:
++			case Token.DEL_REF:
++			case Token.DO:
++			case Token.ELSE:
++			case Token.ENTERWITH:
++			case Token.ERROR:
++			case Token.EXPORT:
++			case Token.EXPR_RESULT:
++			case Token.FINALLY:
++			case Token.FUNCTION:
++			case Token.FOR:
++			case Token.GOTO:
++			case Token.IF:
++			case Token.IFEQ:
++			case Token.IFNE:
++			case Token.IMPORT:
++			case Token.INC:
++			case Token.JSR:
++			case Token.LABEL:
++			case Token.LEAVEWITH:
++			case Token.LET:
++			case Token.LETEXPR:
++			case Token.LOCAL_BLOCK:
++			case Token.LOOP:
++			case Token.NEW:
++			case Token.REF_CALL:
++			case Token.RETHROW:
++			case Token.RETURN:
++			case Token.RETURN_RESULT:
++			case Token.SEMI:
++			case Token.SETELEM:
++			case Token.SETELEM_OP:
++			case Token.SETNAME:
++			case Token.SETPROP:
++			case Token.SETPROP_OP:
++			case Token.SETVAR:
++			case Token.SET_REF:
++			case Token.SET_REF_OP:
++			case Token.SWITCH:
++			case Token.TARGET:
++			case Token.THROW:
++			case Token.TRY:
++			case Token.VAR:
++			case Token.WHILE:
++			case Token.WITH:
++			case Token.WITHEXPR:
++			case Token.YIELD:
++			case Token.YIELD_STAR:
++				return true;
++			default: return false;
++		}
 --- a/dev/latvian/mods/rhino/ast/InfixExpression.java
 +++ b/dev/latvian/mods/rhino/ast/InfixExpression.java
 @@ -155,5 +155,8 @@
@@ -2205,6 +2349,172 @@
 +					break;
 +				}
 +				default: throw new ParseException("Unexpected character in string: '\\" + c + "'");
+--- a/dev/latvian/mods/rhino/regexp/NativeRegExpCtor.java
++++ b/dev/latvian/mods/rhino/regexp/NativeRegExpCtor.java
+@@ -104,24 +104,47 @@
+-		int id = switch (s) {
+-			case "multiline" -> Id_multiline;
+-			case "$*" -> Id_STAR;
+-			case "input" -> Id_input;
+-			case "$_" -> Id_UNDERSCORE;
+-			case "lastMatch" -> Id_lastMatch;
+-			case "$&" -> Id_AMPERSAND;
+-			case "lastParen" -> Id_lastParen;
+-			case "$+" -> Id_PLUS;
+-			case "leftContext" -> Id_leftContext;
+-			case "$`" -> Id_BACK_QUOTE;
+-			case "rightContext" -> Id_rightContext;
+-			case "$'" -> Id_QUOTE;
+-			case "$1" -> Id_DOLLAR_1;
+-			case "$2" -> Id_DOLLAR_2;
+-			case "$3" -> Id_DOLLAR_3;
+-			case "$4" -> Id_DOLLAR_4;
+-			case "$5" -> Id_DOLLAR_5;
+-			case "$6" -> Id_DOLLAR_6;
+-			case "$7" -> Id_DOLLAR_7;
+-			case "$8" -> Id_DOLLAR_8;
+-			case "$9" -> Id_DOLLAR_9;
+-			default -> 0;
+-		};
++		int id;
++		switch (s) {
++			case "multiline":
++				id = Id_multiline; break;
++			case "$*":
++				id = Id_STAR; break;
++			case "input":
++				id = Id_input; break;
++			case "$_":
++				id = Id_UNDERSCORE; break;
++			case "lastMatch":
++				id = Id_lastMatch; break;
++			case "$&":
++				id = Id_AMPERSAND; break;
++			case "lastParen":
++				id = Id_lastParen; break;
++			case "$+":
++				id = Id_PLUS; break;
++			case "leftContext":
++				id = Id_leftContext; break;
++			case "$`":
++				id = Id_BACK_QUOTE; break;
++			case "rightContext":
++				id = Id_rightContext; break;
++			case "$'":
++				id = Id_QUOTE; break;
++			case "$1":
++				id = Id_DOLLAR_1; break;
++			case "$2":
++				id = Id_DOLLAR_2; break;
++			case "$3":
++				id = Id_DOLLAR_3; break;
++			case "$4":
++				id = Id_DOLLAR_4; break;
++			case "$5":
++				id = Id_DOLLAR_5; break;
++			case "$6":
++				id = Id_DOLLAR_6; break;
++			case "$7":
++				id = Id_DOLLAR_7; break;
++			case "$8":
++				id = Id_DOLLAR_8; break;
++			case "$9":
++				id = Id_DOLLAR_9; break;
++			default:
++				id = 0; break;
++		}
+@@ -133,7 +156,13 @@
+-		int attr = switch (id) {
+-			case Id_multiline -> multilineAttr;
+-			case Id_STAR -> starAttr;
+-			case Id_input -> inputAttr;
+-			case Id_UNDERSCORE -> underscoreAttr;
+-			default -> PERMANENT | READONLY;
+-		};
++		int attr;
++		switch (id) {
++			case Id_multiline:
++				attr = multilineAttr; break;
++			case Id_STAR:
++				attr = starAttr; break;
++			case Id_input:
++				attr = inputAttr; break;
++			case Id_UNDERSCORE:
++				attr = underscoreAttr; break;
++			default:
++				attr = PERMANENT | READONLY; break;
++		}
+@@ -149,24 +178,46 @@
+-			return switch (shifted) {
+-				case Id_multiline -> "multiline";
+-				case Id_STAR -> "$*";
+-				case Id_input -> "input";
+-				case Id_UNDERSCORE -> "$_";
+-				case Id_lastMatch -> "lastMatch";
+-				case Id_AMPERSAND -> "$&";
+-				case Id_lastParen -> "lastParen";
+-				case Id_PLUS -> "$+";
+-				case Id_leftContext -> "leftContext";
+-				case Id_BACK_QUOTE -> "$`";
+-				case Id_rightContext -> "rightContext";
+-				case Id_QUOTE -> "$'";
+-				case Id_DOLLAR_1 -> "$1";
+-				case Id_DOLLAR_2 -> "$2";
+-				case Id_DOLLAR_3 -> "$3";
+-				case Id_DOLLAR_4 -> "$4";
+-				case Id_DOLLAR_5 -> "$5";
+-				case Id_DOLLAR_6 -> "$6";
+-				case Id_DOLLAR_7 -> "$7";
+-				case Id_DOLLAR_8 -> "$8";
+-				case Id_DOLLAR_9 -> "$9";
+-				default -> super.getInstanceIdName(id);
+-			};
++			switch (shifted) {
++				case Id_multiline:
++					return "multiline";
++				case Id_STAR:
++					return "$*";
++				case Id_input:
++					return "input";
++				case Id_UNDERSCORE:
++					return "$_";
++				case Id_lastMatch:
++					return "lastMatch";
++				case Id_AMPERSAND:
++					return "$&";
++				case Id_lastParen:
++					return "lastParen";
++				case Id_PLUS:
++					return "$+";
++				case Id_leftContext:
++					return "leftContext";
++				case Id_BACK_QUOTE:
++					return "$`";
++				case Id_rightContext:
++					return "rightContext";
++				case Id_QUOTE:
++					return "$'";
++				case Id_DOLLAR_1:
++					return "$1";
++				case Id_DOLLAR_2:
++					return "$2";
++				case Id_DOLLAR_3:
++					return "$3";
++				case Id_DOLLAR_4:
++					return "$4";
++				case Id_DOLLAR_5:
++					return "$5";
++				case Id_DOLLAR_6:
++					return "$6";
++				case Id_DOLLAR_7:
++					return "$7";
++				case Id_DOLLAR_8:
++					return "$8";
++				case Id_DOLLAR_9:
++					return "$9";
++				default:
++					return super.getInstanceIdName(id);
++			}
 --- a/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
 @@ -28 +28 @@
