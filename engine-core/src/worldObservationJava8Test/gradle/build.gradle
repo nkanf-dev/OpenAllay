@@ -1,0 +1,137 @@
+plugins { id 'java' }
+def repo = file('../../../..')
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+def productionPaths = [
+        'engine-core/src/main/java/dev/openallay/context/BlockPositionSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/CallerKind.java',
+        'engine-core/src/main/java/dev/openallay/context/CallerSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/ContextMetrics.java',
+        'engine-core/src/main/java/dev/openallay/context/ContextValidation.java',
+        'engine-core/src/main/java/dev/openallay/context/DataAuthority.java',
+        'engine-core/src/main/java/dev/openallay/context/DataCompleteness.java',
+        'engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java',
+        'engine-core/src/main/java/dev/openallay/context/FluidRequirementSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/IngredientAlternativeSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/IngredientRequirementSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/InventorySlotSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/InventorySnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/ItemStackSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/PlayerSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RecipeEntrySnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RecipeLayoutSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RecipeOutputSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RecipeProcessingSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RecipeReference.java',
+        'engine-core/src/main/java/dev/openallay/context/RecipeSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RegistryEntrySnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/RegistrySnapshot.java',
+        'engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java',
+        'engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java',
+        'engine-core/src/main/java/dev/openallay/json/EngineJson.java',
+        'engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java',
+        'engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeCanonicalizer.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeCatalogDiagnostic.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeProviderDiagnostic.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeProviderSnapshot.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeProviderState.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeSemanticGroup.java',
+        'engine-core/src/main/java/dev/openallay/recipe/RecipeUnlockState.java',
+        'engine-core/src/main/java/dev/openallay/util/Java8Collections.java',
+        'engine-core/src/main/java/dev/openallay/util/Java8Hex.java',
+        'engine-core/src/main/java/dev/openallay/util/Java8Strings.java',
+        'engine-core/src/main/java/dev/openallay/value/ValueSchema.java',
+        'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java',
+        'engine-core/src/main/java/dev/openallay/value/ValueType.java',
+        'engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java',
+        'engine-core/src/main/java/dev/openallay/world/WorldPosition.java',
+        'runtime-json/src/main/java/dev/openallay/json/JsonReaders.java',
+        'runtime-json/src/main/java/dev/openallay/json/JsonTrees.java']
+def reporter = new File(repo, 'engine-core/src/worldObservationJava8Test/java/dev/openallay/world/WorldObservationJava8Fixture.java')
+sourceSets.main.java.setSrcDirs([new File(repo, 'engine-core/src/main/java'), new File(repo, 'runtime-json/src/main/java'), reporter.parentFile])
+sourceSets.main.java.setIncludes([
+        'dev/openallay/context/BlockPositionSnapshot.java',
+        'dev/openallay/context/CallerKind.java',
+        'dev/openallay/context/CallerSnapshot.java',
+        'dev/openallay/context/ContextMetrics.java',
+        'dev/openallay/context/ContextValidation.java',
+        'dev/openallay/context/DataAuthority.java',
+        'dev/openallay/context/DataCompleteness.java',
+        'dev/openallay/context/EvidenceMetadata.java',
+        'dev/openallay/context/FluidRequirementSnapshot.java',
+        'dev/openallay/context/IngredientAlternativeSnapshot.java',
+        'dev/openallay/context/IngredientRequirementSnapshot.java',
+        'dev/openallay/context/InventorySlotSnapshot.java',
+        'dev/openallay/context/InventorySnapshot.java',
+        'dev/openallay/context/ItemStackSnapshot.java',
+        'dev/openallay/context/PlayerSnapshot.java',
+        'dev/openallay/context/RecipeEntrySnapshot.java',
+        'dev/openallay/context/RecipeLayoutSnapshot.java',
+        'dev/openallay/context/RecipeOutputSnapshot.java',
+        'dev/openallay/context/RecipeProcessingSnapshot.java',
+        'dev/openallay/context/RecipeReference.java',
+        'dev/openallay/context/RecipeSnapshot.java',
+        'dev/openallay/context/RegistryEntrySnapshot.java',
+        'dev/openallay/context/RegistrySnapshot.java',
+        'dev/openallay/context/ToolInvocationContext.java',
+        'dev/openallay/context/game/ObservableGameStateSnapshot.java',
+        'dev/openallay/json/ConstructorValueJsonAdapter.java',
+        'dev/openallay/json/EngineJson.java',
+        'dev/openallay/json/RecordJsonAdapter.java',
+        'dev/openallay/platform/InstalledModMetadata.java',
+        'dev/openallay/recipe/RecipeCanonicalizer.java',
+        'dev/openallay/recipe/RecipeCatalogDiagnostic.java',
+        'dev/openallay/recipe/RecipeProviderDiagnostic.java',
+        'dev/openallay/recipe/RecipeProviderSnapshot.java',
+        'dev/openallay/recipe/RecipeProviderState.java',
+        'dev/openallay/recipe/RecipeSemanticGroup.java',
+        'dev/openallay/recipe/RecipeUnlockState.java',
+        'dev/openallay/util/Java8Collections.java',
+        'dev/openallay/util/Java8Hex.java',
+        'dev/openallay/util/Java8Strings.java',
+        'dev/openallay/value/ValueSchema.java',
+        'dev/openallay/value/ValueSchemas.java',
+        'dev/openallay/value/ValueType.java',
+        'dev/openallay/world/WorldFocusObservation.java',
+        'dev/openallay/world/WorldPosition.java',
+        'dev/openallay/json/JsonReaders.java',
+        'dev/openallay/json/JsonTrees.java',
+        'WorldObservationJava8Fixture.java'])
+dependencies { implementation('com.google.code.gson:gson:2.8.0') }
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+def gsonVersion = providers.gradleProperty('observationGsonVersion').getOrElse('2.8.0')
+configurations.runtimeClasspath.resolutionStrategy.force("com.google.code.gson:gson:${gsonVersion}")
+tasks.register('java8WorldObservationTest', JavaExec) {
+    dependsOn('classes'); mainClass = 'dev.openallay.world.WorldObservationJava8Fixture'; args('java8')
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    doFirst { standardOutput = new ByteArrayOutputStream() }
+    doLast {
+        def report = layout.buildDirectory.file('observation-java8.txt').get().asFile
+        report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        if (!providers.gradleProperty('originalObservationReport').isPresent()) throw new GradleException('Original canonical report is required')
+        if (!java.util.Arrays.equals(file(providers.gradleProperty('originalObservationReport').get()).bytes, report.bytes)) {
+            throw new GradleException('Original canonical modern observation vs genuineJava8 report differs')
+        }
+    }
+}
+if (providers.gradleProperty('originalObservationSourceRoot').isPresent()) {
+    def original = file(providers.gradleProperty('originalObservationSourceRoot').get())
+    tasks.register('compileOriginalObservation', JavaCompile) {
+        source = files(productionPaths.collect { new File(original, it) }, reporter)
+        classpath = configurations.compileClasspath; destinationDirectory = layout.buildDirectory.dir('original-classes')
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+        options.release = 17; options.encoding = 'UTF-8'
+    }
+    tasks.register('originalObservationOracle', JavaExec) {
+        dependsOn('compileOriginalObservation'); mainClass = 'dev.openallay.world.WorldObservationJava8Fixture'
+        classpath = files(tasks.named('compileOriginalObservation').flatMap { it.destinationDirectory }) + configurations.runtimeClasspath
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+        doFirst { standardOutput = new ByteArrayOutputStream() }
+        doLast {
+            def report = layout.buildDirectory.file('observation-original-modern.txt').get().asFile
+            report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        }
+    }
+}
