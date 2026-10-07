@@ -15,7 +15,7 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     private final List<AgentToolExecutor> delegates;
 
     public CompositeAgentToolExecutor(List<? extends AgentToolExecutor> delegates) {
-        this.delegates = List.copyOf(delegates);
+        this.delegates = dev.openallay.util.Java8Collections.listCopyOf(delegates);
     }
 
     @Override
@@ -30,7 +30,7 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
                 definitions.add(definition);
             }
         }
-        return List.copyOf(definitions);
+        return dev.openallay.util.Java8Collections.listCopyOf(definitions);
     }
 
     @Override
@@ -110,7 +110,7 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     @Override
     public String skillManifest(String correlationId) {
         return delegates.stream().map(delegate -> delegate.skillManifest(correlationId))
-                .filter(text -> !text.isBlank()).collect(java.util.stream.Collectors.joining("\n"));
+                .filter(text -> !dev.openallay.util.Java8Strings.isBlank(text)).collect(java.util.stream.Collectors.joining("\n"));
     }
 
     @Override

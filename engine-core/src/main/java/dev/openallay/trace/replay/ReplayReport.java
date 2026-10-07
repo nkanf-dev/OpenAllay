@@ -12,7 +12,7 @@ public final class ReplayReport {
     private final String error;
     public ReplayReport(String traceId, boolean passed, List<ReplayStepReport> steps, ReplayMetrics metrics, String error) {
 
-        steps = List.copyOf(steps);
+        steps = dev.openallay.util.Java8Collections.listCopyOf(steps);
 
         this.traceId = traceId;
         this.passed = passed;
@@ -55,7 +55,7 @@ public List<String> chatLines() {
         if (error != null) {
             lines.add("ERROR " + error);
         }
-        return List.copyOf(lines);
+        return dev.openallay.util.Java8Collections.listCopyOf(lines);
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

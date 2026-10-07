@@ -7,7 +7,7 @@ public final class BenchmarkReport {
     private final List<CaseReport> cases;
     public BenchmarkReport(List<CaseReport> cases) {
 
-        cases = List.copyOf(cases);
+        cases = dev.openallay.util.Java8Collections.listCopyOf(cases);
 
         this.cases = cases;
     }
@@ -26,7 +26,7 @@ public static final class CaseReport {
     public CaseReport(String caseId, int attempts, int successes, double successProbability, double averageModelTurns, double medianModelTurns, double averageToolCalls, double medianToolCalls, List<AttemptReport> attemptReports) {
 
             caseId = require(caseId);
-            attemptReports = List.copyOf(attemptReports);
+            attemptReports = dev.openallay.util.Java8Collections.listCopyOf(attemptReports);
             if (attempts != attemptReports.size()) {
                 throw new IllegalArgumentException(
                         "attempt count must match retained attempt reports");
@@ -58,10 +58,10 @@ public static final class CaseReport {
     public double medianToolCalls() { return medianToolCalls; }
     public List<AttemptReport> attemptReports() { return attemptReports; }
 public List<BenchmarkMetrics> metrics() {
-            return attemptReports.stream().map(AttemptReport::metrics).toList();
+            return dev.openallay.util.Java8Collections.toList(attemptReports.stream().map(AttemptReport::metrics));
         }
 public List<String> diagnostics() {
-            return attemptReports.stream().map(AttemptReport::diagnostic).toList();
+            return dev.openallay.util.Java8Collections.toList(attemptReports.stream().map(AttemptReport::diagnostic));
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -159,7 +159,7 @@ public enum FailureKind {
         MODEL_TURN_BUDGET
     }
 private static String require(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException("value must not be blank");
         }
         return value;

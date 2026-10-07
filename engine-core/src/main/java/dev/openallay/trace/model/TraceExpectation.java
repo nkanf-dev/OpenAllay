@@ -21,7 +21,7 @@ public final class TraceExpectation {
             throw new IllegalArgumentException("Exact and contains expectations require value");
         }
         if (match == ExpectationMatch.SCHEMA
-                && (outputType == null || outputType.isBlank())) {
+                && (outputType == null || dev.openallay.util.Java8Strings.isBlank(outputType))) {
             throw new IllegalArgumentException("Schema expectations require outputType");
         }
 

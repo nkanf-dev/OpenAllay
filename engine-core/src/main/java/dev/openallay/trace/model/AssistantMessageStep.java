@@ -5,7 +5,7 @@ public final class AssistantMessageStep implements TraceStep {
     private final String content;
     public AssistantMessageStep(String content) {
 
-        if (content == null || content.isBlank()) {
+        if (content == null || dev.openallay.util.Java8Strings.isBlank(content)) {
             throw new IllegalArgumentException("Assistant message content must not be blank");
         }
 

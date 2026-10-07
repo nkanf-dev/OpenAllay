@@ -11,10 +11,10 @@ public final class ToolRegistry {
 
     public synchronized void register(
             String providerId, Collection<? extends Tool<?, ?>> newTools) {
-        if (providerId == null || providerId.isBlank()) {
+        if (providerId == null || dev.openallay.util.Java8Strings.isBlank(providerId)) {
             throw new IllegalArgumentException("Provider id must not be blank");
         }
-        List<? extends Tool<?, ?>> snapshot = List.copyOf(newTools);
+        List<? extends Tool<?, ?>> snapshot = dev.openallay.util.Java8Collections.listCopyOf(newTools);
         for (Tool<?, ?> tool : snapshot) {
             RegisteredTool existing = tools.get(tool.descriptor().id());
             if (existing != null) {
@@ -37,13 +37,12 @@ public final class ToolRegistry {
     }
 
     public synchronized List<ToolDescriptor<?, ?>> descriptors() {
-        return tools.values().stream()
-                .<ToolDescriptor<?, ?>>map(value -> value.tool().descriptor())
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(tools.values().stream()
+                .<ToolDescriptor<?, ?>>map(value -> value.tool().descriptor()));
     }
 
     /** Returns a detached, stable-ID-ordered view of the authoritative registrations. */
     public synchronized List<RegisteredTool> registrations() {
-        return tools.values().stream().toList();
+        return dev.openallay.util.Java8Collections.toList(tools.values().stream());
     }
 }

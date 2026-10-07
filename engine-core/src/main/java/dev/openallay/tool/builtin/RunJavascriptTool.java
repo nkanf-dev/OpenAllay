@@ -52,7 +52,7 @@ public static final class Input {
     @ToolDescription("Short description in the player's language of what this call intends to do, not a result or success claim. Include on every new call.") @ToolOptional private final String description;
     public Input(String source, List<String> handles, String title, String description) {
 
-            handles = handles == null ? List.of() : List.copyOf(handles);
+            handles = handles == null ? dev.openallay.util.Java8Collections.listOf() : dev.openallay.util.Java8Collections.listCopyOf(handles);
 
         this.source = source;
         this.handles = handles;
@@ -108,12 +108,12 @@ public static final class Output implements WorkspaceModelFacingToolOutput, dev.
     private final List<dev.openallay.model.image.ImageReference> images;
     public Output(String handle, String resultType, long cardinality, List<String> fields, JsonElement preview, String modelText, JavascriptSemanticKind viewKind, boolean complete, int omittedRows, int omittedFields, dev.openallay.tool.ModelResultView modelView, long elapsedMillis, List<String> modules, List<dev.openallay.context.SourceObservation> sources, List<dev.openallay.model.image.ImageReference> images) {
 
-            fields = List.copyOf(fields);
+            fields = dev.openallay.util.Java8Collections.listCopyOf(fields);
             preview = dev.openallay.json.JsonTrees.copy(preview);
             java.util.Objects.requireNonNull(viewKind, "viewKind");
-            modules = List.copyOf(modules);
-            sources = List.copyOf(sources);
-            images = List.copyOf(images);
+            modules = dev.openallay.util.Java8Collections.listCopyOf(modules);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
+            images = dev.openallay.util.Java8Collections.listCopyOf(images);
 
         this.handle = handle;
         this.resultType = resultType;
@@ -150,7 +150,7 @@ public Output(String handle, String resultType, long cardinality, List<String> f
                 int omittedRows, int omittedFields, dev.openallay.tool.ModelResultView modelView,
                 long elapsedMillis, List<String> modules, List<dev.openallay.context.SourceObservation> sources) {
             this(handle, resultType, cardinality, fields, preview, modelText, viewKind, complete,
-                    omittedRows, omittedFields, modelView, elapsedMillis, modules, sources, List.of());
+                    omittedRows, omittedFields, modelView, elapsedMillis, modules, sources, dev.openallay.util.Java8Collections.listOf());
         }
 
         public JsonElement preview() {
@@ -204,15 +204,11 @@ public Output(String handle, String resultType, long cardinality, List<String> f
             Input.class,
             Output.class,
             ToolAccess.EXPERIMENTAL_ACTION,
-            Set.of(
-                    ContextCapability.REGISTRIES,
-                    ContextCapability.RECIPES,
-                    ContextCapability.PLAYER,
-                    ContextCapability.OBSERVABLE_GAME_STATE));
+            dev.openallay.util.Java8Collections.setOf(ContextCapability.REGISTRIES, ContextCapability.RECIPES, ContextCapability.PLAYER, ContextCapability.OBSERVABLE_GAME_STATE));
     /** Display intent cannot make identical execution arguments appear to be a new operation. */
     public static JsonObject executionArguments(JsonObject arguments) {
         JsonObject execution = dev.openallay.json.JsonTrees.copy(arguments);
-        for (String field : List.of("title", "description")) {
+        for (String field : dev.openallay.util.Java8Collections.listOf("title", "description")) {
             JsonElement value = execution.get(field);
             if (value != null && !value.isJsonNull()
                     && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())) {
@@ -320,7 +316,7 @@ public Output(String handle, String resultType, long cardinality, List<String> f
     @Override
     public CompletableFuture<ToolResult<Output>> invokeAsync(
             ToolInvocationContext context, Input input, CancellationSignal cancellation) {
-        if (input == null || input.source() == null || input.source().isBlank()) {
+        if (input == null || input.source() == null || dev.openallay.util.Java8Strings.isBlank(input.source())) {
             return CompletableFuture.completedFuture(
                     new ToolResult.Failure<>("invalid_tool_arguments", "source must not be blank"));
         }
@@ -330,7 +326,7 @@ public Output(String handle, String resultType, long cardinality, List<String> f
             scope = extensions == null ? null
                     : extensions.prepareJavascriptInvocation(context, cancellation);
         } catch (RuntimeException failure) {
-            return CompletableFuture.failedFuture(failure);
+            return dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         CompletableFuture<ToolResult<Output>> future = new CompletableFuture<>();
         java.util.concurrent.atomic.AtomicBoolean settled = new java.util.concurrent.atomic.AtomicBoolean();
@@ -425,7 +421,7 @@ public Output(String handle, String resultType, long cardinality, List<String> f
                                 : "minecraft:observed_command_feedback",
                         context.player().map(value -> value.evidence().gameVersion()).orElse("unknown"),
                         context.player().map(value -> value.evidence().loader()).orElse("unknown"),
-                        Map.of("openallay:scope", kind)),
+                        dev.openallay.util.Java8Collections.mapOf("openallay:scope", kind)),
                 data::recordEvidence);
         List<dev.openallay.model.image.ImageReference> capturedImages = new java.util.ArrayList<>();
         java.util.Optional<dev.openallay.world.JavascriptWorldBridge> worldBridge = worldObservations.bridge(

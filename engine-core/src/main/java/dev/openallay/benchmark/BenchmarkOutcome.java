@@ -15,7 +15,7 @@ public final class BenchmarkOutcome {
         canonicalResult = canonicalResult == null
                 ? JsonNull.INSTANCE
                 : dev.openallay.json.JsonTrees.copy(canonicalResult);
-        observedEffects = List.copyOf(observedEffects);
+        observedEffects = dev.openallay.util.Java8Collections.listCopyOf(observedEffects);
         Objects.requireNonNull(metrics, "metrics");
 
         this.canonicalResult = canonicalResult;

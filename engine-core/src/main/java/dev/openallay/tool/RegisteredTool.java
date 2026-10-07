@@ -9,7 +9,7 @@ public final class RegisteredTool {
     private final Tool<?, ?> tool;
     public RegisteredTool(String providerId, Tool<?, ?> tool) {
 
-        if (providerId == null || providerId.isBlank()) {
+        if (providerId == null || dev.openallay.util.Java8Strings.isBlank(providerId)) {
             throw new IllegalArgumentException("Provider id must not be blank");
         }
         Objects.requireNonNull(tool, "tool");

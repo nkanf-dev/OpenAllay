@@ -22,7 +22,7 @@ public final class BenchmarkRunner {
             Executor executor) {
         Objects.requireNonNull(executor, "executor");
         ArrayList<BenchmarkReport.CaseReport> reports = new ArrayList<>();
-        for (BenchmarkCase testCase : List.copyOf(cases)) {
+        for (BenchmarkCase testCase : dev.openallay.util.Java8Collections.listCopyOf(cases)) {
             ArrayList<BenchmarkReport.AttemptReport> attemptReports = new ArrayList<>();
             int successes = 0;
             long modelTurns = 0;
@@ -55,15 +55,13 @@ public final class BenchmarkRunner {
                     successes,
                     successes / (double) attempts,
                     modelTurns / (double) attempts,
-                    median(attemptReports.stream()
+                    median(dev.openallay.util.Java8Collections.toList(attemptReports.stream()
                             .map(BenchmarkReport.AttemptReport::metrics)
-                            .map(BenchmarkMetrics::modelTurns)
-                            .toList()),
+                            .map(BenchmarkMetrics::modelTurns))),
                     toolCalls / (double) attempts,
-                    median(attemptReports.stream()
+                    median(dev.openallay.util.Java8Collections.toList(attemptReports.stream()
                             .map(BenchmarkReport.AttemptReport::metrics)
-                            .map(BenchmarkMetrics::toolCalls)
-                            .toList()),
+                            .map(BenchmarkMetrics::toolCalls))),
                     attemptReports));
         }
         return new BenchmarkReport(reports);
@@ -91,7 +89,7 @@ public final class BenchmarkRunner {
             BenchmarkVerifier.Verification verification) {
         return switch (failureKind) {
             case NONE -> "";
-            case RUNTIME_TERMINAL -> outcome.metrics().terminalCode().isBlank()
+            case RUNTIME_TERMINAL -> dev.openallay.util.Java8Strings.isBlank(outcome.metrics().terminalCode())
                     ? "runtime terminal failure"
                     : "runtime terminal: " + outcome.metrics().terminalCode();
             case VERIFICATION -> verification.diagnostic();
@@ -100,7 +98,7 @@ public final class BenchmarkRunner {
     }
 
     private static double median(List<Integer> values) {
-        List<Integer> ordered = values.stream().sorted().toList();
+        List<Integer> ordered = dev.openallay.util.Java8Collections.toList(values.stream().sorted());
         int middle = ordered.size() / 2;
         return ordered.size() % 2 == 1
                 ? ordered.get(middle)

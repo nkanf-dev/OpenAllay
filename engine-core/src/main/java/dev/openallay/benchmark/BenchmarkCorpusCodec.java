@@ -10,19 +10,11 @@ import java.util.Set;
 /** Strict benchmark corpus codec. */
 public final class BenchmarkCorpusCodec {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("cases");
+            dev.openallay.util.Java8Collections.setOf("cases");
     private static final Set<String> CASE_FIELDS =
-            Set.of(
-                    "id",
-                    "category",
-                    "prompt",
-                    "fixture",
-                    "requiredCapabilities",
-                    "attempts",
-                    "maxModelTurns",
-                    "verifier");
+            dev.openallay.util.Java8Collections.setOf("id", "category", "prompt", "fixture", "requiredCapabilities", "attempts", "maxModelTurns", "verifier");
     private static final Set<String> VERIFIER_FIELDS =
-            Set.of("kind", "path", "expected", "contains");
+            dev.openallay.util.Java8Collections.setOf("kind", "path", "expected", "contains");
 
     public BenchmarkCorpus decode(Reader reader) {
         JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
@@ -113,7 +105,7 @@ public final class BenchmarkCorpusCodec {
             }
             values.add(value.getAsString());
         });
-        return List.copyOf(values);
+        return dev.openallay.util.Java8Collections.listCopyOf(values);
     }
 
     private static IllegalArgumentException invalid(String message) {

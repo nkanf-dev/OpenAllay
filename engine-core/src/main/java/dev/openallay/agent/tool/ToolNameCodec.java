@@ -29,8 +29,8 @@ public final class ToolNameCodec {
             }
             forward.put(id, encoded);
         }
-        encodedById = Map.copyOf(forward);
-        idByAlias = Map.copyOf(aliases);
+        encodedById = dev.openallay.util.Java8Collections.mapCopyOf(forward);
+        idByAlias = dev.openallay.util.Java8Collections.mapCopyOf(aliases);
     }
 
     public String encode(String toolId) {

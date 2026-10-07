@@ -20,8 +20,8 @@ public final class BenchmarkCase {
         category = nonBlank(category, "category");
         prompt = nonBlank(prompt, "prompt");
         fixture = nonBlank(fixture, "fixture");
-        requiredCapabilities = List.copyOf(requiredCapabilities);
-        if (requiredCapabilities.stream().anyMatch(value -> value == null || value.isBlank())) {
+        requiredCapabilities = dev.openallay.util.Java8Collections.listCopyOf(requiredCapabilities);
+        if (requiredCapabilities.stream().anyMatch(value -> value == null || dev.openallay.util.Java8Strings.isBlank(value))) {
             throw new IllegalArgumentException("requiredCapabilities must not contain blanks");
         }
         if (new java.util.HashSet<>(requiredCapabilities).size()
@@ -57,7 +57,7 @@ public BenchmarkCase(
             int attempts,
             int maxModelTurns,
             Verifier verifier) {
-        this(id, category, prompt, "unit", List.of(), attempts, maxModelTurns, verifier);
+        this(id, category, prompt, "unit", dev.openallay.util.Java8Collections.listOf(), attempts, maxModelTurns, verifier);
     }
 public boolean applicableTo(String fixtureId, java.util.Set<String> capabilities) {
         Objects.requireNonNull(capabilities, "capabilities");
@@ -83,15 +83,15 @@ public static final class Verifier {
     public Verifier(Kind kind, String path, JsonElement expected, String contains) {
 
             Objects.requireNonNull(kind, "kind");
-            path = path == null ? "" : path.strip();
+            path = path == null ? "" : dev.openallay.util.Java8Strings.strip(path);
             expected = expected == null ? null : dev.openallay.json.JsonTrees.copy(expected);
             contains = contains == null ? "" : contains;
-            if (kind == Kind.JSON_PATH_EQUALS && (path.isBlank() || expected == null)) {
+            if (kind == Kind.JSON_PATH_EQUALS && (dev.openallay.util.Java8Strings.isBlank(path) || expected == null)) {
                 throw new IllegalArgumentException(
                         "json_path_equals requires path and expected");
             }
             if ((kind == Kind.ANSWER_CONTAINS || kind == Kind.EFFECT_CONTAINS)
-                    && contains.isBlank()) {
+                    && dev.openallay.util.Java8Strings.isBlank(contains)) {
                 throw new IllegalArgumentException(kind + " requires contains");
             }
 
@@ -136,7 +136,7 @@ public enum Kind {
         NON_EMPTY_RESULT
     }
 private static String nonBlank(String value, String field) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return value;

@@ -16,11 +16,11 @@ public final class BenchmarkSelector {
             Set<String> requestedCaseIds,
             int attempts) {
         Objects.requireNonNull(corpus, "corpus");
-        if (fixtureId == null || fixtureId.isBlank()) {
+        if (fixtureId == null || dev.openallay.util.Java8Strings.isBlank(fixtureId)) {
             throw new IllegalArgumentException("fixtureId must not be blank");
         }
-        Set<String> availableCapabilities = Set.copyOf(capabilities);
-        Set<String> requested = Set.copyOf(requestedCaseIds);
+        Set<String> availableCapabilities = dev.openallay.util.Java8Collections.setCopyOf(capabilities);
+        Set<String> requested = dev.openallay.util.Java8Collections.setCopyOf(requestedCaseIds);
         if (attempts <= 0) {
             throw new IllegalArgumentException("attempts must be positive");
         }
@@ -40,10 +40,9 @@ public final class BenchmarkSelector {
             if (!requested.isEmpty() && !requested.contains(testCase.id())) {
                 continue;
             }
-            List<String> missing = testCase.requiredCapabilities().stream()
+            List<String> missing = dev.openallay.util.Java8Collections.toList(testCase.requiredCapabilities().stream()
                     .filter(capability -> !availableCapabilities.contains(capability))
-                    .sorted()
-                    .toList();
+                    .sorted());
             if (!testCase.fixture().equals(fixtureId)) {
                 skipped.add(new SkippedCase(
                         testCase.id(),
@@ -81,14 +80,14 @@ public static final class SkippedCase {
     private final List<String> missingCapabilities;
     public SkippedCase(String caseId, String requiredFixture, SkipReason reason, List<String> missingCapabilities) {
 
-            if (caseId == null || caseId.isBlank()) {
+            if (caseId == null || dev.openallay.util.Java8Strings.isBlank(caseId)) {
                 throw new IllegalArgumentException("caseId must not be blank");
             }
-            if (requiredFixture == null || requiredFixture.isBlank()) {
+            if (requiredFixture == null || dev.openallay.util.Java8Strings.isBlank(requiredFixture)) {
                 throw new IllegalArgumentException("requiredFixture must not be blank");
             }
             Objects.requireNonNull(reason, "reason");
-            missingCapabilities = List.copyOf(missingCapabilities);
+            missingCapabilities = dev.openallay.util.Java8Collections.listCopyOf(missingCapabilities);
 
         this.caseId = caseId;
         this.requiredFixture = requiredFixture;
@@ -128,8 +127,8 @@ public static final class Selection {
     private final List<SkippedCase> skipped;
     public Selection(List<BenchmarkCase> selected, List<SkippedCase> skipped) {
 
-            selected = List.copyOf(selected);
-            skipped = List.copyOf(skipped);
+            selected = dev.openallay.util.Java8Collections.listCopyOf(selected);
+            skipped = dev.openallay.util.Java8Collections.listCopyOf(skipped);
 
         this.selected = selected;
         this.skipped = skipped;

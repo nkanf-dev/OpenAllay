@@ -24,7 +24,7 @@ public static final class TraceSource {
     private final ReaderOpener opener;
     public TraceSource(String name, ReaderOpener opener) {
 
-            if (name == null || name.isBlank()) {
+            if (name == null || dev.openallay.util.Java8Strings.isBlank(name)) {
                 throw new IllegalArgumentException("Trace source name must not be blank");
             }
             Objects.requireNonNull(opener, "opener");
@@ -60,13 +60,13 @@ public static final class LoadedTraces {
     private final Map<String, AgentTrace> traces;
     public LoadedTraces(Map<String, AgentTrace> traces) {
 
-            traces = Map.copyOf(new TreeMap<>(traces));
+            traces = dev.openallay.util.Java8Collections.mapCopyOf(new TreeMap<>(traces));
 
         this.traces = traces;
     }
     public Map<String, AgentTrace> traces() { return traces; }
 public List<String> ids() {
-            return traces.keySet().stream().sorted().toList();
+            return dev.openallay.util.Java8Collections.toList(traces.keySet().stream().sorted());
         }
 public Optional<AgentTrace> find(String id) {
             return Optional.ofNullable(traces.get(id));
@@ -99,9 +99,8 @@ public Optional<AgentTrace> find(String id) {
 
     public ToolResult<LoadedTraces> load(Collection<TraceSource> sources) {
         TreeMap<String, AgentTrace> traces = new TreeMap<>();
-        for (TraceSource source : sources.stream()
-                .sorted(java.util.Comparator.comparing(TraceSource::name))
-                .toList()) {
+        for (TraceSource source : dev.openallay.util.Java8Collections.toList(sources.stream()
+                .sorted(java.util.Comparator.comparing(TraceSource::name)))) {
             String filenameId;
             try {
                 filenameId = filenameId(source.name());

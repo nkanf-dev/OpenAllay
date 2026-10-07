@@ -28,12 +28,12 @@ import java.util.Set;
 
 public final class TraceParser {
     private static final Set<String> TRACE_FIELDS =
-            Set.of("id", "userMessage", "requiredContext", "steps");
+            dev.openallay.util.Java8Collections.setOf("id", "userMessage", "requiredContext", "steps");
     private static final Set<String> TOOL_STEP_FIELDS =
-            Set.of("type", "tool", "arguments", "expect");
-    private static final Set<String> MESSAGE_STEP_FIELDS = Set.of("type", "content");
+            dev.openallay.util.Java8Collections.setOf("type", "tool", "arguments", "expect");
+    private static final Set<String> MESSAGE_STEP_FIELDS = dev.openallay.util.Java8Collections.setOf("type", "content");
     private static final Set<String> EXPECTATION_FIELDS =
-            Set.of("status", "match", "value", "outputType");
+            dev.openallay.util.Java8Collections.setOf("status", "match", "value", "outputType");
 
     public ToolResult<AgentTrace> parse(Reader source) {
         try {
@@ -47,7 +47,7 @@ public final class TraceParser {
         } catch (IOException | JsonParseException | IllegalArgumentException exception) {
             String message = exception.getMessage();
             return new ToolResult.Failure<>(
-                    "invalid_trace", message == null || message.isBlank() ? "Invalid trace" : message);
+                    "invalid_trace", message == null || dev.openallay.util.Java8Strings.isBlank(message) ? "Invalid trace" : message);
         }
     }
 
@@ -101,7 +101,7 @@ public final class TraceParser {
 
     private TraceExpectation parseExpectation(JsonObject object, String stepPath) {
         String path = stepPath + ".expect";
-        requireFields(object, path, EXPECTATION_FIELDS, Set.of("status", "match"));
+        requireFields(object, path, EXPECTATION_FIELDS, dev.openallay.util.Java8Collections.setOf("status", "match"));
         String status = requireString(object, "status", path);
         String matchName = requireString(object, "match", path);
         ExpectationMatch match;

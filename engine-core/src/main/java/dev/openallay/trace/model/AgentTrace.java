@@ -15,11 +15,11 @@ public final class AgentTrace {
         if (id == null || !id.matches("[a-z0-9][a-z0-9_.-]*")) {
             throw new IllegalArgumentException("Invalid trace id: " + id);
         }
-        if (userMessage == null || userMessage.isBlank()) {
+        if (userMessage == null || dev.openallay.util.Java8Strings.isBlank(userMessage)) {
             throw new IllegalArgumentException("userMessage must not be blank");
         }
-        requiredContext = Set.copyOf(requiredContext);
-        steps = List.copyOf(steps);
+        requiredContext = dev.openallay.util.Java8Collections.setCopyOf(requiredContext);
+        steps = dev.openallay.util.Java8Collections.listCopyOf(steps);
         if (steps.isEmpty()) {
             throw new IllegalArgumentException("Trace must contain at least one step");
         }

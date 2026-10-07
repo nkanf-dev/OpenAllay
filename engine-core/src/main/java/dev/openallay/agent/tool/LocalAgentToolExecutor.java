@@ -30,23 +30,22 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     public LocalAgentToolExecutor(ToolRegistry tools, Gson gson) {
         this(ToolRuntimeCatalog.from(
-                Objects.requireNonNull(tools, "tools").registrations(), Set.of()), gson);
+                Objects.requireNonNull(tools, "tools").registrations(), dev.openallay.util.Java8Collections.setOf()), gson);
     }
 
     public LocalAgentToolExecutor(ToolRuntimeCatalog tools, Gson gson) {
         this.tools = Objects.requireNonNull(tools, "tools");
         this.gson = dev.openallay.json.EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
         List<ToolDescriptor<?, ?>> descriptors = tools.descriptors();
-        names = new ToolNameCodec(descriptors.stream().map(ToolDescriptor::id).toList());
+        names = new ToolNameCodec(dev.openallay.util.Java8Collections.toList(descriptors.stream().map(ToolDescriptor::id)));
         arguments = new ToolArgumentCodec(gson);
         normalizer = new ToolResultNormalizer(gson);
         ToolSchemaGenerator schemas = new ToolSchemaGenerator();
-        definitions = descriptors.stream()
+        definitions = dev.openallay.util.Java8Collections.toList(descriptors.stream()
                 .map(descriptor -> new ModelToolDefinition(
                         names.encode(descriptor.id()),
                         descriptor.description(),
-                        schemas.generate(descriptor.inputType())))
-                .toList();
+                        schemas.generate(descriptor.inputType()))));
     }
 
     @Override
@@ -95,7 +94,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                                 String message = cause.getMessage();
                                 result = new ToolResult.Failure<>(
                                         "tool_failure",
-                                        message == null || message.isBlank()
+                                        message == null || dev.openallay.util.Java8Strings.isBlank(message)
                                                 ? cause.getClass().getSimpleName()
                                                 : message);
                             }
@@ -110,7 +109,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                                     source,
                                     result instanceof ToolResult.Success<?> succeeded
                                             && succeeded.value() instanceof ModelImageToolOutput visual
-                                            ? visual.images() : List.of());
+                                            ? visual.images() : dev.openallay.util.Java8Collections.listOf());
                         });
             }
             JsonObject normalized = normalizer.normalize(decoded, tool.descriptor().outputType());
@@ -119,7 +118,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                     normalized,
                     true));
         } catch (RuntimeException exception) {
-            return CompletableFuture.failedFuture(exception);
+            return dev.openallay.util.Java8Futures.failedFuture(exception);
         }
     }
 
@@ -139,7 +138,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
         try {
             return tool.invokeAsync(context, (I) rawInput, cancellation);
         } catch (RuntimeException exception) {
-            return CompletableFuture.failedFuture(exception);
+            return dev.openallay.util.Java8Futures.failedFuture(exception);
         }
     }
 
@@ -210,7 +209,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
         return tools.registrations().stream().map(registration -> registration.tool())
                 .filter(dev.openallay.skill.LoadSkillTool.class::isInstance)
                 .map(dev.openallay.skill.LoadSkillTool.class::cast)
-                .map(skill -> skill.manifest(correlationId)).filter(text -> !text.isBlank())
+                .map(skill -> skill.manifest(correlationId)).filter(text -> !dev.openallay.util.Java8Strings.isBlank(text))
                 .collect(java.util.stream.Collectors.joining("\n"));
     }
 

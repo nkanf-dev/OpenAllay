@@ -8,7 +8,7 @@ public final class BenchmarkCorpus {
     private final List<BenchmarkCase> cases;
     public BenchmarkCorpus(List<BenchmarkCase> cases) {
 
-        cases = List.copyOf(cases);
+        cases = dev.openallay.util.Java8Collections.listCopyOf(cases);
         HashSet<String> ids = new HashSet<>();
         for (BenchmarkCase testCase : cases) {
             if (!ids.add(testCase.id())) {

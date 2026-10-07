@@ -34,8 +34,8 @@ public final class AgentBenchmarkRecorder implements Consumer<AgentEvent> {
     }
 
     public synchronized void effect(String effect) {
-        if (effect != null && !effect.isBlank()) {
-            effects.add(effect.strip());
+        if (effect != null && !dev.openallay.util.Java8Strings.isBlank(effect)) {
+            effects.add(dev.openallay.util.Java8Strings.strip(effect));
         }
     }
 
@@ -87,7 +87,7 @@ public final class AgentBenchmarkRecorder implements Consumer<AgentEvent> {
                 : result.errorCode() == null ? "failed" : result.errorCode();
         return new BenchmarkOutcome(
                 canonical,
-                List.copyOf(effects),
+                dev.openallay.util.Java8Collections.listCopyOf(effects),
                 new BenchmarkMetrics(
                         result.successful(),
                         modelTurns,

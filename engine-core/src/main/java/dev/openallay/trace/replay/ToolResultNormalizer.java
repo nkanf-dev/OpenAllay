@@ -33,7 +33,7 @@ public final class ToolResultNormalizer {
             normalized.add("value", canonicalize(gson.toJsonTree(success.value())));
             if (success.value() instanceof ModelFacingToolOutput projection) {
                 String text = projection.modelText();
-                if (text == null || text.isBlank()) {
+                if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) {
                     throw new IllegalArgumentException("Model-facing tool text must not be blank");
                 }
                 normalized.addProperty("modelText", text);

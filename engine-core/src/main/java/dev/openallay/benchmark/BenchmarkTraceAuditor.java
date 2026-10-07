@@ -106,7 +106,7 @@ public final class BenchmarkTraceAuditor {
                 .map(BenchmarkTraceAudit.Evidence::domain)
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toCollection(LinkedHashSet::new),
-                        List::copyOf));
+                        dev.openallay.util.Java8Collections::listCopyOf));
         BenchmarkTraceAudit.Disposition disposition =
                 domains.size() == 1
                         ? BenchmarkTraceAudit.Disposition.CONFIRMED
@@ -168,7 +168,7 @@ public final class BenchmarkTraceAuditor {
     }
 
     private static BenchmarkTraceAudit.RootCauseDomain domain(String code) {
-        if (code == null || code.isBlank() || "completed".equals(code)) {
+        if (code == null || dev.openallay.util.Java8Strings.isBlank(code) || "completed".equals(code)) {
             return BenchmarkTraceAudit.RootCauseDomain.UNRESOLVED;
         }
         if (code.startsWith("benchmark_") || code.startsWith("fixture_")) {
@@ -222,7 +222,7 @@ public static final class TraceRef {
     private final LiveAgentTrace trace;
     public TraceRef(String caseId, int attempt, LiveAgentTrace trace) {
 
-            if (caseId == null || caseId.isBlank() || attempt < 1) {
+            if (caseId == null || dev.openallay.util.Java8Strings.isBlank(caseId) || attempt < 1) {
                 throw new IllegalArgumentException("caseId and positive attempt are required");
             }
 

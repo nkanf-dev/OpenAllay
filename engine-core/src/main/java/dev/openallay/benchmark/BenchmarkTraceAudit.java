@@ -12,7 +12,7 @@ public final class BenchmarkTraceAudit {
     private final List<AttemptAudit> attempts;
     public BenchmarkTraceAudit(List<AttemptAudit> attempts) {
 
-        attempts = List.copyOf(attempts);
+        attempts = dev.openallay.util.Java8Collections.listCopyOf(attempts);
 
         this.attempts = attempts;
     }
@@ -28,14 +28,14 @@ public static final class AttemptAudit {
     private final List<Evidence> evidence;
     public AttemptAudit(String caseId, int attempt, BenchmarkReport.FailureKind failureKind, Disposition disposition, RootCauseDomain domain, String diagnostic, List<Evidence> evidence) {
 
-            if (caseId == null || caseId.isBlank() || attempt < 1) {
+            if (caseId == null || dev.openallay.util.Java8Strings.isBlank(caseId) || attempt < 1) {
                 throw new IllegalArgumentException("caseId and positive attempt are required");
             }
             java.util.Objects.requireNonNull(failureKind, "failureKind");
             java.util.Objects.requireNonNull(disposition, "disposition");
             java.util.Objects.requireNonNull(domain, "domain");
             diagnostic = diagnostic == null ? "" : diagnostic;
-            evidence = List.copyOf(evidence);
+            evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
             if ((disposition == Disposition.CONFIRMED)
                     != (domain != RootCauseDomain.UNRESOLVED)) {
                 throw new IllegalArgumentException(
@@ -92,7 +92,7 @@ public static final class Evidence {
     public Evidence(EvidenceSource source, String code, RootCauseDomain domain, int eventIndex, String toolId) {
 
             java.util.Objects.requireNonNull(source, "source");
-            if (code == null || code.isBlank()) {
+            if (code == null || dev.openallay.util.Java8Strings.isBlank(code)) {
                 throw new IllegalArgumentException("evidence code must not be blank");
             }
             java.util.Objects.requireNonNull(domain, "domain");
