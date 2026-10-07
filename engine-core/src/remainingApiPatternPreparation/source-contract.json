@@ -3529,6 +3529,10 @@
     {
       "path": "build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java",
       "sha256": "fda0d01ba3183a39bb5bf4b55bbfabcadf1f7111b2ee586c8893e4f0144383c4"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java",
+      "sha256": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c"
     }
   ],
   "runner_sha256": "b9933184a8ff1aee56a2a39b4a49b02d8fedb35b67a105ae3887055c3c5f04ae",
