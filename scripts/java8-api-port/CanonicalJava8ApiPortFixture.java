@@ -41,14 +41,14 @@ public final class CanonicalJava8ApiPortFixture {
                 List<String> copied=function.apply(list);
                 String referenceNull=thrown(()->function.apply(Arrays.asList("x",null)));
                 String referenceImmutable=thrown(()->copied.add("bad"));
-                java.util.function.Supplier<List<String>> empty=List::<String>of;
+                java.util.function.Supplier<List<String>> emptySupplier=List::<String>of;
                 List<String> optional=Optional.<List<String>>empty().orElseGet(List::of);
                 java.util.function.Supplier<List<Integer>> integerEmpty=List::of;
                 int[] lazyCalls={0};
-                java.util.function.Supplier<List<String>> lazy=()->{lazyCalls[0]++;return empty.get();};
+                java.util.function.Supplier<List<String>> lazy=()->{lazyCalls[0]++;return emptySupplier.get();};
                 List<String> present=Optional.of(list).orElseGet(lazy);
-                String supplierImmutable=thrown(()->empty.get().add("bad"));
-                System.out.println(list+":"+repeat+":"+order+":"+nullStream+":"+nullOf+":"+duplicateSet+":"+duplicateMap+":"+immutable+":"+copy+":"+snapshot.get("b")+":"+entries.get("c")+":"+whitespace+":"+lines+":"+hex+":"+seconds+":"+path+":"+empty+":"+failed.isCompletedExceptionally()+":"+new Custom().strip()+":"+nested+":"+copied+":"+referenceNull+":"+referenceImmutable+":"+empty.get()+":"+optional+":"+integerEmpty.get()+":"+(present==list)+":"+lazyCalls[0]+":"+supplierImmutable);
+                String supplierImmutable=thrown(()->emptySupplier.get().add("bad"));
+                System.out.println(list+":"+repeat+":"+order+":"+nullStream+":"+nullOf+":"+duplicateSet+":"+duplicateMap+":"+immutable+":"+copy+":"+snapshot.get("b")+":"+entries.get("c")+":"+whitespace+":"+lines+":"+hex+":"+seconds+":"+path+":"+empty+":"+failed.isCompletedExceptionally()+":"+new Custom().strip()+":"+nested+":"+copied+":"+referenceNull+":"+referenceImmutable+":"+emptySupplier.get()+":"+optional+":"+integerEmpty.get()+":"+(present==list)+":"+lazyCalls[0]+":"+supplierImmutable);
             }
         }
         """;
