@@ -41,7 +41,9 @@ def admitted(path, pins):
 admission = {"gson": admitted(args.gson, contract["dependency_pins"]["gson"]),
              "junit_console": admitted(args.junit_console, contract["dependency_pins"]["junit_console"])}
 converter = contract["converter"]
-assert sha((root / converter["path"]).read_bytes()) == converter["sha256"], "Accepted converter source differs"
+converter_blob = run(["git", "-C", root, "cat-file", "blob", converter["git_blob"]]).stdout
+assert sha(converter_blob) == converter["sha256"], "Accepted converter Git blob differs"
+assert run(["git", "-C", root, "rev-parse", converter["source_commit"] + ":" + converter["path"]]).stdout.decode().strip() == converter["git_blob"], "Accepted converter source-commit custody differs"
 for item in contract["support"] + contract["fixtures"]:
     assert sha((root / item["path"]).read_bytes()) == item["sha256"], "Actual support/fixture differs: " + item["path"]
 args.output.mkdir(parents=True, exist_ok=False)
@@ -60,7 +62,10 @@ for name, binary in [("java17", java17), ("java8", java8), ("javac8", javac8)]:
     result = run([binary, "-version"]); versions[name] = (result.stdout + result.stderr).decode()
 assert "1.8." in versions["java8"] and "1.8." in versions["javac8"], "Genuine Java8 compiler/runtime required"
 tools = args.output / "converter-classes"; tools.mkdir()
-run([javac17, "--release", "17", "-d", tools, root / converter["path"]])
+converter_source = args.output / "accepted-converter-source" / converter["path"]
+converter_source.parent.mkdir(parents=True, exist_ok=True)
+converter_source.write_bytes(converter_blob)
+run([javac17, "--release", "17", "-d", tools, converter_source])
 rows = ["\t".join([str(original / item["path"]), item["path"], item["pre_sha256"], item["record"]])
         for item in contract["owners"] if item["record"]]
 request = args.output / "converter-request.tsv"; request.write_text("\n".join(rows) + "\n")

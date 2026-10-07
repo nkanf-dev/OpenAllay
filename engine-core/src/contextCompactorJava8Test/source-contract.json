@@ -723,7 +723,10 @@
   ],
   "converter": {
     "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
-    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218"
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+    "git_blob": "e6a54f8a16270efbe788d74dbc5f7314fa99d6f1",
+    "source_commit": "2e553b9f548bd2cd4ffbf64ac91d58fa27f95dfb",
+    "custody_scope": "ExactacceptedbuildproofASTsourceonlyfromdurableGitblob, notruntimebranch or secondfeatureimplementation. Currentcheckouttoolmaychange independently; original11targetbytes remainexactreplayed."
   },
   "dependency_pins": {
     "gson": [
@@ -755,7 +758,7 @@
       }
     ]
   },
-  "runner_sha256": "7d39bbc14ac02490909a0dce8d1683d3d890db597eeec8965975b882f6fadebb",
+  "runner_sha256": "29416511eeb21aa4e74d83578cb381ee6f7908a2768f8c879e978ed9ebf49f5d",
   "format_policy": "Onlyblankline trailingwhitespacecleanup afteractualconverter+literalmechanicalops. Summarytextblock exactdedentednewlines retained. No hashinputnormalization.",
   "authority_policy": "Budget/losslabel/noinventedevidence, immutableoriginalcontext, summary-onlyobservedmodel attemptreceipt andcancellation/latepublication fences remainactualoriginalalgorithms.",
   "exact_format_correction": "OnlyProjection compactconstructor generatednonblankline trailingoneASCIIspace removed count1 afterrecordedAPIlowering; nobroadnonblanktrimming."
