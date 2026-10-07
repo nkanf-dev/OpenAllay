@@ -14,18 +14,32 @@ final class SemanticDependencyPackagingTest {
         Path root = repositoryRoot();
         String properties = Files.readString(root.resolve("gradle.properties"));
         assertTrue(properties.contains("commonmark_version=0.28.0"));
-        for (Path build : List.of(root.resolve("fabric/build.gradle"),
-                root.resolve("neoforge/build.gradle"))) {
-            String source = Files.readString(build);
-            int expected = build.toString().contains("neoforge") ? 2 : 1;
-            assertEquals(expected,
-                    occurrences(source, "org.commonmark:commonmark:${commonmark_version}"));
-            assertEquals(expected, occurrences(
-                    source,
-                    "org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}"));
-            assertEquals(expected, occurrences(
-                    source, "org.xerial:sqlite-jdbc:${sqlite_jdbc_version}"));
+        String engine = Files.readString(root.resolve("engine-core/build.gradle"));
+        String fabric = Files.readString(root.resolve("fabric/build.gradle"));
+        String fml = Files.readString(root.resolve("gradle/fml-loader.gradle"));
+        for (String loader : List.of("neoforge", "forge")) {
+            String source = Files.readString(root.resolve(loader + "/build.gradle"));
+            assertTrue(source.contains("apply from: rootProject.file('gradle/fml-loader.gradle')"), loader);
+            for (String module : modules()) assertEquals(0, occurrences(source, module), loader);
         }
+        for (String module : modules()) {
+            assertEquals(1, occurrences(engine, module), "one canonical engine dependency: " + module);
+            assertTrue(fabric.contains("implementation(include(\"" + module + "\"))"), module);
+            assertTrue(fml.contains("implementation(\"" + module + "\")"), module);
+            assertTrue(fml.contains("jarJar(\"" + module + "\")"), module);
+            assertEquals(1, occurrences(fabric, module), module);
+            assertEquals(2, occurrences(fml, module), module);
+        }
+        for (String source : List.of(fabric, fml)) {
+            assertTrue(source.contains("implementation(project(\":engine-core\"))"));
+            assertTrue(source.contains("from({ project(':engine-core').sourceSets.main.output })"));
+        }
+    }
+
+    private static List<String> modules() {
+        return List.of("org.commonmark:commonmark:${commonmark_version}",
+                "org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}",
+                "org.xerial:sqlite-jdbc:${sqlite_jdbc_version}");
     }
 
     private static Path repositoryRoot() {
