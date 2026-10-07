@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory]
         default: skills
         required: true
 permissions:
@@ -2000,3 +2000,45 @@ jobs:
           ${{ runner.temp }}/provider-custody-materialization/source-packet/manifest.json
 
           ${{ runner.temp }}/provider-custody-materialization/source-packet/historical-source-custody.json'
+
+  canonical-language-inventory:
+    if: inputs.scope == 'canonical-language-inventory'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Inventory actual full canonical source language forms without edits
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/canonical-classpath.json"
+
+        mkdir -p "$RUNNER_TEMP/canonical-inventory-tool"
+
+        "$JAVA_HOME_21_X64/bin/javac" --release 17 -encoding UTF-8 -d "$RUNNER_TEMP/canonical-inventory-tool"
+        build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java build-logic/src/main/java/dev/openallay/build/CanonicalVarTypePort.java
+        build-logic/src/main/java/dev/openallay/build/CanonicalLanguageInventory.java
+
+        python3 -B -c ''from pathlib import Path; import os,json,subprocess; temp=Path(os.environ["RUNNER_TEMP"]);
+        meta=json.loads((temp/"canonical-classpath.json").read_text()); assert meta["producer"]==":engine-core:compileJava"
+        and meta["release"]==17; subprocess.run([str(Path(os.environ["JAVA_HOME_21_X64"])/"bin/java"),"-cp",str(temp/"canonical-inventory-tool"),"dev.openallay.build.CanonicalLanguageInventory",meta["sourceRoot"],meta["classpath"],str(temp/"canonical-language-inventory.json")],check=True)'' '
+    - name: Retain genuine production compiler inventory
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: canonical-language-inventory-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/canonical-language-inventory.json
+
+          ${{ runner.temp }}/canonical-classpath.json'
