@@ -13,7 +13,7 @@ def sha(blob):return hashlib.sha256(blob).hexdigest()
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument("--project",type=Path,required=True);p.add_argument("--classpath-metadata",type=Path,required=True);p.add_argument("--javac",type=Path,required=True);p.add_argument("--java",type=Path,required=True);p.add_argument("--javac8",type=Path,required=True);p.add_argument("--java8",type=Path,required=True);p.add_argument("--output",type=Path,required=True)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument("--project",type=Path,required=True);p.add_argument("--classpath-metadata",type=Path,required=True);p.add_argument("--javac",type=Path,required=True);p.add_argument("--java",type=Path,required=True);p.add_argument("--output",type=Path,required=True)
     a=p.parse_args();project=a.project.resolve();out=a.output.resolve()
     if out==project or project in out.parents:raise ValueError("Fresh externaloutput required")
     out.mkdir(parents=True,exist_ok=False);contract_path=project/"engine-core/src/guideSwitchLanguageTest/source-contract.json";contract=json.loads(contract_path.read_text());root=project/"engine-core/src/main/java";selected_file=project/"engine-core/src/guideSwitchLanguageTest/selected-paths.txt"
