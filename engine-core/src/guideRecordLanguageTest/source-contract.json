@@ -1,0 +1,735 @@
+{
+  "scope": "Connected canonicalguide publicAST200records85owners acceptedconverter depthordered language-only lowering; fullfeature sourceowners unchanged",
+  "acceptedInventoryRun": 37572819187,
+  "acceptedInventorySha256": "887e12aa1233efed8287d7814dc7ca74c0c74ec3960678810ba837941e8dec19",
+  "rawSourceCommit": "0195b387c87897e985d8e83daeb68db3a5beead1",
+  "requestedOwnerCount": 85,
+  "parsedRecordCount": 200,
+  "owners": [
+    {
+      "path": "dev/openallay/guide/GuideClientModelProfile.java",
+      "raw_sha256": "c1ac6fa965d9652565abfed8cc9e74122e62efc9c6f03e6a83b0def832096898",
+      "recordPaths": [
+        "GuideClientModelProfile"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideCompactResult.java",
+      "raw_sha256": "2db3a7ba4eeee0f38028de990c8183352e26bba851feb276f7f2776ae89beac5",
+      "recordPaths": [
+        "GuideCompactResult"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideContextEstimate.java",
+      "raw_sha256": "fdaf032a38595892a9242e5feb5561871b3c1d545c5e104d7c9972a921c0af56",
+      "recordPaths": [
+        "GuideContextEstimate"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideContextSpec.java",
+      "raw_sha256": "7bb2b1e654a5bea9c7b663ac521e97dc30a14b9fc174471e7c11d5e6a52cee0f",
+      "recordPaths": [
+        "GuideContextSpec"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideHistorySettingsSnapshot.java",
+      "raw_sha256": "4a68319b0d8e436e9f19eee37146ed154fbbf51bb6aad064ee046c46945602a8",
+      "recordPaths": [
+        "GuideHistorySettingsSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideHistoryWindowSnapshot.java",
+      "raw_sha256": "af0587004f4f79b264738b8ff1af17eae77683793c68f250fa07c9852fa05434",
+      "recordPaths": [
+        "GuideHistoryWindowSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideMessage.java",
+      "raw_sha256": "aa155a22fdeddf45dbae82318e1d443cb77d34e852eeefb1d96137cea9e00e3a",
+      "recordPaths": [
+        "GuideMessage"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideModelSelection.java",
+      "raw_sha256": "79753d3acd7930751e76f7c1cd6e9a73e112e3ba3462807bbb073ec6d0f635c1",
+      "recordPaths": [
+        "GuideModelSelection"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideNotice.java",
+      "raw_sha256": "aebe461629299ff735ca6372465b54a6a9d0d6931c44f1a4cbdf300e9a963c9f",
+      "recordPaths": [
+        "GuideNotice"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuidePendingMessage.java",
+      "raw_sha256": "ab07c8d331de7b5d8c231499daac3796316d6be6703006175b29476e01947b5e",
+      "recordPaths": [
+        "GuidePendingMessage"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuidePersistenceSnapshot.java",
+      "raw_sha256": "3f64e2c14c1c93abda620c69a4d84c4225a4bbef89cb03058d5030bc937c8a01",
+      "recordPaths": [
+        "GuidePersistenceSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuidePresentationEvent.java",
+      "raw_sha256": "7b55370fab242738248755e356ce3d745f3bafcbc78b7ca621a7cbb684e082b8",
+      "recordPaths": [
+        "GuidePresentationEvent",
+        "GuidePresentationEvent.Key",
+        "GuidePresentationEvent.ContentRef",
+        "GuidePresentationEvent.CardPreview"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideRequestProgress.java",
+      "raw_sha256": "efdac6e87d8a81f4f83e541eb0e94feaaeb7174a073b6b1de1944ac50a4a745d",
+      "recordPaths": [
+        "GuideRequestProgress"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideRequestSnapshot.java",
+      "raw_sha256": "94019c710387c3a1fc6e6b5ad5358fa32f5e27ed37e497cf8ba872769a68dc71",
+      "recordPaths": [
+        "GuideRequestSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideService.java",
+      "raw_sha256": "6fafdc2e928625be7b9d1808a10d76e10b665d6ed23e9b9419e512c564f1855c",
+      "recordPaths": [
+        "GuideService.InputReceipt",
+        "GuideService.CancelledFinalization",
+        "GuideService.UsageCarrier",
+        "GuideService.PageKey",
+        "GuideService.PageLoad",
+        "GuideService.SessionProjection",
+        "GuideService.TimelineKey",
+        "GuideService.MessageKey",
+        "GuideService.CheckpointKey",
+        "GuideService.HistoryWrite",
+        "GuideService.HistoryWriteBarrier",
+        "GuideService.MutationKey"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideSessionSnapshot.java",
+      "raw_sha256": "36a881b422e5b869aa09d1de0044fbc0cc5d356efdb96b224ddffd97eb315e98",
+      "recordPaths": [
+        "GuideSessionSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideSnapshot.java",
+      "raw_sha256": "e09f7f94adba3c58043e3d6dc047697e5ab2cccf702fa750b7d78ff254d840ca",
+      "recordPaths": [
+        "GuideSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideSource.java",
+      "raw_sha256": "bdd585e47be63a8a4a7e08e4ad960e832b3fb07a6fec89676cc7d65ca6d0d700",
+      "recordPaths": [
+        "GuideSource"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideStateReducer.java",
+      "raw_sha256": "df0df025247fb6a5c51ac825e49231720168f718138296e4b94ee0faa1a059cd",
+      "recordPaths": [
+        "GuideStateReducer.SegmentKey"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideTelemetrySnapshot.java",
+      "raw_sha256": "85555bcde3f9b8dfcd0ec7d566be569ef126fdd4f343d9d0cc3f539b6757349e",
+      "recordPaths": [
+        "GuideTelemetrySnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideTimelineEntry.java",
+      "raw_sha256": "03564b66a2f0db6710f9fbe18f27d46549eb420db1b7ff926e1d80f111594554",
+      "recordPaths": [
+        "GuideTimelineEntry.User",
+        "GuideTimelineEntry.Assistant",
+        "GuideTimelineEntry.Tool"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolActivity.java",
+      "raw_sha256": "e91993ffe4b25fc541b9b27f363c087df8f482244700268d2c8c659b10fcea61",
+      "recordPaths": [
+        "GuideToolActivity"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolIntent.java",
+      "raw_sha256": "241433df48e069f314fe9c201692aaac72faba46fbd2190dac9db52b17ad34cf",
+      "recordPaths": [
+        "GuideToolIntent"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolInvocationView.java",
+      "raw_sha256": "861e24408e3dc4013b931bc84aeb053955d345d97a3a6fd9cfe7b8be5f6829bc",
+      "recordPaths": [
+        "GuideToolInvocationView"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolMessage.java",
+      "raw_sha256": "d40acf8a48701dc4f4785012c46e6fc9e2702ee5f929d18aedb49ce601349bf5",
+      "recordPaths": [
+        "GuideToolMessage"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideUsageSnapshot.java",
+      "raw_sha256": "e41e86049452a31b088585354aa157c7fb93bc6b4523d736105461aba278adbf",
+      "recordPaths": [
+        "GuideUsageSnapshot"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/GuideUsageTracker.java",
+      "raw_sha256": "8a31b941f054e400172c00e715a9b3987557af1544a03fb4d7a8e77b0c031a6b",
+      "recordPaths": [
+        "GuideUsageTracker.Component",
+        "GuideUsageTracker.Quote"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/composer/SlashCommandDispatcher.java",
+      "raw_sha256": "48a64688623b06134767ef860563a938645d069e6a1dc92ce4bffc9a800fa7d8",
+      "recordPaths": [
+        "SlashCommandDispatcher.Dispatch",
+        "SlashCommandDispatcher.Completion"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/composer/SlashCommandParser.java",
+      "raw_sha256": "2ade98b86bd9d10d1ab509eaa493d839c9e048be2420a193f1251d131e68090e",
+      "recordPaths": [
+        "SlashCommandParser.Parsed",
+        "SlashCommandParser.Suggestion"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/e2e/GuideClientE2EConfig.java",
+      "raw_sha256": "43ccea8a8ed032168de598f0db731292ec2ba9412dcf3cb1df3974e8559c7d28",
+      "recordPaths": [
+        "GuideClientE2EConfig"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/e2e/GuideE2EReport.java",
+      "raw_sha256": "1f23135e51bc6c6176e915950ae892289eff94e461a9a5de188049bd3f2f4539",
+      "recordPaths": [
+        "GuideE2EReport",
+        "GuideE2EReport.ToolProbe"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/export/GuideSessionExportCollector.java",
+      "raw_sha256": "f7ac840f46ab5c2afe52e630b8b9e9e88274b4debdbe8c94c18fe04c3c0e1eb6",
+      "recordPaths": [
+        "GuideSessionExportCollector.SequencedRequest"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/export/GuideSessionExportSnapshot.java",
+      "raw_sha256": "524a5039478cd97ac1455ea4f04dc7b5be6af7aae166974414918a11c47828cb",
+      "recordPaths": [
+        "GuideSessionExportSnapshot",
+        "GuideSessionExportSnapshot.Request",
+        "GuideSessionExportSnapshot.Entry.User",
+        "GuideSessionExportSnapshot.Entry.Assistant",
+        "GuideSessionExportSnapshot.Entry.Tool"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryActivity.java",
+      "raw_sha256": "9a9a28b410a44681832494eeff543dbf4f90d408bea007c8d1c31a9151ea405b",
+      "recordPaths": [
+        "GuideHistoryActivity"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryCommit.java",
+      "raw_sha256": "2e73f24ab2200bb94b028aab4923f668585c4b886966380a3114f005316d1476",
+      "recordPaths": [
+        "GuideHistoryCommit"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryContextRequest.java",
+      "raw_sha256": "3b3908a8520a7d31b4b667933be6dd0521968b21bd195c458450caadd7c312bb",
+      "recordPaths": [
+        "GuideHistoryContextRequest"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryContextSeed.java",
+      "raw_sha256": "8d7f5e87f7a03f919ed4a9364488d29acb2447b60f25770e0984f0d687af2f6f",
+      "recordPaths": [
+        "GuideHistoryContextSeed"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryCursor.java",
+      "raw_sha256": "c1868be274f139556d66ff03ce53d53f509056c8c7b9c328ef6aca068e33f3ae",
+      "recordPaths": [
+        "GuideHistoryCursor"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryDeleteScope.java",
+      "raw_sha256": "15e4ebe3a696286971e8280358bd9931f49206ce6ffd035ee56407b98a3636c3",
+      "recordPaths": [
+        "GuideHistoryDeleteScope.Partition",
+        "GuideHistoryDeleteScope.Actor"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryForkRequest.java",
+      "raw_sha256": "e9d91e4328d895601d79ea87020bfee64807a866419e65ce800224e7ac2ee88e",
+      "recordPaths": [
+        "GuideHistoryForkRequest"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryForkResult.java",
+      "raw_sha256": "756a69af572ce6df35a9f5ffe5bcb6945eafb8bc3fe9150dddefb1b3547a777a",
+      "recordPaths": [
+        "GuideHistoryForkResult"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryMetadata.java",
+      "raw_sha256": "54bb2f360c5f3d5b2a9b0ffbbd6ab1a1cb1ad06540886cbcae96a92325ecc5e9",
+      "recordPaths": [
+        "GuideHistoryMetadata",
+        "GuideHistoryMetadata.Session"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryMutation.java",
+      "raw_sha256": "ebf18696a085d43df1c61b31afe6b65628206ebdc478c0fbda099ab40755aead",
+      "recordPaths": [
+        "GuideHistoryMutation.UpsertPartition",
+        "GuideHistoryMutation.UpsertSession",
+        "GuideHistoryMutation.UpsertSessionUsage",
+        "GuideHistoryMutation.UpsertRequest",
+        "GuideHistoryMutation.UpsertMessage",
+        "GuideHistoryMutation.UpsertTimelineEntry",
+        "GuideHistoryMutation.ReplaceRequestSources",
+        "GuideHistoryMutation.ReplaceContext",
+        "GuideHistoryMutation.ReplaceRequestContext",
+        "GuideHistoryMutation.UpsertCheckpoint",
+        "GuideHistoryMutation.AppendCheckpoint",
+        "GuideHistoryMutation.CaptureRequestBoundary",
+        "GuideHistoryMutation.ForkSession",
+        "GuideHistoryMutation.DeleteSession",
+        "GuideHistoryMutation.ClearSession"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryPage.java",
+      "raw_sha256": "59fe1a288e4d3a29ee17d381697291cb4af29f47abad98316b626dd42c59ba89",
+      "recordPaths": [
+        "GuideHistoryPage"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryPageRequest.java",
+      "raw_sha256": "6681c007a8e78b2e8e4d9611b1cf6e5dafeb25d94fdfc76be06fa8ddacdd42f8",
+      "recordPaths": [
+        "GuideHistoryPageRequest"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryRepository.java",
+      "raw_sha256": "76157334128394033ce1b5f403ae3340d0871ed7af2a38c8f1066943ab79f9db",
+      "recordPaths": [
+        "GuideHistoryRepository.ReservationFutures"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryScope.java",
+      "raw_sha256": "762b0bac5e469d11639879e7a3a242ef4bba12f2c5d167f7197ce7f3c781c267",
+      "recordPaths": [
+        "GuideHistoryScope"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/history/SqliteGuideHistoryStore.java",
+      "raw_sha256": "9db45a2e38fd091086af7de69e7ade7b3b06c09a0000259e6a0f1d398b577b4a",
+      "recordPaths": [
+        "SqliteGuideHistoryStore.RequestBoundary",
+        "SqliteGuideHistoryStore.InterruptedRequest",
+        "SqliteGuideHistoryStore.PartitionHeader",
+        "SqliteGuideHistoryStore.SequencedRequest",
+        "SqliteGuideHistoryStore.ColumnSignature",
+        "SqliteGuideHistoryStore.ForeignKeySignature"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/BuiltinRichComponents.java",
+      "raw_sha256": "10dc282ea4e5c2737086b9c8dbcd150cfb597ab70717617d05a907919e4cd74a",
+      "recordPaths": [
+        "BuiltinRichComponents.PromptCatalogEntry",
+        "BuiltinRichComponents.Definition"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RichComponent.java",
+      "raw_sha256": "cb3290fb6d7e5c2b20cbd509ec064037510f93a5b51e6fc51845987c645a553c",
+      "recordPaths": [
+        "RichComponent.Item",
+        "RichComponent.ItemRow",
+        "RichComponent.RecipeGrid",
+        "RichComponent.Ingredient",
+        "RichComponent.IngredientCheck",
+        "RichComponent.CraftabilitySummary",
+        "RichComponent.Step",
+        "RichComponent.ProgressSteps",
+        "RichComponent.Source",
+        "RichComponent.SourceSummary",
+        "RichComponent.StatusBadge",
+        "RichComponent.Choice",
+        "RichComponent.ChoiceGroup"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RichComponentEnvelope.java",
+      "raw_sha256": "6f05b9c0a054caa6449baa1b9fc495c42353c7c7f25987b361458188346d25c6",
+      "recordPaths": [
+        "RichComponentEnvelope"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RichComponentRegistry.java",
+      "raw_sha256": "0d01297659c07021bc60e018b2d0f8c7c5d9a492c2608aad9b6ebac0ef06f922",
+      "recordPaths": [
+        "RichComponentRegistry.RecipeBinding",
+        "RichComponentRegistry.Decode"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticBlock.java",
+      "raw_sha256": "2759eec20ded463d38f5e38134ed18e072e9e26a4eaecda58a22215d285ce0bb",
+      "recordPaths": [
+        "SemanticBlock.Paragraph",
+        "SemanticBlock.Heading",
+        "SemanticBlock.ListBlock",
+        "SemanticBlock.Quote",
+        "SemanticBlock.CodeBlock",
+        "SemanticBlock.Table",
+        "SemanticBlock.TableRow",
+        "SemanticBlock.TableCell",
+        "SemanticBlock.ThematicBreak",
+        "SemanticBlock.Component"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticDiagnostic.java",
+      "raw_sha256": "84e487f1a73f8ec882bedb55d8335778dd69e247d059c15a3c866d4359f3883e",
+      "recordPaths": [
+        "SemanticDiagnostic"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticDocument.java",
+      "raw_sha256": "0fc229f92cf39324ff92171b8580408b2f7ca48d6b2348c96c99559e6aaa7d64",
+      "recordPaths": [
+        "SemanticDocument"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticInline.java",
+      "raw_sha256": "12460ea1d4d652f9739d4cf6bab743248645c1ab8542a790cd37145fa39110c1",
+      "recordPaths": [
+        "SemanticInline.Text",
+        "SemanticInline.Emphasis",
+        "SemanticInline.Strong",
+        "SemanticInline.Code",
+        "SemanticInline.Break",
+        "SemanticInline.Reference"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticReference.java",
+      "raw_sha256": "2dd6ab71673dbef27858f2512989d04e32071db01e09cb73eda11ab8d73cd6bf",
+      "recordPaths": [
+        "SemanticReference"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticReferenceValidator.java",
+      "raw_sha256": "07887e763d5b478f88bea1c1bbfb55cc41c47f1660dab8dee29367401c81bac5",
+      "recordPaths": [
+        "SemanticReferenceValidator.Validation"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDetailCard.java",
+      "raw_sha256": "cf4875fe35a35d4d5b7a0d2909a63b6e696231e3424824725ca36ce73b0fbeee",
+      "recordPaths": [
+        "GuideDetailCard.Recipe",
+        "GuideDetailCard.ItemGrid",
+        "GuideDetailCard.Requirements",
+        "GuideDetailCard.Requirement",
+        "GuideDetailCard.Text",
+        "GuideDetailCard.Table",
+        "GuideDetailCard.KeyValue",
+        "GuideDetailCard.DataPreview",
+        "GuideDetailCard.DataRow",
+        "GuideDetailCard.DataCell",
+        "GuideDetailCard.Error"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDisplayConfig.java",
+      "raw_sha256": "01eb77045eb1b81488c1448f445d9321b2972d96c7e0c8c45910eed251138884",
+      "recordPaths": [
+        "GuideDisplayConfig"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDisplayConfigLoader.java",
+      "raw_sha256": "572565d290dfc854be2c23125df87e4d7f373306f0ad6fb3ecd4ba1b3f1762a9",
+      "recordPaths": [
+        "GuideDisplayConfigLoader.Load"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideEvidencePresentation.java",
+      "raw_sha256": "1de6f25288c61eb234cbd5541ba8807c9f8ff3bd868c0743c30c6ce38a192f80",
+      "recordPaths": [
+        "GuideEvidencePresentation",
+        "GuideEvidencePresentation.Group",
+        "GuideEvidencePresentation.Identity"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideItemView.java",
+      "raw_sha256": "f4b36fcc1c78266c8bcb1e03df0132b873f228d3552b7f86f8fcea913f5063e7",
+      "recordPaths": [
+        "GuideItemView"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideRecipeCard.java",
+      "raw_sha256": "89b69dbe83f9fa6397ba5c383a3782361bc0cdd6393a8a98f5485e1ace8241cb",
+      "recordPaths": [
+        "GuideRecipeCard",
+        "GuideRecipeCard.Output",
+        "GuideRecipeCard.Ingredient",
+        "GuideRecipeCard.Alternative",
+        "GuideRecipeCard.Processing"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideRecipeDetailFacts.java",
+      "raw_sha256": "3e2cc408297344937b8052923b528c1f1820a28570729cc03944834e635efb42",
+      "recordPaths": [
+        "GuideRecipeDetailFacts.Line"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolDetailPresenter.java",
+      "raw_sha256": "492f55cb76c56dece9e4f61ffcf0dec910b4d75ad3e8cad9dd9c28bdc73dd8cf",
+      "recordPaths": [
+        "GuideToolDetailPresenter.Projection"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolDetailView.java",
+      "raw_sha256": "9fae8d2fad7083e998371e3a0a3314f0e8b06139d71825626fd4c5adc819d14f",
+      "recordPaths": [
+        "GuideToolDetailView",
+        "GuideToolDetailView.Failure",
+        "GuideToolDetailView.Debug"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolSummaryGeometry.java",
+      "raw_sha256": "2df06fea3d2f3f882957da0a7c52bc896a191a3d4e4056a75b1b97b1fede44fe",
+      "recordPaths": [
+        "GuideToolSummaryGeometry",
+        "GuideToolSummaryGeometry.Hit"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolSummaryPresenter.java",
+      "raw_sha256": "5bd6b0b48991e2a3f5a77850fabca59cd2f440f9bce75c14cf0e26f696a24cd8",
+      "recordPaths": [
+        "GuideToolSummaryPresenter.Summary",
+        "GuideToolSummaryPresenter.Item",
+        "GuideToolSummaryPresenter.Recipe"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideTranscriptVirtualizer.java",
+      "raw_sha256": "2f3c5201e50fedf92a276e0b14f62d8bd489d6a766bd9f23ebf8fe4b50cc601b",
+      "recordPaths": [
+        "GuideTranscriptVirtualizer.Row",
+        "GuideTranscriptVirtualizer.Window"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiClickRoute.java",
+      "raw_sha256": "c17154beb863d53e917316f81d88a4775abeae0649ba91a591f6c320a20dfafc",
+      "recordPaths": [
+        "GuideUiClickRoute"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiConfig.java",
+      "raw_sha256": "b5129bce096766dbb519152ad2b6ee991244c85047cc715b5b0d53b3dd6f7811",
+      "recordPaths": [
+        "GuideUiConfig",
+        "GuideUiConfig.Fullscreen",
+        "GuideUiConfig.Hud",
+        "GuideUiConfig.Notifications"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiLayout.java",
+      "raw_sha256": "242bd231596e2912d2d16d04d27c26d2d2d95c0ac975671740020b678ef843a3",
+      "recordPaths": [
+        "GuideUiLayout",
+        "GuideUiLayout.ComposerExtras",
+        "GuideUiLayout.Header",
+        "GuideUiLayout.ComposerControls",
+        "GuideUiLayout.Rect"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiModelChoice.java",
+      "raw_sha256": "fa7d40a614a4f42bab42d011273fc26732081917fac62f81cb302a4815154fa9",
+      "recordPaths": [
+        "GuideUiModelChoice"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiProgress.java",
+      "raw_sha256": "436ea32d3a9f005fbd9f06c0d6122a5a0dd5580b4e73533f8553693eec250e0a",
+      "recordPaths": [
+        "GuideUiProgress"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiRow.java",
+      "raw_sha256": "ad8f7db8dc7b5d27886d5f190c158782550ae49996db675eae6919ddec8701c2",
+      "recordPaths": [
+        "GuideUiRow.Persistence",
+        "GuideUiRow.User",
+        "GuideUiRow.Assistant",
+        "GuideUiRow.Tool",
+        "GuideUiRow.Status"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiSession.java",
+      "raw_sha256": "a78c328edc8ccb2287e65627b7b91a0c5d6d815dc855ed95bead37ebd5249194",
+      "recordPaths": [
+        "GuideUiSession"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiView.java",
+      "raw_sha256": "057a69e8a45237c68643708cfebfe5ea679a5f1fd638973301b4ac7d7aea07d0",
+      "recordPaths": [
+        "GuideUiView",
+        "GuideUiView.ChoiceSeed"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideViewportAnchor.java",
+      "raw_sha256": "6c3f2081691ec77ca1c205c23ffe10e30f79bf4481ba4fb18c8e943e67366b08",
+      "recordPaths": [
+        "GuideViewportAnchor"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/SemanticLayout.java",
+      "raw_sha256": "ba062bc3fbbc7f2d05793ad9133421f1b6451e62bc7512089348a7edf631bbbc",
+      "recordPaths": [
+        "SemanticLayout",
+        "SemanticLayout.Run",
+        "SemanticLayout.Line",
+        "SemanticLayout.TableBox",
+        "SemanticLayout.TableRow",
+        "SemanticLayout.TableCell",
+        "SemanticLayout.CellLine"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/SemanticLayoutCache.java",
+      "raw_sha256": "59af1207282b88b077b6bde68e1d1fbf4ecfeddfa29ed720eba45e35fd0566c9",
+      "recordPaths": [
+        "SemanticLayoutCache.Stats",
+        "SemanticLayoutCache.Key"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudPresenter.java",
+      "raw_sha256": "2a9c2165c1362c87ed525ee2540b4831d34d07df68ffdfc621ece3d394027c1c",
+      "recordPaths": [
+        "GuideHudPresenter.Reply",
+        "GuideHudPresenter.Projected"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudToolCards.java",
+      "raw_sha256": "00c469da62239779eb0d6956421a4495183271b3745f54e8e7a86c539ed6a9f3",
+      "recordPaths": [
+        "GuideHudToolCards.Projection"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudView.java",
+      "raw_sha256": "27be9e76a00c0a44a2fab328c8012bc073cb48ffca7aa725e68fd34587a1e272",
+      "recordPaths": [
+        "GuideHudView"
+      ]
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudVisibility.java",
+      "raw_sha256": "af96e24b1e78f822ff573a173e0de39fad1133a2acaba0e0726b10c3939939a6",
+      "recordPaths": [
+        "GuideHudVisibility.Context"
+      ]
+    }
+  ],
+  "converter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218"
+  },
+  "tool": {
+    "path": "build-logic/src/main/java/dev/openallay/build/CanonicalRecordBatchMaterializer.java",
+    "sha256": "a0e09d260baf3b5790168f9d59ac8f027622aed9a7e0c9611a0a473f26b8d3a2"
+  },
+  "request": {
+    "path": "engine-core/src/guideRecordLanguageTest/request.tsv",
+    "sha256": "a6d7a5a222ae516852df204f2134802c41a96936022dfea8ca97cf876de7e9f0"
+  },
+  "rejectionPolicy": "Rejectedowner receives exactdepth/recordPaths/reason and no productioncandidate; never partialowner conversions",
+  "runtimeJava8Acceptance": false,
+  "modernAcceptance": "Root canonicalpatch review + full enginecore modern tests once; APIs/patterns remain authentic laterclosure"
+}
