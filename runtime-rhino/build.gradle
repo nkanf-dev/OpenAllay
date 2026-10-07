@@ -2,12 +2,12 @@ plugins {
     id 'java-library'
 }
 
-// One current Rhino ABI compiled for Java17, shared by every Minecraft target.
+// One current Java8 production ABI serves every Minecraft target; test tooling remains Java17.
 base { archivesName = 'openallay-rhino' }
 version = rhino_version
 java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
 tasks.withType(JavaCompile).configureEach {
-    options.release = 17
+    options.release = name == 'compileTestJava' ? 17 : 8
     options.encoding = 'UTF-8'
 }
 tasks.withType(Jar).configureEach {
@@ -45,7 +45,7 @@ tasks.named('processResources') { dependsOn prepare }
 tasks.named('jar', Jar) {
     from(['LICENSE-MPL-2.0.txt', 'THIRD-PARTY-NOTICES.txt']) { into 'META-INF/licenses/rhino' }
     from('patches/rhino-java17.patch') { into 'META-INF/openallay/rhino-source-changes' }
-    manifest.attributes('Implementation-Title': 'OpenAllay Rhino Java17 runtime',
+    manifest.attributes('Implementation-Title': 'OpenAllay Rhino shared runtime',
             'Implementation-Version': project.version,
             'Rhino-Upstream-Sources': "dev.latvian.mods:rhino:${rhino_version}:sources")
 }
