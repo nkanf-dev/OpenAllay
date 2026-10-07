@@ -83,8 +83,39 @@ public final class CanonicalPatternPort {
         if (expression.getKind() == javax.lang.model.type.TypeKind.NULL) return expression;
         try { AttributedVarTypes.denotable(expression, false); return expression; }
         catch (IllegalArgumentException captured) {
-            if (captured.getMessage() == null || !captured.getMessage().startsWith("Captured variable:")
-                    || !(site.pattern().getExpression() instanceof IdentifierTree)) throw captured;
+            if (captured.getMessage() == null || !captured.getMessage().startsWith("Captured variable:")) throw captured;
+            if (site.pattern().getExpression() instanceof MethodInvocationTree invocation) {
+                Element called = trees.getElement(expressionPath);
+                if (!(called instanceof ExecutableElement method)) throw captured;
+                javax.lang.model.type.TypeMirror declared = method.getReturnType();
+                // A declared wildcard return keeps the exact method's public type algebra.
+                if (declared.getKind() == javax.lang.model.type.TypeKind.DECLARED
+                        && !containsTypeVariable(declared)
+                        && task.getTypes().isAssignable(expression, declared)
+                        && task.getTypes().isSameType(task.getTypes().erasure(expression), task.getTypes().erasure(declared))) {
+                    accessible(declared, scope, trees);
+                    AttributedVarTypes.denotable(declared, false);
+                    return declared;
+                }
+                if (expression.getKind() != javax.lang.model.type.TypeKind.TYPEVAR
+                        || !(invocation.getMethodSelect() instanceof MemberSelectTree member)) throw captured;
+                TreePath select = new TreePath(expressionPath, invocation.getMethodSelect());
+                javax.lang.model.type.TypeMirror receiver = trees.getTypeMirror(new TreePath(select, member.getExpression()));
+                if (receiver.getKind() != javax.lang.model.type.TypeKind.DECLARED) throw captured;
+                javax.lang.model.type.TypeMirror asMember = task.getTypes().asMemberOf((javax.lang.model.type.DeclaredType) receiver, method);
+                if (asMember.getKind() != javax.lang.model.type.TypeKind.EXECUTABLE) throw captured;
+                javax.lang.model.type.TypeMirror returned = ((javax.lang.model.type.ExecutableType) asMember).getReturnType();
+                if (returned.getKind() != javax.lang.model.type.TypeKind.TYPEVAR
+                        || !task.getTypes().isSameType(task.getTypes().erasure(returned), task.getTypes().erasure(expression))) throw captured;
+                javax.lang.model.type.TypeMirror upper = ((javax.lang.model.type.TypeVariable) expression).getUpperBound();
+                if (upper.getKind() != javax.lang.model.type.TypeKind.DECLARED || containsTypeVariable(upper)
+                        || !task.getTypes().isAssignable(expression, upper)
+                        || !task.getTypes().isSameType(task.getTypes().erasure(expression), task.getTypes().erasure(upper))) throw captured;
+                accessible(upper, scope, trees);
+                AttributedVarTypes.denotable(upper, false);
+                return upper;
+            }
+            if (!(site.pattern().getExpression() instanceof IdentifierTree)) throw captured;
             Element symbol = trees.getElement(expressionPath);
             if (!(symbol instanceof VariableElement variable)
                     || !(symbol.getKind() == ElementKind.PARAMETER || symbol.getKind() == ElementKind.LOCAL_VARIABLE)) throw captured;
@@ -94,6 +125,22 @@ public final class CanonicalPatternPort {
             accessible(declared, scope, trees);
             AttributedVarTypes.denotable(declared, false);
             return declared;
+        }
+    }
+    private static boolean containsTypeVariable(javax.lang.model.type.TypeMirror type) {
+        switch (type.getKind()) {
+            case TYPEVAR: return true;
+            case ARRAY: return containsTypeVariable(((javax.lang.model.type.ArrayType) type).getComponentType());
+            case DECLARED:
+                for (javax.lang.model.type.TypeMirror argument : ((javax.lang.model.type.DeclaredType) type).getTypeArguments()) {
+                    if (containsTypeVariable(argument)) return true;
+                }
+                return false;
+            case WILDCARD:
+                javax.lang.model.type.WildcardType wildcard = (javax.lang.model.type.WildcardType) type;
+                return wildcard.getExtendsBound() != null && containsTypeVariable(wildcard.getExtendsBound())
+                        || wildcard.getSuperBound() != null && containsTypeVariable(wildcard.getSuperBound());
+            default: return false;
         }
     }
     private static int position(long value){if(value<0||value>Integer.MAX_VALUE)throw new IllegalArgumentException("Missing public AST source position");return(int)value;}
