@@ -53,7 +53,7 @@ def main():
     classes.mkdir()
     argfile = out / "javac-sources.txt"
     argfile.write_text("\n".join('"' + str(p) + '"' for p in source_files) + "\n", encoding="utf-8")
-    run([args.javac, "--release", "8", "-encoding", "UTF-8", "-d", classes, "@" + str(argfile)], out / "compile-java8.txt")
+    run([args.javac, "--release", "8", "-Xpkginfo:always", "-encoding", "UTF-8", "-d", classes, "@" + str(argfile)], out / "compile-java8.txt")
     port = out / "openallay-commonmark.jar"
     with zipfile.ZipFile(port, "w", zipfile.ZIP_DEFLATED) as jar:
         for directory in [classes, generated / "resources"]:
