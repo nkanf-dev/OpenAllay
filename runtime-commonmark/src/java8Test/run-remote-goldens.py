@@ -7,6 +7,7 @@ The standalone parser/API/actual-Java8 proof does not depend on engine compilati
 import argparse
 import hashlib
 import os
+import re
 from pathlib import Path
 import subprocess
 import zipfile
@@ -21,6 +22,47 @@ def run(command, output=None):
 
 def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+# Exact compiler-only access markers observed in the real Java8 class artifact.
+# No wildcard is accepted. Original private constructor visibility is unchanged.
+JAVA8_ACCESS_MARKERS = {'org/commonmark/ext/gfm/tables/internal/TableBlockParser$1.class': [('org/commonmark/ext/gfm/tables/internal/TableBlockParser', '(Ljava/util/List;Lorg/commonmark/parser/SourceLine;)V')], 'org/commonmark/internal/HtmlBlockParser$1.class': [('org/commonmark/internal/HtmlBlockParser', '(Ljava/util/regex/Pattern;)V')], 'org/commonmark/node/Nodes$1.class': [('org/commonmark/node/Nodes$NodeIterable', '(Lorg/commonmark/node/Node;Lorg/commonmark/node/Node;)V'), ('org/commonmark/node/Nodes$NodeIterator', '(Lorg/commonmark/node/Node;Lorg/commonmark/node/Node;)V')], 'org/commonmark/parser/Parser$1.class': [('org/commonmark/parser/Parser', '(Lorg/commonmark/parser/Parser$Builder;)V')], 'org/commonmark/renderer/html/CoreHtmlNodeRenderer$1.class': [('org/commonmark/renderer/html/CoreHtmlNodeRenderer$AltTextVisitor', '()V')], 'org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$1.class': [('org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$LineBreakVisitor', '()V')], 'org/commonmark/text/AsciiMatcher$1.class': [('org/commonmark/text/AsciiMatcher', '(Lorg/commonmark/text/AsciiMatcher$Builder;)V'), ('org/commonmark/text/AsciiMatcher$Builder', '(Ljava/util/BitSet;)V')]}
+
+
+def verify_access_markers(javap, jar, output):
+    evidence = []
+    for name, bridges in sorted(JAVA8_ACCESS_MARKERS.items()):
+        owner = name[:-8]
+        text = run([javap, "-classpath", jar, "-v", "-p", name[:-6].replace("/", ".")]).decode("utf-8")
+        if not all(token in text for token in ["major version: 52", "flags: (0x1020) ACC_SUPER, ACC_SYNTHETIC",
+                 "// java/lang/Object", "interfaces: 0, fields: 0, methods: 0, attributes: 3",
+                 'SourceFile: "' + owner.rsplit("/", 1)[-1] + '.java"',
+                 "// " + owner.replace("/", "."), "EnclosingMethod:"]):
+            raise ValueError("Access marker structure/provenance differs: " + name)
+        evidence.append(text)
+        for carrier, original_descriptor in bridges:
+            original_prefix = original_descriptor[:-2]
+            bridge_descriptor = original_prefix + "L" + name[:-6] + ";)V"
+            owner_text = run([javap, "-classpath", jar, "-v", "-p", carrier.replace("/", ".")]).decode("utf-8")
+            # Read actual method descriptors/flags/code; do not infer from $ names.
+            blocks = re.findall(r"^  ([^\n]+)\n    descriptor: ([^\n]+)\n    flags: ([^\n]+)\n(.*?)(?=^  \S|^}|\Z)", owner_text, re.M | re.S)
+            constructors = {descriptor: (header, flags, body) for header, descriptor, flags, body in blocks
+                            if carrier.replace("/", ".") + "(" in header}
+            if original_descriptor not in constructors or "ACC_PRIVATE" not in constructors[original_descriptor][1]:
+                raise ValueError("Original private constructor missing: " + carrier)
+            if bridge_descriptor not in constructors or constructors[bridge_descriptor][1] != "(0x1000) ACC_SYNTHETIC":
+                raise ValueError("Expected non-public synthetic constructor bridge missing: " + carrier)
+            body = constructors[bridge_descriptor][2]
+            instructions = re.findall(r"^\s+\d+: (.+)$", body, re.M)
+            if len(instructions) < 3 or instructions[-1] != "return":
+                raise ValueError("Access bridge has unexpected executable code: " + carrier)
+            if not all(re.fullmatch(r"aload_[0-3]|aload\s+\d+", op) for op in instructions[:-2]):
+                raise ValueError("Access bridge does more than load original constructor arguments: " + carrier)
+            invocation = instructions[-2]
+            if not re.fullmatch(r'invokespecial\s+#\d+\s+// Method "<init>":' + re.escape(original_descriptor), invocation):
+                raise ValueError("Access bridge does not delegate to the original private constructor: " + carrier)
+            evidence.append(owner_text)
+    output.write_text("\n".join(evidence), encoding="utf-8")
 
 
 def main():
@@ -69,18 +111,21 @@ def main():
         if not upstream_names.issubset(port_names):
             raise ValueError("Ordinary upstream binary classes missing: " + str(upstream_names - port_names))
         extra = port_names - upstream_names
-        if extra != {"org/commonmark/internal/util/Java8Collections.class",
+        compatibility_classes = {"org/commonmark/internal/util/Java8Collections.class",
                      "org/commonmark/internal/util/Java8Collections$NullRejectList.class",
                      "org/commonmark/internal/util/Java8Collections$NullRejectSet.class",
-                     "org/commonmark/internal/util/Java8Collections$NullRejectMap.class"}:
+                     "org/commonmark/internal/util/Java8Collections$NullRejectMap.class"}
+        if extra != compatibility_classes | set(JAVA8_ACCESS_MARKERS):
             raise ValueError("Unexpected produced classes: " + str(extra))
         for name in port_names:
             data = jar.read(name)
             if data[:4] != b"\xca\xfe\xba\xbe" or int.from_bytes(data[6:8], "big") != 52:
                 raise ValueError("Non-Java8 compiled class: " + name)
-    if len(upstream_names) != 202 or len(port_names) != 206:
-        raise ValueError("Expected the exact 202 upstream classes plus four compatibility classes")
+    if len(upstream_names) != 202 or len(port_names) != 213:
+        raise ValueError("Expected 202 upstream classes, four compatibility classes, and seven verified Java8 access markers")
+    verify_access_markers(args.javap, port, out / "java8-access-markers-independent.txt")
     if args.ported_jar:
+        verify_access_markers(args.javap, args.ported_jar, out / "java8-access-markers-canonical.txt")
         with zipfile.ZipFile(args.ported_jar) as published, zipfile.ZipFile(port) as compiled:
             actual_names = {n for n in published.namelist() if n.endswith(".class")}
             if actual_names != port_names:
