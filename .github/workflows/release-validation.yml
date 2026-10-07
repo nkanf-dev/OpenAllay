@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures]
+        options: [skills, modern, shared-fixtures, json-java8]
         default: skills
         required: true
 permissions:
@@ -107,3 +107,37 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: engine-core/build/test-results/
+
+  json-java8:
+    if: inputs.scope == 'json-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Verify canonical JSON behavior on Java 8 and Gson 2.8.0
+        run: ./gradlew -c runtime-json/src/java8Test/gradle/settings.gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :java8CompatibilityTest :jar -PjsonVerificationGsonVersion=2.8.0
+      - name: Verify the same classes on Java 8 and current Gson
+        run: ./gradlew -c runtime-json/src/java8Test/gradle/settings.gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :java8CompatibilityTest -PjsonVerificationGsonVersion=2.13.2
+      - name: Retain canonical Java 8 JSON artifact and diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-runtime-json-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            runtime-json/build/libs/
+            runtime-json/build/classes/
+            runtime-json/build/reports/
