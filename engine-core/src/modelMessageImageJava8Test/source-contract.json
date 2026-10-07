@@ -491,7 +491,7 @@
     },
     {
       "path": "engine-core/src/test/java/dev/openallay/model/image/ImageReferenceTest.java",
-      "sha256": "2bc8802ac1cbe6be9485b53867f68fa575a20697c029bc27d2c6e76bebbb757e",
+      "sha256": "054565fef658f90fb5c3793c17e062c3bd3a361601b8e2a151f6413bb3e0aeb7",
       "substitutions": [
         {
           "old": "\"0123456789abcdef\".repeat(4)",
@@ -506,7 +506,7 @@
           "new": "dev.openallay.model.ModelMessageImageJava8Fixture.repeat(\"g\", 64)"
         },
         {
-          "old": "Arrays.stream(ImageReference.class.getRecordComponents())\n                        .map(component -> component.getName()).toArray(String[]::new)",
+          "old": "dev.openallay.value.ValueSchemas.of(ImageReference.class).components().stream()\n                        .map(component -> component.name()).toArray(String[]::new)",
           "new": "dev.openallay.model.ModelMessageImageJava8Fixture.componentNames(ImageReference.class)"
         }
       ]
@@ -555,7 +555,7 @@
     },
     {
       "path": "engine-core/src/test/java/dev/openallay/model/image/ImageReferenceTest.java",
-      "sha256": "2bc8802ac1cbe6be9485b53867f68fa575a20697c029bc27d2c6e76bebbb757e",
+      "sha256": "054565fef658f90fb5c3793c17e062c3bd3a361601b8e2a151f6413bb3e0aeb7",
       "class": "dev.openallay.model.image.ImageReferenceTest"
     },
     {

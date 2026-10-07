@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
-import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 final class ImageReferenceTest {
@@ -14,8 +13,8 @@ final class ImageReferenceTest {
     @Test
     void containsOnlyPortableMetadata() {
         assertArrayEquals(new String[] {"sha256", "mimeType", "width", "height", "byteSize"},
-                Arrays.stream(ImageReference.class.getRecordComponents())
-                        .map(component -> component.getName()).toArray(String[]::new));
+                dev.openallay.value.ValueSchemas.of(ImageReference.class).components().stream()
+                        .map(component -> component.name()).toArray(String[]::new));
         assertEquals(7, new ImageReference(HASH, "image/jpeg", 1, 2, 7).byteSize());
     }
 
