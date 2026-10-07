@@ -2857,8 +2857,8 @@
     },
     {
       "path": "dev/openallay/script/host/RhinoHostAdapter.java",
-      "sha256": "74e51faf6744d9b501b519e17b6a9875e27efa9d07d2cd8a259fc135a6d11ef8",
-      "bytes": 6073
+      "sha256": "5c1292112ace30c36b179e36aa6721bc5dc874408df812952c8a506cb77dcf7f",
+      "bytes": 6121
     },
     {
       "path": "dev/openallay/script/result/JavascriptResultShape.java",
@@ -2907,8 +2907,8 @@
     },
     {
       "path": "dev/openallay/script/schema/RhinoTypeSchema.java",
-      "sha256": "9ea448f433ac5ca492d44fa3f39becb5ca6c2ac2a33d8cd88398dc87b62ab757",
-      "bytes": 11207
+      "sha256": "5f0f15f66ea4515972c64c3a4c404d8579b7c366eb6c94a01de51a4df70450d8",
+      "bytes": 11329
     },
     {
       "path": "dev/openallay/script/workspace/AgentResultWorkspace.java",
