@@ -83,11 +83,41 @@
 +	public String toString() {
 +		return "CachedParameters[count=" + count + ", types=" + types + ", typeInfos=" + typeInfos + ", firstArgContext=" + firstArgContext + ", varArgType=" + varArgType + "]";
 +	}
+--- a/dev/latvian/mods/rhino/LambdaAccessorSlot.java
++++ b/dev/latvian/mods/rhino/LambdaAccessorSlot.java
+@@ -35 +35 @@
+-		var newSlot = new LambdaAccessorSlot(this);
++		dev.latvian.mods.rhino.LambdaAccessorSlot newSlot = new LambdaAccessorSlot(this);
+--- a/dev/latvian/mods/rhino/LambdaSlot.java
++++ b/dev/latvian/mods/rhino/LambdaSlot.java
+@@ -34 +34 @@
+-		var newSlot = new LambdaSlot(this);
++		dev.latvian.mods.rhino.LambdaSlot newSlot = new LambdaSlot(this);
+--- a/dev/latvian/mods/rhino/NativeJSON.java
++++ b/dev/latvian/mods/rhino/NativeJSON.java
+@@ -149 +149 @@
+-		var builder = new StringBuilder();
++		java.lang.StringBuilder builder = new StringBuilder();
+@@ -174 +174 @@
+-			var d = ScriptRuntime.toNumber(cx, v);
++			double d = ScriptRuntime.toNumber(cx, v);
+@@ -185 +185 @@
+-			for (var id : obj.getIds(cx)) {
++			for (java.lang.Object id : obj.getIds(cx)) {
+@@ -210 +210 @@
+-			for (var entry : map.entrySet()) {
++			for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+@@ -241 +241 @@
+-			for (var value : itr) {
++			for (java.lang.Object value : itr) {
 --- a/dev/latvian/mods/rhino/NativeJavaList.java
 +++ b/dev/latvian/mods/rhino/NativeJavaList.java
 @@ -6,0 +7,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
+@@ -144 +146 @@
+-		var reduceFuncArg = REDUCE_FUNC_ARG.withParams(listType);
++		dev.latvian.mods.rhino.type.TypeInfo reduceFuncArg = REDUCE_FUNC_ARG.withParams(listType);
 @@ -193 +195 @@
 -		return list.removeLast();
 +		return ListCompat.removeLast(list);
@@ -106,6 +136,9 @@
 @@ -337 +339 @@
 -			return list.getFirst(); // might not be correct start index
 +			return ListCompat.getFirst(list); // might not be correct start index
+@@ -390 +392 @@
+-			var o = list.get(i);
++			java.lang.Object o = list.get(i);
 --- a/dev/latvian/mods/rhino/FunctionObject.java
 +++ b/dev/latvian/mods/rhino/FunctionObject.java
 @@ -9,0 +10,2 @@
@@ -272,20 +305,160 @@
 +		@Override
 +		public String toString() {
 +			return "ElementComparator[child=" + child + "]";
+--- a/dev/latvian/mods/rhino/IdScriptableObject.java
++++ b/dev/latvian/mods/rhino/IdScriptableObject.java
+@@ -858 +858 @@
+-					var slot = queryOrFakeSlot(cx, key);
++					dev.latvian.mods.rhino.Slot slot = queryOrFakeSlot(cx, key);
+@@ -880 +880 @@
+-						var slot = queryOrFakeSlot(cx, key);
++						dev.latvian.mods.rhino.Slot slot = queryOrFakeSlot(cx, key);
+@@ -932 +932 @@
+-		var slot = getBuiltInSlot(name, cx);
++		dev.latvian.mods.rhino.Slot slot = getBuiltInSlot(name, cx);
+@@ -942 +942 @@
+-		var slot = getBuiltInSlot(key, cx);
++		dev.latvian.mods.rhino.Slot slot = getBuiltInSlot(key, cx);
+@@ -947 +947 @@
+-		var slot = querySlot(cx, id);
++		dev.latvian.mods.rhino.Slot slot = querySlot(cx, id);
+@@ -968 +968 @@
+-			var slot = new Slot(name, 0, (info >>> 16));
++			dev.latvian.mods.rhino.Slot slot = new Slot(name, 0, (info >>> 16));
+@@ -975 +975 @@
+-				var slot = new Slot(name, 0, prototypeValues.getAttributes(id, cx));
++				dev.latvian.mods.rhino.Slot slot = new Slot(name, 0, prototypeValues.getAttributes(id, cx));
+@@ -987 +987 @@
+-				var slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));
++				dev.latvian.mods.rhino.Slot slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));
 --- a/dev/latvian/mods/rhino/JavaMembers.java
 +++ b/dev/latvian/mods/rhino/JavaMembers.java
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
+@@ -101 +103 @@
+-		var type = type0.asClass();
++		java.lang.Class<?> type = type0.asClass();
+@@ -111 +113 @@
+-			for (var method : methods) {
++			for (dev.latvian.mods.rhino.MemberBox method : methods) {
+@@ -113 +115 @@
+-					var params = method.parameters().types();
++					java.util.List<java.lang.Class<?>> params = method.parameters().types();
 @@ -116 +118 @@
 -							if (params.getFirst() == type) {
 +							if (ListCompat.getFirst(params) == type) {
 @@ -123 +125 @@
 -							if (params.getFirst().isAssignableFrom(type)) {
 +							if (ListCompat.getFirst(params).isAssignableFrom(type)) {
+@@ -216 +218 @@
+-		var ht = isStatic ? staticMembers : members;
++		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
+@@ -225 +227 @@
+-		var ht = isStatic ? staticMembers : members;
++		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
+@@ -263 +265 @@
+-		var ht = isStatic ? staticMembers : members;
++		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
 @@ -285 +287 @@
 -				Object[] args = {cx.jsToJava(value, bp.setter.parameters().typeInfos().getFirst())};
 +				Object[] args = {cx.jsToJava(value, ListCompat.getFirst(bp.setter.parameters().typeInfos()))};
+@@ -308 +310 @@
+-			var type = fieldInfo.getType();
++			dev.latvian.mods.rhino.type.TypeInfo type = fieldInfo.getType();
+@@ -324 +326 @@
+-		var map = isStatic ? staticMembers : members;
++		java.util.Map<java.lang.String, java.lang.Object> map = isStatic ? staticMembers : members;
+@@ -334 +336 @@
+-		var ht = isStatic ? staticMembers : members;
++		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
+@@ -355,2 +357,2 @@
+-			for (var methodsOrCtor : methodsOrCtors) {
+-				var type = methodsOrCtor.parameters().types();
++			for (dev.latvian.mods.rhino.MemberBox methodsOrCtor : methodsOrCtors) {
++				java.util.List<java.lang.Class<?>> type = methodsOrCtor.parameters().types();
+@@ -368 +370 @@
+-		var ht = isStatic ? staticMembers : members;
++		java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
+@@ -406,8 +408,8 @@
+-		var storage = cx.getCachedClassStorage(includeProtected);
+-		var classInfo = storage.get(cl);
+-
+-		for (var methodInfo0 : classInfo.getAccessibleMethods(includeProtected)) {
+-			var methodInfo = methodInfo0.getInfo();
+-			var name = methodInfo0.getName();
+-			var ht = methodInfo.isStatic ? staticMembers : members;
+-			var value = ht.get(name);
++		dev.latvian.mods.rhino.CachedClassStorage storage = cx.getCachedClassStorage(includeProtected);
++		dev.latvian.mods.rhino.CachedClassInfo classInfo = storage.get(cl);
++
++		for (dev.latvian.mods.rhino.CachedMethodInfo.Accessible methodInfo0 : classInfo.getAccessibleMethods(includeProtected)) {
++			dev.latvian.mods.rhino.CachedMethodInfo methodInfo = methodInfo0.getInfo();
++			java.lang.String name = methodInfo0.getName();
++			java.util.Map<java.lang.String, java.lang.Object> ht = methodInfo.isStatic ? staticMembers : members;
++			java.lang.Object value = ht.get(name);
+@@ -439,3 +441,3 @@
+-			var ht = isStatic ? staticMembers : members;
+-
+-			for (var entry : ht.entrySet()) {
++			java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
++
++			for (java.util.Map.Entry<java.lang.String, java.lang.Object> entry : ht.entrySet()) {
+@@ -455 +457 @@
+-						var method = (CachedMethodInfo) overloadedMethods.get(i);
++						dev.latvian.mods.rhino.CachedMethodInfo method = (CachedMethodInfo) overloadedMethods.get(i);
+@@ -468,3 +470,3 @@
+-		for (var fieldInfo0 : classInfo.getAccessibleFields(includeProtected)) {
+-			var fieldInfo = fieldInfo0.getInfo();
+-			var name = fieldInfo0.getName();
++		for (dev.latvian.mods.rhino.CachedFieldInfo.Accessible fieldInfo0 : classInfo.getAccessibleFields(includeProtected)) {
++			dev.latvian.mods.rhino.CachedFieldInfo fieldInfo = fieldInfo0.getInfo();
++			java.lang.String name = fieldInfo0.getName();
+@@ -473 +475 @@
+-				var ht = fieldInfo.isStatic ? staticMembers : members;
++				java.util.Map<java.lang.String, java.lang.Object> ht = fieldInfo.isStatic ? staticMembers : members;
+@@ -478,2 +480,2 @@
+-					var fam = new FieldAndMethods(scope, method.methods, fieldInfo, cx);
+-					var fmht = fieldInfo.isStatic ? staticFieldAndMethods : fieldAndMethods;
++					dev.latvian.mods.rhino.FieldAndMethods fam = new FieldAndMethods(scope, method.methods, fieldInfo, cx);
++					java.util.Map<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> fmht = fieldInfo.isStatic ? staticFieldAndMethods : fieldAndMethods;
+@@ -516 +518 @@
+-			var ht = isStatic ? staticMembers : members;
++			java.util.Map<java.lang.String, java.lang.Object> ht = isStatic ? staticMembers : members;
+@@ -579 +581 @@
+-								var type = getter.getReturnType();
++								dev.latvian.mods.rhino.type.TypeInfo type = getter.getReturnType();
+@@ -601 +603 @@
+-		var constructors = classInfo.getConstructors();
++		java.util.List<dev.latvian.mods.rhino.CachedConstructorInfo> constructors = classInfo.getConstructors();
+@@ -625,4 +627,4 @@
+-		var list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleFields(includeProtected);
+-		var list = new ArrayList<FieldInfo>(list0.size());
+-
+-		for (var f : list0) {
++		java.util.List<dev.latvian.mods.rhino.CachedFieldInfo.Accessible> list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleFields(includeProtected);
++		java.util.ArrayList<dev.latvian.mods.rhino.JavaMembers.FieldInfo> list = new ArrayList<FieldInfo>(list0.size());
++
++		for (dev.latvian.mods.rhino.CachedFieldInfo.Accessible f : list0) {
+@@ -637,4 +639,4 @@
+-		var list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleMethods(includeProtected);
+-		var list = new ArrayList<MethodInfo>(list0.size());
+-
+-		for (var m : list0) {
++		java.util.List<dev.latvian.mods.rhino.CachedMethodInfo.Accessible> list0 = cx.getCachedClassStorage(includeProtected).get(cl).getAccessibleMethods(includeProtected);
++		java.util.ArrayList<dev.latvian.mods.rhino.JavaMembers.MethodInfo> list = new ArrayList<MethodInfo>(list0.size());
++
++		for (dev.latvian.mods.rhino.CachedMethodInfo.Accessible m : list0) {
+@@ -648 +650 @@
+-		var ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
++		java.util.Map<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> ht = isStatic ? staticFieldAndMethods : fieldAndMethods;
+@@ -655,3 +657,3 @@
+-		var result = new HashMap<String, FieldAndMethods>(len);
+-
+-		for (var fam : ht.values()) {
++		java.util.HashMap<java.lang.String, dev.latvian.mods.rhino.FieldAndMethods> result = new HashMap<String, FieldAndMethods>(len);
++
++		for (dev.latvian.mods.rhino.FieldAndMethods fam : ht.values()) {
 --- a/dev/latvian/mods/rhino/CachedExecutableInfo.java
 +++ b/dev/latvian/mods/rhino/CachedExecutableInfo.java
 @@ -1,0 +2,2 @@
@@ -351,7 +524,7 @@
 +		} else if (v instanceof NativeNumber) {
 +			return numberPrimitive(ScriptRuntime.toNumber(cx, v));
 +		} else if (v instanceof NativeObject obj) {
-+			var json = new JsonObject();
++			com.google.gson.JsonObject json = new JsonObject();
 @@ -42,3 +50,3 @@
 -				for (Object id : obj.getIds(cx)) {
 -					Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);
@@ -380,9 +553,9 @@
 -					}
 +			return json;
 +		} else if (v instanceof Map<?, ?> map) {
-+			var json = new JsonObject();
++			com.google.gson.JsonObject json = new JsonObject();
 +
-+			for (var entry : map.entrySet()) {
++			for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
 +				if (!doesNotSerialize(entry.getValue())) {
 +					json.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));
 @@ -62,0 +69 @@
@@ -391,9 +564,9 @@
 -				yield json;
 +			return json;
 +		} else if (v instanceof Iterable<?> itr) {
-+			var json = new JsonArray();
++			com.google.gson.JsonArray json = new JsonArray();
 +
-+			for (var o : itr) {
++			for (java.lang.Object o : itr) {
 +				json.add(stringify0(cx, o));
 @@ -66,2 +77,0 @@
 -			case Iterable<?> itr -> {
@@ -416,7 +589,7 @@
 +		} else if (doesNotSerialize(v)) {
 +			return JsonNull.INSTANCE;
 +		}
-+		var json = new JsonArray();
++		com.google.gson.JsonArray json = new JsonArray();
 +		cx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);
 +		return json;
 @@ -117 +121 @@
@@ -594,6 +767,12 @@
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
+@@ -33 +35 @@
+-		var newSlot = new AccessorSlot(this);
++		dev.latvian.mods.rhino.AccessorSlot newSlot = new AccessorSlot(this);
+@@ -216 +218 @@
+-			var pTypes = member.parameters().types();
++			java.util.List<java.lang.Class<?>> pTypes = member.parameters().types();
 @@ -219 +221 @@
 -			Class<?> valueType = pTypes.getLast();
 +			Class<?> valueType = ListCompat.getLast(pTypes);
@@ -602,12 +781,31 @@
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
+@@ -44,2 +46,2 @@
+-		var params = ctor.parameters();
+-		var argTypes = params.typeInfos();
++		dev.latvian.mods.rhino.CachedParameters params = ctor.parameters();
++		java.util.List<dev.latvian.mods.rhino.type.TypeInfo> argTypes = params.typeInfos();
 @@ -60 +62 @@
 -				varArgs = cx.jsToJava(args[args.length - 1], argTypes.getLast());
 +				varArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));
 @@ -63 +65 @@
 -				var componentType = argTypes.getLast().componentType();
-+				var componentType = ListCompat.getLast(argTypes).componentType();
++				dev.latvian.mods.rhino.type.TypeInfo componentType = ListCompat.getLast(argTypes).componentType();
+--- a/dev/latvian/mods/rhino/NativeJavaObject.java
++++ b/dev/latvian/mods/rhino/NativeJavaObject.java
+@@ -90 +90 @@
+-				var parameters = parameterized.asClass().getTypeParameters();
++				java.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] parameters = parameterized.asClass().getTypeParameters();
+@@ -94 +94 @@
+-					var mapping = ImmutableMap.<VariableTypeInfo, TypeInfo>builder();
++					com.google.common.collect.ImmutableMap.Builder<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> mapping = ImmutableMap.<VariableTypeInfo, TypeInfo>builder();
+@@ -152 +152 @@
+-			var member = customMembers.get(name);
++			dev.latvian.mods.rhino.CustomMember member = customMembers.get(name);
+@@ -155 +155 @@
+-				var value = member.value();
++				java.lang.Object value = member.value();
 --- a/dev/latvian/mods/rhino/CachedFieldInfo.java
 +++ b/dev/latvian/mods/rhino/CachedFieldInfo.java
 @@ -55 +55 @@
@@ -616,6 +814,11 @@
 @@ -73 +73 @@
 -		var mh = setterMethodHandle;
 +		java.lang.invoke.MethodHandle mh = setterMethodHandle;
+--- a/dev/latvian/mods/rhino/BuiltInSlot.java
++++ b/dev/latvian/mods/rhino/BuiltInSlot.java
+@@ -75 +75 @@
+-		var res = new BuiltInSlot<>(this);
++		dev.latvian.mods.rhino.BuiltInSlot<T> res = new BuiltInSlot<>(this);
 --- a/dev/latvian/mods/rhino/MemberBox.java
 +++ b/dev/latvian/mods/rhino/MemberBox.java
 @@ -26 +26 @@
@@ -791,17 +994,36 @@
 @@ -7,0 +8,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
+@@ -85 +87 @@
+-			var pars = member.parameters();
++			dev.latvian.mods.rhino.CachedParameters pars = member.parameters();
+@@ -113 +115 @@
+-			var pars = member.parameters();
++			dev.latvian.mods.rhino.CachedParameters pars = member.parameters();
+@@ -149 +151 @@
+-					var bestFitPars = bestFit.parameters();
++					dev.latvian.mods.rhino.CachedParameters bestFitPars = bestFit.parameters();
 @@ -238,2 +240,2 @@
 -			var type1 = vararg1 && j >= sig1.size() ? sig1.getLast() : sig1.get(j);
 -			var type2 = vararg2 && j >= sig2.size() ? sig2.getLast() : sig2.get(j);
-+			var type1 = vararg1 && j >= sig1.size() ? ListCompat.getLast(sig1) : sig1.get(j);
-+			var type2 = vararg2 && j >= sig2.size() ? ListCompat.getLast(sig2) : sig2.get(j);
++			dev.latvian.mods.rhino.type.TypeInfo type1 = vararg1 && j >= sig1.size() ? ListCompat.getLast(sig1) : sig1.get(j);
++			dev.latvian.mods.rhino.type.TypeInfo type2 = vararg2 && j >= sig2.size() ? ListCompat.getLast(sig2) : sig2.get(j);
+@@ -345,3 +347,3 @@
+-		var pars = meth.parameters();
+-
+-		var argTypes = pars.typeInfos();
++		dev.latvian.mods.rhino.CachedParameters pars = meth.parameters();
++
++		java.util.List<dev.latvian.mods.rhino.type.TypeInfo> argTypes = pars.typeInfos();
 @@ -367 +369 @@
 -				varArgs = cx.jsToJava(args[args.length - 1], argTypes.getLast());
 +				varArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));
 @@ -370 +372 @@
 -				var componentType = argTypes.getLast().componentType();
-+				var componentType = ListCompat.getLast(argTypes).componentType();
++				dev.latvian.mods.rhino.type.TypeInfo componentType = ListCompat.getLast(argTypes).componentType();
+@@ -431 +433 @@
+-		var returnType = meth.getReturnType();
++		dev.latvian.mods.rhino.type.TypeInfo returnType = meth.getReturnType();
 --- a/dev/latvian/mods/rhino/CachedMemberInfo.java
 +++ b/dev/latvian/mods/rhino/CachedMemberInfo.java
 @@ -32 +32 @@
@@ -1626,6 +1848,24 @@
 @@ -108 +110 @@
 -			arrayTypeInfo = new JSFixedArrayTypeInfo(List.copyOf(list));
 +			arrayTypeInfo = new JSFixedArrayTypeInfo(ListCompat.copyList(list));
+--- a/dev/latvian/mods/rhino/type/ClassValueTypeInfoFactory.java
++++ b/dev/latvian/mods/rhino/type/ClassValueTypeInfoFactory.java
+@@ -25 +25 @@
+-			var preset = TypeUtils.IMMUTABLE_CACHE.get(c);
++			dev.latvian.mods.rhino.type.TypeInfo preset = TypeUtils.IMMUTABLE_CACHE.get(c);
+--- a/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
+@@ -70 +70 @@
+-		var consolidatedComponent = component.consolidate(mapping);
++		dev.latvian.mods.rhino.type.TypeInfo consolidatedComponent = component.consolidate(mapping);
+--- a/dev/latvian/mods/rhino/type/VariableTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/VariableTypeInfo.java
+@@ -44 +44 @@
+-			var bound = raw.getBounds()[0];
++			java.lang.reflect.Type bound = raw.getBounds()[0];
+@@ -55 +55 @@
+-		var rawBounds = raw.getBounds();
++		java.lang.reflect.Type[] rawBounds = raw.getBounds();
 --- a/dev/latvian/mods/rhino/type/InterfaceTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/InterfaceTypeInfo.java
 @@ -26 +26 @@
@@ -1774,6 +2014,14 @@
 +		int hash = 0;
 +		hash = 31 * hash + Objects.hashCode(value);
 +		return hash;
+--- a/dev/latvian/mods/rhino/type/ParameterizedTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/ParameterizedTypeInfo.java
+@@ -118 +118 @@
+-		for (var param : params) {
++		for (dev.latvian.mods.rhino.type.TypeInfo param : params) {
+@@ -125 +125 @@
+-		var consolidatedParams = TypeConsolidator.consolidateAll(this.params, mapping);
++		dev.latvian.mods.rhino.type.TypeInfo[] consolidatedParams = TypeConsolidator.consolidateAll(this.params, mapping);
 --- a/dev/latvian/mods/rhino/type/JSFixedArrayTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSFixedArrayTypeInfo.java
 @@ -1,0 +2,2 @@
@@ -1881,9 +2129,9 @@
 +		} else if (type instanceof TypeVariable<?> variable) {
 +			return create(variable);
 +		} else if (type instanceof WildcardType wildcard) {
-+			var lower = wildcard.getLowerBounds();
++			java.lang.reflect.Type[] lower = wildcard.getLowerBounds();
 +			if (lower.length == 0) {
-+				var upper = wildcard.getUpperBounds();
++				java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
 +				if (upper.length == 0 || upper[0] == Object.class) {
 +					return TypeInfo.NONE;
 @@ -48,0 +48,3 @@
@@ -1895,6 +2143,9 @@
 -		};
 +		}
 +		return TypeInfo.NONE;
+@@ -58 +60 @@
+-		var arr = new TypeInfo[array.length];
++		dev.latvian.mods.rhino.type.TypeInfo[] arr = new TypeInfo[array.length];
 --- a/dev/latvian/mods/rhino/type/EnumTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/EnumTypeInfo.java
 @@ -1,0 +2,2 @@
@@ -1903,6 +2154,23 @@
 @@ -36 +38 @@
 -			constants = List.of(asClass().getEnumConstants());
 +			constants = ListCompat.listOf(asClass().getEnumConstants());
+@@ -51 +53 @@
+-			var constants = enumConstants();
++			java.util.List<java.lang.Object> constants = enumConstants();
+@@ -56,2 +58,2 @@
+-				for (var entry : constants) {
+-					var name = getName(entry);
++				for (java.lang.Object entry : constants) {
++					java.lang.String name = getName(entry);
+@@ -63 +65 @@
+-			var lookup = constantMap.get(s);
++			java.lang.Object lookup = constantMap.get(s);
+@@ -69 +71 @@
+-			for (var entry : constants) {
++			for (java.lang.Object entry : constants) {
+@@ -79 +81 @@
+-			var constants = enumConstants();
++			java.util.List<java.lang.Object> constants = enumConstants();
 --- a/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
 @@ -1,0 +2,4 @@
@@ -2025,6 +2293,11 @@
 @@ -91 +93 @@
 -			typeSet = Set.of(type);
 +			typeSet = ListCompat.setOf(type);
+--- a/dev/latvian/mods/rhino/type/TypeInfoBase.java
++++ b/dev/latvian/mods/rhino/type/TypeInfoBase.java
+@@ -40 +40 @@
+-				var consolidated = this.consolidateImpl(mapping);
++				dev.latvian.mods.rhino.type.TypeInfo consolidated = this.consolidateImpl(mapping);
 --- a/dev/latvian/mods/rhino/type/NoTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/NoTypeInfo.java
 @@ -1,0 +2,2 @@
@@ -2088,3 +2361,14 @@
 +	public String toString() {
 +		return "TypeWrapper[target=" + target + ", validator=" + validator + ", factory=" + factory + "]";
 +	}
+--- a/dev/latvian/mods/rhino/util/wrap/TypeWrappers.java
++++ b/dev/latvian/mods/rhino/util/wrap/TypeWrappers.java
+@@ -44 +44 @@
+-		var wrapper = wrappers.get(target.asClass());
++		dev.latvian.mods.rhino.util.wrap.TypeWrapper<?> wrapper = wrappers.get(target.asClass());
+@@ -54 +54 @@
+-		var cl = target.asClass();
++		java.lang.Class<?> cl = target.asClass();
+@@ -56 +56 @@
+-		var wrapper = wrappers.get(cl);
++		dev.latvian.mods.rhino.util.wrap.TypeWrapper<?> wrapper = wrappers.get(cl);
