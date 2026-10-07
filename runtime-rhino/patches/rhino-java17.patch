@@ -20,6 +20,79 @@
 -			if (target instanceof Function t) {
 +			if (target instanceof Function) {
 +				Function t = (Function) target;
+--- a/dev/latvian/mods/rhino/Arguments.java
++++ b/dev/latvian/mods/rhino/Arguments.java
+@@ -201,6 +201,11 @@
+-		int id = switch (s) {
+-			case "callee" -> Id_callee;
+-			case "length" -> Id_length;
+-			case "caller" -> Id_caller;
+-			default -> 0;
+-		};
++		int id;
++		switch (s) {
++			case "callee":
++				id = Id_callee; break;
++			case "length":
++				id = Id_length; break;
++			case "caller":
++				id = Id_caller; break;
++			default:
++				id = 0; break;
++		}
+@@ -218,6 +223,11 @@
+-		int attr = switch (id) {
+-			case Id_callee -> calleeAttr;
+-			case Id_caller -> callerAttr;
+-			case Id_length -> lengthAttr;
+-			default -> throw new IllegalStateException();
+-		};
++		int attr;
++		switch (id) {
++			case Id_callee:
++				attr = calleeAttr; break;
++			case Id_caller:
++				attr = callerAttr; break;
++			case Id_length:
++				attr = lengthAttr; break;
++			default:
++				throw new IllegalStateException();
++		}
+@@ -229,6 +239,10 @@
+-		return switch (id) {
+-			case Id_callee -> "callee";
+-			case Id_length -> "length";
+-			case Id_caller -> "caller";
+-			default -> null;
+-		};
++		switch (id) {
++			case Id_callee:
++				return "callee";
++			case Id_length:
++				return "length";
++			case Id_caller:
++				return "caller";
++			default:
++				return null;
++		}
+@@ -263,4 +277,4 @@
+-			case Id_callee -> calleeObj = value;
+-			case Id_length -> lengthObj = value;
+-			case Id_caller -> callerObj = (value != null) ? value : UniqueTag.NULL_VALUE;
+-			default -> super.setInstanceIdValue(id, value, cx);
++			case Id_callee: calleeObj = value; break;
++			case Id_length: lengthObj = value; break;
++			case Id_caller: callerObj = (value != null) ? value : UniqueTag.NULL_VALUE; break;
++			default: super.setInstanceIdValue(id, value, cx); break;
+@@ -274,4 +288,4 @@
+-			case Id_callee -> calleeAttr = attr;
+-			case Id_length -> lengthAttr = attr;
+-			case Id_caller -> callerAttr = attr;
+-			default -> super.setInstanceIdAttributes(id, attr, cx);
++			case Id_callee: calleeAttr = attr; break;
++			case Id_length: lengthAttr = attr; break;
++			case Id_caller: callerAttr = attr; break;
++			default: super.setInstanceIdAttributes(id, attr, cx); break;
 --- a/dev/latvian/mods/rhino/ArrayLikeAbstractOperations.java
 +++ b/dev/latvian/mods/rhino/ArrayLikeAbstractOperations.java
 @@ -1,0 +2,2 @@
@@ -909,6 +982,195 @@
 @@ -2384 +2386 @@
 -		return list.getFirst();
 +		return ListCompat.getFirst(list);
+--- a/dev/latvian/mods/rhino/NativeCallSite.java
++++ b/dev/latvian/mods/rhino/NativeCallSite.java
+@@ -117 +117 @@
+-			case Id_constructor -> {
++			case Id_constructor: {
+@@ -120,2 +120,3 @@
+-			}
+-			case Id_getThis -> {
++				break;
++			}
++			case Id_getThis: {
+@@ -124,2 +125,3 @@
+-			}
+-			case Id_getTypeName -> {
++				break;
++			}
++			case Id_getTypeName: {
+@@ -128,2 +130,3 @@
+-			}
+-			case Id_getFunction -> {
++				break;
++			}
++			case Id_getFunction: {
+@@ -132,2 +135,3 @@
+-			}
+-			case Id_getFunctionName -> {
++				break;
++			}
++			case Id_getFunctionName: {
+@@ -136,2 +140,3 @@
+-			}
+-			case Id_getMethodName -> {
++				break;
++			}
++			case Id_getMethodName: {
+@@ -140,2 +145,3 @@
+-			}
+-			case Id_getFileName -> {
++				break;
++			}
++			case Id_getFileName: {
+@@ -144,2 +150,3 @@
+-			}
+-			case Id_getLineNumber -> {
++				break;
++			}
++			case Id_getLineNumber: {
+@@ -148,2 +155,3 @@
+-			}
+-			case Id_getColumnNumber -> {
++				break;
++			}
++			case Id_getColumnNumber: {
+@@ -152,2 +160,3 @@
+-			}
+-			case Id_getEvalOrigin -> {
++				break;
++			}
++			case Id_getEvalOrigin: {
+@@ -156,2 +165,3 @@
+-			}
+-			case Id_isToplevel -> {
++				break;
++			}
++			case Id_isToplevel: {
+@@ -160,2 +170,3 @@
+-			}
+-			case Id_isEval -> {
++				break;
++			}
++			case Id_isEval: {
+@@ -164,2 +175,3 @@
+-			}
+-			case Id_isNative -> {
++				break;
++			}
++			case Id_isNative: {
+@@ -168,2 +180,3 @@
+-			}
+-			case Id_isConstructor -> {
++				break;
++			}
++			case Id_isConstructor: {
+@@ -172,2 +185,3 @@
+-			}
+-			case Id_toString -> {
++				break;
++			}
++			case Id_toString: {
+@@ -176,2 +190,3 @@
+-			}
+-			default -> throw new IllegalArgumentException(String.valueOf(id));
++				break;
++			}
++			default: throw new IllegalArgumentException(String.valueOf(id));
+@@ -188,11 +203,27 @@
+-		return switch (id) {
+-			case Id_constructor -> make(scope, f, cx);
+-			case Id_getFunctionName -> getFunctionName(thisObj, cx);
+-			case Id_getFileName -> getFileName(thisObj, cx);
+-			case Id_getLineNumber -> getLineNumber(thisObj, cx);
+-			case Id_getThis, Id_getTypeName, Id_getFunction, Id_getColumnNumber -> Undefined.INSTANCE;
+-			case Id_getMethodName -> null;
+-			case Id_getEvalOrigin, Id_isEval, Id_isConstructor, Id_isNative, Id_isToplevel -> Boolean.FALSE;
+-			case Id_toString -> js_toString(thisObj, cx);
+-			default -> throw new IllegalArgumentException(String.valueOf(id));
+-		};
++		switch (id) {
++			case Id_constructor:
++				return make(scope, f, cx);
++			case Id_getFunctionName:
++				return getFunctionName(thisObj, cx);
++			case Id_getFileName:
++				return getFileName(thisObj, cx);
++			case Id_getLineNumber:
++				return getLineNumber(thisObj, cx);
++			case Id_getThis:
++			case Id_getTypeName:
++			case Id_getFunction:
++			case Id_getColumnNumber:
++				return Undefined.INSTANCE;
++			case Id_getMethodName:
++				return null;
++			case Id_getEvalOrigin:
++			case Id_isEval:
++			case Id_isConstructor:
++			case Id_isNative:
++			case Id_isToplevel:
++				return Boolean.FALSE;
++			case Id_toString:
++				return js_toString(thisObj, cx);
++			default:
++				throw new IllegalArgumentException(String.valueOf(id));
++		}
+@@ -211,18 +242,34 @@
+-		return switch (s) {
+-			case "isEval" -> Id_isEval;
+-			case "getThis" -> Id_getThis;
+-			case "isNative" -> Id_isNative;
+-			case "toString" -> Id_toString;
+-			case "isToplevel" -> Id_isToplevel;
+-			case "getFileName" -> Id_getFileName;
+-			case "constructor" -> Id_constructor;
+-			case "getFunction" -> Id_getFunction;
+-			case "getTypeName" -> Id_getTypeName;
+-			case "getEvalOrigin" -> Id_getEvalOrigin;
+-			case "getLineNumber" -> Id_getLineNumber;
+-			case "getMethodName" -> Id_getMethodName;
+-			case "isConstructor" -> Id_isConstructor;
+-			case "getColumnNumber" -> Id_getColumnNumber;
+-			case "getFunctionName" -> Id_getFunctionName;
+-			default -> 0;
+-		};
++		switch (s) {
++			case "isEval":
++				return Id_isEval;
++			case "getThis":
++				return Id_getThis;
++			case "isNative":
++				return Id_isNative;
++			case "toString":
++				return Id_toString;
++			case "isToplevel":
++				return Id_isToplevel;
++			case "getFileName":
++				return Id_getFileName;
++			case "constructor":
++				return Id_constructor;
++			case "getFunction":
++				return Id_getFunction;
++			case "getTypeName":
++				return Id_getTypeName;
++			case "getEvalOrigin":
++				return Id_getEvalOrigin;
++			case "getLineNumber":
++				return Id_getLineNumber;
++			case "getMethodName":
++				return Id_getMethodName;
++			case "isConstructor":
++				return Id_isConstructor;
++			case "getColumnNumber":
++				return Id_getColumnNumber;
++			case "getFunctionName":
++				return Id_getFunctionName;
++			default:
++				return 0;
++		}
+@@ -231 +278 @@
+-}+}
 --- a/dev/latvian/mods/rhino/NativeCollectionIterator.java
 +++ b/dev/latvian/mods/rhino/NativeCollectionIterator.java
 @@ -41,5 +41,6 @@
@@ -1379,6 +1641,25 @@
 @@ -43 +43 @@
 -		var newSlot = new Slot(this);
 +		dev.latvian.mods.rhino.Slot newSlot = new Slot(this);
+--- a/dev/latvian/mods/rhino/SpecialRef.java
++++ b/dev/latvian/mods/rhino/SpecialRef.java
+@@ -44,6 +44,10 @@
+-		return switch (type) {
+-			case SPECIAL_NONE -> ScriptRuntime.getObjectProp(cx, target, name);
+-			case SPECIAL_PROTO -> target.getPrototype(cx);
+-			case SPECIAL_PARENT -> target.getParentScope();
+-			default -> throw Kit.codeBug();
+-		};
++		switch (type) {
++			case SPECIAL_NONE:
++				return ScriptRuntime.getObjectProp(cx, target, name);
++			case SPECIAL_PROTO:
++				return target.getPrototype(cx);
++			case SPECIAL_PARENT:
++				return target.getParentScope();
++			default:
++				throw Kit.codeBug();
++		}
 --- a/dev/latvian/mods/rhino/Token.java
 +++ b/dev/latvian/mods/rhino/Token.java
 @@ -220,166 +220,166 @@
@@ -1821,6 +2102,109 @@
 +				case 'J': return LONG;
 +				default: throw new IllegalArgumentException("bad type");
 +			}
+--- a/dev/latvian/mods/rhino/json/JsonParser.java
++++ b/dev/latvian/mods/rhino/json/JsonParser.java
+@@ -73,10 +73,28 @@
+-			return switch (c) {
+-				case '{' -> readObject(cx);
+-				case '[' -> readArray(cx);
+-				case 't' -> readTrue();
+-				case 'f' -> readFalse();
+-				case '"' -> readString();
+-				case 'n' -> readNull();
+-				case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-' -> readNumber(c);
+-				default -> throw new ParseException("Unexpected token: " + c);
+-			};
++			switch (c) {
++				case '{':
++					return readObject(cx);
++				case '[':
++					return readArray(cx);
++				case 't':
++					return readTrue();
++				case 'f':
++					return readFalse();
++				case '"':
++					return readString();
++				case 'n':
++					return readNull();
++				case '1':
++				case '2':
++				case '3':
++				case '4':
++				case '5':
++				case '6':
++				case '7':
++				case '8':
++				case '9':
++				case '0':
++				case '-':
++					return readNumber(c);
++				default:
++					throw new ParseException("Unexpected token: " + c);
++			}
+@@ -101 +119 @@
+-				case '}' -> {
++				case '}': {
+@@ -107 +125 @@
+-				case ',' -> {
++				case ',': {
+@@ -112,2 +130,4 @@
+-				}
+-				case '"' -> {
++
++					break;
++				}
++				case '"': {
+@@ -127,2 +147,4 @@
+-				}
+-				default -> throw new ParseException("Unexpected token in object literal");
++
++					break;
++				}
++				default: throw new ParseException("Unexpected token in object literal");
+@@ -147 +169 @@
+-				case ']' -> {
++				case ']': {
+@@ -154 +176 @@
+-				case ',' -> {
++				case ',': {
+@@ -160,2 +182,4 @@
+-				}
+-				default -> {
++
++					break;
++				}
++				default: {
+@@ -166,0 +191,2 @@
++
++					break;
+@@ -205,9 +231,9 @@
+-				case '"' -> b.append('"');
+-				case '\\' -> b.append('\\');
+-				case '/' -> b.append('/');
+-				case 'b' -> b.append('\b');
+-				case 'f' -> b.append('\f');
+-				case 'n' -> b.append('\n');
+-				case 'r' -> b.append('\r');
+-				case 't' -> b.append('\t');
+-				case 'u' -> {
++				case '"': b.append('"'); break;
++				case '\\': b.append('\\'); break;
++				case '/': b.append('/'); break;
++				case 'b': b.append('\b'); break;
++				case 'f': b.append('\f'); break;
++				case 'n': b.append('\n'); break;
++				case 'r': b.append('\r'); break;
++				case 't': b.append('\t'); break;
++				case 'u': {
+@@ -223,2 +249,4 @@
+-				}
+-				default -> throw new ParseException("Unexpected character in string: '\\" + c + "'");
++
++					break;
++				}
++				default: throw new ParseException("Unexpected character in string: '\\" + c + "'");
 --- a/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/ArrayTypeInfo.java
 @@ -28 +28 @@

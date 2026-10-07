@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 126659,
-    "sha256": "f35e66cbe3043b9a6cf5a74f943a8e94da80f5a65393e4c35d950171a01ffff7",
-    "modified_upstream_files": 84,
+    "bytes": 136575,
+    "sha256": "c68c979101d9cebbac0c2b86c66718d00bf58fc6736c7121026efab4aa4017f0",
+    "modified_upstream_files": 88,
     "added_source_files": 1,
-    "hunks": 284,
+    "hunks": 298,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Eight scalar/enum statement/expression switches lowered in sixowners, selector evaluation and branch semantics retained. Remaininglanguage/capability APIs staypending; fullruntime release17unchanged.",
+  "source_only_status": "Thirteen parser/callsite/arguments/specialref switches lowered in fourowners; exactescapes/strictmode/prototype/error branches preserved. Fullruntime release17pendingremaininglanguage/capabilityport.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -58,9 +58,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.Arguments",
       "source_bytes": 11294,
       "source_sha256": "711553b10fec0b58d1ab4ba3643e63ce97c9af10013eb17559ed54a396d12f16",
-      "patched_bytes": 11294,
-      "patched_sha256": "711553b10fec0b58d1ab4ba3643e63ce97c9af10013eb17559ed54a396d12f16",
-      "modified": false,
+      "patched_bytes": 11468,
+      "patched_sha256": "cd682c6469c39c695f0157251425ac2b740af10af781c82c354b479a80657404",
+      "modified": true,
       "line_count": 410,
       "license_evidence": [
         "MPL-2.0 header"
@@ -1095,9 +1095,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.NativeCallSite",
       "source_bytes": 6389,
       "source_sha256": "36331e34bcae9573df974b17126ecf367b6a47ec88f08c39d581ae8ebfb8615f",
-      "patched_bytes": 6389,
-      "patched_sha256": "36331e34bcae9573df974b17126ecf367b6a47ec88f08c39d581ae8ebfb8615f",
-      "modified": false,
+      "patched_bytes": 6781,
+      "patched_sha256": "e399269b23c5f04febb513260b5718b1996aae76d07eee6c71f4782c6fdba165",
+      "modified": true,
       "line_count": 231,
       "license_evidence": [
         "MPL-2.0 header"
@@ -1753,9 +1753,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.SpecialRef",
       "source_bytes": 3688,
       "source_sha256": "52e9b3921ea6f65861b24192038ce7c7dd4a5b7db0f7402333b4822a63134f4e",
-      "patched_bytes": 3688,
-      "patched_sha256": "52e9b3921ea6f65861b24192038ce7c7dd4a5b7db0f7402333b4822a63134f4e",
-      "modified": false,
+      "patched_bytes": 3709,
+      "patched_sha256": "98f0c4917414eba3d72f0d3653b52cce786d7cb28ecc1d2c2f3e5d43631f499c",
+      "modified": true,
       "line_count": 134,
       "license_evidence": [
         "MPL-2.0 header"
@@ -3027,9 +3027,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.json.JsonParser",
       "source_bytes": 9637,
       "source_sha256": "09d8d9295563e1d17ee8db72e30a1261895739cf3ee4880ed001173bb279ba13",
-      "patched_bytes": 9637,
-      "patched_sha256": "09d8d9295563e1d17ee8db72e30a1261895739cf3ee4880ed001173bb279ba13",
-      "modified": false,
+      "patched_bytes": 9879,
+      "patched_sha256": "3b0740d101ec7f73eec3c1e62b0c4a7efcf5434a8aa069827d8c3f290b9a3c2a",
+      "modified": true,
       "line_count": 359,
       "license_evidence": [
         "MPL-2.0 header"
