@@ -537,10 +537,10 @@
     "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974"
   },
   "fixturePins": {
-    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionKnownFixture.java": "5972fa54b60e6310cef7575c5ee7e5bc8fd1acc934ebfcf9eee04b08b60f4549",
-    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionAdmissionFixture.java": "e19d46290f2d285e522a92fa1f3e53a9b38c39ace97199e67eb81dd036bf8e7e",
-    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionKnownFixture.java": "22cdb37d8e357ea56a0c91736fc4cd55da98ae83bde0483f0daec6a6c9fb7f5a",
-    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionJava8Fixture.java": "3a02311b5e902fb8ee16f935969941b3958a43dfdc97726fa0673383b108b631"
+    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionKnownFixture.java": "adbd92247f0d888427499292f967f06a9e2d56355d1de402807706d3bc8bdecb",
+    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionAdmissionFixture.java": "61de0d5ce08a23f68ee5552ec46537c4e0cc1fbfd2b0bde98cad3be7c6534d9b",
+    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionKnownFixture.java": "99728da28fc42b875c4d6a53f8ccfba1ab956a923b459d72e927f28ac5f87a74",
+    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionJava8Fixture.java": "31d5acb4fd404e1b5fca4fcaf1e6baf793c733061a21412a07a378e5835fffc5"
   },
   "positiveOriginalOracle": "Knownactualunion values original17 vs candidateactual8 closedsemantic; wholemodern foreignall10 behavior",
   "wholeGuideJava8Acceptance": false,

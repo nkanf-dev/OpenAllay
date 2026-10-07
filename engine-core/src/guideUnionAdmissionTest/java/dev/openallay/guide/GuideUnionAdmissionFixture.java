@@ -42,18 +42,18 @@ public final class GuideUnionAdmissionFixture {
             check(!repository.activity().deleting()&&!java.nio.file.Files.exists(database),"repository rejects before reservation/I/O");
             repository.closeAsync().join();java.nio.file.Files.delete(directory);
         } catch(java.io.IOException failed){throw new AssertionError(failed);}
-        ForeignComponent component=new ForeignComponent();rejected(()->new SemanticBlock.Component("node",component));
-        rejected(()->new SemanticLayout.Line("node",SemanticLayout.Kind.COMPONENT,0,1,Collections.<SemanticLayout.Run>emptyList(),component,null));
+        ForeignComponent component=new ForeignComponent();rejected(()->new SemanticBlock.Component("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",component));
+        rejected(()->new SemanticLayout.Line("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",SemanticLayout.Kind.COMPONENT,0,1,Collections.<SemanticLayout.Run>emptyList(),component,null));
         Map<String,RichComponentRegistry.Decoder> decoders=Collections.singletonMap("foreign",(node,envelope,references)->component);
         RichComponentRegistry registry=new RichComponentRegistry(decoders);
-        rejected(()->registry.decode("{\"type\":\"foreign\",\"properties\":{},\"fallback\":\"foreign\",\"narration\":\"foreign\"}","node",SemanticReferenceIndex.empty(id)));
+        rejected(()->registry.decode("{\"type\":\"foreign\",\"properties\":{},\"fallback\":\"foreign\",\"narration\":\"foreign\"}","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",SemanticReferenceIndex.empty(id)));
         ForeignBlock block=new ForeignBlock();rejected(()->new SemanticDocument(Collections.<SemanticBlock>singletonList(block),"foreign",Collections.<SemanticDiagnostic>emptyList()));
-        rejected(()->new SemanticBlock.Quote("node",Collections.<SemanticBlock>singletonList(block)));
-        rejected(()->new SemanticBlock.ListBlock("node",false,1,Collections.singletonList(Collections.<SemanticBlock>singletonList(block))));
-        ForeignInline inline=new ForeignInline();rejected(()->new SemanticBlock.Paragraph("node",Collections.<SemanticInline>singletonList(inline)));
-        rejected(()->new SemanticBlock.Heading("node",1,Collections.<SemanticInline>singletonList(inline)));
-        rejected(()->new SemanticInline.Emphasis("node",Collections.<SemanticInline>singletonList(inline)));
-        rejected(()->new SemanticInline.Strong("node",Collections.<SemanticInline>singletonList(inline)));
+        rejected(()->new SemanticBlock.Quote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",Collections.<SemanticBlock>singletonList(block)));
+        rejected(()->new SemanticBlock.ListBlock("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",false,1,Collections.singletonList(Collections.<SemanticBlock>singletonList(block))));
+        ForeignInline inline=new ForeignInline();rejected(()->new SemanticBlock.Paragraph("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",Collections.<SemanticInline>singletonList(inline)));
+        rejected(()->new SemanticBlock.Heading("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",1,Collections.<SemanticInline>singletonList(inline)));
+        rejected(()->new SemanticInline.Emphasis("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",Collections.<SemanticInline>singletonList(inline)));
+        rejected(()->new SemanticInline.Strong("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",Collections.<SemanticInline>singletonList(inline)));
         rejected(()->new SemanticBlock.TableCell(SemanticBlock.Alignment.LEFT,Collections.<SemanticInline>singletonList(inline)));
         rejected(()->new GuideToolDetailView("title",GuideToolStatus.SUCCEEDED,GuideToolInvocationView.none(),GuideToolIntent.none(),Collections.<GuideDetailCard>singletonList(new ForeignCard()),Collections.<GuideToolMessage>emptyList(),Optional.<GuideToolDetailView.Debug>empty()));
         rejected(()->new GuideToolSummaryPresenter.Summary("id","title","key","description",GuideToolDisplayStatus.SUCCEEDED,Collections.<GuideToolSummaryPresenter.Capsule>singletonList(new ForeignCapsule())));
@@ -61,7 +61,7 @@ public final class GuideUnionAdmissionFixture {
         rejected(()->new GuideUiView("session",GuideModelMode.SERVER,false,true,false,false,false,null,Collections.<GuideUiSession>emptyList(),Collections.<GuideUiRow>singletonList(row),Collections.singletonList(choice),""));
         rejected(()->new GuideHudView(GuideUiConfig.defaults().hud(),"Assistant","session","","",null,0,Collections.<GuideUiRow>singletonList(row),GuideUiConfig.defaults().fullscreen(),true));
         GuideTimelineEntry.User known=new GuideTimelineEntry.User(0,id,"question");check(GuideTimelineEntry.requireKnown(known)==known,"known identity");
-        check(SemanticInline.requireKnown(new SemanticInline.Text("node","text")) instanceof SemanticInline.Text,"known inline");
+        check(SemanticInline.requireKnown(new SemanticInline.Text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")) instanceof SemanticInline.Text,"known inline");
         check(GuideHistoryDeleteScope.requireKnown(GuideHistoryDeleteScope.actor(id)) instanceof GuideHistoryDeleteScope.Actor,"known scope");
         System.out.println("checks="+checks);System.out.println("PASS actualtenGuide closedunion foreigncapture admission");
     }
