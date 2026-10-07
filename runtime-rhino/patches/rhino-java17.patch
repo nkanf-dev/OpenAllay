@@ -1071,9 +1071,93 @@
 +				dev.latvian.mods.rhino.Slot slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));
 --- a/dev/latvian/mods/rhino/Interpreter.java
 +++ b/dev/latvian/mods/rhino/Interpreter.java
-@@ -254 +254 @@
+@@ -247 +247,2 @@
+-			if (other instanceof CallFrame otherCallFrame) {
++			if (other instanceof CallFrame) {
++				CallFrame otherCallFrame = (CallFrame) other;
+@@ -254 +255 @@
 -				var cx = localContext.factory.enter();
 +				dev.latvian.mods.rhino.Context cx = localContext.factory.enter();
+@@ -1007 +1008,2 @@
+-								if (fun instanceof InterpretedFunction ifun) {
++								if (fun instanceof InterpretedFunction) {
++									InterpretedFunction ifun = (InterpretedFunction) fun;
+@@ -1039 +1041,2 @@
+-								if (fun instanceof IdFunctionObject ifun) {
++								if (fun instanceof IdFunctionObject) {
++									IdFunctionObject ifun = (IdFunctionObject) fun;
+@@ -1044 +1047,2 @@
+-										if (applyCallable instanceof InterpretedFunction iApplyCallable) {
++										if (applyCallable instanceof InterpretedFunction) {
++											InterpretedFunction iApplyCallable = (InterpretedFunction) applyCallable;
+@@ -1053 +1057,2 @@
+-								if (fun instanceof ScriptRuntime.NoSuchMethodShim noSuchMethodShim) {
++								if (fun instanceof ScriptRuntime.NoSuchMethodShim) {
++									ScriptRuntime.NoSuchMethodShim noSuchMethodShim = (ScriptRuntime.NoSuchMethodShim) fun;
+@@ -1057 +1062,2 @@
+-									if (noSuchMethodMethod instanceof InterpretedFunction ifun) {
++									if (noSuchMethodMethod instanceof InterpretedFunction) {
++										InterpretedFunction ifun = (InterpretedFunction) noSuchMethodMethod;
+@@ -1079 +1085,2 @@
+-								if (lhs instanceof InterpretedFunction f) {
++								if (lhs instanceof InterpretedFunction) {
++									InterpretedFunction f = (InterpretedFunction) lhs;
+@@ -1089 +1096 @@
+-								if (!(lhs instanceof Constructable ctor)) {
++								if (!(lhs instanceof Constructable)) {
+@@ -1094,0 +1102 @@
++								Constructable ctor = (Constructable) lhs;
+@@ -1649,8 +1657,14 @@
+-		sDbl[stackTop] = switch (op) {
+-			case Token.BITAND -> lIntValue & rIntValue;
+-			case Token.BITOR -> lIntValue | rIntValue;
+-			case Token.BITXOR -> lIntValue ^ rIntValue;
+-			case Token.LSH -> lIntValue << rIntValue;
+-			case Token.RSH -> lIntValue >> rIntValue;
+-			default -> lIntValue;
+-		};
++		switch (op) {
++			case Token.BITAND:
++				sDbl[stackTop] = lIntValue & rIntValue; break;
++			case Token.BITOR:
++				sDbl[stackTop] = lIntValue | rIntValue; break;
++			case Token.BITXOR:
++				sDbl[stackTop] = lIntValue ^ rIntValue; break;
++			case Token.LSH:
++				sDbl[stackTop] = lIntValue << rIntValue; break;
++			case Token.RSH:
++				sDbl[stackTop] = lIntValue >> rIntValue; break;
++			default:
++				sDbl[stackTop] = lIntValue; break;
++		}
+@@ -1776 +1790,3 @@
+-			if (frame.scope instanceof ConstProperties cp) {
++			Scriptable currentScope = frame.scope;
++			if (currentScope instanceof ConstProperties) {
++				ConstProperties cp = (ConstProperties) currentScope;
+@@ -2218,8 +2234,14 @@
+-		sDbl[stackTop] = switch (op) {
+-			case Token.SUB -> lDbl - rDbl;
+-			case Token.MUL -> lDbl * rDbl;
+-			case Token.DIV -> lDbl / rDbl;
+-			case Token.MOD -> lDbl % rDbl;
+-			case Token.POW -> Math.pow(lDbl, rDbl);
+-			default -> lDbl;
+-		};
++		switch (op) {
++			case Token.SUB:
++				sDbl[stackTop] = lDbl - rDbl; break;
++			case Token.MUL:
++				sDbl[stackTop] = lDbl * rDbl; break;
++			case Token.DIV:
++				sDbl[stackTop] = lDbl / rDbl; break;
++			case Token.MOD:
++				sDbl[stackTop] = lDbl % rDbl; break;
++			case Token.POW:
++				sDbl[stackTop] = Math.pow(lDbl, rDbl); break;
++			default:
++				sDbl[stackTop] = lDbl; break;
++		}
 --- a/dev/latvian/mods/rhino/JavaAdapter.java
 +++ b/dev/latvian/mods/rhino/JavaAdapter.java
 @@ -93 +93 @@
@@ -3117,6 +3201,125 @@
 +			case ASSIGN_POW: return "ASSIGN_POW";
 +			default: throw new IllegalStateException(String.valueOf(token));
 +		}
+--- a/dev/latvian/mods/rhino/TokenStream.java
++++ b/dev/latvian/mods/rhino/TokenStream.java
+@@ -45,35 +45,81 @@
+-		return switch (name) {
+-			case "break" -> Token.BREAK;
+-			case "case" -> Token.CASE;
+-			case "catch" -> Token.CATCH;
+-			case "const" -> Token.CONST;
+-			case "continue" -> Token.CONTINUE;
+-			case "default" -> Token.DEFAULT;
+-			case "delete" -> Token.DELPROP;
+-			case "do" -> Token.DO;
+-			case "else" -> Token.ELSE;
+-			case "finally" -> Token.FINALLY;
+-			case "for" -> Token.FOR;
+-			case "function" -> Token.FUNCTION;
+-			case "if" -> Token.IF;
+-			case "in" -> Token.IN;
+-			case "instanceof" -> Token.INSTANCEOF;
+-			case "new" -> Token.NEW;
+-			case "return" -> Token.RETURN;
+-			case "switch" -> Token.SWITCH;
+-			case "this" -> Token.THIS;
+-			case "throw" -> Token.THROW;
+-			case "try" -> Token.TRY;
+-			case "typeof" -> Token.TYPEOF;
+-			case "var" -> Token.VAR;
+-			case "void" -> Token.VOID;
+-			case "while" -> Token.WHILE;
+-			case "with" -> Token.WITH;
+-			case "yield" -> Token.YIELD;
+-			case "false" -> Token.FALSE;
+-			case "null" -> Token.NULL;
+-			case "true" -> Token.TRUE;
+-			case "let" -> Token.LET;
+-			case "class", "export", "static", "public", "protected", "private", "package", "interface", "implements", "enum", "await", "super", "import", "extends" -> Token.RESERVED;
+-			default -> Token.EOF;
+-		}; // & 0xFF;
++		switch (name) {
++			case "break":
++				return Token.BREAK;
++			case "case":
++				return Token.CASE;
++			case "catch":
++				return Token.CATCH;
++			case "const":
++				return Token.CONST;
++			case "continue":
++				return Token.CONTINUE;
++			case "default":
++				return Token.DEFAULT;
++			case "delete":
++				return Token.DELPROP;
++			case "do":
++				return Token.DO;
++			case "else":
++				return Token.ELSE;
++			case "finally":
++				return Token.FINALLY;
++			case "for":
++				return Token.FOR;
++			case "function":
++				return Token.FUNCTION;
++			case "if":
++				return Token.IF;
++			case "in":
++				return Token.IN;
++			case "instanceof":
++				return Token.INSTANCEOF;
++			case "new":
++				return Token.NEW;
++			case "return":
++				return Token.RETURN;
++			case "switch":
++				return Token.SWITCH;
++			case "this":
++				return Token.THIS;
++			case "throw":
++				return Token.THROW;
++			case "try":
++				return Token.TRY;
++			case "typeof":
++				return Token.TYPEOF;
++			case "var":
++				return Token.VAR;
++			case "void":
++				return Token.VOID;
++			case "while":
++				return Token.WHILE;
++			case "with":
++				return Token.WITH;
++			case "yield":
++				return Token.YIELD;
++			case "false":
++				return Token.FALSE;
++			case "null":
++				return Token.NULL;
++			case "true":
++				return Token.TRUE;
++			case "let":
++				return Token.LET;
++			case "class":
++			case "export":
++			case "static":
++			case "public":
++			case "protected":
++			case "private":
++			case "package":
++			case "interface":
++			case "implements":
++			case "enum":
++			case "await":
++			case "super":
++			case "import":
++			case "extends":
++				return Token.RESERVED;
++			default:
++				return Token.EOF;
++		} // & 0xFF;
 --- a/dev/latvian/mods/rhino/UniqueTag.java
 +++ b/dev/latvian/mods/rhino/UniqueTag.java
 @@ -46,6 +46,7 @@

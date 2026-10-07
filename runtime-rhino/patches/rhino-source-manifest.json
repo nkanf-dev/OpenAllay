@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 182288,
-    "sha256": "f16181f687122e48b4ebb3acfa649eb33c51ab414cf43bd474a7e84e6bfc76d4",
-    "modified_upstream_files": 101,
+    "bytes": 188648,
+    "sha256": "83b1e8a770b84d7410d4eb20c1386d05dc12b9c18ae7f90d40ef83ca692e8d50",
+    "modified_upstream_files": 102,
     "added_source_files": 1,
-    "hunks": 387,
+    "hunks": 397,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "ClassFileWriter12arrow switches/MHandlebindinglowered; bytecodeemission/stack/descriptoralgorithm retained. No classloading workaround; fullruntime release17pendinglanguage/APIport.",
+  "source_only_status": "Interpreter9bindings2arithmeticswitches/TokenStreamkeyword switchlowered; stack/callback/control/receiverorder preserved. Fullrelease17pendingremaininglanguage/APIcapabilities.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -843,8 +843,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.Interpreter",
       "source_bytes": 82980,
       "source_sha256": "05ef8985ffec3588e92f4c1233a8007c690fa579513e6de005c1e0fe676b7e09",
-      "patched_bytes": 83007,
-      "patched_sha256": "762afd9ddc4b9163536a2546ffb3ccfd5b7319f39e38b400e523321379c1e493",
+      "patched_bytes": 83852,
+      "patched_sha256": "97658f21167c11360fe400056716809e317dff28535be174f7a83b5888fe530f",
       "modified": true,
       "line_count": 2461,
       "license_evidence": [
@@ -1823,9 +1823,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.TokenStream",
       "source_bytes": 38388,
       "source_sha256": "5474e150e1919eb3dbf9bbda4ff67c6d15e9486ecbc785f23581163182ac5191",
-      "patched_bytes": 38388,
-      "patched_sha256": "5474e150e1919eb3dbf9bbda4ff67c6d15e9486ecbc785f23581163182ac5191",
-      "modified": false,
+      "patched_bytes": 38781,
+      "patched_sha256": "5b2ff4581bddc5dc3c7f9b272d69b0cc6f8f48a51fb14ba3c18844c6fc0a84bb",
+      "modified": true,
       "line_count": 1554,
       "license_evidence": [
         "MPL-2.0 header"
