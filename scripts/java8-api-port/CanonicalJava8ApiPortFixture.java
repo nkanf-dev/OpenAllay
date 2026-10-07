@@ -55,6 +55,27 @@ public final class CanonicalJava8ApiPortFixture {
         String wanted="[a, b]:xx:abRNcd:[x, null]:NullPointerException:IllegalArgumentException:IllegalArgumentException:UnsupportedOperationException:[snap]:2:3:a:true:b:c:abc:000fff:1:a/b:true:true:custom:[[a, b]]:[a, b]:NullPointerException:UnsupportedOperationException\n";
         check(process(args[2],List.of("-cp",modern.toString(),"ApiFlow")).equals(wanted),"Originalsemantic output");check(process(args[4],List.of("-cp",release8.toString(),"ApiFlow")).equals(wanted),"Convertedrelease8 output");check(process(args[4],List.of("-cp",true8.toString(),"ApiFlow")).equals(wanted),"Truejavac8 output");
         Path unsupported=root.resolve("unsupported");Files.createDirectory(unsupported);Files.writeString(unsupported.resolve("Unsupported.java"),"import java.util.concurrent.*;class Unsupported {static CompletableFuture<String> receiver(){throw new AssertionError();}Object test(){return receiver().failedFuture(new IllegalArgumentException(\"x\"));} }");Path rejectedSelected=root.resolve("rejected.txt");Files.writeString(rejectedSelected,"Unsupported.java\n");Path refused=root.resolve("refused");CanonicalJava8ApiPort.main(new String[]{unsupported.toString(),"",rejectedSelected.toString(),refused.toString()});check(Files.readString(refused.resolve("owner-status.tsv")).contains("\tREJECTED\t1\t"),"Evaluatedstaticreceiver rejected");check(!Files.exists(refused.resolve("post/Unsupported.java")),"No partialowner");
+        Map<String,String> shadows=new LinkedHashMap<>();
+
+        shadows.put("JavaAndPaths","import java.nio.file.Path;class JavaAndPaths {static Object Paths; Object test(){Path java=Path.of(\"a\");return java;}}");
+        shadows.put("FieldDev","import java.util.List;class FieldDev {static Object dev;Object test(){return List.of(\"a\");}}");
+        shadows.put("NestedDev","import java.util.List;class NestedDev {static class dev{} Object test(){return List.of(\"a\");}}");
+        shadows.put("LocalDev","import java.util.List;class LocalDev {Object test(){Object dev=List.of(\"a\");return dev;}}");
+        int index=0;for(var shadow:shadows.entrySet()){
+            Path directory=root.resolve("shadow"+index++);Files.createDirectory(directory);Path input=directory.resolve(shadow.getKey()+".java");Files.writeString(input,shadow.getValue());
+            Path proof=root.resolve("shadow-original-"+shadow.getKey());compile(input,List.of(),proof,"17");
+            Path selection=root.resolve("shadow-"+shadow.getKey()+".txt");Files.writeString(selection,input.getFileName()+"\n");Path rejected=root.resolve("shadow-output-"+shadow.getKey());
+            CanonicalJava8ApiPort.main(new String[]{directory.toString(),"",selection.toString(),rejected.toString()});
+            String report=Files.readString(rejected.resolve("owner-status.tsv"));check(report.contains("\tREJECTED\t1\t"),"Actual package root shadow must reject completeowner: "+report);
+            check(!Files.exists(rejected.resolve("post").resolve(input.getFileName())),"No shadowed postimage emitted");
+        }
+        Path pathScope=root.resolve("pathscope");Files.createDirectory(pathScope);Path pathSource=pathScope.resolve("PathScope.java");
+        Files.writeString(pathSource,"import java.nio.file.Path;public class PathScope {public static void main(String[]args){Path java=Path.of(\"a\",\"b\");System.out.println(java.toString().replace('\\\\','/'));}}");
+        Path pathSelection=root.resolve("pathscope.txt");Files.writeString(pathSelection,"PathScope.java\n");Path pathOutput=root.resolve("path-output");CanonicalJava8ApiPort.main(new String[]{pathScope.toString(),"",pathSelection.toString(),pathOutput.toString()});
+        check(Files.readString(pathOutput.resolve("owner-status.tsv")).contains("\tSUPPORTED\t1\t"),"Resolved safe Paths import generation");
+        Path pathAfter=pathOutput.resolve("post/PathScope.java"),pathOriginal=root.resolve("path-original"),pathRelease8=root.resolve("path-release8"),pathTrue8=root.resolve("path-true8");
+        compile(pathSource,List.of(),pathOriginal,"17");compile(pathAfter,List.of(),pathRelease8,"8");Files.createDirectory(pathTrue8);process(args[3],List.of("-source","8","-target","8","-d",pathTrue8.toString(),pathAfter.toString()));
+        check(process(args[2],List.of("-cp",pathOriginal.toString(),"PathScope")).equals("a/b\n"),"Original localjava Paths behavior");check(process(args[4],List.of("-cp",pathRelease8.toString(),"PathScope")).equals("a/b\n"),"Release8 safe Paths qualifier");check(process(args[4],List.of("-cp",pathTrue8.toString(),"PathScope")).equals("a/b\n"),"True8 safe Paths qualifier");
         System.out.println("PASS genuineattributed API oracle original17=release8=truejavac8 evaluationorder/null/duplicates/varargs/generic/snapshot/immutable/whitespace/hex/future/path/duration;custommethod untouched, evaluatedstaticreceiver failclosed");
     }
 }

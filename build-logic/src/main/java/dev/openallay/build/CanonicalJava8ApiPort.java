@@ -37,12 +37,46 @@ public final class CanonicalJava8ApiPort {
         case "java.util.HexFormat" -> "dev.openallay.util.Java8Hex.formatHex";
         default -> "";
     };}
+    /** Qualified generated type names must not bind a local/field/type named by the package root. */
+    private static void unshadowedRoot(String qualified,TreePath use,Trees trees,JavacTask task){
+        String root=qualified.substring(0,qualified.indexOf('.'));
+        for(Scope scope=trees.getScope(use);scope!=null;scope=scope.getEnclosingScope()){
+            for(Element element:scope.getLocalElements())if(element.getSimpleName().contentEquals(root)
+                    && (element instanceof VariableElement||element instanceof TypeElement))
+                throw new IllegalArgumentException("Generated package root is shadowed in actual scope: "+root+" by "+element.getKind());
+            TypeElement enclosing=scope.getEnclosingClass();
+            if(enclosing!=null)for(Element element:task.getElements().getAllMembers(enclosing))
+                if(element.getSimpleName().contentEquals(root)&&(element instanceof VariableElement||element instanceof TypeElement))
+                    throw new IllegalArgumentException("Generated package root is shadowed by actual enclosing member: "+root+" by "+element.getKind());
+        }
+        // A declaration's own initializer cannot resolve a package root with the variable's name.
+        for(TreePath path=use;path!=null;path=path.getParentPath())if(path.getLeaf() instanceof VariableTree variable
+                && variable.getName().contentEquals(root))throw new IllegalArgumentException("Generated package root shadows its declaration initializer: "+root);
+    }
+    private static String safePathsQualifier(CompilationUnitTree unit,TreePath use,Trees trees,JavacTask task,Set<CompilationUnitTree> imported){
+        try{unshadowedRoot("java.nio.file.Paths",use,trees,task);return "java.nio.file.Paths";}catch(IllegalArgumentException packageShadow){
+            TypeElement paths=task.getElements().getTypeElement("java.nio.file.Paths");
+            if(paths==null||!trees.isAccessible(trees.getScope(use),paths))throw new IllegalArgumentException("Actual Paths type inaccessible");
+            for(Scope scope=trees.getScope(use);scope!=null;scope=scope.getEnclosingScope()){
+                for(Element element:scope.getLocalElements())if(element.getSimpleName().contentEquals("Paths")&&!element.equals(paths))throw new IllegalArgumentException("Generated Paths simple qualifier shadowed by "+element.getKind());
+                TypeElement enclosing=scope.getEnclosingClass();if(enclosing!=null)for(Element member:task.getElements().getAllMembers(enclosing))if(member.getSimpleName().contentEquals("Paths")&&!member.equals(paths))throw new IllegalArgumentException("Generated Paths qualifier shadowed by enclosing member");
+            }
+            for(TreePath path=use;path!=null;path=path.getParentPath())if(path.getLeaf() instanceof VariableTree variable&&variable.getName().contentEquals("Paths"))throw new IllegalArgumentException("Paths qualifier shadows currentinitializer");
+            for(ImportTree declaration:unit.getImports()){
+                String name=declaration.getQualifiedIdentifier().toString();if(name.endsWith(".Paths")&&!name.equals("java.nio.file.Paths"))throw new IllegalArgumentException("Conflicting Paths import");
+            }
+            if(unit.getPackageName()!=null){TypeElement sibling=task.getElements().getTypeElement(unit.getPackageName()+".Paths");if(sibling!=null&&!sibling.equals(paths))throw new IllegalArgumentException("Package declares a competing Paths type");}
+            final boolean[] collision={false};new TreeScanner<Void,Void>(){@Override public Void visitClass(ClassTree tree,Void unused){if(tree.getSimpleName().contentEquals("Paths"))collision[0]=true;return super.visitClass(tree,unused);}}.scan(unit,null);
+            if(collision[0])throw new IllegalArgumentException("Source declares a Paths type");
+            imported.add(unit);return "Paths";
+        }
+    }
     public static void main(String[] args)throws Exception{
         if(args.length!=4)throw new IllegalArgumentException("completeActualRoot genuineProductionClasspath selectedOwners freshExternalOutput");Path root=Paths.get(args[0]).toAbsolutePath().normalize(),output=Paths.get(args[3]).toAbsolutePath().normalize();if(Files.exists(output)||output.startsWith(root)||root.startsWith(output))throw new IllegalArgumentException("Fresh externaloutput only");Set<String> selected=new TreeSet<>(Files.readAllLines(Paths.get(args[2]),StandardCharsets.UTF_8));List<File> files=new ArrayList<>();try(var stream=Files.walk(root)){stream.filter(p->p.toString().endsWith(".java")).sorted().forEach(p->files.add(p.toFile()));}
         JavaCompiler compiler=ToolProvider.getSystemJavaCompiler();DiagnosticCollector<JavaFileObject> diagnostics=new DiagnosticCollector<>();Map<String,byte[]> before=new TreeMap<>(),after=new TreeMap<>();List<String> statuses=new ArrayList<>();
         try(StandardJavaFileManager manager=compiler.getStandardFileManager(diagnostics,Locale.ROOT,StandardCharsets.UTF_8)){
             JavacTask task=(JavacTask)compiler.getTask(null,manager,diagnostics,List.of("--release","17","-proc:none","-encoding","UTF-8","-classpath",args[1]),null,manager.getJavaFileObjectsFromFiles(files));List<CompilationUnitTree> units=new ArrayList<>();task.parse().forEach(units::add);Trees trees=Trees.instance(task);SourcePositions positions=trees.getSourcePositions();task.analyze();for(Diagnostic<?> d:diagnostics.getDiagnostics())if(d.getKind()==Diagnostic.Kind.ERROR)throw new IllegalStateException("Complete genuine source attribution failed: "+d);
-            for(CompilationUnitTree unit:units){String name=root.relativize(Paths.get(unit.getSourceFile().toUri())).toString().replace(File.separatorChar,'/');if(!selected.contains(name))continue;byte[] bytes=Files.readAllBytes(root.resolve(name));before.put(name,bytes);String text=new String(bytes,StandardCharsets.UTF_8);List<Site> sites=new ArrayList<>();List<Edit> referenceEdits=new ArrayList<>();List<String> reasons=new ArrayList<>();
+            for(CompilationUnitTree unit:units){String name=root.relativize(Paths.get(unit.getSourceFile().toUri())).toString().replace(File.separatorChar,'/');if(!selected.contains(name))continue;byte[] bytes=Files.readAllBytes(root.resolve(name));before.put(name,bytes);String text=new String(bytes,StandardCharsets.UTF_8);Set<CompilationUnitTree> importedPaths=new HashSet<>();List<Site> sites=new ArrayList<>();List<Edit> referenceEdits=new ArrayList<>();List<String> reasons=new ArrayList<>();
                 new TreePathScanner<Void,Void>(){
                     @Override public Void visitMethodInvocation(MethodInvocationTree invocation,Void unused){Element element=trees.getElement(getCurrentPath());if(element instanceof ExecutableElement executable&&executable.getEnclosingElement() instanceof TypeElement type){String owner=type.getQualifiedName().toString(),method=executable.getSimpleName().toString();if(selectedMethod(owner,method)){String reject=null;
                         if(!(invocation.getMethodSelect() instanceof MemberSelectTree)&&!executable.getModifiers().contains(Modifier.STATIC))reject="Implicit receiver API call needs explicit qualifiedthis scope policy";
@@ -58,7 +92,9 @@ public final class CanonicalJava8ApiPort {
                             TypeElement targetType=(TypeElement)((javax.lang.model.type.DeclaredType)target).asElement();
                             long abstractMethods=task.getElements().getAllMembers(targetType).stream().filter(member->member.getKind()==ElementKind.METHOD&&member.getModifiers().contains(Modifier.ABSTRACT)).count();
                             if(abstractMethods!=1)throw new IllegalArgumentException("Methodreference target is not a unique public functional descriptor");
-                            String mapped=helper(declared,methodName,1);int dot=mapped.lastIndexOf('.');
+                            String mapped=helper(declared,methodName,1);
+                            try{unshadowedRoot(mapped,getCurrentPath(),trees,task);}catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,reference)+" "+failure.getMessage());return super.visitMemberReference(reference,unused);}
+                            int dot=mapped.lastIndexOf('.');
                             String typeArguments=reference.getTypeArguments()==null||reference.getTypeArguments().isEmpty()?"":"<"+String.join(",",reference.getTypeArguments().stream().map(Object::toString).toList())+">";
                             referenceEdits.add(new Edit(pos(positions.getStartPosition(unit,reference)),pos(positions.getEndPosition(unit,reference)),mapped.substring(0,dot)+"::"+typeArguments+mapped.substring(dot+1)));
                         }else reasons.add("offset="+positions.getStartPosition(unit,reference)+" API method reference needs functional target adaptation");
@@ -81,11 +117,15 @@ public final class CanonicalJava8ApiPort {
                     String replacement;
                     if((site.owner().equals("java.lang.StringBuilder")||site.owner().equals("java.lang.CharSequence"))){if(!arguments.isEmpty()&&arguments.size()==1)replacement="("+receiver+").length() == 0";else throw new IllegalArgumentException("Unexpected StringBuilder.isEmpty signature");replacement="("+replacement+")";}
                     else if(site.owner().equals("java.time.Duration")){if(arguments.size()!=1)throw new IllegalArgumentException("Unexpected Duration.toSeconds signature");replacement="("+receiver+").getSeconds()";}
-                    else if(site.owner().equals("java.nio.file.Path")){String typeArguments=invocation.getTypeArguments().isEmpty()?"":"<"+String.join(",",invocation.getTypeArguments().stream().map(Object::toString).toList())+">";replacement="java.nio.file.Paths."+typeArguments+"get("+String.join(", ",arguments)+")";}
-                    else{String mapped=helper(site.owner(),site.method(),invocation.getArguments().size());String typeArguments=invocation.getTypeArguments().isEmpty()?"":"<"+String.join(",",invocation.getTypeArguments().stream().map(Object::toString).toList())+">";int dot=mapped.lastIndexOf('.');mapped=mapped.substring(0,dot+1)+typeArguments+mapped.substring(dot+1);replacement=mapped+"("+String.join(", ",arguments)+")";}
+                    else if(site.owner().equals("java.nio.file.Path")){String typeArguments=invocation.getTypeArguments().isEmpty()?"":"<"+String.join(",",invocation.getTypeArguments().stream().map(Object::toString).toList())+">";String qualifier=safePathsQualifier(unit,site.path(),trees,task,importedPaths);replacement=qualifier+"."+typeArguments+"get("+String.join(", ",arguments)+")";}
+                    else{String mapped=helper(site.owner(),site.method(),invocation.getArguments().size());unshadowedRoot(mapped,site.path(),trees,task);String typeArguments=invocation.getTypeArguments().isEmpty()?"":"<"+String.join(",",invocation.getTypeArguments().stream().map(Object::toString).toList())+">";int dot=mapped.lastIndexOf('.');mapped=mapped.substring(0,dot+1)+typeArguments+mapped.substring(dot+1);replacement=mapped+"("+String.join(", ",arguments)+")";}
                     edits.removeAll(inner);edits.add(new Edit(start,end,replacement));
                 }catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,site.invocation())+" "+site.owner()+"."+site.method()+" "+failure.getMessage());}}
                 if(!reasons.isEmpty()){statuses.add(name+"\tREJECTED\t"+(sites.size()+referenceEdits.size())+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
+                if(importedPaths.contains(unit)&&unit.getImports().stream().noneMatch(declaration->declaration.getQualifiedIdentifier().toString().equals("java.nio.file.Paths"))){
+                    int at=unit.getImports().isEmpty()?(unit.getPackage()==null?0:pos(positions.getEndPosition(unit,unit.getPackage()))):pos(positions.getStartPosition(unit,unit.getImports().get(0)));
+                    edits.add(new Edit(at,at,"\nimport java.nio.file.Paths;\n"));
+                }
                 after.put(name,apply(text,0,text.length(),edits).getBytes(StandardCharsets.UTF_8));statuses.add(name+"\tSUPPORTED\t"+(sites.size()+referenceEdits.size())+"\t0");
             }
         }
