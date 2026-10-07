@@ -154,27 +154,42 @@ public static List<GuideUiRow> projectRequestRows(
         rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
         for (GuideTimelineEntry entry : request.timeline()) {
             java.util.Objects.requireNonNull(entry);
-            if (entry instanceof GuideTimelineEntry.User user) {
-                rows.add(new GuideUiRow.User(user.messageId(), user.text()));
-            } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+            {
+final java.lang.Object $oaPattern0_value = entry;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideTimelineEntry.User;
+GuideTimelineEntry.User $oaPattern0_bound = $oaPattern0_match ? (GuideTimelineEntry.User) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                rows.add(new GuideUiRow.User($oaPattern0_bound.messageId(), $oaPattern0_bound.text()));
+            } else {
+final java.lang.Object $oaPattern1_value = entry;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof GuideTimelineEntry.Assistant;
+GuideTimelineEntry.Assistant $oaPattern1_bound = $oaPattern1_match ? (GuideTimelineEntry.Assistant) $oaPattern1_value : null;
+if ($oaPattern1_match) {
                 rows.add(new GuideUiRow.Assistant(
                         request.requestId(),
-                        assistant.ordinal(),
-                        assistant.text(),
-                        assistant.semantic(),
-                        assistant.streaming(),
-                        assistant.sources()));
-            } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+                        $oaPattern1_bound.ordinal(),
+                        $oaPattern1_bound.text(),
+                        $oaPattern1_bound.semantic(),
+                        $oaPattern1_bound.streaming(),
+                        $oaPattern1_bound.sources()));
+            } else {
+final java.lang.Object $oaPattern2_value = entry;
+final boolean $oaPattern2_match = $oaPattern2_value instanceof GuideTimelineEntry.Tool;
+GuideTimelineEntry.Tool $oaPattern2_bound = $oaPattern2_match ? (GuideTimelineEntry.Tool) $oaPattern2_value : null;
+if ($oaPattern2_match) {
                 rows.add(new GuideUiRow.Tool(
                         request.requestId(),
-                        tool.ordinal(),
-                        tool.activity(),
+                        $oaPattern2_bound.ordinal(),
+                        $oaPattern2_bound.activity(),
                         GuideToolDetailPresenter.project(
-                                tool.activity(), displayConfig.debugMode())
+                                $oaPattern2_bound.activity(), displayConfig.debugMode())
                                 .forRequest(request.terminal())));
             } else {
                 throw new IncompatibleClassChangeError();
             }
+}
+}
+}
         }
         if (request.status() == GuideRequestStatus.FAILED
                 || request.status() == GuideRequestStatus.CANCELLED

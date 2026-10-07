@@ -176,10 +176,15 @@ public final class GuideHudPresenter {
 
     private static String assistantPreview(GuideRequestSnapshot request, boolean streaming) {
         for (int index = request.timeline().size() - 1; index >= 0; index--) {
-            if (request.timeline().get(index) instanceof GuideTimelineEntry.Assistant assistant) {
-                if (assistant.streaming() != streaming) return "";
-                return assistant.semantic().fallbackText();
+            {
+final java.lang.Object $oaPattern0_value = request.timeline().get(index);
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideTimelineEntry.Assistant;
+GuideTimelineEntry.Assistant $oaPattern0_bound = $oaPattern0_match ? (GuideTimelineEntry.Assistant) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                if ($oaPattern0_bound.streaming() != streaming) return "";
+                return $oaPattern0_bound.semantic().fallbackText();
             }
+}
         }
         return "";
     }

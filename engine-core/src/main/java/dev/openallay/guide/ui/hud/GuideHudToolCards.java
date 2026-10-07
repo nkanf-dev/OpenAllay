@@ -62,53 +62,85 @@ public static final class Projection {
         for (GuideDetailCard card : tool.detail().cards()) {
             String key = row + ":card:" + index++;
             java.util.Objects.requireNonNull(card);
-            if (card instanceof GuideDetailCard.ItemGrid grid) {
-                paragraph(blocks, key + ":title", translate.apply(grid.titleKey()));
-                for (int i = 0; i < grid.items().size(); i++) {
-                    GuideItemView item = grid.items().get(i);
+            {
+final java.lang.Object $oaPattern0_value = card;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideDetailCard.ItemGrid;
+GuideDetailCard.ItemGrid $oaPattern0_bound = $oaPattern0_match ? (GuideDetailCard.ItemGrid) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                paragraph(blocks, key + ":title", translate.apply($oaPattern0_bound.titleKey()));
+                for (int i = 0; i < $oaPattern0_bound.items().size(); i++) {
+                    GuideItemView item = $oaPattern0_bound.items().get(i);
                     String id = id(key + ":item:" + i);
                     RichComponent.ItemRow component = new RichComponent.ItemRow(id,
                             List.of(item(item, origin)), item.displayName() + " ×" + item.count(),
                             item.displayName() + " ×" + item.count());
                     blocks.add(new SemanticBlock.Component(id, component));
                 }
-            } else if (card instanceof GuideDetailCard.Recipe recipe) {
+            } else {
+final java.lang.Object $oaPattern1_value = card;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof GuideDetailCard.Recipe;
+GuideDetailCard.Recipe $oaPattern1_bound = $oaPattern1_match ? (GuideDetailCard.Recipe) $oaPattern1_value : null;
+if ($oaPattern1_match) {
                 String id = id(key);
-                GuideRecipeCard value = recipe.recipe();
+                GuideRecipeCard value = $oaPattern1_bound.recipe();
                 String label = value.outputs().isEmpty() ? value.id() : value.outputs().get(0).displayName();
                 RichComponent.RecipeGrid component = new RichComponent.RecipeGrid(
                         id, value.reference(), origin, label, label, label);
                 blocks.add(new SemanticBlock.Component(id, component));
                 recipes.put(id, value);
-            } else if (card instanceof GuideDetailCard.Table table) {
-                paragraph(blocks, key + ":title", translate.apply(table.titleKey()));
-                blocks.add(new SemanticBlock.Table(id(key), tableRow(key + ":header", table.columns()),
-                        java.util.stream.IntStream.range(0, table.rows().size())
-                                .mapToObj(i -> tableRow(key + ":row:" + i, table.rows().get(i))).toList()));
-            } else if (card instanceof GuideDetailCard.KeyValue values) {
-                paragraph(blocks, key + ":title", translate.apply(values.titleKey()));
+            } else {
+final java.lang.Object $oaPattern2_value = card;
+final boolean $oaPattern2_match = $oaPattern2_value instanceof GuideDetailCard.Table;
+GuideDetailCard.Table $oaPattern2_bound = $oaPattern2_match ? (GuideDetailCard.Table) $oaPattern2_value : null;
+if ($oaPattern2_match) {
+                paragraph(blocks, key + ":title", translate.apply($oaPattern2_bound.titleKey()));
+                blocks.add(new SemanticBlock.Table(id(key), tableRow(key + ":header", $oaPattern2_bound.columns()),
+                        java.util.stream.IntStream.range(0, $oaPattern2_bound.rows().size())
+                                .mapToObj(i -> tableRow(key + ":row:" + i, $oaPattern2_bound.rows().get(i))).toList()));
+            } else {
+final java.lang.Object $oaPattern3_value = card;
+final boolean $oaPattern3_match = $oaPattern3_value instanceof GuideDetailCard.KeyValue;
+GuideDetailCard.KeyValue $oaPattern3_bound = $oaPattern3_match ? (GuideDetailCard.KeyValue) $oaPattern3_value : null;
+if ($oaPattern3_match) {
+                paragraph(blocks, key + ":title", translate.apply($oaPattern3_bound.titleKey()));
                 int entry = 0;
-                for (GuideDetailCard.DataCell cell : values.entries()) {
+                for (GuideDetailCard.DataCell cell : $oaPattern3_bound.entries()) {
                     paragraph(blocks, key + ":entry:" + entry++, cell.key() + ": " + cell.value());
                 }
-            } else if (card instanceof GuideDetailCard.DataPreview preview) {
-                paragraph(blocks, key + ":title", translate.apply(preview.titleKey()));
+            } else {
+final java.lang.Object $oaPattern4_value = card;
+final boolean $oaPattern4_match = $oaPattern4_value instanceof GuideDetailCard.DataPreview;
+GuideDetailCard.DataPreview $oaPattern4_bound = $oaPattern4_match ? (GuideDetailCard.DataPreview) $oaPattern4_value : null;
+if ($oaPattern4_match) {
+                paragraph(blocks, key + ":title", translate.apply($oaPattern4_bound.titleKey()));
                 int entry = 0;
-                for (GuideDetailCard.DataRow data : preview.rows()) {
+                for (GuideDetailCard.DataRow data : $oaPattern4_bound.rows()) {
                     for (GuideDetailCard.DataCell cell : data.cells()) {
                         paragraph(blocks, key + ":entry:" + entry++, cell.key() + ": " + cell.value());
                     }
                 }
-            } else if (card instanceof GuideDetailCard.Text text) {
-                paragraph(blocks, key + ":title", translate.apply(text.titleKey()));
-                for (int i = 0; i < text.lines().size(); i++) paragraph(blocks, key + ":line:" + i, text.lines().get(i));
-            } else if (card instanceof GuideDetailCard.Error error) {
-                paragraph(blocks, key, error.message());
-            } else if (card instanceof GuideDetailCard.Requirements requirements) {
-                paragraph(blocks, key, translate.apply(requirements.craftable()
+            } else {
+final java.lang.Object $oaPattern5_value = card;
+final boolean $oaPattern5_match = $oaPattern5_value instanceof GuideDetailCard.Text;
+GuideDetailCard.Text $oaPattern5_bound = $oaPattern5_match ? (GuideDetailCard.Text) $oaPattern5_value : null;
+if ($oaPattern5_match) {
+                paragraph(blocks, key + ":title", translate.apply($oaPattern5_bound.titleKey()));
+                for (int i = 0; i < $oaPattern5_bound.lines().size(); i++) paragraph(blocks, key + ":line:" + i, $oaPattern5_bound.lines().get(i));
+            } else {
+final java.lang.Object $oaPattern6_value = card;
+final boolean $oaPattern6_match = $oaPattern6_value instanceof GuideDetailCard.Error;
+GuideDetailCard.Error $oaPattern6_bound = $oaPattern6_match ? (GuideDetailCard.Error) $oaPattern6_value : null;
+if ($oaPattern6_match) {
+                paragraph(blocks, key, $oaPattern6_bound.message());
+            } else {
+final java.lang.Object $oaPattern7_value = card;
+final boolean $oaPattern7_match = $oaPattern7_value instanceof GuideDetailCard.Requirements;
+GuideDetailCard.Requirements $oaPattern7_bound = $oaPattern7_match ? (GuideDetailCard.Requirements) $oaPattern7_value : null;
+if ($oaPattern7_match) {
+                paragraph(blocks, key, translate.apply($oaPattern7_bound.craftable()
                         ? "screen.openallay.craftability.ready" : "screen.openallay.craftability.missing"));
                 int entry = 0;
-                for (GuideDetailCard.Requirement requirement : requirements.requirements()) {
+                for (GuideDetailCard.Requirement requirement : $oaPattern7_bound.requirements()) {
                     String requirementKey = key + ":requirement:" + entry++;
                     paragraph(blocks, requirementKey, requirement.key() + " "
                             + requirement.allocated() + "/" + requirement.required());
@@ -124,6 +156,14 @@ public static final class Projection {
             } else {
                 throw new IncompatibleClassChangeError();
             }
+}
+}
+}
+}
+}
+}
+}
+}
         }
         return new Projection(SemanticDocument.of(blocks, List.of()), recipes);
     }

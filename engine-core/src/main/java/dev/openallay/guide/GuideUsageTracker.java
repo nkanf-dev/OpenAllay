@@ -78,18 +78,26 @@ final class GuideUsageTracker {
 
     boolean accept(UUID owner, AgentEvent event) {
         if (owner == null || !requestModels.containsKey(owner)) return false;
-        if (event instanceof AgentEvent.ModelUsageStarted started) {
-            if (calls.contains(started.callId())) return false;
-            return pendingCalls.putIfAbsent(started.callId(), owner) == null;
+        {
+final java.lang.Object $oaPattern0_value = event;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof AgentEvent.ModelUsageStarted;
+AgentEvent.ModelUsageStarted $oaPattern0_bound = $oaPattern0_match ? (AgentEvent.ModelUsageStarted) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+            if (calls.contains($oaPattern0_bound.callId())) return false;
+            return pendingCalls.putIfAbsent($oaPattern0_bound.callId(), owner) == null;
         }
-        if (!(event instanceof AgentEvent.ModelUsageObserved observed)) return false;
-        UUID startedOwner = pendingCalls.get(observed.callId());
-        if (startedOwner != null && !startedOwner.equals(owner) || !calls.add(observed.callId())) return false;
-        String model = observed.modelIdentifier() == null || observed.modelIdentifier().isBlank()
-                ? requestModels.get(owner) : observed.modelIdentifier();
-        GuideUsageSnapshot delta = project(observed.usage(), pricing(model));
+}
+        final java.lang.Object $oaPattern1_value = event;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof AgentEvent.ModelUsageObserved;
+AgentEvent.ModelUsageObserved $oaPattern1_bound = $oaPattern1_match ? (AgentEvent.ModelUsageObserved) $oaPattern1_value : null;
+if (!($oaPattern1_match)) return false;
+        UUID startedOwner = pendingCalls.get($oaPattern1_bound.callId());
+        if (startedOwner != null && !startedOwner.equals(owner) || !calls.add($oaPattern1_bound.callId())) return false;
+        String model = $oaPattern1_bound.modelIdentifier() == null || $oaPattern1_bound.modelIdentifier().isBlank()
+                ? requestModels.get(owner) : $oaPattern1_bound.modelIdentifier();
+        GuideUsageSnapshot delta = project($oaPattern1_bound.usage(), pricing(model));
         requests.merge(owner, delta, GuideUsageSnapshot::plus);
-        pendingCalls.remove(observed.callId());
+        pendingCalls.remove($oaPattern1_bound.callId());
         session = session.plus(delta);
         if (controls.contains(owner)) control = control.plus(delta);
         return true;

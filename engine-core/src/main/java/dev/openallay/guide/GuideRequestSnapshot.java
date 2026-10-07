@@ -223,9 +223,14 @@ public boolean terminal() {
     }
 public String assistantText() {
         for (int index = timeline.size() - 1; index >= 0; index--) {
-            if (timeline.get(index) instanceof GuideTimelineEntry.Assistant assistant) {
-                return assistant.text();
+            {
+final java.lang.Object $oaPattern0_value = timeline.get(index);
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideTimelineEntry.Assistant;
+GuideTimelineEntry.Assistant $oaPattern0_bound = $oaPattern0_match ? (GuideTimelineEntry.Assistant) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                return $oaPattern0_bound.text();
             }
+}
         }
         return "";
     }

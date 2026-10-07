@@ -287,13 +287,28 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 pending.addAll(GuideImageOwnership.references(
                         readImageOwners(connection, commit.scope().scopeId())));
                 for (GuideHistoryMutation mutation : commit.mutations()) {
-                    if (mutation instanceof GuideHistoryMutation.ReplaceContext context) {
-                        pending.addAll(GuideImageOwnership.references(context.messages()));
-                    } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext context) {
-                        pending.addAll(GuideImageOwnership.references(context.messages()));
-                    } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary boundary) {
-                        pending.addAll(GuideImageOwnership.references(boundary.messages()));
+                    {
+final java.lang.Object $oaPattern0_value = mutation;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideHistoryMutation.ReplaceContext;
+GuideHistoryMutation.ReplaceContext $oaPattern0_bound = $oaPattern0_match ? (GuideHistoryMutation.ReplaceContext) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                        pending.addAll(GuideImageOwnership.references($oaPattern0_bound.messages()));
+                    } else {
+final java.lang.Object $oaPattern1_value = mutation;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof GuideHistoryMutation.ReplaceRequestContext;
+GuideHistoryMutation.ReplaceRequestContext $oaPattern1_bound = $oaPattern1_match ? (GuideHistoryMutation.ReplaceRequestContext) $oaPattern1_value : null;
+if ($oaPattern1_match) {
+                        pending.addAll(GuideImageOwnership.references($oaPattern1_bound.messages()));
+                    } else {
+final java.lang.Object $oaPattern2_value = mutation;
+final boolean $oaPattern2_match = $oaPattern2_value instanceof GuideHistoryMutation.CaptureRequestBoundary;
+GuideHistoryMutation.CaptureRequestBoundary $oaPattern2_bound = $oaPattern2_match ? (GuideHistoryMutation.CaptureRequestBoundary) $oaPattern2_value : null;
+if ($oaPattern2_match) {
+                        pending.addAll(GuideImageOwnership.references($oaPattern2_bound.messages()));
                     }
+}
+}
+}
                 }
                 // Verify and pin both existing and incoming assets before any SQL mutation.
                 // The complete post-mutation owners are checked again before durable commit.
@@ -318,7 +333,12 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 if (rollback(connection, failure) && ownershipChanges) {
                     recoverPinsAfterRollback(connection, commit.scope(), failure);
                 }
-                if (failure instanceof GuideHistoryException known) throw known;
+                {
+final java.lang.Object $oaPattern3_value = failure;
+final boolean $oaPattern3_match = $oaPattern3_value instanceof GuideHistoryException;
+GuideHistoryException $oaPattern3_bound = $oaPattern3_match ? (GuideHistoryException) $oaPattern3_value : null;
+if ($oaPattern3_match) throw $oaPattern3_bound;
+}
                 throw new GuideHistoryException(
                         "history_write_failed", "Unable to commit durable guide history", failure);
             }
@@ -365,7 +385,12 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
                 if (rollback(connection, failure)) {
                     recoverPinsAfterRollback(connection, request.scope(), failure);
                 }
-                if (failure instanceof GuideHistoryException known) throw known;
+                {
+final java.lang.Object $oaPattern4_value = failure;
+final boolean $oaPattern4_match = $oaPattern4_value instanceof GuideHistoryException;
+GuideHistoryException $oaPattern4_bound = $oaPattern4_match ? (GuideHistoryException) $oaPattern4_value : null;
+if ($oaPattern4_match) throw $oaPattern4_bound;
+}
                 throw new GuideHistoryException(
                         "history_fork_failed", "Unable to fork durable guide history", failure);
             }
@@ -604,23 +629,43 @@ private static final class RequestBoundary {
         try (GuideImageOwnership.Guard ignored = imageOwnership.lock();
                 Connection connection = open()) {
             List<GuideHistoryScope> affected;
-            if (scope instanceof GuideHistoryDeleteScope.Partition partition) {
-                affected = List.of(partition.scope());
-            } else if (scope instanceof GuideHistoryDeleteScope.Actor actor) {
+            {
+final java.lang.Object $oaPattern5_value = scope;
+final boolean $oaPattern5_match = $oaPattern5_value instanceof GuideHistoryDeleteScope.Partition;
+GuideHistoryDeleteScope.Partition $oaPattern5_bound = $oaPattern5_match ? (GuideHistoryDeleteScope.Partition) $oaPattern5_value : null;
+if ($oaPattern5_match) {
+                affected = List.of($oaPattern5_bound.scope());
+            } else {
+final java.lang.Object $oaPattern6_value = scope;
+final boolean $oaPattern6_match = $oaPattern6_value instanceof GuideHistoryDeleteScope.Actor;
+GuideHistoryDeleteScope.Actor $oaPattern6_bound = $oaPattern6_match ? (GuideHistoryDeleteScope.Actor) $oaPattern6_value : null;
+if ($oaPattern6_match) {
                 affected = readScopes(connection).stream()
-                        .filter(existing -> existing.actorId().equals(actor.actorId())).toList();
+                        .filter(existing -> existing.actorId().equals($oaPattern6_bound.actorId())).toList();
             } else {
                 throw new IncompatibleClassChangeError();
             }
+}
+}
             connection.setAutoCommit(false);
             try {
-                if (scope instanceof GuideHistoryDeleteScope.Partition partition) {
-                    deletePartition(connection, partition.scope());
-                } else if (scope instanceof GuideHistoryDeleteScope.Actor actor) {
-                    deleteActor(connection, actor.actorId());
+                {
+final java.lang.Object $oaPattern7_value = scope;
+final boolean $oaPattern7_match = $oaPattern7_value instanceof GuideHistoryDeleteScope.Partition;
+GuideHistoryDeleteScope.Partition $oaPattern7_bound = $oaPattern7_match ? (GuideHistoryDeleteScope.Partition) $oaPattern7_value : null;
+if ($oaPattern7_match) {
+                    deletePartition(connection, $oaPattern7_bound.scope());
+                } else {
+final java.lang.Object $oaPattern8_value = scope;
+final boolean $oaPattern8_match = $oaPattern8_value instanceof GuideHistoryDeleteScope.Actor;
+GuideHistoryDeleteScope.Actor $oaPattern8_bound = $oaPattern8_match ? (GuideHistoryDeleteScope.Actor) $oaPattern8_value : null;
+if ($oaPattern8_match) {
+                    deleteActor(connection, $oaPattern8_bound.actorId());
                 } else {
                     throw new IncompatibleClassChangeError();
                 }
+}
+}
                 failureInjector.beforeCommit(Mutation.DELETE);
                 connection.commit();
                 durable = true;
@@ -631,7 +676,12 @@ private static final class RequestBoundary {
             finishDurableImages(connection, affected, true);
         } catch (SQLException | RuntimeException failure) {
             if (durable) return;
-            if (failure instanceof GuideHistoryException historyFailure) throw historyFailure;
+            {
+final java.lang.Object $oaPattern9_value = failure;
+final boolean $oaPattern9_match = $oaPattern9_value instanceof GuideHistoryException;
+GuideHistoryException $oaPattern9_bound = $oaPattern9_match ? (GuideHistoryException) $oaPattern9_value : null;
+if ($oaPattern9_match) throw $oaPattern9_bound;
+}
             throw deleteFailure(failure);
         }
     }
@@ -670,8 +720,13 @@ private static final class RequestBoundary {
             finishDurableImages(connection, affected, true);
         } catch (SQLException | RuntimeException failure) {
             if (durable) return;
-            if (failure instanceof GuideHistoryException historyFailure
-                    && historyFailure.code().equals("history_delete_failed")) throw historyFailure;
+            {
+final java.lang.Object $oaPattern10_value = failure;
+final boolean $oaPattern10_match = $oaPattern10_value instanceof GuideHistoryException;
+GuideHistoryException $oaPattern10_bound = $oaPattern10_match ? (GuideHistoryException) $oaPattern10_value : null;
+if ($oaPattern10_match
+                    && $oaPattern10_bound.code().equals("history_delete_failed")) throw $oaPattern10_bound;
+}
             throw deleteFailure(failure);
         }
     }
@@ -706,37 +761,112 @@ private static final class RequestBoundary {
 
     private static boolean changesImageOwnership(GuideHistoryMutation mutation) {
         Objects.requireNonNull(mutation);
-        if (mutation instanceof GuideHistoryMutation.UpsertPartition ignored) {
+        {
+final java.lang.Object $oaPattern11_value = mutation;
+final boolean $oaPattern11_match = $oaPattern11_value instanceof GuideHistoryMutation.UpsertPartition;
+GuideHistoryMutation.UpsertPartition $oaPattern11_bound = $oaPattern11_match ? (GuideHistoryMutation.UpsertPartition) $oaPattern11_value : null;
+if ($oaPattern11_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.UpsertSession ignored) {
+        } else {
+final java.lang.Object $oaPattern12_value = mutation;
+final boolean $oaPattern12_match = $oaPattern12_value instanceof GuideHistoryMutation.UpsertSession;
+GuideHistoryMutation.UpsertSession $oaPattern12_bound = $oaPattern12_match ? (GuideHistoryMutation.UpsertSession) $oaPattern12_value : null;
+if ($oaPattern12_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage ignored) {
+        } else {
+final java.lang.Object $oaPattern13_value = mutation;
+final boolean $oaPattern13_match = $oaPattern13_value instanceof GuideHistoryMutation.UpsertSessionUsage;
+GuideHistoryMutation.UpsertSessionUsage $oaPattern13_bound = $oaPattern13_match ? (GuideHistoryMutation.UpsertSessionUsage) $oaPattern13_value : null;
+if ($oaPattern13_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.UpsertRequest ignored) {
+        } else {
+final java.lang.Object $oaPattern14_value = mutation;
+final boolean $oaPattern14_match = $oaPattern14_value instanceof GuideHistoryMutation.UpsertRequest;
+GuideHistoryMutation.UpsertRequest $oaPattern14_bound = $oaPattern14_match ? (GuideHistoryMutation.UpsertRequest) $oaPattern14_value : null;
+if ($oaPattern14_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.UpsertMessage ignored) {
+        } else {
+final java.lang.Object $oaPattern15_value = mutation;
+final boolean $oaPattern15_match = $oaPattern15_value instanceof GuideHistoryMutation.UpsertMessage;
+GuideHistoryMutation.UpsertMessage $oaPattern15_bound = $oaPattern15_match ? (GuideHistoryMutation.UpsertMessage) $oaPattern15_value : null;
+if ($oaPattern15_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry ignored) {
+        } else {
+final java.lang.Object $oaPattern16_value = mutation;
+final boolean $oaPattern16_match = $oaPattern16_value instanceof GuideHistoryMutation.UpsertTimelineEntry;
+GuideHistoryMutation.UpsertTimelineEntry $oaPattern16_bound = $oaPattern16_match ? (GuideHistoryMutation.UpsertTimelineEntry) $oaPattern16_value : null;
+if ($oaPattern16_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources ignored) {
+        } else {
+final java.lang.Object $oaPattern17_value = mutation;
+final boolean $oaPattern17_match = $oaPattern17_value instanceof GuideHistoryMutation.ReplaceRequestSources;
+GuideHistoryMutation.ReplaceRequestSources $oaPattern17_bound = $oaPattern17_match ? (GuideHistoryMutation.ReplaceRequestSources) $oaPattern17_value : null;
+if ($oaPattern17_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint ignored) {
+        } else {
+final java.lang.Object $oaPattern18_value = mutation;
+final boolean $oaPattern18_match = $oaPattern18_value instanceof GuideHistoryMutation.UpsertCheckpoint;
+GuideHistoryMutation.UpsertCheckpoint $oaPattern18_bound = $oaPattern18_match ? (GuideHistoryMutation.UpsertCheckpoint) $oaPattern18_value : null;
+if ($oaPattern18_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint ignored) {
+        } else {
+final java.lang.Object $oaPattern19_value = mutation;
+final boolean $oaPattern19_match = $oaPattern19_value instanceof GuideHistoryMutation.AppendCheckpoint;
+GuideHistoryMutation.AppendCheckpoint $oaPattern19_bound = $oaPattern19_match ? (GuideHistoryMutation.AppendCheckpoint) $oaPattern19_value : null;
+if ($oaPattern19_match) {
             return false;
-        } else if (mutation instanceof GuideHistoryMutation.ReplaceContext ignored) {
+        } else {
+final java.lang.Object $oaPattern20_value = mutation;
+final boolean $oaPattern20_match = $oaPattern20_value instanceof GuideHistoryMutation.ReplaceContext;
+GuideHistoryMutation.ReplaceContext $oaPattern20_bound = $oaPattern20_match ? (GuideHistoryMutation.ReplaceContext) $oaPattern20_value : null;
+if ($oaPattern20_match) {
             return true;
-        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext ignored) {
+        } else {
+final java.lang.Object $oaPattern21_value = mutation;
+final boolean $oaPattern21_match = $oaPattern21_value instanceof GuideHistoryMutation.ReplaceRequestContext;
+GuideHistoryMutation.ReplaceRequestContext $oaPattern21_bound = $oaPattern21_match ? (GuideHistoryMutation.ReplaceRequestContext) $oaPattern21_value : null;
+if ($oaPattern21_match) {
             return true;
-        } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary ignored) {
+        } else {
+final java.lang.Object $oaPattern22_value = mutation;
+final boolean $oaPattern22_match = $oaPattern22_value instanceof GuideHistoryMutation.CaptureRequestBoundary;
+GuideHistoryMutation.CaptureRequestBoundary $oaPattern22_bound = $oaPattern22_match ? (GuideHistoryMutation.CaptureRequestBoundary) $oaPattern22_value : null;
+if ($oaPattern22_match) {
             return true;
-        } else if (mutation instanceof GuideHistoryMutation.ForkSession ignored) {
+        } else {
+final java.lang.Object $oaPattern23_value = mutation;
+final boolean $oaPattern23_match = $oaPattern23_value instanceof GuideHistoryMutation.ForkSession;
+GuideHistoryMutation.ForkSession $oaPattern23_bound = $oaPattern23_match ? (GuideHistoryMutation.ForkSession) $oaPattern23_value : null;
+if ($oaPattern23_match) {
             return true;
-        } else if (mutation instanceof GuideHistoryMutation.DeleteSession ignored) {
+        } else {
+final java.lang.Object $oaPattern24_value = mutation;
+final boolean $oaPattern24_match = $oaPattern24_value instanceof GuideHistoryMutation.DeleteSession;
+GuideHistoryMutation.DeleteSession $oaPattern24_bound = $oaPattern24_match ? (GuideHistoryMutation.DeleteSession) $oaPattern24_value : null;
+if ($oaPattern24_match) {
             return true;
-        } else if (mutation instanceof GuideHistoryMutation.ClearSession ignored) {
+        } else {
+final java.lang.Object $oaPattern25_value = mutation;
+final boolean $oaPattern25_match = $oaPattern25_value instanceof GuideHistoryMutation.ClearSession;
+GuideHistoryMutation.ClearSession $oaPattern25_bound = $oaPattern25_match ? (GuideHistoryMutation.ClearSession) $oaPattern25_value : null;
+if ($oaPattern25_match) {
             return true;
         }
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
@@ -1277,7 +1407,11 @@ private static final class RequestBoundary {
             GuideHistoryMutation mutation) throws SQLException {
         String scopeId = scope.scopeId();
         Objects.requireNonNull(mutation);
-        if (mutation instanceof GuideHistoryMutation.UpsertPartition partition) {
+        {
+final java.lang.Object $oaPattern26_value = mutation;
+final boolean $oaPattern26_match = $oaPattern26_value instanceof GuideHistoryMutation.UpsertPartition;
+GuideHistoryMutation.UpsertPartition $oaPattern26_bound = $oaPattern26_match ? (GuideHistoryMutation.UpsertPartition) $oaPattern26_value : null;
+if ($oaPattern26_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     insert into partitions(
                         scope_id, actor_id, connection_kind, selected_session,
@@ -1290,11 +1424,15 @@ private static final class RequestBoundary {
                 statement.setString(1, scopeId);
                 statement.setString(2, scope.actorId().toString());
                 statement.setString(3, scope.kind().name());
-                statement.setString(4, partition.selectedSession());
-                statement.setString(5, partition.updatedAt().toString());
+                statement.setString(4, $oaPattern26_bound.selectedSession());
+                statement.setString(5, $oaPattern26_bound.updatedAt().toString());
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.UpsertSession session) {
+        } else {
+final java.lang.Object $oaPattern27_value = mutation;
+final boolean $oaPattern27_match = $oaPattern27_value instanceof GuideHistoryMutation.UpsertSession;
+GuideHistoryMutation.UpsertSession $oaPattern27_bound = $oaPattern27_match ? (GuideHistoryMutation.UpsertSession) $oaPattern27_value : null;
+if ($oaPattern27_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     insert into sessions(scope_id, session_id, ordinal, model_selection_json, control_usage_json)
                     values (?, ?, ?, ?, ?)
@@ -1303,26 +1441,42 @@ private static final class RequestBoundary {
                         model_selection_json = excluded.model_selection_json
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, session.sessionId());
-                statement.setInt(3, session.ordinal());
-                statement.setString(4, codec.encodeModelSelection(session.modelSelection()));
+                statement.setString(2, $oaPattern27_bound.sessionId());
+                statement.setInt(3, $oaPattern27_bound.ordinal());
+                statement.setString(4, codec.encodeModelSelection($oaPattern27_bound.modelSelection()));
                 statement.setString(5, codec.encodeUsageProjection(GuideUsageSnapshot.empty()));
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.UpsertSessionUsage usage) {
+        } else {
+final java.lang.Object $oaPattern28_value = mutation;
+final boolean $oaPattern28_match = $oaPattern28_value instanceof GuideHistoryMutation.UpsertSessionUsage;
+GuideHistoryMutation.UpsertSessionUsage $oaPattern28_bound = $oaPattern28_match ? (GuideHistoryMutation.UpsertSessionUsage) $oaPattern28_value : null;
+if ($oaPattern28_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     update sessions set control_usage_json = ? where scope_id = ? and session_id = ?
                     """)) {
-                statement.setString(1, codec.encodeUsageProjection(usage.controlUsage()));
+                statement.setString(1, codec.encodeUsageProjection($oaPattern28_bound.controlUsage()));
                 statement.setString(2, scopeId);
-                statement.setString(3, usage.sessionId());
+                statement.setString(3, $oaPattern28_bound.sessionId());
                 if (statement.executeUpdate() != 1) throw new IllegalArgumentException("Session usage owner is absent");
             }
-        } else if (mutation instanceof GuideHistoryMutation.UpsertRequest request) {
-            upsertRequest(connection, scopeId, request.sequence(), request.request());
-        } else if (mutation instanceof GuideHistoryMutation.UpsertMessage message) {
-            upsertMessage(connection, scopeId, message);
-        } else if (mutation instanceof GuideHistoryMutation.UpsertTimelineEntry timeline) {
+        } else {
+final java.lang.Object $oaPattern29_value = mutation;
+final boolean $oaPattern29_match = $oaPattern29_value instanceof GuideHistoryMutation.UpsertRequest;
+GuideHistoryMutation.UpsertRequest $oaPattern29_bound = $oaPattern29_match ? (GuideHistoryMutation.UpsertRequest) $oaPattern29_value : null;
+if ($oaPattern29_match) {
+            upsertRequest(connection, scopeId, $oaPattern29_bound.sequence(), $oaPattern29_bound.request());
+        } else {
+final java.lang.Object $oaPattern30_value = mutation;
+final boolean $oaPattern30_match = $oaPattern30_value instanceof GuideHistoryMutation.UpsertMessage;
+GuideHistoryMutation.UpsertMessage $oaPattern30_bound = $oaPattern30_match ? (GuideHistoryMutation.UpsertMessage) $oaPattern30_value : null;
+if ($oaPattern30_match) {
+            upsertMessage(connection, scopeId, $oaPattern30_bound);
+        } else {
+final java.lang.Object $oaPattern31_value = mutation;
+final boolean $oaPattern31_match = $oaPattern31_value instanceof GuideHistoryMutation.UpsertTimelineEntry;
+GuideHistoryMutation.UpsertTimelineEntry $oaPattern31_bound = $oaPattern31_match ? (GuideHistoryMutation.UpsertTimelineEntry) $oaPattern31_value : null;
+if ($oaPattern31_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     insert into timeline_entries(scope_id, request_id, ordinal, payload_json)
                     values (?, ?, ?, ?)
@@ -1330,34 +1484,42 @@ private static final class RequestBoundary {
                         payload_json = excluded.payload_json
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, timeline.requestId().toString());
-                statement.setInt(3, timeline.entry().ordinal());
-                statement.setString(4, codec.encodeEntry(timeline.entry()));
+                statement.setString(2, $oaPattern31_bound.requestId().toString());
+                statement.setInt(3, $oaPattern31_bound.entry().ordinal());
+                statement.setString(4, codec.encodeEntry($oaPattern31_bound.entry()));
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestSources sources) {
+        } else {
+final java.lang.Object $oaPattern32_value = mutation;
+final boolean $oaPattern32_match = $oaPattern32_value instanceof GuideHistoryMutation.ReplaceRequestSources;
+GuideHistoryMutation.ReplaceRequestSources $oaPattern32_bound = $oaPattern32_match ? (GuideHistoryMutation.ReplaceRequestSources) $oaPattern32_value : null;
+if ($oaPattern32_match) {
             try (PreparedStatement delete = connection.prepareStatement("""
                     delete from request_sources where scope_id = ? and request_id = ?
                     """)) {
                 delete.setString(1, scopeId);
-                delete.setString(2, sources.requestId().toString());
+                delete.setString(2, $oaPattern32_bound.requestId().toString());
                 delete.executeUpdate();
             }
-            for (int ordinal = 0; ordinal < sources.sources().size(); ordinal++) {
+            for (int ordinal = 0; ordinal < $oaPattern32_bound.sources().size(); ordinal++) {
                 try (PreparedStatement insert = connection.prepareStatement("""
                         insert into request_sources(
                             scope_id, request_id, ordinal, payload_json)
                         values (?, ?, ?, ?)
                         """)) {
                     insert.setString(1, scopeId);
-                    insert.setString(2, sources.requestId().toString());
+                    insert.setString(2, $oaPattern32_bound.requestId().toString());
                     insert.setInt(3, ordinal);
                     insert.setString(4, codec.encodeSources(
-                            List.of(sources.sources().get(ordinal))));
+                            List.of($oaPattern32_bound.sources().get(ordinal))));
                     insert.executeUpdate();
                 }
             }
-        } else if (mutation instanceof GuideHistoryMutation.ReplaceContext context) {
+        } else {
+final java.lang.Object $oaPattern33_value = mutation;
+final boolean $oaPattern33_match = $oaPattern33_value instanceof GuideHistoryMutation.ReplaceContext;
+GuideHistoryMutation.ReplaceContext $oaPattern33_bound = $oaPattern33_match ? (GuideHistoryMutation.ReplaceContext) $oaPattern33_value : null;
+if ($oaPattern33_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     insert into model_context(scope_id, session_id, payload_json)
                     values (?, ?, ?)
@@ -1365,11 +1527,15 @@ private static final class RequestBoundary {
                         payload_json = excluded.payload_json
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, context.sessionId());
-                statement.setString(3, modelContexts.encode(context.messages()));
+                statement.setString(2, $oaPattern33_bound.sessionId());
+                statement.setString(3, modelContexts.encode($oaPattern33_bound.messages()));
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.ReplaceRequestContext context) {
+        } else {
+final java.lang.Object $oaPattern34_value = mutation;
+final boolean $oaPattern34_match = $oaPattern34_value instanceof GuideHistoryMutation.ReplaceRequestContext;
+GuideHistoryMutation.ReplaceRequestContext $oaPattern34_bound = $oaPattern34_match ? (GuideHistoryMutation.ReplaceRequestContext) $oaPattern34_value : null;
+if ($oaPattern34_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     insert into request_model_context(scope_id, request_id, payload_json)
                     values (?, ?, ?)
@@ -1377,11 +1543,15 @@ private static final class RequestBoundary {
                         payload_json = excluded.payload_json
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, context.requestId().toString());
-                statement.setString(3, modelContexts.encode(context.messages()));
+                statement.setString(2, $oaPattern34_bound.requestId().toString());
+                statement.setString(3, modelContexts.encode($oaPattern34_bound.messages()));
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.UpsertCheckpoint checkpoint) {
+        } else {
+final java.lang.Object $oaPattern35_value = mutation;
+final boolean $oaPattern35_match = $oaPattern35_value instanceof GuideHistoryMutation.UpsertCheckpoint;
+GuideHistoryMutation.UpsertCheckpoint $oaPattern35_bound = $oaPattern35_match ? (GuideHistoryMutation.UpsertCheckpoint) $oaPattern35_value : null;
+if ($oaPattern35_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     insert into compaction_checkpoints(
                         scope_id, session_id, ordinal, checkpoint_id, payload_json)
@@ -1391,28 +1561,32 @@ private static final class RequestBoundary {
                         payload_json = excluded.payload_json
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, checkpoint.sessionId());
-                statement.setInt(3, checkpoint.ordinal());
-                statement.setString(4, checkpoint.checkpoint().checkpointId().toString());
-                statement.setString(5, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                statement.setString(2, $oaPattern35_bound.sessionId());
+                statement.setInt(3, $oaPattern35_bound.ordinal());
+                statement.setString(4, $oaPattern35_bound.checkpoint().checkpointId().toString());
+                statement.setString(5, codec.encodeCheckpoint($oaPattern35_bound.checkpoint()));
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.AppendCheckpoint checkpoint) {
+        } else {
+final java.lang.Object $oaPattern36_value = mutation;
+final boolean $oaPattern36_match = $oaPattern36_value instanceof GuideHistoryMutation.AppendCheckpoint;
+GuideHistoryMutation.AppendCheckpoint $oaPattern36_bound = $oaPattern36_match ? (GuideHistoryMutation.AppendCheckpoint) $oaPattern36_value : null;
+if ($oaPattern36_match) {
             Integer existingOrdinal = null;
             try (PreparedStatement query = connection.prepareStatement("""
                     select ordinal from compaction_checkpoints
                     where scope_id = ? and session_id = ? and checkpoint_id = ?
                     """)) {
                 query.setString(1, scopeId);
-                query.setString(2, checkpoint.sessionId());
-                query.setString(3, checkpoint.checkpoint().checkpointId().toString());
+                query.setString(2, $oaPattern36_bound.sessionId());
+                query.setString(3, $oaPattern36_bound.checkpoint().checkpointId().toString());
                 try (ResultSet result = query.executeQuery()) {
                     if (result.next()) existingOrdinal = result.getInt("ordinal");
                 }
             }
             if (existingOrdinal != null) {
                 applyMutation(connection, scope, new GuideHistoryMutation.UpsertCheckpoint(
-                        checkpoint.sessionId(), existingOrdinal, checkpoint.checkpoint()));
+                        $oaPattern36_bound.sessionId(), existingOrdinal, $oaPattern36_bound.checkpoint()));
             } else {
                 try (PreparedStatement statement = connection.prepareStatement("""
                         insert into compaction_checkpoints(
@@ -1421,35 +1595,51 @@ private static final class RequestBoundary {
                         from compaction_checkpoints where scope_id = ? and session_id = ?
                         """)) {
                     statement.setString(1, scopeId);
-                    statement.setString(2, checkpoint.sessionId());
-                    statement.setString(3, checkpoint.checkpoint().checkpointId().toString());
-                    statement.setString(4, codec.encodeCheckpoint(checkpoint.checkpoint()));
+                    statement.setString(2, $oaPattern36_bound.sessionId());
+                    statement.setString(3, $oaPattern36_bound.checkpoint().checkpointId().toString());
+                    statement.setString(4, codec.encodeCheckpoint($oaPattern36_bound.checkpoint()));
                     statement.setString(5, scopeId);
-                    statement.setString(6, checkpoint.sessionId());
+                    statement.setString(6, $oaPattern36_bound.sessionId());
                     // The scoped checkpoint identity constraint rejects another session's ID.
                     statement.executeUpdate();
                 }
             }
-        } else if (mutation instanceof GuideHistoryMutation.CaptureRequestBoundary boundary) {
-            captureRequestBoundary(connection, scopeId, boundary);
-        } else if (mutation instanceof GuideHistoryMutation.ForkSession fork) {
-            applyForkSession(connection, scope, fork);
-        } else if (mutation instanceof GuideHistoryMutation.DeleteSession session) {
+        } else {
+final java.lang.Object $oaPattern37_value = mutation;
+final boolean $oaPattern37_match = $oaPattern37_value instanceof GuideHistoryMutation.CaptureRequestBoundary;
+GuideHistoryMutation.CaptureRequestBoundary $oaPattern37_bound = $oaPattern37_match ? (GuideHistoryMutation.CaptureRequestBoundary) $oaPattern37_value : null;
+if ($oaPattern37_match) {
+            captureRequestBoundary(connection, scopeId, $oaPattern37_bound);
+        } else {
+final java.lang.Object $oaPattern38_value = mutation;
+final boolean $oaPattern38_match = $oaPattern38_value instanceof GuideHistoryMutation.ForkSession;
+GuideHistoryMutation.ForkSession $oaPattern38_bound = $oaPattern38_match ? (GuideHistoryMutation.ForkSession) $oaPattern38_value : null;
+if ($oaPattern38_match) {
+            applyForkSession(connection, scope, $oaPattern38_bound);
+        } else {
+final java.lang.Object $oaPattern39_value = mutation;
+final boolean $oaPattern39_match = $oaPattern39_value instanceof GuideHistoryMutation.DeleteSession;
+GuideHistoryMutation.DeleteSession $oaPattern39_bound = $oaPattern39_match ? (GuideHistoryMutation.DeleteSession) $oaPattern39_value : null;
+if ($oaPattern39_match) {
             try (PreparedStatement statement = connection.prepareStatement("""
                     delete from sessions where scope_id = ? and session_id = ?
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, session.sessionId());
+                statement.setString(2, $oaPattern39_bound.sessionId());
                 statement.executeUpdate();
             }
-        } else if (mutation instanceof GuideHistoryMutation.ClearSession session) {
+        } else {
+final java.lang.Object $oaPattern40_value = mutation;
+final boolean $oaPattern40_match = $oaPattern40_value instanceof GuideHistoryMutation.ClearSession;
+GuideHistoryMutation.ClearSession $oaPattern40_bound = $oaPattern40_match ? (GuideHistoryMutation.ClearSession) $oaPattern40_value : null;
+if ($oaPattern40_match) {
             applyMutation(connection, scope, new GuideHistoryMutation.UpsertSessionUsage(
-                    session.sessionId(), GuideUsageSnapshot.empty()));
+                    $oaPattern40_bound.sessionId(), GuideUsageSnapshot.empty()));
             for (String table : List.of("messages", "compaction_checkpoints", "model_context")) {
                 try (PreparedStatement statement = connection.prepareStatement(
                         "delete from " + table + " where scope_id = ? and session_id = ?")) {
                     statement.setString(1, scopeId);
-                    statement.setString(2, session.sessionId());
+                    statement.setString(2, $oaPattern40_bound.sessionId());
                     statement.executeUpdate();
                 }
             }
@@ -1457,12 +1647,27 @@ private static final class RequestBoundary {
                     delete from requests where scope_id = ? and session_id = ?
                     """)) {
                 statement.setString(1, scopeId);
-                statement.setString(2, session.sessionId());
+                statement.setString(2, $oaPattern40_bound.sessionId());
                 statement.executeUpdate();
             }
         } else {
             throw new IncompatibleClassChangeError();
         }
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
     }
 
     private void upsertRequest(
@@ -1788,11 +1993,15 @@ private static final class RequestBoundary {
                 changed = true;
                 for (GuideTimelineEntry entry : readTimeline(
                         connection, scope.scopeId(), request.requestId())) {
-                    if (entry instanceof GuideTimelineEntry.Assistant assistant
-                            && assistant.streaming()) {
+                    {
+final java.lang.Object $oaPattern41_value = entry;
+final boolean $oaPattern41_match = $oaPattern41_value instanceof GuideTimelineEntry.Assistant;
+GuideTimelineEntry.Assistant $oaPattern41_bound = $oaPattern41_match ? (GuideTimelineEntry.Assistant) $oaPattern41_value : null;
+if ($oaPattern41_match
+                            && $oaPattern41_bound.streaming()) {
                         GuideTimelineEntry.Assistant closed = new GuideTimelineEntry.Assistant(
-                                assistant.ordinal(), assistant.text(), assistant.semantic(),
-                                false, assistant.sources());
+                                $oaPattern41_bound.ordinal(), $oaPattern41_bound.text(), $oaPattern41_bound.semantic(),
+                                false, $oaPattern41_bound.sources());
                         try (PreparedStatement update = connection.prepareStatement("""
                                 update timeline_entries set payload_json = ?
                                 where scope_id = ? and request_id = ? and ordinal = ?
@@ -1804,6 +2013,7 @@ private static final class RequestBoundary {
                             update.executeUpdate();
                         }
                     }
+}
                 }
                 List<ModelMessage> original = readRequestContext(
                         connection, scope.scopeId(), request.requestId());

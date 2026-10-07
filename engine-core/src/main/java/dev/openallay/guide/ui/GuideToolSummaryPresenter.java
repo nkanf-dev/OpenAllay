@@ -156,12 +156,20 @@ public static final class Recipe implements Capsule {
                 GuideDetailCard card = detail.cards().get(cardIndex);
                 String cardId = id + ":card:" + cardIndex;
                 Objects.requireNonNull(card);
-                if (card instanceof GuideDetailCard.ItemGrid grid) {
-                    for (int itemIndex = 0; itemIndex < grid.items().size() && capsules.size() < MAX_CAPSULES; itemIndex++) {
-                        capsules.add(new Item(cardId + ":item:" + itemIndex, origin, grid.items().get(itemIndex)));
+                {
+final java.lang.Object $oaPattern0_value = card;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideDetailCard.ItemGrid;
+GuideDetailCard.ItemGrid $oaPattern0_bound = $oaPattern0_match ? (GuideDetailCard.ItemGrid) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                    for (int itemIndex = 0; itemIndex < $oaPattern0_bound.items().size() && capsules.size() < MAX_CAPSULES; itemIndex++) {
+                        capsules.add(new Item(cardId + ":item:" + itemIndex, origin, $oaPattern0_bound.items().get(itemIndex)));
                     }
-                } else if (card instanceof GuideDetailCard.Recipe value) {
-                    GuideRecipeCard recipe = value.recipe();
+                } else {
+final java.lang.Object $oaPattern1_value = card;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof GuideDetailCard.Recipe;
+GuideDetailCard.Recipe $oaPattern1_bound = $oaPattern1_match ? (GuideDetailCard.Recipe) $oaPattern1_value : null;
+if ($oaPattern1_match) {
+                    GuideRecipeCard recipe = $oaPattern1_bound.recipe();
                     if (!recipe.outputs().isEmpty()) {
                         GuideRecipeCard.Output output = recipe.outputs().get(0);
                         capsules.add(new Recipe(cardId + ":recipe", origin,
@@ -170,6 +178,8 @@ public static final class Recipe implements Capsule {
                 } else {
                     /* Other complete card families belong only in the detail drawer. */
                 }
+}
+}
             }
         }
         return new Summary(id, detail.intent().title(), detail.titleKey(), detail.intent().description(),
