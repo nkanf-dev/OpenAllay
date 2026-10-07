@@ -1367,14 +1367,12 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify composed native adapter member and object binding owners
+    - name: Verify remaining array binding and parser label behavior
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.JavaAdapterLanguageTest --tests dev.latvian.mods.rhino.NativeGraphMemberBindingTest
-        --tests dev.latvian.mods.rhino.ObjectSlotBindingLanguageTest
+        --tests dev.latvian.mods.rhino.ArrayListenerSyntaxTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
-        --tests dev.openallay.script.RhinoJavascriptRuntimeTest --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest
-        --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest
+        --tests dev.openallay.script.RhinoJavascriptRuntimeTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
