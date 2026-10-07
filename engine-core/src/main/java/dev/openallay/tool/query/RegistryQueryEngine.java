@@ -74,8 +74,8 @@ public static final class Field {
     private final List<String> operations;
     public Field(String path, List<String> types, int presentRows, int totalRows, String example, List<String> operations) {
 
-            types = List.copyOf(types);
-            operations = List.copyOf(operations);
+            types = dev.openallay.util.Java8Collections.listCopyOf(types);
+            operations = dev.openallay.util.Java8Collections.listCopyOf(operations);
 
         this.path = path;
         this.types = types;
@@ -124,7 +124,7 @@ public static final class Schema {
     public Schema(Dataset dataset, String namespace, int rows, List<Field> fields) {
 
             namespace = namespace == null ? "" : namespace;
-            fields = List.copyOf(fields);
+            fields = dev.openallay.util.Java8Collections.listCopyOf(fields);
 
         this.dataset = dataset;
         this.namespace = namespace;
@@ -167,9 +167,10 @@ public static final class Result {
     private final int sourceRows;
     public Result(Dataset dataset, List<String> columns, List<Map<String, JsonElement>> rows, List<Stage> stages, int sourceRows) {
 
-            columns = List.copyOf(columns);
-            rows = rows.stream().map(RegistryQueryEngine::copyRow).toList();
-            stages = List.copyOf(stages);
+            columns = dev.openallay.util.Java8Collections.listCopyOf(columns);
+            rows = rows.stream().map(RegistryQueryEngine::copyRow).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
+            stages = dev.openallay.util.Java8Collections.listCopyOf(stages);
 
         this.dataset = dataset;
         this.columns = columns;
@@ -183,7 +184,8 @@ public static final class Result {
     public int sourceRows() { return sourceRows; }
 
         public List<Map<String, JsonElement>> rows() {
-            return rows.stream().map(RegistryQueryEngine::copyRow).toList();
+            return rows.stream().map(RegistryQueryEngine::copyRow).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -219,7 +221,8 @@ public static final class Result {
         List<Field> discovered = fields.entrySet().stream()
                 .filter(entry -> !entry.getKey().isEmpty())
                 .map(entry -> entry.getValue().field(entry.getKey(), rows.size()))
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
         return new Schema(dataset, namespace, rows.size(), discovered);
     }
 
@@ -245,12 +248,14 @@ public static final class Result {
         }
         List<Map<String, JsonElement>> resultRows = rows.stream()
                 .map(RegistryQueryEngine::toMap)
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
         List<String> columns = resultRows.stream()
                 .flatMap(row -> row.keySet().stream())
                 .distinct()
                 .sorted()
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
         return new Result(dataset, columns, resultRows, stages, sourceRows);
     }
 
@@ -263,29 +268,31 @@ public static final class Result {
 
     private static List<JsonObject> source(
             Collection<RegistryEntrySnapshot> entries, Dataset dataset, String namespace) {
-        String selectedNamespace = namespace == null ? "" : namespace.strip();
+        String selectedNamespace = namespace == null ? "" : dev.openallay.util.Java8Strings.strip(namespace);
         return entries.stream()
                 .filter(entry -> matchesDataset(entry, dataset))
                 .filter(entry -> selectedNamespace.isEmpty() || entry.namespace().equals(selectedNamespace))
                 .map(RegistryQueryEngine::row)
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static List<JsonObject> apply(
             List<JsonObject> rows, QueryOperation operation, int index) {
-        return switch (operation.op()) {
-            case SEARCH -> search(rows, required(operation.value(), index, "value"), operation.field());
-            case FILTER -> filter(rows, required(operation.field(), index, "field"),
+        switch (operation.op()) {
+            case SEARCH: return search(rows, required(operation.value(), index, "value"), operation.field());
+            case FILTER: return filter(rows, required(operation.field(), index, "field"),
                     required(operation.operator(), index, "operator"), operation.value());
-            case SELECT -> select(rows, requiredFields(operation.fields(), index));
-            case SORT -> sort(rows, required(operation.field(), index, "field"),
+            case SELECT: return select(rows, requiredFields(operation.fields(), index));
+            case SORT: return sort(rows, required(operation.field(), index, "field"),
                     operation.direction() == null ? QueryOperation.Direction.ASC : operation.direction());
-            case GROUP -> group(rows, required(operation.field(), index, "field"));
-            case AGGREGATE -> aggregate(rows, operation.field(),
+            case GROUP: return group(rows, required(operation.field(), index, "field"));
+            case AGGREGATE: return aggregate(rows, operation.field(),
                     required(operation.aggregate(), index, "aggregate"), operation.groupBy());
-            case EXPAND -> expand(rows, required(operation.field(), index, "field"));
-            case TAKE -> take(rows, requiredCount(operation.count(), index));
-        };
+            case EXPAND: return expand(rows, required(operation.field(), index, "field"));
+            case TAKE: return take(rows, requiredCount(operation.count(), index));
+            default: throw new IllegalStateException("Unknown query operation: " + operation.op());
+        }
     }
 
     private static List<JsonObject> search(List<JsonObject> rows, String value, String field) {
@@ -295,7 +302,8 @@ public static final class Result {
             List<JsonElement> values = field == null ? primitives(row) : values(row, field);
             return values.stream().map(RegistryQueryEngine::text)
                     .anyMatch(candidate -> candidate.contains(needle));
-        }).toList();
+        }).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static List<JsonObject> filter(
@@ -304,7 +312,7 @@ public static final class Result {
             QueryOperation.Operator operator,
             String value) {
         requireKnownField(rows, field);
-        if (operator != QueryOperation.Operator.EXISTS && (value == null || value.isBlank())) {
+        if (operator != QueryOperation.Operator.EXISTS && (value == null || dev.openallay.util.Java8Strings.isBlank(value))) {
             throw new IllegalArgumentException("FILTER value is required unless operator is EXISTS");
         }
         return rows.stream().filter(row -> {
@@ -313,22 +321,24 @@ public static final class Result {
                 return values.stream().anyMatch(RegistryQueryEngine::present);
             }
             return values.stream().anyMatch(actual -> compare(actual, operator, value));
-        }).toList();
+        }).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static boolean compare(JsonElement actual, QueryOperation.Operator operator, String expected) {
         if (!present(actual) || !actual.isJsonPrimitive()) return false;
         JsonPrimitive primitive = actual.getAsJsonPrimitive();
-        return switch (operator) {
-            case EQ -> canonical(primitive.getAsString()).equals(canonical(expected));
-            case NE -> !canonical(primitive.getAsString()).equals(canonical(expected));
-            case CONTAINS -> canonical(primitive.getAsString()).contains(canonical(expected));
-            case GT -> numeric(primitive).compareTo(numeric(expected)) > 0;
-            case GTE -> numeric(primitive).compareTo(numeric(expected)) >= 0;
-            case LT -> numeric(primitive).compareTo(numeric(expected)) < 0;
-            case LTE -> numeric(primitive).compareTo(numeric(expected)) <= 0;
-            case EXISTS -> throw new IllegalStateException();
-        };
+        switch (operator) {
+            case EQ: return canonical(primitive.getAsString()).equals(canonical(expected));
+            case NE: return !canonical(primitive.getAsString()).equals(canonical(expected));
+            case CONTAINS: return canonical(primitive.getAsString()).contains(canonical(expected));
+            case GT: return numeric(primitive).compareTo(numeric(expected)) > 0;
+            case GTE: return numeric(primitive).compareTo(numeric(expected)) >= 0;
+            case LT: return numeric(primitive).compareTo(numeric(expected)) < 0;
+            case LTE: return numeric(primitive).compareTo(numeric(expected)) <= 0;
+            case EXISTS: throw new IllegalStateException();
+            default: throw new IllegalStateException("Unknown query comparison: " + operator);
+        }
     }
 
     private static List<JsonObject> select(List<JsonObject> rows, List<String> fields) {
@@ -346,7 +356,8 @@ public static final class Result {
                 }
             });
             return selected;
-        }).toList();
+        }).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static List<JsonObject> sort(
@@ -358,7 +369,8 @@ public static final class Result {
         if (direction == QueryOperation.Direction.DESC) comparator = comparator.reversed();
         return rows.stream().sorted(comparator
                 .thenComparing(row -> stringAt(row, "/id"))
-                .thenComparing(row -> stringAt(row, "/kind"))).toList();
+                .thenComparing(row -> stringAt(row, "/kind"))).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static List<JsonObject> group(List<JsonObject> rows, String field) {
@@ -371,7 +383,8 @@ public static final class Result {
             result.addProperty(field, entry.getKey());
             result.addProperty("count", entry.getValue());
             return result;
-        }).toList();
+        }).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static List<JsonObject> aggregate(
@@ -380,7 +393,7 @@ public static final class Result {
             QueryOperation.Aggregate aggregate,
             String groupBy) {
         if (aggregate != QueryOperation.Aggregate.COUNT) {
-            if (field == null || field.isBlank()) {
+            if (field == null || dev.openallay.util.Java8Strings.isBlank(field)) {
                 throw new IllegalArgumentException("AGGREGATE field is required unless aggregate is COUNT");
             }
             requireKnownField(rows, field);
@@ -399,7 +412,8 @@ public static final class Result {
             JsonElement value = aggregateValue(group.getValue(), field, aggregate);
             result.add("value", value);
             return result;
-        }).toList();
+        }).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
     }
 
     private static JsonElement aggregateValue(
@@ -409,16 +423,19 @@ public static final class Result {
                 .map(row -> single(row, field))
                 .filter(RegistryQueryEngine::present)
                 .map(RegistryQueryEngine::numeric)
-                .toList();
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
         if (values.isEmpty()) return JsonNull.INSTANCE;
-        BigDecimal value = switch (aggregate) {
-            case MIN -> values.stream().min(BigDecimal::compareTo).orElseThrow();
-            case MAX -> values.stream().max(BigDecimal::compareTo).orElseThrow();
-            case SUM -> values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-            case AVG -> values.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(BigDecimal.valueOf(values.size()), 8, RoundingMode.HALF_UP);
-            case COUNT -> throw new IllegalStateException();
-        };
+        BigDecimal value;
+        switch (aggregate) {
+            case MIN: value = values.stream().min(BigDecimal::compareTo).get(); break;
+            case MAX: value = values.stream().max(BigDecimal::compareTo).get(); break;
+            case SUM: value = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add); break;
+            case AVG: value = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(values.size()), 8, RoundingMode.HALF_UP); break;
+            case COUNT: throw new IllegalStateException();
+            default: throw new IllegalStateException("Unknown query aggregate: " + aggregate);
+        }
         return new JsonPrimitive(value.stripTrailingZeros());
     }
 
@@ -436,11 +453,11 @@ public static final class Result {
                 result.add(expanded);
             }
         }
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     private static List<JsonObject> take(List<JsonObject> rows, int count) {
-        return List.copyOf(rows.subList(0, Math.min(rows.size(), count)));
+        return dev.openallay.util.Java8Collections.listCopyOf(rows.subList(0, Math.min(rows.size(), count)));
     }
 
     private static JsonObject row(RegistryEntrySnapshot entry) {
@@ -467,15 +484,17 @@ public static final class Result {
 
     private static boolean matchesDataset(RegistryEntrySnapshot entry, Dataset dataset) {
         if (dataset == Dataset.all) return true;
-        String singular = switch (dataset) {
-            case items -> "item";
-            case blocks -> "block";
-            case effects -> "effect";
-            case potions -> "potion";
-            case entities -> "entity";
-            case attributes -> "attribute";
-            case all -> throw new IllegalStateException();
-        };
+        String singular;
+        switch (dataset) {
+            case items: singular = "item"; break;
+            case blocks: singular = "block"; break;
+            case effects: singular = "effect"; break;
+            case potions: singular = "potion"; break;
+            case entities: singular = "entity"; break;
+            case attributes: singular = "attribute"; break;
+            case all: throw new IllegalStateException();
+            default: throw new IllegalStateException("Unknown registry dataset: " + dataset);
+        }
         return entry.kind().equals(singular);
     }
 
@@ -483,7 +502,8 @@ public static final class Result {
         if (field == null || rows.isEmpty()) return;
         if (rows.stream().noneMatch(row -> !values(row, field).isEmpty())) {
             List<String> available = new RegistryQueryEngine().describeRows(rows).fields().stream()
-                    .map(Field::path).toList();
+                    .map(Field::path).collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList));
             throw new IllegalArgumentException(
                     "unknown field '" + field + "'; use describe=true; available fields: " + available);
         }
@@ -495,7 +515,8 @@ public static final class Result {
         return new Schema(Dataset.all, "", rows.size(), fields.entrySet().stream()
                 .filter(entry -> !entry.getKey().isEmpty())
                 .map(entry -> entry.getValue().field(entry.getKey(), rows.size()))
-                .toList());
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(ArrayList::new), java.util.Collections::unmodifiableList)));
     }
 
     private static void walk(
@@ -513,9 +534,9 @@ public static final class Result {
     }
 
     private static List<JsonElement> values(JsonObject row, String path) {
-        if (row.has(path)) return List.of(row.get(path));
-        if (path == null || path.isEmpty() || path.equals("/")) return List.of(row);
-        List<JsonElement> current = List.of(row);
+        if (row.has(path)) return dev.openallay.util.Java8Collections.listOf(row.get(path));
+        if (path == null || path.isEmpty() || path.equals("/")) return dev.openallay.util.Java8Collections.listOf(row);
+        List<JsonElement> current = dev.openallay.util.Java8Collections.listOf(row);
         for (String raw : path.substring(path.startsWith("/") ? 1 : 0).split("/", -1)) {
             String part = unescape(raw);
             List<JsonElement> next = new ArrayList<>();
@@ -526,7 +547,7 @@ public static final class Result {
                     next.add(value.getAsJsonObject().get(part));
                 }
             }
-            current = List.copyOf(next);
+            current = dev.openallay.util.Java8Collections.listCopyOf(next);
         }
         return current;
     }
@@ -553,7 +574,7 @@ public static final class Result {
     private static List<JsonElement> primitives(JsonElement value) {
         List<JsonElement> result = new ArrayList<>();
         collectPrimitives(value, result);
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     private static void collectPrimitives(JsonElement value, List<JsonElement> result) {
@@ -602,7 +623,7 @@ public static final class Result {
 
     private static BigDecimal numeric(String value) {
         try {
-            return new BigDecimal(value.strip());
+            return new BigDecimal(dev.openallay.util.Java8Strings.strip(value));
         } catch (RuntimeException invalid) {
             throw new IllegalArgumentException("numeric operation requires numeric values");
         }
@@ -610,7 +631,7 @@ public static final class Result {
 
     private static boolean present(JsonElement value) {
         return value != null && !value.isJsonNull()
-                && (!value.isJsonPrimitive() || !value.getAsString().isBlank());
+                && (!value.isJsonPrimitive() || !dev.openallay.util.Java8Strings.isBlank(value.getAsString()));
     }
 
     private static String text(JsonElement value) {
@@ -632,15 +653,15 @@ public static final class Result {
     private static Map<String, JsonElement> copyRow(Map<String, JsonElement> row) {
         Map<String, JsonElement> result = new TreeMap<>();
         row.forEach((key, value) -> result.put(key, dev.openallay.json.JsonTrees.copy(value)));
-        return Map.copyOf(result);
+        return dev.openallay.util.Java8Collections.mapCopyOf(result);
     }
 
     private static List<String> requiredFields(List<String> fields, int index) {
         if (fields == null || fields.isEmpty()
-                || fields.stream().anyMatch(value -> value == null || value.isBlank())) {
+                || fields.stream().anyMatch(value -> value == null || dev.openallay.util.Java8Strings.isBlank(value))) {
             throw new IllegalArgumentException("pipeline stage " + index + " requires fields");
         }
-        return List.copyOf(fields);
+        return dev.openallay.util.Java8Collections.listCopyOf(fields);
     }
 
     private static int requiredCount(Integer count, int index) {
@@ -651,15 +672,15 @@ public static final class Result {
     }
 
     private static <T> T required(T value, int index, String field) {
-        if (value == null || value instanceof String text && text.isBlank()) {
+        if (value == null || value instanceof String && dev.openallay.util.Java8Strings.isBlank((String) value)) {
             throw new IllegalArgumentException("pipeline stage " + index + " requires " + field);
         }
         return value;
     }
 
     private static String canonical(String value) {
-        return Normalizer.normalize(value, Normalizer.Form.NFKC)
-                .toLowerCase(Locale.ROOT).strip();
+        return dev.openallay.util.Java8Strings.strip(Normalizer.normalize(value, Normalizer.Form.NFKC)
+                .toLowerCase(Locale.ROOT));
     }
 
     private static String escape(String token) {
@@ -685,10 +706,10 @@ public static final class Result {
         operations.add("SELECT");
         if (types.contains("array")) operations.add("EXPAND");
         if (types.stream().anyMatch(type -> type.equals("string") || type.equals("boolean") || type.equals("number"))) {
-            operations.addAll(List.of("FILTER", "GROUP", "SEARCH", "SORT"));
+            operations.addAll(dev.openallay.util.Java8Collections.listOf("FILTER", "GROUP", "SEARCH", "SORT"));
         }
         if (types.contains("number")) operations.add("AGGREGATE");
-        return List.copyOf(operations);
+        return dev.openallay.util.Java8Collections.listCopyOf(operations);
     }
 
     private static final class FieldAccumulator {
@@ -705,7 +726,7 @@ public static final class Result {
         Field field(String path, int totalRows) {
             return new Field(
                     path,
-                    List.copyOf(types),
+                    dev.openallay.util.Java8Collections.listCopyOf(types),
                     rows.size(),
                     totalRows,
                     example == null ? "null" : example,

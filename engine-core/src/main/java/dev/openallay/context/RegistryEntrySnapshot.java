@@ -26,7 +26,7 @@ public final class RegistryEntrySnapshot {
         displayName = ContextValidation.nonBlank(displayName, "displayName");
         namespace = ContextValidation.nonBlank(namespace, "namespace");
         provenance = ContextValidation.identifier(provenance, "provenance");
-        aliases = List.copyOf(aliases);
+        aliases = dev.openallay.util.Java8Collections.listCopyOf(aliases);
         tags = Collections.unmodifiableSet(new TreeSet<>(tags));
         components = Collections.unmodifiableSet(new TreeSet<>(components));
         TreeMap<String, JsonElement> propertyCopy = new TreeMap<>();
@@ -55,7 +55,7 @@ public final class RegistryEntrySnapshot {
     public Set<String> components() { return components; }
 public RegistryEntrySnapshot(
             String id, String kind, String displayName, String namespace, String provenance) {
-        this(id, kind, displayName, namespace, provenance, List.of(), Set.of(), Set.of(), Map.of());
+        this(id, kind, displayName, namespace, provenance, dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.setOf(), dev.openallay.util.Java8Collections.setOf(), dev.openallay.util.Java8Collections.mapOf());
     }
 
     public Map<String, JsonElement> properties() {

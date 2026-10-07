@@ -9,7 +9,7 @@ public final class RegistrySnapshot {
     public RegistrySnapshot(EvidenceMetadata evidence, List<RegistryEntrySnapshot> entries) {
 
         java.util.Objects.requireNonNull(evidence, "evidence");
-        entries = List.copyOf(entries);
+        entries = dev.openallay.util.Java8Collections.listCopyOf(entries);
 
         this.evidence = evidence;
         this.entries = entries;
