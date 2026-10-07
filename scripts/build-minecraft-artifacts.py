@@ -138,9 +138,10 @@ def metadata(path, family, release_version):
                       "dev/openallay/guide/history/SqliteGuideHistoryStore.class",
                       "dev/openallay/guide/semantic/SemanticMessageParser.class"):
             require(entry in entries, "Required product class missing: " + entry)
-        for dependency in ("commonmark-0.28.0.jar", "commonmark-ext-gfm-tables-0.28.0.jar", "sqlite-jdbc-3.50.3.0.jar"):
+        for dependency in ("sqlite-jdbc-3.50.3.0.jar",):
             require(any(directory + dependency in entries for directory in ("META-INF/jars/", "META-INF/jarjar/")),
                     "Required product dependency missing: " + dependency)
+        commonmark_package(archive, entries, family["loader"])
         if family["loader"] == "fabric":
             require(not any(name in entries for name in ("META-INF/mods.toml", "META-INF/neoforge.mods.toml")),
                     "Fabric product cannot declare an FML loader")
@@ -167,6 +168,54 @@ def metadata(path, family, release_version):
                     dependencies.append(fields)
             require(len(dependencies) == 1 and dependencies[0].get("versionRange") == described["minecraftMavenRange"],
                     "FML Minecraft range differs from exact accepted family")
+
+
+# Accepted full canonical source-port artifact: run 37561859246 at source
+# a2eff926602ca8e8bf94fde01a03dca53ec3bef6. This is a real artifact identity,
+# not an internal protocol version or an upstream binary acceptance shortcut.
+COMMONMARK_RUNTIME_SHA256 = "dff5404332182c794aec52538a9a620b61032041a3b08ddbb972ddf246021a02"
+
+
+def commonmark_package(archive, entries, loader):
+    version = native.read_properties(ROOT / "gradle.properties")["commonmark_version"]
+    directory = "META-INF/jars/" if loader == "fabric" else "META-INF/jarjar/"
+    expected = directory + "openallay-commonmark-" + version + ".jar"
+    matches = [name for name in entries if name.endswith(".jar") and "commonmark" in Path(name).name.lower()]
+    require(matches == [expected], "Exactly one canonical CommonMark runtime must be nested; upstream binary JARs are forbidden")
+    require(not any(name.startswith("org/commonmark/") and name.endswith(".class") for name in entries),
+            "CommonMark classes cannot compete with the canonical nested source owner")
+    if loader == "fabric":
+        registered = [item["file"] for item in json.loads(archive.read("fabric.mod.json")).get("jars", [])]
+        require(registered.count(expected) == 1, "Canonical CommonMark needs one Fabric registration")
+    else:
+        rows = json.loads(archive.read("META-INF/jarjar/metadata.json"))["jars"]
+        registered = [row for row in rows if row["path"] == expected]
+        require(len(registered) == 1 and registered[0]["identifier"] == {"group": "dev.openallay", "artifact": "runtime-commonmark"},
+                "Canonical CommonMark needs exactly one project-owned FML registration")
+        require(registered[0]["version"]["artifactVersion"] == version
+                and registered[0]["version"]["range"] == "[" + version + "]",
+                "Canonical CommonMark JarJar external version/range differs")
+    content = archive.read(expected)
+    require(hashlib.sha256(content).hexdigest() == COMMONMARK_RUNTIME_SHA256,
+            "Nested CommonMark differs from the accepted complete Java8 source-port artifact")
+    with zipfile.ZipFile(BytesIO(content)) as nested:
+        names = nested.namelist()
+        require(len(names) == len(set(names)) and nested.testzip() is None, "Corrupt canonical CommonMark runtime")
+        classes = [name for name in names if name.endswith(".class")]
+        require(len(classes) == 213 and all(name.startswith("org/commonmark/") for name in classes),
+                "Canonical CommonMark must retain its proved complete 213-class closure")
+        for name in classes:
+            blob = nested.read(name)
+            require(len(blob) >= 8 and blob[:4] == b"\xca\xfe\xba\xbe" and int.from_bytes(blob[6:8], "big") == 52,
+                    "Canonical CommonMark Java8 class ABI differs: " + name)
+        for name in ("org/commonmark/parser/Parser.class", "org/commonmark/node/SourceSpan.class",
+                     "org/commonmark/ext/gfm/tables/TablesExtension.class",
+                     "org/commonmark/internal/util/entities.txt",
+                     "META-INF/licenses/commonmark/LICENSE-commonmark.txt",
+                     "META-INF/licenses/commonmark/core-LICENSE.txt", "META-INF/licenses/commonmark/tables-LICENSE.txt",
+                     "META-INF/openallay/commonmark-source-changes/commonmark-source-manifest.json",
+                     "META-INF/openallay/commonmark-source-changes/commonmark-java8.patch"):
+            require(name in names, "Canonical CommonMark source/license/provenance missing: " + name)
 
 
 def builder_support(path, family, lock):

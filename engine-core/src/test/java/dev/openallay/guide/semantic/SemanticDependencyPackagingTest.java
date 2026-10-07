@@ -36,10 +36,40 @@ final class SemanticDependencyPackagingTest {
         }
     }
 
+    @Test
+    void commonMarkHasOneProvedSourceOwnerAcrossEngineAndLoaders() throws Exception {
+        Path root = repositoryRoot();
+        String engine = Files.readString(root.resolve("engine-core/build.gradle"));
+        String common = Files.readString(root.resolve("common/build.gradle"));
+        String fabric = Files.readString(root.resolve("fabric/build.gradle"));
+        String fml = Files.readString(root.resolve("gradle/fml-loader.gradle"));
+        for (String source : List.of(engine, common, fabric, fml)) {
+            assertEquals(0, occurrences(source, "org.commonmark:commonmark:"));
+            assertEquals(0, occurrences(source, "org.commonmark:commonmark-ext-gfm-tables:"));
+        }
+        assertEquals(1, occurrences(engine, "implementation(project(':runtime-commonmark'))"));
+        assertEquals(1, occurrences(common, "implementation(project(':runtime-commonmark'))"));
+        assertEquals(1, occurrences(fabric, "implementation(include(project(':runtime-commonmark')))"));
+        assertEquals(1, occurrences(fml, "implementation(project(':runtime-commonmark'))"));
+        assertEquals(1, occurrences(fml, "jarJar(project(':runtime-commonmark'))"));
+        assertEquals(1, occurrences(Files.readString(root.resolve("settings.gradle")), "include('runtime-commonmark')"));
+        String runtime = Files.readString(root.resolve("runtime-commonmark/build.gradle"));
+        assertEquals(1, occurrences(runtime, "upstreamCoreSources(\"org.commonmark:commonmark:${commonmark_version}:sources@jar\")"));
+        assertEquals(1, occurrences(runtime, "upstreamTablesSources(\"org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}:sources@jar\")"));
+        assertTrue(runtime.contains("options.release = 8"));
+        assertTrue(runtime.contains("options.compilerArgs.add('-Xpkginfo:always')"));
+        assertTrue(runtime.contains("withSourcesJar()"));
+        String license = Files.readString(root.resolve("runtime-commonmark/LICENSE-commonmark.txt"));
+        assertTrue(license.contains("Copyright (c) 2015, Atlassian Pty Ltd"));
+        assertTrue(license.contains("Redistribution and use in source and binary forms"));
+        String packaging = Files.readString(root.resolve("scripts/build-minecraft-artifacts.py"));
+        assertTrue(packaging.contains("dff5404332182c794aec52538a9a620b61032041a3b08ddbb972ddf246021a02"));
+        assertTrue(packaging.contains("commonmark_package(archive, entries, family[\"loader\"])"));
+        assertTrue(packaging.contains("len(classes) == 213"));
+    }
+
     private static List<String> modules() {
-        return List.of("org.commonmark:commonmark:${commonmark_version}",
-                "org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}",
-                "org.xerial:sqlite-jdbc:${sqlite_jdbc_version}");
+        return List.of("org.xerial:sqlite-jdbc:${sqlite_jdbc_version}");
     }
 
     private static Path repositoryRoot() {
