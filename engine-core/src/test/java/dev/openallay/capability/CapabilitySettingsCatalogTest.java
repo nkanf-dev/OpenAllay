@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.openallay.model.ModelContent;
 import dev.openallay.tool.Tool;
-import java.lang.reflect.RecordComponent;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -84,9 +83,8 @@ final class CapabilitySettingsCatalogTest {
 
     @Test
     void descriptorShapeCannotCarryToolsCallbacksUrlsOrPaths() {
-        Set<Class<?>> componentTypes = java.util.Arrays.stream(
-                        CapabilitySettingsDescriptor.class.getRecordComponents())
-                .map(RecordComponent::getType)
+        Set<Class<?>> componentTypes = dev.openallay.value.ValueSchemas.of(CapabilitySettingsDescriptor.class).components().stream()
+                .map(dev.openallay.value.ValueSchema.Component::rawType)
                 .collect(java.util.stream.Collectors.toSet());
 
         assertFalse(componentTypes.stream().anyMatch(Tool.class::isAssignableFrom));

@@ -48,9 +48,8 @@ public final class JavascriptInvocationLifecycleTest {
                 .map(java.lang.reflect.Constructor::getParameterCount)
                 .collect(java.util.stream.Collectors.toSet()));
         assertEquals(List.of("dataModules", "javascriptModules", "skills", "resultViews",
-                "javascriptInvocationParticipants", "hostBindings"), java.util.Arrays.stream(
-                OpenAllayExtensionContribution.class.getRecordComponents())
-                .map(java.lang.reflect.RecordComponent::getName).toList());
+                "javascriptInvocationParticipants", "hostBindings"), dev.openallay.value.ValueSchemas.of(OpenAllayExtensionContribution.class).components().stream()
+                .map(dev.openallay.value.ValueSchema.Component::name).toList());
         assertTrue(new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of())
                 .hostBindings().isEmpty());
         assertTrue(new OpenAllayExtensionContribution(List.of(), List.of(), List.of(), List.of(), List.of())
