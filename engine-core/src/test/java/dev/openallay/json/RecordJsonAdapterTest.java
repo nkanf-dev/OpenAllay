@@ -120,4 +120,35 @@ final class RecordJsonAdapterTest {
         assertTrue(gson.toJson(value).contains("hello"));
         assertTrue(!tree.has("inputObservation") || tree.get("inputObservation").isJsonNull());
     }
+
+    private record PrivateAnnotated(@com.google.gson.annotations.JsonAdapter(PrivateUpperAdapter.class) String text) {}
+    private static final class PrivateUpperAdapter extends TypeAdapter<String> {
+        private PrivateUpperAdapter() {}
+        @Override public void write(JsonWriter out, String value) throws IOException { out.value(value.toUpperCase(java.util.Locale.ROOT)); }
+        @Override public String read(JsonReader in) throws IOException { return in.nextString().toLowerCase(java.util.Locale.ROOT); }
+    }
+
+    @Test void optionalPublicRecordFactAndPrivateAnnotationConstructorKeepExistingPolicy() {
+        assertTrue(dev.openallay.value.ValueSchemas.isValue(Counts.class));
+        assertFalse(dev.openallay.value.ValueSchemas.supports(Counts.class));
+        assertFalse(dev.openallay.value.ValueSchemas.isValue(String.class));
+        Gson gson = EngineJson.create();
+        assertEquals("{\"text\":\"A\"}", gson.toJson(new PrivateAnnotated("a")));
+        assertEquals(new PrivateAnnotated("b"), gson.fromJson("{\"text\":\"B\"}", PrivateAnnotated.class));
+        JsonParseException failure = assertThrows(JsonParseException.class,
+                () -> gson.fromJson("{\"count\":0}", Validated.class));
+        assertInstanceOf(IllegalArgumentException.class, failure.getCause());
+        assertEquals("count must be positive", failure.getCause().getMessage());
+    }
+
+    private record ExplicitAndRecord(EngineJsonJava8Fixture.Sample sample, Instant time) {}
+    @Test void explicitValuesAndForeignRecordsShareOneEngineOwner() throws Exception {
+        EngineJsonJava8Fixture.run();
+        Gson gson = EngineJson.create();
+        var value = new ExplicitAndRecord(new EngineJsonJava8Fixture.Sample("a", 3), Instant.ofEpochSecond(-1, 7));
+        var decoded = gson.fromJson(gson.toJson(value), ExplicitAndRecord.class);
+        assertEquals(value.sample().text(), decoded.sample().text());
+        assertEquals(value.sample().count(), decoded.sample().count());
+        assertEquals(value.time(), decoded.time());
+    }
 }
