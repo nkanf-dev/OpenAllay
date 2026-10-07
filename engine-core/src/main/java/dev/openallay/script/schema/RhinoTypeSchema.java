@@ -5,8 +5,9 @@ import dev.latvian.mods.rhino.type.TypeInfo;
 import dev.openallay.script.host.HostAccessException;
 import dev.openallay.value.ValueSchema;
 import dev.openallay.value.ValueSchemas;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.RecordComponent;
+import dev.openallay.value.RecordMetadata;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalAmount;
@@ -48,9 +49,8 @@ public final class RhinoTypeSchema {
             return new HostSchema.Scalar("number");
         }
         if (raw.isEnum()) {
-            List<String> values = type.enumConstants().stream()
-                    .map(value -> ((Enum<?>) value).name())
-                    .toList();
+            List<String> values = dev.openallay.util.Java8Collections.toList(type.enumConstants().stream()
+                    .map(value -> ((Enum<?>) value).name()));
             return new HostSchema.Enumeration("enum", values);
         }
         if (JsonElement.class.isAssignableFrom(raw)) {
@@ -81,10 +81,10 @@ public final class RhinoTypeSchema {
             }
             return new HostSchema.RecordValue("record", raw.getName(), fields);
         }
-        if (raw.isRecord()) {
+        if (RecordMetadata.isRecord(raw)) {
             LinkedHashMap<String, HostSchema> fields = new LinkedHashMap<>();
-            for (RecordComponent component : raw.getRecordComponents()) {
-                fields.put(component.getName(), require(TypeInfo.of(component.getGenericType())));
+            for (RecordMetadata.Component component : RecordMetadata.components(raw)) {
+                fields.put(component.name(), require(TypeInfo.of(component.genericType())));
             }
             return new HostSchema.RecordValue("record", raw.getName(), fields);
         }
@@ -96,30 +96,37 @@ public final class RhinoTypeSchema {
     }
 
     private static void validateValue(TypeInfo declared, HostSchema schema, Object value) {
+        HostSchema.requireKnown(schema);
         if (value == null) {
             return;
         }
-        if (schema instanceof HostSchema.OptionalValue optional) {
-            if (!(value instanceof Optional<?> actual)) {
+        if (schema instanceof HostSchema.OptionalValue) {
+            HostSchema.OptionalValue optional = (HostSchema.OptionalValue) schema;
+            if (!(value instanceof Optional<?>)) {
                 throw mismatch(declared, value);
             }
+            Optional<?> actual = (Optional<?>) value;
             actual.ifPresent(item -> validateValue(declared.param(0), optional.value(), item));
             return;
         }
-        if (schema instanceof HostSchema.Sequence sequence) {
-            if (!(value instanceof Collection<?> actual)) {
+        if (schema instanceof HostSchema.Sequence) {
+            HostSchema.Sequence sequence = (HostSchema.Sequence) schema;
+            if (!(value instanceof Collection<?>)) {
                 throw mismatch(declared, value);
             }
+            Collection<?> actual = (Collection<?>) value;
             TypeInfo elementType = declared.param(0);
             for (Object item : actual) {
                 validateValue(elementType, sequence.elements(), item);
             }
             return;
         }
-        if (schema instanceof HostSchema.Dictionary dictionary) {
-            if (!(value instanceof Map<?, ?> actual)) {
+        if (schema instanceof HostSchema.Dictionary) {
+            HostSchema.Dictionary dictionary = (HostSchema.Dictionary) schema;
+            if (!(value instanceof Map<?, ?>)) {
                 throw mismatch(declared, value);
             }
+            Map<?, ?> actual = (Map<?, ?>) value;
             TypeInfo valueType = declared.param(1);
             for (Map.Entry<?, ?> entry : actual.entrySet()) {
                 if (!(entry.getKey() instanceof String)) {
@@ -131,7 +138,8 @@ public final class RhinoTypeSchema {
             }
             return;
         }
-        if (schema instanceof HostSchema.RecordValue record) {
+        if (schema instanceof HostSchema.RecordValue) {
+            HostSchema.RecordValue record = (HostSchema.RecordValue) schema;
             if (!declared.asClass().isInstance(value)) {
                 throw mismatch(declared, value);
             }
@@ -139,14 +147,11 @@ public final class RhinoTypeSchema {
                 validateExplicitValue(declared.asClass(), record, value);
                 return;
             }
-            RecordComponent[] components = declared.asClass().getRecordComponents();
             try {
-                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(
-                        declared.asClass(), MethodHandles.lookup());
-                for (RecordComponent component : components) {
-                    Object child = lookup.unreflect(component.getAccessor()).invoke(value);
-                    TypeInfo childType = TypeInfo.of(component.getGenericType());
-                    validateValue(childType, record.fields().get(component.getName()), child);
+                for (RecordMetadata.Component component : RecordMetadata.components(declared.asClass())) {
+                    Object child = readExternalRecordComponent(value, component);
+                    TypeInfo childType = TypeInfo.of(component.genericType());
+                    validateValue(childType, record.fields().get(component.name()), child);
                 }
             } catch (Throwable failure) {
                 throw new HostAccessException(
@@ -165,6 +170,22 @@ public final class RhinoTypeSchema {
         if (!boxed(raw).isInstance(value)) {
             throw mismatch(declared, value);
         }
+    }
+
+    /** Owned detached-record accessor only. Public JVM metadata supplies the exact method. */
+    public static Object readExternalRecordComponent(Object value, RecordMetadata.Component component) throws Throwable {
+        java.util.Objects.requireNonNull(value, "value");
+        java.util.Objects.requireNonNull(component, "component");
+        Method accessor = component.accessorMetadata();
+        if (!RecordMetadata.isRecord(value.getClass()) || accessor.getDeclaringClass() != value.getClass()
+                || accessor.getParameterTypes().length != 0 || accessor.getReturnType() != component.rawType()) {
+            throw HostAccessException.unsupported(value.getClass());
+        }
+        // This is the existing host owner's exact component-access authority, not a bean fallback.
+        // Normal JVM module/security access checks still own denial on modern hosts.
+        accessor.setAccessible(true);
+        try { return accessor.invoke(value); }
+        catch (InvocationTargetException failure) { throw failure.getCause(); }
     }
 
     private static <T> ValueSchema<T> explicitSchema(Class<T> owner) {

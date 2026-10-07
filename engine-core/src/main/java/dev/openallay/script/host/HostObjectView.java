@@ -46,18 +46,18 @@ public final class HostObjectView extends ScriptableObject implements Map<String
             Reader reader,
             JavascriptResultShape resultShape) {
         this.adapter = Objects.requireNonNull(adapter, "adapter");
-        this.keys = List.copyOf(keys);
-        this.keySet = java.util.Set.copyOf(keys);
+        this.keys = dev.openallay.util.Java8Collections.listCopyOf(keys);
+        this.keySet = dev.openallay.util.Java8Collections.setCopyOf(keys);
         this.reader = Objects.requireNonNull(reader, "reader");
         this.resultShape = Objects.requireNonNull(resultShape, "resultShape");
-        jsonView = Collections.unmodifiableMap(new AbstractMap<>() {
+        jsonView = Collections.unmodifiableMap(new AbstractMap<String, Object>() {
             @Override
             public Set<Entry<String, Object>> entrySet() {
-                return new AbstractSet<>() {
+                return new AbstractSet<Entry<String, Object>>() {
                     @Override public int size() { return HostObjectView.this.keys.size(); }
                     @Override public Iterator<Entry<String, Object>> iterator() {
                         Iterator<String> names = HostObjectView.this.keys.iterator();
-                        return new Iterator<>() {
+                        return new Iterator<Entry<String, Object>>() {
                             @Override public boolean hasNext() { return names.hasNext(); }
                             @Override public Entry<String, Object> next() {
                                 String name = names.next();
@@ -94,10 +94,10 @@ public final class HostObjectView extends ScriptableObject implements Map<String
             Context context, Scriptable scope, RhinoHostAdapter adapter, Map<?, ?> value) {
         ArrayList<String> keys = new ArrayList<>(value.size());
         for (Object key : value.keySet()) {
-            if (!(key instanceof String string)) {
+            if (!(key instanceof String)) {
                 throw HostAccessException.unsupportedMapKey(key);
             }
-            keys.add(string);
+            keys.add((String) key);
         }
         return new HostObjectView(
                 context,
@@ -128,7 +128,7 @@ public final class HostObjectView extends ScriptableObject implements Map<String
                 context,
                 scope,
                 adapter,
-                List.copyOf(dev.openallay.json.JsonTrees.keys(value)),
+                dev.openallay.util.Java8Collections.listCopyOf(dev.openallay.json.JsonTrees.keys(value)),
                 name -> value.has(name) ? value.get(name) : Scriptable.NOT_FOUND,
                 resultShape);
     }
@@ -142,11 +142,11 @@ public final class HostObjectView extends ScriptableObject implements Map<String
             return JavascriptResultShape.trusted(
                     JavascriptSemanticKind.RECIPE, RecipeEntrySnapshot.class);
         }
-        if (value instanceof RegistryEntrySnapshot entry && "item".equals(entry.kind())) {
+        if (value instanceof RegistryEntrySnapshot && "item".equals(((RegistryEntrySnapshot) value).kind())) {
             return JavascriptResultShape.trusted(
                     JavascriptSemanticKind.ITEM, RegistryEntrySnapshot.class);
         }
-        if (value instanceof ItemStackSnapshot stack && !stack.itemId().isBlank()) {
+        if (value instanceof ItemStackSnapshot && !dev.openallay.util.Java8Strings.isBlank(((ItemStackSnapshot) value).itemId())) {
             return JavascriptResultShape.trusted(
                     JavascriptSemanticKind.ITEM, ItemStackSnapshot.class);
         }
@@ -164,7 +164,7 @@ public final class HostObjectView extends ScriptableObject implements Map<String
     @Override public boolean containsKey(Object key) { return keySet.contains(key); }
     @Override public boolean containsValue(Object value) { return jsonView.containsValue(value); }
     @Override public Object get(Object key) {
-        return key instanceof String name && keySet.contains(name) ? jsonValue(name) : null;
+        return key instanceof String && keySet.contains((String) key) ? jsonValue((String) key) : null;
     }
     @Override public Set<String> keySet() { return jsonView.keySet(); }
     @Override public Collection<Object> values() { return jsonView.values(); }

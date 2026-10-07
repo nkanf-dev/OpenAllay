@@ -14,7 +14,7 @@ public final class HostSchemaCatalog {
 
     public HostSchemaCatalog(Collection<HostRootDescriptor> descriptors) {
         LinkedHashMap<String, HostRootDescriptor> collected = new LinkedHashMap<>();
-        for (HostRootDescriptor descriptor : List.copyOf(descriptors)) {
+        for (HostRootDescriptor descriptor : dev.openallay.util.Java8Collections.listCopyOf(descriptors)) {
             Objects.requireNonNull(descriptor, "descriptor");
             if (collected.putIfAbsent(descriptor.name(), descriptor) != null) {
                 throw new IllegalArgumentException(
@@ -25,22 +25,21 @@ public final class HostSchemaCatalog {
     }
 
     public List<RootSummary> list() {
-        return roots.values().stream()
+        return dev.openallay.util.Java8Collections.toList(roots.values().stream()
                 .map(root -> new RootSummary(
                         root.name(),
                         root.availability(),
                         root.providerId(),
                         root.summary(),
                         root.evidenceOwner(),
-                        root.schema().kind()))
-                .toList();
+                        root.schema().kind())));
     }
 
     public Optional<PathDescription> describe(String path) {
-        if (path == null || path.isBlank()) {
+        if (path == null || dev.openallay.util.Java8Strings.isBlank(path)) {
             return Optional.empty();
         }
-        String[] parts = path.strip().split("\\.");
+        String[] parts = dev.openallay.util.Java8Strings.strip(path).split("\\.");
         HostRootDescriptor root = roots.get(parts[0]);
         if (root == null) {
             return Optional.empty();
@@ -50,10 +49,10 @@ public final class HostSchemaCatalog {
         resolved.add(root.name());
         for (int index = 1; index < parts.length; index++) {
             String field = parts[index];
-            if (!(schema instanceof HostSchema.RecordValue record)) {
+            if (!(schema instanceof HostSchema.RecordValue)) {
                 return Optional.empty();
             }
-            schema = record.fields().get(field);
+            schema = ((HostSchema.RecordValue) schema).fields().get(field);
             if (schema == null) {
                 return Optional.empty();
             }
@@ -72,10 +71,9 @@ public final class HostSchemaCatalog {
     }
 
     public List<String> availableRootNames() {
-        return roots.values().stream()
+        return dev.openallay.util.Java8Collections.toList(roots.values().stream()
                 .filter(HostRootDescriptor::available)
-                .map(HostRootDescriptor::name)
-                .toList();
+                .map(HostRootDescriptor::name));
     }
 
     @dev.openallay.value.ValueType(RootSummary.ValueSchemaProvider.class)

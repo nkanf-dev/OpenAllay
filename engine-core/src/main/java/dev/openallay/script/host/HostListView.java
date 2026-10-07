@@ -64,7 +64,7 @@ public final class HostListView extends ScriptableObject implements Iterable<Obj
     /** Lazy closed values for Rhino's existing NativeGSON Iterable serialization path. */
     @Override
     public Iterator<Object> iterator() {
-        return new Iterator<>() {
+        return new Iterator<Object>() {
             private int index;
             @Override public boolean hasNext() { return index < values.size(); }
             @Override public Object next() {

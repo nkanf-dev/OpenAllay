@@ -123,7 +123,8 @@ public final class HostRootDescriptor {
             Supplier<?> supplier) {
         this.name = require(name, "name");
         this.declaredType = declaredType;
-        this.schema = Objects.requireNonNull(schema, "schema");
+        HostSchema.requireKnown(schema);
+        this.schema = schema;
         this.availability = Objects.requireNonNull(availability, "availability");
         this.providerId = require(providerId, "providerId");
         this.summary = require(summary, "summary");
@@ -183,7 +184,7 @@ public final class HostRootDescriptor {
     }
 
     private static String require(String value, String field) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
         return value;

@@ -4,15 +4,17 @@ import java.util.List;
 import java.util.Map;
 
 /** Closed, script-visible description of values accepted by the Rhino host adapter. */
-public sealed interface HostSchema
-        permits HostSchema.Scalar,
-                HostSchema.Enumeration,
-                HostSchema.Sequence,
-                HostSchema.OptionalValue,
-                HostSchema.Dictionary,
-                HostSchema.RecordValue,
-                HostSchema.DynamicJson,
-                HostSchema.DynamicDetached {
+public interface HostSchema {
+    /** Closed schema algebra; foreign implementations cannot enter host discovery/validation. */
+    static void requireKnown(HostSchema schema) {
+        java.util.Objects.requireNonNull(schema, "schema");
+        Class<?> type = schema.getClass();
+        if (type != Scalar.class && type != Enumeration.class && type != Sequence.class
+                && type != OptionalValue.class && type != Dictionary.class && type != RecordValue.class
+                && type != DynamicJson.class && type != DynamicDetached.class) {
+            throw new IncompatibleClassChangeError("Unknown host schema subtype");
+        }
+    }
     String kind();
 
     @dev.openallay.value.ValueType(Scalar.ValueSchemaProvider.class)
@@ -48,7 +50,7 @@ public static final class Enumeration implements HostSchema {
     private final List<String> values;
     public Enumeration(String kind, List<String> values) {
 
-            values = List.copyOf(values);
+            values = dev.openallay.util.Java8Collections.listCopyOf(values);
 
         this.kind = kind;
         this.values = values;
@@ -83,6 +85,7 @@ public static final class Sequence implements HostSchema {
     public Sequence(String kind, HostSchema elements) {
 
             java.util.Objects.requireNonNull(elements, "elements");
+            HostSchema.requireKnown(elements);
 
         this.kind = kind;
         this.elements = elements;
@@ -117,6 +120,7 @@ public static final class OptionalValue implements HostSchema {
     public OptionalValue(String kind, HostSchema value) {
 
             java.util.Objects.requireNonNull(value, "value");
+            HostSchema.requireKnown(value);
 
         this.kind = kind;
         this.value = value;
@@ -152,6 +156,7 @@ public static final class Dictionary implements HostSchema {
     public Dictionary(String kind, HostSchema values, boolean dynamicKeys) {
 
             java.util.Objects.requireNonNull(values, "values");
+            HostSchema.requireKnown(values);
 
         this.kind = kind;
         this.values = values;
@@ -189,10 +194,11 @@ public static final class RecordValue implements HostSchema {
     private final Map<String, HostSchema> fields;
     public RecordValue(String kind, String javaType, Map<String, HostSchema> fields) {
 
-            if (javaType == null || javaType.isBlank()) {
+            if (javaType == null || dev.openallay.util.Java8Strings.isBlank(javaType)) {
                 throw new IllegalArgumentException("javaType must not be blank");
             }
-            fields = Map.copyOf(fields);
+            fields = dev.openallay.util.Java8Collections.mapCopyOf(fields);
+            fields.values().forEach(HostSchema::requireKnown);
 
         this.kind = kind;
         this.javaType = javaType;

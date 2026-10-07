@@ -3,9 +3,7 @@ package dev.openallay.script.host;
 import dev.latvian.mods.rhino.type.TypeInfo;
 import dev.openallay.value.ValueSchema;
 import dev.openallay.value.ValueSchemas;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.RecordComponent;
+import dev.openallay.value.RecordMetadata;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,27 +22,24 @@ final class HostRecordSchema {
         if (ValueSchemas.supports(type)) {
             addExplicitComponents(type, resolved);
         } else {
-            if (!type.isRecord()) {
+            if (!RecordMetadata.isRecord(type)) {
                 throw HostAccessException.unsupported(type);
             }
             try {
-                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(type, MethodHandles.lookup());
-                for (RecordComponent component : type.getRecordComponents()) {
-                    MethodHandle accessor = lookup.unreflect(component.getAccessor());
-                    resolved.put(
-                            component.getName(),
-                            new Component(
-                                    value -> accessor.invoke(value),
-                                    TypeInfo.of(component.getGenericType())));
+                for (RecordMetadata.Component component : RecordMetadata.components(type)) {
+                    component.accessorMetadata().setAccessible(true);
+                    resolved.put(component.name(), new Component(
+                            value -> dev.openallay.script.schema.RhinoTypeSchema.readExternalRecordComponent(value, component),
+                            TypeInfo.of(component.genericType())));
                 }
-            } catch (IllegalAccessException failure) {
+            } catch (RuntimeException failure) {
                 throw new HostAccessException(
                         "javascript_host_type_unsupported",
                         "Detached record components are not accessible: " + type.getName());
             }
         }
-        names = List.copyOf(resolved.keySet());
-        components = Map.copyOf(resolved);
+        names = dev.openallay.util.Java8Collections.listCopyOf(resolved.keySet());
+        components = dev.openallay.util.Java8Collections.mapCopyOf(resolved);
     }
 
     private static <T> void addExplicitComponents(

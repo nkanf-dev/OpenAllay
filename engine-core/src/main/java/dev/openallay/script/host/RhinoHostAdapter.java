@@ -49,10 +49,12 @@ public final class RhinoHostAdapter {
         if (value == null || value == JsonNull.INSTANCE) {
             return null;
         }
-        if (value instanceof Optional<?> optional) {
-            return optional.isPresent() ? adapt(optional.orElseThrow()) : Undefined.INSTANCE;
+        if (value instanceof Optional<?>) {
+            Optional<?> optional = (Optional<?>) value;
+            return optional.isPresent() ? adapt(optional.get()) : Undefined.INSTANCE;
         }
-        if (value instanceof JsonElement json) {
+        if (value instanceof JsonElement) {
+            JsonElement json = (JsonElement) value;
             return adaptJson(json);
         }
         if (value instanceof String
@@ -60,38 +62,47 @@ public final class RhinoHostAdapter {
                 || value instanceof Boolean) {
             return value;
         }
-        if (value instanceof Character character) {
+        if (value instanceof Character) {
+            Character character = (Character) value;
             return character.toString();
         }
-        if (value instanceof Enum<?> enumeration) {
+        if (value instanceof Enum<?>) {
+            Enum<?> enumeration = (Enum<?>) value;
             return enumeration.name();
         }
-        if (value instanceof UUID uuid) {
+        if (value instanceof UUID) {
+            UUID uuid = (UUID) value;
             return uuid.toString();
         }
-        if (value instanceof TemporalAccessor temporal) {
+        if (value instanceof TemporalAccessor) {
+            TemporalAccessor temporal = (TemporalAccessor) value;
             return temporal.toString();
         }
-        if (value instanceof TemporalAmount temporal) {
+        if (value instanceof TemporalAmount) {
+            TemporalAmount temporal = (TemporalAmount) value;
             return temporal.toString();
         }
-        if (value instanceof List<?> list) {
+        if (value instanceof List<?>) {
+            List<?> list = (List<?>) value;
             return cached(list, () -> HostListView.list(context, scope, this, list));
         }
-        if (value instanceof Set<?> set) {
+        if (value instanceof Set<?>) {
+            Set<?> set = (Set<?>) value;
             // JavaScript requires stable numeric indexing. Only the reference vector is copied;
             // every detached element retains its original Java identity.
             return cached(set, () -> HostListView.list(
                     context, scope, this, new ArrayList<>(set)));
         }
-        if (value instanceof Collection<?> collection) {
+        if (value instanceof Collection<?>) {
+            Collection<?> collection = (Collection<?>) value;
             return cached(collection, () -> HostListView.list(
                     context, scope, this, new ArrayList<>(collection)));
         }
-        if (value instanceof Map<?, ?> map) {
+        if (value instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) value;
             return cached(map, () -> HostObjectView.map(context, scope, this, map));
         }
-        if (ValueSchemas.supports(value.getClass()) || value.getClass().isRecord()) {
+        if (ValueSchemas.supports(value.getClass()) || dev.openallay.value.RecordMetadata.isRecord(value.getClass())) {
             return cached(value, () -> HostObjectView.value(context, scope, this, value));
         }
         throw HostAccessException.unsupported(value.getClass());
@@ -99,7 +110,7 @@ public final class RhinoHostAdapter {
 
     public Object adaptWorkspace(Object value, JavascriptResultShape shape) {
         Objects.requireNonNull(shape, "shape");
-        if (!(value instanceof JsonElement json) || !shape.trusted()) {
+        if (!(value instanceof JsonElement) || !shape.trusted()) {
             return adapt(value);
         }
         if (json.isJsonArray()) {
