@@ -82,26 +82,83 @@ final class BuiltinRichComponents {
                 .toList();
     }
 
-    record PromptCatalogEntry(String type, String guidance) {
-        PromptCatalogEntry {
+    @dev.openallay.value.ValueType(PromptCatalogEntry.ValueSchemaProvider.class)
+static final class PromptCatalogEntry {
+    private final String type;
+    private final String guidance;
+    PromptCatalogEntry(String type, String guidance) {
+
             if (type == null || !type.matches("[a-z][a-z0-9_]*")) {
                 throw new IllegalArgumentException("prompt component type is invalid");
             }
             if (guidance == null || guidance.isBlank()) {
                 throw new IllegalArgumentException("prompt component guidance is required");
             }
+
+        this.type = type;
+        this.guidance = guidance;
+    }
+    public String type() { return type; }
+    public String guidance() { return guidance; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PromptCatalogEntry)) return false;
+        PromptCatalogEntry that = (PromptCatalogEntry) other;
+        return java.util.Objects.equals(type, that.type) && java.util.Objects.equals(guidance, that.guidance);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + java.util.Objects.hashCode(guidance);
+        return hash;
+    }
+    @Override public String toString() { return "PromptCatalogEntry[type=" + type + ", guidance=" + guidance + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PromptCatalogEntry> schema() {
+            return new dev.openallay.value.ValueSchema<>(PromptCatalogEntry.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PromptCatalogEntry>>asList(new dev.openallay.value.ValueSchema.Component<>(PromptCatalogEntry.class, "type", PromptCatalogEntry::type), new dev.openallay.value.ValueSchema.Component<>(PromptCatalogEntry.class, "guidance", PromptCatalogEntry::guidance)), arguments -> new PromptCatalogEntry((String) arguments[0], (String) arguments[1]));
         }
     }
+}
 
-    private record Definition(
-            String type,
-            RichComponentRegistry.Decoder decoder,
-            String guidance) {
-        private Definition {
+    @dev.openallay.value.ValueType(Definition.ValueSchemaProvider.class)
+private static final class Definition {
+    private final String type;
+    private final RichComponentRegistry.Decoder decoder;
+    private final String guidance;
+    private Definition(String type, RichComponentRegistry.Decoder decoder, String guidance) {
+
             java.util.Objects.requireNonNull(decoder, "decoder");
             new PromptCatalogEntry(type, guidance);
+
+        this.type = type;
+        this.decoder = decoder;
+        this.guidance = guidance;
+    }
+    public String type() { return type; }
+    public RichComponentRegistry.Decoder decoder() { return decoder; }
+    public String guidance() { return guidance; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Definition)) return false;
+        Definition that = (Definition) other;
+        return java.util.Objects.equals(type, that.type) && java.util.Objects.equals(decoder, that.decoder) && java.util.Objects.equals(guidance, that.guidance);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + java.util.Objects.hashCode(decoder);
+        hash = 31 * hash + java.util.Objects.hashCode(guidance);
+        return hash;
+    }
+    @Override public String toString() { return "Definition[type=" + type + ", decoder=" + decoder + ", guidance=" + guidance + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Definition> schema() {
+            return new dev.openallay.value.ValueSchema<>(Definition.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Definition>>asList(new dev.openallay.value.ValueSchema.Component<>(Definition.class, "type", Definition::type), new dev.openallay.value.ValueSchema.Component<>(Definition.class, "decoder", Definition::decoder), new dev.openallay.value.ValueSchema.Component<>(Definition.class, "guidance", Definition::guidance)), arguments -> new Definition((String) arguments[0], (RichComponentRegistry.Decoder) arguments[1], (String) arguments[2]));
         }
     }
+}
 
     private static RichComponent itemRow(
             String nodeId,

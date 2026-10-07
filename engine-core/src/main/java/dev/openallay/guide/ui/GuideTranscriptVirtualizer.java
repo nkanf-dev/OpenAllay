@@ -7,21 +7,81 @@ import java.util.Map;
 
 /** Pure variable-height row index with binary-search visibility and stable anchors. */
 public final class GuideTranscriptVirtualizer {
-    public record Row(String id, int height) {
-        public Row {
+    @dev.openallay.value.ValueType(Row.ValueSchemaProvider.class)
+public static final class Row {
+    private final String id;
+    private final int height;
+    public Row(String id, int height) {
+
             if (id == null || id.isBlank() || height <= 0) {
                 throw new IllegalArgumentException("virtual row identity and height are required");
             }
+
+        this.id = id;
+        this.height = height;
+    }
+    public String id() { return id; }
+    public int height() { return height; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Row)) return false;
+        Row that = (Row) other;
+        return java.util.Objects.equals(id, that.id) && height == that.height;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + Integer.hashCode(height);
+        return hash;
+    }
+    @Override public String toString() { return "Row[id=" + id + ", height=" + height + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Row> schema() {
+            return new dev.openallay.value.ValueSchema<>(Row.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Row>>asList(new dev.openallay.value.ValueSchema.Component<>(Row.class, "id", Row::id), new dev.openallay.value.ValueSchema.Component<>(Row.class, "height", Row::height)), arguments -> new Row((String) arguments[0], (Integer) arguments[1]));
         }
     }
+}
 
-    public record Window(int fromIndex, int toIndexExclusive, int totalHeight) {
-        public Window {
+    @dev.openallay.value.ValueType(Window.ValueSchemaProvider.class)
+public static final class Window {
+    private final int fromIndex;
+    private final int toIndexExclusive;
+    private final int totalHeight;
+    public Window(int fromIndex, int toIndexExclusive, int totalHeight) {
+
             if (fromIndex < 0 || toIndexExclusive < fromIndex || totalHeight < 0) {
                 throw new IllegalArgumentException("invalid virtual window");
             }
+
+        this.fromIndex = fromIndex;
+        this.toIndexExclusive = toIndexExclusive;
+        this.totalHeight = totalHeight;
+    }
+    public int fromIndex() { return fromIndex; }
+    public int toIndexExclusive() { return toIndexExclusive; }
+    public int totalHeight() { return totalHeight; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Window)) return false;
+        Window that = (Window) other;
+        return fromIndex == that.fromIndex && toIndexExclusive == that.toIndexExclusive && totalHeight == that.totalHeight;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(fromIndex);
+        hash = 31 * hash + Integer.hashCode(toIndexExclusive);
+        hash = 31 * hash + Integer.hashCode(totalHeight);
+        return hash;
+    }
+    @Override public String toString() { return "Window[fromIndex=" + fromIndex + ", toIndexExclusive=" + toIndexExclusive + ", totalHeight=" + totalHeight + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Window> schema() {
+            return new dev.openallay.value.ValueSchema<>(Window.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Window>>asList(new dev.openallay.value.ValueSchema.Component<>(Window.class, "fromIndex", Window::fromIndex), new dev.openallay.value.ValueSchema.Component<>(Window.class, "toIndexExclusive", Window::toIndexExclusive), new dev.openallay.value.ValueSchema.Component<>(Window.class, "totalHeight", Window::totalHeight)), arguments -> new Window((Integer) arguments[0], (Integer) arguments[1], (Integer) arguments[2]));
         }
     }
+}
 
     private List<Row> rows = List.of();
     private int[] offsets = {0};

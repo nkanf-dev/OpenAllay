@@ -166,6 +166,68 @@ final class GuideUsageTracker {
         return new Quote(known && (!incomplete || amount.signum() > 0) ? amount.movePointLeft(6) : null, incomplete);
     }
 
-    private record Component(long tokens, boolean known, BigDecimal rate) {}
-    private record Quote(BigDecimal amount, boolean incomplete) {}
+    @dev.openallay.value.ValueType(Component.ValueSchemaProvider.class)
+private static final class Component {
+    private final long tokens;
+    private final boolean known;
+    private final BigDecimal rate;
+    private Component(long tokens, boolean known, BigDecimal rate) {
+        this.tokens = tokens;
+        this.known = known;
+        this.rate = rate;
+    }
+    public long tokens() { return tokens; }
+    public boolean known() { return known; }
+    public BigDecimal rate() { return rate; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Component)) return false;
+        Component that = (Component) other;
+        return tokens == that.tokens && known == that.known && java.util.Objects.equals(rate, that.rate);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(tokens);
+        hash = 31 * hash + Boolean.hashCode(known);
+        hash = 31 * hash + java.util.Objects.hashCode(rate);
+        return hash;
+    }
+    @Override public String toString() { return "Component[tokens=" + tokens + ", known=" + known + ", rate=" + rate + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Component> schema() {
+            return new dev.openallay.value.ValueSchema<>(Component.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Component>>asList(new dev.openallay.value.ValueSchema.Component<>(Component.class, "tokens", Component::tokens), new dev.openallay.value.ValueSchema.Component<>(Component.class, "known", Component::known), new dev.openallay.value.ValueSchema.Component<>(Component.class, "rate", Component::rate)), arguments -> new Component((Long) arguments[0], (Boolean) arguments[1], (BigDecimal) arguments[2]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Quote.ValueSchemaProvider.class)
+private static final class Quote {
+    private final BigDecimal amount;
+    private final boolean incomplete;
+    private Quote(BigDecimal amount, boolean incomplete) {
+        this.amount = amount;
+        this.incomplete = incomplete;
+    }
+    public BigDecimal amount() { return amount; }
+    public boolean incomplete() { return incomplete; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Quote)) return false;
+        Quote that = (Quote) other;
+        return java.util.Objects.equals(amount, that.amount) && incomplete == that.incomplete;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(amount);
+        hash = 31 * hash + Boolean.hashCode(incomplete);
+        return hash;
+    }
+    @Override public String toString() { return "Quote[amount=" + amount + ", incomplete=" + incomplete + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Quote> schema() {
+            return new dev.openallay.value.ValueSchema<>(Quote.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Quote>>asList(new dev.openallay.value.ValueSchema.Component<>(Quote.class, "amount", Quote::amount), new dev.openallay.value.ValueSchema.Component<>(Quote.class, "incomplete", Quote::incomplete)), arguments -> new Quote((BigDecimal) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 }

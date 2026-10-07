@@ -566,7 +566,36 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
     }
 
-    private record RequestBoundary(List<ModelMessage> messages, List<ContextCheckpoint> checkpoints) {}
+    @dev.openallay.value.ValueType(RequestBoundary.ValueSchemaProvider.class)
+private static final class RequestBoundary {
+    private final List<ModelMessage> messages;
+    private final List<ContextCheckpoint> checkpoints;
+    private RequestBoundary(List<ModelMessage> messages, List<ContextCheckpoint> checkpoints) {
+        this.messages = messages;
+        this.checkpoints = checkpoints;
+    }
+    public List<ModelMessage> messages() { return messages; }
+    public List<ContextCheckpoint> checkpoints() { return checkpoints; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RequestBoundary)) return false;
+        RequestBoundary that = (RequestBoundary) other;
+        return java.util.Objects.equals(messages, that.messages) && java.util.Objects.equals(checkpoints, that.checkpoints);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(messages);
+        hash = 31 * hash + java.util.Objects.hashCode(checkpoints);
+        return hash;
+    }
+    @Override public String toString() { return "RequestBoundary[messages=" + messages + ", checkpoints=" + checkpoints + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RequestBoundary> schema() {
+            return new dev.openallay.value.ValueSchema<>(RequestBoundary.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RequestBoundary>>asList(new dev.openallay.value.ValueSchema.Component<>(RequestBoundary.class, "messages", RequestBoundary::messages), new dev.openallay.value.ValueSchema.Component<>(RequestBoundary.class, "checkpoints", RequestBoundary::checkpoints)), arguments -> new RequestBoundary((List) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 
     @Override
     public void delete(GuideHistoryDeleteScope scope) {
@@ -1953,32 +1982,200 @@ public final class SqliteGuideHistoryStore implements GuideHistoryStore {
         }
     }
 
-    private record InterruptedRequest(
-            UUID requestId, String sessionId, String userMessage, boolean latestRequest) {}
+    @dev.openallay.value.ValueType(InterruptedRequest.ValueSchemaProvider.class)
+private static final class InterruptedRequest {
+    private final UUID requestId;
+    private final String sessionId;
+    private final String userMessage;
+    private final boolean latestRequest;
+    private InterruptedRequest(UUID requestId, String sessionId, String userMessage, boolean latestRequest) {
+        this.requestId = requestId;
+        this.sessionId = sessionId;
+        this.userMessage = userMessage;
+        this.latestRequest = latestRequest;
+    }
+    public UUID requestId() { return requestId; }
+    public String sessionId() { return sessionId; }
+    public String userMessage() { return userMessage; }
+    public boolean latestRequest() { return latestRequest; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof InterruptedRequest)) return false;
+        InterruptedRequest that = (InterruptedRequest) other;
+        return java.util.Objects.equals(requestId, that.requestId) && java.util.Objects.equals(sessionId, that.sessionId) && java.util.Objects.equals(userMessage, that.userMessage) && latestRequest == that.latestRequest;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + java.util.Objects.hashCode(userMessage);
+        hash = 31 * hash + Boolean.hashCode(latestRequest);
+        return hash;
+    }
+    @Override public String toString() { return "InterruptedRequest[requestId=" + requestId + ", sessionId=" + sessionId + ", userMessage=" + userMessage + ", latestRequest=" + latestRequest + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<InterruptedRequest> schema() {
+            return new dev.openallay.value.ValueSchema<>(InterruptedRequest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<InterruptedRequest>>asList(new dev.openallay.value.ValueSchema.Component<>(InterruptedRequest.class, "requestId", InterruptedRequest::requestId), new dev.openallay.value.ValueSchema.Component<>(InterruptedRequest.class, "sessionId", InterruptedRequest::sessionId), new dev.openallay.value.ValueSchema.Component<>(InterruptedRequest.class, "userMessage", InterruptedRequest::userMessage), new dev.openallay.value.ValueSchema.Component<>(InterruptedRequest.class, "latestRequest", InterruptedRequest::latestRequest)), arguments -> new InterruptedRequest((UUID) arguments[0], (String) arguments[1], (String) arguments[2], (Boolean) arguments[3]));
+        }
+    }
+}
 
-    private record PartitionHeader(
-            String selectedSession,
-            Instant updatedAt) {}
+    @dev.openallay.value.ValueType(PartitionHeader.ValueSchemaProvider.class)
+private static final class PartitionHeader {
+    private final String selectedSession;
+    private final Instant updatedAt;
+    private PartitionHeader(String selectedSession, Instant updatedAt) {
+        this.selectedSession = selectedSession;
+        this.updatedAt = updatedAt;
+    }
+    public String selectedSession() { return selectedSession; }
+    public Instant updatedAt() { return updatedAt; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PartitionHeader)) return false;
+        PartitionHeader that = (PartitionHeader) other;
+        return java.util.Objects.equals(selectedSession, that.selectedSession) && java.util.Objects.equals(updatedAt, that.updatedAt);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(selectedSession);
+        hash = 31 * hash + java.util.Objects.hashCode(updatedAt);
+        return hash;
+    }
+    @Override public String toString() { return "PartitionHeader[selectedSession=" + selectedSession + ", updatedAt=" + updatedAt + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PartitionHeader> schema() {
+            return new dev.openallay.value.ValueSchema<>(PartitionHeader.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PartitionHeader>>asList(new dev.openallay.value.ValueSchema.Component<>(PartitionHeader.class, "selectedSession", PartitionHeader::selectedSession), new dev.openallay.value.ValueSchema.Component<>(PartitionHeader.class, "updatedAt", PartitionHeader::updatedAt)), arguments -> new PartitionHeader((String) arguments[0], (Instant) arguments[1]));
+        }
+    }
+}
 
-    private record SequencedRequest(
-            GuideHistoryCursor cursor,
-            GuideRequestSnapshot request) {}
+    @dev.openallay.value.ValueType(SequencedRequest.ValueSchemaProvider.class)
+private static final class SequencedRequest {
+    private final GuideHistoryCursor cursor;
+    private final GuideRequestSnapshot request;
+    private SequencedRequest(GuideHistoryCursor cursor, GuideRequestSnapshot request) {
+        this.cursor = cursor;
+        this.request = request;
+    }
+    public GuideHistoryCursor cursor() { return cursor; }
+    public GuideRequestSnapshot request() { return request; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SequencedRequest)) return false;
+        SequencedRequest that = (SequencedRequest) other;
+        return java.util.Objects.equals(cursor, that.cursor) && java.util.Objects.equals(request, that.request);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(cursor);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "SequencedRequest[cursor=" + cursor + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SequencedRequest> schema() {
+            return new dev.openallay.value.ValueSchema<>(SequencedRequest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SequencedRequest>>asList(new dev.openallay.value.ValueSchema.Component<>(SequencedRequest.class, "cursor", SequencedRequest::cursor), new dev.openallay.value.ValueSchema.Component<>(SequencedRequest.class, "request", SequencedRequest::request)), arguments -> new SequencedRequest((GuideHistoryCursor) arguments[0], (GuideRequestSnapshot) arguments[1]));
+        }
+    }
+}
 
-    private record ColumnSignature(
-            String name,
-            String type,
-            boolean notNull,
-            int primaryKeyPosition,
-            int hidden) {}
+    @dev.openallay.value.ValueType(ColumnSignature.ValueSchemaProvider.class)
+private static final class ColumnSignature {
+    private final String name;
+    private final String type;
+    private final boolean notNull;
+    private final int primaryKeyPosition;
+    private final int hidden;
+    private ColumnSignature(String name, String type, boolean notNull, int primaryKeyPosition, int hidden) {
+        this.name = name;
+        this.type = type;
+        this.notNull = notNull;
+        this.primaryKeyPosition = primaryKeyPosition;
+        this.hidden = hidden;
+    }
+    public String name() { return name; }
+    public String type() { return type; }
+    public boolean notNull() { return notNull; }
+    public int primaryKeyPosition() { return primaryKeyPosition; }
+    public int hidden() { return hidden; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ColumnSignature)) return false;
+        ColumnSignature that = (ColumnSignature) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(type, that.type) && notNull == that.notNull && primaryKeyPosition == that.primaryKeyPosition && hidden == that.hidden;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + Boolean.hashCode(notNull);
+        hash = 31 * hash + Integer.hashCode(primaryKeyPosition);
+        hash = 31 * hash + Integer.hashCode(hidden);
+        return hash;
+    }
+    @Override public String toString() { return "ColumnSignature[name=" + name + ", type=" + type + ", notNull=" + notNull + ", primaryKeyPosition=" + primaryKeyPosition + ", hidden=" + hidden + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ColumnSignature> schema() {
+            return new dev.openallay.value.ValueSchema<>(ColumnSignature.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ColumnSignature>>asList(new dev.openallay.value.ValueSchema.Component<>(ColumnSignature.class, "name", ColumnSignature::name), new dev.openallay.value.ValueSchema.Component<>(ColumnSignature.class, "type", ColumnSignature::type), new dev.openallay.value.ValueSchema.Component<>(ColumnSignature.class, "notNull", ColumnSignature::notNull), new dev.openallay.value.ValueSchema.Component<>(ColumnSignature.class, "primaryKeyPosition", ColumnSignature::primaryKeyPosition), new dev.openallay.value.ValueSchema.Component<>(ColumnSignature.class, "hidden", ColumnSignature::hidden)), arguments -> new ColumnSignature((String) arguments[0], (String) arguments[1], (Boolean) arguments[2], (Integer) arguments[3], (Integer) arguments[4]));
+        }
+    }
+}
 
-    private record ForeignKeySignature(
-            int sequence,
-            String owner,
-            String fromColumn,
-            String toColumn,
-            String onUpdate,
-            String onDelete,
-            String match) {}
+    @dev.openallay.value.ValueType(ForeignKeySignature.ValueSchemaProvider.class)
+private static final class ForeignKeySignature {
+    private final int sequence;
+    private final String owner;
+    private final String fromColumn;
+    private final String toColumn;
+    private final String onUpdate;
+    private final String onDelete;
+    private final String match;
+    private ForeignKeySignature(int sequence, String owner, String fromColumn, String toColumn, String onUpdate, String onDelete, String match) {
+        this.sequence = sequence;
+        this.owner = owner;
+        this.fromColumn = fromColumn;
+        this.toColumn = toColumn;
+        this.onUpdate = onUpdate;
+        this.onDelete = onDelete;
+        this.match = match;
+    }
+    public int sequence() { return sequence; }
+    public String owner() { return owner; }
+    public String fromColumn() { return fromColumn; }
+    public String toColumn() { return toColumn; }
+    public String onUpdate() { return onUpdate; }
+    public String onDelete() { return onDelete; }
+    public String match() { return match; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ForeignKeySignature)) return false;
+        ForeignKeySignature that = (ForeignKeySignature) other;
+        return sequence == that.sequence && java.util.Objects.equals(owner, that.owner) && java.util.Objects.equals(fromColumn, that.fromColumn) && java.util.Objects.equals(toColumn, that.toColumn) && java.util.Objects.equals(onUpdate, that.onUpdate) && java.util.Objects.equals(onDelete, that.onDelete) && java.util.Objects.equals(match, that.match);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(sequence);
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + java.util.Objects.hashCode(fromColumn);
+        hash = 31 * hash + java.util.Objects.hashCode(toColumn);
+        hash = 31 * hash + java.util.Objects.hashCode(onUpdate);
+        hash = 31 * hash + java.util.Objects.hashCode(onDelete);
+        hash = 31 * hash + java.util.Objects.hashCode(match);
+        return hash;
+    }
+    @Override public String toString() { return "ForeignKeySignature[sequence=" + sequence + ", owner=" + owner + ", fromColumn=" + fromColumn + ", toColumn=" + toColumn + ", onUpdate=" + onUpdate + ", onDelete=" + onDelete + ", match=" + match + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ForeignKeySignature> schema() {
+            return new dev.openallay.value.ValueSchema<>(ForeignKeySignature.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ForeignKeySignature>>asList(new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "sequence", ForeignKeySignature::sequence), new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "owner", ForeignKeySignature::owner), new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "fromColumn", ForeignKeySignature::fromColumn), new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "toColumn", ForeignKeySignature::toColumn), new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "onUpdate", ForeignKeySignature::onUpdate), new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "onDelete", ForeignKeySignature::onDelete), new dev.openallay.value.ValueSchema.Component<>(ForeignKeySignature.class, "match", ForeignKeySignature::match)), arguments -> new ForeignKeySignature((Integer) arguments[0], (String) arguments[1], (String) arguments[2], (String) arguments[3], (String) arguments[4], (String) arguments[5], (String) arguments[6]));
+        }
+    }
+}
 
     enum Mutation {
         COMMIT,

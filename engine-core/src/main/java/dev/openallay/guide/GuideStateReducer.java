@@ -524,5 +524,34 @@ public final class GuideStateReducer {
                 .replace("__", ":");
     }
 
-    private record SegmentKey(UUID requestId, int ordinal) {}
+    @dev.openallay.value.ValueType(SegmentKey.ValueSchemaProvider.class)
+private static final class SegmentKey {
+    private final UUID requestId;
+    private final int ordinal;
+    private SegmentKey(UUID requestId, int ordinal) {
+        this.requestId = requestId;
+        this.ordinal = ordinal;
+    }
+    public UUID requestId() { return requestId; }
+    public int ordinal() { return ordinal; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SegmentKey)) return false;
+        SegmentKey that = (SegmentKey) other;
+        return java.util.Objects.equals(requestId, that.requestId) && ordinal == that.ordinal;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        return hash;
+    }
+    @Override public String toString() { return "SegmentKey[requestId=" + requestId + ", ordinal=" + ordinal + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SegmentKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(SegmentKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SegmentKey>>asList(new dev.openallay.value.ValueSchema.Component<>(SegmentKey.class, "requestId", SegmentKey::requestId), new dev.openallay.value.ValueSchema.Component<>(SegmentKey.class, "ordinal", SegmentKey::ordinal)), arguments -> new SegmentKey((UUID) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 }

@@ -24,12 +24,40 @@ import java.util.concurrent.CompletableFuture;
 public final class GuideSessionExportCollector {
     private static final int PAGE_BATCH = 128;
 
-    public record SequencedRequest(long sequence, GuideRequestSnapshot request) {
-        public SequencedRequest {
+    @dev.openallay.value.ValueType(SequencedRequest.ValueSchemaProvider.class)
+public static final class SequencedRequest {
+    private final long sequence;
+    private final GuideRequestSnapshot request;
+    public SequencedRequest(long sequence, GuideRequestSnapshot request) {
+
             if (sequence < 0) throw new IllegalArgumentException("request sequence is negative");
             Objects.requireNonNull(request, "request");
+
+        this.sequence = sequence;
+        this.request = request;
+    }
+    public long sequence() { return sequence; }
+    public GuideRequestSnapshot request() { return request; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SequencedRequest)) return false;
+        SequencedRequest that = (SequencedRequest) other;
+        return sequence == that.sequence && java.util.Objects.equals(request, that.request);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(sequence);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "SequencedRequest[sequence=" + sequence + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SequencedRequest> schema() {
+            return new dev.openallay.value.ValueSchema<>(SequencedRequest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SequencedRequest>>asList(new dev.openallay.value.ValueSchema.Component<>(SequencedRequest.class, "sequence", SequencedRequest::sequence), new dev.openallay.value.ValueSchema.Component<>(SequencedRequest.class, "request", SequencedRequest::request)), arguments -> new SequencedRequest((Long) arguments[0], (GuideRequestSnapshot) arguments[1]));
         }
     }
+}
 
     private final GuideHistoryScope scope;
     private final GuideHistoryAccess history;

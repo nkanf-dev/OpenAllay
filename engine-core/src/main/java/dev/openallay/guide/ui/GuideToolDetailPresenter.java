@@ -320,11 +320,39 @@ public final class GuideToolDetailPresenter {
         return value.substring(0, end) + "…";
     }
 
-    private record Projection(List<GuideDetailCard> cards, String diagnostic) {
-        private Projection {
+    @dev.openallay.value.ValueType(Projection.ValueSchemaProvider.class)
+private static final class Projection {
+    private final List<GuideDetailCard> cards;
+    private final String diagnostic;
+    private Projection(List<GuideDetailCard> cards, String diagnostic) {
+
             cards = List.copyOf(cards);
             diagnostic = diagnostic == null ? "" : diagnostic;
+
+        this.cards = cards;
+        this.diagnostic = diagnostic;
+    }
+    public List<GuideDetailCard> cards() { return cards; }
+    public String diagnostic() { return diagnostic; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projection)) return false;
+        Projection that = (Projection) other;
+        return java.util.Objects.equals(cards, that.cards) && java.util.Objects.equals(diagnostic, that.diagnostic);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(cards);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        return hash;
+    }
+    @Override public String toString() { return "Projection[cards=" + cards + ", diagnostic=" + diagnostic + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projection>>asList(new dev.openallay.value.ValueSchema.Component<>(Projection.class, "cards", Projection::cards), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "diagnostic", Projection::diagnostic)), arguments -> new Projection((List) arguments[0], (String) arguments[1]));
         }
     }
+}
 
 }

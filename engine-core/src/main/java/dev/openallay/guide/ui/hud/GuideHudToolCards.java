@@ -20,9 +20,37 @@ import java.util.function.Function;
 
 /** Native semantic adapter of already validated player cards; source cards stay unchanged. */
 public final class GuideHudToolCards {
-    public record Projection(SemanticDocument document, Map<String, GuideRecipeCard> recipes) {
-        public Projection { recipes = Map.copyOf(recipes); }
+    @dev.openallay.value.ValueType(Projection.ValueSchemaProvider.class)
+public static final class Projection {
+    private final SemanticDocument document;
+    private final Map<String, GuideRecipeCard> recipes;
+    public Projection(SemanticDocument document, Map<String, GuideRecipeCard> recipes) {
+ recipes = Map.copyOf(recipes);
+        this.document = document;
+        this.recipes = recipes;
     }
+    public SemanticDocument document() { return document; }
+    public Map<String, GuideRecipeCard> recipes() { return recipes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projection)) return false;
+        Projection that = (Projection) other;
+        return java.util.Objects.equals(document, that.document) && java.util.Objects.equals(recipes, that.recipes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        hash = 31 * hash + java.util.Objects.hashCode(recipes);
+        return hash;
+    }
+    @Override public String toString() { return "Projection[document=" + document + ", recipes=" + recipes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projection>>asList(new dev.openallay.value.ValueSchema.Component<>(Projection.class, "document", Projection::document), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "recipes", Projection::recipes)), arguments -> new Projection((SemanticDocument) arguments[0], (Map) arguments[1]));
+        }
+    }
+}
     private GuideHudToolCards() {}
 
     public static Projection project(GuideUiRow.Tool tool, Function<String, String> translate) {

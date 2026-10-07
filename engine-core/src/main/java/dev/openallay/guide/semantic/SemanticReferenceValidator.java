@@ -71,23 +71,48 @@ public final class SemanticReferenceValidator {
         }
     }
 
-    public record Validation(SemanticReference reference, String failureCode) {
-        public Validation {
+    @dev.openallay.value.ValueType(Validation.ValueSchemaProvider.class)
+public static final class Validation {
+    private final SemanticReference reference;
+    private final String failureCode;
+    public Validation(SemanticReference reference, String failureCode) {
+
             if ((reference == null) == (failureCode == null)) {
                 throw new IllegalArgumentException("reference validation must succeed or fail");
             }
-        }
 
-        public static Validation success(SemanticReference reference) {
+        this.reference = reference;
+        this.failureCode = failureCode;
+    }
+    public SemanticReference reference() { return reference; }
+    public String failureCode() { return failureCode; }
+public static Validation success(SemanticReference reference) {
             return new Validation(Objects.requireNonNull(reference, "reference"), null);
         }
-
-        public static Validation failure(String code) {
+public static Validation failure(String code) {
             return new Validation(null, Objects.requireNonNull(code, "code"));
         }
-
-        public boolean successful() {
+public boolean successful() {
             return reference != null;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Validation)) return false;
+        Validation that = (Validation) other;
+        return java.util.Objects.equals(reference, that.reference) && java.util.Objects.equals(failureCode, that.failureCode);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(reference);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        return hash;
+    }
+    @Override public String toString() { return "Validation[reference=" + reference + ", failureCode=" + failureCode + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Validation> schema() {
+            return new dev.openallay.value.ValueSchema<>(Validation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Validation>>asList(new dev.openallay.value.ValueSchema.Component<>(Validation.class, "reference", Validation::reference), new dev.openallay.value.ValueSchema.Component<>(Validation.class, "failureCode", Validation::failureCode)), arguments -> new Validation((SemanticReference) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

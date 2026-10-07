@@ -184,10 +184,71 @@ public final class GuideHudPresenter {
         return "";
     }
 
-    private record Reply(GuideRequestSnapshot request, String text) {
-        UUID requestId() { return request.requestId(); }
-        Instant terminalAt() { return request.terminalAt(); }
-        Instant createdAt() { return request.createdAt(); }
+    @dev.openallay.value.ValueType(Reply.ValueSchemaProvider.class)
+private static final class Reply {
+    private final GuideRequestSnapshot request;
+    private final String text;
+    private Reply(GuideRequestSnapshot request, String text) {
+        this.request = request;
+        this.text = text;
     }
-    private record Projected(GuideRequestSnapshot request, boolean debug, List<GuideUiRow> rows) {}
+    public GuideRequestSnapshot request() { return request; }
+    public String text() { return text; }
+UUID requestId() { return request.requestId(); }
+Instant terminalAt() { return request.terminalAt(); }
+Instant createdAt() { return request.createdAt(); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Reply)) return false;
+        Reply that = (Reply) other;
+        return java.util.Objects.equals(request, that.request) && java.util.Objects.equals(text, that.text);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        hash = 31 * hash + java.util.Objects.hashCode(text);
+        return hash;
+    }
+    @Override public String toString() { return "Reply[request=" + request + ", text=" + text + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Reply> schema() {
+            return new dev.openallay.value.ValueSchema<>(Reply.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Reply>>asList(new dev.openallay.value.ValueSchema.Component<>(Reply.class, "request", Reply::request), new dev.openallay.value.ValueSchema.Component<>(Reply.class, "text", Reply::text)), arguments -> new Reply((GuideRequestSnapshot) arguments[0], (String) arguments[1]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Projected.ValueSchemaProvider.class)
+private static final class Projected {
+    private final GuideRequestSnapshot request;
+    private final boolean debug;
+    private final List<GuideUiRow> rows;
+    private Projected(GuideRequestSnapshot request, boolean debug, List<GuideUiRow> rows) {
+        this.request = request;
+        this.debug = debug;
+        this.rows = rows;
+    }
+    public GuideRequestSnapshot request() { return request; }
+    public boolean debug() { return debug; }
+    public List<GuideUiRow> rows() { return rows; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projected)) return false;
+        Projected that = (Projected) other;
+        return java.util.Objects.equals(request, that.request) && debug == that.debug && java.util.Objects.equals(rows, that.rows);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        hash = 31 * hash + Boolean.hashCode(debug);
+        hash = 31 * hash + java.util.Objects.hashCode(rows);
+        return hash;
+    }
+    @Override public String toString() { return "Projected[request=" + request + ", debug=" + debug + ", rows=" + rows + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projected> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projected.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projected>>asList(new dev.openallay.value.ValueSchema.Component<>(Projected.class, "request", Projected::request), new dev.openallay.value.ValueSchema.Component<>(Projected.class, "debug", Projected::debug), new dev.openallay.value.ValueSchema.Component<>(Projected.class, "rows", Projected::rows)), arguments -> new Projected((GuideRequestSnapshot) arguments[0], (Boolean) arguments[1], (List) arguments[2]));
+        }
+    }
+}
 }

@@ -5,9 +5,37 @@ import java.util.List;
 
 /** Complete stored recipe facts below the bounded native canvas. No preview values are inferred. */
 public final class GuideRecipeDetailFacts {
-    public record Line(String key, List<String> arguments) {
-        public Line { arguments = List.copyOf(arguments); }
+    @dev.openallay.value.ValueType(Line.ValueSchemaProvider.class)
+public static final class Line {
+    private final String key;
+    private final List<String> arguments;
+    public Line(String key, List<String> arguments) {
+ arguments = List.copyOf(arguments);
+        this.key = key;
+        this.arguments = arguments;
     }
+    public String key() { return key; }
+    public List<String> arguments() { return arguments; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Line)) return false;
+        Line that = (Line) other;
+        return java.util.Objects.equals(key, that.key) && java.util.Objects.equals(arguments, that.arguments);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(key);
+        hash = 31 * hash + java.util.Objects.hashCode(arguments);
+        return hash;
+    }
+    @Override public String toString() { return "Line[key=" + key + ", arguments=" + arguments + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Line> schema() {
+            return new dev.openallay.value.ValueSchema<>(Line.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Line>>asList(new dev.openallay.value.ValueSchema.Component<>(Line.class, "key", Line::key), new dev.openallay.value.ValueSchema.Component<>(Line.class, "arguments", Line::arguments)), arguments -> new Line((String) arguments[0], (List) arguments[1]));
+        }
+    }
+}
     private GuideRecipeDetailFacts() {}
 
     public static List<Line> project(GuideRecipeCard recipe) {

@@ -909,9 +909,37 @@ public final class GuideService implements GuideHistoryAdministration {
     }
 
     /** Actual request identity or accepted FIFO pending identity; neither means task completion. */
-    public record InputReceipt(UUID id, boolean queued) {
-        public InputReceipt { Objects.requireNonNull(id, "id"); }
+    @dev.openallay.value.ValueType(InputReceipt.ValueSchemaProvider.class)
+public static final class InputReceipt {
+    private final UUID id;
+    private final boolean queued;
+    public InputReceipt(UUID id, boolean queued) {
+ Objects.requireNonNull(id, "id");
+        this.id = id;
+        this.queued = queued;
     }
+    public UUID id() { return id; }
+    public boolean queued() { return queued; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof InputReceipt)) return false;
+        InputReceipt that = (InputReceipt) other;
+        return java.util.Objects.equals(id, that.id) && queued == that.queued;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + Boolean.hashCode(queued);
+        return hash;
+    }
+    @Override public String toString() { return "InputReceipt[id=" + id + ", queued=" + queued + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<InputReceipt> schema() {
+            return new dev.openallay.value.ValueSchema<>(InputReceipt.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<InputReceipt>>asList(new dev.openallay.value.ValueSchema.Component<>(InputReceipt.class, "id", InputReceipt::id), new dev.openallay.value.ValueSchema.Component<>(InputReceipt.class, "queued", InputReceipt::queued)), arguments -> new InputReceipt((UUID) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 
     /** Explicit captured owner. Idle sends and busy FIFO follow-ups are chosen at final admission. */
     public CompletableFuture<ToolResult<InputReceipt>> followUp(String sessionId, UUID sessionOwner, String text,
@@ -3470,37 +3498,368 @@ public final class GuideService implements GuideHistoryAdministration {
         }
     }
 
-    private record CancelledFinalization(String sessionId, long sequence, List<ContextCheckpoint> checkpoints) {
-        private CancelledFinalization {
+    @dev.openallay.value.ValueType(CancelledFinalization.ValueSchemaProvider.class)
+private static final class CancelledFinalization {
+    private final String sessionId;
+    private final long sequence;
+    private final List<ContextCheckpoint> checkpoints;
+    private CancelledFinalization(String sessionId, long sequence, List<ContextCheckpoint> checkpoints) {
+
             checkpoints = List.copyOf(checkpoints);
+
+        this.sessionId = sessionId;
+        this.sequence = sequence;
+        this.checkpoints = checkpoints;
+    }
+    public String sessionId() { return sessionId; }
+    public long sequence() { return sequence; }
+    public List<ContextCheckpoint> checkpoints() { return checkpoints; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CancelledFinalization)) return false;
+        CancelledFinalization that = (CancelledFinalization) other;
+        return java.util.Objects.equals(sessionId, that.sessionId) && sequence == that.sequence && java.util.Objects.equals(checkpoints, that.checkpoints);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + Long.hashCode(sequence);
+        hash = 31 * hash + java.util.Objects.hashCode(checkpoints);
+        return hash;
+    }
+    @Override public String toString() { return "CancelledFinalization[sessionId=" + sessionId + ", sequence=" + sequence + ", checkpoints=" + checkpoints + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CancelledFinalization> schema() {
+            return new dev.openallay.value.ValueSchema<>(CancelledFinalization.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CancelledFinalization>>asList(new dev.openallay.value.ValueSchema.Component<>(CancelledFinalization.class, "sessionId", CancelledFinalization::sessionId), new dev.openallay.value.ValueSchema.Component<>(CancelledFinalization.class, "sequence", CancelledFinalization::sequence), new dev.openallay.value.ValueSchema.Component<>(CancelledFinalization.class, "checkpoints", CancelledFinalization::checkpoints)), arguments -> new CancelledFinalization((String) arguments[0], (Long) arguments[1], (List) arguments[2]));
         }
     }
-    private record UsageCarrier(long sequence, GuideUsageSnapshot usage) {}
+}
+    @dev.openallay.value.ValueType(UsageCarrier.ValueSchemaProvider.class)
+private static final class UsageCarrier {
+    private final long sequence;
+    private final GuideUsageSnapshot usage;
+    private UsageCarrier(long sequence, GuideUsageSnapshot usage) {
+        this.sequence = sequence;
+        this.usage = usage;
+    }
+    public long sequence() { return sequence; }
+    public GuideUsageSnapshot usage() { return usage; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof UsageCarrier)) return false;
+        UsageCarrier that = (UsageCarrier) other;
+        return sequence == that.sequence && java.util.Objects.equals(usage, that.usage);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(sequence);
+        hash = 31 * hash + java.util.Objects.hashCode(usage);
+        return hash;
+    }
+    @Override public String toString() { return "UsageCarrier[sequence=" + sequence + ", usage=" + usage + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<UsageCarrier> schema() {
+            return new dev.openallay.value.ValueSchema<>(UsageCarrier.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<UsageCarrier>>asList(new dev.openallay.value.ValueSchema.Component<>(UsageCarrier.class, "sequence", UsageCarrier::sequence), new dev.openallay.value.ValueSchema.Component<>(UsageCarrier.class, "usage", UsageCarrier::usage)), arguments -> new UsageCarrier((Long) arguments[0], (GuideUsageSnapshot) arguments[1]));
+        }
+    }
+}
 
-    private record PageKey(
-            GuideHistoryPageRequest.Direction direction,
-            GuideHistoryCursor cursor,
-            int count) {}
+    @dev.openallay.value.ValueType(PageKey.ValueSchemaProvider.class)
+private static final class PageKey {
+    private final GuideHistoryPageRequest.Direction direction;
+    private final GuideHistoryCursor cursor;
+    private final int count;
+    private PageKey(GuideHistoryPageRequest.Direction direction, GuideHistoryCursor cursor, int count) {
+        this.direction = direction;
+        this.cursor = cursor;
+        this.count = count;
+    }
+    public GuideHistoryPageRequest.Direction direction() { return direction; }
+    public GuideHistoryCursor cursor() { return cursor; }
+    public int count() { return count; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PageKey)) return false;
+        PageKey that = (PageKey) other;
+        return java.util.Objects.equals(direction, that.direction) && java.util.Objects.equals(cursor, that.cursor) && count == that.count;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(direction);
+        hash = 31 * hash + java.util.Objects.hashCode(cursor);
+        hash = 31 * hash + Integer.hashCode(count);
+        return hash;
+    }
+    @Override public String toString() { return "PageKey[direction=" + direction + ", cursor=" + cursor + ", count=" + count + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PageKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(PageKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PageKey>>asList(new dev.openallay.value.ValueSchema.Component<>(PageKey.class, "direction", PageKey::direction), new dev.openallay.value.ValueSchema.Component<>(PageKey.class, "cursor", PageKey::cursor), new dev.openallay.value.ValueSchema.Component<>(PageKey.class, "count", PageKey::count)), arguments -> new PageKey((GuideHistoryPageRequest.Direction) arguments[0], (GuideHistoryCursor) arguments[1], (Integer) arguments[2]));
+        }
+    }
+}
 
-    private record PageLoad(
-            PageKey key,
-            long generation,
-            List<CompletableFuture<ToolResult<GuideHistoryPage>>> waiters) {}
+    @dev.openallay.value.ValueType(PageLoad.ValueSchemaProvider.class)
+private static final class PageLoad {
+    private final PageKey key;
+    private final long generation;
+    private final List<CompletableFuture<ToolResult<GuideHistoryPage>>> waiters;
+    private PageLoad(PageKey key, long generation, List<CompletableFuture<ToolResult<GuideHistoryPage>>> waiters) {
+        this.key = key;
+        this.generation = generation;
+        this.waiters = waiters;
+    }
+    public PageKey key() { return key; }
+    public long generation() { return generation; }
+    public List<CompletableFuture<ToolResult<GuideHistoryPage>>> waiters() { return waiters; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PageLoad)) return false;
+        PageLoad that = (PageLoad) other;
+        return java.util.Objects.equals(key, that.key) && generation == that.generation && java.util.Objects.equals(waiters, that.waiters);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(key);
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(waiters);
+        return hash;
+    }
+    @Override public String toString() { return "PageLoad[key=" + key + ", generation=" + generation + ", waiters=" + waiters + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PageLoad> schema() {
+            return new dev.openallay.value.ValueSchema<>(PageLoad.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PageLoad>>asList(new dev.openallay.value.ValueSchema.Component<>(PageLoad.class, "key", PageLoad::key), new dev.openallay.value.ValueSchema.Component<>(PageLoad.class, "generation", PageLoad::generation), new dev.openallay.value.ValueSchema.Component<>(PageLoad.class, "waiters", PageLoad::waiters)), arguments -> new PageLoad((PageKey) arguments[0], (Long) arguments[1], (List) arguments[2]));
+        }
+    }
+}
 
-    private record SessionProjection(int ordinal, GuideModelSelection selection) {}
+    @dev.openallay.value.ValueType(SessionProjection.ValueSchemaProvider.class)
+private static final class SessionProjection {
+    private final int ordinal;
+    private final GuideModelSelection selection;
+    private SessionProjection(int ordinal, GuideModelSelection selection) {
+        this.ordinal = ordinal;
+        this.selection = selection;
+    }
+    public int ordinal() { return ordinal; }
+    public GuideModelSelection selection() { return selection; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SessionProjection)) return false;
+        SessionProjection that = (SessionProjection) other;
+        return ordinal == that.ordinal && java.util.Objects.equals(selection, that.selection);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        hash = 31 * hash + java.util.Objects.hashCode(selection);
+        return hash;
+    }
+    @Override public String toString() { return "SessionProjection[ordinal=" + ordinal + ", selection=" + selection + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SessionProjection> schema() {
+            return new dev.openallay.value.ValueSchema<>(SessionProjection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SessionProjection>>asList(new dev.openallay.value.ValueSchema.Component<>(SessionProjection.class, "ordinal", SessionProjection::ordinal), new dev.openallay.value.ValueSchema.Component<>(SessionProjection.class, "selection", SessionProjection::selection)), arguments -> new SessionProjection((Integer) arguments[0], (GuideModelSelection) arguments[1]));
+        }
+    }
+}
 
-    private record TimelineKey(UUID requestId, int ordinal) {}
+    @dev.openallay.value.ValueType(TimelineKey.ValueSchemaProvider.class)
+private static final class TimelineKey {
+    private final UUID requestId;
+    private final int ordinal;
+    private TimelineKey(UUID requestId, int ordinal) {
+        this.requestId = requestId;
+        this.ordinal = ordinal;
+    }
+    public UUID requestId() { return requestId; }
+    public int ordinal() { return ordinal; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof TimelineKey)) return false;
+        TimelineKey that = (TimelineKey) other;
+        return java.util.Objects.equals(requestId, that.requestId) && ordinal == that.ordinal;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        return hash;
+    }
+    @Override public String toString() { return "TimelineKey[requestId=" + requestId + ", ordinal=" + ordinal + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<TimelineKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(TimelineKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<TimelineKey>>asList(new dev.openallay.value.ValueSchema.Component<>(TimelineKey.class, "requestId", TimelineKey::requestId), new dev.openallay.value.ValueSchema.Component<>(TimelineKey.class, "ordinal", TimelineKey::ordinal)), arguments -> new TimelineKey((UUID) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 
-    private record MessageKey(String sessionId, int ordinal) {}
+    @dev.openallay.value.ValueType(MessageKey.ValueSchemaProvider.class)
+private static final class MessageKey {
+    private final String sessionId;
+    private final int ordinal;
+    private MessageKey(String sessionId, int ordinal) {
+        this.sessionId = sessionId;
+        this.ordinal = ordinal;
+    }
+    public String sessionId() { return sessionId; }
+    public int ordinal() { return ordinal; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof MessageKey)) return false;
+        MessageKey that = (MessageKey) other;
+        return java.util.Objects.equals(sessionId, that.sessionId) && ordinal == that.ordinal;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        return hash;
+    }
+    @Override public String toString() { return "MessageKey[sessionId=" + sessionId + ", ordinal=" + ordinal + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<MessageKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(MessageKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<MessageKey>>asList(new dev.openallay.value.ValueSchema.Component<>(MessageKey.class, "sessionId", MessageKey::sessionId), new dev.openallay.value.ValueSchema.Component<>(MessageKey.class, "ordinal", MessageKey::ordinal)), arguments -> new MessageKey((String) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 
-    private record CheckpointKey(String sessionId, int ordinal) {}
+    @dev.openallay.value.ValueType(CheckpointKey.ValueSchemaProvider.class)
+private static final class CheckpointKey {
+    private final String sessionId;
+    private final int ordinal;
+    private CheckpointKey(String sessionId, int ordinal) {
+        this.sessionId = sessionId;
+        this.ordinal = ordinal;
+    }
+    public String sessionId() { return sessionId; }
+    public int ordinal() { return ordinal; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CheckpointKey)) return false;
+        CheckpointKey that = (CheckpointKey) other;
+        return java.util.Objects.equals(sessionId, that.sessionId) && ordinal == that.ordinal;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        return hash;
+    }
+    @Override public String toString() { return "CheckpointKey[sessionId=" + sessionId + ", ordinal=" + ordinal + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CheckpointKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(CheckpointKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CheckpointKey>>asList(new dev.openallay.value.ValueSchema.Component<>(CheckpointKey.class, "sessionId", CheckpointKey::sessionId), new dev.openallay.value.ValueSchema.Component<>(CheckpointKey.class, "ordinal", CheckpointKey::ordinal)), arguments -> new CheckpointKey((String) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 
-    private record HistoryWrite(long generation, GuideHistoryCommit commit) {}
+    @dev.openallay.value.ValueType(HistoryWrite.ValueSchemaProvider.class)
+private static final class HistoryWrite {
+    private final long generation;
+    private final GuideHistoryCommit commit;
+    private HistoryWrite(long generation, GuideHistoryCommit commit) {
+        this.generation = generation;
+        this.commit = commit;
+    }
+    public long generation() { return generation; }
+    public GuideHistoryCommit commit() { return commit; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof HistoryWrite)) return false;
+        HistoryWrite that = (HistoryWrite) other;
+        return generation == that.generation && java.util.Objects.equals(commit, that.commit);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(commit);
+        return hash;
+    }
+    @Override public String toString() { return "HistoryWrite[generation=" + generation + ", commit=" + commit + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<HistoryWrite> schema() {
+            return new dev.openallay.value.ValueSchema<>(HistoryWrite.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<HistoryWrite>>asList(new dev.openallay.value.ValueSchema.Component<>(HistoryWrite.class, "generation", HistoryWrite::generation), new dev.openallay.value.ValueSchema.Component<>(HistoryWrite.class, "commit", HistoryWrite::commit)), arguments -> new HistoryWrite((Long) arguments[0], (GuideHistoryCommit) arguments[1]));
+        }
+    }
+}
 
-    private record HistoryWriteBarrier(
-            long generation, UUID requestId, CompletableFuture<Void> completion) {}
+    @dev.openallay.value.ValueType(HistoryWriteBarrier.ValueSchemaProvider.class)
+private static final class HistoryWriteBarrier {
+    private final long generation;
+    private final UUID requestId;
+    private final CompletableFuture<Void> completion;
+    private HistoryWriteBarrier(long generation, UUID requestId, CompletableFuture<Void> completion) {
+        this.generation = generation;
+        this.requestId = requestId;
+        this.completion = completion;
+    }
+    public long generation() { return generation; }
+    public UUID requestId() { return requestId; }
+    public CompletableFuture<Void> completion() { return completion; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof HistoryWriteBarrier)) return false;
+        HistoryWriteBarrier that = (HistoryWriteBarrier) other;
+        return generation == that.generation && java.util.Objects.equals(requestId, that.requestId) && java.util.Objects.equals(completion, that.completion);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + java.util.Objects.hashCode(completion);
+        return hash;
+    }
+    @Override public String toString() { return "HistoryWriteBarrier[generation=" + generation + ", requestId=" + requestId + ", completion=" + completion + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<HistoryWriteBarrier> schema() {
+            return new dev.openallay.value.ValueSchema<>(HistoryWriteBarrier.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<HistoryWriteBarrier>>asList(new dev.openallay.value.ValueSchema.Component<>(HistoryWriteBarrier.class, "generation", HistoryWriteBarrier::generation), new dev.openallay.value.ValueSchema.Component<>(HistoryWriteBarrier.class, "requestId", HistoryWriteBarrier::requestId), new dev.openallay.value.ValueSchema.Component<>(HistoryWriteBarrier.class, "completion", HistoryWriteBarrier::completion)), arguments -> new HistoryWriteBarrier((Long) arguments[0], (UUID) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 
-    private record MutationKey(Class<?> kind, Object owner, int ordinal) {}
+    @dev.openallay.value.ValueType(MutationKey.ValueSchemaProvider.class)
+private static final class MutationKey {
+    private final Class<?> kind;
+    private final Object owner;
+    private final int ordinal;
+    private MutationKey(Class<?> kind, Object owner, int ordinal) {
+        this.kind = kind;
+        this.owner = owner;
+        this.ordinal = ordinal;
+    }
+    public Class<?> kind() { return kind; }
+    public Object owner() { return owner; }
+    public int ordinal() { return ordinal; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof MutationKey)) return false;
+        MutationKey that = (MutationKey) other;
+        return java.util.Objects.equals(kind, that.kind) && java.util.Objects.equals(owner, that.owner) && ordinal == that.ordinal;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(kind);
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        return hash;
+    }
+    @Override public String toString() { return "MutationKey[kind=" + kind + ", owner=" + owner + ", ordinal=" + ordinal + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<MutationKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(MutationKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<MutationKey>>asList(new dev.openallay.value.ValueSchema.Component<>(MutationKey.class, "kind", MutationKey::kind), new dev.openallay.value.ValueSchema.Component<>(MutationKey.class, "owner", MutationKey::owner), new dev.openallay.value.ValueSchema.Component<>(MutationKey.class, "ordinal", MutationKey::ordinal)), arguments -> new MutationKey((Class) arguments[0], (Object) arguments[1], (Integer) arguments[2]));
+        }
+    }
+}
 
     /** Latest unacknowledged value per unit, with clear/delete as ordered session barriers. */
     private final class HistoryMutationBuffer {
