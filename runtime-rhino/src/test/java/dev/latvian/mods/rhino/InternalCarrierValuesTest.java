@@ -39,7 +39,7 @@ final class InternalCarrierValuesTest {
         assertEquals(new StringOracle(string.constant()).hashCode(), string.hashCode());
         assertEquals(ScriptRuntime.escapeAndWrapString(string.constant()), string.toString());
         assertEquals(string, new JSStringConstantTypeInfo(string.constant()));
-        assertEquals("\"\"", JSStringConstantTypeInfo.EMPTY.toString());
+        assertEquals("''", JSStringConstantTypeInfo.EMPTY.toString());
     }
 
     @Test void objectFactoryAndUnionKeepImmutableNullAndCopyRules() {
