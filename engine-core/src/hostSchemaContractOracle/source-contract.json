@@ -1,0 +1,32 @@
+{
+  "original": {
+    "path": "engine-core/src/main/java/dev/openallay/script/schema/CoreJavascriptContract.java",
+    "git_blob": "2422b3339e48b7f0ea228b73651f2cefc143369b",
+    "commit": "5045b229bfcf3f62b378c9a8266c3ece7b51e7bb",
+    "sha256": "ff03ff7777da63e8db6c57b20785ff3e18f9cc9ec52a10f5ae38fbf911b9e154"
+  },
+  "current_sources": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/script/schema/CoreJavascriptContract.java",
+      "sha256": "c0c1b0c6cc5ccb9d38c1be24264de5a7fc36a656dd78f2eff05f0334a6bf3bce"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/script/schema/HostSchema.java",
+      "sha256": "5b38efe5aca91396ffb1fd77da2d3da609bed5f78369d573acc3cdf5c3418809"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/script/schema/HostSchemaCatalog.java",
+      "sha256": "871ac13b57dee903a7f6e443d69f39e88945b3ec8dc382ebb7eb2c4ab4ed1e18"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/script/schema/HostRootDescriptor.java",
+      "sha256": "e75cf64e49e515576021945b6f3c80b8e2b1c75883e06914cd4f9cf1903b99bf"
+    }
+  ],
+  "reporter": {
+    "path": "engine-core/src/hostSchemaContractOracle/java/dev/openallay/script/schema/CoreContractExactOracle.java",
+    "sha256": "0faf522316e711381051cb8ac9eac89fd678c745efc09b148e30268b9ebe955e"
+  },
+  "runner_sha256": "9fae76cab37fbfab343e0665c62181dce126876d1248317fe3f881ea4d71bb44",
+  "classpath_policy": "Root exports normal actual fullengine productionclasspath aftercandidate source compile; no fakeRhino/types or sourceclosure substitution."
+}
