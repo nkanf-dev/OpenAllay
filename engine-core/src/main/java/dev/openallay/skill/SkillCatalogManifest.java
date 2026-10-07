@@ -21,11 +21,11 @@ public record SkillCatalogManifest(List<Document> documents) {
 
     private static final class MapBySkill {
         static void requireExactReferences(List<Document> documents) {
-            var skills = documents.stream().collect(java.util.stream.Collectors.groupingBy(Document::name));
+            java.util.Map<java.lang.String, java.util.List<dev.openallay.skill.SkillCatalogManifest.Document>> skills = documents.stream().collect(java.util.stream.Collectors.groupingBy(Document::name));
             skills.values().forEach(skill -> {
-                var entry = skill.stream().filter(document -> document.document().equals("SKILL.md"))
+                dev.openallay.skill.SkillCatalogManifest.Document entry = skill.stream().filter(document -> document.document().equals("SKILL.md"))
                         .findFirst().orElseThrow(() -> new IllegalArgumentException("Skill manifest has no entry document"));
-                var references = skill.stream().filter(document -> !document.document().equals("SKILL.md"))
+                java.util.List<java.lang.String> references = skill.stream().filter(document -> !document.document().equals("SKILL.md"))
                         .map(Document::document).sorted().toList();
                 for (Document document : skill) {
                     if (!document.source().equals(entry.source())

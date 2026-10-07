@@ -88,9 +88,9 @@ public final class AgentResultWorkspace implements AutoCloseable {
         JsonElement original = values.get(view.handle());
         if (original == null) throw new WorkspaceException(
                 "workspace_handle_unavailable", "Result handle is unavailable in this request");
-        var choice = answer ? new dev.openallay.tool.result.NaturalModelView.Choice(original, true, 0)
+        dev.openallay.tool.result.NaturalModelView.Choice choice = answer ? new dev.openallay.tool.result.NaturalModelView.Choice(original, true, 0)
                 : dev.openallay.tool.result.NaturalModelView.artifact(original);
-        var chosen = new dev.openallay.tool.ModelResultView(view.handle(), view.type(), view.cardinality(),
+        dev.openallay.tool.ModelResultView chosen = new dev.openallay.tool.ModelResultView(view.handle(), view.type(), view.cardinality(),
                 view.canonicalUtf8Bytes(), choice.complete(), "current request only", view.inputCoverage());
         String provenance = suffix + (choice.complete() ? "" : "\nrepresentative sample: "
                 + choice.omittedRows() + " canonical row(s) remain outside this chosen view");

@@ -222,7 +222,7 @@ public final class SkillPackageInstaller {
             }
             Candidate candidate = candidate(extracted);
             String digest = candidate.sha256();
-            var metadata = candidate.document().metadata();
+            dev.openallay.skill.SkillMetadata metadata = candidate.document().metadata();
             PreparedSkillInstall prepared = new PreparedSkillInstall(metadata, digest,
                     version == null ? metadata.attributes().getOrDefault("openallay/version", "") : version,
                     provenance == null ? metadata.provenance() : provenance,
@@ -260,7 +260,7 @@ public final class SkillPackageInstaller {
             for (String directory : captured.directories()) {
                 Files.createDirectories(verified.resolve(directory));
             }
-            for (var file : captured.files().entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, byte[]> file : captured.files().entrySet()) {
                 Path target = verified.resolve(file.getKey());
                 Files.createDirectories(target.getParent());
                 Files.write(target, file.getValue());
@@ -281,7 +281,7 @@ public final class SkillPackageInstaller {
         }
         Map<String, byte[]> files = new java.util.TreeMap<>();
         Set<String> directories = new java.util.TreeSet<>();
-        try (var paths = Files.walk(root)) {
+        try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(root)) {
             for (Path path : paths.sorted().toList()) {
                 if (path.equals(root)) {
                     continue;
@@ -300,11 +300,11 @@ public final class SkillPackageInstaller {
             }
         }
         try {
-            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             for (String directory : directories) {
                 digest.update(("D" + directory + "\0").getBytes(StandardCharsets.UTF_8));
             }
-            for (var file : files.entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, byte[]> file : files.entrySet()) {
                 digest.update(("F" + file.getKey() + "\0" + file.getValue().length + "\0")
                         .getBytes(StandardCharsets.UTF_8));
                 digest.update(file.getValue());
@@ -327,7 +327,7 @@ public final class SkillPackageInstaller {
 
     private Candidate candidate(Path extracted) throws IOException {
         java.util.List<Path> entries;
-        try (var stream = Files.walk(extracted)) {
+        try (java.util.stream.Stream<java.nio.file.Path> stream = Files.walk(extracted)) {
             entries = stream.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
                             && path.getFileName().toString().equals("SKILL.md"))
                     .toList();
@@ -343,7 +343,7 @@ public final class SkillPackageInstaller {
         }
         CapturedTree captured = capture(packageRoot);
         Map<String, String> encoded = new LinkedHashMap<>();
-        for (var file : captured.files().entrySet()) {
+        for (java.util.Map.Entry<java.lang.String, byte[]> file : captured.files().entrySet()) {
             encoded.put(file.getKey(), StandardCharsets.UTF_8.newDecoder()
                     .decode(java.nio.ByteBuffer.wrap(file.getValue())).toString());
         }
@@ -437,7 +437,7 @@ public final class SkillPackageInstaller {
         if (root == null || !Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
-        try (var paths = Files.walk(root)) {
+        try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(root)) {
             for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
                 Files.deleteIfExists(path);
             }

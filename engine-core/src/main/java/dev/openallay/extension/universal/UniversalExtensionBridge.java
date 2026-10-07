@@ -37,7 +37,7 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
         this.host = Objects.requireNonNull(host, "host");
         Objects.requireNonNull(verifiedDescriptor, "verifiedDescriptor");
-        var target = UniversalExtensionSupport.matchingTarget(verifiedDescriptor.support(), host.environment())
+        dev.openallay.api.extension.SupportTarget target = UniversalExtensionSupport.matchingTarget(verifiedDescriptor.support(), host.environment())
                 .orElseThrow(() -> new IllegalArgumentException("Extension support is incompatible"));
         descriptor = UniversalExtensionSupport.legacyDescriptor(verifiedDescriptor, target);
     }
@@ -61,17 +61,17 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
         }
         contributionAttempted = true;
         try {
-            var declared = Objects.requireNonNull(delegate.contribution(host), "contribution");
-            var modules = declared.javascriptModules().stream().map(value ->
+            dev.openallay.api.extension.ExtensionContribution declared = Objects.requireNonNull(delegate.contribution(host), "contribution");
+            java.util.List<dev.openallay.extension.JavascriptModuleSource> modules = declared.javascriptModules().stream().map(value ->
                     new dev.openallay.extension.JavascriptModuleSource(value.id(), value.source())).toList();
-            var skills = declared.skills().stream().map(value ->
+            java.util.List<dev.openallay.skill.SkillSource> skills = declared.skills().stream().map(value ->
                     new dev.openallay.skill.SkillSource(value.provenance(), value.entryPath(), value.files(),
                             dev.openallay.skill.SkillSource.Origin.valueOf(value.origin().name()))).toList();
             List<JavascriptResultViewProvider> views = declared.resultViews().stream().map(value ->
                     (JavascriptResultViewProvider) new JavascriptResultViewProvider.Declaration(value.id(),
                             JavascriptSemanticKind.valueOf(value.kind().name()), value.summary())).toList();
             List<JavascriptInvocationParticipant> participants = new ArrayList<>();
-            for (var value : declared.javascriptInvocationParticipants()) {
+            for (dev.openallay.api.extension.JavascriptInvocationParticipant value : declared.javascriptInvocationParticipants()) {
                 String id = value.id(); // Capture the only foreign declaration accessor exactly once.
                 participants.add(new JavascriptInvocationParticipant() {
                     @Override public String id() { return id; }
@@ -141,7 +141,7 @@ public final class UniversalExtensionBridge implements OpenAllayExtension {
 
     /** Existing host NUMBER algebra is finite, including numbers nested in JSON values. */
     private static void requireFiniteHostNumbers(JsonElement value) {
-        var pending = new java.util.ArrayDeque<JsonElement>();
+        java.util.ArrayDeque<com.google.gson.JsonElement> pending = new java.util.ArrayDeque<JsonElement>();
         pending.push(value);
         while (!pending.isEmpty()) {
             JsonElement current = pending.pop();

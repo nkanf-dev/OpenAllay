@@ -11,7 +11,7 @@ public enum JavascriptHostValueType {
         if (this == JSON) return true;
         if (this == NULL) return value.isJsonNull();
         if (!value.isJsonPrimitive()) return false;
-        var primitive = value.getAsJsonPrimitive();
+        com.google.gson.JsonPrimitive primitive = value.getAsJsonPrimitive();
         return switch (this) {
             case STRING -> primitive.isString();
             case BOOLEAN -> primitive.isBoolean();

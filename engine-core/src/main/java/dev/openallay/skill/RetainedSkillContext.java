@@ -51,16 +51,16 @@ public final class RetainedSkillContext {
         void addAll(List<Range> actual) { actual.forEach(this::add); }
 
         void add(Range range) {
-            var intervals = byKey.computeIfAbsent(range.key(), ignored -> new TreeMap<>());
+            java.util.NavigableMap<java.lang.Integer, java.lang.Integer> intervals = byKey.computeIfAbsent(range.key(), ignored -> new TreeMap<>());
             int start = range.offset();
             int end = range.end();
-            var previous = intervals.floorEntry(start);
+            java.util.Map.Entry<java.lang.Integer, java.lang.Integer> previous = intervals.floorEntry(start);
             if (previous != null && previous.getValue() >= start) {
                 start = previous.getKey();
                 end = Math.max(end, previous.getValue());
                 intervals.remove(previous.getKey());
             }
-            var next = intervals.ceilingEntry(start);
+            java.util.Map.Entry<java.lang.Integer, java.lang.Integer> next = intervals.ceilingEntry(start);
             while (next != null && next.getKey() <= end) {
                 end = Math.max(end, next.getValue());
                 intervals.remove(next.getKey());
@@ -74,9 +74,9 @@ public final class RetainedSkillContext {
         }
 
         boolean contains(Key key, int offset, int end) {
-            var intervals = byKey.get(key);
+            java.util.NavigableMap<java.lang.Integer, java.lang.Integer> intervals = byKey.get(key);
             if (intervals == null) return false;
-            var start = intervals.floorEntry(offset);
+            java.util.Map.Entry<java.lang.Integer, java.lang.Integer> start = intervals.floorEntry(offset);
             return start != null && start.getValue() >= end;
         }
     }

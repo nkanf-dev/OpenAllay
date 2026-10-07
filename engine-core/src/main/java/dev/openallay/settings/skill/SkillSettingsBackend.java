@@ -399,7 +399,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         }
 
         List<SkillSettingsView.Skill> skills = new ArrayList<>();
-        for (var metadata : repository.metadata()) {
+        for (dev.openallay.skill.SkillMetadata metadata : repository.metadata()) {
             SkillDocument document = repository.find(metadata.name()).orElseThrow();
             String markdown = parsedSources.getOrDefault(metadata.name(), List.of()).stream()
                     .filter(parsed -> parsed.document().metadata().origin() == metadata.origin())
@@ -480,8 +480,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         if (actual == null) {
             return false;
         }
-        var left = expected.metadata();
-        var right = actual.metadata();
+        dev.openallay.skill.SkillMetadata left = expected.metadata();
+        dev.openallay.skill.SkillMetadata right = actual.metadata();
         return left.name().equals(right.name())
                 && left.description().equals(right.description())
                 && left.license().equals(right.license())

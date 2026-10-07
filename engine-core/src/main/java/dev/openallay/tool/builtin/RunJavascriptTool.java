@@ -321,8 +321,8 @@ public final class RunJavascriptTool
                     context.correlationId(), ignored -> graphFactory.apply(context));
             workspace = workspaces.open(context.correlationId());
         }
-        var data = graph.open();
-        var commandBridge = commands.bridge(
+        dev.openallay.script.data.MinecraftAgentHostGraph.InvocationData data = graph.open();
+        java.util.Optional<dev.openallay.script.command.JavascriptCommandBridge> commandBridge = commands.bridge(
                 context.correlationId(), cancellation,
                 (kind, capturedAt) -> new EvidenceMetadata(
                         DataAuthority.CLIENT_VISIBLE,
@@ -339,7 +339,7 @@ public final class RunJavascriptTool
                         Map.of("openallay:scope", kind)),
                 data::recordEvidence);
         List<dev.openallay.model.image.ImageReference> capturedImages = new java.util.ArrayList<>();
-        var worldBridge = worldObservations.bridge(
+        java.util.Optional<dev.openallay.world.JavascriptWorldBridge> worldBridge = worldObservations.bridge(
                 context.correlationId(), cancellation, data::recordEvidence, capturedImages::add);
         if (scope != null) scope.open(data::recordEvidence);
         JavascriptExecution execution = runtime.execute(
@@ -360,18 +360,18 @@ public final class RunJavascriptTool
         }
         requestCancellation.throwIfCancelled();
         JsonElement canonical = execution.value();
-        var sources = data.sources();
+        java.util.List<dev.openallay.context.SourceObservation> sources = data.sources();
         String handle = workspace.store(
                 canonical, execution.shape(), context.unrestrictedJavascript(), sources);
         String coverage = inputCoverage(sources);
         // Canonical storage and execution authority stay mode-specific. Model transport does not.
-        var choice = dev.openallay.tool.result.NaturalModelView.artifact(canonical);
-        var naturalView = new dev.openallay.tool.ModelResultView(handle,
+        dev.openallay.tool.result.NaturalModelView.Choice choice = dev.openallay.tool.result.NaturalModelView.artifact(canonical);
+        dev.openallay.tool.ModelResultView naturalView = new dev.openallay.tool.ModelResultView(handle,
                 dev.openallay.tool.result.JsonResultProjection.type(canonical),
                 dev.openallay.tool.result.JsonResultProjection.cardinality(canonical),
                 dev.openallay.tool.result.JsonResultProjection.serializedBytes(canonical),
                 choice.complete(), "current request only", coverage);
-        var presentation = presenter.presentChosen(handle, choice.value(), canonical,
+        dev.openallay.script.workspace.JavascriptResultPresenter.Presentation presentation = presenter.presentChosen(handle, choice.value(), canonical,
                 naturalView, execution.shape(), coverage);
         String modelText = presentation.modelText();
         return new ToolResult.Success<>(new Output(

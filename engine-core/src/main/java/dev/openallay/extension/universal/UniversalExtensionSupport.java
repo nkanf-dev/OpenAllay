@@ -53,7 +53,7 @@ public final class UniversalExtensionSupport {
         if (!descriptor.support().targets().contains(target)) {
             throw new IllegalArgumentException("Target is not declared by this Extension");
         }
-        var requirements = descriptor.requirements();
+        dev.openallay.api.extension.ExtensionRequirements requirements = descriptor.requirements();
         return new OpenAllayExtensionDescriptor(descriptor.id(), descriptor.name(), descriptor.version(),
                 descriptor.provider(), descriptor.summary(), Set.of(target.loader()),
                 target.minecraftVersionRange(), target.openAllayApiVersionRange(), descriptor.source(),

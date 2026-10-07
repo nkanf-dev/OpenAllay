@@ -377,7 +377,7 @@ public final class AgentSkillManager {
         if (path == null || !Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
-        try (var entries = Files.walk(path)) {
+        try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(path)) {
             for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) {
                 Files.deleteIfExists(entry);
             }

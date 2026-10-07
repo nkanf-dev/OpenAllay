@@ -31,7 +31,7 @@ public final class JavascriptResultPresenter {
     /** The agent chooses this encoded byte envelope from the actual model request budget. */
     public Presentation present(String handle, JsonElement value, JavascriptResultShape shape,
             String suffix, int maximumUtf8Bytes) {
-        var view = JsonResultProjection.project(value, handle, suffix, maximumUtf8Bytes);
+        dev.openallay.tool.result.JsonResultProjection.Projection view = JsonResultProjection.project(value, handle, suffix, maximumUtf8Bytes);
         return new Presentation(handle, view.type(), view.cardinality(), view.fields(), view.preview(),
                 view.modelText(), JavascriptResultViewRegistry.classify(value, shape), view.complete(),
                 view.omittedRows(), view.omittedFields(), view.serializedBytes());
@@ -39,7 +39,7 @@ public final class JavascriptResultPresenter {
 
     public Presentation presentChosen(String handle, JsonElement value, JsonElement schemaSource,
             dev.openallay.tool.ModelResultView view, JavascriptResultShape shape, String suffix) {
-        var projected = JsonResultProjection.project(value, view, suffix, MODEL_TEXT_BYTE_BUDGET,
+        dev.openallay.tool.result.JsonResultProjection.Projection projected = JsonResultProjection.project(value, view, suffix, MODEL_TEXT_BYTE_BUDGET,
                 schemaSource);
         return new Presentation(handle, projected.type(), projected.cardinality(), projected.fields(),
                 projected.preview(), projected.modelText(), JavascriptResultViewRegistry.classify(schemaSource, shape),
