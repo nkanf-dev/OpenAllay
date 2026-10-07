@@ -113,6 +113,7 @@ public final class RhinoHostAdapter {
         if (!(value instanceof JsonElement) || !shape.trusted()) {
             return adapt(value);
         }
+        JsonElement json = (JsonElement) value;
         if (json.isJsonArray()) {
             return cached(json, () -> HostListView.json(
                     context, scope, this, json.getAsJsonArray(), shape));

@@ -179,7 +179,9 @@ public final class RhinoTypeSchema {
         Method accessor = component.accessorMetadata();
         if (!RecordMetadata.isRecord(value.getClass()) || accessor.getDeclaringClass() != value.getClass()
                 || accessor.getParameterTypes().length != 0 || accessor.getReturnType() != component.rawType()) {
-            throw HostAccessException.unsupported(value.getClass());
+            throw new HostAccessException(
+                    "javascript_host_type_unsupported",
+                    "Unsupported detached Java host value: " + value.getClass().getName());
         }
         // This is the existing host owner's exact component-access authority, not a bean fallback.
         // Normal JVM module/security access checks still own denial on modern hosts.
