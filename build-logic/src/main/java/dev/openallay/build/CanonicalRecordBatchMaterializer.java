@@ -17,6 +17,11 @@ public final class CanonicalRecordBatchMaterializer {
             case "dev/openallay/guide/ui/GuideRecipeDetailFacts.java" -> body.equals(" arguments = List.copyOf(arguments); ");
             case "dev/openallay/guide/ui/GuideToolSummaryGeometry.java" -> body.equals(" capsules = List.copyOf(capsules); ");
             case "dev/openallay/guide/ui/hud/GuideHudToolCards.java" -> body.equals(" recipes = Map.copyOf(recipes); ");
+            case "dev/openallay/client/gui/GuideClientUiState.java" -> body.equals(" Objects.requireNonNull(observation, \"observation\"); ");
+            case "dev/openallay/client/gui/settings/BuiltinModelSettingsProjection.java" -> body.equals(" lines = List.copyOf(lines); ") || body.equals(" arguments = List.copyOf(arguments); ");
+            case "dev/openallay/client/voice/NativeModelFiles.java" -> body.equals(" files = List.copyOf(files); ");
+            case "dev/openallay/client/voice/VoiceRuntime.java" -> body.equals(" Objects.requireNonNull(id); Objects.requireNonNull(kind); ");
+            case "dev/openallay/client/voice/VoiceSettingsView.java" -> body.equals(" devices = List.copyOf(devices); ");
             default -> false;
         };
         return exact?body.substring(0,body.length()-1):body;

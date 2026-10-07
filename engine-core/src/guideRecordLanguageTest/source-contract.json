@@ -723,7 +723,7 @@
   },
   "tool": {
     "path": "build-logic/src/main/java/dev/openallay/build/CanonicalRecordBatchMaterializer.java",
-    "sha256": "b0afdb085143ee46464f14cd0711312e4b5d30a22e798f9e82c6fd28a03ceb97"
+    "sha256": "e33cf790f0aaca1951cd20917530b6f8603e0be1e90265dfd91ba6bece9e83c8"
   },
   "request": {
     "path": "engine-core/src/guideRecordLanguageTest/request.tsv",
