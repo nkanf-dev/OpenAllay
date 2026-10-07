@@ -61,8 +61,8 @@ public final class ClientToolExecutionEndpoint {
     }
 
     private static final ResultImages NO_IMAGES = (request, invocation, session, references, cancellation) ->
-            references.isEmpty() ? CompletableFuture.completedFuture(List.of())
-                    : CompletableFuture.failedFuture(new IllegalStateException("Client image custody is unavailable"));
+            references.isEmpty() ? CompletableFuture.completedFuture(dev.openallay.util.Java8Collections.listOf())
+                    : dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Client image custody is unavailable"));
     private volatile ResultImages resultImages = NO_IMAGES;
 
     public void configureResultImages(ResultImages images) {
@@ -123,25 +123,23 @@ public final class ClientToolExecutionEndpoint {
                 .map(tool -> tool.freezeCommandCapability(requestId.toString()))
                 .orElse(false);
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
-                frozenTools.registrations().stream()
+                dev.openallay.util.Java8Collections.toList(frozenTools.registrations().stream()
                         .map(registration -> registration.tool() instanceof LoadSkillTool skill
                                 ? new RegisteredTool(registration.providerId(),
                                         skill.forRequest(false, commandsEnabled, "client"))
-                                : registration)
-                        .toList(),
-                Set.of());
+                                : registration)),
+                dev.openallay.util.Java8Collections.setOf());
         SkillCatalogManifest skillDocuments = requestTools.find("openallay:load_skill")
                 .filter(LoadSkillTool.class::isInstance)
                 .map(LoadSkillTool.class::cast)
                 .map(LoadSkillTool::catalogManifest)
                 .orElse(SkillCatalogManifest.EMPTY);
         java.util.ArrayList<String> exported = new java.util.ArrayList<>(
-                requestTools.descriptors().stream()
+                dev.openallay.util.Java8Collections.toList(requestTools.descriptors().stream()
                 .filter(descriptor -> descriptor.access() == ToolAccess.READ_ONLY
                         || descriptor.access() == ToolAccess.EXPERIMENTAL_ACTION)
                 .map(descriptor -> descriptor.id())
-                .sorted()
-                .toList());
+                .sorted()));
         if (commandsEnabled) exported.add(EXPERIMENTAL_COMMANDS_CAPABILITY);
         RequestState state = new RequestState(
                 sessionId,
@@ -155,7 +153,7 @@ public final class ClientToolExecutionEndpoint {
                     "duplicate_request", "Client Tool request ID is already active");
         }
         return new ToolResult.Success<>(
-                new OpenedRequest(requestId, sessionId, List.copyOf(exported), skillDocuments));
+                new OpenedRequest(requestId, sessionId, dev.openallay.util.Java8Collections.listCopyOf(exported), skillDocuments));
     }
 
     public ToolResult<VoidResult> handle(ClientToolCallPayload payload) {
@@ -243,7 +241,7 @@ public final class ClientToolExecutionEndpoint {
     }
 
     public int disconnect() {
-        List<UUID> active = List.copyOf(requests.keySet());
+        List<UUID> active = dev.openallay.util.Java8Collections.listCopyOf(requests.keySet());
         active.forEach(this::close);
         return active.size();
     }
@@ -295,7 +293,7 @@ public final class ClientToolExecutionEndpoint {
             com.google.gson.JsonObject normalized = normalizer.normalize(result, tool.descriptor().outputType());
             List<dev.openallay.model.image.ImageReference> images = result instanceof ToolResult.Success<?> success
                     && success.value() instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
-                    ? List.copyOf(visual.images()) : List.of();
+                    ? dev.openallay.util.Java8Collections.listCopyOf(visual.images()) : dev.openallay.util.Java8Collections.listOf();
             dev.openallay.model.image.ModelImages.unique(images);
             request.images.prepare(payload.requestId(), payload.invocationId(), request.sessionId,
                             images, cancellation)
@@ -336,7 +334,7 @@ public final class ClientToolExecutionEndpoint {
     private void sendNormalized(
             UUID requestId, UUID invocationId, com.google.gson.JsonObject normalized) {
         sendMessage(requestId, invocationId,
-                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, List.of()));
+                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, dev.openallay.util.Java8Collections.listOf()));
     }
 
     private void sendMessage(UUID requestId, UUID invocationId,
@@ -378,7 +376,7 @@ public static final class OpenedRequest {
     public OpenedRequest(UUID requestId, String sessionId, List<String> clientToolIds, SkillCatalogManifest skillDocuments) {
 
             java.util.Objects.requireNonNull(requestId, "requestId");
-            clientToolIds = List.copyOf(clientToolIds);
+            clientToolIds = dev.openallay.util.Java8Collections.listCopyOf(clientToolIds);
             java.util.Objects.requireNonNull(skillDocuments, "skillDocuments");
 
         this.requestId = requestId;
@@ -484,7 +482,7 @@ public static final class VoidResult {
                     return;
                 }
                 closed = true;
-                cancellations = List.copyOf(pending.values());
+                cancellations = dev.openallay.util.Java8Collections.listCopyOf(pending.values());
                 pending.clear();
             }
             cancellations.forEach(CancellationSignal::cancel);

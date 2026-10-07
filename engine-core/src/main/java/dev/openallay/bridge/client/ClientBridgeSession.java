@@ -197,8 +197,7 @@ public static final class Connection {
                 synchronized (serverRequestLock) {
                     request = serverRequests.get(requestId);
                     if (!current(requestId, request) || !request.sessionId.equals(sessionId)) {
-                        return java.util.concurrent.CompletableFuture.failedFuture(
-                                new IllegalStateException("Client image request is no longer active"));
+                        return dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Client image request is no longer active"));
                     }
                 }
                 java.util.List<dev.openallay.model.image.ImageReference> captured = dev.openallay.model.image.ModelImages.unique(references);
@@ -219,7 +218,7 @@ public static final class Connection {
                     }
                     cancellation.throwIfCancelled();
                     requireCurrent(requestId, request);
-                    return java.util.List.copyOf(attachments);
+                    return dev.openallay.util.Java8Collections.listCopyOf(attachments);
                 }, resultImageWorker);
             }
 
@@ -305,7 +304,7 @@ public static final class Connection {
         }
         ClientToolExecutionEndpoint endpoint = clientTools;
         ServerAgentRequestPayload outbound = request.withClientTools(
-                java.util.List.of(), dev.openallay.skill.SkillCatalogManifest.EMPTY);
+                dev.openallay.util.Java8Collections.listOf(), dev.openallay.skill.SkillCatalogManifest.EMPTY);
         if (endpoint != null) {
             Supplier<ToolRuntimeCatalog> catalogs = localToolCatalog;
             if (catalogs == null) return false;

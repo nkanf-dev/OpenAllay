@@ -7,11 +7,10 @@ public final class PlatformServices {
     private PlatformServices() {}
 
     public static PlatformService load() {
-        List<PlatformService> services = ServiceLoader.load(
+        List<PlatformService> services = dev.openallay.util.Java8Collections.toList(ServiceLoader.load(
                         PlatformService.class, PlatformServices.class.getClassLoader())
                 .stream()
-                .map(ServiceLoader.Provider::get)
-                .toList();
+                .map(ServiceLoader.Provider::get));
         if (services.size() != 1) {
             throw new IllegalStateException(
                     "Expected exactly one PlatformService, found " + services.size());

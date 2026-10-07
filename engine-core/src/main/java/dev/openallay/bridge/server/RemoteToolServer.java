@@ -167,7 +167,7 @@ public final class RemoteToolServer {
             java.util.List<CancellationSignal> snapshot;
             synchronized (this) {
                 closed = true;
-                snapshot = java.util.List.copyOf(pending);
+                snapshot = dev.openallay.util.Java8Collections.listCopyOf(pending);
                 pending.clear();
             }
             snapshot.forEach(CancellationSignal::cancel);

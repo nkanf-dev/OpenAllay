@@ -46,7 +46,7 @@ public final class ClientPlacedToolExecutor implements AgentToolExecutor {
                         definition.inputSchema()));
             }
         }
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     @Override

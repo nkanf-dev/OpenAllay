@@ -18,7 +18,7 @@ public static final class Route {
     private final CommandArgument argument;
     private final Action action;
     public Route(List<String> literals, CommandArgument argument, Action action) {
- literals = List.copyOf(literals);
+ literals = dev.openallay.util.Java8Collections.listCopyOf(literals);
         this.literals = literals;
         this.argument = argument;
         this.action = action;
@@ -55,10 +55,7 @@ public static final class Route {
         ToolResult<ReplayReport> replay(String traceId);
     }
 
-    private static final List<Route> ROUTES = List.of(
-            new Route(List.of("tools"), CommandArgument.NONE, Action.TOOLS),
-            new Route(List.of("replay"), CommandArgument.TRACE_WORD, Action.REPLAY),
-            new Route(List.of("invoke"), CommandArgument.TOOL_GREEDY, Action.INVOKE));
+    private static final List<Route> ROUTES = dev.openallay.util.Java8Collections.listOf(new Route(dev.openallay.util.Java8Collections.listOf("tools"), CommandArgument.NONE, Action.TOOLS), new Route(dev.openallay.util.Java8Collections.listOf("replay"), CommandArgument.TRACE_WORD, Action.REPLAY), new Route(dev.openallay.util.Java8Collections.listOf("invoke"), CommandArgument.TOOL_GREEDY, Action.INVOKE));
 
     private DevelopmentCommandSpec() {}
 
@@ -69,7 +66,7 @@ public static final class Route {
         if (result instanceof ToolResult.Success<List<String>> success) {
             return success.value();
         }
-        return List.of();
+        return dev.openallay.util.Java8Collections.listOf();
     }
 
     public static int dispatch(

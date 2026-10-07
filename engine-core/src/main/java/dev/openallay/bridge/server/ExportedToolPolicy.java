@@ -14,7 +14,7 @@ public final class ExportedToolPolicy {
 
     public ExportedToolPolicy(ToolRegistry tools, Set<String> exported) {
         this.tools = tools;
-        this.exported = Set.copyOf(exported);
+        this.exported = dev.openallay.util.Java8Collections.setCopyOf(exported);
         for (String id : this.exported) {
             Tool<?, ?> tool = tools.find(id).orElseThrow(() ->
                     new IllegalArgumentException("Cannot export unknown tool " + id));

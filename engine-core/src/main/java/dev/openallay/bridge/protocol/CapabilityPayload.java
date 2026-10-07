@@ -14,16 +14,16 @@ public final class CapabilityPayload {
     private final String serverImageInputCapabilitySource;
     public CapabilityPayload(List<RemoteToolCapability> remoteTools, boolean serverModel, int serverContextWindowTokens, int serverMaxOutputTokens, int serverPromptAndToolTokens, String serverCanonicalModelId, dev.openallay.model.image.ImageInputCapability serverImageInputCapability, String serverImageInputCapabilitySource) {
 
-        remoteTools = List.copyOf(remoteTools);
+        remoteTools = dev.openallay.util.Java8Collections.listCopyOf(remoteTools);
         java.util.Objects.requireNonNull(serverImageInputCapability, "serverImageInputCapability");
-        if (serverImageInputCapabilitySource == null || serverImageInputCapabilitySource.isBlank()) {
+        if (serverImageInputCapabilitySource == null || dev.openallay.util.Java8Strings.isBlank(serverImageInputCapabilitySource)) {
             throw new IllegalArgumentException("Server image capability source is required");
         }
         if (!serverModel && serverImageInputCapability != dev.openallay.model.image.ImageInputCapability.UNKNOWN) {
             throw new IllegalArgumentException("Unavailable server model cannot advertise image support");
         }
         if (serverModel) {
-            if (serverCanonicalModelId == null || serverCanonicalModelId.isBlank()) {
+            if (serverCanonicalModelId == null || dev.openallay.util.Java8Strings.isBlank(serverCanonicalModelId)) {
                 throw new IllegalArgumentException("Server model context capability is required");
             }
             dev.openallay.agent.context.ContextBudget budget =
@@ -71,10 +71,10 @@ public static final class RemoteToolCapability {
     private final String inputSchemaJson;
     public RemoteToolCapability(String id, String description, String inputSchemaJson) {
 
-            if (id == null || id.isBlank() || description == null || description.isBlank()) {
+            if (id == null || dev.openallay.util.Java8Strings.isBlank(id) || description == null || dev.openallay.util.Java8Strings.isBlank(description)) {
                 throw new IllegalArgumentException("Remote tool identity and description are required");
             }
-            if (inputSchemaJson == null || inputSchemaJson.isBlank()) {
+            if (inputSchemaJson == null || dev.openallay.util.Java8Strings.isBlank(inputSchemaJson)) {
                 throw new IllegalArgumentException("Remote tool schema is required");
             }
 

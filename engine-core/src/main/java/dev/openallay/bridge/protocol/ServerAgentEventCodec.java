@@ -73,40 +73,40 @@ public final class ServerAgentEventCodec {
         }
 
         AgentEvent event = switch (payload.eventType()) {
-            case "state" -> new AgentEvent.StateChanged(read(body, Set.of("state"), AgentEvent.StateChanged.class).state());
+            case "state" -> new AgentEvent.StateChanged(read(body, dev.openallay.util.Java8Collections.setOf("state"), AgentEvent.StateChanged.class).state());
             case "context_compacted" ->
                     new AgentEvent.ContextCompacted(checkpoints.decode(body.toString()));
             case "context_updated" -> readContext(body);
             case "context_finalized" -> readFinalized(body);
             case "steer_applied" -> readSteerApplied(body);
-            case "steer_rejected" -> new AgentEvent.SteerRejected(readMessageId(body, Set.of("messageId")));
+            case "steer_rejected" -> new AgentEvent.SteerRejected(readMessageId(body, dev.openallay.util.Java8Collections.setOf("messageId")));
             case "text_delta" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("text"), ModelEvent.TextDelta.class));
+                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.TextDelta.class));
             case "reasoning_delta" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("text"), ModelEvent.ReasoningDelta.class));
+                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.ReasoningDelta.class));
             case "tool_use_complete" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("id", "name", "input"), ModelEvent.ToolUseComplete.class));
-            case "request_released" -> read(body, Set.of(), AgentEvent.RequestReleased.class);
+                    read(body, dev.openallay.util.Java8Collections.setOf("id", "name", "input"), ModelEvent.ToolUseComplete.class));
+            case "request_released" -> read(body, dev.openallay.util.Java8Collections.setOf(), AgentEvent.RequestReleased.class);
             case "model_usage_started" -> readUsageStarted(body);
             case "model_usage_observed" -> readUsageObserved(body);
             case "usage" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("usage"), ModelEvent.UsageUpdate.class));
+                    read(body, dev.openallay.util.Java8Collections.setOf("usage"), ModelEvent.UsageUpdate.class));
             case "model_attempt_started" -> new AgentEvent.ModelProgress(
                     readAttemptStarted(body));
             case "model_response_started" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of(), ModelEvent.ResponseStarted.class));
+                    read(body, dev.openallay.util.Java8Collections.setOf(), ModelEvent.ResponseStarted.class));
             case "rate_limited" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class));
+                    read(body, dev.openallay.util.Java8Collections.setOf("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class));
             case "model_complete" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("stopReason"), ModelEvent.MessageComplete.class));
+                    read(body, dev.openallay.util.Java8Collections.setOf("stopReason"), ModelEvent.MessageComplete.class));
             case "model_failure" -> new AgentEvent.ModelProgress(readModelFailure(body));
             case "tool_started" -> readToolStarted(body);
             case "tool_completed" -> read(
                     body,
-                    Set.of("invocationId", "toolId", "failure", "normalized"),
+                    dev.openallay.util.Java8Collections.setOf("invocationId", "toolId", "failure", "normalized"),
                     AgentEvent.ToolCompleted.class);
-            case "final_text" -> read(body, Set.of("text"), AgentEvent.FinalText.class);
-            case "failed" -> read(body, Set.of("code", "message"), AgentEvent.Failed.class);
+            case "final_text" -> read(body, dev.openallay.util.Java8Collections.setOf("text"), AgentEvent.FinalText.class);
+            case "failed" -> read(body, dev.openallay.util.Java8Collections.setOf("code", "message"), AgentEvent.Failed.class);
             default -> throw new IllegalArgumentException(
                     "Unknown server Agent event type " + payload.eventType());
         };
@@ -118,7 +118,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ModelUsageStarted readUsageStarted(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("callId", "modelIdentifier"))
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("callId", "modelIdentifier"))
                 || !body.get("callId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("callId").isString()
                 || !body.get("modelIdentifier").isJsonPrimitive()
@@ -130,7 +130,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ModelUsageObserved readUsageObserved(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("callId", "modelIdentifier", "usage"))
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("callId", "modelIdentifier", "usage"))
                 || !body.get("callId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("callId").isString()
                 || !body.get("modelIdentifier").isJsonPrimitive()
@@ -139,10 +139,8 @@ public final class ServerAgentEventCodec {
             throw new IllegalArgumentException("Server model usage receipt schema mismatch");
         }
         JsonObject usage = body.getAsJsonObject("usage");
-        Set<String> counts = Set.of("inputTokens", "outputTokens", "cacheReadTokens",
-                "cacheWriteTokens", "uncachedInputTokens");
-        Set<String> known = Set.of("inputKnown", "outputKnown", "cacheReadKnown",
-                "cacheWriteKnown", "uncachedInputKnown");
+        Set<String> counts = dev.openallay.util.Java8Collections.setOf("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens", "uncachedInputTokens");
+        Set<String> known = dev.openallay.util.Java8Collections.setOf("inputKnown", "outputKnown", "cacheReadKnown", "cacheWriteKnown", "uncachedInputKnown");
         java.util.HashSet<String> fields = new java.util.HashSet<>(counts);
         fields.addAll(known);
         if (!dev.openallay.json.JsonTrees.keys(usage).equals(fields)) {
@@ -171,7 +169,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.SteerApplied readSteerApplied(JsonObject body) {
-        UUID messageId = readMessageId(body, Set.of("messageId", "message"));
+        UUID messageId = readMessageId(body, dev.openallay.util.Java8Collections.setOf("messageId", "message"));
         BridgeJsonCodec.validateHistoryMessage(body.get("message"));
         ServerAgentHistoryMessage message = gson.fromJson(body.get("message"), ServerAgentHistoryMessage.class);
         ServerAgentSteerPayload.validateMessage(message);
@@ -188,7 +186,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ContextUpdated readContext(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("messages", "requestMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server model context schema mismatch");
         }
         return new AgentEvent.ContextUpdated(contexts.decode(body.get("messages").toString()),
@@ -196,7 +194,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ContextFinalized readFinalized(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("messages", "requestMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server finalized context schema mismatch");
         }
         return new AgentEvent.ContextFinalized(contexts.decode(body.get("messages").toString()),
@@ -217,16 +215,16 @@ public final class ServerAgentEventCodec {
 
     private ModelFailure readModelFailure(JsonObject body) {
         Set<String> fields = dev.openallay.json.JsonTrees.keys(body);
-        if (!fields.equals(Set.of("code", "message"))
-                && !fields.equals(Set.of("code", "message", "httpStatus"))) {
+        if (!fields.equals(dev.openallay.util.Java8Collections.setOf("code", "message"))
+                && !fields.equals(dev.openallay.util.Java8Collections.setOf("code", "message", "httpStatus"))) {
             throw new IllegalArgumentException("Server Agent event schema mismatch for ModelFailure");
         }
         return gson.fromJson(body, ModelFailure.class);
     }
 
     private ModelEvent.AttemptStarted readAttemptStarted(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("attempt"))
-                && !dev.openallay.json.JsonTrees.keys(body).equals(Set.of("attempt", "attemptTimeoutMillis"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("attempt"))
+                && !dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("attempt", "attemptTimeoutMillis"))) {
             throw new IllegalArgumentException(
                     "Server Agent event schema mismatch for AttemptStarted");
         }
@@ -243,8 +241,7 @@ public final class ServerAgentEventCodec {
     }
 
     private static AgentEvent.ToolStarted readToolStarted(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of(
-                "invocationId", "toolId", "presentationMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("invocationId", "toolId", "presentationMessages"))) {
             throw new IllegalArgumentException("Server Tool start schema mismatch");
         }
         if (!body.get("invocationId").isJsonPrimitive()

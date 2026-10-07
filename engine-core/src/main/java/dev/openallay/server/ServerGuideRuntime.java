@@ -113,7 +113,7 @@ public static ToolResult<ServerGuideRuntime> create(
                 runtime.tools(), gson, clientToolTransport, config.requestTimeout());
         String prompt = systemPrompt(runtime.skills(), false);
         int promptAndTools = estimator.estimate(
-                prompt, java.util.List.of(), tools.definitions());
+                prompt, dev.openallay.util.Java8Collections.listOf(), tools.definitions());
         dev.openallay.guide.GuideContextSpec contextSpec =
                 new dev.openallay.guide.GuideContextSpec(
                         config.contextBudget(), promptAndTools, config.model(), estimator);
@@ -250,8 +250,8 @@ static dev.openallay.skill.SkillCatalogSnapshot requestSkills(
             dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
         java.util.Objects.requireNonNull(skills, "skills");
         return experimentalCommands
-                ? skills.snapshotWithRuntimeEnabled(java.util.Set.of(), java.util.Set.of("run-game-commands"))
-                : skills.snapshot(java.util.Set.of());
+                ? skills.snapshotWithRuntimeEnabled(dev.openallay.util.Java8Collections.setOf(), dev.openallay.util.Java8Collections.setOf("run-game-commands"))
+                : skills.snapshot(dev.openallay.util.Java8Collections.setOf());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

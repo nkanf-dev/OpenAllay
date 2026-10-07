@@ -20,7 +20,7 @@ public final class ServerModelCapabilityProjection {
             Optional<GuideContextSpec> serverModel,
             dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapability) {
         java.util.Objects.requireNonNull(imageCapability, "imageCapability");
-        List<CapabilityPayload.RemoteToolCapability> detached = List.copyOf(tools);
+        List<CapabilityPayload.RemoteToolCapability> detached = dev.openallay.util.Java8Collections.listCopyOf(tools);
         if (serverModel.isEmpty()) {
             return new CapabilityPayload(
                     detached, false, 0, 0, 0, "");

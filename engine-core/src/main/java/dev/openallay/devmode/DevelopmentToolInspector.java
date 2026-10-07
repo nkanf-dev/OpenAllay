@@ -14,9 +14,8 @@ public final class DevelopmentToolInspector {
     }
 
     public List<String> listTools() {
-        return registry.descriptors().stream()
-                .map(value -> value.id() + " - " + value.description())
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(registry.descriptors().stream()
+                .map(value -> value.id() + " - " + value.description()));
     }
 
     public ToolResult<?> invokeNoArgument(ToolInvocationContext context, String id) {

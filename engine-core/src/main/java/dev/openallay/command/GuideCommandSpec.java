@@ -24,7 +24,7 @@ public static final class Route {
     private final CommandArgument argument;
     private final Action action;
     public Route(List<String> literals, CommandArgument argument, Action action) {
- literals = List.copyOf(literals);
+ literals = dev.openallay.util.Java8Collections.listCopyOf(literals);
         this.literals = literals;
         this.argument = argument;
         this.action = action;
@@ -54,31 +54,14 @@ public static final class Route {
     }
 }
 
-    private static final List<Route> ROUTES = List.of(
-            route(Action.OPEN, CommandArgument.NONE),
-            route(Action.CANCEL, CommandArgument.NONE, "cancel"),
-            route(Action.RETRY, CommandArgument.NONE, "retry"),
-            route(Action.CLEAR, CommandArgument.NONE, "clear"),
-            route(Action.STATUS, CommandArgument.NONE, "status"),
-            route(Action.SKILLS, CommandArgument.NONE, "skills"),
-            route(Action.SOURCES, CommandArgument.NONE, "sources"),
-            route(Action.MODEL_LIST, CommandArgument.NONE, "model", "list"),
-            route(Action.MODEL_PROFILE, CommandArgument.ID_WORD, "model", "profile"),
-            route(Action.MODEL_CLIENT, CommandArgument.NONE, "model", "client"),
-            route(Action.MODEL_SERVER, CommandArgument.NONE, "model", "server"),
-            route(Action.SESSION_LIST, CommandArgument.NONE, "session", "list"),
-            route(Action.SESSION_SELECT, CommandArgument.ID_WORD, "session", "new"),
-            route(Action.SESSION_SELECT, CommandArgument.ID_WORD, "session", "switch"),
-            route(Action.SESSION_CLOSE, CommandArgument.ID_WORD, "session", "close"),
-            route(Action.ASK, CommandArgument.QUESTION_GREEDY, "ask"),
-            route(Action.ASK, CommandArgument.QUESTION_GREEDY));
+    private static final List<Route> ROUTES = dev.openallay.util.Java8Collections.listOf(route(Action.OPEN, CommandArgument.NONE), route(Action.CANCEL, CommandArgument.NONE, "cancel"), route(Action.RETRY, CommandArgument.NONE, "retry"), route(Action.CLEAR, CommandArgument.NONE, "clear"), route(Action.STATUS, CommandArgument.NONE, "status"), route(Action.SKILLS, CommandArgument.NONE, "skills"), route(Action.SOURCES, CommandArgument.NONE, "sources"), route(Action.MODEL_LIST, CommandArgument.NONE, "model", "list"), route(Action.MODEL_PROFILE, CommandArgument.ID_WORD, "model", "profile"), route(Action.MODEL_CLIENT, CommandArgument.NONE, "model", "client"), route(Action.MODEL_SERVER, CommandArgument.NONE, "model", "server"), route(Action.SESSION_LIST, CommandArgument.NONE, "session", "list"), route(Action.SESSION_SELECT, CommandArgument.ID_WORD, "session", "new"), route(Action.SESSION_SELECT, CommandArgument.ID_WORD, "session", "switch"), route(Action.SESSION_CLOSE, CommandArgument.ID_WORD, "session", "close"), route(Action.ASK, CommandArgument.QUESTION_GREEDY, "ask"), route(Action.ASK, CommandArgument.QUESTION_GREEDY));
 
     private GuideCommandSpec() {}
 
     public static List<Route> routes() { return ROUTES; }
 
     private static Route route(Action action, CommandArgument argument, String... literals) {
-        return new Route(List.of(literals), argument, action);
+        return new Route(dev.openallay.util.Java8Collections.listOf(literals), argument, action);
     }
 
     /** Resolve the execution actor once, only for actions that use an actor. */

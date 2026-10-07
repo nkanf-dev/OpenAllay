@@ -74,7 +74,7 @@ public final class PlayerClientToolRouter {
     private volatile ResultPreparation resultPreparation =
             (actor, request, session, references, attachments, current) -> references.isEmpty()
                     ? CompletableFuture.completedFuture(null)
-                    : CompletableFuture.failedFuture(new IllegalStateException("Server image admission is unavailable"));
+                    : dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Server image admission is unavailable"));
     private volatile int resultByteLimit = dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES;
     private volatile java.util.function.BiPredicate<UUID, UUID> resultAdmission = (actor, request) -> true;
     private final java.util.concurrent.Executor resultWorker;
@@ -158,18 +158,17 @@ public final class PlayerClientToolRouter {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             return new ToolResult.Failure<>("invalid_session", "Invalid Agent session ID");
         }
-        Set<String> accepted = List.copyOf(advertisedClientToolIds).stream()
+        Set<String> accepted = dev.openallay.util.Java8Collections.listCopyOf(advertisedClientToolIds).stream()
                 .filter(toolId -> trustedTools.find(toolId).isPresent())
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
         // Rebind document guidance only. The trusted Tool IDs and placement policy do not change.
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
-                trustedTools.registrations().stream()
+                dev.openallay.util.Java8Collections.toList(trustedTools.registrations().stream()
                         .map(registration -> registration.tool() instanceof LoadSkillTool
                                 ? new RegisteredTool(
                                         registration.providerId(), new LoadSkillTool(requestSkills, "server"))
-                                : registration)
-                        .toList(),
-                Set.of());
+                                : registration)),
+                dev.openallay.util.Java8Collections.setOf());
         RequestKey key = new RequestKey(actorId, requestId);
         RequestExecutor executor = new RequestExecutor(
                 key, sessionId, accepted, requestTools, clientSkillDocuments);
@@ -203,15 +202,14 @@ public final class PlayerClientToolRouter {
         if (executor == null || executor != expected || !active.remove(key, executor)) return false;
         executor.closed = true;
         executor.cancelPending();
-        List.copyOf(executor.retained.keySet()).forEach(executor::closeRequestScope);
+        dev.openallay.util.Java8Collections.listCopyOf(executor.retained.keySet()).forEach(executor::closeRequestScope);
         executor.closeRequestScope(actorId + "/" + requestId);
         return true;
     }
 
     public int disconnect(UUID actorId) {
-        List<RequestKey> owned = active.keySet().stream()
-                .filter(key -> key.actorId.equals(actorId))
-                .toList();
+        List<RequestKey> owned = dev.openallay.util.Java8Collections.toList(active.keySet().stream()
+                .filter(key -> key.actorId.equals(actorId)));
         owned.forEach(key -> close(key.actorId, key.requestId));
         return owned.size();
     }
@@ -251,7 +249,7 @@ public final class PlayerClientToolRouter {
             this.key = key;
             this.boundTransport = transport.bind(key.actorId);
             this.sessionId = sessionId;
-            this.clientTools = Set.copyOf(clientTools);
+            this.clientTools = dev.openallay.util.Java8Collections.setCopyOf(clientTools);
             this.requestTools = requestTools;
             this.local = new LocalAgentToolExecutor(requestTools, gson);
             this.clientSkillContext = clientTools.contains("openallay:load_skill")
@@ -294,7 +292,7 @@ public final class PlayerClientToolRouter {
             LoadSkillTool.Input skillInput = null;
             if (clientSkillContext != null && toolId.equals("openallay:load_skill")) {
                 if (cancellation.isCancelled()) {
-                    return CompletableFuture.failedFuture(new ModelClientException(new ModelFailure(
+                    return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(new ModelFailure(
                             "agent_cancelled", "Client Tool invocation was cancelled", null)));
                 }
                 ToolResult<LoadSkillTool.Input> decoded = argumentsCodec.decode(
@@ -494,7 +492,7 @@ public final class PlayerClientToolRouter {
         }
 
         private int failPending(String code, String message) {
-            List<Map.Entry<UUID, Pending>> values = List.copyOf(pending.entrySet());
+            List<Map.Entry<UUID, Pending>> values = dev.openallay.util.Java8Collections.listCopyOf(pending.entrySet());
             values.forEach(entry -> {
                 Pending value = entry.getValue();
                 synchronized (value) {
@@ -511,7 +509,7 @@ public final class PlayerClientToolRouter {
         }
 
         private void cancelPending() {
-            List<Map.Entry<UUID, Pending>> values = List.copyOf(pending.entrySet());
+            List<Map.Entry<UUID, Pending>> values = dev.openallay.util.Java8Collections.listCopyOf(pending.entrySet());
             values.forEach(entry -> cancelInvocation(entry.getKey(), entry.getValue()));
         }
 
@@ -609,7 +607,7 @@ private static final class ValidatedResult {
         }
         String status = normalized.get("status").getAsString();
         if (status.equals("failure")) {
-            if (!dev.openallay.json.JsonTrees.keys(normalized).equals(Set.of("status", "code", "message"))) {
+            if (!dev.openallay.json.JsonTrees.keys(normalized).equals(dev.openallay.util.Java8Collections.setOf("status", "code", "message"))) {
                 return null;
             }
             try {
@@ -617,7 +615,7 @@ private static final class ValidatedResult {
                         new ToolResult.Failure<>(
                                 normalized.get("code").getAsString(),
                                 normalized.get("message").getAsString()),
-                        Object.class), List.of());
+                        Object.class), dev.openallay.util.Java8Collections.listOf());
             } catch (RuntimeException invalid) {
                 return null;
             }
@@ -631,8 +629,8 @@ private static final class ValidatedResult {
         }
         boolean hasModelText = normalized.has("modelText");
         Set<String> expectedKeys = hasModelText
-                ? Set.of("status", "outputType", "value", "modelText")
-                : Set.of("status", "outputType", "value");
+                ? dev.openallay.util.Java8Collections.setOf("status", "outputType", "value", "modelText")
+                : dev.openallay.util.Java8Collections.setOf("status", "outputType", "value");
         if (!dev.openallay.json.JsonTrees.keys(normalized).equals(expectedKeys)) {
             return null;
         }
@@ -640,7 +638,7 @@ private static final class ValidatedResult {
                 && (!ModelFacingToolOutput.class.isAssignableFrom(tool.descriptor().outputType())
                         || !normalized.get("modelText").isJsonPrimitive()
                         || !normalized.get("modelText").getAsJsonPrimitive().isString()
-                        || normalized.get("modelText").getAsString().isBlank())) {
+                        || dev.openallay.util.Java8Strings.isBlank(normalized.get("modelText").getAsString()))) {
             return null;
         }
         if (!normalized.get("outputType").isJsonPrimitive()
@@ -653,7 +651,7 @@ private static final class ValidatedResult {
             // The structured value is authoritative; rebuild any model projection locally.
             List<dev.openallay.model.image.ImageReference> images =
                     value instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
-                            ? List.copyOf(visual.images()) : List.of();
+                            ? dev.openallay.util.Java8Collections.listCopyOf(visual.images()) : dev.openallay.util.Java8Collections.listOf();
             dev.openallay.model.image.ModelImages.unique(images);
             return new ValidatedResult(normalizer.normalize(
                     new ToolResult.Success<>(value), tool.descriptor().outputType()), images);
@@ -663,15 +661,12 @@ private static final class ValidatedResult {
     }
 
     private static boolean exactSkillOutput(JsonObject output) {
-        if (!dev.openallay.json.JsonTrees.keys(output).equals(Set.of("name", "document", "source", "fingerprint", "state",
-                "content", "offset", "nextOffset", "complete", "nextCursor", "availableReferences",
-                "allowedTools", "provenance"))) return false;
-        for (String field : List.of("name", "document", "source", "fingerprint", "state",
-                "content", "nextCursor", "provenance")) {
+        if (!dev.openallay.json.JsonTrees.keys(output).equals(dev.openallay.util.Java8Collections.setOf("name", "document", "source", "fingerprint", "state", "content", "offset", "nextOffset", "complete", "nextCursor", "availableReferences", "allowedTools", "provenance"))) return false;
+        for (String field : dev.openallay.util.Java8Collections.listOf("name", "document", "source", "fingerprint", "state", "content", "nextCursor", "provenance")) {
             com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return false;
         }
-        for (String field : List.of("offset", "nextOffset")) {
+        for (String field : dev.openallay.util.Java8Collections.listOf("offset", "nextOffset")) {
             com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
                     || !value.getAsString().matches("[0-9]+")) return false;
@@ -683,7 +678,7 @@ private static final class ValidatedResult {
         }
         com.google.gson.JsonElement complete = output.get("complete");
         if (!complete.isJsonPrimitive() || !complete.getAsJsonPrimitive().isBoolean()) return false;
-        for (String field : List.of("availableReferences", "allowedTools")) {
+        for (String field : dev.openallay.util.Java8Collections.listOf("availableReferences", "allowedTools")) {
             com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonArray() || dev.openallay.json.JsonReaders.elements(value.getAsJsonArray()).stream()
                     .anyMatch(item -> !item.isJsonPrimitive()

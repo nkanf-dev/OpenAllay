@@ -133,8 +133,8 @@ public final class ServerAgentService {
         java.util.Objects.requireNonNull(payload, "payload");
         ServerGuideEvents boundEvents = events.bind(sender);
         ContextProvider boundContexts = contexts.bind(sender);
-        List<ModelMessage> restored = payload.history().stream()
-                .map(ServerAgentHistoryMessage::toModelMessage).toList();
+        List<ModelMessage> restored = dev.openallay.util.Java8Collections.toList(payload.history().stream()
+                .map(ServerAgentHistoryMessage::toModelMessage));
         ModelMessage userInput = payload.userInput().toModelMessage();
         AgentSessionKey key = new AgentSessionKey(sender, payload.sessionId());
         Owner owner;
@@ -149,8 +149,8 @@ public final class ServerAgentService {
                 return new ToolResult.Failure<>("agent_busy", "An Agent request is active or awaiting release in this session");
             }
             List<dev.openallay.model.image.ImageReference> required = imageReferences(
-                    java.util.stream.Stream.of(restored, sessions.history(key), List.of(userInput))
-                            .flatMap(List::stream).toList());
+                    dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.of(restored, sessions.history(key), dev.openallay.util.Java8Collections.listOf(userInput))
+                            .flatMap(List::stream)));
             if (!required.isEmpty()
                     && imageCapability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
                 return new ToolResult.Failure<>(
@@ -242,10 +242,10 @@ public final class ServerAgentService {
                 })
                 ;
         } catch (RuntimeException failure) {
-            work = CompletableFuture.failedFuture(failure);
+            work = dev.openallay.util.Java8Futures.failedFuture(failure);
         } catch (Error failure) {
             synchronousFatal = failure;
-            work = CompletableFuture.failedFuture(failure);
+            work = dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         work.whenComplete((result, failure) -> {
             try {
@@ -297,7 +297,7 @@ public final class ServerAgentService {
         try {
             message = owner.runtime().prepareSteer().apply(payload);
             ServerAgentSteerPayload.validateMessage(ServerAgentHistoryMessage.from(message));
-            List<dev.openallay.model.image.ImageReference> required = imageReferences(List.of(message));
+            List<dev.openallay.model.image.ImageReference> required = imageReferences(dev.openallay.util.Java8Collections.listOf(message));
             if (!required.isEmpty()) {
                 if (images == null) throw new IllegalArgumentException("Server image store is unavailable");
                 java.util.Set<dev.openallay.model.image.ImageReference> retained;
@@ -309,7 +309,7 @@ public final class ServerAgentService {
                 // Keep store work outside the owner lock. Stop revokes the token immediately;
                 // the tracked image operation keeps all pins alive only until actual cleanup.
                 images.retain(owner.actorId(), requestImageOwner(owner.imageScope, payload.requestId()),
-                        List.copyOf(retained));
+                        dev.openallay.util.Java8Collections.listCopyOf(retained));
                 synchronized (owner) {
                     if (!currentImport(payload, owner, operation)) return false;
                     owner.allowedImages.addAll(required);
@@ -374,13 +374,13 @@ public final class ServerAgentService {
         Owner owner = active.get(requestId);
         if (owner == null || !owner.actorId().equals(actor) || !owner.sessionId().equals(sessionId)
                 || !ownsRequest(actor, requestId) || !invocationCurrent.getAsBoolean()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Client Tool request scope closed"));
+            return dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Client Tool request scope closed"));
         }
         List<dev.openallay.model.image.ImageReference> required;
         try {
-            required = dev.openallay.model.image.ModelImages.unique(List.copyOf(references));
-            List<dev.openallay.model.image.ImageReference> supplied = attachments.stream()
-                    .map(dev.openallay.bridge.protocol.ServerAgentImageAttachment::reference).toList();
+            required = dev.openallay.model.image.ModelImages.unique(dev.openallay.util.Java8Collections.listCopyOf(references));
+            List<dev.openallay.model.image.ImageReference> supplied = dev.openallay.util.Java8Collections.toList(attachments.stream()
+                    .map(dev.openallay.bridge.protocol.ServerAgentImageAttachment::reference));
             if (dev.openallay.model.image.ModelImages.unique(supplied).size() != supplied.size()
                     || !new java.util.HashSet<>(required).equals(new java.util.HashSet<>(supplied))) {
                 throw new IllegalArgumentException("Client Tool image attachments do not match typed references");
@@ -390,9 +390,9 @@ public final class ServerAgentService {
                 throw new IllegalArgumentException("Server model image input is unavailable");
             }
         } catch (RuntimeException invalid) {
-            return CompletableFuture.failedFuture(invalid);
+            return dev.openallay.util.Java8Futures.failedFuture(invalid);
         }
-        List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> captured = List.copyOf(attachments);
+        List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> captured = dev.openallay.util.Java8Collections.listCopyOf(attachments);
         return imageOperation(requestId, owner, () -> {
             try {
                 requireClientToolImport(requestId, owner, invocationCurrent);
@@ -410,7 +410,7 @@ public final class ServerAgentService {
                     retained = new java.util.LinkedHashSet<>(owner.allowedImages);
                     retained.addAll(required);
                 }
-                images.retain(actor, requestImageOwner(owner.imageScope, requestId), List.copyOf(retained));
+                images.retain(actor, requestImageOwner(owner.imageScope, requestId), dev.openallay.util.Java8Collections.listCopyOf(retained));
                 synchronized (owner) {
                     requireClientToolImport(requestId, owner, invocationCurrent);
                     owner.allowedImages.addAll(required);
@@ -437,8 +437,7 @@ public final class ServerAgentService {
             owner.inbox.clear();
             owner.imports.clear();
             if (!owner.engineStarted) {
-                List<ModelMessage> original = List.of(owner.userInput(),
-                        new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
+                List<ModelMessage> original = dev.openallay.util.Java8Collections.listOf(owner.userInput(), new ModelMessage(ModelRole.ASSISTANT, dev.openallay.util.Java8Collections.listOf(new ModelContent.Text(
                                 "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
                 List<ModelMessage> projected = new java.util.ArrayList<>(owner.history());
                 projected.addAll(original);
@@ -949,7 +948,7 @@ public RequestRuntime(
             this.sessionId = sessionId;
             this.userInput = userInput;
             this.imageScope = imageScope;
-            this.requiredImages = List.copyOf(requiredImages);
+            this.requiredImages = dev.openallay.util.Java8Collections.listCopyOf(requiredImages);
             this.allowedImages.addAll(requiredImages);
             this.history = dev.openallay.agent.context.ModelContextCodec.safe(history);
             this.cancellation = cancellation;

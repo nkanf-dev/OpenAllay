@@ -302,12 +302,11 @@ public final class ServerBridgeSession {
 
     private CapabilityPayload capabilities() {
         ToolSchemaGenerator schemas = new ToolSchemaGenerator();
-        List<CapabilityPayload.RemoteToolCapability> tools = runtime.tools().descriptors().stream()
+        List<CapabilityPayload.RemoteToolCapability> tools = dev.openallay.util.Java8Collections.toList(runtime.tools().descriptors().stream()
                 .filter(ExportedToolPolicy::isRemotelyReadable)
                 .map(descriptor -> new CapabilityPayload.RemoteToolCapability(
                         descriptor.id(), descriptor.description(),
-                        schemas.generate(descriptor.inputType()).toString()))
-                .toList();
+                        schemas.generate(descriptor.inputType()).toString())));
         return ServerModelCapabilityProjection.from(
                 tools,
                 serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success

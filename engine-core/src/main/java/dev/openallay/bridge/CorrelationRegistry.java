@@ -69,10 +69,9 @@ public static final class Entry {
     }
 
     public synchronized int cancelActor(UUID actorId) {
-        java.util.List<java.util.UUID> owned = entries.entrySet().stream()
+        java.util.List<java.util.UUID> owned = dev.openallay.util.Java8Collections.toList(entries.entrySet().stream()
                 .filter(entry -> entry.getValue().actorId().equals(actorId))
-                .map(Map.Entry::getKey)
-                .toList();
+                .map(Map.Entry::getKey));
         owned.forEach(id -> cancel(actorId, id));
         return owned.size();
     }

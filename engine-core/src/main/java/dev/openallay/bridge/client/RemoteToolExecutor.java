@@ -64,17 +64,16 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
 
     @Override
     public List<ModelToolDefinition> definitions() {
-        return capabilities.snapshot().remoteTools().stream()
+        return dev.openallay.util.Java8Collections.toList(capabilities.snapshot().remoteTools().stream()
                 .map(tool -> new ModelToolDefinition(
                         MODEL_PREFIX + codec().encode(tool.id()),
                         "[server read tool] " + tool.description(),
-                        dev.openallay.json.JsonTrees.parse(tool.inputSchemaJson()).getAsJsonObject()))
-                .toList();
+                        dev.openallay.json.JsonTrees.parse(tool.inputSchemaJson()).getAsJsonObject())));
     }
 
     @Override
     public Set<ContextCapability> requiredContext() {
-        return Set.of();
+        return dev.openallay.util.Java8Collections.setOf();
     }
 
     @Override
@@ -96,8 +95,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
             ToolInvocationContext context,
             CancellationSignal cancellation) {
         if (!modelToolName.startsWith(MODEL_PREFIX)) {
-            return CompletableFuture.failedFuture(
-                    new IllegalArgumentException("Not a server tool name: " + modelToolName));
+            return dev.openallay.util.Java8Futures.failedFuture(new IllegalArgumentException("Not a server tool name: " + modelToolName));
         }
         String toolId = codec().decode(modelToolName.substring(MODEL_PREFIX.length()));
         UUID correlation = UUID.randomUUID();
@@ -178,7 +176,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
 
     public void disconnect() {
         capabilities.clear();
-        List<Map.Entry<UUID, Pending>> values = List.copyOf(pending.entrySet());
+        List<Map.Entry<UUID, Pending>> values = dev.openallay.util.Java8Collections.listCopyOf(pending.entrySet());
         values.forEach(entry -> {
             Pending value = entry.getValue();
             synchronized (value) {
@@ -209,8 +207,8 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
     }
 
     private ToolNameCodec codec() {
-        return new ToolNameCodec(capabilities.snapshot().remoteTools().stream()
-                .map(value -> value.id()).toList());
+        return new ToolNameCodec(dev.openallay.util.Java8Collections.toList(capabilities.snapshot().remoteTools().stream()
+                .map(value -> value.id())));
     }
 
     private void cancelInvocation(UUID correlation, Pending value) {
