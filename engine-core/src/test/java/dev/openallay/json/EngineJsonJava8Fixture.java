@@ -9,6 +9,7 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import dev.openallay.util.Java8Collections;
 import dev.openallay.value.ValueSchema;
+import dev.openallay.value.RecordMetadata;
 import dev.openallay.value.ValueSchemas;
 import dev.openallay.value.ValueType;
 import java.io.DataInputStream;
@@ -28,7 +29,7 @@ public final class EngineJsonJava8Fixture {
     public static void main(String[] arguments) throws Exception {
         equal("1.8", System.getProperty("java.specification.version"));
         for (Class<?> owner : new Class<?>[] {EngineJson.class, RecordJsonAdapter.class,
-                ConstructorValueJsonAdapter.class, ValueSchema.class, ValueSchemas.class,
+                ConstructorValueJsonAdapter.class, ValueSchema.class, ValueSchemas.class, RecordMetadata.class,
                 ValueType.class, Java8Collections.class, JsonReaders.class, JsonTrees.class,
                 EngineJsonJava8Fixture.class}) {
             try (DataInputStream input = new DataInputStream(owner.getResourceAsStream(
@@ -36,6 +37,7 @@ public final class EngineJsonJava8Fixture {
                 equal(0xcafebabe, input.readInt()); input.readUnsignedShort(); equal(52, input.readUnsignedShort());
             }
         }
+        check(!RecordMetadata.isRecord(String.class), "shared record fact absent on Java 8");
         check(!ValueSchemas.isValue(String.class), "foreign record fact absent on Java 8");
         check(ValueSchemas.isValue(Sample.class), "explicit schemas survive absent record fact");
         run();

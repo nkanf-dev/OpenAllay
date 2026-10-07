@@ -8,7 +8,7 @@ def contextNames = ['IngredientAlternativeSnapshot', 'IngredientRequirementSnaps
 def recipeNames = ['RecipeProviderSnapshot', 'RecipeSemanticGroup', 'RecipeCatalogDiagnostic', 'RecipeProviderDiagnostic',
         'RecipeCanonicalizer', 'RecipeProviderState', 'RecipeUnlockState']
 def paths = contextNames.collect { 'dev/openallay/context/' + it + '.java' } + recipeNames.collect { 'dev/openallay/recipe/' + it + '.java' } + [
-        'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/ValueType.java',
+        'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/RecordMetadata.java', 'dev/openallay/value/ValueType.java',
         'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java', 'dev/openallay/util/Java8Hex.java']
 sourceSets.main.java.setSrcDirs([new File(engine, 'src/main/java'), new File(engine, 'src/recipeContextJava8Test/java'), new File(repo, 'runtime-json/src/main/java')])
 sourceSets.main.java.setIncludes(paths + ['dev/openallay/context/RecipeContextJava8Fixture.java', 'dev/openallay/json/JsonTrees.java'])

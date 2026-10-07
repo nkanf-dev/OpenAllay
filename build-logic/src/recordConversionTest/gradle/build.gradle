@@ -31,7 +31,7 @@ tasks.register('convertFixture', JavaExec) {
 }
 def support = [new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueType.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'),
-        new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'),
+        new File(repo, 'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java', 'engine-core/src/main/java/dev/openallay/value/RecordMetadata.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/util/Java8Collections.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/agent/tool/ToolDescription.java'),
         new File(repo, 'engine-core/src/main/java/dev/openallay/agent/tool/ToolOptional.java')]

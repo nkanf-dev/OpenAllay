@@ -6,7 +6,7 @@ def owners = ['ItemStackSnapshot', 'InventorySlotSnapshot', 'InventorySnapshot',
         'PlayerSnapshot', 'CallerSnapshot', 'ContextMetrics', 'SourceObservation', 'RecipeLayoutSnapshot', 'RecipeProcessingSnapshot']
 def support = ['EvidenceMetadata', 'ContextValidation', 'DataAuthority', 'DataCompleteness', 'CallerKind']
 def paths = (owners + support).collect { 'dev/openallay/context/' + it + '.java' } + [
-        'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/ValueType.java',
+        'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/RecordMetadata.java', 'dev/openallay/value/ValueType.java',
         'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java']
 sourceSets.main.java.setSrcDirs([new File(engine, 'src/main/java'), new File(engine, 'src/contextJava8Test/java')])
 sourceSets.main.java.setIncludes(paths + ['dev/openallay/context/ContextSnapshotsJava8Fixture.java'])

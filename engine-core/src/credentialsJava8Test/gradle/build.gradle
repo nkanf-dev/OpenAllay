@@ -8,7 +8,7 @@ java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
 sourceSets.main.java.setSrcDirs([])
 def support = objects.sourceDirectorySet('credentialSupport', 'Actual canonical support frontier')
 support.srcDirs(new File(canonical, 'src/main/java'), new File(repository, 'runtime-json/src/main/java'))
-support.setIncludes(['dev/openallay/tool/ToolResult.java', 'dev/openallay/util/Java8Strings.java', 'dev/openallay/util/Java8Collections.java', 'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/ValueType.java', 'dev/openallay/json/EngineJson.java', 'dev/openallay/json/RecordJsonAdapter.java', 'dev/openallay/json/ConstructorValueJsonAdapter.java', 'dev/openallay/json/JsonTrees.java', 'dev/openallay/json/JsonReaders.java'])
+support.setIncludes(['dev/openallay/tool/ToolResult.java', 'dev/openallay/util/Java8Strings.java', 'dev/openallay/util/Java8Collections.java', 'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/RecordMetadata.java', 'dev/openallay/value/ValueType.java', 'dev/openallay/json/EngineJson.java', 'dev/openallay/json/RecordJsonAdapter.java', 'dev/openallay/json/ConstructorValueJsonAdapter.java', 'dev/openallay/json/JsonTrees.java', 'dev/openallay/json/JsonReaders.java'])
 def owners = objects.sourceDirectorySet('credentialOwners', 'Four actual credential owners')
 owners.srcDir(originalMode ? new File(originalRoot.get(), 'engine-core/src/main/java') : new File(canonical, 'src/main/java'))
 owners.setIncludes(['dev/openallay/model/config/LocalCredentialStore.java', 'dev/openallay/model/config/CredentialResolver.java', 'dev/openallay/model/config/SecretValue.java', 'dev/openallay/model/config/CredentialReference.java'])

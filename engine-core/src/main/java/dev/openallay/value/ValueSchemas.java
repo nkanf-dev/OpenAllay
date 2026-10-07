@@ -19,9 +19,7 @@ public final class ValueSchemas {
     /** Public optional modern-JVM fact; no Java9+ symbol appears in this Java8 class. */
     public static boolean isValue(Class<?> owner) {
         if (supports(owner)) return true;
-        try { return Boolean.TRUE.equals(Class.class.getMethod("isRecord").invoke(owner)); }
-        catch (NoSuchMethodException absentOnJava8) { return false; }
-        catch (ReflectiveOperationException failure) { throw new IllegalStateException("Cannot inspect public record fact", failure); }
+        return RecordMetadata.isRecord(owner);
     }
     public static boolean supports(Class<?> owner) { return owner.getAnnotation(ValueType.class) != null; }
     @SuppressWarnings("unchecked")

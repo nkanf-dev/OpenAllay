@@ -8,7 +8,7 @@ def actualSources = [
     'dev/openallay/context/RegistryEntrySnapshot.java', 'dev/openallay/context/RegistrySnapshot.java',
     'dev/openallay/context/EvidenceMetadata.java', 'dev/openallay/context/ContextValidation.java',
     'dev/openallay/context/DataAuthority.java', 'dev/openallay/context/DataCompleteness.java',
-    'dev/openallay/value/ValueType.java', 'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java',
+    'dev/openallay/value/ValueType.java', 'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/RecordMetadata.java',
     'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java',
     'dev/openallay/agent/tool/ToolDescription.java', 'dev/openallay/agent/tool/ToolOptional.java']
 sourceSets.main.java.setSrcDirs([new File(engine, 'src/main/java'), new File(engine, 'src/queryJava8Test/java'), new File(repo, 'runtime-json/src/main/java')])

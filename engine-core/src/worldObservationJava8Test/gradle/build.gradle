@@ -91,7 +91,7 @@ sourceSets.main.java.setIncludes([
         'dev/openallay/util/Java8Hex.java',
         'dev/openallay/util/Java8Strings.java',
         'dev/openallay/value/ValueSchema.java',
-        'dev/openallay/value/ValueSchemas.java',
+        'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/RecordMetadata.java',
         'dev/openallay/value/ValueType.java',
         'dev/openallay/world/WorldFocusObservation.java',
         'dev/openallay/world/WorldPosition.java',
