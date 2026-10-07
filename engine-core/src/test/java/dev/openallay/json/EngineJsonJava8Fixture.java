@@ -240,11 +240,12 @@ public final class EngineJsonJava8Fixture {
         public T value() { return value; } public List<T> history() { return history; }
         public static final class Schema implements ValueSchema.Provider {
             public Schema() {}
+            @SuppressWarnings("unchecked")
             @Override public ValueSchema<Box> schema() {
                 return new ValueSchema<>(Box.class, Arrays.asList(
                         new ValueSchema.Component<>(Box.class, "value", Box::value),
                         new ValueSchema.Component<>(Box.class, "history", Box::history)),
-                        values -> new Box<>(values[0], (List<?>) values[1]));
+                        values -> new Box<Object>(values[0], (List<Object>) values[1]));
             }
         }
     }
