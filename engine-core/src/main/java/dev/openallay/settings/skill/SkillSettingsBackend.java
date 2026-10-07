@@ -192,8 +192,10 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     private ToolResult<PreparedPackageInstall> refreshing(ToolResult<PreparedSkillInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedSkillInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.skill.install.PreparedSkillInstall> value; ToolResult.Failure<PreparedSkillInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<PreparedSkillInstall>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         PreparedSkillInstall candidate = ((ToolResult.Success<PreparedSkillInstall>) result).value();
         return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
@@ -214,13 +216,17 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     private ToolResult<SkillCommunityView> commitPrepared(ToolResult<PreparedPackageInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedPackageInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Failure<PreparedPackageInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<PreparedPackageInstall>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         try (PreparedPackageInstall candidate = ((ToolResult.Success<PreparedPackageInstall>) result).value()) {
             ToolResult<Boolean> committed = candidate.commit();
-            if (committed instanceof ToolResult.Failure<Boolean> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern2_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
             }
             return new ToolResult.Success<>(community);
         }

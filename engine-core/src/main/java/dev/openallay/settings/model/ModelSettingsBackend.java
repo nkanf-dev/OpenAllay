@@ -98,8 +98,10 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
                 profilesPath,
                 credentials,
                 Map.copyOf(metadata));
-        if (loaded instanceof ToolResult.Success<ModelProfilesConfigLoader.Load> success) {
-            collectUnreferenced(success.value().config());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Success<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ModelProfilesConfigLoader.Load>) $oaPattern0_holder.value) != null))) {
+            collectUnreferenced($oaPattern0_holder.bound.value().config());
         }
         return mapLoad(loaded);
     }
@@ -131,8 +133,10 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
         ModelProfilesConfig prepared = candidate;
         if (replacement != null) {
             ToolResult<CredentialReference> created = credentialStore.insert(replacement);
-            if (created instanceof ToolResult.Failure<CredentialReference> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.CredentialReference> value; ToolResult.Failure<CredentialReference> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = created) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<CredentialReference>) $oaPattern1_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
             }
             inserted = ((ToolResult.Success<CredentialReference>) created).value();
             try {
@@ -145,11 +149,13 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
         }
         ToolResult<ModelProfileSettingsStore.Saved> saved = store.save(
                 prepared, credentials, Map.copyOf(metadata), registry);
-        if (saved instanceof ToolResult.Failure<ModelProfileSettingsStore.Saved> failure) {
+        final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfileSettingsStore.Saved> value; ToolResult.Failure<ModelProfileSettingsStore.Saved> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = saved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<ModelProfileSettingsStore.Saved>) $oaPattern2_holder.value) != null))) {
             if (inserted != null) {
                 credentialStore.deleteIfUnreferenced(inserted, Set.of());
             }
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+            return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
         }
         ModelProfileSettingsStore.Saved value =
                 ((ToolResult.Success<ModelProfileSettingsStore.Saved>) saved).value();
@@ -169,8 +175,10 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
                 profilesPath,
                 credentials,
                 Map.copyOf(metadata));
-        if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern3_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern3_holder.bound.code(), $oaPattern3_holder.bound.message());
         }
         ModelProfilesConfigLoader.Load value =
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
@@ -203,8 +211,10 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
                             ? new ToolResult.Success<>(replacement)
                             : credentials.resolve(reference);
                 }, metadata);
-        if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern4_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern4_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern4_holder.bound.code(), $oaPattern4_holder.bound.message());
         }
         return new ToolResult.Success<>(
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded)
@@ -216,8 +226,10 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
             ModelProfilesConfig candidate,
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
         ToolResult<ModelProfilesConfigLoader.Load> loaded = decode(candidate, metadata);
-        if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern5_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern5_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern5_holder.bound.code(), $oaPattern5_holder.bound.message());
         }
         ModelProfilesConfigLoader.Load value =
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
@@ -252,12 +264,14 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
             } catch (RuntimeException failure) {
                 resolved = null;
             }
-            if (!(resolved instanceof ToolResult.Success<SecretValue> success)) {
+            final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.SecretValue> value; ToolResult.Success<SecretValue> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if (!((($oaPattern6_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern6_holder.bound = (ToolResult.Success<SecretValue>) $oaPattern6_holder.value) != null)))) {
                 return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                         "model_catalog_credential_missing",
                         "A model provider credential is required to fetch models"));
             }
-            credential = success.value();
+            credential = $oaPattern6_holder.bound.value();
         }
         try {
             return Objects.requireNonNull(
@@ -356,8 +370,10 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
 
     private ToolResult<ClientSettingsService.ModelState> mapLoad(
             ToolResult<ModelProfilesConfigLoader.Load> loaded) {
-        if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern7_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern7_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern7_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern7_holder.bound.code(), $oaPattern7_holder.bound.message());
         }
         return new ToolResult.Success<>(state(
                 ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value()));
@@ -385,6 +401,8 @@ public final class ModelSettingsBackend implements ClientSettingsService.ModelAc
             return value != null && !value.isBlank();
         }
         ToolResult<Boolean> present = credentialStore.contains(reference);
-        return present instanceof ToolResult.Success<Boolean> success && success.value();
+        final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+return (($oaPattern8_holder.value = present) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern8_holder.bound = (ToolResult.Success<Boolean>) $oaPattern8_holder.value) != null)) && $oaPattern8_holder.bound.value();
     }
 }

@@ -62,7 +62,9 @@ public final class ClientObservationInputCoordinator {
                 CompletableFuture<ToolResult<Boolean>> custody = anchor.image().isEmpty()
                         ? CompletableFuture.completedFuture(new ToolResult.Success<>(true)) : state.observationImagesSettled();
                 custody.whenComplete((ack, pinFailure) -> client.execute(() -> {
-                    if (pinFailure != null || !(ack instanceof ToolResult.Success<Boolean> success) || !Boolean.TRUE.equals(success.value())) {
+                    final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (pinFailure != null || !((($oaPattern0_holder.value = ack) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<Boolean>) $oaPattern0_holder.value) != null))) || !Boolean.TRUE.equals($oaPattern0_holder.bound.value())) {
                         // Keep the temporary producer until connection disposal. Do not expose unpinned pixels as ready.
                         state.replaceObservation(appliedCapture, new ClientObservationAnchor(anchor.associationId(),
                                 anchor.capturedAt(), anchor.focus(), Optional.empty()));

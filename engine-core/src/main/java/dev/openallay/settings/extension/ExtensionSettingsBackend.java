@@ -153,8 +153,10 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         }
         return catalogClient.refresh(cancellation).thenApply(result -> {
             synchronized (this) {
-                if (result instanceof ToolResult.Success<ExtensionCatalogManifest> success) {
-                    catalog = success.value();
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.catalog.ExtensionCatalogManifest> value; ToolResult.Success<ExtensionCatalogManifest> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ExtensionCatalogManifest>) $oaPattern0_holder.value) != null))) {
+                    catalog = $oaPattern0_holder.bound.value();
                     notice = Optional.empty();
                     return new ToolResult.Success<>(currentView());
                 }
@@ -200,8 +202,10 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
 
     private ToolResult<PreparedPackageInstall> refreshing(
             Optional<ExtensionCatalogEntry> entry, ToolResult<PreparedExtensionInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedExtensionInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.install.PreparedExtensionInstall> value; ToolResult.Failure<PreparedExtensionInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<PreparedExtensionInstall>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         PreparedExtensionInstall candidate = ((ToolResult.Success<PreparedExtensionInstall>) result).value();
         return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
@@ -228,13 +232,17 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
     }
 
     private ToolResult<ExtensionSettingsView> commitPrepared(ToolResult<PreparedPackageInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedPackageInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Failure<PreparedPackageInstall> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<PreparedPackageInstall>) $oaPattern2_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
         }
         try (PreparedPackageInstall candidate = ((ToolResult.Success<PreparedPackageInstall>) result).value()) {
             ToolResult<Boolean> committed = candidate.commit();
-            if (committed instanceof ToolResult.Failure<Boolean> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = committed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern3_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern3_holder.bound.code(), $oaPattern3_holder.bound.message());
             }
             return new ToolResult.Success<>(currentView());
         }

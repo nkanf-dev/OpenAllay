@@ -489,23 +489,53 @@ private static String renderSchema(HostSchema schema, int depth) {
             return schema.kind();
         }
         Objects.requireNonNull(schema);
-        if (schema instanceof HostSchema.Scalar scalar) {
-            return scalar.kind();
-        } else if (schema instanceof HostSchema.Enumeration enumeration) {
-            return enumeration.kind() + "(" + String.join(" | ", enumeration.values()) + ")";
-        } else if (schema instanceof HostSchema.Sequence sequence) {
-            return "array<" + renderSchema(sequence.elements(), depth + 1) + ">";
-        } else if (schema instanceof HostSchema.OptionalValue optional) {
-            return renderSchema(optional.value(), depth + 1) + "?";
-        } else if (schema instanceof HostSchema.Dictionary dictionary) {
-            return "map<string, " + renderSchema(dictionary.values(), depth + 1) + ">";
-        } else if (schema instanceof HostSchema.DynamicJson ignored) {
+        final class $oaPattern0_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.Scalar bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.Scalar && (($oaPattern0_holder.bound = (HostSchema.Scalar) $oaPattern0_holder.value) != null))) {
+            return $oaPattern0_holder.bound.kind();
+        } else {
+final class $oaPattern1_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.Enumeration bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.Enumeration && (($oaPattern1_holder.bound = (HostSchema.Enumeration) $oaPattern1_holder.value) != null))) {
+            return $oaPattern1_holder.bound.kind() + "(" + String.join(" | ", $oaPattern1_holder.bound.values()) + ")";
+        } else {
+final class $oaPattern2_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.Sequence bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.Sequence && (($oaPattern2_holder.bound = (HostSchema.Sequence) $oaPattern2_holder.value) != null))) {
+            return "array<" + renderSchema($oaPattern2_holder.bound.elements(), depth + 1) + ">";
+        } else {
+final class $oaPattern3_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.OptionalValue bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.OptionalValue && (($oaPattern3_holder.bound = (HostSchema.OptionalValue) $oaPattern3_holder.value) != null))) {
+            return renderSchema($oaPattern3_holder.bound.value(), depth + 1) + "?";
+        } else {
+final class $oaPattern4_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.Dictionary bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.Dictionary && (($oaPattern4_holder.bound = (HostSchema.Dictionary) $oaPattern4_holder.value) != null))) {
+            return "map<string, " + renderSchema($oaPattern4_holder.bound.values(), depth + 1) + ">";
+        } else {
+final class $oaPattern5_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.DynamicJson bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.DynamicJson && (($oaPattern5_holder.bound = (HostSchema.DynamicJson) $oaPattern5_holder.value) != null))) {
             return "dynamic JSON";
-        } else if (schema instanceof HostSchema.DynamicDetached ignored) {
+        } else {
+final class $oaPattern6_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.DynamicDetached bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.DynamicDetached && (($oaPattern6_holder.bound = (HostSchema.DynamicDetached) $oaPattern6_holder.value) != null))) {
             return "declared extension value";
-        } else if (schema instanceof HostSchema.RecordValue record) {
-            return renderRecord(record, depth);
+        } else {
+final class $oaPattern7_Holder { dev.openallay.script.schema.HostSchema value; HostSchema.RecordValue bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = schema) instanceof dev.openallay.script.schema.HostSchema.RecordValue && (($oaPattern7_holder.bound = (HostSchema.RecordValue) $oaPattern7_holder.value) != null))) {
+            return renderRecord($oaPattern7_holder.bound, depth);
         }
+}
+}
+}
+}
+}
+}
+}
         throw new IncompatibleClassChangeError();
     }
 private static String renderRecord(HostSchema.RecordValue record, int depth) {

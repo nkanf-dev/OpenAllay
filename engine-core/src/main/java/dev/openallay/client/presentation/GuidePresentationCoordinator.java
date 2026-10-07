@@ -311,8 +311,10 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
         dev.openallay.model.ModelMessage input = dev.openallay.model.ModelMessage.userInput(text, List.of(),
                 observation == null ? Optional.empty() : observation.anchor());
         return service.followUp(target.sessionId(), target.sessionOwner(), input, fence).thenApply(result -> {
-            if (result instanceof dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt> success) {
-                GuideService.InputReceipt receipt = success.value();
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.GuideService.InputReceipt> value; dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt>) $oaPattern0_holder.value) != null))) {
+                GuideService.InputReceipt receipt = $oaPattern0_holder.bound.value();
                 dispatcher.execute(() -> {
                     if (owner == state && !owner.closed()) owner.acceptedObservation(observation);
                     releaseVoiceObservation(target);

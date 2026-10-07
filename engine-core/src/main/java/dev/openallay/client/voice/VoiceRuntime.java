@@ -324,8 +324,10 @@ public boolean indicatorVisible() { return state != State.IDLE; }
             CompletableFuture<ToolResult<DeliveryReceipt>> admission = Objects.requireNonNull(
                     drafts.send(op.target, transcript.text(), () -> current(op)));
             admission.whenComplete((result, failure) -> dispatch(op, () -> {
-                if (failure == null && result instanceof ToolResult.Success<DeliveryReceipt> success) {
-                    DeliveryReceipt receipt = success.value();
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.client.voice.VoiceRuntime.DeliveryReceipt> value; ToolResult.Success<DeliveryReceipt> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (failure == null && (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<DeliveryReceipt>) $oaPattern0_holder.value) != null))) {
+                    DeliveryReceipt receipt = $oaPattern0_holder.bound.value();
                     if (receipt != null) {
                         operation = null;
                         setStatus(State.READY, receipt.kind() == DeliveryKind.SENT ? "voice_sent" : "voice_queued",
@@ -357,15 +359,19 @@ public boolean indicatorVisible() { return state != State.IDLE; }
         }});
     }
     static String safeCode(Throwable failure) {
-        if (failure instanceof AudioPermissionException permission) {
-            return switch (permission.diagnostic()) {
+        final class $oaPattern1_Holder { java.lang.Throwable value; AudioPermissionException bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = failure) instanceof dev.openallay.client.voice.AudioPermissionException && (($oaPattern1_holder.bound = (AudioPermissionException) $oaPattern1_holder.value) != null))) {
+            return switch ($oaPattern1_holder.bound.diagnostic()) {
                 case DENIED, RESTRICTED -> "microphone_denied";
                 case LAUNCHER_NOT_PREPARED -> "microphone_launcher_unprepared";
                 case CHECK_FAILED -> "microphone_permission_unavailable";
             };
         }
-        if (failure instanceof AudioCapture.CaptureException capture) {
-            return switch (capture.failure()) {
+        final class $oaPattern2_Holder { java.lang.Throwable value; AudioCapture.CaptureException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = failure) instanceof dev.openallay.client.voice.AudioCapture.CaptureException && (($oaPattern2_holder.bound = (AudioCapture.CaptureException) $oaPattern2_holder.value) != null))) {
+            return switch ($oaPattern2_holder.bound.failure()) {
                 case DEVICE_DISCONNECTED, READ_FAILED -> "device_broken";
                 case DEVICE_UNAVAILABLE -> "microphone_device_unavailable";
                 case BACKEND_UNAVAILABLE -> "microphone_backend_unavailable";
@@ -374,8 +380,12 @@ public boolean indicatorVisible() { return state != State.IDLE; }
                 case OPEN_TIMEOUT, OPEN_BUSY -> "microphone_open_failed";
             };
         }
-        if (failure instanceof HttpSpeechToText.Failure http) return http.code();
-        if (failure instanceof NativeSpeechToText.Failure nativeFailure) return nativeFailure.code();
+        final class $oaPattern3_Holder { java.lang.Throwable value; HttpSpeechToText.Failure bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = failure) instanceof dev.openallay.client.voice.HttpSpeechToText.Failure && (($oaPattern3_holder.bound = (HttpSpeechToText.Failure) $oaPattern3_holder.value) != null))) return $oaPattern3_holder.bound.code();
+        final class $oaPattern4_Holder { java.lang.Throwable value; NativeSpeechToText.Failure bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = failure) instanceof dev.openallay.client.voice.NativeSpeechToText.Failure && (($oaPattern4_holder.bound = (NativeSpeechToText.Failure) $oaPattern4_holder.value) != null))) return $oaPattern4_holder.bound.code();
         String message = failure.getMessage();
         return message != null && java.util.Set.of("empty_audio", "device_broken", "microphone_denied", "microphone_launcher_unprepared",
                 "microphone_permission_unavailable", "model_not_installed").contains(message) ? message : "voice_failed";

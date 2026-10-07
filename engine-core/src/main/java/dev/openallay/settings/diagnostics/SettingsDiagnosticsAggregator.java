@@ -449,8 +449,10 @@ public DiagnosticsInputs(
             add(codes, profile.failure());
         }
         add(codes, inputs.models().metadataFailure());
-        if (inputs.models().connectionResult() instanceof ModelConnectionResult.Failure failure) {
-            codes.add(safeCode(failure.code()));
+        final class $oaPattern0_Holder { dev.openallay.settings.model.ModelConnectionResult value; ModelConnectionResult.Failure bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof dev.openallay.settings.model.ModelConnectionResult.Failure && (($oaPattern0_holder.bound = (ModelConnectionResult.Failure) $oaPattern0_holder.value) != null))) {
+            codes.add(safeCode($oaPattern0_holder.bound.code()));
         }
         inputs.guide().ifPresent(guide -> {
             add(codes, guide.persistence().failure());

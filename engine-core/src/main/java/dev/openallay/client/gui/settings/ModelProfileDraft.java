@@ -259,8 +259,10 @@ public ModelProfileDraft withImageInputCapabilityOverride(ImageInputCapability v
     }
 public boolean dirtyComparedTo(ModelProfileDefinition definition) {
         ToolResult<ModelProfileDefinition> validated = validate();
-        return !(validated instanceof ToolResult.Success<ModelProfileDefinition> success)
-                || !success.value().equals(definition);
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfileDefinition> value; ToolResult.Success<ModelProfileDefinition> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return !((($oaPattern0_holder.value = validated) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ModelProfileDefinition>) $oaPattern0_holder.value) != null)))
+                || !$oaPattern0_holder.bound.value().equals(definition);
     }
 public ToolResult<ModelProfileDefinition> validate() {
         try {

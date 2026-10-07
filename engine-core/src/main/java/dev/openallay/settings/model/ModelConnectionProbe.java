@@ -104,8 +104,10 @@ public final class ModelConnectionProbe {
         if (cancellation.isCancelled()) {
             return failure("connection_cancelled");
         }
-        if (cause instanceof ModelClientException exception) {
-            ModelFailure modelFailure = exception.failure();
+        final class $oaPattern0_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern0_holder.bound = (ModelClientException) $oaPattern0_holder.value) != null))) {
+            ModelFailure modelFailure = $oaPattern0_holder.bound.failure();
             if ("agent_cancelled".equals(modelFailure.code())) {
                 return failure("connection_cancelled");
             }

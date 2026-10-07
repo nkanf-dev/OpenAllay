@@ -92,8 +92,12 @@ public final class VoiceClientRuntime implements AutoCloseable {
                 try { return result.get(); }
                 catch (java.util.concurrent.ExecutionException failure) {
                     Throwable cause = failure.getCause();
-                    if (cause instanceof Exception e) throw e;
-                    if (cause instanceof Error e) throw e;
+                    final class $oaPattern0_Holder { java.lang.Throwable value; Exception bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof java.lang.Exception && (($oaPattern0_holder.bound = (Exception) $oaPattern0_holder.value) != null))) throw $oaPattern0_holder.bound;
+                    final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
                     throw new IllegalStateException("voice_failed");
                 }
             }
@@ -232,8 +236,10 @@ public final class VoiceClientRuntime implements AutoCloseable {
             }
             if (replacement != null) {
                 ToolResult<CredentialReference> result = credentials.insert(SecretValue.of(new String(replacement)));
-                if (result instanceof ToolResult.Failure<CredentialReference> failure) {
-                    return new ToolResult.Failure<>(failure.code(), failure.message());
+                final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.CredentialReference> value; ToolResult.Failure<CredentialReference> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<CredentialReference>) $oaPattern2_holder.value) != null))) {
+                    return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
                 }
                 inserted = ((ToolResult.Success<CredentialReference>) result).value();
             }

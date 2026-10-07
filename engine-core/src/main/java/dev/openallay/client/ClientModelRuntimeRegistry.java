@@ -94,8 +94,10 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
             AgentToolExecutor extension) {
         ToolResult<ModelProfilesConfigLoader.Load> loaded = new ModelProfilesConfigLoader()
                 .load(profilesPath, environment);
-        if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         Gson gson = dev.openallay.json.EngineJson.create();
         ModelProfilesConfigLoader.Load value =
@@ -457,8 +459,10 @@ public final class ClientModelRuntimeRegistry implements GuideLocalEndpoint {
     private static ClientCapabilitySnapshot resolveDefaultCapabilities(FeatureServices runtime) {
         ToolResult<ClientCapabilitySnapshot> resolved = new ClientCapabilityResolver().resolve(
                 CapabilityPolicy.defaults(), runtime.tools().registrations(), runtime.skills());
-        if (resolved instanceof ToolResult.Success<ClientCapabilitySnapshot> success) {
-            return success.value();
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Success<ClientCapabilitySnapshot> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<ClientCapabilitySnapshot>) $oaPattern1_holder.value) != null))) {
+            return $oaPattern1_holder.bound.value();
         }
         ToolResult.Failure<ClientCapabilitySnapshot> failure =
                 (ToolResult.Failure<ClientCapabilitySnapshot>) resolved;

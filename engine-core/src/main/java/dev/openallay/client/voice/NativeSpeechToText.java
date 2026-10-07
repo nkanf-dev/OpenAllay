@@ -305,13 +305,19 @@ static final class Call {
             return invoke(loader.loadClass(PACKAGE + name), "builder", new Class<?>[0]);
         }
         private static Object invoke(Object target, String name, Class<?>[] types, Object... arguments) throws Exception {
-            Class<?> type = target instanceof Class<?> value ? value : target.getClass();
+            final class $oaPattern0_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+Class<?> type = (($oaPattern0_holder.value = target) instanceof java.lang.Class && (($oaPattern0_holder.bound = (Class<?>) $oaPattern0_holder.value) != null)) ? $oaPattern0_holder.bound : target.getClass();
             Method method = type.getMethod(name, types);
             try { return method.invoke(target instanceof Class<?> ? null : target, arguments); }
             catch (InvocationTargetException failure) {
                 Throwable cause = failure.getCause();
-                if (cause instanceof Exception exception) throw exception;
-                if (cause instanceof Error error) throw error;
+                final class $oaPattern1_Holder { java.lang.Throwable value; Exception bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof java.lang.Exception && (($oaPattern1_holder.bound = (Exception) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
+                final class $oaPattern2_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = cause) instanceof java.lang.Error && (($oaPattern2_holder.bound = (Error) $oaPattern2_holder.value) != null))) throw $oaPattern2_holder.bound;
                 throw failure;
             }
         }

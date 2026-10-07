@@ -160,10 +160,12 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         this.selectedSessions = Objects.requireNonNull(selectedSessions, "selectedSessions");
         this.promptModes = promptModes;
         LocalAgentToolExecutor local = new LocalAgentToolExecutor(capabilities.localTools(), gson);
-        toolExecutor = extension == null
+        final class $oaPattern0_Holder { dev.openallay.agent.tool.AgentToolExecutor value; RemoteToolExecutor bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+toolExecutor = extension == null
                 ? local
-                : extension instanceof RemoteToolExecutor remote
-                        ? new ClientPlacedToolExecutor(local, remote)
+                : (($oaPattern0_holder.value = extension) instanceof dev.openallay.bridge.client.RemoteToolExecutor && (($oaPattern0_holder.bound = (RemoteToolExecutor) $oaPattern0_holder.value) != null))
+                        ? new ClientPlacedToolExecutor(local, $oaPattern0_holder.bound)
                         : new CompositeAgentToolExecutor(List.of(local, extension));
         agent = new GameGuideAgent(
                 endpoint.scheduler(), toolExecutor, sessions, gson, endpoint.compactor(),
@@ -314,8 +316,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 new ToolResult.Failure<>("compact_cancelled", "Manual compaction was cancelled"));
         ToolResult<AgentSessionStore.ControlLease> reservation = sessions.reserveControl(
                 new AgentSessionKey(actor, sessionId), controlId, durableSeed);
-        if (reservation instanceof ToolResult.Failure<AgentSessionStore.ControlLease> failure) {
-            return CompletableFuture.completedFuture(new ToolResult.Failure<>(failure.code(), failure.message()));
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.agent.session.AgentSessionStore.ControlLease> value; ToolResult.Failure<AgentSessionStore.ControlLease> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = reservation) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<AgentSessionStore.ControlLease>) $oaPattern1_holder.value) != null))) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message()));
         }
         AgentSessionStore.ControlLease lease =
                 ((ToolResult.Success<AgentSessionStore.ControlLease>) reservation).value();
@@ -418,8 +422,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private static boolean realQuestion(ModelMessage message) {
         if (message.role() != ModelRole.USER || message.content().stream().anyMatch(
                 ModelContent.ToolResult.class::isInstance)) return false;
-        if (message.content().get(0) instanceof ModelContent.Text text
-                && text.text().startsWith("[OpenAllay derived conversation memory; NOT factual evidence]\n")) {
+        final class $oaPattern2_Holder { dev.openallay.model.ModelContent value; ModelContent.Text bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = message.content().get(0)) instanceof dev.openallay.model.ModelContent.Text && (($oaPattern2_holder.bound = (ModelContent.Text) $oaPattern2_holder.value) != null))
+                && $oaPattern2_holder.bound.text().startsWith("[OpenAllay derived conversation memory; NOT factual evidence]\n")) {
             return false;
         }
         return message.content().stream().anyMatch(item -> item instanceof ModelContent.Text
@@ -433,8 +439,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         }
         if (cancellation.isCancelled()) return new ToolResult.Failure<>(
                 "compact_cancelled", "Manual compaction was cancelled");
-        if (failure instanceof ModelClientException model) return new ToolResult.Failure<>(
-                model.failure().code(), model.failure().message());
+        final class $oaPattern3_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = failure) instanceof dev.openallay.model.ModelClientException && (($oaPattern3_holder.bound = (ModelClientException) $oaPattern3_holder.value) != null))) return new ToolResult.Failure<>(
+                $oaPattern3_holder.bound.failure().code(), $oaPattern3_holder.bound.failure().message());
         return new ToolResult.Failure<>("compact_failed", "Manual compaction could not prepare a valid summary");
     }
 
@@ -459,11 +467,17 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
 
         private void observeUsage(ModelEvent event) {
             AgentEvent forwarded;
-            if (event instanceof ModelEvent.UsageStarted started) forwarded = new AgentEvent.ModelUsageStarted(
-                    started.callId(), started.modelIdentifier());
-            else if (event instanceof ModelEvent.UsageObserved observed) forwarded = new AgentEvent.ModelUsageObserved(
-                    observed.callId(), observed.modelIdentifier(), observed.usage());
+            final class $oaPattern4_Holder { dev.openallay.model.ModelEvent value; ModelEvent.UsageStarted bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = event) instanceof dev.openallay.model.ModelEvent.UsageStarted && (($oaPattern4_holder.bound = (ModelEvent.UsageStarted) $oaPattern4_holder.value) != null))) forwarded = new AgentEvent.ModelUsageStarted(
+                    $oaPattern4_holder.bound.callId(), $oaPattern4_holder.bound.modelIdentifier());
+            else {
+final class $oaPattern5_Holder { dev.openallay.model.ModelEvent value; ModelEvent.UsageObserved bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = event) instanceof dev.openallay.model.ModelEvent.UsageObserved && (($oaPattern5_holder.bound = (ModelEvent.UsageObserved) $oaPattern5_holder.value) != null))) forwarded = new AgentEvent.ModelUsageObserved(
+                    $oaPattern5_holder.bound.callId(), $oaPattern5_holder.bound.modelIdentifier(), $oaPattern5_holder.bound.usage());
             else return;
+}
             usage.accept(forwarded);
         }
 
@@ -719,8 +733,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private static ClientCapabilitySnapshot defaultCapabilities(FeatureServices runtime) {
         ToolResult<ClientCapabilitySnapshot> resolved = new ClientCapabilityResolver().resolve(
                 CapabilityPolicy.defaults(), runtime.tools().registrations(), runtime.skills());
-        if (resolved instanceof ToolResult.Success<ClientCapabilitySnapshot> success) {
-            return success.value();
+        final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Success<ClientCapabilitySnapshot> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern6_holder.bound = (ToolResult.Success<ClientCapabilitySnapshot>) $oaPattern6_holder.value) != null))) {
+            return $oaPattern6_holder.bound.value();
         }
         ToolResult.Failure<ClientCapabilitySnapshot> failure =
                 (ToolResult.Failure<ClientCapabilitySnapshot>) resolved;

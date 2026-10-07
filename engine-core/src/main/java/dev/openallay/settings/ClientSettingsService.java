@@ -1096,8 +1096,10 @@ public static final class PreparedModels {
             ToolResult<PreparedPackageInstall> completed, Throwable thrown) {
         synchronized (lock) {
             if (activePackagePreparation != active || closed) {
-                if (completed instanceof ToolResult.Success<PreparedPackageInstall> success) {
-                    closePreparedPackage(success.value());
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Success<PreparedPackageInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<PreparedPackageInstall>) $oaPattern0_holder.value) != null))) {
+                    closePreparedPackage($oaPattern0_holder.bound.value());
                 }
                 active.outward().complete(new ToolResult.Failure<>(
                         "package_preview_cancelled", "Package preview cancelled"));
@@ -1105,16 +1107,20 @@ public static final class PreparedModels {
             }
             activePackagePreparation = null;
             operation = SettingsOperation.idle();
-            if (thrown == null && completed instanceof ToolResult.Success<PreparedPackageInstall> success) {
-                preparedPackage = success.value();
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Success<PreparedPackageInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (thrown == null && (($oaPattern1_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<PreparedPackageInstall>) $oaPattern1_holder.value) != null))) {
+                preparedPackage = $oaPattern1_holder.bound.value();
                 packageReviewToken = new RequirementReview.Token();
                 notice = SettingsNotice.success("package_preview_ready", "Package ready for review");
                 publishLocked();
                 active.outward().complete(new ToolResult.Success<>(true));
             } else {
-                ToolResult.Failure<PreparedPackageInstall> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<PreparedPackageInstall> value
-                                ? value : new ToolResult.Failure<>(
+                final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Failure<PreparedPackageInstall> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+ToolResult.Failure<PreparedPackageInstall> failure =
+                        thrown == null && (($oaPattern2_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<PreparedPackageInstall>) $oaPattern2_holder.value) != null))
+                                ? $oaPattern2_holder.bound : new ToolResult.Failure<>(
                                         "package_preview_failed", "Unable to prepare the package preview");
                 notice = SettingsNotice.failure(failure.code(), failure.message());
                 publishLocked();
@@ -1390,8 +1396,10 @@ private static final class ActivePackagePreparation {
         synchronized (lock) {
             if (!isCurrentLocked(operationId)) return;
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<UnrestrictedJavascriptConfig> success) {
-                unrestrictedState = success.value();
+            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> value; ToolResult.Success<UnrestrictedJavascriptConfig> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern3_holder.bound = (ToolResult.Success<UnrestrictedJavascriptConfig>) $oaPattern3_holder.value) != null))) {
+                unrestrictedState = $oaPattern3_holder.bound.value();
                 notice = SettingsNotice.success("unrestricted_javascript_saved", "Unrestricted JavaScript settings saved");
                 result = new ToolResult.Success<>(true);
             } else {
@@ -1702,10 +1710,12 @@ private static final class ActivePackagePreparation {
                 () -> models.resolve(candidate, replacement, metadataSnapshot),
                 "invalid_model_config",
                 "Unable to prepare the connection test");
-        if (resolved instanceof ToolResult.Failure<ResolvedModelProfile> failure) {
+        final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ResolvedModelProfile> value; ToolResult.Failure<ResolvedModelProfile> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern4_holder.bound = (ToolResult.Failure<ResolvedModelProfile>) $oaPattern4_holder.value) != null))) {
             dispatcher.execute(() -> finishProbe(
                     operationId,
-                    connectionFailure(failure.code(), safeProbeMessage(failure.code())),
+                    connectionFailure($oaPattern4_holder.bound.code(), safeProbeMessage($oaPattern4_holder.bound.code())),
                     outward));
             return;
         }
@@ -1767,14 +1777,18 @@ private static final class ActivePackagePreparation {
             }
             activeCatalog = null;
             operation = SettingsOperation.idle();
-            if (thrown == null && completed instanceof ToolResult.Success<ModelCatalog> success) {
-                result = new ToolResult.Success<>(success.value());
+            final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.catalog.ModelCatalog> value; ToolResult.Success<ModelCatalog> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if (thrown == null && (($oaPattern5_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern5_holder.bound = (ToolResult.Success<ModelCatalog>) $oaPattern5_holder.value) != null))) {
+                result = new ToolResult.Success<>($oaPattern5_holder.bound.value());
                 notice = SettingsNotice.success(
                         "model_catalog_loaded", "Model catalog loaded");
             } else {
-                ToolResult.Failure<ModelCatalog> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<ModelCatalog> value
-                                ? value
+                final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.catalog.ModelCatalog> value; ToolResult.Failure<ModelCatalog> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+ToolResult.Failure<ModelCatalog> failure =
+                        thrown == null && (($oaPattern6_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern6_holder.bound = (ToolResult.Failure<ModelCatalog>) $oaPattern6_holder.value) != null))
+                                ? $oaPattern6_holder.bound
                                 : new ToolResult.Failure<>(
                                         cancellation.isCancelled()
                                                 ? "model_catalog_cancelled"
@@ -1825,8 +1839,10 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<ModelState> success) {
-                modelState = success.value();
+            final class $oaPattern7_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsService.ModelState> value; ToolResult.Success<ModelState> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern7_holder.bound = (ToolResult.Success<ModelState>) $oaPattern7_holder.value) != null))) {
+                modelState = $oaPattern7_holder.bound.value();
                 connectionResult = null;
                 notice = SettingsNotice.success(successCode, switch (successCode) {
                     case "models_reloaded" -> "Model settings reloaded";
@@ -1860,8 +1876,10 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<CapabilitySettingsView> success) {
-                capabilityState = success.value();
+            final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.capability.CapabilitySettingsView> value; ToolResult.Success<CapabilitySettingsView> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern8_holder.bound = (ToolResult.Success<CapabilitySettingsView>) $oaPattern8_holder.value) != null))) {
+                capabilityState = $oaPattern8_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("capabilities_reloaded")
@@ -1890,8 +1908,10 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<RecipeSettingsView> success) {
-                recipeState = success.value();
+            final class $oaPattern9_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.capability.RecipeSettingsView> value; ToolResult.Success<RecipeSettingsView> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern9_holder.bound = (ToolResult.Success<RecipeSettingsView>) $oaPattern9_holder.value) != null))) {
+                recipeState = $oaPattern9_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("recipes_reloaded")
@@ -1920,8 +1940,10 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<SkillSettingsView> success) {
-                skillState = success.value();
+            final class $oaPattern10_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.skill.SkillSettingsView> value; ToolResult.Success<SkillSettingsView> bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern10_holder.bound = (ToolResult.Success<SkillSettingsView>) $oaPattern10_holder.value) != null))) {
+                skillState = $oaPattern10_holder.bound.value();
                 notice = SettingsNotice.success(successCode, switch (successCode) {
                     case "skills_reloaded" -> "Skills reloaded";
                     case "skill_override_deleted" -> "Skill override deleted";
@@ -1981,9 +2003,11 @@ private static final class ActivePackagePreparation {
                 } catch (RuntimeException ignored) {
                     // Preserve the last immutable catalog projection when refresh recovery fails.
                 }
-                ToolResult.Failure<SkillCommunityView> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<SkillCommunityView> value
-                                ? value
+                final class $oaPattern11_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.skill.SkillCommunityView> value; ToolResult.Failure<SkillCommunityView> bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+ToolResult.Failure<SkillCommunityView> failure =
+                        thrown == null && (($oaPattern11_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern11_holder.bound = (ToolResult.Failure<SkillCommunityView>) $oaPattern11_holder.value) != null))
+                                ? $oaPattern11_holder.bound
                                 : new ToolResult.Failure<>(
                                         "skill_community_operation_failed",
                                         "Unable to update Skills");
@@ -2007,10 +2031,12 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (thrown == null
-                    && completed instanceof ToolResult.Success<ExtensionSettingsView> success) {
+            final class $oaPattern12_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.extension.ExtensionSettingsView> value; ToolResult.Success<ExtensionSettingsView> bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if (thrown == null
+                    && (($oaPattern12_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern12_holder.bound = (ToolResult.Success<ExtensionSettingsView>) $oaPattern12_holder.value) != null))) {
                 extensionState = Objects.requireNonNull(
-                        success.value(), "updated Extension projection");
+                        $oaPattern12_holder.bound.value(), "updated Extension projection");
                 notice = SettingsNotice.success(successCode, switch (successCode) {
                     case "extension_capability_saved" ->
                             "Extension capability settings saved";
@@ -2028,12 +2054,14 @@ private static final class ActivePackagePreparation {
                 } catch (RuntimeException ignored) {
                     // Preserve the last immutable Extension projection on recovery failure.
                 }
-                ToolResult.Failure<ExtensionSettingsView> failure =
+                final class $oaPattern13_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.extension.ExtensionSettingsView> value; ToolResult.Failure<
+                                                        ExtensionSettingsView> bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+ToolResult.Failure<ExtensionSettingsView> failure =
                         thrown == null
-                                        && completed
-                                                instanceof ToolResult.Failure<
-                                                        ExtensionSettingsView> value
-                                ? value
+                                        && (($oaPattern13_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern13_holder.bound = (ToolResult.Failure<
+                                                        ExtensionSettingsView>) $oaPattern13_holder.value) != null))
+                                ? $oaPattern13_holder.bound
                                 : new ToolResult.Failure<>(
                                         "extension_community_operation_failed",
                                         "Unable to update Extensions");
@@ -2056,8 +2084,10 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<GuideDisplayConfig> success) {
-                display = success.value();
+            final class $oaPattern14_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.ui.GuideDisplayConfig> value; ToolResult.Success<GuideDisplayConfig> bound; }
+final $oaPattern14_Holder $oaPattern14_holder = new $oaPattern14_Holder();
+if ((($oaPattern14_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern14_holder.bound = (ToolResult.Success<GuideDisplayConfig>) $oaPattern14_holder.value) != null))) {
+                display = $oaPattern14_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("display_reloaded")
@@ -2086,8 +2116,10 @@ private static final class ActivePackagePreparation {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<CommandCapabilityConfig> success) {
-                commandState = success.value();
+            final class $oaPattern15_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.command.CommandCapabilityConfig> value; ToolResult.Success<CommandCapabilityConfig> bound; }
+final $oaPattern15_Holder $oaPattern15_holder = new $oaPattern15_Holder();
+if ((($oaPattern15_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern15_holder.bound = (ToolResult.Success<CommandCapabilityConfig>) $oaPattern15_holder.value) != null))) {
+                commandState = $oaPattern15_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("experimental_commands_reloaded")
@@ -2172,9 +2204,11 @@ private static final class ActivePackagePreparation {
                 notice = SettingsNotice.success(code, "Guide history updated");
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
-                ToolResult.Failure<Boolean> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<Boolean> value
-                                ? value
+                final class $oaPattern16_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern16_Holder $oaPattern16_holder = new $oaPattern16_Holder();
+ToolResult.Failure<Boolean> failure =
+                        thrown == null && (($oaPattern16_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern16_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern16_holder.value) != null))
+                                ? $oaPattern16_holder.bound
                                 : new ToolResult.Failure<>(
                                         "history_delete_failed",
                                         "Unable to update Guide history");
@@ -2220,10 +2254,13 @@ private static final class ActivePackagePreparation {
                     || metadataGeneration != expectedMetadataGeneration
                     || modelState.config() != preparedConfig) {
                 retry = true;
-            } else if (prepared instanceof ToolResult.Success<PreparedModels> success) {
+            } else {
+final class $oaPattern17_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsService.PreparedModels> value; ToolResult.Success<PreparedModels> bound; }
+final $oaPattern17_Holder $oaPattern17_holder = new $oaPattern17_Holder();
+if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern17_holder.bound = (ToolResult.Success<PreparedModels>) $oaPattern17_holder.value) != null))) {
                 try {
-                    if (success.value().publish().getAsBoolean()) {
-                        modelState = success.value().state();
+                    if ($oaPattern17_holder.bound.value().publish().getAsBoolean()) {
+                        modelState = $oaPattern17_holder.bound.value().state();
                         publishLocked();
                     } else {
                         // Registry publication, including capabilities, advanced before this callback.
@@ -2240,6 +2277,7 @@ private static final class ActivePackagePreparation {
                 metadataFailure = new GuideFailure(failure.code(), failure.message());
                 publishLocked();
             }
+}
         }
         if (retry) {
             reconcileCurrentMetadata();

@@ -74,8 +74,10 @@ public final class RecipeSettingsBackend implements ClientSettingsService.Recipe
         try {
             encoded = writer.encode(candidate);
             ToolResult<RecipeClientConfig> decoded = loader.load(new StringReader(encoded));
-            if (decoded instanceof ToolResult.Failure<RecipeClientConfig> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.recipe.config.RecipeClientConfig> value; ToolResult.Failure<RecipeClientConfig> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<RecipeClientConfig>) $oaPattern0_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
             }
             validated = ((ToolResult.Success<RecipeClientConfig>) decoded).value();
         } catch (RuntimeException failure) {
@@ -96,8 +98,10 @@ public final class RecipeSettingsBackend implements ClientSettingsService.Recipe
     @Override
     public ToolResult<RecipeSettingsView> reloadRecipes() {
         ToolResult<RecipeClientConfig> loaded = runtime.reload();
-        if (loaded instanceof ToolResult.Failure<RecipeClientConfig> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.recipe.config.RecipeClientConfig> value; ToolResult.Failure<RecipeClientConfig> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<RecipeClientConfig>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         return new ToolResult.Success<>(view(
                 ((ToolResult.Success<RecipeClientConfig>) loaded).value()));
