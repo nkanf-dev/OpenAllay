@@ -6,20 +6,20 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 19604,
-    "sha256": "25b80e8b0fe32276086c26c64eeb632fb0728836efa9635e5361685df8f20c8d",
-    "modified_upstream_files": 16,
+    "bytes": 23225,
+    "sha256": "37b83a7d98ee79a9e2fb54ee376b645a4148e9ab3870075ef553897586277db9",
+    "modified_upstream_files": 17,
     "added_source_files": 1,
-    "hunks": 73,
+    "hunks": 50,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
-        "bytes": 1777,
-        "sha256": "c8b9fc45977a3e90aa89a6ab2906309b3063e27b56a7c6d36f078e2351418f7b"
+        "bytes": 3979,
+        "sha256": "37bd2128b67034a53290e98d89cf356baa6c0d7d3b83022f41516cd6bf10d415"
       }
     ]
   },
-  "source_only_status": "Static ZIP/source audit and exact in-memory patch replay only. No Java compilation, ABI verification, or runtime-test claims.",
+  "source_only_status": "Canonical current source preparation includes a Java8 leaf subset; full runtime remains Java17 pending the remaining source port. Focused actual Java8 execution evidence is recorded separately.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -1025,8 +1025,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.MethodSignature",
       "source_bytes": 648,
       "source_sha256": "e127631a95a87155d4c07d4719eeaac0cdbb6453ddd1696a3524050203e88f73",
-      "patched_bytes": 702,
-      "patched_sha256": "cf6b7cd08c1e4dc0b116c3f69f921084b9e798d8e27135fe2cf6681e6bda3065",
+      "patched_bytes": 1079,
+      "patched_sha256": "007fc113b2aaa42e6dfe6f04a05615fa9eeadb5c3ece154afa54a382313f1377",
       "modified": true,
       "line_count": 26,
       "license_evidence": [
@@ -3601,9 +3601,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.util.Possible",
       "source_bytes": 775,
       "source_sha256": "c75f32f25779174b0e1cf0dbd99aab397522594f9a59e1bf7f5dc08ba597e1b9",
-      "patched_bytes": 775,
-      "patched_sha256": "c75f32f25779174b0e1cf0dbd99aab397522594f9a59e1bf7f5dc08ba597e1b9",
-      "modified": false,
+      "patched_bytes": 1085,
+      "patched_sha256": "4b7c6175984d58ad23ae06685d8065829847dba90c7aea4db7b7fd4ac25dda0c",
+      "modified": true,
       "line_count": 35,
       "license_evidence": [
         "No per-file license header; module metadata declares MPL-2.0"

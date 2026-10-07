@@ -88,11 +88,37 @@
 +				Object[] args = {cx.jsToJava(value, ListCompat.getFirst(bp.setter.parameters().typeInfos()))};
 --- a/dev/latvian/mods/rhino/MethodSignature.java
 +++ b/dev/latvian/mods/rhino/MethodSignature.java
-@@ -15 +15,3 @@
+@@ -6 +6,17 @@
+-public record MethodSignature(String name, Class<?>[] args) {
++public final class MethodSignature {
++	private final String name;
++	private final Class<?>[] args;
++
++	public MethodSignature(String name, Class<?>[] args) {
++		this.name = name;
++		this.args = args;
++	}
++
++	public String name() {
++		return name;
++	}
++
++	public Class<?>[] args() {
++		return args;
++	}
++
+@@ -15 +31,4 @@
 -		if (o instanceof MethodSignature(String name1, Class<?>[] args1)) {
-+		if (o instanceof MethodSignature signature) {
++		if (o instanceof MethodSignature) {
++			MethodSignature signature = (MethodSignature) o;
 +			String name1 = signature.name();
 +			Class<?>[] args1 = signature.args();
+@@ -25,0 +45,5 @@
++
++	@Override
++	public String toString() {
++		return "MethodSignature[name=" + name + ", args=" + args + "]";
++	}
 --- a/dev/latvian/mods/rhino/NativeArray.java
 +++ b/dev/latvian/mods/rhino/NativeArray.java
 @@ -7,0 +8,2 @@
@@ -368,6 +394,39 @@
 -		};
 +		}
 +		return TypeInfo.NONE;
+--- a/dev/latvian/mods/rhino/util/Possible.java
++++ b/dev/latvian/mods/rhino/util/Possible.java
+@@ -3 +3,2 @@
+-import org.jetbrains.annotations.Nullable;
++
++import java.util.Objects;
+@@ -6 +7,11 @@
+-public record Possible<T>(@Nullable Object value) {
++public final class Possible<T> {
++	private final Object value;
++
++	public Possible(Object value) {
++		this.value = value;
++	}
++
++	public Object value() {
++		return value;
++	}
++
+@@ -10 +21 @@
+-	public static <T> Possible<T> of(@Nullable T o) {
++	public static <T> Possible<T> of(T o) {
+@@ -34,0 +46,10 @@
++
++	@Override
++	public boolean equals(Object other) {
++		return other instanceof Possible<?> && Objects.equals(value, ((Possible<?>) other).value);
++	}
++
++	@Override
++	public int hashCode() {
++		return Objects.hashCode(value);
++	}
 --- a/dev/latvian/mods/rhino/util/ToStringJS.java
 +++ b/dev/latvian/mods/rhino/util/ToStringJS.java
 @@ -12,7 +12,8 @@
@@ -444,7 +503,7 @@
 +		return o.toString();
 --- /dev/null
 +++ b/dev/latvian/mods/rhino/util/ListCompat.java
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,144 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -452,19 +511,28 @@
 + */
 +package dev.latvian.mods.rhino.util;
 +
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.Collection;
++import java.util.Collections;
 +import java.util.Deque;
++import java.util.LinkedHashMap;
++import java.util.LinkedHashSet;
++import java.util.Map;
++import java.util.Objects;
++import java.util.Set;
 +import java.util.List;
 +import java.util.NoSuchElementException;
 +
-+/** Java 17 equivalents of the Java 21 List first/last default methods. */
++/** Java 8 equivalents of sequenced List operations and immutable collection factories. */
 +public final class ListCompat {
 +	private ListCompat() {
 +	}
 +
 +	@SuppressWarnings("unchecked")
 +	public static <E> E getFirst(List<E> list) {
-+		if (list instanceof Deque<?> deque) {
-+			return ((Deque<E>) deque).getFirst();
++		if (list instanceof Deque<?>) {
++			return ((Deque<E>) list).getFirst();
 +		}
 +		if (list.isEmpty()) {
 +			throw new NoSuchElementException();
@@ -474,8 +542,8 @@
 +
 +	@SuppressWarnings("unchecked")
 +	public static <E> E getLast(List<E> list) {
-+		if (list instanceof Deque<?> deque) {
-+			return ((Deque<E>) deque).getLast();
++		if (list instanceof Deque<?>) {
++			return ((Deque<E>) list).getLast();
 +		}
 +		int size = list.size();
 +		if (size == 0) {
@@ -486,8 +554,8 @@
 +
 +	@SuppressWarnings("unchecked")
 +	public static <E> E removeFirst(List<E> list) {
-+		if (list instanceof Deque<?> deque) {
-+			return ((Deque<E>) deque).removeFirst();
++		if (list instanceof Deque<?>) {
++			return ((Deque<E>) list).removeFirst();
 +		}
 +		if (list.isEmpty()) {
 +			throw new NoSuchElementException();
@@ -497,8 +565,8 @@
 +
 +	@SuppressWarnings("unchecked")
 +	public static <E> E removeLast(List<E> list) {
-+		if (list instanceof Deque<?> deque) {
-+			return ((Deque<E>) deque).removeLast();
++		if (list instanceof Deque<?>) {
++			return ((Deque<E>) list).removeLast();
 +		}
 +		int size = list.size();
 +		if (size == 0) {
@@ -509,10 +577,74 @@
 +
 +	@SuppressWarnings("unchecked")
 +	public static <E> void addFirst(List<E> list, E value) {
-+		if (list instanceof Deque<?> deque) {
-+			((Deque<E>) deque).addFirst(value);
++		if (list instanceof Deque<?>) {
++			((Deque<E>) list).addFirst(value);
 +		} else {
 +			list.add(0, value);
 +		}
++	}
++
++	@SafeVarargs
++	public static <E> List<E> listOf(E... elements) {
++		return copyList(Arrays.asList(elements));
++	}
++
++	public static <E> List<E> copyList(Collection<? extends E> elements) {
++		List<E> copy = new ArrayList<E>(elements.size());
++		for (E element : elements) {
++			copy.add(Objects.requireNonNull(element));
++		}
++		return Collections.unmodifiableList(copy);
++	}
++
++	@SafeVarargs
++	public static <E> Set<E> setOf(E... elements) {
++		Set<E> copy = new LinkedHashSet<E>();
++		for (E element : elements) {
++			if (!copy.add(Objects.requireNonNull(element))) {
++				throw new IllegalArgumentException("duplicate element: " + element);
++			}
++		}
++		return Collections.unmodifiableSet(copy);
++	}
++
++	public static <E> Set<E> copySet(Collection<? extends E> elements) {
++		Set<E> copy = new LinkedHashSet<E>();
++		for (E element : elements) {
++			copy.add(Objects.requireNonNull(element));
++		}
++		return Collections.unmodifiableSet(copy);
++	}
++
++	public static <K, V> Map<K, V> copyMap(Map<? extends K, ? extends V> entries) {
++		Map<K, V> copy = new LinkedHashMap<K, V>();
++		for (Map.Entry<? extends K, ? extends V> entry : entries.entrySet()) {
++			K key = Objects.requireNonNull(entry.getKey());
++			V value = Objects.requireNonNull(entry.getValue());
++			if (copy.containsKey(key)) {
++				throw new IllegalArgumentException("duplicate key: " + key);
++			}
++			copy.put(key, value);
++		}
++		return Collections.unmodifiableMap(copy);
++	}
++
++	public static String repeat(String value, int count) {
++		Objects.requireNonNull(value);
++		if (count < 0) {
++			throw new IllegalArgumentException("count is negative: " + count);
++		}
++		if (count == 0 || value.isEmpty()) {
++			return "";
++		}
++		long length = (long) value.length() * count;
++		if (length > Integer.MAX_VALUE) {
++			throw new OutOfMemoryError("Required string length exceeds implementation limit");
++		}
++		StringBuilder result = new StringBuilder((int) length);
++		for (int i = 0; i < count; i++) {
++			result.append(value);
++		}
++		return result.toString();
 +	}
 +}
