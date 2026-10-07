@@ -25,6 +25,7 @@ public final class RegistryQueryJava8Fixture {
     private RegistryQueryJava8Fixture() {}
     private interface Checked { void run() throws Exception; }
     public static void main(String[] args) throws Exception {
+        verifyObjectCanonicalization();
         boolean actual8 = args.length == 1 && args[0].equals("java8");
         if (actual8) {
             equal("1.8", System.getProperty("java.specification.version"));
@@ -148,7 +149,38 @@ public final class RegistryQueryJava8Fixture {
             JsonObject object = new JsonObject(); object.addProperty("index", stage.index()); object.addProperty("operation", stage.operation().name());
             object.addProperty("inputRows", stage.inputRows()); object.addProperty("outputRows", stage.outputRows()); stages.add(object);
         }
-        report.add("stages", stages); System.out.println(name + "=" + report.toString());
+        report.add("stages", stages); System.out.println(name + "=" + canonicalObjectMembers(report).toString());
+    }
+    /** JSON object member order is not semantic; array order and scalar values remain exact. */
+    private static JsonElement canonicalObjectMembers(JsonElement value) {
+        if (value.isJsonObject()) {
+            JsonObject result = new JsonObject();
+            java.util.TreeMap<String, JsonElement> entries = new java.util.TreeMap<>();
+            value.getAsJsonObject().entrySet().forEach(entry -> entries.put(entry.getKey(), entry.getValue()));
+            entries.forEach((key, child) -> result.add(key, canonicalObjectMembers(child)));
+            return result;
+        }
+        if (value.isJsonArray()) {
+            JsonArray result = new JsonArray();
+            for (JsonElement child : value.getAsJsonArray()) result.add(canonicalObjectMembers(child));
+            return result;
+        }
+        return dev.openallay.json.JsonTrees.copy(value);
+    }
+    private static void verifyObjectCanonicalization() {
+        JsonObject first = new JsonObject(); first.addProperty("z", 1); first.addProperty("a", 2);
+        JsonObject reverseKeys = new JsonObject(); reverseKeys.addProperty("a", 2); reverseKeys.addProperty("z", 1);
+        equal(canonicalObjectMembers(first).toString(), canonicalObjectMembers(reverseKeys).toString());
+        JsonArray rows = new JsonArray(); rows.add(first); rows.add(new JsonPrimitive(7));
+        JsonArray reversedRows = new JsonArray(); reversedRows.add(new JsonPrimitive(7)); reversedRows.add(first);
+        check(!canonicalObjectMembers(rows).toString().equals(canonicalObjectMembers(reversedRows).toString()), "canonicalization must reject different row order");
+        JsonObject changedValue = new JsonObject(); changedValue.addProperty("a", 3); changedValue.addProperty("z", 1);
+        check(!canonicalObjectMembers(first).toString().equals(canonicalObjectMembers(changedValue).toString()), "canonicalization must reject different values");
+        JsonObject columns = new JsonObject(); JsonArray order = new JsonArray(); order.add(new JsonPrimitive("a")); order.add(new JsonPrimitive("z")); columns.add("columns", order);
+        JsonObject changedColumns = new JsonObject(); JsonArray reversed = new JsonArray(); reversed.add(new JsonPrimitive("z")); reversed.add(new JsonPrimitive("a")); changedColumns.add("columns", reversed);
+        check(!canonicalObjectMembers(columns).toString().equals(canonicalObjectMembers(changedColumns).toString()), "canonicalization must reject different columns order");
+        JsonPrimitive numericLexeme = new JsonPrimitive(new java.math.BigDecimal("1.2300"));
+        equal("1.2300", canonicalObjectMembers(numericLexeme).toString());
     }
     private static void failure(String name, Checked operation) throws Exception {
         try { operation.run(); throw new AssertionError("Expected rejection: " + name); }
