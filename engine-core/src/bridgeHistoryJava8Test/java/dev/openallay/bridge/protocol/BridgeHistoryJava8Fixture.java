@@ -41,6 +41,20 @@ public final class BridgeHistoryJava8Fixture {
         result.addProperty("mutated", true); check(!execution.result().has("mutated"), "tool result constructor copy");
         execution.result().addProperty("later", true); check(!execution.result().has("later"), "tool result accessor copy");
         execution.requireImages(Arrays.asList(image));
+        int executionHash = 0;
+        executionHash = 31 * executionHash + java.util.Objects.hashCode(execution.result());
+        executionHash = 31 * executionHash + java.util.Objects.hashCode(execution.imageAttachments());
+        equal(executionHash, execution.hashCode());
+        int historyHash = 0;
+        for (Object field : new Object[] {history.role(), history.content(), history.inputObservation()}) {
+            historyHash = 31 * historyHash + java.util.Objects.hashCode(field);
+        }
+        equal(historyHash, history.hashCode());
+        check(!history.equals(new ServerAgentHistoryMessage(ServerAgentHistoryMessage.Role.USER, "other")), "history field inequality");
+        int attachmentHash = 0;
+        attachmentHash = 31 * attachmentHash + java.util.Objects.hashCode(attachment.reference());
+        attachmentHash = 31 * attachmentHash + java.util.Objects.hashCode(attachment.base64Data());
+        equal(attachmentHash, attachment.hashCode());
         ServerAgentSteerPayload put = new ServerAgentSteerPayload(request, message, ServerAgentSteerPayload.Operation.PUT, history, Arrays.asList(attachment));
         ServerAgentSteerPayload remove = new ServerAgentSteerPayload(request, message, ServerAgentSteerPayload.Operation.REMOVE, null);
         for (Object value : Arrays.asList(attachment, imageHistory, tool, resultHistory, history, execution, put, remove)) {

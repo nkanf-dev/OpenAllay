@@ -56,12 +56,12 @@
         },
         {
           "old": "        switch (kind) {\n            case IMAGE -> {\n                if (image == null || text != null || toolUseId != null || toolName != null\n                        || json != null || error != null) {\n                    throw new IllegalArgumentException(\"Malformed image history content\");\n                }\n            }\n            case TEXT -> {\n                if (text == null || toolUseId != null || toolName != null\n                        || json != null || error != null) {\n                    throw new IllegalArgumentException(\"Malformed text history content\");\n                }\n            }\n            case TOOL_USE -> {\n                if (text != null || blank(toolUseId) || blank(toolName)\n                        || blank(json) || error != null\n                        || !dev.openallay.json.JsonTrees.parse(json).isJsonObject()) {\n                    throw new IllegalArgumentException(\"Malformed tool-use history content\");\n                }\n            }\n            case TOOL_RESULT -> {\n                if (text != null || blank(toolUseId) || toolName != null\n                        || blank(json) || error == null) {\n                    throw new IllegalArgumentException(\"Malformed tool-result history content\");\n                }\n                dev.openallay.json.JsonTrees.parse(json);\n            }\n        }",
-          "new": "        switch (kind) {\n            case IMAGE: {\n                if (image == null || text != null || toolUseId != null || toolName != null\n                        || json != null || error != null) {\n                    throw new IllegalArgumentException(\"Malformed image history content\");\n                }\n                break;\n            }\n            case TEXT: {\n                if (text == null || toolUseId != null || toolName != null\n                        || json != null || error != null) {\n                    throw new IllegalArgumentException(\"Malformed text history content\");\n                }\n                break;\n            }\n            case TOOL_USE: {\n                if (text != null || blank(toolUseId) || blank(toolName)\n                        || blank(json) || error != null\n                        || !dev.openallay.json.JsonTrees.parse(json).isJsonObject()) {\n                    throw new IllegalArgumentException(\"Malformed tool-use history content\");\n                }\n                break;\n            }\n            case TOOL_RESULT: {\n                if (text != null || blank(toolUseId) || toolName != null\n                        || blank(json) || error == null) {\n                    throw new IllegalArgumentException(\"Malformed tool-result history content\");\n                }\n                dev.openallay.json.JsonTrees.parse(json);\n                break;\n            }\n            default: throw new IllegalStateException(\"Unknown history content kind: \" + kind);\n        }",
+          "new": "        switch (kind) {\n            case IMAGE: {\n                if (image == null || text != null || toolUseId != null || toolName != null\n                        || json != null || error != null) {\n                    throw new IllegalArgumentException(\"Malformed image history content\");\n                }\n                break;\n            }\n            case TEXT: {\n                if (text == null || toolUseId != null || toolName != null\n                        || json != null || error != null) {\n                    throw new IllegalArgumentException(\"Malformed text history content\");\n                }\n                break;\n            }\n            case TOOL_USE: {\n                if (text != null || blank(toolUseId) || blank(toolName)\n                        || blank(json) || error != null\n                        || !dev.openallay.json.JsonTrees.parse(json).isJsonObject()) {\n                    throw new IllegalArgumentException(\"Malformed tool-use history content\");\n                }\n                break;\n            }\n            case TOOL_RESULT: {\n                if (text != null || blank(toolUseId) || toolName != null\n                        || blank(json) || error == null) {\n                    throw new IllegalArgumentException(\"Malformed tool-result history content\");\n                }\n                dev.openallay.json.JsonTrees.parse(json);\n                break;\n            }\n        }",
           "count": 1
         },
         {
           "old": "        return switch (kind) {\n            case IMAGE -> new ModelContent.Image(image, originToolUseId);\n            case TEXT -> new ModelContent.Text(text);\n            case TOOL_USE -> new ModelContent.ToolUse(\n                    toolUseId, toolName, dev.openallay.json.JsonTrees.parse(json).getAsJsonObject());\n            case TOOL_RESULT -> new ModelContent.ToolResult(\n                    toolUseId, dev.openallay.json.JsonTrees.parse(json), error, images);\n        };",
-          "new": "        switch (kind) {\n            case IMAGE: return new ModelContent.Image(image, originToolUseId);\n            case TEXT: return new ModelContent.Text(text);\n            case TOOL_USE: return new ModelContent.ToolUse(\n                    toolUseId, toolName, dev.openallay.json.JsonTrees.parse(json).getAsJsonObject());\n            case TOOL_RESULT: return new ModelContent.ToolResult(\n                    toolUseId, dev.openallay.json.JsonTrees.parse(json), error, images);\n            default: throw new IllegalStateException(\"Unknown history content kind: \" + kind);\n        }",
+          "new": "        switch (kind) {\n            case IMAGE: return new ModelContent.Image(image, originToolUseId);\n            case TEXT: return new ModelContent.Text(text);\n            case TOOL_USE: return new ModelContent.ToolUse(\n                    toolUseId, toolName, dev.openallay.json.JsonTrees.parse(json).getAsJsonObject());\n            case TOOL_RESULT: return new ModelContent.ToolResult(\n                    toolUseId, dev.openallay.json.JsonTrees.parse(json), error, images);\n            default: throw new IncompatibleClassChangeError();\n        }",
           "count": 1
         }
       ]
@@ -84,9 +84,14 @@
           "count": 1
         },
         {
-          "old": ".toList()",
-          "new": ".collect(java.util.stream.Collectors.collectingAndThen(java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList))",
-          "count": 3
+          "old": "content.stream().map(ServerAgentHistoryContent::toModelContent).toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(content.stream().map(ServerAgentHistoryContent::toModelContent))",
+          "count": 2
+        },
+        {
+          "old": "message.content().stream().map(ServerAgentHistoryContent::from).toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(message.content().stream().map(ServerAgentHistoryContent::from))",
+          "count": 1
         }
       ]
     },
@@ -111,8 +116,8 @@
           "count": 1
         },
         {
-          "old": ".toList()",
-          "new": ".collect(java.util.stream.Collectors.collectingAndThen(java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList))",
+          "old": "imageAttachments.stream()\n                .map(ServerAgentImageAttachment::reference).toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(imageAttachments.stream()\n                .map(ServerAgentImageAttachment::reference))",
           "count": 2
         }
       ]
@@ -144,13 +149,23 @@
       "pre_bytes": 9135,
       "api_substitutions": [
         {
-          "old": ".toList()",
-          "new": ".collect(java.util.stream.Collectors.collectingAndThen(java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList))",
-          "count": 3
-        },
-        {
           "old": "output.writeBytes(assembly.parts.get(index));",
           "new": "byte[] part = assembly.parts.get(index);\n                output.write(part, 0, part.length);",
+          "count": 1
+        },
+        {
+          "old": "return new ServerAgentRequestChunker().split(messageId, content, transportChunkBytes, maximumBytes).stream()\n                .map(chunk -> new ServerAgentSteerChunkPayload(requestId, messageId, chunk.index(),\n                        chunk.total(), chunk.contentHash(), chunk.base64Data())).toList();",
+          "new": "return dev.openallay.util.Java8Collections.toList(new ServerAgentRequestChunker().split(messageId, content, transportChunkBytes, maximumBytes).stream()\n                .map(chunk -> new ServerAgentSteerChunkPayload(requestId, messageId, chunk.index(),\n                        chunk.total(), chunk.contentHash(), chunk.base64Data())));",
+          "count": 1
+        },
+        {
+          "old": "assemblies.keySet().stream()\n                    .filter(key -> key.actorId().equals(actorId) && key.requestId().equals(requestId)).toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(assemblies.keySet().stream()\n                    .filter(key -> key.actorId().equals(actorId) && key.requestId().equals(requestId)))",
+          "count": 1
+        },
+        {
+          "old": "assemblies.keySet().stream()\n                    .filter(key -> key.actorId().equals(actorId))\n                    .toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(assemblies.keySet().stream()\n                    .filter(key -> key.actorId().equals(actorId)))",
           "count": 1
         }
       ]
@@ -168,13 +183,13 @@
           "count": 1
         },
         {
-          "old": ".toList()",
-          "new": ".collect(java.util.stream.Collectors.collectingAndThen(java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList))",
+          "old": "output.writeBytes(assembly.parts.get(index));",
+          "new": "byte[] part = assembly.parts.get(index);\n                output.write(part, 0, part.length);",
           "count": 1
         },
         {
-          "old": "output.writeBytes(assembly.parts.get(index));",
-          "new": "byte[] part = assembly.parts.get(index);\n                output.write(part, 0, part.length);",
+          "old": "assemblies.keySet().stream()\n                    .filter(key -> key.actorId().equals(actorId))\n                    .toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(assemblies.keySet().stream()\n                    .filter(key -> key.actorId().equals(actorId)))",
           "count": 1
         }
       ]
@@ -420,7 +435,7 @@
   "fixtures": [
     {
       "path": "engine-core/src/bridgeHistoryJava8Test/java/dev/openallay/bridge/protocol/BridgeHistoryJava8Fixture.java",
-      "sha256": "0cca5b8e2d63cf37082b08760cf98692573a0cabe9421ade93a8c0fd20cd2cb8"
+      "sha256": "fdd6c3b005cdc3283314de193fc1dac79ce8771148f4319f9383e19b24e73815"
     },
     {
       "path": "engine-core/src/bridgeHistoryJava8Test/java/dev/openallay/bridge/protocol/BridgeHistoryJava8Test.java",
@@ -462,5 +477,8 @@
     ]
   },
   "runner_sha256": "1cad1380492eca7382de638ec433850ab287412ad17fc0939f87e46bd73ac0d5",
-  "format_policy": "Onlyblankline trailingwhitespacecleanup afterauthenticconverter/APIops; strictactualtarget equality beforecompile."
+  "format_policy": "Onlyblankline trailingwhitespacecleanup afterauthenticconverter/APIops; strictactualtarget equality beforecompile.",
+  "admission_change": "ServerAgentHistoryContent.from(ModelContent) directly invokes the accepted canonical ModelContent.requireKnown before dispatch: foreign subtype rejection ICCE replaces existing explicitelse ICCE (actualoriginalsourceconfirmed); knownReasoning retains IllegalArgumentException. No duplicate newvalidator.",
+  "switch_policy": "Validation statement enum switch retains no default; toModelContent exhaustive expression lowering uses default IncompatibleClassChangeError matching compiler exhausted enum boundary.",
+  "hash_oracle_policy": "Hash invariants are calculated within eachVM fromfieldvalues with0seed. Enum/objectidentity hashes are nevercompared asrawcrossVMreports; exactstablefieldJSON/vector bytes remainoracle."
 }
