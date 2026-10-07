@@ -1,6 +1,6 @@
 {
   "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
-  "patch_sha256": "ae7d72ef886b2aca9fff9158338d752bc84178c0b365fbcf0be3b921db6d5bb4",
+  "patch_sha256": "4cafc954890b175e18936698f7e14166b5d29e61580950273ec10850537a35fa",
   "files": [
     {
       "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
@@ -1071,6 +1071,10 @@
         {
           "before": "\t@Override\n\tpublic Set<Class<?>> getContainedComponentClasses() {\n\t\tif (typeSet == null) {\n\t\t\ttypeSet = Set.of(type);\n\t\t}\n\n\t\treturn typeSet;\n",
           "after": "\t@Override\n\tpublic Set<Class<?>> getContainedComponentClasses() {\n\t\tif (typeSet == null) {\n\t\t\ttypeSet = ListCompat.setOf(type);\n\t\t}\n\n\t\treturn typeSet;\n"
+        },
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object o) {\n\t\treturn o == this || o instanceof ClassTypeInfo t && type == t.type;\n\t}\n\n\t@Override\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object o) {\n\t\treturn o == this || o instanceof ClassTypeInfo && type == ((ClassTypeInfo) o).type;\n\t}\n\n\t@Override\n"
         }
       ]
     },
@@ -1401,6 +1405,10 @@
         {
           "before": "\n\t@Override\n\tprotected TypeInfo consolidateImpl(@NotNull Map<VariableTypeInfo, TypeInfo> mapping) {\n\t\tvar consolidatedComponent = component.consolidate(mapping);\n\t\tif (consolidatedComponent == component) {\n\t\t\treturn this;\n\t\t}\n",
           "after": "\n\t@Override\n\tprotected TypeInfo consolidateImpl(@NotNull Map<VariableTypeInfo, TypeInfo> mapping) {\n\t\tdev.latvian.mods.rhino.type.TypeInfo consolidatedComponent = component.consolidate(mapping);\n\t\tif (consolidatedComponent == component) {\n\t\t\treturn this;\n\t\t}\n"
+        },
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\treturn obj == this || obj instanceof ArrayTypeInfo t && component.equals(t.component);\n\t}\n\n\t@Override\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\treturn obj == this || obj instanceof ArrayTypeInfo && component.equals(((ArrayTypeInfo) obj).component);\n\t}\n\n\t@Override\n"
         }
       ]
     },
@@ -1421,6 +1429,10 @@
         {
           "before": "\tpublic void collectContainedComponentClasses(Collection<Class<?>> classes) {\n\t\trawType.collectContainedComponentClasses(classes);\n\n\t\tfor (var param : params) {\n\t\t\tparam.collectContainedComponentClasses(classes);\n\t\t}\n\t}\n\n\t@Override\n\tprotected TypeInfo consolidateImpl(@NotNull Map<VariableTypeInfo, TypeInfo> mapping) {\n\t\tvar consolidatedParams = TypeConsolidator.consolidateAll(this.params, mapping);\n\t\tif (consolidatedParams == params) {\n\t\t\treturn this;\n\t\t}\n",
           "after": "\tpublic void collectContainedComponentClasses(Collection<Class<?>> classes) {\n\t\trawType.collectContainedComponentClasses(classes);\n\n\t\tfor (dev.latvian.mods.rhino.type.TypeInfo param : params) {\n\t\t\tparam.collectContainedComponentClasses(classes);\n\t\t}\n\t}\n\n\t@Override\n\tprotected TypeInfo consolidateImpl(@NotNull Map<VariableTypeInfo, TypeInfo> mapping) {\n\t\tdev.latvian.mods.rhino.type.TypeInfo[] consolidatedParams = TypeConsolidator.consolidateAll(this.params, mapping);\n\t\tif (consolidatedParams == params) {\n\t\t\treturn this;\n\t\t}\n"
+        },
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object object) {\n\t\treturn this == object || object instanceof ParameterizedTypeInfo that && params.length == that.params.length && rawType.equals(that.rawType) && Arrays.deepEquals(params, that.params);\n\t}\n\n\t@Override\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object object) {\n\t\tif (this == object) {\n\t\t\treturn true;\n\t\t}\n\t\tif (!(object instanceof ParameterizedTypeInfo)) {\n\t\t\treturn false;\n\t\t}\n\t\tParameterizedTypeInfo that = (ParameterizedTypeInfo) object;\n\t\treturn params.length == that.params.length && rawType.equals(that.rawType) && Arrays.deepEquals(params, that.params);\n\t}\n\n\t@Override\n"
         }
       ]
     },
@@ -1609,6 +1621,56 @@
         {
           "before": "\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tvar rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tvar componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n",
           "after": "\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tjava.lang.reflect.Type rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tjava.lang.reflect.Type componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/ResolvedOverload.java",
+      "old_path": "dev/latvian/mods/rhino/ResolvedOverload.java",
+      "hunks": [
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object other) {\n\t\tif (!(other instanceof ResolvedOverload ovl)) {\n\t\t\treturn false;\n\t\t}\n\t\treturn Arrays.equals(types, ovl.types) && index == ovl.index;\n\t}\n\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object other) {\n\t\tif (!(other instanceof ResolvedOverload)) {\n\t\t\treturn false;\n\t\t}\n\t\tResolvedOverload ovl = (ResolvedOverload) other;\n\t\treturn Arrays.equals(types, ovl.types) && index == ovl.index;\n\t}\n\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeJavaArray.java",
+      "old_path": "dev/latvian/mods/rhino/NativeJavaArray.java",
+      "hunks": [
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\treturn (obj instanceof NativeJavaArray other) && Objects.equals(other.array, array);\n\t}\n\n\t@Override\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\treturn (obj instanceof NativeJavaArray) && Objects.equals(((NativeJavaArray) obj).array, array);\n\t}\n\n\t@Override\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/Wrapper.java",
+      "old_path": "dev/latvian/mods/rhino/Wrapper.java",
+      "hunks": [
+        {
+          "before": "public interface Wrapper {\n\n\tstatic Object unwrapped(Object o) {\n\t\treturn o instanceof Wrapper w ? unwrapped(w.unwrap()) : o;\n\t}\n\n\t/**\n",
+          "after": "public interface Wrapper {\n\n\tstatic Object unwrapped(Object o) {\n\t\treturn o instanceof Wrapper ? unwrapped(((Wrapper) o).unwrap()) : o;\n\t}\n\n\t/**\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/classfile/ConstantEntry.java",
+      "old_path": "dev/latvian/mods/rhino/classfile/ConstantEntry.java",
+      "hunks": [
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\tif (!(obj instanceof ConstantEntry entry)) {\n\t\t\treturn false;\n\t\t}\n\t\tif (type != entry.type) {\n\t\t\treturn false;\n\t\t}\n\t\treturn switch (type) {\n\t\t\tcase ConstantPool.CONSTANT_Integer, ConstantPool.CONSTANT_Float -> intval == entry.intval;\n\t\t\tcase ConstantPool.CONSTANT_Long, ConstantPool.CONSTANT_Double -> longval == entry.longval;\n\t\t\tcase ConstantPool.CONSTANT_NameAndType -> str1.equals(entry.str1) && str2.equals(entry.str2);\n\t\t\tcase ConstantPool.CONSTANT_InvokeDynamic -> intval == entry.intval && str1.equals(entry.str1) && str2.equals(entry.str2);\n\t\t\tdefault -> throw new RuntimeException(\"unsupported constant type\");\n\t\t};\n\t}\n}\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\tif (!(obj instanceof ConstantEntry)) {\n\t\t\treturn false;\n\t\t}\n\t\tConstantEntry entry = (ConstantEntry) obj;\n\t\tif (type != entry.type) {\n\t\t\treturn false;\n\t\t}\n\t\tswitch (type) {\n\t\t\tcase ConstantPool.CONSTANT_Integer:\n\t\t\tcase ConstantPool.CONSTANT_Float:\n\t\t\t\treturn intval == entry.intval;\n\t\t\tcase ConstantPool.CONSTANT_Long:\n\t\t\tcase ConstantPool.CONSTANT_Double:\n\t\t\t\treturn longval == entry.longval;\n\t\t\tcase ConstantPool.CONSTANT_NameAndType:\n\t\t\t\treturn str1.equals(entry.str1) && str2.equals(entry.str2);\n\t\t\tcase ConstantPool.CONSTANT_InvokeDynamic:\n\t\t\t\treturn intval == entry.intval && str1.equals(entry.str1) && str2.equals(entry.str2);\n\t\t\tdefault:\n\t\t\t\tthrow new RuntimeException(\"unsupported constant type\");\n\t\t}\n\t}\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/classfile/FieldOrMethodRef.java",
+      "old_path": "dev/latvian/mods/rhino/classfile/FieldOrMethodRef.java",
+      "hunks": [
+        {
+          "before": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\tif (!(obj instanceof FieldOrMethodRef x)) {\n\t\t\treturn false;\n\t\t}\n\t\treturn className.equals(x.className) && name.equals(x.name) && type.equals(x.type);\n\t}\n\n",
+          "after": "\n\t@Override\n\tpublic boolean equals(Object obj) {\n\t\tif (!(obj instanceof FieldOrMethodRef)) {\n\t\t\treturn false;\n\t\t}\n\t\tFieldOrMethodRef x = (FieldOrMethodRef) obj;\n\t\treturn className.equals(x.className) && name.equals(x.name) && type.equals(x.type);\n\t}\n\n"
         }
       ]
     }
