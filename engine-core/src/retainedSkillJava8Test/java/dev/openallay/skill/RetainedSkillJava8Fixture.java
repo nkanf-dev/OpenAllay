@@ -126,7 +126,9 @@ public final class RetainedSkillJava8Fixture {
         int missing=1024;
         for(int i=2047;i>=0;i--){if(i==missing)continue;ranges.add(new RetainedSkillContext.Range(key,i*4,i*4+2,8192));ranges.add(new RetainedSkillContext.Range(key,i*4+1,i*4+4,8192));}
         RetainedSkillContext.Coverage coverage=new RetainedSkillContext.Coverage(ranges);
-        for(int i=0;i<2048;i++)check(coverage.contains(key,i*4,i*4+4)==(i!=missing),"out of order interval coverage "+i);
+        boolean exactIntervals = true;
+        for(int i=0;i<2048;i++) exactIntervals &= coverage.contains(key,i*4,i*4+4)==(i!=missing);
+        check(exactIntervals,"all2048 out of order interval coverage checks");
         check(!coverage.contains(key,0,8192),"never fill missing interval");
         coverage.add(new RetainedSkillContext.Range(key,missing*4,missing*4+4,8192)); check(coverage.contains(key,0,8192),"merge actual gap bridge");
         rejects(() -> new RetainedSkillContext.Range(key,1,0,4),"range validation");
@@ -135,6 +137,11 @@ public final class RetainedSkillJava8Fixture {
         check(json.fromJson(json.toJson(input),LoadSkillTool.Input.class).equals(input),"actual schema input roundtrip");
         check(json.fromJson(json.toJson(first),LoadSkillTool.Output.class).equals(first),"actual schema output roundtrip");
         check(json.fromJson(json.toJson(manifest),SkillCatalogManifest.class).equals(manifest),"actual schema nested manifest roundtrip");
+        check(tool.descriptor().id().equals("openallay:load_skill"),"canonical tool descriptor");
+        check(first.availableReferences().equals(Collections.singletonList("references/a.md")),"exact declared references");
+        check(first.offset()==0 && first.nextOffset()==first.content().length(),"exact complete bounds");
+        check(LoadSkillTool.decodeCursor("","guide","SKILL.md",first.source(),first.fingerprint())==0,"empty cursor first range");
+        if(checks!=52) throw new AssertionError("Expected exactly52 fixture checks, got "+checks);
         report("input",input); report("output",first); report("manifest",manifest);
         report("model_text",first.modelText().replace("\n","\\n")); report("checks",checks);
         System.out.println("PASS actual retained skill context oracle");
