@@ -1367,13 +1367,11 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify baseline-corrected Context and generic type bindings
+    - name: Verify actual Date state timezone and prototype switch consumers
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.ContextConversionBindingTest --tests dev.latvian.mods.rhino.type.GenericBindingTypeTest
-        --tests dev.latvian.mods.rhino.GenericBindingInteropTest
+        --tests dev.latvian.mods.rhino.DateSwitchLanguageTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
-        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.schema.HostSchemaCatalogTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
