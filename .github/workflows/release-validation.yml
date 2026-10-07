@@ -10,7 +10,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-affected-${{ github.ref }}
+  group: release-affected-${{ github.ref }}-${{ inputs.scope }}
   cancel-in-progress: false
 jobs:
   skills-runtime:
