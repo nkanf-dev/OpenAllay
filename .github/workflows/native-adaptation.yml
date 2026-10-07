@@ -1,0 +1,654 @@
+name: Forge16 namespace tooling and new publication ABI
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        default: tooling
+        options: [tooling, abi, engine, native, pack, boot, ui, world, persistence, builder, builder-call, builder-lifecycle, builder-presets, stock1122, census1122, stock1122-bridge, stock1122-pack200, engine1122, stock1122-title, native1122, reobf1122, stock1122-objectholder, stock1122-phase-diagnostic, modern1122, component1122-pack, component1122-boot, component1122-mixin-repair, component1122-world-sdk, component1122-native-refresh, component1122-ui-manual, component1122-world-persistence, builder1122, component1122-builder-restricted, component1122-builder-partial, component1122-builder-cancel, component1122-builder-undo, component1122-engine-refresh, component1122-builder-legacy-shapes, component1122-builder-bundle, component1122-builder-bundled-shapes, release-prep16, release-prep12]
+permissions:
+  contents: read
+concurrency:
+  group: forge16165-focused-tooling-${{ github.ref }}-${{ inputs.mode }}
+  cancel-in-progress: false
+jobs:
+  focused-tooling-publication:
+    if: inputs.mode == 'tooling' || inputs.mode == 'abi'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21.0.10+7.0.LTS'
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '17.0.18+8'
+      - name: Resolve actual FG host; accept focused tooling; capture only new ABI
+        run: python3 -B scripts/forge16165-engine-prerequisite/focused-tooling-acceptance.py --output "$PWD/build/forge16165-focused-tooling-report" ${{ inputs.mode == 'abi' && '--pending-bodies' || '' }}
+      - name: Retain tiny text evidence, never game or library binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-focused-tooling-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: build/forge16165-focused-tooling-report/
+
+  changed-engine:
+    if: inputs.mode == 'engine'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21.0.10+7.0.LTS'
+      - name: Rebuild changed engine only and test custody call chains
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/forge16165-engine-prerequisite/build-changed-engine.py
+      - name: Retain new engine once
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-effective-engine-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: build/forge36-shared/
+      - name: Retain focused test and producer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-engine-evidence-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            native-builds/engine-only/engine-core/build/test-results/
+            native-builds/engine-only/engine-core/build/reports/tests/
+            native-builds/engine-only/engine-core/build/engine-source-inputs.json
+            build/changed-engine/receipt.json
+
+  native-product:
+    if: inputs.mode == 'native'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: false
+      - name: Compile the real native source union once
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/build-forge16165-native.py
+      - name: Retain native compile and mapping evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-native-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            native-builds/forge16165/build/native-tooling/
+            native-builds/forge16165/build/namespace/
+            native-builds/forge16165/build/native-metadata/
+            native-builds/forge16165/build/native-ap/
+            native-builds/forge16165/build/libs/
+            build/forge16165-native-report/
+
+  pack-product:
+    if: inputs.mode == 'pack'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Pack retained native and engine bytes without build replay
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/run-forge16165-pack-only.py
+      - name: Retain product once
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-product-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: build/forge16165-product/
+      - name: Retain packaging evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-pack-evidence-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge16165-pack-inputs/*.json
+            build/forge16165-pack-inputs/postprocessed/*.json
+            build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.json
+            build/forge16165-pack-inputs/source/build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+
+  product-native-boot:
+    if: inputs.mode == 'boot' || inputs.mode == 'ui' || inputs.mode == 'world' || inputs.mode == 'persistence' || inputs.mode == 'builder-call'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Install isolated display and screenshot support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/acceptance-tools
+          build/acceptance-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Boot the actual product once with required Mixin bindings
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py ${{ inputs.mode == 'builder-call' && '--builder-call' || inputs.mode == 'ui' && '--ui' || inputs.mode == 'persistence' || inputs.mode == 'builder-call' && '--persistence' || inputs.mode == 'world' && '--world' || '' }}
+      - name: Retain actual product/native evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-product-boot-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/e2e/forge16165-product/*.json
+            build/e2e/forge16165-product/*.log
+            build/e2e/forge16165-product/*.png
+            build/e2e/forge16165-product/game/logs/
+            build/e2e/forge16165-product/game/crash-reports/
+            build/e2e/forge16165-product-ui/*.json
+            build/e2e/forge16165-product-ui/*.log
+            build/e2e/forge16165-product-ui/*.png
+            build/e2e/forge16165-product-ui/screenshots/
+            build/e2e/forge16165-product-ui/game/logs/
+            build/e2e/forge16165-product-ui/game/crash-reports/
+
+            build/e2e/forge16165-product-builder/*.json
+            build/e2e/forge16165-product-builder/*.log
+            build/e2e/forge16165-product-builder/*.png
+            build/e2e/forge16165-product-builder/game/logs/
+            build/e2e/forge16165-product-builder/game/crash-reports/
+            build/e2e/forge16165-product-world/*.json
+            build/e2e/forge16165-product-world/*.log
+            build/e2e/forge16165-product-world/*.png
+            build/e2e/forge16165-product-world/game/logs/
+            build/e2e/forge16165-product-world/game/crash-reports/
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+
+  builder-candidate:
+    if: inputs.mode == 'builder' || inputs.mode == 'builder1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - name: Build only the changed Builder candidate declaration
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/build-forge16165-builder-candidate.py ${{ inputs.mode == 'builder1122' && '--target 1.12.2' || '' }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: ${{ inputs.mode }}-builder-candidate-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge16165-builder-candidate/builder-candidate.jar
+            build/forge16165-builder-candidate/builder-candidate.json
+            build/forge1122-builder-candidate/builder-candidate.jar
+            build/forge1122-builder-candidate/builder-candidate.json
+
+  builder-native-lifecycle:
+    if: inputs.mode == 'builder-lifecycle'
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [partial, cancel, undo]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Install isolated display and screenshot support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/acceptance-tools
+          build/acceptance-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Boot the actual product once with required Mixin bindings
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py --builder-call --builder-scenario ${{ matrix.scenario }}
+      - name: Retain actual product/native evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-builder-${{ matrix.scenario }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/e2e/forge16165-product/*.json
+            build/e2e/forge16165-product/*.log
+            build/e2e/forge16165-product/*.png
+            build/e2e/forge16165-product/game/logs/
+            build/e2e/forge16165-product/game/crash-reports/
+            build/e2e/forge16165-product-ui/*.json
+            build/e2e/forge16165-product-ui/*.log
+            build/e2e/forge16165-product-ui/*.png
+            build/e2e/forge16165-product-ui/screenshots/
+            build/e2e/forge16165-product-ui/game/logs/
+            build/e2e/forge16165-product-ui/game/crash-reports/
+
+            build/e2e/forge16165-product-builder/*.json
+            build/e2e/forge16165-product-builder/*.log
+            build/e2e/forge16165-product-builder/*.png
+            build/e2e/forge16165-product-builder/game/logs/
+            build/e2e/forge16165-product-builder/game/crash-reports/
+            build/e2e/forge16165-product-world/*.json
+            build/e2e/forge16165-product-world/*.log
+            build/e2e/forge16165-product-world/*.png
+            build/e2e/forge16165-product-world/game/logs/
+            build/e2e/forge16165-product-world/game/crash-reports/
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+
+  builder-native-presets:
+    if: inputs.mode == 'builder-presets'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Install isolated display and screenshot support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/acceptance-tools
+          build/acceptance-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Boot the actual product once with required Mixin bindings
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py --builder-call --builder-scenario acceptance --builder-reload --bundled-builder --product-inputs native-builds/forge16165/preset-product-inputs.json
+      - name: Retain actual product/native evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-builder-presets-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/e2e/forge16165-product/*.json
+            build/e2e/forge16165-product/*.log
+            build/e2e/forge16165-product/*.png
+            build/e2e/forge16165-product/game/logs/
+            build/e2e/forge16165-product/game/crash-reports/
+            build/e2e/forge16165-product-ui/*.json
+            build/e2e/forge16165-product-ui/*.log
+            build/e2e/forge16165-product-ui/*.png
+            build/e2e/forge16165-product-ui/screenshots/
+            build/e2e/forge16165-product-ui/game/logs/
+            build/e2e/forge16165-product-ui/game/crash-reports/
+
+            build/e2e/forge16165-product-builder/*.json
+            build/e2e/forge16165-product-builder/*.log
+            build/e2e/forge16165-product-builder/*.png
+            build/e2e/forge16165-product-builder/game/logs/
+            build/e2e/forge16165-product-builder/game/crash-reports/
+            build/e2e/forge16165-product-world/*.json
+            build/e2e/forge16165-product-world/*.log
+            build/e2e/forge16165-product-world/*.png
+            build/e2e/forge16165-product-world/game/logs/
+            build/e2e/forge16165-product-world/game/crash-reports/
+            build/e2e/runtime/forge16165-stock/minecraft/.provision/*.log
+
+  stock1122-java17-prerequisite:
+    if: inputs.mode == 'stock1122' || inputs.mode == 'stock1122-bridge' || inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title' || inputs.mode == 'stock1122-objectholder' || inputs.mode == 'stock1122-phase-diagnostic'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        if: inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title' || inputs.mode == 'stock1122-objectholder' || inputs.mode == 'stock1122-phase-diagnostic'
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - name: Capture immutable build-only JDK8 path before runtime JDK17 setup
+        if: inputs.mode == 'stock1122-pack200' || inputs.mode == 'stock1122-title' || inputs.mode == 'stock1122-objectholder' || inputs.mode == 'stock1122-phase-diagnostic'
+        run: printf 'OPENALLAY_PACK200_JAVA8_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Install isolated stock client display support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth x11-xserver-utils libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/stock1122-tools
+          build/stock1122-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Provision official Forge14 and capture selected Java17 startup
+        run: >-
+          xvfb-run -a -s '-screen 0 1280x960x24'
+          build/stock1122-tools/bin/python -B scripts/forge1122-runtime-prerequisite/stock-forge1122-prerequisite.py
+          --repo "$PWD" --java "$JAVA_HOME/bin/java" --java-release '17.0.18+8'
+          --minecraft-root "$PWD/build/e2e/runtime/forge1122-stock/minecraft"
+          --output "$PWD/build/e2e/forge1122-stock"
+          ${{ inputs.mode == 'stock1122-phase-diagnostic' && '--objectholder-phase-diagnostic' || inputs.mode == 'stock1122-objectholder' && '--objectholder-bridge' || inputs.mode == 'stock1122-title' && '--title-only' || inputs.mode == 'stock1122-pack200' && '--pack200-bridge' || inputs.mode == 'stock1122-bridge' && '--launchwrapper-bridge' || '' }}
+      - name: Retain only stock startup and source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-${{ inputs.mode }}-java17-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/e2e/forge1122-stock/*.json
+            build/e2e/forge1122-stock/*.log
+            build/e2e/forge1122-stock/*.png
+            build/e2e/forge1122-stock/*.tsv
+            build/e2e/forge1122-stock/*.jsonl
+            build/e2e/forge1122-stock/objectholder-rejected/
+            build/e2e/forge1122-stock/bridge-tests.log
+            build/e2e/forge1122-stock/game/logs/
+            build/e2e/forge1122-stock/game/crash-reports/
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.json
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
+
+  native1122-census:
+    if: inputs.mode == 'census1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '17.0.18+8'
+      - name: Preserve exact metadata JDK17 path
+        run: echo "CENSUS_JAVAP=$JAVA_HOME/bin/javap" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '8.0.482+8'
+      - name: Export one normal FG3 named input island; inventory only
+        run: python3 -B scripts/run-forge1122-native-census.py --workspace "$RUNNER_TEMP/forge1122-tool" --output "$RUNNER_TEMP/forge1122-census" --javap "$CENSUS_JAVAP"
+      - name: Retain bounded text evidence, not game binaries or caches
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-native-census-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/forge1122-census/
+
+  changed-engine1122:
+    if: inputs.mode == 'engine1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - name: Build changed neutral engine seams and focused fixtures only
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/build-forge1122-changed-engine.py
+      - name: Retain changed engine and focused evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-changed-engine-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-changed-engine/*.json
+            build/forge1122-changed-engine/*.log
+            build/forge36-shared/
+            native-builds/engine-only/engine-core/build/test-results/
+            native-builds/engine-only/engine-core/build/reports/tests/
+
+  native1122-application:
+    if: inputs.mode == 'native1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Capture immutable application JDK17 path before legacy build JDK8 setup
+        run: printf 'OPENALLAY_NATIVE_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Compile native Java17 against the exact stock named FG3 island
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/build-forge1122-native.py
+      - name: Retain concrete diagnostics and supplementary API even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-native-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-native-report/
+            ${{ runner.temp }}/forge1122-native-inputs/*.json
+            ${{ runner.temp }}/forge1122-native-inputs/*.log
+            ${{ runner.temp }}/forge1122-native/*.json
+            ${{ runner.temp }}/forge1122-native/*.properties
+            ${{ runner.temp }}/forge1122-native/*.txt
+            ${{ runner.temp }}/forge1122-native/*.tsv
+            ${{ runner.temp }}/forge1122-native/supplement/
+            ${{ runner.temp }}/forge1122-native/ap/
+            ${{ runner.temp }}/forge1122-native/jar/
+
+
+  affected-modern-native1122:
+    if: inputs.mode == 'modern1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Compile shared modern native code and test affected UI and voice fixtures only
+        run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :common:test --tests dev.openallay.client.gui.GuideLegacyButtonDispatchTest -x :engine-core:test -x :runtime-maven:test
+      - name: Retain affected representative compile and test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-affected-modern-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            common/build/test-results/
+            common/build/reports/tests/
+            adapters/minecraft/build/test-results/
+            adapters/minecraft/build/reports/tests/
+
+  native1122-retained-reobf:
+    if: inputs.mode == 'reobf1122'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Normal FG3 reobf only; preserve accepted Java17 native input
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/run-forge1122-reobf-only.py
+      - name: Retain normal reobf custody and product native jar
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-reobf-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-reobf-report/
+            native-builds/forge1122-reobf/build/createMcpToSrg/output.srg
+            native-builds/forge1122-reobf/build/reobfJar/log.txt
+            ${{ runner.temp }}/forge1122-reobf/
+
+  component1122-pack:
+    if: inputs.mode == 'component1122-pack' || inputs.mode == 'component1122-mixin-repair' || inputs.mode == 'component1122-native-refresh' || inputs.mode == 'component1122-engine-refresh' || inputs.mode == 'component1122-builder-bundle'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - name: Capture immutable component Gradle tool JDK21
+        run: printf 'OPENALLAY_COMPONENT_JAVA21_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Capture immutable application JDK17
+        run: printf 'OPENALLAY_COMPONENT_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Pack provider-verified retained bytes and census genuine private Mixin
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B ${{ inputs.mode == 'component1122-builder-bundle' && 'scripts/bundle-forge1122-builder.py' || inputs.mode == 'component1122-engine-refresh' && 'scripts/refresh-forge1122-component-engine.py' || inputs.mode == 'component1122-native-refresh' && 'scripts/refresh-forge1122-component-native.py' || inputs.mode == 'component1122-mixin-repair' && 'scripts/repair-forge1122-private-mixin.py' || 'scripts/run-forge1122-component.py' }}
+      - name: Retain component artifacts once
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-component-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-component-product/
+            build/forge1122-component-report/
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.json
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
+
+  component1122-boot:
+    if: inputs.mode == 'component1122-boot' || inputs.mode == 'component1122-world-sdk' || inputs.mode == 'component1122-ui-manual' || inputs.mode == 'component1122-world-persistence' || (startsWith(inputs.mode, 'component1122-builder-') && inputs.mode != 'component1122-builder-bundle')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - name: Capture immutable build-only JDK8 converter
+        run: printf 'OPENALLAY_PACK200_JAVA8_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: Capture immutable component runtime JDK17
+        run: printf 'OPENALLAY_COMPONENT_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Install real isolated display utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth x11-xserver-utils libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+          python3 -m venv build/stock1122-tools
+          build/stock1122-tools/bin/python -m pip install Pillow==11.3.0
+      - name: Install actual owned-window focus support
+        if: inputs.mode == 'component1122-ui-manual'
+        run: sudo apt-get install -y xdotool openbox
+      - name: Boot retained actual component once; verify only new capability and loader boundaries
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: >-
+          xvfb-run -a -s '-screen 0 1280x960x24'
+          build/stock1122-tools/bin/python -B scripts/boot-forge1122-component.py
+          --product-pin native-builds/forge1122-component/accepted-product-provider.json
+          ${{ inputs.mode == 'component1122-builder-restricted' && '--builder-scenario restricted --applied-bindings' || inputs.mode == 'component1122-builder-partial' && '--builder-scenario partial --applied-bindings' || inputs.mode == 'component1122-builder-cancel' && '--builder-scenario cancel --applied-bindings' || inputs.mode == 'component1122-builder-bundled-shapes' && '--builder-scenario legacy-shapes --bundled-builder --applied-bindings' || inputs.mode == 'component1122-builder-legacy-shapes' && '--builder-scenario legacy-shapes --applied-bindings' || inputs.mode == 'component1122-builder-undo' && '--builder-scenario undo --applied-bindings' || inputs.mode == 'component1122-world-persistence' && '--world-persistence --applied-bindings' || inputs.mode == 'component1122-ui-manual' && '--ui-manual --applied-bindings' || inputs.mode == 'component1122-world-sdk' && '--world-sdk --applied-bindings' || '' }}
+      - name: Retain component startup proof and exact rejected inputs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-component-boot-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-component-boot-report/
+            build/e2e/forge1122-component/*.json
+            build/e2e/forge1122-component/*.jsonl
+            build/e2e/forge1122-component/*.log
+            build/e2e/forge1122-component/*.tsv
+            build/e2e/forge1122-component/*.png
+            build/e2e/forge1122-component/frames/
+            build/e2e/forge1122-component/persist/*.json
+            build/e2e/forge1122-component/persist/*.jsonl
+            build/e2e/forge1122-component/persist/*.tsv
+            build/e2e/forge1122-component/persist/*.log
+            build/e2e/forge1122-component/reload/*.json
+            build/e2e/forge1122-component/reload/*.jsonl
+            build/e2e/forge1122-component/reload/*.tsv
+            build/e2e/forge1122-component/reload/*.log
+            build/e2e/forge1122-component/objectholder-rejected/
+            build/e2e/forge1122-component/capability-rejected/
+            build/e2e/forge1122-component/dimension-phase/
+            build/e2e/forge1122-component/game/logs/
+            build/e2e/forge1122-component/game/crash-reports/
+            build/e2e/forge1122-component/game/config/openallay-builder/templates/openallay_e2e_legacy_mirror_diagnostic.json
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.json
+            build/e2e/runtime/forge1122-stock/minecraft/.provision/*.log
+
+  legacy-release-inputs:
+    if: inputs.mode == 'release-prep16' || inputs.mode == 'release-prep12'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Prepare actual current legacy release bytes through central recipe
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: >-
+          python3 -B scripts/build-minecraft-artifacts.py build-and-stage
+          build/legacy-release-stage/${{ inputs.mode == 'release-prep16' && '1.16.5' || '1.12.2' }}
+          --target '${{ inputs.mode == 'release-prep16' && '1.16.5' || '1.12.2' }}'
+          --families '${{ inputs.mode == 'release-prep16' && 'forge-1.16.5' || 'forge-1.12.2' }}'
+      - name: Retain current product and exact stage receipts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: legacy-release-${{ inputs.mode }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: build/legacy-release-stage/
+      - name: Retain input/producer diagnosis without game files
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: legacy-release-input-evidence-${{ inputs.mode }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/legacy-release-inputs/*/*.json
+            build/legacy-release-inputs/*/*.log
+            native-builds/forge16165/build/native-metadata/
+            native-builds/forge16165/build/namespace/*.json
+            ${{ runner.temp }}/legacy-release-native-*/*/*.json
