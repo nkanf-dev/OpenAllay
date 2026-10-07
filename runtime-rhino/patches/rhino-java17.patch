@@ -84,13 +84,69 @@
 +		@Override
 +		public String toString() {
 +			return "ElementComparator[child=" + child + "]";
---- a/dev/latvian/mods/rhino/CachedParameters.java
-+++ b/dev/latvian/mods/rhino/CachedParameters.java
+--- a/dev/latvian/mods/rhino/CachedClassInfo.java
++++ b/dev/latvian/mods/rhino/CachedClassInfo.java
 @@ -1,0 +2,2 @@
 +
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -71 +73 @@
+-			remapPrefixes = Set.copyOf(remapPrefixes);
++			remapPrefixes = ListCompat.copySet(remapPrefixes);
+@@ -95 +97 @@
+-			interfaces = List.copyOf(il);
++			interfaces = ListCompat.copyList(il);
+@@ -106 +108 @@
+-				return constructors = List.of();
++				return constructors = ListCompat.listOf();
+@@ -123 +125 @@
+-			constructors = List.copyOf(list);
++			constructors = ListCompat.copyList(list);
+@@ -134 +136 @@
+-				return declaredFields = List.of();
++				return declaredFields = ListCompat.listOf();
+@@ -171 +173 @@
+-			declaredFields = List.copyOf(list);
++			declaredFields = ListCompat.copyList(list);
+@@ -182 +184 @@
+-				return declaredMethods = List.of();
++				return declaredMethods = ListCompat.listOf();
+@@ -208 +210 @@
+-			declaredMethods = List.copyOf(list);
++			declaredMethods = ListCompat.copyList(list);
+@@ -250 +252 @@
+-			list = List.copyOf(map.values());
++			list = ListCompat.copyList(map.values());
+@@ -319 +321 @@
+-			list = List.copyOf(map.values());
++			list = ListCompat.copyList(map.values());
+@@ -362 +364 @@
+-			builder.append("[]".repeat(arr));
++			builder.append(ListCompat.repeat("[]", arr));
+@@ -378 +380 @@
+-			clName.append("[]".repeat(array));
++			clName.append(ListCompat.repeat("[]", array));
+--- a/dev/latvian/mods/rhino/CachedExecutableInfo.java
++++ b/dev/latvian/mods/rhino/CachedExecutableInfo.java
+@@ -1,0 +2,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -68 +70 @@
+-				v = parameters = new CachedParameters(tc.length, List.of(tc), List.of(ti), fcx, varArgs ? ti[ti.length - 1].componentType() : null);
++				v = parameters = new CachedParameters(tc.length, ListCompat.listOf(tc), ListCompat.listOf(ti), fcx, varArgs ? ti[ti.length - 1].componentType() : null);
+@@ -105 +107 @@
+-		return parent.getTypeInfo() + "#" + originalName + "(" + ".".repeat(parameterCount) + ")";
++		return parent.getTypeInfo() + "#" + originalName + "(" + ListCompat.repeat(".", parameterCount) + ")";
+--- a/dev/latvian/mods/rhino/CachedParameters.java
++++ b/dev/latvian/mods/rhino/CachedParameters.java
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
++
 +import java.util.Objects;
-@@ -8 +10,41 @@
+@@ -8,3 +12,43 @@
 -public record CachedParameters(int count, List<Class<?>> types, List<TypeInfo> typeInfos, boolean firstArgContext, @Nullable TypeInfo varArgType) {
+-	public static final CachedParameters EMPTY = new CachedParameters(0, List.of(), List.of(), false, null);
+-	public static final CachedParameters EMPTY_FIRST_CX = new CachedParameters(0, List.of(), List.of(), true, null);
 +public final class CachedParameters {
 +	private final int count;
 +
@@ -132,7 +188,9 @@
 +		return varArgType;
 +	}
 +
-@@ -28,0 +71,25 @@
++	public static final CachedParameters EMPTY = new CachedParameters(0, ListCompat.listOf(), ListCompat.listOf(), false, null);
++	public static final CachedParameters EMPTY_FIRST_CX = new CachedParameters(0, ListCompat.listOf(), ListCompat.listOf(), true, null);
+@@ -28,0 +73,25 @@
 +
 +	@Override
 +	public boolean equals(Object other) {
@@ -160,7 +218,10 @@
 +	}
 --- a/dev/latvian/mods/rhino/Context.java
 +++ b/dev/latvian/mods/rhino/Context.java
-@@ -167,5 +167,6 @@
+@@ -9,0 +10,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -167,5 +169,6 @@
 -		switch (e) {
 -			case Error err -> throw err; // special handling of Error so scripts would not catch them
 -			case RhinoException err -> throw err;
@@ -172,7 +233,7 @@
 +			throw err;
 +		}
 +		throw new WrappedException(cx, e);
-@@ -1323,10 +1324,15 @@
+@@ -1323,10 +1326,15 @@
 -		return switch (value) {
 -			case NativeArray array -> ArrayValueProvider.fromNativeArray(array);
 -			// special casing this because it can wrap i.e. sets as well
@@ -198,7 +259,10 @@
 +			return ArrayValueProvider.fromIterable(itr);
 +		}
 +		return value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);
-@@ -1571,6 +1577,8 @@
+@@ -1422 +1430 @@
+-					return Map.of();
++					return ListCompat.mapOf();
+@@ -1571,6 +1579,8 @@
 -			return switch (from) {
 -				case NativeJavaClass ignore -> JSTYPE_JAVA_CLASS;
 -				case NativeJavaArray ignore -> JSTYPE_JAVA_ARRAY;
@@ -336,7 +400,10 @@
 +		return ListCompat.getFirst(list);
 --- a/dev/latvian/mods/rhino/NativeGSON.java
 +++ b/dev/latvian/mods/rhino/NativeGSON.java
-@@ -31,10 +31,16 @@
+@@ -7,0 +8,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -31,10 +33,16 @@
 -		return switch (v) {
 -			case null -> JsonNull.INSTANCE;
 -			case JsonElement json -> json;
@@ -363,14 +430,14 @@
 +			return numberPrimitive(ScriptRuntime.toNumber(cx, v));
 +		} else if (v instanceof NativeObject obj) {
 +			var json = new JsonObject();
-@@ -42,3 +48,3 @@
+@@ -42,3 +50,3 @@
 -				for (Object id : obj.getIds(cx)) {
 -					Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);
 -					value = Wrapper.unwrapped(value);
 +			for (Object id : obj.getIds(cx)) {
 +				Object value = id instanceof Integer index ? obj.get(cx, index, obj) : obj.get(cx, String.valueOf(id), obj);
 +				value = Wrapper.unwrapped(value);
-@@ -46,5 +52,2 @@
+@@ -46,5 +54,2 @@
 -					if (doesNotSerialize(value)) {
 -						continue;
 -					}
@@ -378,13 +445,13 @@
 -					json.add(String.valueOf(id), stringify0(cx, value));
 +				if (doesNotSerialize(value)) {
 +					continue;
-@@ -53 +56 @@
+@@ -53 +58 @@
 -				yield json;
 +				json.add(String.valueOf(id), stringify0(cx, value));
-@@ -55,2 +57,0 @@
+@@ -55,2 +59,0 @@
 -			case Map<?, ?> map -> {
 -				var json = new JsonObject();
-@@ -58,4 +59,7 @@
+@@ -58,4 +61,7 @@
 -				for (var entry : map.entrySet()) {
 -					if (!doesNotSerialize(entry.getValue())) {
 -						json.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));
@@ -396,9 +463,9 @@
 +			for (var entry : map.entrySet()) {
 +				if (!doesNotSerialize(entry.getValue())) {
 +					json.add(entry.getKey().toString(), stringify0(cx, entry.getValue()));
-@@ -62,0 +67 @@
+@@ -62,0 +69 @@
 +			}
-@@ -64 +69,6 @@
+@@ -64 +71,6 @@
 -				yield json;
 +			return json;
 +		} else if (v instanceof Iterable<?> itr) {
@@ -406,10 +473,10 @@
 +
 +			for (var o : itr) {
 +				json.add(stringify0(cx, o));
-@@ -66,2 +75,0 @@
+@@ -66,2 +77,0 @@
 -			case Iterable<?> itr -> {
 -				var json = new JsonArray();
-@@ -69,13 +77,7 @@
+@@ -69,13 +79,7 @@
 -				for (var o : itr) {
 -					json.add(stringify0(cx, o));
 -				}
@@ -430,6 +497,9 @@
 +		var json = new JsonArray();
 +		cx.getCachedClassStorage(false).get(Wrapper.unwrapped(v).getClass()).getDebugInfo().forEach(json::add);
 +		return json;
+@@ -117 +121 @@
+-			indent = (gapLength > 0) ? " ".repeat(gapLength) : "";
++			indent = (gapLength > 0) ? ListCompat.repeat(" ", gapLength) : "";
 --- a/dev/latvian/mods/rhino/NativeJavaClass.java
 +++ b/dev/latvian/mods/rhino/NativeJavaClass.java
 @@ -7,0 +8,2 @@
@@ -541,12 +611,30 @@
 @@ -108 +110 @@
 -		return labels.getFirst();
 +		return ListCompat.getFirst(labels);
---- a/dev/latvian/mods/rhino/type/JSBasicConstantTypeInfo.java
-+++ b/dev/latvian/mods/rhino/type/JSBasicConstantTypeInfo.java
+--- a/dev/latvian/mods/rhino/type/ClassTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/ClassTypeInfo.java
 @@ -1,0 +2,2 @@
 +
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -91 +93 @@
+-			typeSet = Set.of(type);
++			typeSet = ListCompat.setOf(type);
+--- a/dev/latvian/mods/rhino/type/EnumTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/EnumTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -36 +38 @@
+-			constants = List.of(asClass().getEnumConstants());
++			constants = ListCompat.listOf(asClass().getEnumConstants());
+--- a/dev/latvian/mods/rhino/type/JSBasicConstantTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSBasicConstantTypeInfo.java
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
++
 +import java.util.Objects;
-@@ -7 +9,11 @@
+@@ -7 +11,11 @@
 -public record JSBasicConstantTypeInfo(String value) implements TypeInfo {
 +public final class JSBasicConstantTypeInfo implements TypeInfo {
 +	private final String value;
@@ -559,7 +647,10 @@
 +		return value;
 +	}
 +
-@@ -35,0 +48,16 @@
+@@ -34 +48,17 @@
+-		return Set.of();
++		return ListCompat.setOf();
++	}
 +
 +	@Override
 +	public boolean equals(Object other) {
@@ -575,7 +666,6 @@
 +		int hash = 0;
 +		hash = 31 * hash + Objects.hashCode(value);
 +		return hash;
-+	}
 --- a/dev/latvian/mods/rhino/type/JSFixedArrayTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSFixedArrayTypeInfo.java
 @@ -1,0 +2,2 @@
@@ -665,10 +755,12 @@
 +	}
 --- a/dev/latvian/mods/rhino/type/JSNumberConstantTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSNumberConstantTypeInfo.java
-@@ -1,0 +2,2 @@
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
 +
 +import java.util.Objects;
-@@ -7 +9,11 @@
+@@ -7 +11,11 @@
 -public record JSNumberConstantTypeInfo(Number number) implements TypeInfo {
 +public final class JSNumberConstantTypeInfo implements TypeInfo {
 +	private final Number number;
@@ -681,7 +773,10 @@
 +		return number;
 +	}
 +
-@@ -30,0 +43,16 @@
+@@ -29 +43,17 @@
+-		return Set.of();
++		return ListCompat.setOf();
++	}
 +
 +	@Override
 +	public boolean equals(Object other) {
@@ -697,13 +792,14 @@
 +		int hash = 0;
 +		hash = 31 * hash + Objects.hashCode(number);
 +		return hash;
-+	}
 --- a/dev/latvian/mods/rhino/type/JSObjectTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSObjectTypeInfo.java
-@@ -1,0 +2,2 @@
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
 +
 +import java.util.Objects;
-@@ -7 +9,11 @@
+@@ -7 +11,11 @@
 -public record JSObjectTypeInfo(List<JSOptionalParam> fields) implements TypeInfo {
 +public final class JSObjectTypeInfo implements TypeInfo {
 +	private final List<JSOptionalParam> fields;
@@ -716,13 +812,22 @@
 +		return fields;
 +	}
 +
-@@ -36 +48 @@
+@@ -9 +23 @@
+-		return new JSObjectTypeInfo(List.of(field));
++		return new JSObjectTypeInfo(ListCompat.listOf(field));
+@@ -13 +27 @@
+-		return new JSObjectTypeInfo(List.of(field1, field2));
++		return new JSObjectTypeInfo(ListCompat.listOf(field1, field2));
+@@ -17 +31 @@
+-		return new JSObjectTypeInfo(List.of(fields));
++		return new JSObjectTypeInfo(ListCompat.listOf(fields));
+@@ -36 +50 @@
 -		for (var field : fields) {
 +		for (JSOptionalParam field : fields) {
-@@ -52 +64 @@
+@@ -52 +66 @@
 -		for (var field : fields) {
 +		for (JSOptionalParam field : fields) {
-@@ -55,0 +68,16 @@
+@@ -55,0 +70,16 @@
 +
 +	@Override
 +	public boolean equals(Object other) {
@@ -794,10 +899,12 @@
 +	}
 --- a/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
-@@ -1,0 +2,2 @@
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
 +
 +import java.util.Objects;
-@@ -8 +10,11 @@
+@@ -8 +12,11 @@
 -public record JSOrTypeInfo(List<TypeInfo> types) implements TypeInfo {
 +public final class JSOrTypeInfo implements TypeInfo {
 +	private final List<TypeInfo> types;
@@ -810,20 +917,26 @@
 +		return types;
 +	}
 +
-@@ -16,2 +28,4 @@
+@@ -16,2 +30,4 @@
 -		if (info instanceof JSOrTypeInfo(List<TypeInfo> types1)) {
 -			var list = new ArrayList<TypeInfo>(types.size() + types1.size());
 +		if (info instanceof JSOrTypeInfo) {
 +			JSOrTypeInfo other = (JSOrTypeInfo) info;
 +			List<TypeInfo> types1 = other.types();
 +			List<TypeInfo> list = new ArrayList<TypeInfo>(types.size() + types1.size());
-@@ -22 +36 @@
+@@ -20 +36 @@
+-			return new JSOrTypeInfo(List.copyOf(list));
++			return new JSOrTypeInfo(ListCompat.copyList(list));
+@@ -22 +38 @@
 -			var list = new ArrayList<TypeInfo>(types.size() + 1);
 +			List<TypeInfo> list = new ArrayList<TypeInfo>(types.size() + 1);
-@@ -49 +63 @@
+@@ -25 +41 @@
+-			return new JSOrTypeInfo(List.copyOf(list));
++			return new JSOrTypeInfo(ListCompat.copyList(list));
+@@ -49 +65 @@
 -		for (var type : types) {
 +		for (TypeInfo type : types) {
-@@ -52,0 +67,16 @@
+@@ -52,0 +69,16 @@
 +
 +	@Override
 +	public boolean equals(Object other) {
@@ -842,10 +955,12 @@
 +	}
 --- a/dev/latvian/mods/rhino/type/JSStringConstantTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSStringConstantTypeInfo.java
-@@ -1,0 +2,2 @@
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
 +
 +import java.util.Objects;
-@@ -9 +11,11 @@
+@@ -9 +13,11 @@
 -public record JSStringConstantTypeInfo(String constant) implements TypeInfo {
 +public final class JSStringConstantTypeInfo implements TypeInfo {
 +	private final String constant;
@@ -858,7 +973,10 @@
 +		return constant;
 +	}
 +
-@@ -34,0 +47,16 @@
+@@ -33 +47,17 @@
+-		return Set.of();
++		return ListCompat.setOf();
++	}
 +
 +	@Override
 +	public boolean equals(Object other) {
@@ -874,7 +992,35 @@
 +		int hash = 0;
 +		hash = 31 * hash + Objects.hashCode(constant);
 +		return hash;
-+	}
+--- a/dev/latvian/mods/rhino/type/NoTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/NoTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -53 +55 @@
+-		return Set.of();
++		return ListCompat.setOf();
+--- a/dev/latvian/mods/rhino/type/RecordTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/RecordTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -33,3 +35,3 @@
+-		setGlobalDefaultValue(List.class, List.of());
+-		setGlobalDefaultValue(Set.class, Set.of());
+-		setGlobalDefaultValue(Map.class, Map.of());
++		setGlobalDefaultValue(List.class, ListCompat.listOf());
++		setGlobalDefaultValue(Set.class, ListCompat.setOf());
++		setGlobalDefaultValue(Map.class, ListCompat.mapOf());
+@@ -78 +80 @@
+-			data = new Data(components, Map.copyOf(componentMap), defaultArguments);
++			data = new Data(components, ListCompat.copyMap(componentMap), defaultArguments);
+@@ -93 +95 @@
+-			objectTypeInfo = new JSObjectTypeInfo(List.copyOf(list));
++			objectTypeInfo = new JSObjectTypeInfo(ListCompat.copyList(list));
+@@ -108 +110 @@
+-			arrayTypeInfo = new JSFixedArrayTypeInfo(List.copyOf(list));
++			arrayTypeInfo = new JSFixedArrayTypeInfo(ListCompat.copyList(list));
 --- a/dev/latvian/mods/rhino/type/TypeConsolidator.java
 +++ b/dev/latvian/mods/rhino/type/TypeConsolidator.java
 @@ -1,0 +2,2 @@
@@ -884,7 +1030,27 @@
 -			var consolidated = original.getFirst().consolidate(mapping);
 -			return consolidated != original.getFirst() ? List.of(consolidated) : original;
 +			var consolidated = ListCompat.getFirst(original).consolidate(mapping);
-+			return consolidated != ListCompat.getFirst(original) ? List.of(consolidated) : original;
++			return consolidated != ListCompat.getFirst(original) ? ListCompat.listOf(consolidated) : original;
+@@ -174 +176 @@
+-			return Map.of();
++			return ListCompat.mapOf();
+@@ -177 +179 @@
+-			return Map.of(entry.getKey(), entry.getValue().consolidate(transformer));
++			return ListCompat.mapOf(entry.getKey(), entry.getValue().consolidate(transformer));
+--- a/dev/latvian/mods/rhino/type/TypeInfo.java
++++ b/dev/latvian/mods/rhino/type/TypeInfo.java
+@@ -1,0 +2,2 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
+@@ -204 +206 @@
+-		return Map.of();
++		return ListCompat.mapOf();
+@@ -208 +210 @@
+-		return List.of();
++		return ListCompat.listOf();
+@@ -212 +214 @@
+-		return new JSOrTypeInfo(List.of(this, info));
++		return new JSOrTypeInfo(ListCompat.listOf(this, info));
 --- a/dev/latvian/mods/rhino/type/TypeInfoFactory.java
 +++ b/dev/latvian/mods/rhino/type/TypeInfoFactory.java
 @@ -22 +22 @@
@@ -931,19 +1097,33 @@
 +		return TypeInfo.NONE;
 --- a/dev/latvian/mods/rhino/util/ArrayValueProvider.java
 +++ b/dev/latvian/mods/rhino/util/ArrayValueProvider.java
-@@ -1,0 +2,2 @@
+@@ -1,0 +2,4 @@
++
++import dev.latvian.mods.rhino.util.ListCompat;
 +
 +import java.util.Objects;
-@@ -42 +44 @@
+@@ -42 +46 @@
 -		var arr = target.newArray(len);
 +		Object arr = target.newArray(len);
-@@ -68 +70 @@
+@@ -59 +63 @@
+-			return List.of();
++			return ListCompat.listOf();
+@@ -62 +66 @@
+-				return List.of(cx.jsToJava(getArrayValue(cx, 0), target));
++				return ListCompat.listOf(cx.jsToJava(getArrayValue(cx, 0), target));
+@@ -68 +72 @@
 -		var list = new ArrayList<>(len);
 +		List<Object> list = new ArrayList<Object>(len);
-@@ -94 +96 @@
+@@ -85 +89 @@
+-			return Set.of();
++			return ListCompat.setOf();
+@@ -88 +92 @@
+-				return Set.of(cx.jsToJava(getArrayValue(cx, 0), target));
++				return ListCompat.setOf(cx.jsToJava(getArrayValue(cx, 0), target));
+@@ -94 +98 @@
 -		var set = new HashSet<>(len);
 +		Set<Object> set = new HashSet<Object>(len);
-@@ -107 +109,11 @@
+@@ -107 +111,11 @@
 -	record FromObject(Object object) implements ArrayValueProvider {
 +	final class FromObject implements ArrayValueProvider {
 +		private final Object object;
@@ -956,7 +1136,7 @@
 +			return object;
 +		}
 +
-@@ -122,0 +135,21 @@
+@@ -122,0 +137,21 @@
 +		}
 +
 +		@Override
@@ -978,7 +1158,7 @@
 +		@Override
 +		public String toString() {
 +			return "FromObject[object=" + object + "]";
-@@ -130 +163,11 @@
+@@ -130 +165,11 @@
 -	record FromNativeArray(NativeArray array) implements ArrayValueProvider {
 +	final class FromNativeArray implements ArrayValueProvider {
 +		private final NativeArray array;
@@ -991,7 +1171,7 @@
 +			return array;
 +		}
 +
-@@ -145,5 +188,38 @@
+@@ -145,5 +190,38 @@
 -	}
 -
 -	record FromJavaArray(Object array, int length) implements ArrayValueProvider {
@@ -1035,13 +1215,13 @@
 +		}
 +
 +		public int length() {
-@@ -153,0 +230,5 @@
+@@ -153,0 +232,5 @@
 +		public int getLength(Context cx) {
 +			return length;
 +		}
 +
 +		@Override
-@@ -162,3 +243,35 @@
+@@ -162,3 +245,35 @@
 -	}
 -
 -	record FromPlainJavaArray(Object[] array) implements ArrayValueProvider {
@@ -1080,7 +1260,7 @@
 +			return array;
 +		}
 +
-@@ -177,0 +291,21 @@
+@@ -177,0 +293,21 @@
 +		}
 +
 +		@Override
@@ -1102,7 +1282,7 @@
 +		@Override
 +		public String toString() {
 +			return "FromPlainJavaArray[array=" + array + "]";
-@@ -185 +319,18 @@
+@@ -185 +321,18 @@
 -	record FromJavaList(List<?> list, Object errorSource) implements ArrayValueProvider {
 +	final class FromJavaList implements ArrayValueProvider {
 +		private final List<?> list;
@@ -1122,7 +1302,7 @@
 +			return errorSource;
 +		}
 +
-@@ -198,0 +350,22 @@
+@@ -198,0 +352,22 @@
 +		}
 +
 +		@Override
@@ -1145,15 +1325,15 @@
 +		@Override
 +		public String toString() {
 +			return "FromJavaList[list=" + list + ", errorSource=" + errorSource + "]";
-@@ -205,2 +378,2 @@
+@@ -205,2 +380,2 @@
 -		if (iterable instanceof Collection<?> c) {
 -			len = c.size();
 +		if (iterable instanceof Collection<?>) {
 +			len = ((Collection<?>) iterable).size();
-@@ -210 +383 @@
+@@ -210 +385 @@
 -			for (var ignored : iterable) {
 +			for (Object ignored : iterable) {
-@@ -218,3 +391,14 @@
+@@ -218,3 +393,14 @@
 -	record FromIterator(int length, Iterator<?> iterator, Object errorSource) implements ArrayValueProvider {
 -		@Override
 -		public int getLength(Context cx) {
@@ -1171,7 +1351,7 @@
 +		}
 +
 +		public int length() {
-@@ -223,0 +408,13 @@
+@@ -223,0 +410,13 @@
 +		public Iterator<?> iterator() {
 +			return iterator;
 +		}
@@ -1185,7 +1365,7 @@
 +			return length;
 +		}
 +
-@@ -232,0 +430,23 @@
+@@ -232,0 +432,23 @@
 +
 +		@Override
 +		public boolean equals(Object other) {
@@ -1411,7 +1591,7 @@
 +	}
 --- /dev/null
 +++ b/dev/latvian/mods/rhino/util/ListCompat.java
-@@ -0,0 +1,144 @@
+@@ -0,0 +1,268 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -1419,6 +1599,14 @@
 + */
 +package dev.latvian.mods.rhino.util;
 +
++import java.io.Serializable;
++import java.util.AbstractList;
++import java.util.AbstractMap;
++import java.util.AbstractSet;
++import java.util.Iterator;
++import java.util.RandomAccess;
++import java.util.function.BiFunction;
++import java.util.function.Function;
 +import java.util.ArrayList;
 +import java.util.Arrays;
 +import java.util.Collection;
@@ -1502,7 +1690,7 @@
 +		for (E element : elements) {
 +			copy.add(Objects.requireNonNull(element));
 +		}
-+		return Collections.unmodifiableList(copy);
++		return Collections.unmodifiableList(new NullRejectList<E>(copy));
 +	}
 +
 +	@SafeVarargs
@@ -1513,7 +1701,7 @@
 +				throw new IllegalArgumentException("duplicate element: " + element);
 +			}
 +		}
-+		return Collections.unmodifiableSet(copy);
++		return Collections.unmodifiableSet(new NullRejectSet<E>(copy));
 +	}
 +
 +	public static <E> Set<E> copySet(Collection<? extends E> elements) {
@@ -1521,7 +1709,7 @@
 +		for (E element : elements) {
 +			copy.add(Objects.requireNonNull(element));
 +		}
-+		return Collections.unmodifiableSet(copy);
++		return Collections.unmodifiableSet(new NullRejectSet<E>(copy));
 +	}
 +
 +	public static <K, V> Map<K, V> copyMap(Map<? extends K, ? extends V> entries) {
@@ -1534,7 +1722,7 @@
 +			}
 +			copy.put(key, value);
 +		}
-+		return Collections.unmodifiableMap(copy);
++		return new NullRejectMap<K, V>(copy);
 +	}
 +
 +	public static String repeat(String value, int count) {
@@ -1554,5 +1742,121 @@
 +			result.append(value);
 +		}
 +		return result.toString();
++	}
++
++	private static final class NullRejectList<E> extends AbstractList<E> implements RandomAccess, Serializable {
++		private static final long serialVersionUID = 1L;
++		private final List<E> values;
++		NullRejectList(List<E> values) { this.values = values; }
++		@Override public E get(int index) { return values.get(index); }
++		@Override public int size() { return values.size(); }
++		@Override public int indexOf(Object value) { return values.indexOf(Objects.requireNonNull(value)); }
++		@Override public int lastIndexOf(Object value) { return values.lastIndexOf(Objects.requireNonNull(value)); }
++		@Override public boolean contains(Object value) { return indexOf(value) >= 0; }
++		@Override public List<E> subList(int from, int to) {
++			return Collections.unmodifiableList(new NullRejectList<E>(values.subList(from, to)));
++		}
++	}
++
++	private static final class NullRejectSet<E> extends AbstractSet<E> implements Serializable {
++		private static final long serialVersionUID = 1L;
++		private final Set<E> values;
++		NullRejectSet(Set<E> values) { this.values = values; }
++		@Override public int size() { return values.size(); }
++		@Override public boolean contains(Object value) { return values.contains(Objects.requireNonNull(value)); }
++		@Override public Iterator<E> iterator() { return values.iterator(); }
++	}
++
++	private static final class NullRejectMap<K, V> extends AbstractMap<K, V> implements Serializable {
++		private static final long serialVersionUID = 1L;
++		private final Map<K, V> values;
++		NullRejectMap(Map<K, V> values) { this.values = values; }
++		@Override public int size() { return values.size(); }
++		@Override public V get(Object key) { return values.get(Objects.requireNonNull(key)); }
++		@Override public boolean containsKey(Object key) { return values.containsKey(Objects.requireNonNull(key)); }
++		@Override public boolean containsValue(Object value) { return values.containsValue(Objects.requireNonNull(value)); }
++		@Override public V getOrDefault(Object key, V fallback) {
++			V value = get(key);
++			return value == null ? fallback : value;
++		}
++		@Override public Set<Map.Entry<K, V>> entrySet() {
++			if (values.size() == 1) {
++				Map.Entry<K, V> item = values.entrySet().iterator().next();
++				return setOf(entry(item.getKey(), item.getValue()));
++			}
++			return new AbstractSet<Map.Entry<K, V>>() {
++				@Override public int size() { return values.size(); }
++				@Override public Iterator<Map.Entry<K, V>> iterator() {
++					final Iterator<Map.Entry<K, V>> source = values.entrySet().iterator();
++					return new Iterator<Map.Entry<K, V>>() {
++						@Override public boolean hasNext() { return source.hasNext(); }
++						@Override public Map.Entry<K, V> next() {
++							Map.Entry<K, V> item = source.next();
++							return entry(item.getKey(), item.getValue());
++						}
++					};
++				}
++			};
++		}
++		@Override public V put(K key, V value) { throw new UnsupportedOperationException(); }
++		@Override public void putAll(Map<? extends K, ? extends V> map) { throw new UnsupportedOperationException(); }
++		@Override public V remove(Object key) { throw new UnsupportedOperationException(); }
++		@Override public boolean remove(Object key, Object value) { throw new UnsupportedOperationException(); }
++		@Override public void clear() { throw new UnsupportedOperationException(); }
++		@Override public V putIfAbsent(K key, V value) { throw new UnsupportedOperationException(); }
++		@Override public V replace(K key, V value) { throw new UnsupportedOperationException(); }
++		@Override public boolean replace(K key, V oldValue, V newValue) { throw new UnsupportedOperationException(); }
++		@Override public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) { throw new UnsupportedOperationException(); }
++		@Override public V computeIfAbsent(K key, Function<? super K, ? extends V> function) { throw new UnsupportedOperationException(); }
++		@Override public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> function) { throw new UnsupportedOperationException(); }
++		@Override public V compute(K key, BiFunction<? super K, ? super V, ? extends V> function) { throw new UnsupportedOperationException(); }
++		@Override public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> function) { throw new UnsupportedOperationException(); }
++	}
++
++	public static <K, V> Map.Entry<K, V> entry(K key, V value) {
++		return new ImmutableEntry<K, V>(key, value);
++	}
++
++	@SafeVarargs
++	public static <K, V> Map<K, V> mapOfEntries(Map.Entry<? extends K, ? extends V>... entries) {
++		Map<K, V> copy = new LinkedHashMap<K, V>();
++		for (Map.Entry<? extends K, ? extends V> entry : entries) {
++			K key = Objects.requireNonNull(entry.getKey());
++			V value = Objects.requireNonNull(entry.getValue());
++			if (copy.containsKey(key)) { throw new IllegalArgumentException("duplicate key: " + key); }
++			copy.put(key, value);
++		}
++		return new NullRejectMap<K, V>(copy);
++	}
++
++	public static <K, V> Map<K, V> mapOf() { return mapOfEntries(); }
++	public static <K, V> Map<K, V> mapOf(K key, V value) { return mapOfEntries(entry(key, value)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2) { return mapOfEntries(entry(key1, value1), entry(key2, value2)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4, K key5, V value5) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4), entry(key5, value5)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4, K key5, V value5, K key6, V value6) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4), entry(key5, value5), entry(key6, value6)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4, K key5, V value5, K key6, V value6, K key7, V value7) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4), entry(key5, value5), entry(key6, value6), entry(key7, value7)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4, K key5, V value5, K key6, V value6, K key7, V value7, K key8, V value8) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4), entry(key5, value5), entry(key6, value6), entry(key7, value7), entry(key8, value8)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4, K key5, V value5, K key6, V value6, K key7, V value7, K key8, V value8, K key9, V value9) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4), entry(key5, value5), entry(key6, value6), entry(key7, value7), entry(key8, value8), entry(key9, value9)); }
++	public static <K, V> Map<K, V> mapOf(K key1, V value1, K key2, V value2, K key3, V value3, K key4, V value4, K key5, V value5, K key6, V value6, K key7, V value7, K key8, V value8, K key9, V value9, K key10, V value10) { return mapOfEntries(entry(key1, value1), entry(key2, value2), entry(key3, value3), entry(key4, value4), entry(key5, value5), entry(key6, value6), entry(key7, value7), entry(key8, value8), entry(key9, value9), entry(key10, value10)); }
++
++	private static final class ImmutableEntry<K, V> implements Map.Entry<K, V> {
++		private final K key;
++		private final V value;
++		ImmutableEntry(K key, V value) {
++			this.key = Objects.requireNonNull(key);
++			this.value = Objects.requireNonNull(value);
++		}
++		@Override public K getKey() { return key; }
++		@Override public V getValue() { return value; }
++		@Override public V setValue(V value) { throw new UnsupportedOperationException(); }
++		@Override public boolean equals(Object other) {
++			if (!(other instanceof Map.Entry<?, ?>)) { return false; }
++			Map.Entry<?, ?> entry = (Map.Entry<?, ?>) other;
++			return key.equals(entry.getKey()) && value.equals(entry.getValue());
++		}
++		@Override public int hashCode() { return key.hashCode() ^ value.hashCode(); }
++		@Override public String toString() { return key + "=" + value; }
 +	}
 +}
