@@ -1367,13 +1367,12 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify repaired guest dispatch and scalar switch consumers
+    - name: Verify canonical parser arguments and callsite switches
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.BindingDispatchTest --tests dev.latvian.mods.rhino.ScalarSwitchTest
-        --tests dev.latvian.mods.rhino.classfile.VerifierTypeSwitchTest
+        --tests dev.latvian.mods.rhino.ParserArgumentSwitchTest
 
         ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
-        --tests dev.openallay.script.RhinoJavascriptStringGuardTest --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
+        --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
