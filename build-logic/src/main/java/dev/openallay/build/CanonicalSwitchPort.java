@@ -34,6 +34,22 @@ public final class CanonicalSwitchPort {
             if(parent instanceof ReturnTree returned&&returned.getExpression()==child){String expression=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
             if(parent instanceof ExpressionStatementTree expression&&expression.getExpression()==child){String replacement=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,replacement,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
             if(parent instanceof VariableTree variable&&variable.getInitializer()==child&&cursor.getParentPath().getLeaf() instanceof BlockTree){String expression=apply(text,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
+            if(parent instanceof AssignmentTree assignment && assignment.getExpression()==child && assignment.getVariable() instanceof IdentifierTree){
+                child=parent;cursor=cursor.getParentPath();continue;
+            }
+            if(parent instanceof ConditionalExpressionTree conditional && (conditional.getTrueExpression()==child||conditional.getFalseExpression()==child)){
+                String temporary=result+"_conditional"+index++,type=denotableAt(cursor,trees);
+                String condition=slice(text,unit,positions,conditional.getCondition());
+                String active=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);
+                String other=slice(text,unit,positions,conditional.getTrueExpression()==child?conditional.getFalseExpression():conditional.getTrueExpression());
+                String branch=prefix+evaluation+temporary+" = "+active+";\n";
+                String trueBranch=conditional.getTrueExpression()==child?branch:temporary+" = "+other+";\n";
+                String falseBranch=conditional.getFalseExpression()==child?branch:temporary+" = "+other+";\n";
+                int from=pos(positions.getStartPosition(unit,parent)),to=pos(positions.getEndPosition(unit,parent));
+                edits.removeIf(edit->edit.start()>=from&&edit.end()<=to);edits.add(new Edit(from,to,temporary));
+                prefix.setLength(0);prefix.append(type).append(' ').append(temporary).append(";\nif (").append(condition).append(") {\n").append(trueBranch).append("} else {\n").append(falseBranch).append("}\n");
+                evaluation="";child=parent;cursor=cursor.getParentPath();continue;
+            }
             List<? extends ExpressionTree> previous=List.of();
             if(parent instanceof MethodInvocationTree call){
                 int argument=call.getArguments().indexOf(child);if(argument<0)throw new IllegalArgumentException("Switch in invocation receiver/typearguments requires separate timing proof");
