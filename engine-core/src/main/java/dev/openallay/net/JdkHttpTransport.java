@@ -213,19 +213,34 @@ public final class JdkHttpTransport implements HttpTransport {
         }
     }
 
-    private static InputStream checkedBody(int status, HttpResponseHeaders headers, InputStream body) {
+    private static InputStream checkedBody(int status, HttpResponseHeaders headers, InputStream body) throws IOException {
         // URLConnection can silently return EOF for a truncated fixed-length response.
         // Preserve the streaming decoder's IOException boundary without buffering the body.
-        if (status < 200 || status == 204 || status == 304
+        if (status < 200 || status == 204 || status == 205 || status == 304
                 || headers.firstValue("transfer-encoding").isPresent()) return body;
-        String length = headers.firstValue("content-length").orElse(null);
-        if (length == null) return body;
+        List<String> lengths = headers.values().get("content-length");
+        if (lengths == null || lengths.isEmpty()) return body;
+        Long expected = null;
         try {
-            long expected = Long.parseLong(length.trim());
-            return expected < 0 ? body : new LengthCheckedBody(body, expected);
+            for (String header : lengths) {
+                for (String token : header.split(",", -1)) {
+                    String value = token.trim();
+                    if (value.isEmpty()) throw new NumberFormatException();
+                    for (int index = 0; index < value.length(); index++) {
+                        char digit = value.charAt(index);
+                        if (digit < '0' || digit > '9') throw new NumberFormatException();
+                    }
+                    long length = Long.parseLong(value);
+                    if (expected != null && expected.longValue() != length) {
+                        throw new IOException("HTTP response has conflicting declared lengths");
+                    }
+                    expected = length;
+                }
+            }
         } catch (NumberFormatException invalidLength) {
-            return body;
+            throw new IOException("HTTP response has an invalid declared length");
         }
+        return new LengthCheckedBody(body, expected.longValue());
     }
 
     private static final class LengthCheckedBody extends FilterInputStream {

@@ -57,7 +57,7 @@ public final class HttpJava8Fixture {
             incompleteErrorBody();
             waitForThreads();
             require(UNCAUGHT.get() == null, "uncaught owner failure: " + UNCAUGHT.get());
-            System.out.println("PASS Java8 HTTP incomplete-error response: observed400 IOException closure cleanup Class52 threads");
+            System.out.println("PASS Java8 HTTP incomplete-response: observed200/400 IOException chunked bounded-read no-body closure cleanup Class52 threads");
             return;
         }
         values();
@@ -147,31 +147,62 @@ public final class HttpJava8Fixture {
     }
 
     private static void incompleteErrorBody() throws Exception {
-        CountDownLatch decoding = new CountDownLatch(1);
-        AtomicInteger observedStatus = new AtomicInteger(-1);
-        AtomicReference<InputStream> bodyRef = new AtomicReference<>();
+        for (int rejectedStatus : new int[] {200, 400}) {
+            CountDownLatch decoding = new CountDownLatch(1);
+            AtomicInteger observedStatus = new AtomicInteger(-1);
+            AtomicReference<InputStream> bodyRef = new AtomicReference<>();
+            try (Server server = new Server()) {
+                server.http.createContext("/incomplete-error", exchange -> {
+                    exchange.sendResponseHeaders(rejectedStatus, 200);
+                    exchange.getResponseBody().write('{');
+                    exchange.getResponseBody().flush();
+                    try { require(decoding.await(2, TimeUnit.SECONDS), "incomplete-response decoder entered"); }
+                    catch (InterruptedException failure) { Thread.currentThread().interrupt(); }
+                    finally { exchange.close(); }
+                });
+                server.http.start();
+                CompletableFuture<String> result = transport().execute(request(server, "/incomplete-error", 2), new Cancel(),
+                        (status, headers, body) -> {
+                            observedStatus.set(status);
+                            bodyRef.set(body);
+                            decoding.countDown();
+                            return read(body);
+                        });
+                expect(result, IOException.class);
+                require(observedStatus.get() == rejectedStatus, "known status must reach decoder");
+                cleanup(result, 3);
+                try { bodyRef.get().read(); throw new AssertionError("incomplete body not closed"); }
+                catch (IOException expected) { }
+            }
+        }
         try (Server server = new Server()) {
-            server.http.createContext("/incomplete-error", exchange -> {
-                exchange.sendResponseHeaders(400, 200);
+            server.http.createContext("/chunked", exchange -> {
+                exchange.sendResponseHeaders(400, 0);
                 exchange.getResponseBody().write('{');
-                exchange.getResponseBody().flush();
-                try { require(decoding.await(2, TimeUnit.SECONDS), "incomplete-error decoder entered"); }
-                catch (InterruptedException failure) { Thread.currentThread().interrupt(); }
-                finally { exchange.close(); }
+                exchange.close();
+            });
+            server.http.createContext("/bounded", exchange -> send(exchange, 400, "longer-than-decoder-needs"));
+            server.http.createContext("/no-content", exchange -> {
+                exchange.getResponseHeaders().add("Content-Length", "200");
+                exchange.sendResponseHeaders(304, -1);
+                exchange.close();
             });
             server.http.start();
-            CompletableFuture<String> result = transport().execute(request(server, "/incomplete-error", 2), new Cancel(),
+            CompletableFuture<String> chunked = transport().execute(request(server, "/chunked", 2), new Cancel(),
                     (status, headers, body) -> {
-                        observedStatus.set(status);
-                        bodyRef.set(body);
-                        decoding.countDown();
+                        require(headers.firstValue("transfer-encoding").isPresent(), "actual chunked response");
                         return read(body);
                     });
-            expect(result, IOException.class);
-            require(observedStatus.get() == 400, "known rejection status must reach decoder");
-            cleanup(result, 3);
-            try { bodyRef.get().read(); throw new AssertionError("incomplete body not closed"); }
-            catch (IOException expected) { }
+            require(chunked.get(3, TimeUnit.SECONDS).equals("{"), "chunked EOF is not fixed-length truncation");
+            cleanup(chunked, 3);
+            CompletableFuture<Integer> bounded = transport().execute(request(server, "/bounded", 2), new Cancel(),
+                    (status, headers, body) -> body.read());
+            require(bounded.get(3, TimeUnit.SECONDS) == (int) 'l', "intentional bounded read can close without EOF");
+            cleanup(bounded, 3);
+            CompletableFuture<String> noContent = transport().execute(request(server, "/no-content", 2), new Cancel(),
+                    (status, headers, body) -> read(body));
+            require(noContent.get(3, TimeUnit.SECONDS).isEmpty(), "304 length header is representation metadata");
+            cleanup(noContent, 3);
         }
     }
 
