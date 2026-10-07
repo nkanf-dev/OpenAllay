@@ -3,7 +3,7 @@ package dev.openallay.guide.semantic;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import dev.openallay.util.Java8Hex;
 
 final class SemanticIds {
     private SemanticIds() {}
@@ -16,7 +16,7 @@ final class SemanticIds {
             digest.update(kind.getBytes(StandardCharsets.UTF_8));
             digest.update((byte) 0);
             digest.update(content.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest.digest());
+            return Java8Hex.formatHex(digest.digest());
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }
