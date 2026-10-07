@@ -1367,9 +1367,10 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify repaired RegExp fixtures and function global array switches
+    - name: Verify baseline-corrected function switches and guarded callbacks
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
         --tests dev.latvian.mods.rhino.RegexpErrorAstSwitchTest --tests dev.latvian.mods.rhino.FunctionGlobalArraySwitchTest
+        --tests dev.latvian.mods.rhino.CallbackGuardBindingTest
 
         ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
         --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
