@@ -19,9 +19,18 @@ final class ParserSwitchLanguageTest {
             "var a,b;[a,b]=[3,4];var o={p:0};[o.p]=[9];var {x=2}={};[a,b,o.p,x].join('|');"));
     }
     @Test void duplicateDeclarationsAndStrictInvalidTargetsStillFailParsing() {
-        Context cx = new ContextFactory().enter(); Scriptable scope = cx.initStandardObjects();
-        for (String source : new String[]{"let x=1;let x=2;", "const x=1;const x=2;", "'use strict';eval=1;", "var o={set x(a,b){}};"}) {
-            assertThrows(RuntimeException.class, () -> cx.evaluateString(scope, source, "bad.js", 1, null), source);
+        for (String source : new String[]{"let x=1;let x=2;", "const x=1;const x=2;", "'use strict';eval=1;",
+                "'use strict';var o={get x(){return 1;},get x(){return 2;}};", "function f( {", "(1+2)=3;"}) {
+            Context errorContext = new ContextFactory().enter();
+            Scriptable errorScope = errorContext.initStandardObjects();
+            assertThrows(EvaluatorException.class, () -> errorContext.evaluateString(errorScope, source, "bad.js", 1, null), source);
         }
+        assertEquals("undefined", evaluate("var o={set x(a,b){}};"));
+        assertEquals("7|undefined", evaluate("var observed;var o={set x(a,b){observed=[a,String(b)].join('|');}};o.x=7;observed;"));
+        assertEquals("object", evaluate("var o={set x(){}};o.x=7;typeof o;"));
+        assertEquals("7", evaluate("var observed;var o={set x(a){observed=a;}};o.x=7;observed;"));
+        assertEquals("7", evaluate("var o={get x(){return 7;}};o.x;"));
+        assertEquals("undefined", evaluate("var o={get x(a){return a;}};String(o.x);"));
+        assertEquals("undefined", evaluate("var o={set (a){}};"));
     }
 }
