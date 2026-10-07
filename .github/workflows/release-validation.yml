@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration]
         default: skills
         required: true
 permissions:
@@ -461,3 +461,110 @@ jobs:
           path: |
             engine-core/src/queryJava8Test/gradle/build/
             engine-core/build/test-results/
+
+  rhino-values:
+    if: inputs.scope == 'rhino-values'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual canonical affected owners
+      run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
+        --tests dev.latvian.mods.rhino.Java8ValueOwnersTest
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
+        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest
+        --tests dev.openallay.script.RhinoJavascriptStringGuardTest --tests dev.openallay.script.host.RhinoHostAdapterTest
+        --tests dev.openallay.script.schema.CoreJavascriptContractTest --tests dev.openallay.script.schema.HostSchemaCatalogTest
+        --tests dev.openallay.script.UnrestrictedJavaAccessTest --tests dev.openallay.extension.JavascriptHostBindingTest'
+    - name: Retain original scoped diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-values-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'runtime-rhino/build/test-results/
+
+          engine-core/build/test-results/'
+
+  voice-http-java8:
+    if: inputs.scope == 'voice-http-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual canonical affected owners
+      run: './gradlew --max-workers=2 --no-daemon -p engine-core/src/java8Test/voice-http
+        -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" java8CompatibilityTest
+
+        export OPENALLAY_VOICE_TLS_KEYS="$PWD/engine-core/src/java8Test/voice-http/build/tls/fixture.jks"
+
+        export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=$OPENALLAY_VOICE_TLS_KEYS
+        -Djavax.net.ssl.trustStorePassword=fixture-only"
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.client.voice.HttpSpeechToTextTest
+        --tests dev.openallay.client.voice.NativeModelInstallerHttpTest --tests dev.openallay.client.voice.NativeSpeechToTextTest'
+    - name: Retain original scoped diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: voice-http-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'engine-core/src/java8Test/voice-http/build/
+
+          engine-core/build/test-results/'
+
+  semantic-integration:
+    if: inputs.scope == 'semantic-integration'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual canonical affected owners
+      run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.guide.semantic.SemanticDependencyPackagingTest
+        --tests dev.openallay.guide.semantic.SemanticMessageParserTest --tests dev.openallay.guide.semantic.SemanticDocumentCodecTest
+        --tests dev.openallay.guide.semantic.SemanticStreamingStateTest --tests dev.openallay.guide.semantic.RichComponentRegistryTest
+    - name: Retain original scoped diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: semantic-integration-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: engine-core/build/test-results/
