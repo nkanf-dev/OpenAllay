@@ -23,7 +23,7 @@ import dev.openallay.script.schema.DeclaredHostRoots;
 import dev.openallay.script.schema.HostRootDescriptor;
 import dev.openallay.script.schema.HostSchema;
 import dev.openallay.script.schema.HostSchemaCatalog;
-import java.lang.reflect.RecordComponent;
+import dev.openallay.value.ValueSchema;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.AbstractMap;
@@ -502,9 +502,9 @@ public final class MinecraftAgentHostGraph {
     }
 
     private static Type type(String name) {
-        for (RecordComponent component : DeclaredTypes.class.getRecordComponents()) {
-            if (component.getName().equals(name)) {
-                return component.getGenericType();
+        for (ValueSchema.Component<DeclaredTypes> component : new DeclaredTypes.ValueSchemaProvider().schema().components()) {
+            if (component.name().equals(name)) {
+                return component.genericType();
             }
         }
         throw new IllegalArgumentException("Unknown declared host type: " + name);
@@ -518,55 +518,252 @@ public final class MinecraftAgentHostGraph {
         return type.cast(supplier.get());
     }
 
-    public record RegistryCatalog(
-            EvidenceMetadata evidence, int entryCount, Map<String, Integer> kinds) {
-        public RegistryCatalog {
+    @dev.openallay.value.ValueType(RegistryCatalog.ValueSchemaProvider.class)
+public static final class RegistryCatalog {
+    private final EvidenceMetadata evidence;
+    private final int entryCount;
+    private final Map<String, Integer> kinds;
+    public RegistryCatalog(EvidenceMetadata evidence, int entryCount, Map<String, Integer> kinds) {
+
             kinds = Map.copyOf(kinds);
+
+        this.evidence = evidence;
+        this.entryCount = entryCount;
+        this.kinds = kinds;
+    }
+    public EvidenceMetadata evidence() { return evidence; }
+    public int entryCount() { return entryCount; }
+    public Map<String, Integer> kinds() { return kinds; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RegistryCatalog)) return false;
+        RegistryCatalog that = (RegistryCatalog) other;
+        return java.util.Objects.equals(evidence, that.evidence) && entryCount == that.entryCount && java.util.Objects.equals(kinds, that.kinds);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(evidence);
+        hash = 31 * hash + Integer.hashCode(entryCount);
+        hash = 31 * hash + java.util.Objects.hashCode(kinds);
+        return hash;
+    }
+    @Override public String toString() { return "RegistryCatalog[evidence=" + evidence + ", entryCount=" + entryCount + ", kinds=" + kinds + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RegistryCatalog> schema() {
+            return new dev.openallay.value.ValueSchema<>(RegistryCatalog.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RegistryCatalog>>asList(new dev.openallay.value.ValueSchema.Component<>(RegistryCatalog.class, "evidence", RegistryCatalog::evidence), new dev.openallay.value.ValueSchema.Component<>(RegistryCatalog.class, "entryCount", RegistryCatalog::entryCount), new dev.openallay.value.ValueSchema.Component<>(RegistryCatalog.class, "kinds", RegistryCatalog::kinds)), arguments -> new RegistryCatalog((EvidenceMetadata) arguments[0], (Integer) arguments[1], (Map) arguments[2]));
         }
     }
+}
 
-    public record RecipeCatalogView(
-            EvidenceMetadata evidence,
-            int recipeCount,
-            List<RecipeProviderStatus> providers,
-            List<RecipeSemanticGroup> groups,
-            List<RecipeCatalogDiagnostic> diagnostics) {
-        public RecipeCatalogView {
+    @dev.openallay.value.ValueType(RecipeCatalogView.ValueSchemaProvider.class)
+public static final class RecipeCatalogView {
+    private final EvidenceMetadata evidence;
+    private final int recipeCount;
+    private final List<RecipeProviderStatus> providers;
+    private final List<RecipeSemanticGroup> groups;
+    private final List<RecipeCatalogDiagnostic> diagnostics;
+    public RecipeCatalogView(EvidenceMetadata evidence, int recipeCount, List<RecipeProviderStatus> providers, List<RecipeSemanticGroup> groups, List<RecipeCatalogDiagnostic> diagnostics) {
+
             providers = List.copyOf(providers);
             groups = List.copyOf(groups);
             diagnostics = List.copyOf(diagnostics);
+
+        this.evidence = evidence;
+        this.recipeCount = recipeCount;
+        this.providers = providers;
+        this.groups = groups;
+        this.diagnostics = diagnostics;
+    }
+    public EvidenceMetadata evidence() { return evidence; }
+    public int recipeCount() { return recipeCount; }
+    public List<RecipeProviderStatus> providers() { return providers; }
+    public List<RecipeSemanticGroup> groups() { return groups; }
+    public List<RecipeCatalogDiagnostic> diagnostics() { return diagnostics; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RecipeCatalogView)) return false;
+        RecipeCatalogView that = (RecipeCatalogView) other;
+        return java.util.Objects.equals(evidence, that.evidence) && recipeCount == that.recipeCount && java.util.Objects.equals(providers, that.providers) && java.util.Objects.equals(groups, that.groups) && java.util.Objects.equals(diagnostics, that.diagnostics);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(evidence);
+        hash = 31 * hash + Integer.hashCode(recipeCount);
+        hash = 31 * hash + java.util.Objects.hashCode(providers);
+        hash = 31 * hash + java.util.Objects.hashCode(groups);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostics);
+        return hash;
+    }
+    @Override public String toString() { return "RecipeCatalogView[evidence=" + evidence + ", recipeCount=" + recipeCount + ", providers=" + providers + ", groups=" + groups + ", diagnostics=" + diagnostics + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RecipeCatalogView> schema() {
+            return new dev.openallay.value.ValueSchema<>(RecipeCatalogView.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RecipeCatalogView>>asList(new dev.openallay.value.ValueSchema.Component<>(RecipeCatalogView.class, "evidence", RecipeCatalogView::evidence), new dev.openallay.value.ValueSchema.Component<>(RecipeCatalogView.class, "recipeCount", RecipeCatalogView::recipeCount), new dev.openallay.value.ValueSchema.Component<>(RecipeCatalogView.class, "providers", RecipeCatalogView::providers), new dev.openallay.value.ValueSchema.Component<>(RecipeCatalogView.class, "groups", RecipeCatalogView::groups), new dev.openallay.value.ValueSchema.Component<>(RecipeCatalogView.class, "diagnostics", RecipeCatalogView::diagnostics)), arguments -> new RecipeCatalogView((EvidenceMetadata) arguments[0], (Integer) arguments[1], (List) arguments[2], (List) arguments[3], (List) arguments[4]));
         }
     }
+}
 
-    public record KnowledgeCatalog(
-            Instant createdAt,
-            int documentCount,
-            Map<String, Integer> sources,
-            List<EvidenceMetadata> evidence) {
-        public KnowledgeCatalog {
+    @dev.openallay.value.ValueType(KnowledgeCatalog.ValueSchemaProvider.class)
+public static final class KnowledgeCatalog {
+    private final Instant createdAt;
+    private final int documentCount;
+    private final Map<String, Integer> sources;
+    private final List<EvidenceMetadata> evidence;
+    public KnowledgeCatalog(Instant createdAt, int documentCount, Map<String, Integer> sources, List<EvidenceMetadata> evidence) {
+
             sources = Map.copyOf(sources);
             evidence = List.copyOf(evidence);
+
+        this.createdAt = createdAt;
+        this.documentCount = documentCount;
+        this.sources = sources;
+        this.evidence = evidence;
+    }
+    public Instant createdAt() { return createdAt; }
+    public int documentCount() { return documentCount; }
+    public Map<String, Integer> sources() { return sources; }
+    public List<EvidenceMetadata> evidence() { return evidence; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof KnowledgeCatalog)) return false;
+        KnowledgeCatalog that = (KnowledgeCatalog) other;
+        return java.util.Objects.equals(createdAt, that.createdAt) && documentCount == that.documentCount && java.util.Objects.equals(sources, that.sources) && java.util.Objects.equals(evidence, that.evidence);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(createdAt);
+        hash = 31 * hash + Integer.hashCode(documentCount);
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + java.util.Objects.hashCode(evidence);
+        return hash;
+    }
+    @Override public String toString() { return "KnowledgeCatalog[createdAt=" + createdAt + ", documentCount=" + documentCount + ", sources=" + sources + ", evidence=" + evidence + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<KnowledgeCatalog> schema() {
+            return new dev.openallay.value.ValueSchema<>(KnowledgeCatalog.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<KnowledgeCatalog>>asList(new dev.openallay.value.ValueSchema.Component<>(KnowledgeCatalog.class, "createdAt", KnowledgeCatalog::createdAt), new dev.openallay.value.ValueSchema.Component<>(KnowledgeCatalog.class, "documentCount", KnowledgeCatalog::documentCount), new dev.openallay.value.ValueSchema.Component<>(KnowledgeCatalog.class, "sources", KnowledgeCatalog::sources), new dev.openallay.value.ValueSchema.Component<>(KnowledgeCatalog.class, "evidence", KnowledgeCatalog::evidence)), arguments -> new KnowledgeCatalog((Instant) arguments[0], (Integer) arguments[1], (Map) arguments[2], (List) arguments[3]));
         }
     }
+}
 
-    public record Capability(
-            String root, String provider, String schemaKind, String evidenceOwner) {}
+    @dev.openallay.value.ValueType(Capability.ValueSchemaProvider.class)
+public static final class Capability {
+    private final String root;
+    private final String provider;
+    private final String schemaKind;
+    private final String evidenceOwner;
+    public Capability(String root, String provider, String schemaKind, String evidenceOwner) {
+        this.root = root;
+        this.provider = provider;
+        this.schemaKind = schemaKind;
+        this.evidenceOwner = evidenceOwner;
+    }
+    public String root() { return root; }
+    public String provider() { return provider; }
+    public String schemaKind() { return schemaKind; }
+    public String evidenceOwner() { return evidenceOwner; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Capability)) return false;
+        Capability that = (Capability) other;
+        return java.util.Objects.equals(root, that.root) && java.util.Objects.equals(provider, that.provider) && java.util.Objects.equals(schemaKind, that.schemaKind) && java.util.Objects.equals(evidenceOwner, that.evidenceOwner);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(root);
+        hash = 31 * hash + java.util.Objects.hashCode(provider);
+        hash = 31 * hash + java.util.Objects.hashCode(schemaKind);
+        hash = 31 * hash + java.util.Objects.hashCode(evidenceOwner);
+        return hash;
+    }
+    @Override public String toString() { return "Capability[root=" + root + ", provider=" + provider + ", schemaKind=" + schemaKind + ", evidenceOwner=" + evidenceOwner + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Capability> schema() {
+            return new dev.openallay.value.ValueSchema<>(Capability.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Capability>>asList(new dev.openallay.value.ValueSchema.Component<>(Capability.class, "root", Capability::root), new dev.openallay.value.ValueSchema.Component<>(Capability.class, "provider", Capability::provider), new dev.openallay.value.ValueSchema.Component<>(Capability.class, "schemaKind", Capability::schemaKind), new dev.openallay.value.ValueSchema.Component<>(Capability.class, "evidenceOwner", Capability::evidenceOwner)), arguments -> new Capability((String) arguments[0], (String) arguments[1], (String) arguments[2], (String) arguments[3]));
+        }
+    }
+}
 
-    private record DeclaredTypes(
-            CallerSnapshot caller,
-            ContextMetrics metrics,
-            Instant capturedAt,
-            PlayerSnapshot player,
-            RegistryCatalog registries,
-            List<RegistryEntrySnapshot> registryEntries,
-            RecipeCatalogView recipeCatalog,
-            List<RecipeEntrySnapshot> recipes,
-            ObservableGameStateSnapshot game,
-            List<KnowledgeDocument> knowledge,
-            KnowledgeCatalog knowledgeCatalog,
-            List<JavascriptDataModuleRegistry.Descriptor> extensionCatalog,
-            List<JavascriptDataModuleRegistry.Diagnostic> extensionDiagnostics,
-            List<Capability> capabilities) {}
+    @dev.openallay.value.ValueType(DeclaredTypes.ValueSchemaProvider.class)
+private static final class DeclaredTypes {
+    private final CallerSnapshot caller;
+    private final ContextMetrics metrics;
+    private final Instant capturedAt;
+    private final PlayerSnapshot player;
+    private final RegistryCatalog registries;
+    private final List<RegistryEntrySnapshot> registryEntries;
+    private final RecipeCatalogView recipeCatalog;
+    private final List<RecipeEntrySnapshot> recipes;
+    private final ObservableGameStateSnapshot game;
+    private final List<KnowledgeDocument> knowledge;
+    private final KnowledgeCatalog knowledgeCatalog;
+    private final List<JavascriptDataModuleRegistry.Descriptor> extensionCatalog;
+    private final List<JavascriptDataModuleRegistry.Diagnostic> extensionDiagnostics;
+    private final List<Capability> capabilities;
+    private DeclaredTypes(CallerSnapshot caller, ContextMetrics metrics, Instant capturedAt, PlayerSnapshot player, RegistryCatalog registries, List<RegistryEntrySnapshot> registryEntries, RecipeCatalogView recipeCatalog, List<RecipeEntrySnapshot> recipes, ObservableGameStateSnapshot game, List<KnowledgeDocument> knowledge, KnowledgeCatalog knowledgeCatalog, List<JavascriptDataModuleRegistry.Descriptor> extensionCatalog, List<JavascriptDataModuleRegistry.Diagnostic> extensionDiagnostics, List<Capability> capabilities) {
+        this.caller = caller;
+        this.metrics = metrics;
+        this.capturedAt = capturedAt;
+        this.player = player;
+        this.registries = registries;
+        this.registryEntries = registryEntries;
+        this.recipeCatalog = recipeCatalog;
+        this.recipes = recipes;
+        this.game = game;
+        this.knowledge = knowledge;
+        this.knowledgeCatalog = knowledgeCatalog;
+        this.extensionCatalog = extensionCatalog;
+        this.extensionDiagnostics = extensionDiagnostics;
+        this.capabilities = capabilities;
+    }
+    public CallerSnapshot caller() { return caller; }
+    public ContextMetrics metrics() { return metrics; }
+    public Instant capturedAt() { return capturedAt; }
+    public PlayerSnapshot player() { return player; }
+    public RegistryCatalog registries() { return registries; }
+    public List<RegistryEntrySnapshot> registryEntries() { return registryEntries; }
+    public RecipeCatalogView recipeCatalog() { return recipeCatalog; }
+    public List<RecipeEntrySnapshot> recipes() { return recipes; }
+    public ObservableGameStateSnapshot game() { return game; }
+    public List<KnowledgeDocument> knowledge() { return knowledge; }
+    public KnowledgeCatalog knowledgeCatalog() { return knowledgeCatalog; }
+    public List<JavascriptDataModuleRegistry.Descriptor> extensionCatalog() { return extensionCatalog; }
+    public List<JavascriptDataModuleRegistry.Diagnostic> extensionDiagnostics() { return extensionDiagnostics; }
+    public List<Capability> capabilities() { return capabilities; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DeclaredTypes)) return false;
+        DeclaredTypes that = (DeclaredTypes) other;
+        return java.util.Objects.equals(caller, that.caller) && java.util.Objects.equals(metrics, that.metrics) && java.util.Objects.equals(capturedAt, that.capturedAt) && java.util.Objects.equals(player, that.player) && java.util.Objects.equals(registries, that.registries) && java.util.Objects.equals(registryEntries, that.registryEntries) && java.util.Objects.equals(recipeCatalog, that.recipeCatalog) && java.util.Objects.equals(recipes, that.recipes) && java.util.Objects.equals(game, that.game) && java.util.Objects.equals(knowledge, that.knowledge) && java.util.Objects.equals(knowledgeCatalog, that.knowledgeCatalog) && java.util.Objects.equals(extensionCatalog, that.extensionCatalog) && java.util.Objects.equals(extensionDiagnostics, that.extensionDiagnostics) && java.util.Objects.equals(capabilities, that.capabilities);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(caller);
+        hash = 31 * hash + java.util.Objects.hashCode(metrics);
+        hash = 31 * hash + java.util.Objects.hashCode(capturedAt);
+        hash = 31 * hash + java.util.Objects.hashCode(player);
+        hash = 31 * hash + java.util.Objects.hashCode(registries);
+        hash = 31 * hash + java.util.Objects.hashCode(registryEntries);
+        hash = 31 * hash + java.util.Objects.hashCode(recipeCatalog);
+        hash = 31 * hash + java.util.Objects.hashCode(recipes);
+        hash = 31 * hash + java.util.Objects.hashCode(game);
+        hash = 31 * hash + java.util.Objects.hashCode(knowledge);
+        hash = 31 * hash + java.util.Objects.hashCode(knowledgeCatalog);
+        hash = 31 * hash + java.util.Objects.hashCode(extensionCatalog);
+        hash = 31 * hash + java.util.Objects.hashCode(extensionDiagnostics);
+        hash = 31 * hash + java.util.Objects.hashCode(capabilities);
+        return hash;
+    }
+    @Override public String toString() { return "DeclaredTypes[caller=" + caller + ", metrics=" + metrics + ", capturedAt=" + capturedAt + ", player=" + player + ", registries=" + registries + ", registryEntries=" + registryEntries + ", recipeCatalog=" + recipeCatalog + ", recipes=" + recipes + ", game=" + game + ", knowledge=" + knowledge + ", knowledgeCatalog=" + knowledgeCatalog + ", extensionCatalog=" + extensionCatalog + ", extensionDiagnostics=" + extensionDiagnostics + ", capabilities=" + capabilities + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DeclaredTypes> schema() {
+            return new dev.openallay.value.ValueSchema<>(DeclaredTypes.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DeclaredTypes>>asList(new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "caller", DeclaredTypes::caller), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "metrics", DeclaredTypes::metrics), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "capturedAt", DeclaredTypes::capturedAt), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "player", DeclaredTypes::player), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "registries", DeclaredTypes::registries), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "registryEntries", DeclaredTypes::registryEntries), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "recipeCatalog", DeclaredTypes::recipeCatalog), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "recipes", DeclaredTypes::recipes), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "game", DeclaredTypes::game), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "knowledge", DeclaredTypes::knowledge), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "knowledgeCatalog", DeclaredTypes::knowledgeCatalog), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "extensionCatalog", DeclaredTypes::extensionCatalog), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "extensionDiagnostics", DeclaredTypes::extensionDiagnostics), new dev.openallay.value.ValueSchema.Component<>(DeclaredTypes.class, "capabilities", DeclaredTypes::capabilities)), arguments -> new DeclaredTypes((CallerSnapshot) arguments[0], (ContextMetrics) arguments[1], (Instant) arguments[2], (PlayerSnapshot) arguments[3], (RegistryCatalog) arguments[4], (List) arguments[5], (RecipeCatalogView) arguments[6], (List) arguments[7], (ObservableGameStateSnapshot) arguments[8], (List) arguments[9], (KnowledgeCatalog) arguments[10], (List) arguments[11], (List) arguments[12], (List) arguments[13]));
+        }
+    }
+}
 
     private static final class MemoizedSupplier implements Supplier<Object> {
         private Supplier<?> source;

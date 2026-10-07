@@ -3,17 +3,29 @@ package dev.openallay.trace.replay;
 import java.util.List;
 import java.util.ArrayList;
 
-public record ReplayReport(
-        String traceId,
-        boolean passed,
-        List<ReplayStepReport> steps,
-        ReplayMetrics metrics,
-        String error) {
-    public ReplayReport {
-        steps = List.copyOf(steps);
-    }
+@dev.openallay.value.ValueType(ReplayReport.ValueSchemaProvider.class)
+public final class ReplayReport {
+    private final String traceId;
+    private final boolean passed;
+    private final List<ReplayStepReport> steps;
+    private final ReplayMetrics metrics;
+    private final String error;
+    public ReplayReport(String traceId, boolean passed, List<ReplayStepReport> steps, ReplayMetrics metrics, String error) {
 
-    public List<String> chatLines() {
+        steps = List.copyOf(steps);
+
+        this.traceId = traceId;
+        this.passed = passed;
+        this.steps = steps;
+        this.metrics = metrics;
+        this.error = error;
+    }
+    public String traceId() { return traceId; }
+    public boolean passed() { return passed; }
+    public List<ReplayStepReport> steps() { return steps; }
+    public ReplayMetrics metrics() { return metrics; }
+    public String error() { return error; }
+public List<String> chatLines() {
         List<String> lines = new ArrayList<>();
         lines.add("TRACE " + traceId + " " + (passed ? "PASS" : "FAIL"));
         for (ReplayStepReport step : steps) {
@@ -44,5 +56,27 @@ public record ReplayReport(
             lines.add("ERROR " + error);
         }
         return List.copyOf(lines);
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ReplayReport)) return false;
+        ReplayReport that = (ReplayReport) other;
+        return java.util.Objects.equals(traceId, that.traceId) && passed == that.passed && java.util.Objects.equals(steps, that.steps) && java.util.Objects.equals(metrics, that.metrics) && java.util.Objects.equals(error, that.error);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(traceId);
+        hash = 31 * hash + Boolean.hashCode(passed);
+        hash = 31 * hash + java.util.Objects.hashCode(steps);
+        hash = 31 * hash + java.util.Objects.hashCode(metrics);
+        hash = 31 * hash + java.util.Objects.hashCode(error);
+        return hash;
+    }
+    @Override public String toString() { return "ReplayReport[traceId=" + traceId + ", passed=" + passed + ", steps=" + steps + ", metrics=" + metrics + ", error=" + error + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ReplayReport> schema() {
+            return new dev.openallay.value.ValueSchema<>(ReplayReport.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ReplayReport>>asList(new dev.openallay.value.ValueSchema.Component<>(ReplayReport.class, "traceId", ReplayReport::traceId), new dev.openallay.value.ValueSchema.Component<>(ReplayReport.class, "passed", ReplayReport::passed), new dev.openallay.value.ValueSchema.Component<>(ReplayReport.class, "steps", ReplayReport::steps), new dev.openallay.value.ValueSchema.Component<>(ReplayReport.class, "metrics", ReplayReport::metrics), new dev.openallay.value.ValueSchema.Component<>(ReplayReport.class, "error", ReplayReport::error)), arguments -> new ReplayReport((String) arguments[0], (Boolean) arguments[1], (List) arguments[2], (ReplayMetrics) arguments[3], (String) arguments[4]));
+        }
     }
 }

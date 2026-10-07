@@ -369,12 +369,68 @@ public final class ExtensionPackageInstaller {
                 "");
     }
 
-    private record InspectedPackage(
-            ExtensionPackageManifest manifest, Set<String> declaredModIds) {}
-
-    private record Download(int status, byte[] bytes) {
-        private Download {
-            bytes = bytes.clone();
+    @dev.openallay.value.ValueType(InspectedPackage.ValueSchemaProvider.class)
+private static final class InspectedPackage {
+    private final ExtensionPackageManifest manifest;
+    private final Set<String> declaredModIds;
+    private InspectedPackage(ExtensionPackageManifest manifest, Set<String> declaredModIds) {
+        this.manifest = manifest;
+        this.declaredModIds = declaredModIds;
+    }
+    public ExtensionPackageManifest manifest() { return manifest; }
+    public Set<String> declaredModIds() { return declaredModIds; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof InspectedPackage)) return false;
+        InspectedPackage that = (InspectedPackage) other;
+        return java.util.Objects.equals(manifest, that.manifest) && java.util.Objects.equals(declaredModIds, that.declaredModIds);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(manifest);
+        hash = 31 * hash + java.util.Objects.hashCode(declaredModIds);
+        return hash;
+    }
+    @Override public String toString() { return "InspectedPackage[manifest=" + manifest + ", declaredModIds=" + declaredModIds + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<InspectedPackage> schema() {
+            return new dev.openallay.value.ValueSchema<>(InspectedPackage.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<InspectedPackage>>asList(new dev.openallay.value.ValueSchema.Component<>(InspectedPackage.class, "manifest", InspectedPackage::manifest), new dev.openallay.value.ValueSchema.Component<>(InspectedPackage.class, "declaredModIds", InspectedPackage::declaredModIds)), arguments -> new InspectedPackage((ExtensionPackageManifest) arguments[0], (Set) arguments[1]));
         }
     }
+}
+
+    @dev.openallay.value.ValueType(Download.ValueSchemaProvider.class)
+private static final class Download {
+    private final int status;
+    private final byte[] bytes;
+    private Download(int status, byte[] bytes) {
+
+            bytes = bytes.clone();
+
+        this.status = status;
+        this.bytes = bytes;
+    }
+    public int status() { return status; }
+    public byte[] bytes() { return bytes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Download)) return false;
+        Download that = (Download) other;
+        return status == that.status && java.util.Objects.equals(bytes, that.bytes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(bytes);
+        return hash;
+    }
+    @Override public String toString() { return "Download[status=" + status + ", bytes=" + bytes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Download> schema() {
+            return new dev.openallay.value.ValueSchema<>(Download.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Download>>asList(new dev.openallay.value.ValueSchema.Component<>(Download.class, "status", Download::status), new dev.openallay.value.ValueSchema.Component<>(Download.class, "bytes", Download::bytes)), arguments -> new Download((Integer) arguments[0], (byte[]) arguments[1]));
+        }
+    }
+}
 }

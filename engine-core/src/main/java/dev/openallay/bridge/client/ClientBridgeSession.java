@@ -42,12 +42,40 @@ public class ClientBridgeSession {
     }
 
     /** Immutable actor identity plus an exact native connection identity check, not an API handle. */
-    public record Connection(UUID actorId, BooleanSupplier current) {
-        public Connection {
+    @dev.openallay.value.ValueType(Connection.ValueSchemaProvider.class)
+public static final class Connection {
+    private final UUID actorId;
+    private final BooleanSupplier current;
+    public Connection(UUID actorId, BooleanSupplier current) {
+
             java.util.Objects.requireNonNull(actorId, "actorId");
             java.util.Objects.requireNonNull(current, "current");
+
+        this.actorId = actorId;
+        this.current = current;
+    }
+    public UUID actorId() { return actorId; }
+    public BooleanSupplier current() { return current; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Connection)) return false;
+        Connection that = (Connection) other;
+        return java.util.Objects.equals(actorId, that.actorId) && java.util.Objects.equals(current, that.current);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actorId);
+        hash = 31 * hash + java.util.Objects.hashCode(current);
+        return hash;
+    }
+    @Override public String toString() { return "Connection[actorId=" + actorId + ", current=" + current + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Connection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Connection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Connection>>asList(new dev.openallay.value.ValueSchema.Component<>(Connection.class, "actorId", Connection::actorId), new dev.openallay.value.ValueSchema.Component<>(Connection.class, "current", Connection::current)), arguments -> new Connection((UUID) arguments[0], (BooleanSupplier) arguments[1]));
         }
     }
+}
 
     private final NativeHost host;
     private final ClientEventDispatcher dispatcher;

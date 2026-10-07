@@ -93,7 +93,36 @@ final class HostRecordSchema {
         Object read(Object value) throws Throwable;
     }
 
-    private record Component(Accessor accessor, TypeInfo type) {}
+    @dev.openallay.value.ValueType(Component.ValueSchemaProvider.class)
+private static final class Component {
+    private final Accessor accessor;
+    private final TypeInfo type;
+    private Component(Accessor accessor, TypeInfo type) {
+        this.accessor = accessor;
+        this.type = type;
+    }
+    public Accessor accessor() { return accessor; }
+    public TypeInfo type() { return type; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Component)) return false;
+        Component that = (Component) other;
+        return java.util.Objects.equals(accessor, that.accessor) && java.util.Objects.equals(type, that.type);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(accessor);
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        return hash;
+    }
+    @Override public String toString() { return "Component[accessor=" + accessor + ", type=" + type + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Component> schema() {
+            return new dev.openallay.value.ValueSchema<>(Component.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Component>>asList(new dev.openallay.value.ValueSchema.Component<>(Component.class, "accessor", Component::accessor), new dev.openallay.value.ValueSchema.Component<>(Component.class, "type", Component::type)), arguments -> new Component((Accessor) arguments[0], (TypeInfo) arguments[1]));
+        }
+    }
+}
 
     enum Missing {
         INSTANCE

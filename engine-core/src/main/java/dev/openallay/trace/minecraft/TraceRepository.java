@@ -18,28 +18,78 @@ public final class TraceRepository {
         Reader open() throws IOException;
     }
 
-    public record TraceSource(String name, ReaderOpener opener) {
-        public TraceSource {
+    @dev.openallay.value.ValueType(TraceSource.ValueSchemaProvider.class)
+public static final class TraceSource {
+    private final String name;
+    private final ReaderOpener opener;
+    public TraceSource(String name, ReaderOpener opener) {
+
             if (name == null || name.isBlank()) {
                 throw new IllegalArgumentException("Trace source name must not be blank");
             }
             Objects.requireNonNull(opener, "opener");
+
+        this.name = name;
+        this.opener = opener;
+    }
+    public String name() { return name; }
+    public ReaderOpener opener() { return opener; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof TraceSource)) return false;
+        TraceSource that = (TraceSource) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(opener, that.opener);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(opener);
+        return hash;
+    }
+    @Override public String toString() { return "TraceSource[name=" + name + ", opener=" + opener + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<TraceSource> schema() {
+            return new dev.openallay.value.ValueSchema<>(TraceSource.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<TraceSource>>asList(new dev.openallay.value.ValueSchema.Component<>(TraceSource.class, "name", TraceSource::name), new dev.openallay.value.ValueSchema.Component<>(TraceSource.class, "opener", TraceSource::opener)), arguments -> new TraceSource((String) arguments[0], (ReaderOpener) arguments[1]));
         }
     }
+}
 
-    public record LoadedTraces(Map<String, AgentTrace> traces) {
-        public LoadedTraces {
+    @dev.openallay.value.ValueType(LoadedTraces.ValueSchemaProvider.class)
+public static final class LoadedTraces {
+    private final Map<String, AgentTrace> traces;
+    public LoadedTraces(Map<String, AgentTrace> traces) {
+
             traces = Map.copyOf(new TreeMap<>(traces));
-        }
 
-        public List<String> ids() {
+        this.traces = traces;
+    }
+    public Map<String, AgentTrace> traces() { return traces; }
+public List<String> ids() {
             return traces.keySet().stream().sorted().toList();
         }
-
-        public Optional<AgentTrace> find(String id) {
+public Optional<AgentTrace> find(String id) {
             return Optional.ofNullable(traces.get(id));
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof LoadedTraces)) return false;
+        LoadedTraces that = (LoadedTraces) other;
+        return java.util.Objects.equals(traces, that.traces);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(traces);
+        return hash;
+    }
+    @Override public String toString() { return "LoadedTraces[traces=" + traces + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<LoadedTraces> schema() {
+            return new dev.openallay.value.ValueSchema<>(LoadedTraces.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<LoadedTraces>>asList(new dev.openallay.value.ValueSchema.Component<>(LoadedTraces.class, "traces", LoadedTraces::traces)), arguments -> new LoadedTraces((Map) arguments[0]));
+        }
+    }
+}
 
     private final TraceParser parser;
 

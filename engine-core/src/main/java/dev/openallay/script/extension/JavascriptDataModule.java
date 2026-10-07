@@ -28,14 +28,41 @@ public interface JavascriptDataModule {
 
     Snapshot capture(ToolInvocationContext context);
 
-    record Snapshot(Object value, List<EvidenceMetadata> evidence) {
-        public Snapshot {
+    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
+public static final class Snapshot {
+    private final Object value;
+    private final List<EvidenceMetadata> evidence;
+    public Snapshot(Object value, List<EvidenceMetadata> evidence) {
+
             value = java.util.Objects.requireNonNull(value, "value");
             evidence = List.copyOf(evidence);
             if (evidence.isEmpty()) {
                 throw new IllegalArgumentException("JavaScript module snapshot requires evidence");
             }
-        }
 
+        this.value = value;
+        this.evidence = evidence;
     }
+    public Object value() { return value; }
+    public List<EvidenceMetadata> evidence() { return evidence; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Snapshot)) return false;
+        Snapshot that = (Snapshot) other;
+        return java.util.Objects.equals(value, that.value) && java.util.Objects.equals(evidence, that.evidence);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        hash = 31 * hash + java.util.Objects.hashCode(evidence);
+        return hash;
+    }
+    @Override public String toString() { return "Snapshot[value=" + value + ", evidence=" + evidence + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
+            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "value", Snapshot::value), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "evidence", Snapshot::evidence)), arguments -> new Snapshot((Object) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 }

@@ -166,7 +166,36 @@ final class UnrestrictedJavaAccess {
         return context.wrap(scope, value, TypeInfo.of(type));
     }
 
-    private record Target(Class<?> type, Object instance) {}
+    @dev.openallay.value.ValueType(Target.ValueSchemaProvider.class)
+private static final class Target {
+    private final Class<?> type;
+    private final Object instance;
+    private Target(Class<?> type, Object instance) {
+        this.type = type;
+        this.instance = instance;
+    }
+    public Class<?> type() { return type; }
+    public Object instance() { return instance; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Target)) return false;
+        Target that = (Target) other;
+        return java.util.Objects.equals(type, that.type) && java.util.Objects.equals(instance, that.instance);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + java.util.Objects.hashCode(instance);
+        return hash;
+    }
+    @Override public String toString() { return "Target[type=" + type + ", instance=" + instance + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Target> schema() {
+            return new dev.openallay.value.ValueSchema<>(Target.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Target>>asList(new dev.openallay.value.ValueSchema.Component<>(Target.class, "type", Target::type), new dev.openallay.value.ValueSchema.Component<>(Target.class, "instance", Target::instance)), arguments -> new Target((Class) arguments[0], (Object) arguments[1]));
+        }
+    }
+}
 
     private Target target(Object value) {
         Object raw = unwrap(value);
@@ -206,7 +235,44 @@ final class UnrestrictedJavaAccess {
         }
     }
 
-    private record Selector(String name, Object declaringClass, Object returnType, Object parameterTypes) {}
+    @dev.openallay.value.ValueType(Selector.ValueSchemaProvider.class)
+private static final class Selector {
+    private final String name;
+    private final Object declaringClass;
+    private final Object returnType;
+    private final Object parameterTypes;
+    private Selector(String name, Object declaringClass, Object returnType, Object parameterTypes) {
+        this.name = name;
+        this.declaringClass = declaringClass;
+        this.returnType = returnType;
+        this.parameterTypes = parameterTypes;
+    }
+    public String name() { return name; }
+    public Object declaringClass() { return declaringClass; }
+    public Object returnType() { return returnType; }
+    public Object parameterTypes() { return parameterTypes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Selector)) return false;
+        Selector that = (Selector) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(declaringClass, that.declaringClass) && java.util.Objects.equals(returnType, that.returnType) && java.util.Objects.equals(parameterTypes, that.parameterTypes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(declaringClass);
+        hash = 31 * hash + java.util.Objects.hashCode(returnType);
+        hash = 31 * hash + java.util.Objects.hashCode(parameterTypes);
+        return hash;
+    }
+    @Override public String toString() { return "Selector[name=" + name + ", declaringClass=" + declaringClass + ", returnType=" + returnType + ", parameterTypes=" + parameterTypes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Selector> schema() {
+            return new dev.openallay.value.ValueSchema<>(Selector.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Selector>>asList(new dev.openallay.value.ValueSchema.Component<>(Selector.class, "name", Selector::name), new dev.openallay.value.ValueSchema.Component<>(Selector.class, "declaringClass", Selector::declaringClass), new dev.openallay.value.ValueSchema.Component<>(Selector.class, "returnType", Selector::returnType), new dev.openallay.value.ValueSchema.Component<>(Selector.class, "parameterTypes", Selector::parameterTypes)), arguments -> new Selector((String) arguments[0], (Object) arguments[1], (Object) arguments[2], (Object) arguments[3]));
+        }
+    }
+}
 
     private Selector selector(Object value) {
         if (value instanceof CharSequence) return new Selector(name(value, "member name"), null, null, null);

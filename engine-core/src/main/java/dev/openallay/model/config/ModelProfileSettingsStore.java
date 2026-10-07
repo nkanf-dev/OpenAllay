@@ -28,17 +28,43 @@ public final class ModelProfileSettingsStore {
         void publish();
     }
 
-    public record Saved(
-            ModelProfilesConfig config,
-            List<ResolvedModelProfile> profiles) {
-        public Saved {
+    @dev.openallay.value.ValueType(Saved.ValueSchemaProvider.class)
+public static final class Saved {
+    private final ModelProfilesConfig config;
+    private final List<ResolvedModelProfile> profiles;
+    public Saved(ModelProfilesConfig config, List<ResolvedModelProfile> profiles) {
+
             Objects.requireNonNull(config, "config");
             profiles = List.copyOf(profiles);
             if (profiles.size() != config.profiles().size()) {
                 throw new IllegalArgumentException("every saved profile must have a resolution");
             }
+
+        this.config = config;
+        this.profiles = profiles;
+    }
+    public ModelProfilesConfig config() { return config; }
+    public List<ResolvedModelProfile> profiles() { return profiles; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Saved)) return false;
+        Saved that = (Saved) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(profiles, that.profiles);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(profiles);
+        return hash;
+    }
+    @Override public String toString() { return "Saved[config=" + config + ", profiles=" + profiles + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Saved> schema() {
+            return new dev.openallay.value.ValueSchema<>(Saved.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Saved>>asList(new dev.openallay.value.ValueSchema.Component<>(Saved.class, "config", Saved::config), new dev.openallay.value.ValueSchema.Component<>(Saved.class, "profiles", Saved::profiles)), arguments -> new Saved((ModelProfilesConfig) arguments[0], (List) arguments[1]));
         }
     }
+}
 
     private final Path path;
     private final FileReplacement files;

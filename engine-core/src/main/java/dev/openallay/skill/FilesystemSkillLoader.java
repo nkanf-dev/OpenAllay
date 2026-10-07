@@ -19,21 +19,77 @@ public final class FilesystemSkillLoader {
             "sh", "bash", "zsh", "command", "bat", "cmd", "ps1", "exe", "dll", "dylib",
             "so", "class", "jar", "py", "pyc", "js", "mjs", "cjs");
 
-    public record RejectedSkill(String skillName, SkillDiagnostic diagnostic) {
-        public RejectedSkill {
+    @dev.openallay.value.ValueType(RejectedSkill.ValueSchemaProvider.class)
+public static final class RejectedSkill {
+    private final String skillName;
+    private final SkillDiagnostic diagnostic;
+    public RejectedSkill(String skillName, SkillDiagnostic diagnostic) {
+
             if (skillName == null || skillName.isBlank()) {
                 throw new IllegalArgumentException("Rejected Skill name must not be blank");
             }
             diagnostic = java.util.Objects.requireNonNull(diagnostic, "diagnostic");
+
+        this.skillName = skillName;
+        this.diagnostic = diagnostic;
+    }
+    public String skillName() { return skillName; }
+    public SkillDiagnostic diagnostic() { return diagnostic; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RejectedSkill)) return false;
+        RejectedSkill that = (RejectedSkill) other;
+        return java.util.Objects.equals(skillName, that.skillName) && java.util.Objects.equals(diagnostic, that.diagnostic);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(skillName);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        return hash;
+    }
+    @Override public String toString() { return "RejectedSkill[skillName=" + skillName + ", diagnostic=" + diagnostic + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RejectedSkill> schema() {
+            return new dev.openallay.value.ValueSchema<>(RejectedSkill.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RejectedSkill>>asList(new dev.openallay.value.ValueSchema.Component<>(RejectedSkill.class, "skillName", RejectedSkill::skillName), new dev.openallay.value.ValueSchema.Component<>(RejectedSkill.class, "diagnostic", RejectedSkill::diagnostic)), arguments -> new RejectedSkill((String) arguments[0], (SkillDiagnostic) arguments[1]));
         }
     }
+}
 
-    public record LoadResult(List<SkillSource> sources, List<RejectedSkill> rejected) {
-        public LoadResult {
+    @dev.openallay.value.ValueType(LoadResult.ValueSchemaProvider.class)
+public static final class LoadResult {
+    private final List<SkillSource> sources;
+    private final List<RejectedSkill> rejected;
+    public LoadResult(List<SkillSource> sources, List<RejectedSkill> rejected) {
+
             sources = List.copyOf(sources);
             rejected = List.copyOf(rejected);
+
+        this.sources = sources;
+        this.rejected = rejected;
+    }
+    public List<SkillSource> sources() { return sources; }
+    public List<RejectedSkill> rejected() { return rejected; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof LoadResult)) return false;
+        LoadResult that = (LoadResult) other;
+        return java.util.Objects.equals(sources, that.sources) && java.util.Objects.equals(rejected, that.rejected);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + java.util.Objects.hashCode(rejected);
+        return hash;
+    }
+    @Override public String toString() { return "LoadResult[sources=" + sources + ", rejected=" + rejected + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<LoadResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(LoadResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<LoadResult>>asList(new dev.openallay.value.ValueSchema.Component<>(LoadResult.class, "sources", LoadResult::sources), new dev.openallay.value.ValueSchema.Component<>(LoadResult.class, "rejected", LoadResult::rejected)), arguments -> new LoadResult((List) arguments[0], (List) arguments[1]));
         }
     }
+}
 
     public LoadResult load(Path configuredRoot) {
         Path root = java.util.Objects.requireNonNull(configuredRoot, "configuredRoot")

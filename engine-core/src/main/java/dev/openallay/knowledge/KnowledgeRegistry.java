@@ -184,5 +184,34 @@ public final class KnowledgeRegistry {
         return new PublishedKnowledge(snapshot, new KnowledgeIndex(snapshot));
     }
 
-    private record PublishedKnowledge(KnowledgeSnapshot snapshot, KnowledgeIndex index) {}
+    @dev.openallay.value.ValueType(PublishedKnowledge.ValueSchemaProvider.class)
+private static final class PublishedKnowledge {
+    private final KnowledgeSnapshot snapshot;
+    private final KnowledgeIndex index;
+    private PublishedKnowledge(KnowledgeSnapshot snapshot, KnowledgeIndex index) {
+        this.snapshot = snapshot;
+        this.index = index;
+    }
+    public KnowledgeSnapshot snapshot() { return snapshot; }
+    public KnowledgeIndex index() { return index; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PublishedKnowledge)) return false;
+        PublishedKnowledge that = (PublishedKnowledge) other;
+        return java.util.Objects.equals(snapshot, that.snapshot) && java.util.Objects.equals(index, that.index);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(snapshot);
+        hash = 31 * hash + java.util.Objects.hashCode(index);
+        return hash;
+    }
+    @Override public String toString() { return "PublishedKnowledge[snapshot=" + snapshot + ", index=" + index + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PublishedKnowledge> schema() {
+            return new dev.openallay.value.ValueSchema<>(PublishedKnowledge.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PublishedKnowledge>>asList(new dev.openallay.value.ValueSchema.Component<>(PublishedKnowledge.class, "snapshot", PublishedKnowledge::snapshot), new dev.openallay.value.ValueSchema.Component<>(PublishedKnowledge.class, "index", PublishedKnowledge::index)), arguments -> new PublishedKnowledge((KnowledgeSnapshot) arguments[0], (KnowledgeIndex) arguments[1]));
+        }
+    }
+}
 }

@@ -19,27 +19,32 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.time.Clock;
 
-public record ServerGuideRuntime(
-        ModelConfig config,
-        ServerAgentService service,
-        dev.openallay.guide.GuideContextSpec contextSpec,
-        PlayerClientToolRouter clientTools) {
-    public dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapability() {
+@dev.openallay.value.ValueType(ServerGuideRuntime.ValueSchemaProvider.class)
+public final class ServerGuideRuntime {
+    private final ModelConfig config;
+    private final ServerAgentService service;
+    private final dev.openallay.guide.GuideContextSpec contextSpec;
+    private final PlayerClientToolRouter clientTools;
+    public ServerGuideRuntime(ModelConfig config, ServerAgentService service, dev.openallay.guide.GuideContextSpec contextSpec, PlayerClientToolRouter clientTools) {
+        this.config = config;
+        this.service = service;
+        this.contextSpec = contextSpec;
+        this.clientTools = clientTools;
+    }
+    public ModelConfig config() { return config; }
+    public ServerAgentService service() { return service; }
+    public dev.openallay.guide.GuideContextSpec contextSpec() { return contextSpec; }
+    public PlayerClientToolRouter clientTools() { return clientTools; }
+public dev.openallay.model.metadata.ModelImageCapabilityResolution imageCapability() {
         return config.imageCapability();
     }
-
-    /** Application bridge JSON envelope selected by the captured runtime protocol.
-     * Wire history/Skill metadata and native provider bodies have different overhead;
-     * this cap does not claim that the two encodings have the same byte size.
-     */
-    public int requestBodyLimit() {
+public int requestBodyLimit() {
         return switch (config.protocol()) {
             case ANTHROPIC_MESSAGES -> dev.openallay.bridge.protocol.BridgeProtocol.MAX_ANTHROPIC_REQUEST_BYTES;
             case OPENAI_CHAT -> dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES;
         };
     }
-
-    public static ToolResult<ServerGuideRuntime> create(
+public static ToolResult<ServerGuideRuntime> create(
             FeatureServices runtime,
             Path configPath,
             Map<String, String> environment,
@@ -65,8 +70,7 @@ public record ServerGuideRuntime(
                             dev.openallay.bridge.protocol.ClientToolCancelPayload payload) {}
                 });
     }
-
-    public static ToolResult<ServerGuideRuntime> create(
+public static ToolResult<ServerGuideRuntime> create(
             FeatureServices runtime,
             Path configPath,
             Map<String, String> environment,
@@ -76,8 +80,7 @@ public record ServerGuideRuntime(
         return create(runtime, configPath, environment, contexts, events, clientToolTransport,
                 configPath.toAbsolutePath().normalize().getParent().resolve("image-store"));
     }
-
-    public static ToolResult<ServerGuideRuntime> create(
+public static ToolResult<ServerGuideRuntime> create(
             FeatureServices runtime,
             Path configPath,
             Map<String, String> environment,
@@ -178,9 +181,7 @@ public record ServerGuideRuntime(
                 service::prepareClientToolImages, configured.requestBodyLimit(), service::ownsRequest);
         return new ToolResult.Success<>(configured);
     }
-
-    /** Frozen runtime hook for a typed Steer. Call only on the off-thread payload worker. */
-    public static dev.openallay.model.ModelMessage importSteerImages(
+public static dev.openallay.model.ModelMessage importSteerImages(
             java.util.UUID actor,
             java.util.UUID requestId,
             dev.openallay.model.ModelMessage userInput,
@@ -218,46 +219,59 @@ public record ServerGuideRuntime(
         // newly uploaded images without acquiring any filesystem or URL authority.
         return userInput;
     }
-
-    private static String steerImageOwner(java.util.UUID requestId) {
+private static String steerImageOwner(java.util.UUID requestId) {
         return "server-steer:" + requestId;
     }
-
-    static String systemPrompt(
+static String systemPrompt(
             dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
         return systemPrompt(requestSkills(skills, experimentalCommands), experimentalCommands);
     }
-
-    static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills) {
+static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills) {
         return systemPrompt(skills, false);
     }
-
-    static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills, boolean commandsAvailable) {
+static String systemPrompt(dev.openallay.skill.SkillCatalogSnapshot skills, boolean commandsAvailable) {
         return dev.openallay.agent.AgentSystemPrompt.compose(
                 skills.metadataPrompt(),
                 dev.openallay.script.schema.CoreJavascriptContract.render(
                         dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
                 false, "", commandsAvailable);
     }
-
-    static String systemPrompt(dev.openallay.skill.SkillCatalogManifest skills) {
+static String systemPrompt(dev.openallay.skill.SkillCatalogManifest skills) {
         return systemPrompt(skills, false);
     }
-
-    static String systemPrompt(dev.openallay.skill.SkillCatalogManifest skills, boolean commandsAvailable) {
+static String systemPrompt(dev.openallay.skill.SkillCatalogManifest skills, boolean commandsAvailable) {
         return dev.openallay.agent.AgentSystemPrompt.compose(
                 skills.metadataPrompt(),
                 dev.openallay.script.schema.CoreJavascriptContract.render(
                         dev.openallay.script.data.MinecraftAgentHostGraph.declaredOnlyCatalog()),
                 false, "", commandsAvailable);
     }
-
-    /** Captures matching prompt and server-local load_skill documents for one request. */
-    static dev.openallay.skill.SkillCatalogSnapshot requestSkills(
+static dev.openallay.skill.SkillCatalogSnapshot requestSkills(
             dev.openallay.skill.SkillRepository skills, boolean experimentalCommands) {
         java.util.Objects.requireNonNull(skills, "skills");
         return experimentalCommands
                 ? skills.snapshotWithRuntimeEnabled(java.util.Set.of(), java.util.Set.of("run-game-commands"))
                 : skills.snapshot(java.util.Set.of());
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ServerGuideRuntime)) return false;
+        ServerGuideRuntime that = (ServerGuideRuntime) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(service, that.service) && java.util.Objects.equals(contextSpec, that.contextSpec) && java.util.Objects.equals(clientTools, that.clientTools);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(service);
+        hash = 31 * hash + java.util.Objects.hashCode(contextSpec);
+        hash = 31 * hash + java.util.Objects.hashCode(clientTools);
+        return hash;
+    }
+    @Override public String toString() { return "ServerGuideRuntime[config=" + config + ", service=" + service + ", contextSpec=" + contextSpec + ", clientTools=" + clientTools + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ServerGuideRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(ServerGuideRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ServerGuideRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(ServerGuideRuntime.class, "config", ServerGuideRuntime::config), new dev.openallay.value.ValueSchema.Component<>(ServerGuideRuntime.class, "service", ServerGuideRuntime::service), new dev.openallay.value.ValueSchema.Component<>(ServerGuideRuntime.class, "contextSpec", ServerGuideRuntime::contextSpec), new dev.openallay.value.ValueSchema.Component<>(ServerGuideRuntime.class, "clientTools", ServerGuideRuntime::clientTools)), arguments -> new ServerGuideRuntime((ModelConfig) arguments[0], (ServerAgentService) arguments[1], (dev.openallay.guide.GuideContextSpec) arguments[2], (PlayerClientToolRouter) arguments[3]));
+        }
     }
 }

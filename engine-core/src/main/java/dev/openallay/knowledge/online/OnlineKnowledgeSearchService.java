@@ -103,17 +103,45 @@ public final class OnlineKnowledgeSearchService {
         return current;
     }
 
-    private record SourceOutcome(
-            OnlineKnowledgeSource source,
-            List<OnlineKnowledgeSource.RawHit> hits,
-            Throwable failure) {
-        private static SourceOutcome success(
+    @dev.openallay.value.ValueType(SourceOutcome.ValueSchemaProvider.class)
+private static final class SourceOutcome {
+    private final OnlineKnowledgeSource source;
+    private final List<OnlineKnowledgeSource.RawHit> hits;
+    private final Throwable failure;
+    private SourceOutcome(OnlineKnowledgeSource source, List<OnlineKnowledgeSource.RawHit> hits, Throwable failure) {
+        this.source = source;
+        this.hits = hits;
+        this.failure = failure;
+    }
+    public OnlineKnowledgeSource source() { return source; }
+    public List<OnlineKnowledgeSource.RawHit> hits() { return hits; }
+    public Throwable failure() { return failure; }
+private static SourceOutcome success(
                 OnlineKnowledgeSource source, List<OnlineKnowledgeSource.RawHit> hits) {
             return new SourceOutcome(source, List.copyOf(hits), null);
         }
-
-        private static SourceOutcome failure(OnlineKnowledgeSource source, Throwable failure) {
+private static SourceOutcome failure(OnlineKnowledgeSource source, Throwable failure) {
             return new SourceOutcome(source, List.of(), failure);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SourceOutcome)) return false;
+        SourceOutcome that = (SourceOutcome) other;
+        return java.util.Objects.equals(source, that.source) && java.util.Objects.equals(hits, that.hits) && java.util.Objects.equals(failure, that.failure);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + java.util.Objects.hashCode(hits);
+        hash = 31 * hash + java.util.Objects.hashCode(failure);
+        return hash;
+    }
+    @Override public String toString() { return "SourceOutcome[source=" + source + ", hits=" + hits + ", failure=" + failure + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SourceOutcome> schema() {
+            return new dev.openallay.value.ValueSchema<>(SourceOutcome.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SourceOutcome>>asList(new dev.openallay.value.ValueSchema.Component<>(SourceOutcome.class, "source", SourceOutcome::source), new dev.openallay.value.ValueSchema.Component<>(SourceOutcome.class, "hits", SourceOutcome::hits), new dev.openallay.value.ValueSchema.Component<>(SourceOutcome.class, "failure", SourceOutcome::failure)), arguments -> new SourceOutcome((OnlineKnowledgeSource) arguments[0], (List) arguments[1], (Throwable) arguments[2]));
+        }
+    }
+}
 }

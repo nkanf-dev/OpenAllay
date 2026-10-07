@@ -569,8 +569,36 @@ public final class PlayerClientToolRouter {
                 true);
     }
 
-    private record ValidatedResult(JsonObject normalized,
-            List<dev.openallay.model.image.ImageReference> images) {}
+    @dev.openallay.value.ValueType(ValidatedResult.ValueSchemaProvider.class)
+private static final class ValidatedResult {
+    private final JsonObject normalized;
+    private final List<dev.openallay.model.image.ImageReference> images;
+    private ValidatedResult(JsonObject normalized, List<dev.openallay.model.image.ImageReference> images) {
+        this.normalized = normalized;
+        this.images = images;
+    }
+    public JsonObject normalized() { return normalized; }
+    public List<dev.openallay.model.image.ImageReference> images() { return images; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ValidatedResult)) return false;
+        ValidatedResult that = (ValidatedResult) other;
+        return java.util.Objects.equals(normalized, that.normalized) && java.util.Objects.equals(images, that.images);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(normalized);
+        hash = 31 * hash + java.util.Objects.hashCode(images);
+        return hash;
+    }
+    @Override public String toString() { return "ValidatedResult[normalized=" + normalized + ", images=" + images + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ValidatedResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(ValidatedResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ValidatedResult>>asList(new dev.openallay.value.ValueSchema.Component<>(ValidatedResult.class, "normalized", ValidatedResult::normalized), new dev.openallay.value.ValueSchema.Component<>(ValidatedResult.class, "images", ValidatedResult::images)), arguments -> new ValidatedResult((JsonObject) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 
     private ValidatedResult validateNormalized(
             ToolRuntimeCatalog requestTools, String toolId, JsonObject normalized) {
@@ -664,7 +692,36 @@ public final class PlayerClientToolRouter {
         return true;
     }
 
-    private record RequestKey(UUID actorId, UUID requestId) {}
+    @dev.openallay.value.ValueType(RequestKey.ValueSchemaProvider.class)
+private static final class RequestKey {
+    private final UUID actorId;
+    private final UUID requestId;
+    private RequestKey(UUID actorId, UUID requestId) {
+        this.actorId = actorId;
+        this.requestId = requestId;
+    }
+    public UUID actorId() { return actorId; }
+    public UUID requestId() { return requestId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RequestKey)) return false;
+        RequestKey that = (RequestKey) other;
+        return java.util.Objects.equals(actorId, that.actorId) && java.util.Objects.equals(requestId, that.requestId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actorId);
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        return hash;
+    }
+    @Override public String toString() { return "RequestKey[actorId=" + actorId + ", requestId=" + requestId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RequestKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(RequestKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RequestKey>>asList(new dev.openallay.value.ValueSchema.Component<>(RequestKey.class, "actorId", RequestKey::actorId), new dev.openallay.value.ValueSchema.Component<>(RequestKey.class, "requestId", RequestKey::requestId)), arguments -> new RequestKey((UUID) arguments[0], (UUID) arguments[1]));
+        }
+    }
+}
 
     private static final class Pending {
         private final String toolId;

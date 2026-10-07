@@ -369,17 +369,72 @@ public final class ClientToolExecutionEndpoint {
                 .thenApply(result -> result);
     }
 
-    public record OpenedRequest(
-            UUID requestId, String sessionId, List<String> clientToolIds,
-            SkillCatalogManifest skillDocuments) {
-        public OpenedRequest {
+    @dev.openallay.value.ValueType(OpenedRequest.ValueSchemaProvider.class)
+public static final class OpenedRequest {
+    private final UUID requestId;
+    private final String sessionId;
+    private final List<String> clientToolIds;
+    private final SkillCatalogManifest skillDocuments;
+    public OpenedRequest(UUID requestId, String sessionId, List<String> clientToolIds, SkillCatalogManifest skillDocuments) {
+
             java.util.Objects.requireNonNull(requestId, "requestId");
             clientToolIds = List.copyOf(clientToolIds);
             java.util.Objects.requireNonNull(skillDocuments, "skillDocuments");
+
+        this.requestId = requestId;
+        this.sessionId = sessionId;
+        this.clientToolIds = clientToolIds;
+        this.skillDocuments = skillDocuments;
+    }
+    public UUID requestId() { return requestId; }
+    public String sessionId() { return sessionId; }
+    public List<String> clientToolIds() { return clientToolIds; }
+    public SkillCatalogManifest skillDocuments() { return skillDocuments; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof OpenedRequest)) return false;
+        OpenedRequest that = (OpenedRequest) other;
+        return java.util.Objects.equals(requestId, that.requestId) && java.util.Objects.equals(sessionId, that.sessionId) && java.util.Objects.equals(clientToolIds, that.clientToolIds) && java.util.Objects.equals(skillDocuments, that.skillDocuments);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + java.util.Objects.hashCode(clientToolIds);
+        hash = 31 * hash + java.util.Objects.hashCode(skillDocuments);
+        return hash;
+    }
+    @Override public String toString() { return "OpenedRequest[requestId=" + requestId + ", sessionId=" + sessionId + ", clientToolIds=" + clientToolIds + ", skillDocuments=" + skillDocuments + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<OpenedRequest> schema() {
+            return new dev.openallay.value.ValueSchema<>(OpenedRequest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<OpenedRequest>>asList(new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "requestId", OpenedRequest::requestId), new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "sessionId", OpenedRequest::sessionId), new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "clientToolIds", OpenedRequest::clientToolIds), new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "skillDocuments", OpenedRequest::skillDocuments)), arguments -> new OpenedRequest((UUID) arguments[0], (String) arguments[1], (List) arguments[2], (SkillCatalogManifest) arguments[3]));
         }
     }
+}
 
-    public record VoidResult() {}
+    @dev.openallay.value.ValueType(VoidResult.ValueSchemaProvider.class)
+public static final class VoidResult {
+    public VoidResult() {
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof VoidResult)) return false;
+        VoidResult that = (VoidResult) other;
+        return true;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        return hash;
+    }
+    @Override public String toString() { return "VoidResult[]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<VoidResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(VoidResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VoidResult>>asList(), arguments -> new VoidResult());
+        }
+    }
+}
 
     private enum Registration {
         REGISTERED,

@@ -12,9 +12,41 @@ public final class DevelopmentCommandSpec {
 
     public enum Action { TOOLS, REPLAY, INVOKE }
 
-    public record Route(List<String> literals, CommandArgument argument, Action action) {
-        public Route { literals = List.copyOf(literals); }
+    @dev.openallay.value.ValueType(Route.ValueSchemaProvider.class)
+public static final class Route {
+    private final List<String> literals;
+    private final CommandArgument argument;
+    private final Action action;
+    public Route(List<String> literals, CommandArgument argument, Action action) {
+ literals = List.copyOf(literals);
+        this.literals = literals;
+        this.argument = argument;
+        this.action = action;
     }
+    public List<String> literals() { return literals; }
+    public CommandArgument argument() { return argument; }
+    public Action action() { return action; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Route)) return false;
+        Route that = (Route) other;
+        return java.util.Objects.equals(literals, that.literals) && java.util.Objects.equals(argument, that.argument) && java.util.Objects.equals(action, that.action);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(literals);
+        hash = 31 * hash + java.util.Objects.hashCode(argument);
+        hash = 31 * hash + java.util.Objects.hashCode(action);
+        return hash;
+    }
+    @Override public String toString() { return "Route[literals=" + literals + ", argument=" + argument + ", action=" + action + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Route> schema() {
+            return new dev.openallay.value.ValueSchema<>(Route.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Route>>asList(new dev.openallay.value.ValueSchema.Component<>(Route.class, "literals", Route::literals), new dev.openallay.value.ValueSchema.Component<>(Route.class, "argument", Route::argument), new dev.openallay.value.ValueSchema.Component<>(Route.class, "action", Route::action)), arguments -> new Route((List) arguments[0], (CommandArgument) arguments[1], (Action) arguments[2]));
+        }
+    }
+}
 
     public interface Source {
         void success(String line);

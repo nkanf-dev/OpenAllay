@@ -28,17 +28,42 @@ public final class ModelMetadataCache {
             "source", "providerModelId", "canonicalModelId", "contextWindowTokens",
             "maxOutputTokens", "capturedAt", "imageInputCapability");
 
-    public record Snapshot(
-            Map<ModelMetadata.Key, ModelMetadata> entries,
-            GuideFailure failure) {
-        public Snapshot {
-            entries = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries));
-        }
+    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
+public static final class Snapshot {
+    private final Map<ModelMetadata.Key, ModelMetadata> entries;
+    private final GuideFailure failure;
+    public Snapshot(Map<ModelMetadata.Key, ModelMetadata> entries, GuideFailure failure) {
 
-        public ModelMetadata find(String source, String providerModelId) {
+            entries = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries));
+
+        this.entries = entries;
+        this.failure = failure;
+    }
+    public Map<ModelMetadata.Key, ModelMetadata> entries() { return entries; }
+    public GuideFailure failure() { return failure; }
+public ModelMetadata find(String source, String providerModelId) {
             return entries.get(new ModelMetadata.Key(source, providerModelId));
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Snapshot)) return false;
+        Snapshot that = (Snapshot) other;
+        return java.util.Objects.equals(entries, that.entries) && java.util.Objects.equals(failure, that.failure);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(entries);
+        hash = 31 * hash + java.util.Objects.hashCode(failure);
+        return hash;
+    }
+    @Override public String toString() { return "Snapshot[entries=" + entries + ", failure=" + failure + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
+            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "entries", Snapshot::entries), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "failure", Snapshot::failure)), arguments -> new Snapshot((Map) arguments[0], (GuideFailure) arguments[1]));
+        }
+    }
+}
 
     private final Path path;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(

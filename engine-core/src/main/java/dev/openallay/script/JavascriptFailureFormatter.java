@@ -154,5 +154,34 @@ public final class JavascriptFailureFormatter {
         return source.split("\r\n|[\n\r\u2028\u2029]", -1).length;
     }
 
-    private record Source(int prefixLines, int lines) {}
+    @dev.openallay.value.ValueType(Source.ValueSchemaProvider.class)
+private static final class Source {
+    private final int prefixLines;
+    private final int lines;
+    private Source(int prefixLines, int lines) {
+        this.prefixLines = prefixLines;
+        this.lines = lines;
+    }
+    public int prefixLines() { return prefixLines; }
+    public int lines() { return lines; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Source)) return false;
+        Source that = (Source) other;
+        return prefixLines == that.prefixLines && lines == that.lines;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(prefixLines);
+        hash = 31 * hash + Integer.hashCode(lines);
+        return hash;
+    }
+    @Override public String toString() { return "Source[prefixLines=" + prefixLines + ", lines=" + lines + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Source> schema() {
+            return new dev.openallay.value.ValueSchema<>(Source.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Source>>asList(new dev.openallay.value.ValueSchema.Component<>(Source.class, "prefixLines", Source::prefixLines), new dev.openallay.value.ValueSchema.Component<>(Source.class, "lines", Source::lines)), arguments -> new Source((Integer) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 }

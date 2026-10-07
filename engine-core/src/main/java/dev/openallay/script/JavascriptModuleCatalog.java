@@ -103,5 +103,34 @@ public final class JavascriptModuleCatalog {
         }
     }
 
-    private record RegisteredSource(String provider, String source) {}
+    @dev.openallay.value.ValueType(RegisteredSource.ValueSchemaProvider.class)
+private static final class RegisteredSource {
+    private final String provider;
+    private final String source;
+    private RegisteredSource(String provider, String source) {
+        this.provider = provider;
+        this.source = source;
+    }
+    public String provider() { return provider; }
+    public String source() { return source; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RegisteredSource)) return false;
+        RegisteredSource that = (RegisteredSource) other;
+        return java.util.Objects.equals(provider, that.provider) && java.util.Objects.equals(source, that.source);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(provider);
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        return hash;
+    }
+    @Override public String toString() { return "RegisteredSource[provider=" + provider + ", source=" + source + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RegisteredSource> schema() {
+            return new dev.openallay.value.ValueSchema<>(RegisteredSource.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RegisteredSource>>asList(new dev.openallay.value.ValueSchema.Component<>(RegisteredSource.class, "provider", RegisteredSource::provider), new dev.openallay.value.ValueSchema.Component<>(RegisteredSource.class, "source", RegisteredSource::source)), arguments -> new RegisteredSource((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

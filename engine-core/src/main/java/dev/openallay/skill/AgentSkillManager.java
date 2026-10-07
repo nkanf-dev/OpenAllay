@@ -28,15 +28,47 @@ public final class AgentSkillManager {
         DELETE
     }
 
-    public record Result(
-            Operation operation,
-            String name,
-            SkillSource.Origin origin,
-            List<String> availableReferences) {
-        public Result {
+    @dev.openallay.value.ValueType(Result.ValueSchemaProvider.class)
+public static final class Result {
+    private final Operation operation;
+    private final String name;
+    private final SkillSource.Origin origin;
+    private final List<String> availableReferences;
+    public Result(Operation operation, String name, SkillSource.Origin origin, List<String> availableReferences) {
+
             availableReferences = List.copyOf(availableReferences);
+
+        this.operation = operation;
+        this.name = name;
+        this.origin = origin;
+        this.availableReferences = availableReferences;
+    }
+    public Operation operation() { return operation; }
+    public String name() { return name; }
+    public SkillSource.Origin origin() { return origin; }
+    public List<String> availableReferences() { return availableReferences; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Result)) return false;
+        Result that = (Result) other;
+        return java.util.Objects.equals(operation, that.operation) && java.util.Objects.equals(name, that.name) && java.util.Objects.equals(origin, that.origin) && java.util.Objects.equals(availableReferences, that.availableReferences);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(operation);
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(origin);
+        hash = 31 * hash + java.util.Objects.hashCode(availableReferences);
+        return hash;
+    }
+    @Override public String toString() { return "Result[operation=" + operation + ", name=" + name + ", origin=" + origin + ", availableReferences=" + availableReferences + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Result> schema() {
+            return new dev.openallay.value.ValueSchema<>(Result.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Result>>asList(new dev.openallay.value.ValueSchema.Component<>(Result.class, "operation", Result::operation), new dev.openallay.value.ValueSchema.Component<>(Result.class, "name", Result::name), new dev.openallay.value.ValueSchema.Component<>(Result.class, "origin", Result::origin), new dev.openallay.value.ValueSchema.Component<>(Result.class, "availableReferences", Result::availableReferences)), arguments -> new Result((Operation) arguments[0], (String) arguments[1], (SkillSource.Origin) arguments[2], (List) arguments[3]));
         }
     }
+}
 
     private final Path root;
     private final SkillRepository repository;
@@ -287,11 +319,39 @@ public final class AgentSkillManager {
         }
     }
 
-    private record Replacement(Path target, Path prior) {
-        private void commit() {
+    @dev.openallay.value.ValueType(Replacement.ValueSchemaProvider.class)
+private static final class Replacement {
+    private final Path target;
+    private final Path prior;
+    private Replacement(Path target, Path prior) {
+        this.target = target;
+        this.prior = prior;
+    }
+    public Path target() { return target; }
+    public Path prior() { return prior; }
+private void commit() {
             deleteTreeQuietly(prior);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Replacement)) return false;
+        Replacement that = (Replacement) other;
+        return java.util.Objects.equals(target, that.target) && java.util.Objects.equals(prior, that.prior);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(target);
+        hash = 31 * hash + java.util.Objects.hashCode(prior);
+        return hash;
+    }
+    @Override public String toString() { return "Replacement[target=" + target + ", prior=" + prior + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Replacement> schema() {
+            return new dev.openallay.value.ValueSchema<>(Replacement.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Replacement>>asList(new dev.openallay.value.ValueSchema.Component<>(Replacement.class, "target", Replacement::target), new dev.openallay.value.ValueSchema.Component<>(Replacement.class, "prior", Replacement::prior)), arguments -> new Replacement((Path) arguments[0], (Path) arguments[1]));
+        }
+    }
+}
 
     private void reload() {
         if (!repository.reload(bundled, loader.load(root), installedMods)) {

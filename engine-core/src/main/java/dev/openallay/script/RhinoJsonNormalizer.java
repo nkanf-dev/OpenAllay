@@ -302,10 +302,38 @@ final class RhinoJsonNormalizer {
         return left > Long.MAX_VALUE - right ? Long.MAX_VALUE : left + right;
     }
 
-    record Result(JsonElement value, JavascriptResultShape shape) {
-        Result {
+    @dev.openallay.value.ValueType(Result.ValueSchemaProvider.class)
+static final class Result {
+    private final JsonElement value;
+    private final JavascriptResultShape shape;
+    Result(JsonElement value, JavascriptResultShape shape) {
+
             value = java.util.Objects.requireNonNull(value, "value");
             shape = java.util.Objects.requireNonNull(shape, "shape");
+
+        this.value = value;
+        this.shape = shape;
+    }
+    public JsonElement value() { return value; }
+    public JavascriptResultShape shape() { return shape; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Result)) return false;
+        Result that = (Result) other;
+        return java.util.Objects.equals(value, that.value) && java.util.Objects.equals(shape, that.shape);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        hash = 31 * hash + java.util.Objects.hashCode(shape);
+        return hash;
+    }
+    @Override public String toString() { return "Result[value=" + value + ", shape=" + shape + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Result> schema() {
+            return new dev.openallay.value.ValueSchema<>(Result.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Result>>asList(new dev.openallay.value.ValueSchema.Component<>(Result.class, "value", Result::value), new dev.openallay.value.ValueSchema.Component<>(Result.class, "shape", Result::shape)), arguments -> new Result((JsonElement) arguments[0], (JavascriptResultShape) arguments[1]));
         }
     }
+}
 }

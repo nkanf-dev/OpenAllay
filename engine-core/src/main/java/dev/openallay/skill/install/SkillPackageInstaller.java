@@ -315,7 +315,40 @@ public final class SkillPackageInstaller {
         }
     }
 
-    private record CapturedTree(Map<String, byte[]> files, Set<String> directories, String sha256) {}
+    @dev.openallay.value.ValueType(CapturedTree.ValueSchemaProvider.class)
+private static final class CapturedTree {
+    private final Map<String, byte[]> files;
+    private final Set<String> directories;
+    private final String sha256;
+    private CapturedTree(Map<String, byte[]> files, Set<String> directories, String sha256) {
+        this.files = files;
+        this.directories = directories;
+        this.sha256 = sha256;
+    }
+    public Map<String, byte[]> files() { return files; }
+    public Set<String> directories() { return directories; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CapturedTree)) return false;
+        CapturedTree that = (CapturedTree) other;
+        return java.util.Objects.equals(files, that.files) && java.util.Objects.equals(directories, that.directories) && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(files);
+        hash = 31 * hash + java.util.Objects.hashCode(directories);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "CapturedTree[files=" + files + ", directories=" + directories + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CapturedTree> schema() {
+            return new dev.openallay.value.ValueSchema<>(CapturedTree.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CapturedTree>>asList(new dev.openallay.value.ValueSchema.Component<>(CapturedTree.class, "files", CapturedTree::files), new dev.openallay.value.ValueSchema.Component<>(CapturedTree.class, "directories", CapturedTree::directories), new dev.openallay.value.ValueSchema.Component<>(CapturedTree.class, "sha256", CapturedTree::sha256)), arguments -> new CapturedTree((Map) arguments[0], (Set) arguments[1], (String) arguments[2]));
+        }
+    }
+}
 
     private static <T> ToolResult.Failure<T> cancelled() {
         return new ToolResult.Failure<>("skill_install_cancelled", "Skill installation was cancelled");
@@ -468,25 +501,112 @@ public final class SkillPackageInstaller {
         return value;
     }
 
-    public record InstallResult(String skillName, String provenance) {
-        public InstallResult {
+    @dev.openallay.value.ValueType(InstallResult.ValueSchemaProvider.class)
+public static final class InstallResult {
+    private final String skillName;
+    private final String provenance;
+    public InstallResult(String skillName, String provenance) {
+
             if (skillName == null || skillName.isBlank()
                     || provenance == null || provenance.isBlank()) {
                 throw new IllegalArgumentException("Installed Skill identity is required");
             }
+
+        this.skillName = skillName;
+        this.provenance = provenance;
+    }
+    public String skillName() { return skillName; }
+    public String provenance() { return provenance; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof InstallResult)) return false;
+        InstallResult that = (InstallResult) other;
+        return java.util.Objects.equals(skillName, that.skillName) && java.util.Objects.equals(provenance, that.provenance);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(skillName);
+        hash = 31 * hash + java.util.Objects.hashCode(provenance);
+        return hash;
+    }
+    @Override public String toString() { return "InstallResult[skillName=" + skillName + ", provenance=" + provenance + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<InstallResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(InstallResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<InstallResult>>asList(new dev.openallay.value.ValueSchema.Component<>(InstallResult.class, "skillName", InstallResult::skillName), new dev.openallay.value.ValueSchema.Component<>(InstallResult.class, "provenance", InstallResult::provenance)), arguments -> new InstallResult((String) arguments[0], (String) arguments[1]));
         }
     }
+}
 
-    private record Candidate(Path packageRoot, SkillDocument document, String sha256) {}
-
-    private record ArchiveResponse(int status, byte[] bytes) {
-        private ArchiveResponse {
-            bytes = bytes.clone();
+    @dev.openallay.value.ValueType(Candidate.ValueSchemaProvider.class)
+private static final class Candidate {
+    private final Path packageRoot;
+    private final SkillDocument document;
+    private final String sha256;
+    private Candidate(Path packageRoot, SkillDocument document, String sha256) {
+        this.packageRoot = packageRoot;
+        this.document = document;
+        this.sha256 = sha256;
+    }
+    public Path packageRoot() { return packageRoot; }
+    public SkillDocument document() { return document; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Candidate)) return false;
+        Candidate that = (Candidate) other;
+        return java.util.Objects.equals(packageRoot, that.packageRoot) && java.util.Objects.equals(document, that.document) && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(packageRoot);
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "Candidate[packageRoot=" + packageRoot + ", document=" + document + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Candidate> schema() {
+            return new dev.openallay.value.ValueSchema<>(Candidate.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Candidate>>asList(new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "packageRoot", Candidate::packageRoot), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "document", Candidate::document), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "sha256", Candidate::sha256)), arguments -> new Candidate((Path) arguments[0], (SkillDocument) arguments[1], (String) arguments[2]));
         }
+    }
+}
 
-        @Override
+    @dev.openallay.value.ValueType(ArchiveResponse.ValueSchemaProvider.class)
+private static final class ArchiveResponse {
+    private final int status;
+    private final byte[] bytes;
+    private ArchiveResponse(int status, byte[] bytes) {
+
+            bytes = bytes.clone();
+
+        this.status = status;
+        this.bytes = bytes;
+    }
+    public int status() { return status; }
+
         public byte[] bytes() {
             return bytes.clone();
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ArchiveResponse)) return false;
+        ArchiveResponse that = (ArchiveResponse) other;
+        return status == that.status && java.util.Objects.equals(bytes, that.bytes);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(bytes);
+        return hash;
+    }
+    @Override public String toString() { return "ArchiveResponse[status=" + status + ", bytes=" + bytes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ArchiveResponse> schema() {
+            return new dev.openallay.value.ValueSchema<>(ArchiveResponse.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ArchiveResponse>>asList(new dev.openallay.value.ValueSchema.Component<>(ArchiveResponse.class, "status", ArchiveResponse::status), new dev.openallay.value.ValueSchema.Component<>(ArchiveResponse.class, "bytes", ArchiveResponse::bytes)), arguments -> new ArchiveResponse((Integer) arguments[0], (byte[]) arguments[1]));
+        }
+    }
+}
 }

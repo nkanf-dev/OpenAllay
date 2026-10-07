@@ -255,5 +255,26 @@ public final class RemoteToolServer {
         return actorId + "/" + requestId;
     }
 
-    public record VoidResult() {}
+    @dev.openallay.value.ValueType(VoidResult.ValueSchemaProvider.class)
+public static final class VoidResult {
+    public VoidResult() {
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof VoidResult)) return false;
+        VoidResult that = (VoidResult) other;
+        return true;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        return hash;
+    }
+    @Override public String toString() { return "VoidResult[]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<VoidResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(VoidResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VoidResult>>asList(), arguments -> new VoidResult());
+        }
+    }
+}
 }

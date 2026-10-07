@@ -46,6 +46,39 @@ public final class NaturalModelView {
         return result;
     }
 
-    public record Choice(JsonElement value, boolean complete, int omittedRows) {}
+    @dev.openallay.value.ValueType(Choice.ValueSchemaProvider.class)
+public static final class Choice {
+    private final JsonElement value;
+    private final boolean complete;
+    private final int omittedRows;
+    public Choice(JsonElement value, boolean complete, int omittedRows) {
+        this.value = value;
+        this.complete = complete;
+        this.omittedRows = omittedRows;
+    }
+    public JsonElement value() { return value; }
+    public boolean complete() { return complete; }
+    public int omittedRows() { return omittedRows; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Choice)) return false;
+        Choice that = (Choice) other;
+        return java.util.Objects.equals(value, that.value) && complete == that.complete && omittedRows == that.omittedRows;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        hash = 31 * hash + Boolean.hashCode(complete);
+        hash = 31 * hash + Integer.hashCode(omittedRows);
+        return hash;
+    }
+    @Override public String toString() { return "Choice[value=" + value + ", complete=" + complete + ", omittedRows=" + omittedRows + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Choice> schema() {
+            return new dev.openallay.value.ValueSchema<>(Choice.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Choice>>asList(new dev.openallay.value.ValueSchema.Component<>(Choice.class, "value", Choice::value), new dev.openallay.value.ValueSchema.Component<>(Choice.class, "complete", Choice::complete), new dev.openallay.value.ValueSchema.Component<>(Choice.class, "omittedRows", Choice::omittedRows)), arguments -> new Choice((JsonElement) arguments[0], (Boolean) arguments[1], (Integer) arguments[2]));
+        }
+    }
+}
     private static final class State { private boolean omitted; private int omittedRows; }
 }

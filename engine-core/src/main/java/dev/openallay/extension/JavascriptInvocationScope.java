@@ -118,8 +118,66 @@ public final class JavascriptInvocationScope implements AutoCloseable {
         return value;
     }
 
-    record Participant(String owner, JavascriptInvocationParticipant declaration) {}
-    record Binding(String owner, JavascriptHostBinding declaration) {}
+    @dev.openallay.value.ValueType(Participant.ValueSchemaProvider.class)
+static final class Participant {
+    private final String owner;
+    private final JavascriptInvocationParticipant declaration;
+    Participant(String owner, JavascriptInvocationParticipant declaration) {
+        this.owner = owner;
+        this.declaration = declaration;
+    }
+    public String owner() { return owner; }
+    public JavascriptInvocationParticipant declaration() { return declaration; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Participant)) return false;
+        Participant that = (Participant) other;
+        return java.util.Objects.equals(owner, that.owner) && java.util.Objects.equals(declaration, that.declaration);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + java.util.Objects.hashCode(declaration);
+        return hash;
+    }
+    @Override public String toString() { return "Participant[owner=" + owner + ", declaration=" + declaration + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Participant> schema() {
+            return new dev.openallay.value.ValueSchema<>(Participant.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Participant>>asList(new dev.openallay.value.ValueSchema.Component<>(Participant.class, "owner", Participant::owner), new dev.openallay.value.ValueSchema.Component<>(Participant.class, "declaration", Participant::declaration)), arguments -> new Participant((String) arguments[0], (JavascriptInvocationParticipant) arguments[1]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Binding.ValueSchemaProvider.class)
+static final class Binding {
+    private final String owner;
+    private final JavascriptHostBinding declaration;
+    Binding(String owner, JavascriptHostBinding declaration) {
+        this.owner = owner;
+        this.declaration = declaration;
+    }
+    public String owner() { return owner; }
+    public JavascriptHostBinding declaration() { return declaration; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Binding)) return false;
+        Binding that = (Binding) other;
+        return java.util.Objects.equals(owner, that.owner) && java.util.Objects.equals(declaration, that.declaration);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + java.util.Objects.hashCode(declaration);
+        return hash;
+    }
+    @Override public String toString() { return "Binding[owner=" + owner + ", declaration=" + declaration + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Binding> schema() {
+            return new dev.openallay.value.ValueSchema<>(Binding.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Binding>>asList(new dev.openallay.value.ValueSchema.Component<>(Binding.class, "owner", Binding::owner), new dev.openallay.value.ValueSchema.Component<>(Binding.class, "declaration", Binding::declaration)), arguments -> new Binding((String) arguments[0], (JavascriptHostBinding) arguments[1]));
+        }
+    }
+}
 
     /** Marks a normal JavaScript return before revoking native work and unwinding hooks. */
     public void complete() {

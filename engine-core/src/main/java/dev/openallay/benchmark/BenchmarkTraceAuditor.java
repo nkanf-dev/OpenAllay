@@ -215,13 +215,74 @@ public final class BenchmarkTraceAuditor {
                 : "";
     }
 
-    public record TraceRef(String caseId, int attempt, LiveAgentTrace trace) {
-        public TraceRef {
+    @dev.openallay.value.ValueType(TraceRef.ValueSchemaProvider.class)
+public static final class TraceRef {
+    private final String caseId;
+    private final int attempt;
+    private final LiveAgentTrace trace;
+    public TraceRef(String caseId, int attempt, LiveAgentTrace trace) {
+
             if (caseId == null || caseId.isBlank() || attempt < 1) {
                 throw new IllegalArgumentException("caseId and positive attempt are required");
             }
+
+        this.caseId = caseId;
+        this.attempt = attempt;
+        this.trace = trace;
+    }
+    public String caseId() { return caseId; }
+    public int attempt() { return attempt; }
+    public LiveAgentTrace trace() { return trace; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof TraceRef)) return false;
+        TraceRef that = (TraceRef) other;
+        return java.util.Objects.equals(caseId, that.caseId) && attempt == that.attempt && java.util.Objects.equals(trace, that.trace);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(caseId);
+        hash = 31 * hash + Integer.hashCode(attempt);
+        hash = 31 * hash + java.util.Objects.hashCode(trace);
+        return hash;
+    }
+    @Override public String toString() { return "TraceRef[caseId=" + caseId + ", attempt=" + attempt + ", trace=" + trace + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<TraceRef> schema() {
+            return new dev.openallay.value.ValueSchema<>(TraceRef.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<TraceRef>>asList(new dev.openallay.value.ValueSchema.Component<>(TraceRef.class, "caseId", TraceRef::caseId), new dev.openallay.value.ValueSchema.Component<>(TraceRef.class, "attempt", TraceRef::attempt), new dev.openallay.value.ValueSchema.Component<>(TraceRef.class, "trace", TraceRef::trace)), arguments -> new TraceRef((String) arguments[0], (Integer) arguments[1], (LiveAgentTrace) arguments[2]));
         }
     }
+}
 
-    private record AttemptKey(String caseId, int attempt) {}
+    @dev.openallay.value.ValueType(AttemptKey.ValueSchemaProvider.class)
+private static final class AttemptKey {
+    private final String caseId;
+    private final int attempt;
+    private AttemptKey(String caseId, int attempt) {
+        this.caseId = caseId;
+        this.attempt = attempt;
+    }
+    public String caseId() { return caseId; }
+    public int attempt() { return attempt; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof AttemptKey)) return false;
+        AttemptKey that = (AttemptKey) other;
+        return java.util.Objects.equals(caseId, that.caseId) && attempt == that.attempt;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(caseId);
+        hash = 31 * hash + Integer.hashCode(attempt);
+        return hash;
+    }
+    @Override public String toString() { return "AttemptKey[caseId=" + caseId + ", attempt=" + attempt + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<AttemptKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(AttemptKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<AttemptKey>>asList(new dev.openallay.value.ValueSchema.Component<>(AttemptKey.class, "caseId", AttemptKey::caseId), new dev.openallay.value.ValueSchema.Component<>(AttemptKey.class, "attempt", AttemptKey::attempt)), arguments -> new AttemptKey((String) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 }

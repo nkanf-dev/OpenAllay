@@ -508,7 +508,36 @@ public final class ServerAgentService {
         return new Disconnect(count, finished);
     }
 
-    private record Disconnect(int count, CompletableFuture<Void> cleanup) {}
+    @dev.openallay.value.ValueType(Disconnect.ValueSchemaProvider.class)
+private static final class Disconnect {
+    private final int count;
+    private final CompletableFuture<Void> cleanup;
+    private Disconnect(int count, CompletableFuture<Void> cleanup) {
+        this.count = count;
+        this.cleanup = cleanup;
+    }
+    public int count() { return count; }
+    public CompletableFuture<Void> cleanup() { return cleanup; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Disconnect)) return false;
+        Disconnect that = (Disconnect) other;
+        return count == that.count && java.util.Objects.equals(cleanup, that.cleanup);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(count);
+        hash = 31 * hash + java.util.Objects.hashCode(cleanup);
+        return hash;
+    }
+    @Override public String toString() { return "Disconnect[count=" + count + ", cleanup=" + cleanup + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Disconnect> schema() {
+            return new dev.openallay.value.ValueSchema<>(Disconnect.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Disconnect>>asList(new dev.openallay.value.ValueSchema.Component<>(Disconnect.class, "count", Disconnect::count), new dev.openallay.value.ValueSchema.Component<>(Disconnect.class, "cleanup", Disconnect::cleanup)), arguments -> new Disconnect((Integer) arguments[0], (CompletableFuture) arguments[1]));
+        }
+    }
+}
 
     /** Correlation checks never grant another actor authority over this request. */
     public boolean hasRequest(UUID actor, UUID requestId) {
@@ -790,22 +819,63 @@ public final class ServerAgentService {
         return owner.equals(active.get(requestId));
     }
 
-    public record Accepted(UUID requestId, String sessionId) {}
+    @dev.openallay.value.ValueType(Accepted.ValueSchemaProvider.class)
+public static final class Accepted {
+    private final UUID requestId;
+    private final String sessionId;
+    public Accepted(UUID requestId, String sessionId) {
+        this.requestId = requestId;
+        this.sessionId = sessionId;
+    }
+    public UUID requestId() { return requestId; }
+    public String sessionId() { return sessionId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Accepted)) return false;
+        Accepted that = (Accepted) other;
+        return java.util.Objects.equals(requestId, that.requestId) && java.util.Objects.equals(sessionId, that.sessionId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        return hash;
+    }
+    @Override public String toString() { return "Accepted[requestId=" + requestId + ", sessionId=" + sessionId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Accepted> schema() {
+            return new dev.openallay.value.ValueSchema<>(Accepted.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Accepted>>asList(new dev.openallay.value.ValueSchema.Component<>(Accepted.class, "requestId", Accepted::requestId), new dev.openallay.value.ValueSchema.Component<>(Accepted.class, "sessionId", Accepted::sessionId)), arguments -> new Accepted((UUID) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
-    public record RequestRuntime(
-            GameGuideAgent agent,
-            AgentToolExecutor tools,
-            String systemPrompt,
-            Function<ServerAgentSteerPayload, ModelMessage> prepareSteer,
-            Runnable close) {
-        public RequestRuntime {
+    @dev.openallay.value.ValueType(RequestRuntime.ValueSchemaProvider.class)
+public static final class RequestRuntime {
+    private final GameGuideAgent agent;
+    private final AgentToolExecutor tools;
+    private final String systemPrompt;
+    private final Function<ServerAgentSteerPayload, ModelMessage> prepareSteer;
+    private final Runnable close;
+    public RequestRuntime(GameGuideAgent agent, AgentToolExecutor tools, String systemPrompt, Function<ServerAgentSteerPayload, ModelMessage> prepareSteer, Runnable close) {
+
             java.util.Objects.requireNonNull(agent, "agent");
             java.util.Objects.requireNonNull(tools, "tools");
             java.util.Objects.requireNonNull(prepareSteer, "prepareSteer");
             java.util.Objects.requireNonNull(close, "close");
-        }
 
-        public RequestRuntime(
+        this.agent = agent;
+        this.tools = tools;
+        this.systemPrompt = systemPrompt;
+        this.prepareSteer = prepareSteer;
+        this.close = close;
+    }
+    public GameGuideAgent agent() { return agent; }
+    public AgentToolExecutor tools() { return tools; }
+    public String systemPrompt() { return systemPrompt; }
+    public Function<ServerAgentSteerPayload, ModelMessage> prepareSteer() { return prepareSteer; }
+    public Runnable close() { return close; }
+public RequestRuntime(
                 GameGuideAgent agent, AgentToolExecutor tools, String systemPrompt, Runnable close) {
             this(agent, tools, systemPrompt, payload -> {
                 ModelMessage message = payload.message().toModelMessage();
@@ -816,12 +886,33 @@ public final class ServerAgentService {
                 return message;
             }, close);
         }
-
-        public RequestRuntime(
+public RequestRuntime(
                 GameGuideAgent agent, AgentToolExecutor tools, Runnable close) {
             this(agent, tools, null, close);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RequestRuntime)) return false;
+        RequestRuntime that = (RequestRuntime) other;
+        return java.util.Objects.equals(agent, that.agent) && java.util.Objects.equals(tools, that.tools) && java.util.Objects.equals(systemPrompt, that.systemPrompt) && java.util.Objects.equals(prepareSteer, that.prepareSteer) && java.util.Objects.equals(close, that.close);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(agent);
+        hash = 31 * hash + java.util.Objects.hashCode(tools);
+        hash = 31 * hash + java.util.Objects.hashCode(systemPrompt);
+        hash = 31 * hash + java.util.Objects.hashCode(prepareSteer);
+        hash = 31 * hash + java.util.Objects.hashCode(close);
+        return hash;
+    }
+    @Override public String toString() { return "RequestRuntime[agent=" + agent + ", tools=" + tools + ", systemPrompt=" + systemPrompt + ", prepareSteer=" + prepareSteer + ", close=" + close + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RequestRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(RequestRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RequestRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "agent", RequestRuntime::agent), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "tools", RequestRuntime::tools), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "systemPrompt", RequestRuntime::systemPrompt), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "prepareSteer", RequestRuntime::prepareSteer), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "close", RequestRuntime::close)), arguments -> new RequestRuntime((GameGuideAgent) arguments[0], (AgentToolExecutor) arguments[1], (String) arguments[2], (Function) arguments[3], (Runnable) arguments[4]));
+        }
+    }
+}
 
     private static final class Owner {
         private final UUID actorId;

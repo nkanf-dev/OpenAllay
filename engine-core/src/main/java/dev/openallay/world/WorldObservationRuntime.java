@@ -272,7 +272,44 @@ public final class WorldObservationRuntime {
         return new JavascriptExecutionException("world_observation_cancelled", "Observation request is no longer available");
     }
 
-    private record Producer(UUID actor, ImageAttachmentStore store, String owner, ImageReference reference) {}
+    @dev.openallay.value.ValueType(Producer.ValueSchemaProvider.class)
+private static final class Producer {
+    private final UUID actor;
+    private final ImageAttachmentStore store;
+    private final String owner;
+    private final ImageReference reference;
+    private Producer(UUID actor, ImageAttachmentStore store, String owner, ImageReference reference) {
+        this.actor = actor;
+        this.store = store;
+        this.owner = owner;
+        this.reference = reference;
+    }
+    public UUID actor() { return actor; }
+    public ImageAttachmentStore store() { return store; }
+    public String owner() { return owner; }
+    public ImageReference reference() { return reference; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Producer)) return false;
+        Producer that = (Producer) other;
+        return java.util.Objects.equals(actor, that.actor) && java.util.Objects.equals(store, that.store) && java.util.Objects.equals(owner, that.owner) && java.util.Objects.equals(reference, that.reference);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actor);
+        hash = 31 * hash + java.util.Objects.hashCode(store);
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + java.util.Objects.hashCode(reference);
+        return hash;
+    }
+    @Override public String toString() { return "Producer[actor=" + actor + ", store=" + store + ", owner=" + owner + ", reference=" + reference + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Producer> schema() {
+            return new dev.openallay.value.ValueSchema<>(Producer.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Producer>>asList(new dev.openallay.value.ValueSchema.Component<>(Producer.class, "actor", Producer::actor), new dev.openallay.value.ValueSchema.Component<>(Producer.class, "store", Producer::store), new dev.openallay.value.ValueSchema.Component<>(Producer.class, "owner", Producer::owner), new dev.openallay.value.ValueSchema.Component<>(Producer.class, "reference", Producer::reference)), arguments -> new Producer((UUID) arguments[0], (ImageAttachmentStore) arguments[1], (String) arguments[2], (ImageReference) arguments[3]));
+        }
+    }
+}
 
     private static final class Request {
         final WorldObservationCoordinator coordinator;

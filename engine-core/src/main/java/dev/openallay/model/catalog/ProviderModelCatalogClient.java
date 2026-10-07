@@ -168,14 +168,40 @@ public final class ProviderModelCatalogClient {
         return new ToolResult.Failure<>(code, message);
     }
 
-    private record Response(int status, String body) {
-        private Response {
-            Objects.requireNonNull(body, "body");
-        }
+    @dev.openallay.value.ValueType(Response.ValueSchemaProvider.class)
+private static final class Response {
+    private final int status;
+    private final String body;
+    private Response(int status, String body) {
 
-        @Override
+            Objects.requireNonNull(body, "body");
+
+        this.status = status;
+        this.body = body;
+    }
+    public int status() { return status; }
+    public String body() { return body; }
+@Override
         public String toString() {
             return "Response[status=" + status + "]";
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Response)) return false;
+        Response that = (Response) other;
+        return status == that.status && java.util.Objects.equals(body, that.body);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(body);
+        return hash;
+    }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Response> schema() {
+            return new dev.openallay.value.ValueSchema<>(Response.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Response>>asList(new dev.openallay.value.ValueSchema.Component<>(Response.class, "status", Response::status), new dev.openallay.value.ValueSchema.Component<>(Response.class, "body", Response::body)), arguments -> new Response((Integer) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

@@ -357,35 +357,142 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
         return body.substring(start, end);
     }
 
-    private record IndexedSection(
-            KnowledgeDocument document,
-            String sectionId,
-            String heading,
-            String body,
-            String titleText,
-            String identityText,
-            String metadataText,
-            List<String> titleTokens,
-            List<String> headingTokens,
-            List<String> identityTokens,
-            List<String> metadataTokens,
-            List<String> bodyTokens) {}
+    @dev.openallay.value.ValueType(IndexedSection.ValueSchemaProvider.class)
+private static final class IndexedSection {
+    private final KnowledgeDocument document;
+    private final String sectionId;
+    private final String heading;
+    private final String body;
+    private final String titleText;
+    private final String identityText;
+    private final String metadataText;
+    private final List<String> titleTokens;
+    private final List<String> headingTokens;
+    private final List<String> identityTokens;
+    private final List<String> metadataTokens;
+    private final List<String> bodyTokens;
+    private IndexedSection(KnowledgeDocument document, String sectionId, String heading, String body, String titleText, String identityText, String metadataText, List<String> titleTokens, List<String> headingTokens, List<String> identityTokens, List<String> metadataTokens, List<String> bodyTokens) {
+        this.document = document;
+        this.sectionId = sectionId;
+        this.heading = heading;
+        this.body = body;
+        this.titleText = titleText;
+        this.identityText = identityText;
+        this.metadataText = metadataText;
+        this.titleTokens = titleTokens;
+        this.headingTokens = headingTokens;
+        this.identityTokens = identityTokens;
+        this.metadataTokens = metadataTokens;
+        this.bodyTokens = bodyTokens;
+    }
+    public KnowledgeDocument document() { return document; }
+    public String sectionId() { return sectionId; }
+    public String heading() { return heading; }
+    public String body() { return body; }
+    public String titleText() { return titleText; }
+    public String identityText() { return identityText; }
+    public String metadataText() { return metadataText; }
+    public List<String> titleTokens() { return titleTokens; }
+    public List<String> headingTokens() { return headingTokens; }
+    public List<String> identityTokens() { return identityTokens; }
+    public List<String> metadataTokens() { return metadataTokens; }
+    public List<String> bodyTokens() { return bodyTokens; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof IndexedSection)) return false;
+        IndexedSection that = (IndexedSection) other;
+        return java.util.Objects.equals(document, that.document) && java.util.Objects.equals(sectionId, that.sectionId) && java.util.Objects.equals(heading, that.heading) && java.util.Objects.equals(body, that.body) && java.util.Objects.equals(titleText, that.titleText) && java.util.Objects.equals(identityText, that.identityText) && java.util.Objects.equals(metadataText, that.metadataText) && java.util.Objects.equals(titleTokens, that.titleTokens) && java.util.Objects.equals(headingTokens, that.headingTokens) && java.util.Objects.equals(identityTokens, that.identityTokens) && java.util.Objects.equals(metadataTokens, that.metadataTokens) && java.util.Objects.equals(bodyTokens, that.bodyTokens);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        hash = 31 * hash + java.util.Objects.hashCode(sectionId);
+        hash = 31 * hash + java.util.Objects.hashCode(heading);
+        hash = 31 * hash + java.util.Objects.hashCode(body);
+        hash = 31 * hash + java.util.Objects.hashCode(titleText);
+        hash = 31 * hash + java.util.Objects.hashCode(identityText);
+        hash = 31 * hash + java.util.Objects.hashCode(metadataText);
+        hash = 31 * hash + java.util.Objects.hashCode(titleTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(headingTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(identityTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(metadataTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(bodyTokens);
+        return hash;
+    }
+    @Override public String toString() { return "IndexedSection[document=" + document + ", sectionId=" + sectionId + ", heading=" + heading + ", body=" + body + ", titleText=" + titleText + ", identityText=" + identityText + ", metadataText=" + metadataText + ", titleTokens=" + titleTokens + ", headingTokens=" + headingTokens + ", identityTokens=" + identityTokens + ", metadataTokens=" + metadataTokens + ", bodyTokens=" + bodyTokens + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<IndexedSection> schema() {
+            return new dev.openallay.value.ValueSchema<>(IndexedSection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<IndexedSection>>asList(new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "document", IndexedSection::document), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "sectionId", IndexedSection::sectionId), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "heading", IndexedSection::heading), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "body", IndexedSection::body), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "titleText", IndexedSection::titleText), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "identityText", IndexedSection::identityText), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "metadataText", IndexedSection::metadataText), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "titleTokens", IndexedSection::titleTokens), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "headingTokens", IndexedSection::headingTokens), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "identityTokens", IndexedSection::identityTokens), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "metadataTokens", IndexedSection::metadataTokens), new dev.openallay.value.ValueSchema.Component<>(IndexedSection.class, "bodyTokens", IndexedSection::bodyTokens)), arguments -> new IndexedSection((KnowledgeDocument) arguments[0], (String) arguments[1], (String) arguments[2], (String) arguments[3], (String) arguments[4], (String) arguments[5], (String) arguments[6], (List) arguments[7], (List) arguments[8], (List) arguments[9], (List) arguments[10], (List) arguments[11]));
+        }
+    }
+}
 
-    private record RankedSection(
-            IndexedSection section,
-            int priority,
-            double lexicalScore,
-            Set<String> matchedFields) {}
+    @dev.openallay.value.ValueType(RankedSection.ValueSchemaProvider.class)
+private static final class RankedSection {
+    private final IndexedSection section;
+    private final int priority;
+    private final double lexicalScore;
+    private final Set<String> matchedFields;
+    private RankedSection(IndexedSection section, int priority, double lexicalScore, Set<String> matchedFields) {
+        this.section = section;
+        this.priority = priority;
+        this.lexicalScore = lexicalScore;
+        this.matchedFields = matchedFields;
+    }
+    public IndexedSection section() { return section; }
+    public int priority() { return priority; }
+    public double lexicalScore() { return lexicalScore; }
+    public Set<String> matchedFields() { return matchedFields; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RankedSection)) return false;
+        RankedSection that = (RankedSection) other;
+        return java.util.Objects.equals(section, that.section) && priority == that.priority && Double.compare(lexicalScore, that.lexicalScore) == 0 && java.util.Objects.equals(matchedFields, that.matchedFields);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(section);
+        hash = 31 * hash + Integer.hashCode(priority);
+        hash = 31 * hash + Double.hashCode(lexicalScore);
+        hash = 31 * hash + java.util.Objects.hashCode(matchedFields);
+        return hash;
+    }
+    @Override public String toString() { return "RankedSection[section=" + section + ", priority=" + priority + ", lexicalScore=" + lexicalScore + ", matchedFields=" + matchedFields + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RankedSection> schema() {
+            return new dev.openallay.value.ValueSchema<>(RankedSection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RankedSection>>asList(new dev.openallay.value.ValueSchema.Component<>(RankedSection.class, "section", RankedSection::section), new dev.openallay.value.ValueSchema.Component<>(RankedSection.class, "priority", RankedSection::priority), new dev.openallay.value.ValueSchema.Component<>(RankedSection.class, "lexicalScore", RankedSection::lexicalScore), new dev.openallay.value.ValueSchema.Component<>(RankedSection.class, "matchedFields", RankedSection::matchedFields)), arguments -> new RankedSection((IndexedSection) arguments[0], (Integer) arguments[1], (Double) arguments[2], (Set) arguments[3]));
+        }
+    }
+}
 
-    private record Corpus(
-            int sectionCount,
-            Map<String, Integer> documentFrequencies,
-            double averageTitleLength,
-            double averageHeadingLength,
-            double averageIdentityLength,
-            double averageMetadataLength,
-            double averageBodyLength) {
-        private static Corpus from(List<IndexedSection> sections) {
+    @dev.openallay.value.ValueType(Corpus.ValueSchemaProvider.class)
+private static final class Corpus {
+    private final int sectionCount;
+    private final Map<String, Integer> documentFrequencies;
+    private final double averageTitleLength;
+    private final double averageHeadingLength;
+    private final double averageIdentityLength;
+    private final double averageMetadataLength;
+    private final double averageBodyLength;
+    private Corpus(int sectionCount, Map<String, Integer> documentFrequencies, double averageTitleLength, double averageHeadingLength, double averageIdentityLength, double averageMetadataLength, double averageBodyLength) {
+        this.sectionCount = sectionCount;
+        this.documentFrequencies = documentFrequencies;
+        this.averageTitleLength = averageTitleLength;
+        this.averageHeadingLength = averageHeadingLength;
+        this.averageIdentityLength = averageIdentityLength;
+        this.averageMetadataLength = averageMetadataLength;
+        this.averageBodyLength = averageBodyLength;
+    }
+    public int sectionCount() { return sectionCount; }
+    public Map<String, Integer> documentFrequencies() { return documentFrequencies; }
+    public double averageTitleLength() { return averageTitleLength; }
+    public double averageHeadingLength() { return averageHeadingLength; }
+    public double averageIdentityLength() { return averageIdentityLength; }
+    public double averageMetadataLength() { return averageMetadataLength; }
+    public double averageBodyLength() { return averageBodyLength; }
+private static Corpus from(List<IndexedSection> sections) {
             Map<String, Integer> frequencies = new HashMap<>();
             double titleLength = 0.0d;
             double headingLength = 0.0d;
@@ -416,14 +523,36 @@ public final class DeterministicKnowledgeRetriever implements KnowledgeRetriever
                     average(metadataLength, count),
                     average(bodyLength, count));
         }
-
-        private double idf(String term) {
+private double idf(String term) {
             int frequency = documentFrequencies.getOrDefault(term, 0);
             return Math.log(1.0d + (sectionCount - frequency + 0.5d) / (frequency + 0.5d));
         }
-
-        private static double average(double total, int count) {
+private static double average(double total, int count) {
             return count == 0 ? 1.0d : Math.max(total / count, 1.0d);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Corpus)) return false;
+        Corpus that = (Corpus) other;
+        return sectionCount == that.sectionCount && java.util.Objects.equals(documentFrequencies, that.documentFrequencies) && Double.compare(averageTitleLength, that.averageTitleLength) == 0 && Double.compare(averageHeadingLength, that.averageHeadingLength) == 0 && Double.compare(averageIdentityLength, that.averageIdentityLength) == 0 && Double.compare(averageMetadataLength, that.averageMetadataLength) == 0 && Double.compare(averageBodyLength, that.averageBodyLength) == 0;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(sectionCount);
+        hash = 31 * hash + java.util.Objects.hashCode(documentFrequencies);
+        hash = 31 * hash + Double.hashCode(averageTitleLength);
+        hash = 31 * hash + Double.hashCode(averageHeadingLength);
+        hash = 31 * hash + Double.hashCode(averageIdentityLength);
+        hash = 31 * hash + Double.hashCode(averageMetadataLength);
+        hash = 31 * hash + Double.hashCode(averageBodyLength);
+        return hash;
+    }
+    @Override public String toString() { return "Corpus[sectionCount=" + sectionCount + ", documentFrequencies=" + documentFrequencies + ", averageTitleLength=" + averageTitleLength + ", averageHeadingLength=" + averageHeadingLength + ", averageIdentityLength=" + averageIdentityLength + ", averageMetadataLength=" + averageMetadataLength + ", averageBodyLength=" + averageBodyLength + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Corpus> schema() {
+            return new dev.openallay.value.ValueSchema<>(Corpus.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Corpus>>asList(new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "sectionCount", Corpus::sectionCount), new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "documentFrequencies", Corpus::documentFrequencies), new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "averageTitleLength", Corpus::averageTitleLength), new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "averageHeadingLength", Corpus::averageHeadingLength), new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "averageIdentityLength", Corpus::averageIdentityLength), new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "averageMetadataLength", Corpus::averageMetadataLength), new dev.openallay.value.ValueSchema.Component<>(Corpus.class, "averageBodyLength", Corpus::averageBodyLength)), arguments -> new Corpus((Integer) arguments[0], (Map) arguments[1], (Double) arguments[2], (Double) arguments[3], (Double) arguments[4], (Double) arguments[5], (Double) arguments[6]));
+        }
+    }
+}
 }

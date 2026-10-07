@@ -439,6 +439,34 @@ public final class ModelRequestScheduler implements ModelClient {
         }
     }
 
-    private record GateWaiter(
-            CancellationSignal cancellation, CompletableFuture<Void> result) {}
+    @dev.openallay.value.ValueType(GateWaiter.ValueSchemaProvider.class)
+private static final class GateWaiter {
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<Void> result;
+    private GateWaiter(CancellationSignal cancellation, CompletableFuture<Void> result) {
+        this.cancellation = cancellation;
+        this.result = result;
+    }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<Void> result() { return result; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof GateWaiter)) return false;
+        GateWaiter that = (GateWaiter) other;
+        return java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(result, that.result);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(result);
+        return hash;
+    }
+    @Override public String toString() { return "GateWaiter[cancellation=" + cancellation + ", result=" + result + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<GateWaiter> schema() {
+            return new dev.openallay.value.ValueSchema<>(GateWaiter.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<GateWaiter>>asList(new dev.openallay.value.ValueSchema.Component<>(GateWaiter.class, "cancellation", GateWaiter::cancellation), new dev.openallay.value.ValueSchema.Component<>(GateWaiter.class, "result", GateWaiter::result)), arguments -> new GateWaiter((CancellationSignal) arguments[0], (CompletableFuture) arguments[1]));
+        }
+    }
+}
 }
