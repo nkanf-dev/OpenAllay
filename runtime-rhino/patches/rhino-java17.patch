@@ -98,7 +98,29 @@
 @@ -1,0 +2,2 @@
 +
 +import java.util.Objects;
-@@ -233 +235,11 @@
+@@ -110,7 +112,14 @@
+-		return switch (operation) {
+-			case EVERY -> Boolean.TRUE;
+-			case FILTER, MAP -> array;
+-			case SOME -> Boolean.FALSE;
+-			case FIND_INDEX, FIND_LAST_INDEX -> ScriptRuntime.wrapNumber(-1);
+-			default -> Undefined.INSTANCE;
+-		};
++		switch (operation) {
++			case EVERY:
++				return Boolean.TRUE;
++			case FILTER:
++			case MAP:
++				return array;
++			case SOME:
++				return Boolean.FALSE;
++			case FIND_INDEX:
++			case FIND_LAST_INDEX:
++				return ScriptRuntime.wrapNumber(-1);
++			default:
++				return Undefined.INSTANCE;
++		}
+@@ -233 +242,11 @@
 -	public record StringLikeComparator(Context cx) implements Comparator<Object> {
 +	public static final class StringLikeComparator implements Comparator<Object> {
 +		private final Context cx;
@@ -111,7 +133,7 @@
 +			return cx;
 +		}
 +
-@@ -240,3 +252,34 @@
+@@ -240,3 +259,34 @@
 -	}
 -
 -	public record ElementComparator(Comparator<Object> child) implements Comparator<Object> {
@@ -149,7 +171,7 @@
 +			return child;
 +		}
 +
-@@ -266,0 +310,21 @@
+@@ -266,0 +317,21 @@
 +		}
 +
 +		@Override
@@ -171,6 +193,171 @@
 +		@Override
 +		public String toString() {
 +			return "ElementComparator[child=" + child + "]";
+--- a/dev/latvian/mods/rhino/BaseFunction.java
++++ b/dev/latvian/mods/rhino/BaseFunction.java
+@@ -154 +154 @@
+-			case "length" -> {
++			case "length": {
+@@ -158,2 +158,4 @@
+-			}
+-			case "arity" -> {
++
++				break;
++			}
++			case "arity": {
+@@ -163,2 +165,4 @@
+-			}
+-			case "name" -> {
++
++				break;
++			}
++			case "name": {
+@@ -168,2 +172,4 @@
+-			}
+-			case "prototype" -> {
++
++				break;
++			}
++			case "prototype": {
+@@ -174,2 +180,4 @@
+-			}
+-			case "arguments" -> {
++
++				break;
++			}
++			case "arguments": {
+@@ -185,8 +193,14 @@
+-		return switch (id) {
+-			case Id_length -> "length";
+-			case Id_arity -> "arity";
+-			case Id_name -> "name";
+-			case Id_prototype -> "prototype";
+-			case Id_arguments -> "arguments";
+-			default -> super.getInstanceIdName(id);
+-		};
++		switch (id) {
++			case Id_length:
++				return "length";
++			case Id_arity:
++				return "arity";
++			case Id_name:
++				return "name";
++			case Id_prototype:
++				return "prototype";
++			case Id_arguments:
++				return "arguments";
++			default:
++				return super.getInstanceIdName(id);
++		}
+@@ -197,8 +211,14 @@
+-		return switch (id) {
+-			case Id_length -> lengthPropertyAttributes >= 0 ? getLength() : NOT_FOUND;
+-			case Id_arity -> arityPropertyAttributes >= 0 ? getArity() : NOT_FOUND;
+-			case Id_name -> namePropertyAttributes >= 0 ? (nameValue != null ? nameValue : getFunctionName()) : NOT_FOUND;
+-			case Id_prototype -> getPrototypeProperty(cx);
+-			case Id_arguments -> getArguments(cx);
+-			default -> super.getInstanceIdValue(id, cx);
+-		};
++		switch (id) {
++			case Id_length:
++				return lengthPropertyAttributes >= 0 ? getLength() : NOT_FOUND;
++			case Id_arity:
++				return arityPropertyAttributes >= 0 ? getArity() : NOT_FOUND;
++			case Id_name:
++				return namePropertyAttributes >= 0 ? (nameValue != null ? nameValue : getFunctionName()) : NOT_FOUND;
++			case Id_prototype:
++				return getPrototypeProperty(cx);
++			case Id_arguments:
++				return getArguments(cx);
++			default:
++				return super.getInstanceIdValue(id, cx);
++		}
+@@ -253 +273 @@
+-			case Id_prototype -> {
++			case Id_prototype: {
+@@ -257 +277 @@
+-			case Id_arguments -> {
++			case Id_arguments: {
+@@ -261 +281 @@
+-			case Id_arity -> {
++			case Id_arity: {
+@@ -265 +285 @@
+-			case Id_name -> {
++			case Id_name: {
+@@ -269 +289 @@
+-			case Id_length -> {
++			case Id_length: {
+@@ -290 +310 @@
+-			case Id_constructor -> {
++			case Id_constructor: {
+@@ -293,2 +313,4 @@
+-			}
+-			case Id_toString -> {
++
++				break;
++			}
++			case Id_toString: {
+@@ -297,2 +319,4 @@
+-			}
+-			case Id_toSource -> {
++
++				break;
++			}
++			case Id_toSource: {
+@@ -301,2 +325,4 @@
+-			}
+-			case Id_apply -> {
++
++				break;
++			}
++			case Id_apply: {
+@@ -305,2 +331,4 @@
+-			}
+-			case Id_call -> {
++
++				break;
++			}
++			case Id_call: {
+@@ -309,2 +337,4 @@
+-			}
+-			case Id_bind -> {
++
++				break;
++			}
++			case Id_bind: {
+@@ -313,2 +343,4 @@
+-			}
+-			default -> throw new IllegalArgumentException(String.valueOf(id));
++
++				break;
++			}
++			default: throw new IllegalArgumentException(String.valueOf(id));
+@@ -587,9 +619,16 @@
+-		return switch (s) {
+-			case "constructor" -> Id_constructor;
+-			case "toString" -> Id_toString;
+-			case "toSource" -> Id_toSource;
+-			case "apply" -> Id_apply;
+-			case "call" -> Id_call;
+-			case "bind" -> Id_bind;
+-			default -> 0;
+-		};
++		switch (s) {
++			case "constructor":
++				return Id_constructor;
++			case "toString":
++				return Id_toString;
++			case "toSource":
++				return Id_toSource;
++			case "apply":
++				return Id_apply;
++			case "call":
++				return Id_call;
++			case "bind":
++				return Id_bind;
++			default:
++				return 0;
++		}
 --- a/dev/latvian/mods/rhino/BuiltInSlot.java
 +++ b/dev/latvian/mods/rhino/BuiltInSlot.java
 @@ -75 +75 @@
@@ -1335,7 +1522,69 @@
 +			indent = (gapLength > 0) ? ListCompat.repeat(" ", gapLength) : "";
 --- a/dev/latvian/mods/rhino/NativeGlobal.java
 +++ b/dev/latvian/mods/rhino/NativeGlobal.java
-@@ -384 +384,2 @@
+@@ -47,11 +47,11 @@
+-				case Id_decodeURI -> name = "decodeURI";
+-				case Id_decodeURIComponent -> name = "decodeURIComponent";
+-				case Id_encodeURI -> name = "encodeURI";
+-				case Id_encodeURIComponent -> name = "encodeURIComponent";
+-				case Id_escape -> name = "escape";
+-				case Id_eval -> name = "eval";
+-				case Id_isFinite -> name = "isFinite";
+-				case Id_isNaN -> name = "isNaN";
+-				case Id_isXMLName -> name = "isXMLName";
+-				case Id_parseFloat -> name = "parseFloat";
+-				case Id_parseInt -> {
++				case Id_decodeURI: name = "decodeURI"; break;
++				case Id_decodeURIComponent: name = "decodeURIComponent"; break;
++				case Id_encodeURI: name = "encodeURI"; break;
++				case Id_encodeURIComponent: name = "encodeURIComponent"; break;
++				case Id_escape: name = "escape"; break;
++				case Id_eval: name = "eval"; break;
++				case Id_isFinite: name = "isFinite"; break;
++				case Id_isNaN: name = "isNaN"; break;
++				case Id_isXMLName: name = "isXMLName"; break;
++				case Id_parseFloat: name = "parseFloat"; break;
++				case Id_parseInt: {
+@@ -60,4 +60,6 @@
+-				}
+-				case Id_unescape -> name = "unescape";
+-				case Id_uneval -> name = "uneval";
+-				default -> throw Kit.codeBug();
++
++					break;
++				}
++				case Id_unescape: name = "unescape"; break;
++				case Id_uneval: name = "uneval"; break;
++				default: throw Kit.codeBug();
+@@ -221 +223 @@
+-				case '.' -> {
++				case '.': {
+@@ -229 +231,2 @@
+-				case 'e', 'E' -> {
++				case 'e':
++				case 'E': {
+@@ -238 +241,2 @@
+-				case '+', '-' -> {
++				case '+':
++				case '-': {
+@@ -248 +252,10 @@
+-				case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
++				case '0':
++				case '1':
++				case '2':
++				case '3':
++				case '4':
++				case '5':
++				case '6':
++				case '7':
++				case '8':
++				case '9': {
+@@ -254 +267,3 @@
+-				default -> {
++				default: {
++
++					break;
+@@ -384 +399,2 @@
 -		if (functionObj instanceof IdFunctionObject function) {
 +		if (functionObj instanceof IdFunctionObject) {
 +			IdFunctionObject function = (IdFunctionObject) functionObj;
