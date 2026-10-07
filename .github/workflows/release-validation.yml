@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections]
         default: skills
         required: true
 permissions:
@@ -780,3 +780,59 @@ jobs:
           path: |
             engine-core/src/java8Test/engine-json/build/
             engine-core/build/test-results/
+
+  rhino-collections:
+    if: inputs.scope == 'rhino-collections'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual Java 8 collection behavior and modern upstream oracle
+      run: 'mkdir -p build/rhino-collection-inputs
+
+        curl --fail --location https://maven.latvian.dev/releases/dev/latvian/mods/rhino/2101.2.8-build.91/rhino-2101.2.8-build.91-sources.jar
+        --output build/rhino-collection-inputs/rhino-sources.jar
+
+        printf ''%s  %s\n'' bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8
+        build/rhino-collection-inputs/rhino-sources.jar | sha256sum --check
+
+        RHINO_SOURCE_ARCHIVE="$PWD/build/rhino-collection-inputs/rhino-sources.jar"
+        python3 -B -m unittest discover -s scripts -p test_prepare_rhino_sources.py
+        -v
+
+        python3 -B scripts/verify-rhino-java8-collections.py build/rhino-collection-inputs/rhino-sources.jar
+        --javac "$JAVA_HOME_17_X64/bin/javac" --java8 "$JAVA_HOME_8_X64/bin/java" --output
+        build/rhino-collections-java8-proof
+
+        ./gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test --tests
+        dev.latvian.mods.rhino.CollectionCompatibilityTest --tests dev.latvian.mods.rhino.InternalCarrierValuesTest
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest
+        --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest --tests dev.openallay.script.host.RhinoHostAdapterTest
+        --tests dev.openallay.script.schema.HostSchemaCatalogTest'
+    - name: Retain exact collection proof and current consumer results
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-collections-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'build/rhino-collections-java8-proof/
+
+          runtime-rhino/build/test-results/
+
+          engine-core/build/test-results/'
