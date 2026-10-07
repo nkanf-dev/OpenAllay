@@ -4,9 +4,9 @@
     "dev/openallay/script/data/MinecraftAgentHostGraph.java"
   ],
   "selectedPreimageSha256": {
-    "dev/openallay/script/data/MinecraftAgentHostGraph.java": "0d0ca90536ef7bff232cd2f3fa98d9f60c6af7361876423cee75a3079814dd4d"
+    "dev/openallay/script/data/MinecraftAgentHostGraph.java": "dc58607b5bc0a18583a1e7ad4fadbf9ffa04f8f7d1ae492ce8227e8020984fcb"
   },
-  "sourceLanguageStage": "Currentwholecanonicalhostgraph heldunchanged acrosscohort166API/29patterns; fouremptyListsuppliers neednarrowprovenpolicy",
+  "sourceLanguageStage": "Actual full switch owner postimage from 37662223647, prior whole API20 classifier37662774536 postimage held unapplied; reuse genuine supplier oracle37661220439",
   "excludedOwners": {},
   "acceptedToolOracleRun": 37661220439,
   "fixtureReexecuted": false,
@@ -20,5 +20,6 @@
     "engine-core/src/main/java/dev/openallay/util/Java8Hex.java": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
     "engine-core/src/main/java/dev/openallay/util/Java8Futures.java": "be44b1a5deed7cd847fa1d6bc9acaf0a11fefe8ad6367ade750ac0e770a43268"
   },
-  "unsupportedPolicy": "ZEROarg List.of actualstaticTypeElement/uniquefunctionaldescriptor only; nonzero/devshadowrefs namedreject/no partialowner; no SourceGraph method slicing."
+  "unsupportedPolicy": "ZEROarg List.of actualstaticTypeElement/uniquefunctionaldescriptor only; nonzero/devshadowrefs namedreject/no partialowner; no SourceGraph method slicing.",
+  "rawSourceCommit": "3ea48e4a06f8a15947ef4c8c93c7a82730eba675"
 }
