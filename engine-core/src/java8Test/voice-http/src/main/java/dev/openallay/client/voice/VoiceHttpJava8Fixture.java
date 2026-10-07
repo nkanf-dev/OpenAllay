@@ -165,8 +165,10 @@ public final class VoiceHttpJava8Fixture {
                 require(entered.await(2, TimeUnit.SECONDS), "stalled ASR entered");
                 if (cancelNow) { long started = System.nanoTime(); cancellation.cancel(); require(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started) < 300, "nonblocking voice cancel"); }
                 try { work.get(2, TimeUnit.SECONDS); throw new AssertionError("stalled speech accepted"); }
-                catch (ExecutionException failure) {
-                    if (cancelNow) require(failure.getCause() instanceof CancellationException, "speech cancellation");
+                catch (CancellationException failure) {
+                    require(cancelNow && cancellation.cancelled(), "speech cancellation must be requested");
+                } catch (ExecutionException failure) {
+                    if (cancelNow) require(cancellation.cancelled() && failure.getCause() instanceof CancellationException, "speech cancellation");
                     else require(((VoiceHttpSpeechEndpoint.Failure) failure.getCause()).code().equals("voice_timeout"), "full speech deadline");
                 }
             } finally { release.countDown(); }
@@ -225,8 +227,10 @@ public final class VoiceHttpJava8Fixture {
                 require(stalled[cancelNow ? 1 : 0].await(2, TimeUnit.SECONDS), "download stream started");
                 if (cancelNow) signal.cancel();
                 try { result.get(2, TimeUnit.SECONDS); throw new AssertionError("stalled download accepted"); }
-                catch (ExecutionException failure) {
-                    require(cancelNow ? failure.getCause() instanceof CancellationException
+                catch (CancellationException failure) {
+                    require(cancelNow && signal.cancelled(), "download cancellation must be requested");
+                } catch (ExecutionException failure) {
+                    require(cancelNow ? signal.cancelled() && failure.getCause() instanceof CancellationException
                             : failure.getCause() instanceof dev.openallay.net.HttpTimeoutException, "download deadline/cancel");
                 }
             }
