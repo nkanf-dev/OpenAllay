@@ -1,0 +1,52 @@
+plugins { id 'java' }
+// Direct canonical source frontier; no proof JARs, copied stubs, or full engine build.
+def canonical = file('../../..')
+def repository = new File(canonical, '..')
+def originalRoot = providers.gradleProperty('credentialsOriginalSourceRoot')
+def originalMode = originalRoot.isPresent()
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+sourceSets.main.java.setSrcDirs([])
+def support = objects.sourceDirectorySet('credentialSupport', 'Actual canonical support frontier')
+support.srcDirs(new File(canonical, 'src/main/java'), new File(repository, 'runtime-json/src/main/java'))
+support.setIncludes(['dev/openallay/tool/ToolResult.java', 'dev/openallay/util/Java8Strings.java', 'dev/openallay/util/Java8Collections.java', 'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/ValueType.java', 'dev/openallay/json/EngineJson.java', 'dev/openallay/json/RecordJsonAdapter.java', 'dev/openallay/json/ConstructorValueJsonAdapter.java', 'dev/openallay/json/JsonTrees.java', 'dev/openallay/json/JsonReaders.java'])
+def owners = objects.sourceDirectorySet('credentialOwners', 'Four actual credential owners')
+owners.srcDir(originalMode ? new File(originalRoot.get(), 'engine-core/src/main/java') : new File(canonical, 'src/main/java'))
+owners.setIncludes(['dev/openallay/model/config/LocalCredentialStore.java', 'dev/openallay/model/config/CredentialResolver.java', 'dev/openallay/model/config/SecretValue.java', 'dev/openallay/model/config/CredentialReference.java'])
+def fixture = objects.sourceDirectorySet('credentialFixture', 'Synthetic-only behavioral vectors')
+fixture.srcDir(new File(canonical, 'src/credentialsJava8Test/java'))
+fixture.include('dev/openallay/model/config/CredentialsJava8Fixture.java')
+sourceSets.main.java.source(support)
+sourceSets.main.java.source(owners)
+sourceSets.main.java.source(fixture)
+repositories { mavenCentral() }
+dependencies {
+    implementation('com.google.code.gson:gson:2.8.0')
+    runtimeOnly('org.xerial:sqlite-jdbc:3.50.3.0')
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = originalMode ? 17 : 8
+    options.encoding = 'UTF-8'
+}
+def host = providers.gradleProperty('jsonVerificationGsonVersion').getOrElse('2.8.0')
+configurations.runtimeClasspath.resolutionStrategy.force("com.google.code.gson:gson:${host}")
+tasks.register('credentialsTest', JavaExec) {
+    dependsOn('classes')
+    mainClass = 'dev.openallay.model.config.CredentialsJava8Fixture'
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(originalMode ? 17 : 8)
+    }
+    systemProperty('credentials.expectedJava', originalMode ? '17' : '1.8')
+    inputs.property('jsonVerificationGsonVersion', host)
+    inputs.property('credentialsOriginalMode', originalMode)
+    doFirst {
+        def artifacts = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+        def gson = artifacts.findAll { it.moduleVersion.id.group == 'com.google.code.gson' && it.name == 'gson' }
+        def sqlite = artifacts.findAll { it.moduleVersion.id.group == 'org.xerial' && it.name == 'sqlite-jdbc' }
+        if (gson.size() != 1 || gson.first().moduleVersion.id.version != host
+                || sqlite.size() != 1 || sqlite.first().moduleVersion.id.version != '3.50.3.0') {
+            throw new GradleException('Credential frontier requires the pinned Gson host and actual SQLite JDBC')
+        }
+        logger.lifecycle("Canonical credential runtime: Gson ${host}; SQLite ${sqlite.first().moduleVersion.id}; original=${originalMode}")
+    }
+}

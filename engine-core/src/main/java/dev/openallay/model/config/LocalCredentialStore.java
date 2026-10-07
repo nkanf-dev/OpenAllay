@@ -1,6 +1,7 @@
 package dev.openallay.model.config;
 
 import dev.openallay.tool.ToolResult;
+import dev.openallay.util.Java8Collections;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -8,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -41,11 +43,10 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
         CredentialReference reference = CredentialReference.local(UUID.randomUUID());
         byte[] encoded = secret.reveal().getBytes(StandardCharsets.UTF_8);
         try (Connection connection = open();
-                var statement = connection.prepareStatement("""
-                        insert into credentials(
-                            credential_id, secret_value, created_at, updated_at)
-                        values (?, ?, ?, ?)
-                        """)) {
+                PreparedStatement statement = connection.prepareStatement(
+                        "insert into credentials(\n"
+                                + "    credential_id, secret_value, created_at, updated_at)\n"
+                                + "values (?, ?, ?, ?)\n")) {
             String now = Instant.now(clock).toString();
             statement.setString(1, reference.value());
             statement.setBytes(2, encoded);
@@ -67,7 +68,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
             return unavailable();
         }
         try (Connection connection = open();
-                var statement = connection.prepareStatement(
+                PreparedStatement statement = connection.prepareStatement(
                         "select secret_value from credentials where credential_id = ?")) {
             statement.setString(1, reference.value());
             try (ResultSet result = statement.executeQuery()) {
@@ -95,7 +96,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
             return unavailable();
         }
         try (Connection connection = open();
-                var statement = connection.prepareStatement(
+                PreparedStatement statement = connection.prepareStatement(
                         "select 1 from credentials where credential_id = ?")) {
             statement.setString(1, reference.value());
             try (ResultSet result = statement.executeQuery()) {
@@ -110,7 +111,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
             CredentialReference reference,
             Set<CredentialReference> retained) {
         Objects.requireNonNull(reference, "reference");
-        Set<CredentialReference> retainedCopy = Set.copyOf(retained);
+        Set<CredentialReference> retainedCopy = Java8Collections.setCopyOf(retained);
         if (closed) {
             return unavailable();
         }
@@ -118,7 +119,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
             return new ToolResult.Success<>(Boolean.FALSE);
         }
         try (Connection connection = open();
-                var statement = connection.prepareStatement(
+                PreparedStatement statement = connection.prepareStatement(
                         "delete from credentials where credential_id = ?")) {
             statement.setString(1, reference.value());
             return new ToolResult.Success<>(statement.executeUpdate() > 0);
@@ -130,7 +131,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
     public synchronized ToolResult<Integer> collectUnreferenced(
             Set<CredentialReference> retained) {
         Set<String> retainedIds = new HashSet<>();
-        for (CredentialReference reference : Set.copyOf(retained)) {
+        for (CredentialReference reference : Java8Collections.setCopyOf(retained)) {
             if (reference.kind() == CredentialReference.Kind.LOCAL) {
                 retainedIds.add(reference.value());
             }
@@ -140,7 +141,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
         }
         try (Connection connection = open()) {
             int deleted = 0;
-            try (var query = connection.createStatement();
+            try (Statement query = connection.createStatement();
                     ResultSet result = query.executeQuery(
                             "select credential_id from credentials order by credential_id")) {
                 java.util.List<String> candidates = new java.util.ArrayList<>();
@@ -150,7 +151,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
                         candidates.add(id);
                     }
                 }
-                try (var remove = connection.prepareStatement(
+                try (PreparedStatement remove = connection.prepareStatement(
                         "delete from credentials where credential_id = ?")) {
                     for (String id : candidates) {
                         remove.setString(1, id);
@@ -202,7 +203,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
             createSchema(connection);
             return;
         }
-        if (!tables.equals(Set.of("credentials"))) {
+        if (!tables.equals(Java8Collections.setOf("credentials"))) {
             throw new SQLException("unrecognized credential database");
         }
         Set<String> columns = new HashSet<>();
@@ -216,7 +217,7 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
                         + ":" + result.getInt("notnull") + ":" + result.getInt("pk"));
             }
         }
-        if (!columns.equals(Set.of(
+        if (!columns.equals(Java8Collections.setOf(
                 "credential_id:TEXT:0:1", "secret_value:BLOB:1:0",
                 "created_at:TEXT:1:0", "updated_at:TEXT:1:0"))) {
             throw new SQLException("unrecognized credential database");
@@ -227,14 +228,12 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
         boolean autoCommit = connection.getAutoCommit();
         connection.setAutoCommit(false);
         try (Statement statement = connection.createStatement()) {
-            statement.execute("""
-                    create table credentials(
-                        credential_id text primary key,
-                        secret_value blob not null,
-                        created_at text not null,
-                        updated_at text not null
-                    )
-                    """);
+            statement.execute("create table credentials(\n"
+                    + "    credential_id text primary key,\n"
+                    + "    secret_value blob not null,\n"
+                    + "    created_at text not null,\n"
+                    + "    updated_at text not null\n"
+                    + ")\n");
             connection.commit();
         } catch (SQLException failure) {
             try {
@@ -251,15 +250,13 @@ public final class LocalCredentialStore implements CredentialResolver, AutoClose
     private static Set<String> applicationTables(Connection connection) throws SQLException {
         Set<String> tables = new HashSet<>();
         try (Statement statement = connection.createStatement();
-                ResultSet result = statement.executeQuery("""
-                        select name from sqlite_master
-                        where type = 'table' and name not glob 'sqlite_*'
-                        """)) {
+                ResultSet result = statement.executeQuery("select name from sqlite_master\n"
+                        + "where type = 'table' and name not glob 'sqlite_*'\n")) {
             while (result.next()) {
                 tables.add(result.getString(1));
             }
         }
-        return Set.copyOf(tables);
+        return Java8Collections.setCopyOf(tables);
     }
 
     private void hardenPermissions() {

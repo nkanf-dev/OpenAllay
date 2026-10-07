@@ -1,6 +1,8 @@
 package dev.openallay.model.config;
 
 import dev.openallay.tool.ToolResult;
+import dev.openallay.util.Java8Collections;
+import dev.openallay.util.Java8Strings;
 import java.util.Map;
 import java.util.Objects;
 
@@ -10,7 +12,7 @@ public interface CredentialResolver {
     ToolResult<SecretValue> resolve(CredentialReference reference);
 
     static CredentialResolver environment(Map<String, String> environment) {
-        Map<String, String> snapshot = Map.copyOf(environment);
+        Map<String, String> snapshot = Java8Collections.mapCopyOf(environment);
         return reference -> {
             Objects.requireNonNull(reference, "reference");
             if (reference.kind() != CredentialReference.Kind.ENVIRONMENT) {
@@ -18,7 +20,7 @@ public interface CredentialResolver {
                         "credential_not_found", "The stored credential is unavailable");
             }
             String value = snapshot.get(reference.value());
-            if (value == null || value.isBlank()) {
+            if (value == null || Java8Strings.isBlank(value)) {
                 return new ToolResult.Failure<>(
                         "model_not_configured", "The configured credential is unavailable");
             }
