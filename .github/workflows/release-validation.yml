@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof]
         default: skills
         required: true
 permissions:
@@ -1367,12 +1367,14 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify remaining array binding and parser label behavior
+    - name: Verify regular expression and retained proxy record capability language
+        ports
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.ArrayListenerSyntaxTest
+        --tests dev.latvian.mods.rhino.RegExpLanguageClosureTest --tests dev.latvian.mods.rhino.VMBridgeRecordSyntaxTest
+        --tests dev.latvian.mods.rhino.type.NativeRecordCarrierSyntaxTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest
-        --tests dev.openallay.script.RhinoJavascriptRuntimeTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
+        --tests dev.openallay.script.schema.HostSchemaCatalogTest --tests dev.openallay.script.RhinoJavascriptStringGuardTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -3399,3 +3401,131 @@ jobs:
           ${{ runner.temp }}/remaining-record-materialization/materialized/
 
           ${{ runner.temp }}/remaining-record-materialization/materializer.log'
+
+  guide-union-semantic-java8:
+    if: inputs.scope == 'guide-union-semantic-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify actual closed semantic source union families on true Java 8
+      run: './gradlew --max-workers=2 :runtime-commonmark:jar
+
+        python3 -B scripts/prepare-guide-union-semantic-java8.py --project "$PWD" --output
+        "$RUNNER_TEMP/union-source-packet"
+
+        mkdir -p "$RUNNER_TEMP/union-dependencies"
+
+        curl --fail --location --retry 3 --retry-all-errors https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/union-dependencies/gson-2.8.0.jar"
+
+        curl --fail --location --retry 3 --retry-all-errors https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        --output "$RUNNER_TEMP/union-dependencies/gson-2.13.2.jar"
+
+        python3 -B -c ''from pathlib import Path; import os,subprocess; jars=[p for
+        p in Path("runtime-commonmark/build/libs").glob("*.jar") if not p.name.endswith("-sources.jar")];
+        assert len(jars)==1,jars; temp=Path(os.environ["RUNNER_TEMP"]); j17=Path(os.environ["JAVA_HOME_17_X64"]);
+        j8=Path(os.environ["JAVA_HOME_8_X64"]); versions=["2.8.0","2.13.2"]; [subprocess.run(["python3","-B","scripts/verify-guide-union-semantic-java8.py","--project",str(Path.cwd()),"--source-packet",str(temp/"union-source-packet"),"--javac",str(j17/"bin/javac"),"--java",str(j17/"bin/java"),"--javac8",str(j8/"bin/javac"),"--java8",str(j8/"bin/java"),"--classpath",str(temp/"union-dependencies"/("gson-"+v+".jar"))+os.pathsep+str(jars[0]),"--output",str(temp/("union-semantic-"+v))],check=True)
+        for v in versions]'' '
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: guide-union-semantic-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/union-source-packet/manifest.json
+
+          ${{ runner.temp }}/union-semantic-2.8.0/receipt.json
+
+          ${{ runner.temp }}/union-semantic-2.8.0/*.log
+
+          ${{ runner.temp }}/union-semantic-2.13.2/receipt.json
+
+          ${{ runner.temp }}/union-semantic-2.13.2/*.log'
+  client-settings-java8-api-language:
+    if: inputs.scope == 'client-settings-java8-api-language'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Attribute complete client settings Java 8 API invocations
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/client-api-classpath.json"
+
+        python3 -B scripts/materialize-client-settings-java8-api.py --project "$PWD"
+        --classpath-metadata "$RUNNER_TEMP/client-api-classpath.json" --javac "$JAVA_HOME_21_X64/bin/javac"
+        --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/client-api-materialization"'
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: client-settings-java8-api-language-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/client-api-classpath.json
+
+          ${{ runner.temp }}/client-api-materialization/source-packet/
+
+          ${{ runner.temp }}/client-api-materialization/command-*.log'
+  attributed-record-proof:
+    if: inputs.scope == 'attributed-record-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          21'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Prove authentic constructor and interface override attribution on actual
+        Java 8
+      run: ./gradlew --no-daemon -p build-logic/src/attributedRecordTest/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64"
+        attributedRecordTest
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: attributed-record-proof-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: build-logic/src/attributedRecordTest/gradle/build/
