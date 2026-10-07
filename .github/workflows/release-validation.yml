@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8]
         default: skills
         required: true
 permissions:
@@ -1112,5 +1112,67 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
         path: 'runtime-rhino/build/test-results/
+
+          engine-core/build/test-results/'
+
+  credentials-java8:
+    if: inputs.scope == 'credentials-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify real SQLite credential owners on original and Java 8 runtimes
+      run: "python3 -c 'from pathlib import Path\nimport subprocess\nroot=Path(\"build/credential-originals\"\
+        );root.mkdir(parents=True,exist_ok=False)\nfor name in ['\"'\"'engine-core/src/main/java/dev/openallay/model/config/LocalCredentialStore.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/model/config/CredentialResolver.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/model/config/SecretValue.java'\"\
+        '\"', '\"'\"'engine-core/src/main/java/dev/openallay/model/config/CredentialReference.java'\"\
+        '\"']:\n path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(subprocess.check_output([\"\
+        git\",\"show\",\"e7e6d68ee576a28566d96107fa52a79fc06dea26:\"+name]))'\n./gradlew\
+        \ --no-daemon --max-workers=2 -p engine-core/src/credentialsJava8Test/gradle\
+        \ -Dorg.gradle.java.installations.paths=\"$JAVA_HOME_8_X64,$JAVA_HOME_17_X64\"\
+        \ clean credentialsTest -PjsonVerificationGsonVersion=2.8.0 -PcredentialsOriginalSourceRoot=\"\
+        $PWD/build/credential-originals\" > build/credentials-original-2.8.0.log 2>&1\n\
+        cat build/credentials-original-2.8.0.log\n./gradlew --no-daemon --max-workers=2\
+        \ -p engine-core/src/credentialsJava8Test/gradle -Dorg.gradle.java.installations.paths=\"\
+        $JAVA_HOME_8_X64,$JAVA_HOME_17_X64\" credentialsTest -PjsonVerificationGsonVersion=2.13.2\
+        \ -PcredentialsOriginalSourceRoot=\"$PWD/build/credential-originals\" > build/credentials-original-2.13.2.log\
+        \ 2>&1\ncat build/credentials-original-2.13.2.log\n./gradlew --no-daemon --max-workers=2\
+        \ -p engine-core/src/credentialsJava8Test/gradle -Dorg.gradle.java.installations.paths=\"\
+        $JAVA_HOME_8_X64,$JAVA_HOME_17_X64\" clean credentialsTest -PjsonVerificationGsonVersion=2.8.0\
+        \ > build/credentials-java8-2.8.0.log 2>&1\ncat build/credentials-java8-2.8.0.log\n\
+        ./gradlew --no-daemon --max-workers=2 -p engine-core/src/credentialsJava8Test/gradle\
+        \ -Dorg.gradle.java.installations.paths=\"$JAVA_HOME_8_X64,$JAVA_HOME_17_X64\"\
+        \ credentialsTest -PjsonVerificationGsonVersion=2.13.2 > build/credentials-java8-2.13.2.log\
+        \ 2>&1\ncat build/credentials-java8-2.13.2.log\n./gradlew --max-workers=2 :engine-core:test\
+        \ --tests dev.openallay.model.config.LocalCredentialStoreTest --tests dev.openallay.model.config.ModelProfilesConfigLoaderTest\
+        \ --tests dev.openallay.model.config.ModelProfilesConfigWriterTest --tests dev.openallay.model.config.ModelConfigLoaderTest\
+        \ --tests dev.openallay.client.voice.HttpSpeechToTextTest --tests dev.openallay.client.voice.VoiceSettingsCandidateSaveTest\
+        \ --tests dev.openallay.client.voice.VoiceConfigStoreTest -PjsonVerificationGsonVersion=2.8.0"
+    - name: Retain synthetic-store proof and current caller results
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: credentials-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'build/credentials-*.log
+
+          engine-core/src/credentialsJava8Test/gradle/build/
 
           engine-core/build/test-results/'
