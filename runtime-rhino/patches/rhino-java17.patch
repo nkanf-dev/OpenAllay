@@ -120,7 +120,17 @@
 +			default:
 +				return Undefined.INSTANCE;
 +		}
-@@ -233 +242,11 @@
+@@ -120 +129 @@
+-		if (!(callbackArg instanceof Function f)) {
++		if (!(callbackArg instanceof Function)) {
+@@ -122,0 +132 @@
++		Function f = (Function) callbackArg;
+@@ -176 +186 @@
+-		if (callbackArg == null || !(callbackArg instanceof Function f)) {
++		if (callbackArg == null || !(callbackArg instanceof Function)) {
+@@ -178,0 +189 @@
++		Function f = (Function) callbackArg;
+@@ -233 +244,11 @@
 -	public record StringLikeComparator(Context cx) implements Comparator<Object> {
 +	public static final class StringLikeComparator implements Comparator<Object> {
 +		private final Context cx;
@@ -133,7 +143,7 @@
 +			return cx;
 +		}
 +
-@@ -240,3 +259,34 @@
+@@ -240,3 +261,34 @@
 -	}
 -
 -	public record ElementComparator(Comparator<Object> child) implements Comparator<Object> {
@@ -171,7 +181,7 @@
 +			return child;
 +		}
 +
-@@ -266,0 +317,21 @@
+@@ -266,0 +319,21 @@
 +		}
 +
 +		@Override
@@ -332,7 +342,12 @@
 +				break;
 +			}
 +			default: throw new IllegalArgumentException(String.valueOf(id));
-@@ -587,9 +619,16 @@
+@@ -338 +370 @@
+-				if (!(thisObj instanceof Callable targetFunction)) {
++				if (!(thisObj instanceof Callable)) {
+@@ -340,0 +373 @@
++				Callable targetFunction = (Callable) thisObj;
+@@ -587,9 +620,16 @@
 -		return switch (s) {
 -			case "constructor" -> Id_constructor;
 -			case "toString" -> Id_toString;
@@ -869,6 +884,12 @@
 +	public String toString() {
 +		return "CustomMember[name=" + name + ", type=" + type + ", value=" + value + "]";
 +	}
+--- a/dev/latvian/mods/rhino/ES6Generator.java
++++ b/dev/latvian/mods/rhino/ES6Generator.java
+@@ -228 +228,2 @@
+-			if (r instanceof YieldStarResult ysResult) {
++			if (r instanceof YieldStarResult) {
++				YieldStarResult ysResult = (YieldStarResult) r;
 --- a/dev/latvian/mods/rhino/FunctionObject.java
 +++ b/dev/latvian/mods/rhino/FunctionObject.java
 @@ -9,0 +10,2 @@
@@ -891,30 +912,58 @@
 @@ -931 +931 @@
 -				for (var i : dfns) {
 +				for (dev.latvian.mods.rhino.Node[] i : dfns) {
+--- a/dev/latvian/mods/rhino/IdEnumeration.java
++++ b/dev/latvian/mods/rhino/IdEnumeration.java
+@@ -35 +35 @@
+-			if (!(v instanceof Callable f)) {
++			if (!(v instanceof Callable)) {
+@@ -37,0 +38 @@
++			Callable f = (Callable) v;
+@@ -64 +65,2 @@
+-			} else if (id instanceof String strId) {
++			} else if (id instanceof String) {
++				String strId = (String) id;
+@@ -82 +84 @@
+-		if (!(v instanceof Callable f)) {
++		if (!(v instanceof Callable)) {
+@@ -84,0 +87 @@
++		Callable f = (Callable) v;
 --- a/dev/latvian/mods/rhino/IdScriptableObject.java
 +++ b/dev/latvian/mods/rhino/IdScriptableObject.java
-@@ -858 +858 @@
+@@ -850 +850,2 @@
+-		if (key instanceof String name) {
++		if (key instanceof String) {
++			String name = (String) key;
+@@ -858 +859 @@
 -					var slot = queryOrFakeSlot(cx, key);
 +					dev.latvian.mods.rhino.Slot slot = queryOrFakeSlot(cx, key);
-@@ -880 +880 @@
+@@ -880 +881 @@
 -						var slot = queryOrFakeSlot(cx, key);
 +						dev.latvian.mods.rhino.Slot slot = queryOrFakeSlot(cx, key);
-@@ -932 +932 @@
+@@ -932 +933 @@
 -		var slot = getBuiltInSlot(name, cx);
 +		dev.latvian.mods.rhino.Slot slot = getBuiltInSlot(name, cx);
-@@ -942 +942 @@
+@@ -942 +943 @@
 -		var slot = getBuiltInSlot(key, cx);
 +		dev.latvian.mods.rhino.Slot slot = getBuiltInSlot(key, cx);
-@@ -947 +947 @@
+@@ -947 +948 @@
 -		var slot = querySlot(cx, id);
 +		dev.latvian.mods.rhino.Slot slot = querySlot(cx, id);
-@@ -968 +968 @@
+@@ -949 +950,2 @@
+-			if (id instanceof String name) {
++			if (id instanceof String) {
++				String name = (String) id;
+@@ -954 +956,2 @@
+-				if (id instanceof SymbolKey symbolKey) {
++				if (id instanceof SymbolKey) {
++					SymbolKey symbolKey = (SymbolKey) id;
+@@ -968 +971 @@
 -			var slot = new Slot(name, 0, (info >>> 16));
 +			dev.latvian.mods.rhino.Slot slot = new Slot(name, 0, (info >>> 16));
-@@ -975 +975 @@
+@@ -975 +978 @@
 -				var slot = new Slot(name, 0, prototypeValues.getAttributes(id, cx));
 +				dev.latvian.mods.rhino.Slot slot = new Slot(name, 0, prototypeValues.getAttributes(id, cx));
-@@ -987 +987 @@
+@@ -987 +990 @@
 -				var slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));
 +				dev.latvian.mods.rhino.Slot slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));
 --- a/dev/latvian/mods/rhino/Interpreter.java
@@ -1374,28 +1423,38 @@
 +		}
 --- a/dev/latvian/mods/rhino/NativeError.java
 +++ b/dev/latvian/mods/rhino/NativeError.java
-@@ -268 +268 @@
+@@ -113 +113,3 @@
+-				if (args[1] instanceof NativeObject options) {
++				Object causeOptions1 = args[1];
++				if (causeOptions1 instanceof NativeObject) {
++					NativeObject options = (NativeObject) causeOptions1;
+@@ -143 +145,3 @@
+-					if (args[2] instanceof NativeObject options) {
++					Object causeOptions2 = args[2];
++					if (causeOptions2 instanceof NativeObject) {
++						NativeObject options = (NativeObject) causeOptions2;
+@@ -268 +272 @@
 -			case Id_constructor -> {
 +			case Id_constructor: {
-@@ -271,2 +271,3 @@
+@@ -271,2 +275,3 @@
 -			}
 -			case Id_toString -> {
 +				break;
 +			}
 +			case Id_toString: {
-@@ -275,2 +276,3 @@
+@@ -275,2 +280,3 @@
 -			}
 -			case Id_toSource -> {
 +				break;
 +			}
 +			case Id_toSource: {
-@@ -279,2 +281,3 @@
+@@ -279,2 +285,3 @@
 -			}
 -			default -> throw new IllegalArgumentException(String.valueOf(id));
 +				break;
 +			}
 +			default: throw new IllegalArgumentException(String.valueOf(id));
-@@ -386,6 +389,10 @@
+@@ -386,6 +393,10 @@
 -		return switch (s) {
 -			case "constructor" -> Id_constructor;
 -			case "toString" -> Id_toString;
@@ -1626,6 +1685,32 @@
 @@ -63 +65 @@
 -				var componentType = argTypes.getLast().componentType();
 +				dev.latvian.mods.rhino.type.TypeInfo componentType = ListCompat.getLast(argTypes).componentType();
+@@ -205,7 +207,11 @@
+-		if (args.length == 1 && args[0] instanceof Scriptable p) {
+-			Class<?> c = getClassObject();
+-			do {
+-				if (p instanceof Wrapper) {
+-					Object o = ((Wrapper) p).unwrap();
+-					if (c.isInstance(o)) {
+-						return p;
++		if (args.length == 1) {
++			Object candidate = args[0];
++			if (candidate instanceof Scriptable) {
++				Scriptable p = (Scriptable) candidate;
++				Class<?> c = getClassObject();
++				do {
++					if (p instanceof Wrapper) {
++						Object o = ((Wrapper) p).unwrap();
++						if (c.isInstance(o)) {
++							return p;
++						}
+@@ -213,3 +219,3 @@
+-				}
+-				p = p.getPrototype(cx);
+-			} while (p != null);
++					p = p.getPrototype(cx);
++				} while (p != null);
++			}
 --- a/dev/latvian/mods/rhino/NativeJavaList.java
 +++ b/dev/latvian/mods/rhino/NativeJavaList.java
 @@ -6,0 +7,2 @@
@@ -1655,6 +1740,13 @@
 @@ -390 +392 @@
 -			var o = list.get(i);
 +			java.lang.Object o = list.get(i);
+--- a/dev/latvian/mods/rhino/NativeJavaMap.java
++++ b/dev/latvian/mods/rhino/NativeJavaMap.java
+@@ -178 +178 @@
+-		if (!(thisObj instanceof NativeJavaMap njm)) {
++		if (!(thisObj instanceof NativeJavaMap)) {
+@@ -180,0 +181 @@
++		NativeJavaMap njm = (NativeJavaMap) thisObj;
 --- a/dev/latvian/mods/rhino/NativeJavaMethod.java
 +++ b/dev/latvian/mods/rhino/NativeJavaMethod.java
 @@ -7,0 +8,2 @@
@@ -1719,7 +1811,12 @@
 +				Function f = (Function) converterObject;
 --- a/dev/latvian/mods/rhino/NativeMap.java
 +++ b/dev/latvian/mods/rhino/NativeMap.java
-@@ -186 +186 @@
+@@ -180 +180 @@
+-		if (!(arg1 instanceof final Callable f)) {
++		if (!(arg1 instanceof Callable)) {
+@@ -182,0 +183 @@
++		final Callable f = (Callable) arg1;
+@@ -186 +187 @@
 -		for (var entry : entries) {
 +		for (dev.latvian.mods.rhino.Hashtable.Entry entry : entries) {
 --- a/dev/latvian/mods/rhino/NativePromise.java
@@ -1748,17 +1845,47 @@
 +				case "InternalError": constructor = NativeErrors.InternalError; break;
 +				case "JavaException": constructor = NativeErrors.JavaException; break;
 +				default: break;
+--- a/dev/latvian/mods/rhino/NativeSet.java
++++ b/dev/latvian/mods/rhino/NativeSet.java
+@@ -156 +156 @@
+-		if (!(arg1 instanceof final Callable f)) {
++		if (!(arg1 instanceof Callable)) {
+@@ -158,0 +159 @@
++		final Callable f = (Callable) arg1;
 --- a/dev/latvian/mods/rhino/NativeString.java
 +++ b/dev/latvian/mods/rhino/NativeString.java
-@@ -388 +388 @@
+@@ -387,7 +387,11 @@
+-		if (args.length > pos && args[pos] instanceof Scriptable arg) {
 -			var reProxy = cx.getRegExp();
-+			dev.latvian.mods.rhino.regexp.RegExp reProxy = cx.getRegExp();
-@@ -546 +546 @@
+-			if (reProxy != null) {
+-				if (reProxy.isRegExp(arg)) {
+-					if (ScriptableObject.isTrue(ScriptableObject.getProperty(arg, SymbolKey.MATCH, cx), cx)) {
+-						throw ScriptRuntime.typeError2(cx,
+-							"msg.first.arg.not.regexp", CLASS_NAME, functionName);
++		if (args.length > pos) {
++			Object candidate = args[pos];
++			if (candidate instanceof Scriptable) {
++				Scriptable arg = (Scriptable) candidate;
++				dev.latvian.mods.rhino.regexp.RegExp reProxy = cx.getRegExp();
++				if (reProxy != null) {
++					if (reProxy.isRegExp(arg)) {
++						if (ScriptableObject.isTrue(ScriptableObject.getProperty(arg, SymbolKey.MATCH, cx), cx)) {
++							throw ScriptRuntime.typeError2(cx,
++								"msg.first.arg.not.regexp", CLASS_NAME, functionName);
++						}
+@@ -546 +550 @@
 -		var regExpProxy = cx.getRegExp();
 +		dev.latvian.mods.rhino.regexp.RegExp regExpProxy = cx.getRegExp();
-@@ -824 +824 @@
+@@ -824 +828 @@
 -		var regExpProxy = cx.getRegExp();
 +		dev.latvian.mods.rhino.regexp.RegExp regExpProxy = cx.getRegExp();
+--- a/dev/latvian/mods/rhino/NativeSymbol.java
++++ b/dev/latvian/mods/rhino/NativeSymbol.java
+@@ -187 +187 @@
+-		if (!(s instanceof NativeSymbol sym)) {
++		if (!(s instanceof NativeSymbol)) {
+@@ -189,0 +190 @@
++		NativeSymbol sym = (NativeSymbol) s;
 --- a/dev/latvian/mods/rhino/NativeWith.java
 +++ b/dev/latvian/mods/rhino/NativeWith.java
 @@ -36 +36,2 @@

@@ -1,6 +1,6 @@
 {
   "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
-  "patch_sha256": "abe009d416f8a28a6c0ff84fe35ce7d9a0fa74beb85fb06c289fb3a6ce510c2f",
+  "patch_sha256": "7ecb5228e302ebe9474129f4d3c59e9746b6112b45a7c47801a6d9f2e99936d5",
   "files": [
     {
       "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
@@ -375,6 +375,10 @@
         {
           "before": "\t\t\t\tvarArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));\n\t\t\t} else {\n\t\t\t\t// marshall the variable parameter\n\t\t\t\tvar componentType = ListCompat.getLast(argTypes).componentType();\n\t\t\t\tvarArgs = componentType.newArray(args.length - argTypes.size() + 1);\n\t\t\t\tint len = Array.getLength(varArgs);\n\t\t\t\tfor (int i = 0; i < len; i++) {\n",
           "after": "\t\t\t\tvarArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));\n\t\t\t} else {\n\t\t\t\t// marshall the variable parameter\n\t\t\t\tdev.latvian.mods.rhino.type.TypeInfo componentType = ListCompat.getLast(argTypes).componentType();\n\t\t\t\tvarArgs = componentType.newArray(args.length - argTypes.size() + 1);\n\t\t\t\tint len = Array.getLength(varArgs);\n\t\t\t\tfor (int i = 0; i < len; i++) {\n"
+        },
+        {
+          "before": "\t\t// If it looks like a \"cast\" of an object to this class type,\n\t\t// walk the prototype chain to see if there's a wrapper of a\n\t\t// object that's an instanceof this class.\n\t\tif (args.length == 1 && args[0] instanceof Scriptable p) {\n\t\t\tClass<?> c = getClassObject();\n\t\t\tdo {\n\t\t\t\tif (p instanceof Wrapper) {\n\t\t\t\t\tObject o = ((Wrapper) p).unwrap();\n\t\t\t\t\tif (c.isInstance(o)) {\n\t\t\t\t\t\treturn p;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tp = p.getPrototype(cx);\n\t\t\t} while (p != null);\n\t\t}\n\t\treturn construct(cx, scope, args);\n\t}\n",
+          "after": "\t\t// If it looks like a \"cast\" of an object to this class type,\n\t\t// walk the prototype chain to see if there's a wrapper of a\n\t\t// object that's an instanceof this class.\n\t\tif (args.length == 1) {\n\t\t\tObject candidate = args[0];\n\t\t\tif (candidate instanceof Scriptable) {\n\t\t\t\tScriptable p = (Scriptable) candidate;\n\t\t\t\tClass<?> c = getClassObject();\n\t\t\t\tdo {\n\t\t\t\t\tif (p instanceof Wrapper) {\n\t\t\t\t\t\tObject o = ((Wrapper) p).unwrap();\n\t\t\t\t\t\tif (c.isInstance(o)) {\n\t\t\t\t\t\t\treturn p;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tp = p.getPrototype(cx);\n\t\t\t\t} while (p != null);\n\t\t\t}\n\t\t}\n\t\treturn construct(cx, scope, args);\n\t}\n"
         }
       ]
     },
@@ -929,6 +933,14 @@
         {
           "before": "\t\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\treturn switch (operation) {\n\t\t\tcase EVERY -> Boolean.TRUE;\n\t\t\tcase FILTER, MAP -> array;\n\t\t\tcase SOME -> Boolean.FALSE;\n\t\t\tcase FIND_INDEX, FIND_LAST_INDEX -> ScriptRuntime.wrapNumber(-1);\n\t\t\tdefault -> Undefined.INSTANCE;\n\t\t};\n\t}\n\n\tstatic Function getCallbackArg(Context cx, Object callbackArg) {\n",
           "after": "\t\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\tswitch (operation) {\n\t\t\tcase EVERY:\n\t\t\t\treturn Boolean.TRUE;\n\t\t\tcase FILTER:\n\t\t\tcase MAP:\n\t\t\t\treturn array;\n\t\t\tcase SOME:\n\t\t\t\treturn Boolean.FALSE;\n\t\t\tcase FIND_INDEX:\n\t\t\tcase FIND_LAST_INDEX:\n\t\t\t\treturn ScriptRuntime.wrapNumber(-1);\n\t\t\tdefault:\n\t\t\t\treturn Undefined.INSTANCE;\n\t\t}\n\t}\n\n\tstatic Function getCallbackArg(Context cx, Object callbackArg) {\n"
+        },
+        {
+          "before": "\t}\n\n\tstatic Function getCallbackArg(Context cx, Object callbackArg) {\n\t\tif (!(callbackArg instanceof Function f)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, callbackArg);\n\t\t}\n\t\tif (callbackArg instanceof NativeRegExp) {\n\t\t\t// Previously, it was allowed to pass RegExp instance as a callback (it implements Function)\n\t\t\t// But according to ES2015 21.2.6 Properties of RegExp Instances:\n",
+          "after": "\t}\n\n\tstatic Function getCallbackArg(Context cx, Object callbackArg) {\n\t\tif (!(callbackArg instanceof Function)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, callbackArg);\n\t\t}\n\t\tFunction f = (Function) callbackArg;\n\t\tif (callbackArg instanceof NativeRegExp) {\n\t\t\t// Previously, it was allowed to pass RegExp instance as a callback (it implements Function)\n\t\t\t// But according to ES2015 21.2.6 Properties of RegExp Instances:\n"
+        },
+        {
+          "before": "\n\t\tlong length = NativeArray.getLengthProperty(cx, o);\n\t\tObject callbackArg = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tif (callbackArg == null || !(callbackArg instanceof Function f)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, callbackArg);\n\t\t}\n\t\tScriptable parent = ScriptableObject.getTopLevelScope(f);\n\t\t// hack to serve both reduce and reduceRight with the same loop\n\t\tboolean movingLeft = operation == ReduceOperation.REDUCE;\n",
+          "after": "\n\t\tlong length = NativeArray.getLengthProperty(cx, o);\n\t\tObject callbackArg = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tif (callbackArg == null || !(callbackArg instanceof Function)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, callbackArg);\n\t\t}\n\t\tFunction f = (Function) callbackArg;\n\t\tScriptable parent = ScriptableObject.getTopLevelScope(f);\n\t\t// hack to serve both reduce and reduceRight with the same loop\n\t\tboolean movingLeft = operation == ReduceOperation.REDUCE;\n"
         }
       ]
     },
@@ -1371,6 +1383,14 @@
         {
           "before": "\t\tif (prototypeValues != null) {\n\t\t\tint id = prototypeValues.findId(key);\n\t\t\tif (id != 0) {\n\t\t\t\tvar slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));\n\t\t\t\tslot.value = prototypeValues.get(id, cx);\n\t\t\t\treturn slot;\n\t\t\t}\n",
           "after": "\t\tif (prototypeValues != null) {\n\t\t\tint id = prototypeValues.findId(key);\n\t\t\tif (id != 0) {\n\t\t\t\tdev.latvian.mods.rhino.Slot slot = new Slot(key, 0, prototypeValues.getAttributes(id, cx));\n\t\t\t\tslot.value = prototypeValues.get(id, cx);\n\t\t\t\treturn slot;\n\t\t\t}\n"
+        },
+        {
+          "before": "\n\t@Override\n\tprotected void defineOwnProperty(Context cx, Object key, ScriptableObject desc, boolean checkValid) {\n\t\tif (key instanceof String name) {\n\t\t\tint info = findInstanceIdInfo(name, cx);\n\t\t\tif (info != 0) {\n\t\t\t\tint id = (info & 0xFFFF);\n",
+          "after": "\n\t@Override\n\tprotected void defineOwnProperty(Context cx, Object key, ScriptableObject desc, boolean checkValid) {\n\t\tif (key instanceof String) {\n\t\t\tString name = (String) key;\n\t\t\tint info = findInstanceIdInfo(name, cx);\n\t\t\tif (info != 0) {\n\t\t\t\tint id = (info & 0xFFFF);\n"
+        },
+        {
+          "before": "\tprivate Slot queryOrFakeSlot(Context cx, Object id) {\n\t\tdev.latvian.mods.rhino.Slot slot = querySlot(cx, id);\n\t\tif (slot == null) {\n\t\t\tif (id instanceof String name) {\n\t\t\t\treturn getBuiltInSlot(name, cx);\n\t\t\t}\n\n\t\t\tif (ScriptRuntime.isSymbol(id)) {\n\t\t\t\tif (id instanceof SymbolKey symbolKey) {\n\t\t\t\t\treturn getBuiltInSlot(symbolKey, cx);\n\t\t\t\t}\n\n",
+          "after": "\tprivate Slot queryOrFakeSlot(Context cx, Object id) {\n\t\tdev.latvian.mods.rhino.Slot slot = querySlot(cx, id);\n\t\tif (slot == null) {\n\t\t\tif (id instanceof String) {\n\t\t\t\tString name = (String) id;\n\t\t\t\treturn getBuiltInSlot(name, cx);\n\t\t\t}\n\n\t\t\tif (ScriptRuntime.isSymbol(id)) {\n\t\t\t\tif (id instanceof SymbolKey) {\n\t\t\t\t\tSymbolKey symbolKey = (SymbolKey) id;\n\t\t\t\t\treturn getBuiltInSlot(symbolKey, cx);\n\t\t\t\t}\n\n"
         }
       ]
     },
@@ -1591,6 +1611,10 @@
         {
           "before": "\n\t\tboolean isStrict = cx.isStrictMode();\n\n\t\tfor (var entry : entries) {\n\t\t\t// Per spec must convert every time so that primitives are always regenerated...\n\t\t\tScriptable thisObj = ScriptRuntime.toObjectOrNull(cx, arg2, scope);\n\n",
           "after": "\n\t\tboolean isStrict = cx.isStrictMode();\n\n\t\tfor (dev.latvian.mods.rhino.Hashtable.Entry entry : entries) {\n\t\t\t// Per spec must convert every time so that primitives are always regenerated...\n\t\t\tScriptable thisObj = ScriptRuntime.toObjectOrNull(cx, arg2, scope);\n\n"
+        },
+        {
+          "before": "\t}\n\n\tprivate Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {\n\t\tif (!(arg1 instanceof final Callable f)) {\n\t\t\tthrow ScriptRuntime.typeError2(cx, \"msg.isnt.function\", arg1, ScriptRuntime.typeof(cx, arg1));\n\t\t}\n\n\t\tboolean isStrict = cx.isStrictMode();\n\n",
+          "after": "\t}\n\n\tprivate Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {\n\t\tif (!(arg1 instanceof Callable)) {\n\t\t\tthrow ScriptRuntime.typeError2(cx, \"msg.isnt.function\", arg1, ScriptRuntime.typeof(cx, arg1));\n\t\t}\n\t\tfinal Callable f = (Callable) arg1;\n\n\t\tboolean isStrict = cx.isStrictMode();\n\n"
         }
       ]
     },
@@ -1609,6 +1633,10 @@
         {
           "before": "\t\t// See ECMAScript spec 22.1.3.14\n\t\tObject o = requireObjectCoercible(cx, thisObj, CLASS_NAME, \"matchAll\");\n\t\tObject regexp = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tvar regExpProxy = cx.getRegExp();\n\t\tif (regexp != null && !Undefined.isUndefined(regexp)) {\n\t\t\tboolean isRegExp =\n\t\t\t\tregexp instanceof Scriptable && regExpProxy.isRegExp((Scriptable) regexp);\n",
           "after": "\t\t// See ECMAScript spec 22.1.3.14\n\t\tObject o = requireObjectCoercible(cx, thisObj, CLASS_NAME, \"matchAll\");\n\t\tObject regexp = args.length > 0 ? args[0] : Undefined.INSTANCE;\n\t\tdev.latvian.mods.rhino.regexp.RegExp regExpProxy = cx.getRegExp();\n\t\tif (regexp != null && !Undefined.isUndefined(regexp)) {\n\t\t\tboolean isRegExp =\n\t\t\t\tregexp instanceof Scriptable && regExpProxy.isRegExp((Scriptable) regexp);\n"
+        },
+        {
+          "before": "\t}\n\n\tprivate static void checkValidRegex(Context cx, Object[] args, int pos, String functionName) {\n\t\tif (args.length > pos && args[pos] instanceof Scriptable arg) {\n\t\t\tdev.latvian.mods.rhino.regexp.RegExp reProxy = cx.getRegExp();\n\t\t\tif (reProxy != null) {\n\t\t\t\tif (reProxy.isRegExp(arg)) {\n\t\t\t\t\tif (ScriptableObject.isTrue(ScriptableObject.getProperty(arg, SymbolKey.MATCH, cx), cx)) {\n\t\t\t\t\t\tthrow ScriptRuntime.typeError2(cx,\n\t\t\t\t\t\t\t\"msg.first.arg.not.regexp\", CLASS_NAME, functionName);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n",
+          "after": "\t}\n\n\tprivate static void checkValidRegex(Context cx, Object[] args, int pos, String functionName) {\n\t\tif (args.length > pos) {\n\t\t\tObject candidate = args[pos];\n\t\t\tif (candidate instanceof Scriptable) {\n\t\t\t\tScriptable arg = (Scriptable) candidate;\n\t\t\t\tdev.latvian.mods.rhino.regexp.RegExp reProxy = cx.getRegExp();\n\t\t\t\tif (reProxy != null) {\n\t\t\t\t\tif (reProxy.isRegExp(arg)) {\n\t\t\t\t\t\tif (ScriptableObject.isTrue(ScriptableObject.getProperty(arg, SymbolKey.MATCH, cx), cx)) {\n\t\t\t\t\t\t\tthrow ScriptRuntime.typeError2(cx,\n\t\t\t\t\t\t\t\t\"msg.first.arg.not.regexp\", CLASS_NAME, functionName);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n"
         }
       ]
     },
@@ -1969,6 +1997,14 @@
         {
           "before": "\n\t@Override\n\tprotected int findPrototypeId(String s) {\n\t\treturn switch (s) {\n\t\t\tcase \"constructor\" -> Id_constructor;\n\t\t\tcase \"toString\" -> Id_toString;\n\t\t\tcase \"toSource\" -> Id_toSource;\n\t\t\tdefault -> 0;\n\t\t};\n\t}\n}\n",
           "after": "\n\t@Override\n\tprotected int findPrototypeId(String s) {\n\t\tswitch (s) {\n\t\t\tcase \"constructor\":\n\t\t\t\treturn Id_constructor;\n\t\t\tcase \"toString\":\n\t\t\t\treturn Id_toString;\n\t\t\tcase \"toSource\":\n\t\t\t\treturn Id_toSource;\n\t\t\tdefault:\n\t\t\t\treturn 0;\n\t\t}\n\t}\n}\n"
+        },
+        {
+          "before": "\t\t\t\tputProperty(obj, \"message\", ScriptRuntime.toString(cx, args[0]), cx);\n\t\t\t}\n\t\t\tif (arglen >= 2) {\n\t\t\t\tif (args[1] instanceof NativeObject options) {\n\t\t\t\t\tinstallCause(cx, options, obj);\n\t\t\t\t} else {\n\t\t\t\t\tputProperty(obj, \"fileName\", ScriptRuntime.toString(cx, args[1]), cx);\n",
+          "after": "\t\t\t\tputProperty(obj, \"message\", ScriptRuntime.toString(cx, args[0]), cx);\n\t\t\t}\n\t\t\tif (arglen >= 2) {\n\t\t\t\tObject causeOptions1 = args[1];\n\t\t\t\tif (causeOptions1 instanceof NativeObject) {\n\t\t\t\t\tNativeObject options = (NativeObject) causeOptions1;\n\t\t\t\t\tinstallCause(cx, options, obj);\n\t\t\t\t} else {\n\t\t\t\t\tputProperty(obj, \"fileName\", ScriptRuntime.toString(cx, args[1]), cx);\n"
+        },
+        {
+          "before": "\t\t\t\t}\n\n\t\t\t\tif (arglen >= 3) {\n\t\t\t\t\tif (args[2] instanceof NativeObject options) {\n\t\t\t\t\t\tinstallCause(cx, options, obj);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tputProperty(obj, \"fileName\", ScriptRuntime.toString(cx, args[2]), cx);\n",
+          "after": "\t\t\t\t}\n\n\t\t\t\tif (arglen >= 3) {\n\t\t\t\t\tObject causeOptions2 = args[2];\n\t\t\t\t\tif (causeOptions2 instanceof NativeObject) {\n\t\t\t\t\t\tNativeObject options = (NativeObject) causeOptions2;\n\t\t\t\t\t\tinstallCause(cx, options, obj);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tputProperty(obj, \"fileName\", ScriptRuntime.toString(cx, args[2]), cx);\n"
         }
       ]
     },
@@ -2027,6 +2063,68 @@
         {
           "before": "\t\t\tcase Id_constructor: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"constructor\";\n\t\t\t\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_toString: {\n\t\t\t\tarity = 0;\n\t\t\t\ts = \"toString\";\n\t\t\t\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_toSource: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"toSource\";\n\t\t\t\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_apply: {\n\t\t\t\tarity = 2;\n\t\t\t\ts = \"apply\";\n\t\t\t\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_call: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"call\";\n\t\t\t\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_bind: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"bind\";\n\t\t\t\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tdefault: throw new IllegalArgumentException(String.valueOf(id));\n",
           "after": "\t\t\tcase Id_constructor: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"constructor\";\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_toString: {\n\t\t\t\tarity = 0;\n\t\t\t\ts = \"toString\";\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_toSource: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"toSource\";\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_apply: {\n\t\t\t\tarity = 2;\n\t\t\t\ts = \"apply\";\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_call: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"call\";\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase Id_bind: {\n\t\t\t\tarity = 1;\n\t\t\t\ts = \"bind\";\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tdefault: throw new IllegalArgumentException(String.valueOf(id));\n"
+        },
+        {
+          "before": "\t\t\t\treturn ScriptRuntime.applyOrCall(cx, scope, id == Id_apply, thisObj, args);\n\n\t\t\tcase Id_bind:\n\t\t\t\tif (!(thisObj instanceof Callable targetFunction)) {\n\t\t\t\t\tthrow ScriptRuntime.notFunctionError(cx, thisObj);\n\t\t\t\t}\n\t\t\t\tint argc = args.length;\n\t\t\t\tfinal Scriptable boundThis;\n\t\t\t\tfinal Object[] boundArgs;\n",
+          "after": "\t\t\t\treturn ScriptRuntime.applyOrCall(cx, scope, id == Id_apply, thisObj, args);\n\n\t\t\tcase Id_bind:\n\t\t\t\tif (!(thisObj instanceof Callable)) {\n\t\t\t\t\tthrow ScriptRuntime.notFunctionError(cx, thisObj);\n\t\t\t\t}\n\t\t\t\tCallable targetFunction = (Callable) thisObj;\n\t\t\t\tint argc = args.length;\n\t\t\t\tfinal Scriptable boundThis;\n\t\t\t\tfinal Object[] boundArgs;\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeJavaMap.java",
+      "old_path": "dev/latvian/mods/rhino/NativeJavaMap.java",
+      "hunks": [
+        {
+          "before": "\t}\n\n\tprivate static final Callable symbol_iterator = (Context cx, Scriptable scope, Scriptable thisObj, Object[] args) -> {\n\t\tif (!(thisObj instanceof NativeJavaMap njm)) {\n\t\t\tthrow ScriptRuntime.typeError1(cx, \"msg.incompat.call\", SymbolKey.ITERATOR);\n\t\t}\n\t\treturn new NativeJavaMapIterator(cx, scope, njm);\n\t};\n\n",
+          "after": "\t}\n\n\tprivate static final Callable symbol_iterator = (Context cx, Scriptable scope, Scriptable thisObj, Object[] args) -> {\n\t\tif (!(thisObj instanceof NativeJavaMap)) {\n\t\t\tthrow ScriptRuntime.typeError1(cx, \"msg.incompat.call\", SymbolKey.ITERATOR);\n\t\t}\n\t\tNativeJavaMap njm = (NativeJavaMap) thisObj;\n\t\treturn new NativeJavaMapIterator(cx, scope, njm);\n\t};\n\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeSet.java",
+      "old_path": "dev/latvian/mods/rhino/NativeSet.java",
+      "hunks": [
+        {
+          "before": "\t}\n\n\tprivate Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {\n\t\tif (!(arg1 instanceof final Callable f)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, arg1);\n\t\t}\n\n\t\tboolean isStrict = cx.isStrictMode();\n\t\tIterator<Hashtable.Entry> i = entries.iterator();\n",
+          "after": "\t}\n\n\tprivate Object js_forEach(Context cx, Scriptable scope, Object arg1, Object arg2) {\n\t\tif (!(arg1 instanceof Callable)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, arg1);\n\t\t}\n\t\tfinal Callable f = (Callable) arg1;\n\n\t\tboolean isStrict = cx.isStrictMode();\n\t\tIterator<Hashtable.Entry> i = entries.iterator();\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/NativeSymbol.java",
+      "old_path": "dev/latvian/mods/rhino/NativeSymbol.java",
+      "hunks": [
+        {
+          "before": "\n\tprivate static Object js_keyFor(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {\n\t\tObject s = (args.length > 0 ? args[0] : Undefined.INSTANCE);\n\t\tif (!(s instanceof NativeSymbol sym)) {\n\t\t\tthrow ScriptRuntime.throwCustomError(cx, scope, \"TypeError\", \"Not a Symbol\");\n\t\t}\n\n\t\tMap<String, NativeSymbol> table = getGlobalMap(scope);\n\t\tfor (Map.Entry<String, NativeSymbol> e : table.entrySet()) {\n",
+          "after": "\n\tprivate static Object js_keyFor(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {\n\t\tObject s = (args.length > 0 ? args[0] : Undefined.INSTANCE);\n\t\tif (!(s instanceof NativeSymbol)) {\n\t\t\tthrow ScriptRuntime.throwCustomError(cx, scope, \"TypeError\", \"Not a Symbol\");\n\t\t}\n\t\tNativeSymbol sym = (NativeSymbol) s;\n\n\t\tMap<String, NativeSymbol> table = getGlobalMap(scope);\n\t\tfor (Map.Entry<String, NativeSymbol> e : table.entrySet()) {\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/IdEnumeration.java",
+      "old_path": "dev/latvian/mods/rhino/IdEnumeration.java",
+      "hunks": [
+        {
+          "before": "\t\t\t}\n\n\t\t\tObject v = ScriptableObject.getProperty(iterator, ES6Iterator.NEXT_METHOD, cx);\n\t\t\tif (!(v instanceof Callable f)) {\n\t\t\t\treturn Boolean.FALSE;\n\t\t\t}\n\t\t\ttry {\n\t\t\t\tcurrentId = f.call(cx, iterator.getParentScope(), iterator, ScriptRuntime.EMPTY_OBJECTS);\n\t\t\t\treturn Boolean.TRUE;\n",
+          "after": "\t\t\t}\n\n\t\t\tObject v = ScriptableObject.getProperty(iterator, ES6Iterator.NEXT_METHOD, cx);\n\t\t\tif (!(v instanceof Callable)) {\n\t\t\t\treturn Boolean.FALSE;\n\t\t\t}\n\t\t\tCallable f = (Callable) v;\n\t\t\ttry {\n\t\t\t\tcurrentId = f.call(cx, iterator.getParentScope(), iterator, ScriptRuntime.EMPTY_OBJECTS);\n\t\t\t\treturn Boolean.TRUE;\n"
+        },
+        {
+          "before": "\t\t\t}\n\t\t\tif (id instanceof Symbol) {\n\t\t\t\tcontinue;\n\t\t\t} else if (id instanceof String strId) {\n\t\t\t\tif (!obj.has(cx, strId, obj)) {\n\t\t\t\t\tcontinue;   // must have been deleted\n\t\t\t\t}\n",
+          "after": "\t\t\t}\n\t\t\tif (id instanceof Symbol) {\n\t\t\t\tcontinue;\n\t\t\t} else if (id instanceof String) {\n\t\t\t\tString strId = (String) id;\n\t\t\t\tif (!obj.has(cx, strId, obj)) {\n\t\t\t\t\tcontinue;   // must have been deleted\n\t\t\t\t}\n"
+        },
+        {
+          "before": "\n\tprivate Boolean enumNextInOrder(Context cx) {\n\t\tObject v = ScriptableObject.getProperty(iterator, ES6Iterator.NEXT_METHOD, cx);\n\t\tif (!(v instanceof Callable f)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, iterator, ES6Iterator.NEXT_METHOD);\n\t\t}\n\t\tScriptable scope = iterator.getParentScope();\n\t\tObject r = f.call(cx, scope, iterator, ScriptRuntime.EMPTY_OBJECTS);\n\t\tScriptable iteratorResult = ScriptRuntime.toObject(cx, scope, r);\n",
+          "after": "\n\tprivate Boolean enumNextInOrder(Context cx) {\n\t\tObject v = ScriptableObject.getProperty(iterator, ES6Iterator.NEXT_METHOD, cx);\n\t\tif (!(v instanceof Callable)) {\n\t\t\tthrow ScriptRuntime.notFunctionError(cx, iterator, ES6Iterator.NEXT_METHOD);\n\t\t}\n\t\tCallable f = (Callable) v;\n\t\tScriptable scope = iterator.getParentScope();\n\t\tObject r = f.call(cx, scope, iterator, ScriptRuntime.EMPTY_OBJECTS);\n\t\tScriptable iteratorResult = ScriptRuntime.toObject(cx, scope, r);\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/ES6Generator.java",
+      "old_path": "dev/latvian/mods/rhino/ES6Generator.java",
+      "hunks": [
+        {
+          "before": "\t\ttry {\n\t\t\tObject r = function.resumeGenerator(cx, scope, GeneratorState.GENERATOR_SEND, savedState, value);\n\n\t\t\tif (r instanceof YieldStarResult ysResult) {\n\t\t\t\t// This special result tells us that we are executing a \"yield *\"\n\t\t\t\tstate = State.SUSPENDED_YIELD;\n\t\t\t\ttry {\n",
+          "after": "\t\ttry {\n\t\t\tObject r = function.resumeGenerator(cx, scope, GeneratorState.GENERATOR_SEND, savedState, value);\n\n\t\t\tif (r instanceof YieldStarResult) {\n\t\t\t\tYieldStarResult ysResult = (YieldStarResult) r;\n\t\t\t\t// This special result tells us that we are executing a \"yield *\"\n\t\t\t\tstate = State.SUSPENDED_YIELD;\n\t\t\t\ttry {\n"
         }
       ]
     }
