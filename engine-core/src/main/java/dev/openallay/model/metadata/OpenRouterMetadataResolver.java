@@ -29,11 +29,39 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
                 HttpExchangeRequest request, CancellationSignal cancellation);
     }
 
-    public record Response(int status, String body) {
-        public Response {
+    @dev.openallay.value.ValueType(Response.ValueSchemaProvider.class)
+public static final class Response {
+    private final int status;
+    private final String body;
+    public Response(int status, String body) {
+
             Objects.requireNonNull(body, "body");
+
+        this.status = status;
+        this.body = body;
+    }
+    public int status() { return status; }
+    public String body() { return body; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Response)) return false;
+        Response that = (Response) other;
+        return status == that.status && java.util.Objects.equals(body, that.body);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(body);
+        return hash;
+    }
+    @Override public String toString() { return "Response[status=" + status + ", body=" + body + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Response> schema() {
+            return new dev.openallay.value.ValueSchema<>(Response.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Response>>asList(new dev.openallay.value.ValueSchema.Component<>(Response.class, "status", Response::status), new dev.openallay.value.ValueSchema.Component<>(Response.class, "body", Response::body)), arguments -> new Response((Integer) arguments[0], (String) arguments[1]));
         }
     }
+}
 
     private final Transport transport;
     private final Clock clock;
@@ -72,7 +100,7 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
             Integer explicitContextWindowTokens,
             Integer explicitMaxOutputTokens,
             CancellationSignal cancellation) {
-        if (modelId == null || modelId.isBlank()) {
+        if (modelId == null || dev.openallay.util.Java8Strings.isBlank(modelId)) {
             return CompletableFuture.completedFuture(ModelMetadataResolution.failed(
                     "metadata_invalid", "The configured model ID is blank"));
         }
@@ -181,7 +209,7 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
         java.util.List<String> modalities = new java.util.ArrayList<>();
         for (JsonElement input : inputs.getAsJsonArray()) {
             if (!input.isJsonPrimitive() || !input.getAsJsonPrimitive().isString()
-                    || input.getAsString().isBlank()) {
+                    || dev.openallay.util.Java8Strings.isBlank(input.getAsString())) {
                 throw new IllegalArgumentException("input_modalities");
             }
             modalities.add(input.getAsString());
@@ -193,7 +221,7 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field);
         }
         return value.getAsString();
@@ -226,6 +254,14 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
                 "metadata_cancelled", "Model metadata refresh was cancelled");
     }
 
+    private static String readBody(java.io.InputStream body) throws java.io.IOException {
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int count;
+        while ((count = body.read(buffer)) != -1) bytes.write(buffer, 0, count);
+        return new String(bytes.toByteArray(), StandardCharsets.UTF_8);
+    }
+
     private static final class MetadataNotFound extends RuntimeException {}
 
     private static final class JdkTransport implements Transport {
@@ -245,7 +281,7 @@ public final class OpenRouterMetadataResolver implements ModelMetadataResolver {
                     cancellation,
                     (status, headers, body) -> new Response(
                             status,
-                            new String(body.readAllBytes(), StandardCharsets.UTF_8)));
+                            readBody(body)));
         }
     }
 }

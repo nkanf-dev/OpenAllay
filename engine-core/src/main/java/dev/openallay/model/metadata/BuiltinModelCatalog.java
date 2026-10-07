@@ -37,8 +37,8 @@ public final class BuiltinModelCatalog {
             Map<String, Source> sources, List<Entry> models) {
         this.version = version;
         this.publishedAt = publishedAt;
-        this.sources = Map.copyOf(sources);
-        this.models = List.copyOf(models);
+        this.sources = dev.openallay.util.Java8Collections.mapCopyOf(sources);
+        this.models = dev.openallay.util.Java8Collections.listCopyOf(models);
         this.index = new BuiltinModelMatcher.Index(this.models);
     }
     public String version() { return version; }
@@ -46,30 +46,235 @@ public final class BuiltinModelCatalog {
     public Map<String, Source> sources() { return sources; }
     public List<Entry> models() { return models; }
 
-    public record Source(String id, String label, URI url, Instant capturedAt) {}
-    public record Entry(
-            String id, String provider, String family, List<String> aliases,
-            int contextWindowTokens, Integer maxOutputTokens, Pricing pricing,
-            String capabilitySource, String pricingSource, String upstreamModelId,
-            ImageInputCapability imageInputCapability, String imageInputCapabilitySource) {
-        public Entry {
-            aliases = List.copyOf(aliases);
-            java.util.Objects.requireNonNull(imageInputCapability, "imageInputCapability");
+    @dev.openallay.value.ValueType(Source.ValueSchemaProvider.class)
+public static final class Source {
+    private final String id;
+    private final String label;
+    private final URI url;
+    private final Instant capturedAt;
+    public Source(String id, String label, URI url, Instant capturedAt) {
+        this.id = id;
+        this.label = label;
+        this.url = url;
+        this.capturedAt = capturedAt;
+    }
+    public String id() { return id; }
+    public String label() { return label; }
+    public URI url() { return url; }
+    public Instant capturedAt() { return capturedAt; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Source)) return false;
+        Source that = (Source) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(label, that.label) && java.util.Objects.equals(url, that.url) && java.util.Objects.equals(capturedAt, that.capturedAt);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(label);
+        hash = 31 * hash + java.util.Objects.hashCode(url);
+        hash = 31 * hash + java.util.Objects.hashCode(capturedAt);
+        return hash;
+    }
+    @Override public String toString() { return "Source[id=" + id + ", label=" + label + ", url=" + url + ", capturedAt=" + capturedAt + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Source> schema() {
+            return new dev.openallay.value.ValueSchema<>(Source.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Source>>asList(new dev.openallay.value.ValueSchema.Component<>(Source.class, "id", Source::id), new dev.openallay.value.ValueSchema.Component<>(Source.class, "label", Source::label), new dev.openallay.value.ValueSchema.Component<>(Source.class, "url", Source::url), new dev.openallay.value.ValueSchema.Component<>(Source.class, "capturedAt", Source::capturedAt)), arguments -> new Source((String) arguments[0], (String) arguments[1], (URI) arguments[2], (Instant) arguments[3]));
         }
-        public Entry(String id, String provider, String family, List<String> aliases,
+    }
+}
+    @dev.openallay.value.ValueType(Entry.ValueSchemaProvider.class)
+public static final class Entry {
+    private final String id;
+    private final String provider;
+    private final String family;
+    private final List<String> aliases;
+    private final int contextWindowTokens;
+    private final Integer maxOutputTokens;
+    private final Pricing pricing;
+    private final String capabilitySource;
+    private final String pricingSource;
+    private final String upstreamModelId;
+    private final ImageInputCapability imageInputCapability;
+    private final String imageInputCapabilitySource;
+    public Entry(String id, String provider, String family, List<String> aliases, int contextWindowTokens, Integer maxOutputTokens, Pricing pricing, String capabilitySource, String pricingSource, String upstreamModelId, ImageInputCapability imageInputCapability, String imageInputCapabilitySource) {
+
+            aliases = dev.openallay.util.Java8Collections.listCopyOf(aliases);
+            java.util.Objects.requireNonNull(imageInputCapability, "imageInputCapability");
+
+        this.id = id;
+        this.provider = provider;
+        this.family = family;
+        this.aliases = aliases;
+        this.contextWindowTokens = contextWindowTokens;
+        this.maxOutputTokens = maxOutputTokens;
+        this.pricing = pricing;
+        this.capabilitySource = capabilitySource;
+        this.pricingSource = pricingSource;
+        this.upstreamModelId = upstreamModelId;
+        this.imageInputCapability = imageInputCapability;
+        this.imageInputCapabilitySource = imageInputCapabilitySource;
+    }
+    public String id() { return id; }
+    public String provider() { return provider; }
+    public String family() { return family; }
+    public List<String> aliases() { return aliases; }
+    public int contextWindowTokens() { return contextWindowTokens; }
+    public Integer maxOutputTokens() { return maxOutputTokens; }
+    public Pricing pricing() { return pricing; }
+    public String capabilitySource() { return capabilitySource; }
+    public String pricingSource() { return pricingSource; }
+    public String upstreamModelId() { return upstreamModelId; }
+    public ImageInputCapability imageInputCapability() { return imageInputCapability; }
+    public String imageInputCapabilitySource() { return imageInputCapabilitySource; }
+public Entry(String id, String provider, String family, List<String> aliases,
                 int contextWindowTokens, Integer maxOutputTokens, Pricing pricing,
                 String capabilitySource, String pricingSource, String upstreamModelId) {
             this(id, provider, family, aliases, contextWindowTokens, maxOutputTokens, pricing,
                     capabilitySource, pricingSource, upstreamModelId, ImageInputCapability.UNKNOWN, null);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Entry)) return false;
+        Entry that = (Entry) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(provider, that.provider) && java.util.Objects.equals(family, that.family) && java.util.Objects.equals(aliases, that.aliases) && contextWindowTokens == that.contextWindowTokens && java.util.Objects.equals(maxOutputTokens, that.maxOutputTokens) && java.util.Objects.equals(pricing, that.pricing) && java.util.Objects.equals(capabilitySource, that.capabilitySource) && java.util.Objects.equals(pricingSource, that.pricingSource) && java.util.Objects.equals(upstreamModelId, that.upstreamModelId) && java.util.Objects.equals(imageInputCapability, that.imageInputCapability) && java.util.Objects.equals(imageInputCapabilitySource, that.imageInputCapabilitySource);
     }
-    public record Pricing(String currency, String unit, List<Tier> tiers, String note) {
-        public Pricing { tiers = List.copyOf(tiers); }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(provider);
+        hash = 31 * hash + java.util.Objects.hashCode(family);
+        hash = 31 * hash + java.util.Objects.hashCode(aliases);
+        hash = 31 * hash + Integer.hashCode(contextWindowTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(maxOutputTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(pricing);
+        hash = 31 * hash + java.util.Objects.hashCode(capabilitySource);
+        hash = 31 * hash + java.util.Objects.hashCode(pricingSource);
+        hash = 31 * hash + java.util.Objects.hashCode(upstreamModelId);
+        hash = 31 * hash + java.util.Objects.hashCode(imageInputCapability);
+        hash = 31 * hash + java.util.Objects.hashCode(imageInputCapabilitySource);
+        return hash;
     }
-    public record Tier(
-            int minInputTokens, BigDecimal input, BigDecimal output,
-            BigDecimal cacheRead, BigDecimal cacheWrite) {}
-    public record Load(BuiltinModelCatalog catalog, GuideFailure failure) {}
+    @Override public String toString() { return "Entry[id=" + id + ", provider=" + provider + ", family=" + family + ", aliases=" + aliases + ", contextWindowTokens=" + contextWindowTokens + ", maxOutputTokens=" + maxOutputTokens + ", pricing=" + pricing + ", capabilitySource=" + capabilitySource + ", pricingSource=" + pricingSource + ", upstreamModelId=" + upstreamModelId + ", imageInputCapability=" + imageInputCapability + ", imageInputCapabilitySource=" + imageInputCapabilitySource + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Entry> schema() {
+            return new dev.openallay.value.ValueSchema<>(Entry.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Entry>>asList(new dev.openallay.value.ValueSchema.Component<>(Entry.class, "id", Entry::id), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "provider", Entry::provider), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "family", Entry::family), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "aliases", Entry::aliases), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "contextWindowTokens", Entry::contextWindowTokens), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "maxOutputTokens", Entry::maxOutputTokens), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "pricing", Entry::pricing), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "capabilitySource", Entry::capabilitySource), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "pricingSource", Entry::pricingSource), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "upstreamModelId", Entry::upstreamModelId), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "imageInputCapability", Entry::imageInputCapability), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "imageInputCapabilitySource", Entry::imageInputCapabilitySource)), arguments -> new Entry((String) arguments[0], (String) arguments[1], (String) arguments[2], (List) arguments[3], (Integer) arguments[4], (Integer) arguments[5], (Pricing) arguments[6], (String) arguments[7], (String) arguments[8], (String) arguments[9], (ImageInputCapability) arguments[10], (String) arguments[11]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Pricing.ValueSchemaProvider.class)
+public static final class Pricing {
+    private final String currency;
+    private final String unit;
+    private final List<Tier> tiers;
+    private final String note;
+    public Pricing(String currency, String unit, List<Tier> tiers, String note) {
+ tiers = dev.openallay.util.Java8Collections.listCopyOf(tiers);
+        this.currency = currency;
+        this.unit = unit;
+        this.tiers = tiers;
+        this.note = note;
+    }
+    public String currency() { return currency; }
+    public String unit() { return unit; }
+    public List<Tier> tiers() { return tiers; }
+    public String note() { return note; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Pricing)) return false;
+        Pricing that = (Pricing) other;
+        return java.util.Objects.equals(currency, that.currency) && java.util.Objects.equals(unit, that.unit) && java.util.Objects.equals(tiers, that.tiers) && java.util.Objects.equals(note, that.note);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(currency);
+        hash = 31 * hash + java.util.Objects.hashCode(unit);
+        hash = 31 * hash + java.util.Objects.hashCode(tiers);
+        hash = 31 * hash + java.util.Objects.hashCode(note);
+        return hash;
+    }
+    @Override public String toString() { return "Pricing[currency=" + currency + ", unit=" + unit + ", tiers=" + tiers + ", note=" + note + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Pricing> schema() {
+            return new dev.openallay.value.ValueSchema<>(Pricing.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Pricing>>asList(new dev.openallay.value.ValueSchema.Component<>(Pricing.class, "currency", Pricing::currency), new dev.openallay.value.ValueSchema.Component<>(Pricing.class, "unit", Pricing::unit), new dev.openallay.value.ValueSchema.Component<>(Pricing.class, "tiers", Pricing::tiers), new dev.openallay.value.ValueSchema.Component<>(Pricing.class, "note", Pricing::note)), arguments -> new Pricing((String) arguments[0], (String) arguments[1], (List) arguments[2], (String) arguments[3]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Tier.ValueSchemaProvider.class)
+public static final class Tier {
+    private final int minInputTokens;
+    private final BigDecimal input;
+    private final BigDecimal output;
+    private final BigDecimal cacheRead;
+    private final BigDecimal cacheWrite;
+    public Tier(int minInputTokens, BigDecimal input, BigDecimal output, BigDecimal cacheRead, BigDecimal cacheWrite) {
+        this.minInputTokens = minInputTokens;
+        this.input = input;
+        this.output = output;
+        this.cacheRead = cacheRead;
+        this.cacheWrite = cacheWrite;
+    }
+    public int minInputTokens() { return minInputTokens; }
+    public BigDecimal input() { return input; }
+    public BigDecimal output() { return output; }
+    public BigDecimal cacheRead() { return cacheRead; }
+    public BigDecimal cacheWrite() { return cacheWrite; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Tier)) return false;
+        Tier that = (Tier) other;
+        return minInputTokens == that.minInputTokens && java.util.Objects.equals(input, that.input) && java.util.Objects.equals(output, that.output) && java.util.Objects.equals(cacheRead, that.cacheRead) && java.util.Objects.equals(cacheWrite, that.cacheWrite);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(minInputTokens);
+        hash = 31 * hash + java.util.Objects.hashCode(input);
+        hash = 31 * hash + java.util.Objects.hashCode(output);
+        hash = 31 * hash + java.util.Objects.hashCode(cacheRead);
+        hash = 31 * hash + java.util.Objects.hashCode(cacheWrite);
+        return hash;
+    }
+    @Override public String toString() { return "Tier[minInputTokens=" + minInputTokens + ", input=" + input + ", output=" + output + ", cacheRead=" + cacheRead + ", cacheWrite=" + cacheWrite + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Tier> schema() {
+            return new dev.openallay.value.ValueSchema<>(Tier.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Tier>>asList(new dev.openallay.value.ValueSchema.Component<>(Tier.class, "minInputTokens", Tier::minInputTokens), new dev.openallay.value.ValueSchema.Component<>(Tier.class, "input", Tier::input), new dev.openallay.value.ValueSchema.Component<>(Tier.class, "output", Tier::output), new dev.openallay.value.ValueSchema.Component<>(Tier.class, "cacheRead", Tier::cacheRead), new dev.openallay.value.ValueSchema.Component<>(Tier.class, "cacheWrite", Tier::cacheWrite)), arguments -> new Tier((Integer) arguments[0], (BigDecimal) arguments[1], (BigDecimal) arguments[2], (BigDecimal) arguments[3], (BigDecimal) arguments[4]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Load.ValueSchemaProvider.class)
+public static final class Load {
+    private final BuiltinModelCatalog catalog;
+    private final GuideFailure failure;
+    public Load(BuiltinModelCatalog catalog, GuideFailure failure) {
+        this.catalog = catalog;
+        this.failure = failure;
+    }
+    public BuiltinModelCatalog catalog() { return catalog; }
+    public GuideFailure failure() { return failure; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Load)) return false;
+        Load that = (Load) other;
+        return java.util.Objects.equals(catalog, that.catalog) && java.util.Objects.equals(failure, that.failure);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(catalog);
+        hash = 31 * hash + java.util.Objects.hashCode(failure);
+        return hash;
+    }
+    @Override public String toString() { return "Load[catalog=" + catalog + ", failure=" + failure + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Load> schema() {
+            return new dev.openallay.value.ValueSchema<>(Load.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Load>>asList(new dev.openallay.value.ValueSchema.Component<>(Load.class, "catalog", Load::catalog), new dev.openallay.value.ValueSchema.Component<>(Load.class, "failure", Load::failure)), arguments -> new Load((BuiltinModelCatalog) arguments[0], (GuideFailure) arguments[1]));
+        }
+    }
+}
 
     public Optional<BuiltinModelMatcher.Match> match(String modelId) {
         return index.match(modelId);
@@ -80,7 +285,7 @@ public final class BuiltinModelCatalog {
     private static final class Bundled {
         private static final Load VALUE = load();
         private static Load load() {
-            var input = BuiltinModelCatalog.class.getResourceAsStream(RESOURCE);
+            java.io.InputStream input = BuiltinModelCatalog.class.getResourceAsStream(RESOURCE);
             if (input == null) {
                 return failed("builtin_catalog_unavailable");
             }
@@ -195,8 +400,8 @@ public final class BuiltinModelCatalog {
     }
 
     private static JsonElement read(JsonReader reader) throws IOException {
-        return switch (reader.peek()) {
-            case BEGIN_OBJECT -> {
+        switch (reader.peek()) {
+            case BEGIN_OBJECT: {
                 reader.beginObject();
                 JsonObject value = new JsonObject();
                 while (reader.hasNext()) {
@@ -205,24 +410,24 @@ public final class BuiltinModelCatalog {
                     value.add(name, read(reader));
                 }
                 reader.endObject();
-                yield value;
+                return value;
             }
-            case BEGIN_ARRAY -> {
+            case BEGIN_ARRAY: {
                 reader.beginArray();
                 JsonArray value = new JsonArray();
                 while (reader.hasNext()) value.add(read(reader));
                 reader.endArray();
-                yield value;
+                return value;
             }
-            case STRING -> new JsonPrimitive(reader.nextString());
-            case NUMBER -> new JsonPrimitive(new BigDecimal(reader.nextString()));
-            case BOOLEAN -> new JsonPrimitive(reader.nextBoolean());
-            case NULL -> { reader.nextNull(); yield JsonNull.INSTANCE; }
-            default -> throw invalid();
-        };
+            case STRING: return new JsonPrimitive(reader.nextString());
+            case NUMBER: return new JsonPrimitive(new BigDecimal(reader.nextString()));
+            case BOOLEAN: return new JsonPrimitive(reader.nextBoolean());
+            case NULL: reader.nextNull(); return JsonNull.INSTANCE;
+            default: throw invalid();
+        }
     }
     private static void fields(JsonObject value, String... fields) {
-        if (!dev.openallay.json.JsonTrees.keys(value).equals(Set.of(fields))) throw invalid();
+        if (!dev.openallay.json.JsonTrees.keys(value).equals(dev.openallay.util.Java8Collections.setOf(fields))) throw invalid();
     }
     private static JsonObject object(JsonElement value) {
         if (value == null || !value.isJsonObject()) throw invalid();
@@ -236,7 +441,7 @@ public final class BuiltinModelCatalog {
         if (value == null || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()) throw invalid();
         String text = value.getAsString();
-        if ((!blankAllowed && text.isBlank()) || text.codePoints().anyMatch(Character::isISOControl))
+        if ((!blankAllowed && dev.openallay.util.Java8Strings.isBlank(text)) || text.codePoints().anyMatch(Character::isISOControl))
             throw invalid();
         return text;
     }
@@ -257,7 +462,7 @@ public final class BuiltinModelCatalog {
         return new IllegalArgumentException("Invalid builtin model catalog");
     }
     private static Load failed(String code) {
-        return new Load(new BuiltinModelCatalog("unavailable", Instant.EPOCH, Map.of(), List.of()),
+        return new Load(new BuiltinModelCatalog("unavailable", Instant.EPOCH, dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.listOf()),
                 new GuideFailure(code, "The builtin model catalog is unavailable"));
     }
 }

@@ -90,6 +90,7 @@ public sealed interface AgentEvent
 
     record ModelProgress(ModelEvent event) implements AgentEvent {
         public ModelProgress {
+            ModelEvent.requireKnown(event);
             Objects.requireNonNull(event, "event");
             if (event instanceof ModelEvent.ReasoningDelta) {
                 event = new ModelEvent.ReasoningDelta("");
