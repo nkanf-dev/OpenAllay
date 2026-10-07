@@ -16,7 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HexFormat;
+import dev.openallay.util.Java8Hex;
 import java.util.List;
 
 /** Stable semantic and provider-generation digests for detached recipe records. */
@@ -106,7 +106,8 @@ public final class RecipeCanonicalizer {
         alternatives.forEach(alternative -> {
             digest.string(alternative.kind());
             digest.string(alternative.id());
-            List<String> resolved = alternative.resolvedItems().stream().sorted().toList();
+            List<String> resolved = alternative.resolvedItems().stream().sorted().collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList));
             digest.number(resolved.size());
             resolved.forEach(digest::string);
         });
@@ -120,7 +121,8 @@ public final class RecipeCanonicalizer {
 
     private static String alternativeKey(IngredientAlternativeSnapshot value) {
         return value.kind() + "\u0000" + value.id() + "\u0000"
-                + String.join("\u0000", value.resolvedItems().stream().sorted().toList());
+                + String.join("\u0000", value.resolvedItems().stream().sorted().collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(java.util.ArrayList::new), java.util.Collections::unmodifiableList)));
     }
 
     private static void fluid(Digest digest, FluidRequirementSnapshot value) {
@@ -248,7 +250,7 @@ public final class RecipeCanonicalizer {
         }
 
         private String finish() {
-            return HexFormat.of().formatHex(digest.digest());
+            return Java8Hex.formatHex(digest.digest());
         }
     }
 }
