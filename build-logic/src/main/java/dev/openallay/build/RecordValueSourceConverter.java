@@ -141,7 +141,8 @@ public final class RecordValueSourceConverter {
                         compact = slice(source, unit, positions, method.getBody()); continue;
                     }
                     if (method.getParameters().size() == components.size()
-                            && names(method.getParameters()).equals(components.stream().map(Component::name).toList())) canonical = true;
+                            && names(method.getParameters()).equals(components.stream().map(Component::name).toList())
+                            && canonicalParameterTypes(method.getParameters(), components, source, unit, positions)) canonical = true;
                 } else if (method.getParameters().isEmpty()) {
                     accessors.add(method.getName().toString());
                     if (components.stream().anyMatch(c -> c.name().contentEquals(method.getName()))) {
@@ -263,6 +264,21 @@ public final class RecordValueSourceConverter {
             case "float" -> "Float"; case "double" -> "Double"; default -> "java.util.Objects";
         };
         return wrapper + ".hashCode(" + c.name() + ")";
+    }
+    /** Parse-only exact declared signature proof; primitive/wrapper overloads are distinct. */
+    private static boolean canonicalParameterTypes(List<? extends VariableTree> parameters,
+            List<Component> components, String source, CompilationUnitTree unit, SourcePositions positions) {
+        boolean same = true;
+        Set<String> primitives = Set.of("boolean", "byte", "short", "char", "int", "long", "float", "double");
+        for (int index = 0; index < components.size(); index++) {
+            String parameter = slice(source, unit, positions, parameters.get(index).getType()).replaceAll("\\s+", "");
+            String component = components.get(index).type().replaceAll("\\s+", "");
+            if (parameter.equals(component)) continue;
+            // A primitive mismatch proves a distinct overload without dependency attribution.
+            if (primitives.contains(parameter) || primitives.contains(component)) same = false;
+            else fail("Reference constructor type mismatch needs attributed signature proof");
+        }
+        return same;
     }
     private static List<String> names(List<? extends VariableTree> parameters) { return parameters.stream().map(v -> v.getName().toString()).toList(); }
     private static String slice(String source, CompilationUnitTree unit, SourcePositions positions, Tree tree) {
