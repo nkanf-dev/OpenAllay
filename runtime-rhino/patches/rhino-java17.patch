@@ -1094,7 +1094,11 @@
 -		} else if (javaObject instanceof Set<?> set) {
 +		} else if (javaObject instanceof Set<?>) {
 +			Set<?> set = (Set<?>) javaObject;
-@@ -1323,10 +1334,21 @@
+@@ -1316 +1327,2 @@
+-		if (value instanceof Object[] arr) {
++		if (value instanceof Object[]) {
++			Object[] arr = (Object[]) value;
+@@ -1323,10 +1335,21 @@
 -		return switch (value) {
 -			case NativeArray array -> ArrayValueProvider.fromNativeArray(array);
 -			// special casing this because it can wrap i.e. sets as well
@@ -1126,33 +1130,37 @@
 +			return ArrayValueProvider.fromIterable(itr);
 +		}
 +		return value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);
-@@ -1355 +1377,2 @@
+@@ -1336 +1359,2 @@
+-		if (from instanceof Object[] arr) {
++		if (from instanceof Object[]) {
++			Object[] arr = (Object[]) from;
+@@ -1355 +1379,2 @@
 -		if (from instanceof NativeJavaList n) {
 +		if (from instanceof NativeJavaList) {
 +			NativeJavaList n = (NativeJavaList) from;
-@@ -1363,3 +1386,3 @@
+@@ -1363,3 +1388,3 @@
 -				var list = new ArrayList<>(n.list.size());
 -
 -				for (var o : n.list) {
 +				java.util.ArrayList<java.lang.Object> list = new ArrayList<>(n.list.size());
 +
 +				for (java.lang.Object o : n.list) {
-@@ -1391 +1414,2 @@
+@@ -1391 +1416,2 @@
 -		if (from instanceof NativeJavaList n) {
 +		if (from instanceof NativeJavaList) {
 +			NativeJavaList n = (NativeJavaList) from;
-@@ -1399,3 +1423,3 @@
+@@ -1399,3 +1425,3 @@
 -				var set = new LinkedHashSet<>(n.list.size());
 -
 -				for (var o : n.list) {
 +				java.util.LinkedHashSet<java.lang.Object> set = new LinkedHashSet<>(n.list.size());
 +
 +				for (java.lang.Object o : n.list) {
-@@ -1413 +1437,2 @@
+@@ -1413 +1439,2 @@
 -		if (from instanceof NativeJavaMap n) {
 +		if (from instanceof NativeJavaMap) {
 +			NativeJavaMap n = (NativeJavaMap) from;
-@@ -1422,6 +1447,6 @@
+@@ -1422,6 +1449,6 @@
 -					return Map.of();
 -				}
 -
@@ -1165,7 +1173,7 @@
 +				java.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(n.map.size());
 +
 +				for (java.util.Map.Entry<?, ?> entry : ((Map<?, ?>) n.map).entrySet()) {
-@@ -1433,5 +1458,6 @@
+@@ -1433,5 +1460,6 @@
 -		} else if (from instanceof NativeObject obj) {
 -			var keys = obj.getIds(this);
 -			var map = new LinkedHashMap<>(keys.length);
@@ -1177,32 +1185,32 @@
 +			java.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(keys.length);
 +
 +			for (java.lang.Object key : keys) {
-@@ -1442 +1468,2 @@
+@@ -1442 +1470,2 @@
 -		} else if (from instanceof Map<?, ?> m) {
 +		} else if (from instanceof Map<?, ?>) {
 +			Map<?, ?> m = (Map<?, ?>) from;
-@@ -1448,3 +1475,3 @@
+@@ -1448,3 +1477,3 @@
 -			var map = new LinkedHashMap<>(m.size());
 -
 -			for (var entry : m.entrySet()) {
 +			java.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(m.size());
 +
 +			for (java.util.Map.Entry<?, ?> entry : m.entrySet()) {
-@@ -1475 +1502,2 @@
+@@ -1475 +1504,2 @@
 -		if (from instanceof NativeJavaClass n) {
 +		if (from instanceof NativeJavaClass) {
 +			NativeJavaClass n = (NativeJavaClass) from;
-@@ -1477 +1505,2 @@
+@@ -1477 +1507,2 @@
 -		} else if (from instanceof Class<?> c) {
 +		} else if (from instanceof Class<?>) {
 +			Class<?> c = (Class<?>) from;
-@@ -1484 +1513 @@
+@@ -1484 +1515 @@
 -			var s = ScriptRuntime.toString(this, from);
 +			java.lang.String s = ScriptRuntime.toString(this, from);
-@@ -1499 +1528 @@
+@@ -1499 +1530 @@
 -		var cl = type.asClass();
 +		java.lang.Class<?> cl = type.asClass();
-@@ -1571,6 +1600,8 @@
+@@ -1571,6 +1602,8 @@
 -			return switch (from) {
 -				case NativeJavaClass ignore -> JSTYPE_JAVA_CLASS;
 -				case NativeJavaArray ignore -> JSTYPE_JAVA_ARRAY;
@@ -1217,7 +1225,7 @@
 +				return JSTYPE_JAVA_OBJECT;
 +			}
 +			return JSTYPE_OBJECT;
-@@ -1591,3 +1622,4 @@
+@@ -1591,3 +1624,4 @@
 -			var arrayType = target.componentType();
 -
 -			if (from instanceof NativeArray array) {
@@ -1225,46 +1233,46 @@
 +
 +			if (from instanceof NativeArray) {
 +				NativeArray array = (NativeArray) from;
-@@ -1616 +1648 @@
+@@ -1616 +1650 @@
 -		var typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);
 +		dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory<?> typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);
-@@ -1623 +1655 @@
+@@ -1623 +1657 @@
 -			case JSTYPE_NULL -> {
 +			case JSTYPE_NULL: {
-@@ -1630 +1662 @@
+@@ -1630 +1664 @@
 -			case JSTYPE_UNDEFINED -> {
 +			case JSTYPE_UNDEFINED: {
-@@ -1636 +1668 @@
+@@ -1636 +1670 @@
 -			case JSTYPE_BOOLEAN -> {
 +			case JSTYPE_BOOLEAN: {
-@@ -1646 +1678 @@
+@@ -1646 +1680 @@
 -			case JSTYPE_NUMBER -> {
 +			case JSTYPE_NUMBER: {
-@@ -1657 +1689 @@
+@@ -1657 +1691 @@
 -			case JSTYPE_STRING -> {
 +			case JSTYPE_STRING: {
-@@ -1675 +1707 @@
+@@ -1675 +1709 @@
 -			case JSTYPE_JAVA_CLASS -> {
 +			case JSTYPE_JAVA_CLASS: {
-@@ -1684 +1716,2 @@
+@@ -1684 +1718,2 @@
 -			case JSTYPE_JAVA_OBJECT, JSTYPE_JAVA_ARRAY -> {
 +			case JSTYPE_JAVA_OBJECT:
 +			case JSTYPE_JAVA_ARRAY: {
-@@ -1699 +1732 @@
+@@ -1699 +1734 @@
 -			case JSTYPE_OBJECT -> {
 +			case JSTYPE_OBJECT: {
-@@ -1731 +1764,2 @@
+@@ -1731 +1766,2 @@
 -		if (target instanceof TypeWrapperFactory<?> f) {
 +		if (target instanceof TypeWrapperFactory<?>) {
 +			TypeWrapperFactory<?> f = (TypeWrapperFactory<?>) target;
-@@ -1811 +1845,2 @@
+@@ -1811 +1847,2 @@
 -			case JSTYPE_JAVA_OBJECT, JSTYPE_JAVA_ARRAY -> {
 +			case JSTYPE_JAVA_OBJECT:
 +			case JSTYPE_JAVA_ARRAY: {
-@@ -1825 +1860 @@
+@@ -1825 +1862 @@
 -			case JSTYPE_OBJECT -> {
 +			case JSTYPE_OBJECT: {
-@@ -1864,0 +1900,2 @@
+@@ -1864,0 +1902,2 @@
 +
 +				break;
 --- a/dev/latvian/mods/rhino/ContextFactory.java
@@ -2040,6 +2048,25 @@
 +			if (!(anotherObj instanceof ComplexKey)) {
 @@ -34,0 +35 @@
 +			ComplexKey another = (ComplexKey) anotherObj;
+@@ -189 +190 @@
+-		} else if (!(bag instanceof Object[] array)) {
++		} else if (!(bag instanceof Object[])) {
+@@ -191,0 +193 @@
++			Object[] array = (Object[]) bag;
+@@ -232 +234,2 @@
+-		} else if (bag instanceof Object[] array) {
++		} else if (bag instanceof Object[]) {
++			Object[] array = (Object[]) bag;
+@@ -279 +282 @@
+-			if (!(bag instanceof Object[] array)) {
++			if (!(bag instanceof Object[])) {
+@@ -281,0 +285 @@
++			Object[] array = (Object[]) bag;
+@@ -288 +292 @@
+-			if (!(bag instanceof Object[] array)) {
++			if (!(bag instanceof Object[])) {
+@@ -293,0 +298 @@
++			Object[] array = (Object[]) bag;
 --- a/dev/latvian/mods/rhino/LambdaAccessorSlot.java
 +++ b/dev/latvian/mods/rhino/LambdaAccessorSlot.java
 @@ -35 +35 @@
@@ -3728,70 +3755,74 @@
 @@ -2613 +2633 @@
 -			default -> {
 +			default: {
-@@ -3070 +3090 @@
+@@ -2738 +2758,2 @@
+-				case Token.DOT, Token.QUESTION_DOT:
++				case Token.DOT:
++				case Token.QUESTION_DOT:
+@@ -3070 +3091 @@
 -				return arrayComprehension(elements.getFirst(), pos);
 +				return arrayComprehension(ListCompat.getFirst(elements), pos);
-@@ -3147 +3167,2 @@
+@@ -3147 +3168,2 @@
 -				case Token.LB, Token.LC -> {
 +				case Token.LB:
 +				case Token.LC: {
-@@ -3151,2 +3172,4 @@
+@@ -3151,2 +3173,4 @@
 -				}
 -				case Token.NAME -> {
 +
 +					break;
 +				}
 +				case Token.NAME: {
-@@ -3155,2 +3178,4 @@
+@@ -3155,2 +3179,4 @@
 -				}
 -				default -> reportError("msg.bad.var");
 +
 +					break;
 +				}
 +				default: reportError("msg.bad.var"); break;
-@@ -3249 +3274,2 @@
+@@ -3249 +3275,2 @@
 -				case Token.LB, Token.LC -> {
 +				case Token.LB:
 +				case Token.LC: {
-@@ -3253,2 +3279,4 @@
+@@ -3253,2 +3280,4 @@
 -				}
 -				case Token.NAME -> {
 +
 +					break;
 +				}
 +				case Token.NAME: {
-@@ -3257,2 +3285,4 @@
+@@ -3257,2 +3286,4 @@
 -				}
 -				default -> reportError("msg.bad.var");
 +
 +					break;
 +				}
 +				default: reportError("msg.bad.var"); break;
-@@ -3384 +3414 @@
+@@ -3384 +3415 @@
 -					case PROP_ENTRY -> {
 +					case PROP_ENTRY: {
-@@ -3386,0 +3417,2 @@
+@@ -3386,0 +3418,2 @@
 +
 +						break;
-@@ -3388 +3420 @@
+@@ -3388 +3421 @@
 -					case METHOD_ENTRY -> {
 +					case METHOD_ENTRY: {
-@@ -3393,0 +3426,2 @@
+@@ -3393,0 +3427,2 @@
 +
 +						break;
-@@ -3395 +3429 @@
+@@ -3395 +3430 @@
 -					case GET_ENTRY -> {
 +					case GET_ENTRY: {
-@@ -3399,0 +3434,2 @@
+@@ -3399,0 +3435,2 @@
 +
 +						break;
-@@ -3401 +3437 @@
+@@ -3401 +3438 @@
 -					case SET_ENTRY -> {
 +					case SET_ENTRY: {
-@@ -3405,0 +3442,2 @@
+@@ -3405,0 +3443,2 @@
 +
 +						break;
-@@ -3437,4 +3475,4 @@
+@@ -3437,4 +3476,4 @@
 -			case Token.NAME -> pname = createNameNode();
 -			case Token.STRING -> pname = createStringLiteral();
 -			case Token.NUMBER -> pname = createNumberLiteral();
@@ -3800,53 +3831,53 @@
 +			case Token.STRING: pname = createStringLiteral(); break;
 +			case Token.NUMBER: pname = createNumberLiteral(); break;
 +			case Token.LB: {
-@@ -3453,2 +3491,4 @@
+@@ -3453,2 +3492,4 @@
 -			}
 -			case Token.MUL -> {
 +
 +				break;
 +			}
 +			case Token.MUL: {
-@@ -3463,2 +3503,4 @@
+@@ -3463,2 +3504,4 @@
 -			}
 -			default -> {
 +
 +				break;
 +			}
 +			default: {
-@@ -3511 +3553 @@
+@@ -3511 +3554 @@
 -			case GET_ENTRY -> {
 +			case GET_ENTRY: {
-@@ -3514,2 +3556,4 @@
+@@ -3514,2 +3557,4 @@
 -			}
 -			case SET_ENTRY -> {
 +
 +				break;
 +			}
 +			case SET_ENTRY: {
-@@ -3518,2 +3562,4 @@
+@@ -3518,2 +3563,4 @@
 -			}
 -			case METHOD_ENTRY -> {
 +
 +				break;
 +			}
 +			case METHOD_ENTRY: {
-@@ -3521,0 +3568,2 @@
+@@ -3521,0 +3569,2 @@
 +
 +				break;
-@@ -3758 +3806,3 @@
+@@ -3758 +3807,3 @@
 -				case Token.CONST, Token.LET, Token.VAR -> reportError("msg.bad.assign.left");
 +				case Token.CONST:
 +				case Token.LET:
 +				case Token.VAR: reportError("msg.bad.assign.left"); break;
-@@ -4093 +4143 @@
+@@ -4093 +4144 @@
 -			case Token.NAME -> {
 +			case Token.NAME: {
-@@ -4101 +4151,2 @@
+@@ -4101 +4152,2 @@
 -			case Token.GETPROP, Token.GETELEM -> {
 +			case Token.GETPROP:
 +			case Token.GETELEM: {
-@@ -4135 +4186 @@
+@@ -4135 +4187 @@
 -			case Token.GET_REF -> {
 +			case Token.GET_REF: {
 --- a/dev/latvian/mods/rhino/ResolvedOverload.java
