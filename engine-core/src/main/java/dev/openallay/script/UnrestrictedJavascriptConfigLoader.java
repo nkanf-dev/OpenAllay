@@ -11,7 +11,7 @@ import java.util.Set;
 
 /** Strict fail-closed loader for the local dangerous capability toggle. */
 public final class UnrestrictedJavascriptConfigLoader {
-    private static final Set<String> FIELDS = Set.of("enabled");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("enabled");
     public ToolResult<UnrestrictedJavascriptConfig> load(Path path) {
         if (!Files.exists(path)) return new ToolResult.Success<>(UnrestrictedJavascriptConfig.defaults());
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) { return load(reader); }

@@ -36,7 +36,7 @@ public final class JavascriptResultViewRegistry {
             if (!row.isJsonObject()) {
                 return JavascriptSemanticKind.GENERIC;
             }
-            Set<String> rowFields = Set.copyOf(dev.openallay.json.JsonTrees.keys(row.getAsJsonObject()));
+            Set<String> rowFields = dev.openallay.util.Java8Collections.setCopyOf(dev.openallay.json.JsonTrees.keys(row.getAsJsonObject()));
             if (fields == null) {
                 fields = rowFields;
             } else if (!fields.equals(rowFields)) {

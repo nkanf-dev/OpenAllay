@@ -23,8 +23,8 @@ public final class JavascriptDataModuleRegistry {
     public synchronized void register(
             String providerId, Collection<? extends JavascriptDataModule> additions) {
         validateRegistration(providerId, additions);
-        String normalizedProvider = providerId.strip();
-        List<? extends JavascriptDataModule> candidates = List.copyOf(additions);
+        String normalizedProvider = dev.openallay.util.Java8Strings.strip(providerId);
+        List<? extends JavascriptDataModule> candidates = dev.openallay.util.Java8Collections.listCopyOf(additions);
         candidates.forEach(module -> {
             HostSchema schema = null;
             String schemaDiagnostic = null;
@@ -42,12 +42,12 @@ public final class JavascriptDataModuleRegistry {
 
     public synchronized void validateRegistration(
             String providerId, Collection<? extends JavascriptDataModule> additions) {
-        if (providerId == null || providerId.isBlank()) {
+        if (providerId == null || dev.openallay.util.Java8Strings.isBlank(providerId)) {
             throw new IllegalArgumentException("Module provider ID must not be blank");
         }
-        String normalizedProvider = providerId.strip();
+        String normalizedProvider = dev.openallay.util.Java8Strings.strip(providerId);
         List<? extends JavascriptDataModule> candidates =
-                List.copyOf(Objects.requireNonNull(additions, "additions"));
+                dev.openallay.util.Java8Collections.listCopyOf(Objects.requireNonNull(additions, "additions"));
         Set<String> batchIds = new HashSet<>();
         for (JavascriptDataModule module : candidates) {
             Objects.requireNonNull(module, "module");
@@ -72,21 +72,20 @@ public final class JavascriptDataModuleRegistry {
 
     /** Returns immutable declarations without capturing any request value. */
     public synchronized List<Descriptor> descriptors() {
-        return modules.values().stream()
+        return dev.openallay.util.Java8Collections.toList(modules.values().stream()
                 .map(registered -> new Descriptor(
                         registered.module().id(),
                         registered.providerId(),
                         registered.module().summary(),
                         registered.schema() != null,
                         registered.schema(),
-                        registered.schemaDiagnostic()))
-                .toList();
+                        registered.schemaDiagnostic())));
     }
 
     public Snapshot capture(ToolInvocationContext context) {
         List<RegisteredModule> captured;
         synchronized (this) {
-            captured = List.copyOf(modules.values());
+            captured = dev.openallay.util.Java8Collections.listCopyOf(modules.values());
         }
         Map<String, Object> values = new TreeMap<>();
         List<Diagnostic> diagnostics = new ArrayList<>();
@@ -115,9 +114,9 @@ public final class JavascriptDataModuleRegistry {
             }
         }
         return new Snapshot(
-                Map.copyOf(values),
-                List.copyOf(diagnostics),
-                evidence.stream().distinct().toList());
+                dev.openallay.util.Java8Collections.mapCopyOf(values),
+                dev.openallay.util.Java8Collections.listCopyOf(diagnostics),
+                dev.openallay.util.Java8Collections.toList(evidence.stream().distinct()));
     }
 
     @dev.openallay.value.ValueType(Diagnostic.ValueSchemaProvider.class)
@@ -209,9 +208,9 @@ public static final class Snapshot {
     private final List<EvidenceMetadata> evidence;
     public Snapshot(Map<String, Object> values, List<Diagnostic> diagnostics, List<EvidenceMetadata> evidence) {
 
-            values = Map.copyOf(values);
-            diagnostics = List.copyOf(diagnostics);
-            evidence = List.copyOf(evidence);
+            values = dev.openallay.util.Java8Collections.mapCopyOf(values);
+            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+            evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
 
         this.values = values;
         this.diagnostics = diagnostics;

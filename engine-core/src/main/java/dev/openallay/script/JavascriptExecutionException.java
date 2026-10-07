@@ -9,7 +9,7 @@ public class JavascriptExecutionException extends RuntimeException {
 
     public JavascriptExecutionException(String code, String message, Throwable cause) {
         super(message, cause);
-        if (code == null || code.isBlank()) {
+        if (code == null || dev.openallay.util.Java8Strings.isBlank(code)) {
             throw new IllegalArgumentException("code must not be blank");
         }
         this.code = code;

@@ -308,7 +308,7 @@ private static final class Selector {
     private Method method(Target target, Selector selector, Object typesValue)
             throws ReflectiveOperationException {
         List<Class<?>> declarations = selector.declaringClass() == null
-                ? hierarchy(target.type()) : List.of(declaringClass(target, selector.declaringClass()));
+                ? hierarchy(target.type()) : dev.openallay.util.Java8Collections.listOf(declaringClass(target, selector.declaringClass()));
         ClassLoader loader = selector.declaringClass() == null
                 ? target.type().getClassLoader() : declarations.get(0).getClassLoader();
         Class<?>[] types = parameterTypes(typesValue, loader);
@@ -446,7 +446,7 @@ private static final class Selector {
     }
 
     private String name(Object value, String label) {
-        if (!(value instanceof CharSequence text) || text.isEmpty()) {
+        if (!(value instanceof CharSequence text) || ((text).length() == 0)) {
             throw invalid(label + " must be a nonempty string");
         }
         return text.toString();
@@ -456,8 +456,8 @@ private static final class Selector {
     private static List<Class<?>> hierarchy(Class<?> target) {
         LinkedHashSet<Class<?>> types = new LinkedHashSet<>();
         for (Class<?> current = target; current != null; current = current.getSuperclass()) types.add(current);
-        for (Class<?> current : List.copyOf(types)) addInterfaces(current, types);
-        return List.copyOf(types);
+        for (Class<?> current : dev.openallay.util.Java8Collections.listCopyOf(types)) addInterfaces(current, types);
+        return dev.openallay.util.Java8Collections.listCopyOf(types);
     }
 
     private static void addInterfaces(Class<?> type, LinkedHashSet<Class<?>> types) {
@@ -551,7 +551,7 @@ private static final class Selector {
     }
 
     private static List<String> typeNames(Class<?>[] types) {
-        return Arrays.stream(types).map(Class::getTypeName).toList();
+        return dev.openallay.util.Java8Collections.toList(Arrays.stream(types).map(Class::getTypeName));
     }
 
     private static JavascriptExecutionException invalid(String message) {
@@ -560,7 +560,7 @@ private static final class Selector {
 
     private static JavascriptExecutionException failure(String code, Throwable failure) {
         String message = failure.getClass().getName();
-        if (failure.getMessage() != null && !failure.getMessage().isBlank()) message += ": " + failure.getMessage();
+        if (failure.getMessage() != null && !dev.openallay.util.Java8Strings.isBlank(failure.getMessage())) message += ": " + failure.getMessage();
         if (failure instanceof ExceptionInInitializerError && failure.getCause() != null) {
             Throwable cause = failure.getCause();
             message += " (caused by " + cause.getClass().getName()

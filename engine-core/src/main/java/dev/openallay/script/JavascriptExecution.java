@@ -18,7 +18,7 @@ public final class JavascriptExecution {
         value = dev.openallay.json.JsonTrees.copy(Objects.requireNonNull(value, "value"));
         shape = Objects.requireNonNull(shape, "shape");
         Objects.requireNonNull(elapsed, "elapsed");
-        modules = List.copyOf(modules);
+        modules = dev.openallay.util.Java8Collections.listCopyOf(modules);
 
         this.value = value;
         this.shape = shape;
@@ -37,7 +37,7 @@ public JavascriptExecution(JsonElement value, Duration elapsed, List<String> mod
                 modules);
     }
 public JavascriptExecution(JsonElement value, Duration elapsed) {
-        this(value, elapsed, List.of());
+        this(value, elapsed, dev.openallay.util.Java8Collections.listOf());
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

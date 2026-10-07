@@ -13,7 +13,7 @@ public final class CommandCatalogSnapshot {
     public CommandCatalogSnapshot(Instant capturedAt, List<CommandNodeSnapshot> nodes) {
 
         Objects.requireNonNull(capturedAt, "capturedAt");
-        nodes = List.copyOf(nodes);
+        nodes = dev.openallay.util.Java8Collections.listCopyOf(nodes);
 
         this.capturedAt = capturedAt;
         this.nodes = nodes;
@@ -44,8 +44,8 @@ public static final class CommandNodeSnapshot {
             kind = require(kind, "kind");
             argumentType = argumentType == null ? "" : argumentType;
             redirect = redirect == null ? "" : redirect;
-            usage = List.copyOf(usage);
-            children = List.copyOf(children);
+            usage = dev.openallay.util.Java8Collections.listCopyOf(usage);
+            children = dev.openallay.util.Java8Collections.listCopyOf(children);
 
         this.path = path;
         this.name = name;
@@ -91,14 +91,14 @@ public static final class CommandNodeSnapshot {
     }
 }
 static String canonical(String value) {
-        String result = value.strip();
+        String result = dev.openallay.util.Java8Strings.strip(value);
         while (result.startsWith("/")) {
             result = result.substring(1);
         }
         return result.replaceAll("\\s+", " ");
     }
 private static String require(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
         return value;

@@ -58,7 +58,7 @@ public final class JavascriptFailureFormatter {
             for (ScriptStackElement frame : rhino.getScriptStack()) {
                 String location = location(frame.fileName, frame.lineNumber, false);
                 if (location == null) continue;
-                String label = frame.functionName == null || frame.functionName.isBlank()
+                String label = frame.functionName == null || dev.openallay.util.Java8Strings.isBlank(frame.functionName)
                         ? location : frame.functionName + " (" + location + ")";
                 frames.add("at " + label);
             }
@@ -91,7 +91,7 @@ public final class JavascriptFailureFormatter {
             if (value instanceof ScriptableObject error
                     && value.getClass().getName().equals("dev.latvian.mods.rhino.NativeError")) {
                 String name = errorTextProperty(error, "name", context);
-                type = name == null || name.isBlank() ? "Error" : name;
+                type = name == null || dev.openallay.util.Java8Strings.isBlank(name) ? "Error" : name;
                 message = errorTextProperty(error, "message", context);
             } else {
                 type = "JavaScriptException";
@@ -136,7 +136,7 @@ public final class JavascriptFailureFormatter {
     }
 
     private static String summary(String type, String message) {
-        return type + (message == null || message.isBlank() ? "" : ": " + message);
+        return type + (message == null || dev.openallay.util.Java8Strings.isBlank(message) ? "" : ": " + message);
     }
 
     private String location(String name, int line, boolean origin) {

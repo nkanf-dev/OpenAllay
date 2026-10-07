@@ -61,7 +61,7 @@ public static final class Presentation {
     private final long canonicalUtf8Bytes;
     public Presentation(String handle, String type, long cardinality, List<String> fields, JsonElement preview, String modelText, JavascriptSemanticKind viewKind, boolean complete, int omittedRows, int omittedFields, long canonicalUtf8Bytes) {
 
-            fields = List.copyOf(fields);
+            fields = dev.openallay.util.Java8Collections.listCopyOf(fields);
             preview = dev.openallay.json.JsonTrees.copy(preview);
             java.util.Objects.requireNonNull(viewKind, "viewKind");
 

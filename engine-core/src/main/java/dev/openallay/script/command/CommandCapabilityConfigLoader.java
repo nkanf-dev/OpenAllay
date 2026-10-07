@@ -11,7 +11,7 @@ import java.util.Set;
 
 /** Strict, pre-release loader. Missing files use defaults; malformed files fail closed. */
 public final class CommandCapabilityConfigLoader {
-    private static final Set<String> FIELDS = Set.of("enabled");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("enabled");
 
     public ToolResult<CommandCapabilityConfig> load(Path path) {
         if (!Files.exists(path)) {

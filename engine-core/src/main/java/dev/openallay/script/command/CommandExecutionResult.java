@@ -27,13 +27,13 @@ public final class CommandExecutionResult {
         if (actorId == null) {
             throw new IllegalArgumentException("actorId must not be null");
         }
-        if (command == null || command.isBlank()) {
+        if (command == null || dev.openallay.util.Java8Strings.isBlank(command)) {
             throw new IllegalArgumentException("command must not be blank");
         }
         if (!"feedback".equals(state) && !"no_feedback".equals(state)) {
             throw new IllegalArgumentException("state must be feedback or no_feedback");
         }
-        messages = List.copyOf(messages);
+        messages = dev.openallay.util.Java8Collections.listCopyOf(messages);
         if ("feedback".equals(state) != !messages.isEmpty()
                 || feedbackObserved != !messages.isEmpty()) {
             throw new IllegalArgumentException("state and messages disagree");

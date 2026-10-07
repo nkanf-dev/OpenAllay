@@ -140,7 +140,7 @@ public final class CommandCapabilityRuntime {
      * while one command for that actor is awaiting feedback.
      */
     public void acceptFeedback(UUID actorId, String message) {
-        if (actorId == null || message == null || message.isBlank()) {
+        if (actorId == null || message == null || dev.openallay.util.Java8Strings.isBlank(message)) {
             return;
         }
         PendingFeedback pending = pendingFeedback.get(actorId);
@@ -186,11 +186,11 @@ public final class CommandCapabilityRuntime {
                 throw new JavascriptExecutionException(
                         "command_invalid", "commands.run requires one command string");
             }
-            String command = source.strip();
+            String command = dev.openallay.util.Java8Strings.strip(source);
             if (command.startsWith("/")) {
                 command = command.substring(1);
             }
-            if (command.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(command)) {
                 throw new JavascriptExecutionException(
                         "command_invalid", "commands.run requires one command string");
             }
@@ -327,10 +327,10 @@ public final class CommandCapabilityRuntime {
                 long now = System.nanoTime();
                 if (!messages.isEmpty()
                         && now - lastMessageNanos >= quietNanos) {
-                    return List.copyOf(messages);
+                    return dev.openallay.util.Java8Collections.listCopyOf(messages);
                 }
                 if (now >= deadlineNanos) {
-                    return List.copyOf(messages);
+                    return dev.openallay.util.Java8Collections.listCopyOf(messages);
                 }
                 long remainingNanos = messages.isEmpty()
                         ? deadlineNanos - now
@@ -353,7 +353,7 @@ public final class CommandCapabilityRuntime {
     }
 
     private static void requireCorrelation(String correlationId) {
-        if (correlationId == null || correlationId.isBlank()) {
+        if (correlationId == null || dev.openallay.util.Java8Strings.isBlank(correlationId)) {
             throw new IllegalArgumentException("correlationId must not be blank");
         }
     }

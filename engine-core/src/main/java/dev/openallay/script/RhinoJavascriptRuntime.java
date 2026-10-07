@@ -129,7 +129,7 @@ public final class RhinoJavascriptRuntime {
                 source,
                 minecraftRoots,
                 workspaceValues,
-                Map.of(),
+                dev.openallay.util.Java8Collections.mapOf(),
                 cancellation,
                 null,
                 null);
@@ -145,7 +145,7 @@ public final class RhinoJavascriptRuntime {
                 source,
                 minecraftRoots,
                 workspaceValues,
-                Map.of(),
+                dev.openallay.util.Java8Collections.mapOf(),
                 cancellation,
                 commands,
                 null);
@@ -183,7 +183,7 @@ public final class RhinoJavascriptRuntime {
             String source, Map<String, Object> minecraftRoots, Map<String, JsonElement> workspaceValues,
             Map<String, JavascriptResultShape> workspaceShapes, CancellationSignal cancellation,
             JavascriptCommandBridge commands, JavascriptWorldBridge world, boolean unrestricted) {
-        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, Map.of(),
+        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, dev.openallay.util.Java8Collections.mapOf(),
                 ignored -> {}, cancellation, commands, world, unrestricted);
     }
 
@@ -214,7 +214,7 @@ public final class RhinoJavascriptRuntime {
             JavascriptWorldBridge world,
             boolean unrestricted,
             JavascriptInvocationScope extensionScope) {
-        if (source == null || source.isBlank()) {
+        if (source == null || dev.openallay.util.Java8Strings.isBlank(source)) {
             throw new JavascriptExecutionException(
                     "javascript_invalid", "JavaScript source must not be blank");
         }
@@ -253,7 +253,7 @@ public final class RhinoJavascriptRuntime {
                             adapter,
                             minecraftRoots instanceof DeclaredHostRoots declared
                                     ? declared.schemaCatalog()
-                                    : new HostSchemaCatalog(List.of())));
+                                    : new HostSchemaCatalog(dev.openallay.util.Java8Collections.listOf())));
             defineGlobal(
                     context,
                     scope,
@@ -286,7 +286,7 @@ public final class RhinoJavascriptRuntime {
                     normalized.value(),
                     normalized.shape(),
                     Duration.ofNanos(System.nanoTime() - started),
-                    List.copyOf(usedModules));
+                    dev.openallay.util.Java8Collections.listCopyOf(usedModules));
         } catch (JavascriptExecutionException failure) {
             throw failure;
         } catch (ModelClientException cancellationFailure) {
@@ -369,7 +369,7 @@ public final class RhinoJavascriptRuntime {
                             "Result handle is unavailable in this execution");
                 }
                 if (opened.add(handle.toString())) {
-                    sources.getOrDefault(handle.toString(), List.of()).forEach(sourceRecorder);
+                    sources.getOrDefault(handle.toString(), dev.openallay.util.Java8Collections.listOf()).forEach(sourceRecorder);
                 }
                 JavascriptResultShape shape = shapes.get(handle.toString());
                 return shape == null

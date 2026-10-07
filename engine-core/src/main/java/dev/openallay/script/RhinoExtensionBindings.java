@@ -27,7 +27,7 @@ final class RhinoExtensionBindings {
     static Map<String, Scriptable> bind(Context context, ScriptableObject scope,
             RhinoHostAdapter adapter, RhinoJsonNormalizer normalizer,
             JavascriptInvocationScope invocation) {
-        if (invocation == null) return Map.of();
+        if (invocation == null) return dev.openallay.util.Java8Collections.mapOf();
         Map<String, Scriptable> bound = new LinkedHashMap<>();
         for (JavascriptHostBinding binding : invocation.hostBindings()) {
             ScriptableObject root = (ScriptableObject) context.newObject(scope);
@@ -56,7 +56,7 @@ final class RhinoExtensionBindings {
                             // Argument/result transport and all interpreter work remain budgeted.
                             // Only the trusted implementation's native waiting/execution is excluded.
                             result = ((OpenAllayRhinoContext) cx).callNative(() ->
-                                    invocation.invokeHostMethod(binding.id(), method.name(), List.copyOf(detached)));
+                                    invocation.invokeHostMethod(binding.id(), method.name(), dev.openallay.util.Java8Collections.listCopyOf(detached)));
                         } catch (JavascriptExecutionException | ModelClientException failure) {
                             throw failure;
                         } catch (Throwable failure) {
@@ -85,7 +85,7 @@ final class RhinoExtensionBindings {
             root.preventExtensions();
             bound.put(binding.id(), root);
         }
-        return Map.copyOf(bound);
+        return dev.openallay.util.Java8Collections.mapCopyOf(bound);
     }
 
     /** Exact detached return shape. This is transport, not a truncated model-result preview. */

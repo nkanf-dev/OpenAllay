@@ -35,7 +35,7 @@ public static final class Snapshot {
     public Snapshot(Object value, List<EvidenceMetadata> evidence) {
 
             value = java.util.Objects.requireNonNull(value, "value");
-            evidence = List.copyOf(evidence);
+            evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
             if (evidence.isEmpty()) {
                 throw new IllegalArgumentException("JavaScript module snapshot requires evidence");
             }

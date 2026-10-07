@@ -11,9 +11,7 @@ import java.util.TreeMap;
 
 /** Reviewed JavaScript modules available inside one Rhino scope. */
 public final class JavascriptModuleCatalog {
-    private static final Map<String, String> BUNDLED = Map.of(
-            "openallay:crafting",
-            "assets/openallay/openallay_js_modules/crafting.js");
+    private static final Map<String, String> BUNDLED = dev.openallay.util.Java8Collections.mapOf("openallay:crafting", "assets/openallay/openallay_js_modules/crafting.js");
 
     private final Map<String, RegisteredSource> sources = new TreeMap<>();
 
@@ -33,7 +31,7 @@ public final class JavascriptModuleCatalog {
 
     /** Descriptor-only view used by Settings without loading module source text. */
     public static Set<String> bundledIds() {
-        return Set.copyOf(BUNDLED.keySet());
+        return dev.openallay.util.Java8Collections.setCopyOf(BUNDLED.keySet());
     }
 
     public synchronized String source(String id) {
@@ -47,7 +45,7 @@ public final class JavascriptModuleCatalog {
     }
 
     public synchronized Set<String> ids() {
-        return Set.copyOf(sources.keySet());
+        return dev.openallay.util.Java8Collections.setCopyOf(sources.keySet());
     }
 
     public synchronized void validateRegistration(
@@ -80,16 +78,16 @@ public final class JavascriptModuleCatalog {
         if (id == null || !id.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) {
             throw new IllegalArgumentException("Invalid JavaScript module id");
         }
-        if (source == null || source.isBlank()) {
+        if (source == null || dev.openallay.util.Java8Strings.isBlank(source)) {
             throw new IllegalArgumentException("JavaScript module source is required");
         }
     }
 
     private static String requireProvider(String providerId) {
-        if (providerId == null || providerId.isBlank()) {
+        if (providerId == null || dev.openallay.util.Java8Strings.isBlank(providerId)) {
             throw new IllegalArgumentException("JavaScript module provider ID is required");
         }
-        return providerId.strip();
+        return dev.openallay.util.Java8Strings.strip(providerId);
     }
 
     private static String read(ClassLoader loader, String path) {

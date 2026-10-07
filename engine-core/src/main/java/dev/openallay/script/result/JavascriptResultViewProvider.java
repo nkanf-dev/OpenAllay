@@ -24,10 +24,10 @@ public static final class Declaration implements JavascriptResultViewProvider {
                 throw new IllegalArgumentException("Invalid result view ID: " + id);
             }
             java.util.Objects.requireNonNull(kind, "kind");
-            if (summary == null || summary.isBlank()) {
+            if (summary == null || dev.openallay.util.Java8Strings.isBlank(summary)) {
                 throw new IllegalArgumentException("Result view summary must not be blank");
             }
-            summary = summary.strip();
+            summary = dev.openallay.util.Java8Strings.strip(summary);
 
         this.id = id;
         this.kind = kind;
