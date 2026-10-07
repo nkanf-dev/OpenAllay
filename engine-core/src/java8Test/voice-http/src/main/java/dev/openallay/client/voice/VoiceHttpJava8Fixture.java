@@ -38,7 +38,10 @@ public final class VoiceHttpJava8Fixture {
     private static volatile Throwable uncaught;
     public static void main(String[] args) throws Exception {
         require("1.8".equals(System.getProperty("java.specification.version")), "genuine Java8 required");
-        Thread.setDefaultUncaughtExceptionHandler((thread, failure) -> uncaught = failure);
+        Thread.setDefaultUncaughtExceptionHandler((thread, failure) -> {
+            uncaught = failure;
+            failure.printStackTrace(System.err);
+        });
         for (Class<?> owner : new Class<?>[] {VoiceHttpJava8Fixture.class, VoiceHttpSpeechEndpoint.class,
                 VoiceHttpCancellation.class, VoiceModelDownload.class, SpeechToText.class,
                 SpeechToText.Request.class, SpeechToText.Result.class, SpeechToText.Usage.class,
