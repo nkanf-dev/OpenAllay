@@ -136,7 +136,13 @@ public final class RegistryQueryJava8Fixture {
         report.addProperty("sourceRows", result.sourceRows());
         JsonArray columns = new JsonArray(); for (String column : result.columns()) columns.add(new JsonPrimitive(column));
         report.add("columns", columns); JsonArray rows = new JsonArray();
-        for (Map<String, JsonElement> row : result.rows()) { JsonObject object = new JsonObject(); row.forEach(object::add); rows.add(object); }
+        for (Map<String, JsonElement> row : result.rows()) {
+            JsonObject object = new JsonObject();
+            // Map.copyOf defines no entry iteration order. Canonicalize only this row map;
+            // query row order, columns, nested JSON, stages, errors and all arrays stay exact.
+            new java.util.TreeMap<String, JsonElement>(row).forEach(object::add);
+            rows.add(object);
+        }
         report.add("rows", rows); JsonArray stages = new JsonArray();
         for (RegistryQueryEngine.Stage stage : result.stages()) {
             JsonObject object = new JsonObject(); object.addProperty("index", stage.index()); object.addProperty("operation", stage.operation().name());
