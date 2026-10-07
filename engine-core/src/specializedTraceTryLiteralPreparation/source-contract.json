@@ -1,0 +1,59 @@
+{
+  "scope": "Fivewholeowners TraceStep+AgentTrace closed2ingress/RunJavascriptTool exactTWRalias/2genuinecompilerliteral owners, source-onlymoderngate no fakeRhino8closure.",
+  "owners": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/trace/model/TraceStep.java",
+      "pre_sha256": "e77e461809844ef93999dc7deaf901880e2e8b55635ed3c58aba5059e6d0d98e",
+      "exact_changes": [
+        {
+          "old": "public sealed interface TraceStep permits ToolCallStep, AssistantMessageStep {}",
+          "new": "public interface TraceStep {\n    /** Exact Java8 replacement for the original closed two-step union. */\n    static void requireKnown(TraceStep step) {\n        java.util.Objects.requireNonNull(step, \"step\");\n        Class<?> type = step.getClass();\n        if (type != ToolCallStep.class && type != AssistantMessageStep.class) {\n            throw new IncompatibleClassChangeError(\"Unknown trace step subtype\");\n        }\n    }\n}",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/trace/model/AgentTrace.java",
+      "pre_sha256": "1cf49e3a7abdcdd229899606a446e2c3cfae532f443056ecd1832803f49a3787",
+      "exact_changes": [
+        {
+          "old": "        steps = dev.openallay.util.Java8Collections.listCopyOf(steps);\n        if (steps.isEmpty())",
+          "new": "        steps = dev.openallay.util.Java8Collections.listCopyOf(steps);\n        steps.forEach(TraceStep::requireKnown);\n        if (steps.isEmpty())",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/builtin/RunJavascriptTool.java",
+      "pre_sha256": "d0e4d879f45037c537352fc407229f748b571c4980f04abc3c39e24c71380eb2",
+      "exact_changes": [
+        {
+          "old": "try (scope) {",
+          "new": "try (JavascriptInvocationScope ownedScope = scope) {",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/script/RhinoJavascriptRuntime.java",
+      "pre_sha256": "db52e684b2080b022db11410502ab0852928f193ab4373694c055b58eeaf70e5",
+      "exact_changes": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/script/command/CommandCapabilityConfigWriter.java",
+      "pre_sha256": "42496fefc9663d9dc3cff6fbf0fb2fa2d3758df88e35943b674d3a8d2c63dde8",
+      "exact_changes": []
+    }
+  ],
+  "literal_tool": {
+    "path": "build-logic/src/main/java/dev/openallay/build/CanonicalTextBlockPort.java",
+    "sha256": "7ebcfe52688b6a8c0147e74341e41a8db7acba6fafe394e5ba0201a941a004db",
+    "acceptedOracleRun": 37652021045
+  },
+  "literal_owners": [
+    "dev/openallay/script/RhinoJavascriptRuntime.java",
+    "dev/openallay/script/command/CommandCapabilityConfigWriter.java"
+  ],
+  "runner_sha256": "3fbea25026628d907380ef9fb6fe60c482932c4d1bb84f5324e48e5bf9b9f2f2",
+  "semantic_policy": "TraceStep.requireKnown exact2classes onceAgentTrace.ingress aftersnapshot/null rejection. TWRownedScope alias closesactualsameJavascriptInvocationScope atsameboundary/no reorder; publicLiteralgetValue exactJShelpers/configstring thenformatted\u2192sameString.formatdefaultlocale/arguments."
+}
