@@ -1,6 +1,6 @@
 {
   "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
-  "patch_sha256": "7ecb5228e302ebe9474129f4d3c59e9746b6112b45a7c47801a6d9f2e99936d5",
+  "patch_sha256": "348002518be52784042fd31f2754ad6f9219d63d600cbb56d17e62774b85ed01",
   "files": [
     {
       "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
@@ -107,6 +107,94 @@
         {
           "before": "\n\t\tObject unwrappedValue = Wrapper.unwrapped(from);\n\n\t\tvar typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);\n\n\t\tif (typeWrapper != null) {\n\t\t\treturn typeWrapper.wrap(this, unwrappedValue, target);\n",
           "after": "\n\t\tObject unwrappedValue = Wrapper.unwrapped(from);\n\n\t\tdev.latvian.mods.rhino.util.wrap.TypeWrapperFactory<?> typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);\n\n\t\tif (typeWrapper != null) {\n\t\t\treturn typeWrapper.wrap(this, unwrappedValue, target);\n"
+        },
+        {
+          "before": "\t\t\te = ((InvocationTargetException) e).getTargetException();\n\t\t}\n\n\t\tif (e instanceof Error err) {\n\t\t\tthrow err; // special handling of Error so scripts would not catch them\n\t\t} else if (e instanceof RhinoException err) {\n\t\t\tthrow err;\n\t\t}\n\t\tthrow new WrappedException(cx, e);\n",
+          "after": "\t\t\te = ((InvocationTargetException) e).getTargetException();\n\t\t}\n\n\t\tif (e instanceof Error) {\n\t\t\tError err = (Error) e;\n\t\t\tthrow err; // special handling of Error so scripts would not catch them\n\t\t} else if (e instanceof RhinoException) {\n\t\t\tRhinoException err = (RhinoException) e;\n\t\t\tthrow err;\n\t\t}\n\t\tthrow new WrappedException(cx, e);\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic void addToScope(Scriptable scope, String name, Object value) {\n\t\tif (value instanceof Class<?> c) {\n\t\t\tScriptableObject.putProperty(scope, name, new NativeJavaClass(this, scope, c), this);\n\t\t} else {\n\t\t\tScriptableObject.putProperty(scope, name, javaToJS(value, scope), this);\n",
+          "after": "\t}\n\n\tpublic void addToScope(Scriptable scope, String name, Object value) {\n\t\tif (value instanceof Class<?>) {\n\t\t\tClass<?> c = (Class<?>) value;\n\t\t\tScriptableObject.putProperty(scope, name, new NativeJavaClass(this, scope, c), this);\n\t\t} else {\n\t\t\tScriptableObject.putProperty(scope, name, javaToJS(value, scope), this);\n"
+        },
+        {
+          "before": "\t\t\treturn (int) (Character) obj;\n\t\t} else if (target.isPrimitive()) {\n\t\t\treturn obj;\n\t\t} else if (target instanceof ArrayTypeInfo array) {\n\t\t\treturn new NativeJavaArray(scope, obj, array, this);\n\t\t} else {\n\t\t\treturn wrapAsJavaObject(scope, obj, target);\n",
+          "after": "\t\t\treturn (int) (Character) obj;\n\t\t} else if (target.isPrimitive()) {\n\t\t\treturn obj;\n\t\t} else if (target instanceof ArrayTypeInfo) {\n\t\t\tArrayTypeInfo array = (ArrayTypeInfo) target;\n\t\t\treturn new NativeJavaArray(scope, obj, array, this);\n\t\t} else {\n\t\t\treturn wrapAsJavaObject(scope, obj, target);\n"
+        },
+        {
+          "before": "\t * @return the wrapped value which shall not be null\n\t */\n\tpublic Scriptable wrapAsJavaObject(Scriptable scope, Object javaObject, TypeInfo target) {\n\t\tif (javaObject instanceof CustomJavaToJsWrapper w) {\n\t\t\treturn w.convertJavaToJs(this, scope, target);\n\t\t}\n\n\t\tif (javaObject instanceof Map map) {\n\t\t\treturn new NativeJavaMap(this, scope, map, map, target);\n\t\t} else if (javaObject instanceof List list) {\n\t\t\treturn new NativeJavaList(this, scope, list, list, target);\n\t\t} else if (javaObject instanceof Set<?> set) {\n\t\t\treturn new NativeJavaList(this, scope, set, new JavaSetWrapper<>(set), target);\n\t\t}\n\n",
+          "after": "\t * @return the wrapped value which shall not be null\n\t */\n\tpublic Scriptable wrapAsJavaObject(Scriptable scope, Object javaObject, TypeInfo target) {\n\t\tif (javaObject instanceof CustomJavaToJsWrapper) {\n\t\t\tCustomJavaToJsWrapper w = (CustomJavaToJsWrapper) javaObject;\n\t\t\treturn w.convertJavaToJs(this, scope, target);\n\t\t}\n\n\t\tif (javaObject instanceof Map) {\n\t\t\tMap map = (Map) javaObject;\n\t\t\treturn new NativeJavaMap(this, scope, map, map, target);\n\t\t} else if (javaObject instanceof List) {\n\t\t\tList list = (List) javaObject;\n\t\t\treturn new NativeJavaList(this, scope, list, list, target);\n\t\t} else if (javaObject instanceof Set<?>) {\n\t\t\tSet<?> set = (Set<?>) javaObject;\n\t\t\treturn new NativeJavaList(this, scope, set, new JavaSetWrapper<>(set), target);\n\t\t}\n\n"
+        },
+        {
+          "before": "\t\t\treturn len == 0 ? ArrayValueProvider.EMPTY : new ArrayValueProvider.FromJavaArray(value, len);\n\t\t}\n\n\t\tif (value instanceof NativeArray array) {\n\t\t\treturn ArrayValueProvider.fromNativeArray(array);\n\t\t// special casing this because it can wrap i.e. sets as well\n\t\t} else if (value instanceof NativeJavaList list) {\n\t\t\treturn ArrayValueProvider.fromJavaList(list.list, list);\n\t\t} else if (value instanceof NativeJavaArray array) {\n\t\t\treturn arrayValueProviderOf(array.array);\n\t\t} else if (value instanceof Wrapper w) {\n\t\t\treturn arrayValueProviderOf(w.unwrap()); // other stuff like NJO wrapping set falls through to this\n\t\t} else if (value instanceof List<?> list) {\n\t\t\treturn ArrayValueProvider.fromJavaList(list, list);\n\t\t} else if (value instanceof Iterable<?> itr) {\n\t\t\treturn ArrayValueProvider.fromIterable(itr);\n\t\t}\n\t\treturn value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);\n",
+          "after": "\t\t\treturn len == 0 ? ArrayValueProvider.EMPTY : new ArrayValueProvider.FromJavaArray(value, len);\n\t\t}\n\n\t\tif (value instanceof NativeArray) {\n\t\t\tNativeArray array = (NativeArray) value;\n\t\t\treturn ArrayValueProvider.fromNativeArray(array);\n\t\t// special casing this because it can wrap i.e. sets as well\n\t\t} else if (value instanceof NativeJavaList) {\n\t\t\tNativeJavaList list = (NativeJavaList) value;\n\t\t\treturn ArrayValueProvider.fromJavaList(list.list, list);\n\t\t} else if (value instanceof NativeJavaArray) {\n\t\t\tNativeJavaArray array = (NativeJavaArray) value;\n\t\t\treturn arrayValueProviderOf(array.array);\n\t\t} else if (value instanceof Wrapper) {\n\t\t\tWrapper w = (Wrapper) value;\n\t\t\treturn arrayValueProviderOf(w.unwrap()); // other stuff like NJO wrapping set falls through to this\n\t\t} else if (value instanceof List<?>) {\n\t\t\tList<?> list = (List<?>) value;\n\t\t\treturn ArrayValueProvider.fromJavaList(list, list);\n\t\t} else if (value instanceof Iterable<?>) {\n\t\t\tIterable<?> itr = (Iterable<?>) value;\n\t\t\treturn ArrayValueProvider.fromIterable(itr);\n\t\t}\n\t\treturn value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object listOf(@Nullable Object from, TypeInfo target) {\n\t\tif (from instanceof NativeJavaList n) {\n\t\t\tif (target == null) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn n.list;\n",
+          "after": "\t}\n\n\tpublic Object listOf(@Nullable Object from, TypeInfo target) {\n\t\tif (from instanceof NativeJavaList) {\n\t\t\tNativeJavaList n = (NativeJavaList) from;\n\t\t\tif (target == null) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn n.list;\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object setOf(@Nullable Object from, TypeInfo target) {\n\t\tif (from instanceof NativeJavaList n) {\n\t\t\tif (target == null) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn new LinkedHashSet<>(n.list);\n",
+          "after": "\t}\n\n\tpublic Object setOf(@Nullable Object from, TypeInfo target) {\n\t\tif (from instanceof NativeJavaList) {\n\t\t\tNativeJavaList n = (NativeJavaList) from;\n\t\t\tif (target == null) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn new LinkedHashSet<>(n.list);\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object mapOf(@Nullable Object from, TypeInfo kTarget, TypeInfo vTarget) {\n\t\tif (from instanceof NativeJavaMap n) {\n\t\t\tif (!kTarget.shouldConvert() && !vTarget.shouldConvert()) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn n.map;\n",
+          "after": "\t}\n\n\tpublic Object mapOf(@Nullable Object from, TypeInfo kTarget, TypeInfo vTarget) {\n\t\tif (from instanceof NativeJavaMap) {\n\t\t\tNativeJavaMap n = (NativeJavaMap) from;\n\t\t\tif (!kTarget.shouldConvert() && !vTarget.shouldConvert()) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn n.map;\n"
+        },
+        {
+          "before": "\n\t\t\t\treturn map;\n\t\t\t}\n\t\t} else if (from instanceof NativeObject obj) {\n\t\t\tjava.lang.Object[] keys = obj.getIds(this);\n\t\t\tjava.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(keys.length);\n\n",
+          "after": "\n\t\t\t\treturn map;\n\t\t\t}\n\t\t} else if (from instanceof NativeObject) {\n\t\t\tNativeObject obj = (NativeObject) from;\n\t\t\tjava.lang.Object[] keys = obj.getIds(this);\n\t\t\tjava.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(keys.length);\n\n"
+        },
+        {
+          "before": "\t\t\t}\n\n\t\t\treturn map;\n\t\t} else if (from instanceof Map<?, ?> m) {\n\t\t\tif (!kTarget.shouldConvert() && !vTarget.shouldConvert()) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn m;\n",
+          "after": "\t\t\t}\n\n\t\t\treturn map;\n\t\t} else if (from instanceof Map<?, ?>) {\n\t\t\tMap<?, ?> m = (Map<?, ?>) from;\n\t\t\tif (!kTarget.shouldConvert() && !vTarget.shouldConvert()) {\n\t\t\t\t// No conversion necessary\n\t\t\t\treturn m;\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic Object classOf(Object from) {\n\t\tif (from instanceof NativeJavaClass n) {\n\t\t\treturn n.getClassObject();\n\t\t} else if (from instanceof Class<?> c) {\n\t\t\tif (visibleToScripts(c.getName(), ClassVisibilityContext.ARGUMENT)) {\n\t\t\t\treturn c;\n\t\t\t} else {\n",
+          "after": "\t}\n\n\tpublic Object classOf(Object from) {\n\t\tif (from instanceof NativeJavaClass) {\n\t\t\tNativeJavaClass n = (NativeJavaClass) from;\n\t\t\treturn n.getClassObject();\n\t\t} else if (from instanceof Class<?>) {\n\t\t\tClass<?> c = (Class<?>) from;\n\t\t\tif (visibleToScripts(c.getName(), ClassVisibilityContext.ARGUMENT)) {\n\t\t\t\treturn c;\n\t\t\t} else {\n"
+        },
+        {
+          "before": "\t\t\t// Make a new java array, and coerce the JS array components to the target (component) type.\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo arrayType = target.componentType();\n\n\t\t\tif (from instanceof NativeArray array) {\n\t\t\t\tlong length = array.getLength();\n\n\t\t\t\tObject result = arrayType.newArray((int) length);\n",
+          "after": "\t\t\t// Make a new java array, and coerce the JS array components to the target (component) type.\n\t\t\tdev.latvian.mods.rhino.type.TypeInfo arrayType = target.componentType();\n\n\t\t\tif (from instanceof NativeArray) {\n\t\t\t\tNativeArray array = (NativeArray) from;\n\t\t\t\tlong length = array.getLength();\n\n\t\t\t\tObject result = arrayType.newArray((int) length);\n"
+        },
+        {
+          "before": "\t\t}\n\n\t\tswitch (getJSTypeCode(from)) {\n\t\t\tcase JSTYPE_NULL -> {\n\t\t\t\t// raise error if type.isPrimitive()\n\t\t\t\tif (target.isPrimitive()) {\n\t\t\t\t\treturn reportConversionError(from, target);\n\t\t\t\t}\n\t\t\t\treturn null;\n\t\t\t}\n\t\t\tcase JSTYPE_UNDEFINED -> {\n\t\t\t\tif (target == TypeInfo.STRING || target == TypeInfo.OBJECT) {\n\t\t\t\t\treturn \"undefined\";\n\t\t\t\t}\n\t\t\t\treturn reportConversionError(from, target);\n\t\t\t}\n\t\t\tcase JSTYPE_BOOLEAN -> {\n\t\t\t\t// Under LC3, only JS Booleans can be coerced into a Boolean value\n\t\t\t\tif (target.isBoolean() || target == TypeInfo.OBJECT) {\n\t\t\t\t\treturn from;\n",
+          "after": "\t\t}\n\n\t\tswitch (getJSTypeCode(from)) {\n\t\t\tcase JSTYPE_NULL: {\n\t\t\t\t// raise error if type.isPrimitive()\n\t\t\t\tif (target.isPrimitive()) {\n\t\t\t\t\treturn reportConversionError(from, target);\n\t\t\t\t}\n\t\t\t\treturn null;\n\t\t\t}\n\t\t\tcase JSTYPE_UNDEFINED: {\n\t\t\t\tif (target == TypeInfo.STRING || target == TypeInfo.OBJECT) {\n\t\t\t\t\treturn \"undefined\";\n\t\t\t\t}\n\t\t\t\treturn reportConversionError(from, target);\n\t\t\t}\n\t\t\tcase JSTYPE_BOOLEAN: {\n\t\t\t\t// Under LC3, only JS Booleans can be coerced into a Boolean value\n\t\t\t\tif (target.isBoolean() || target == TypeInfo.OBJECT) {\n\t\t\t\t\treturn from;\n"
+        },
+        {
+          "before": "\t\t\t\t\treturn internalJsToJavaLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_NUMBER -> {\n\t\t\t\tif (target == TypeInfo.STRING) {\n\t\t\t\t\treturn ScriptRuntime.toString(this, from);\n\t\t\t\t} else if (target == TypeInfo.OBJECT) {\n",
+          "after": "\t\t\t\t\treturn internalJsToJavaLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_NUMBER: {\n\t\t\t\tif (target == TypeInfo.STRING) {\n\t\t\t\t\treturn ScriptRuntime.toString(this, from);\n\t\t\t\t} else if (target == TypeInfo.OBJECT) {\n"
+        },
+        {
+          "before": "\t\t\t\t\treturn internalJsToJavaLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_STRING -> {\n\t\t\t\tif (target == TypeInfo.STRING || target.asClass().isInstance(from)) {\n\t\t\t\t\treturn from.toString();\n\t\t\t\t} else if (target.isCharacter()) {\n",
+          "after": "\t\t\t\t\treturn internalJsToJavaLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_STRING: {\n\t\t\t\tif (target == TypeInfo.STRING || target.asClass().isInstance(from)) {\n\t\t\t\t\treturn from.toString();\n\t\t\t\t} else if (target.isCharacter()) {\n"
+        },
+        {
+          "before": "\t\t\t\t\treturn internalJsToJavaLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_JAVA_CLASS -> {\n\t\t\t\tif (target == TypeInfo.CLASS || target == TypeInfo.OBJECT) {\n\t\t\t\t\treturn unwrappedValue;\n\t\t\t\t} else if (target == TypeInfo.STRING) {\n",
+          "after": "\t\t\t\t\treturn internalJsToJavaLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_JAVA_CLASS: {\n\t\t\t\tif (target == TypeInfo.CLASS || target == TypeInfo.OBJECT) {\n\t\t\t\t\treturn unwrappedValue;\n\t\t\t\t} else if (target == TypeInfo.STRING) {\n"
+        },
+        {
+          "before": "\t\t\t\t\treturn internalJsToJavaLast(unwrappedValue, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_JAVA_OBJECT, JSTYPE_JAVA_ARRAY -> {\n\t\t\t\tif (target.isPrimitive()) {\n\t\t\t\t\tif (target.isBoolean()) {\n\t\t\t\t\t\treturn internalJsToJavaLast(unwrappedValue, target);\n",
+          "after": "\t\t\t\t\treturn internalJsToJavaLast(unwrappedValue, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_JAVA_OBJECT:\n\t\t\tcase JSTYPE_JAVA_ARRAY: {\n\t\t\t\tif (target.isPrimitive()) {\n\t\t\t\t\tif (target.isBoolean()) {\n\t\t\t\t\t\treturn internalJsToJavaLast(unwrappedValue, target);\n"
+        },
+        {
+          "before": "\t\t\t\t}\n\t\t\t\treturn internalJsToJavaLast(unwrappedValue, target);\n\t\t\t}\n\t\t\tcase JSTYPE_OBJECT -> {\n\t\t\t\tif (target == TypeInfo.STRING) {\n\t\t\t\t\treturn ScriptRuntime.toString(this, from);\n\t\t\t\t} else if (target.isPrimitive()) {\n",
+          "after": "\t\t\t\t}\n\t\t\t\treturn internalJsToJavaLast(unwrappedValue, target);\n\t\t\t}\n\t\t\tcase JSTYPE_OBJECT: {\n\t\t\t\tif (target == TypeInfo.STRING) {\n\t\t\t\t\treturn ScriptRuntime.toString(this, from);\n\t\t\t\t} else if (target.isPrimitive()) {\n"
+        },
+        {
+          "before": "\t}\n\n\tprotected Object internalJsToJavaLast(Object from, TypeInfo target) {\n\t\tif (target instanceof TypeWrapperFactory<?> f) {\n\t\t\treturn f.wrap(this, from, target);\n\t\t}\n\n",
+          "after": "\t}\n\n\tprotected Object internalJsToJavaLast(Object from, TypeInfo target) {\n\t\tif (target instanceof TypeWrapperFactory<?>) {\n\t\t\tTypeWrapperFactory<?> f = (TypeWrapperFactory<?>) target;\n\t\t\treturn f.wrap(this, from, target);\n\t\t}\n\n"
+        },
+        {
+          "before": "\t\tint fromCode = getJSTypeCode(from);\n\n\t\tswitch (fromCode) {\n\t\t\tcase JSTYPE_JAVA_OBJECT, JSTYPE_JAVA_ARRAY -> {\n\t\t\t\tObject javaObj = Wrapper.unwrapped(from);\n\t\t\t\tif (target.asClass().isInstance(javaObj)) {\n\t\t\t\t\treturn CONVERSION_EXACT;\n",
+          "after": "\t\tint fromCode = getJSTypeCode(from);\n\n\t\tswitch (fromCode) {\n\t\t\tcase JSTYPE_JAVA_OBJECT:\n\t\t\tcase JSTYPE_JAVA_ARRAY: {\n\t\t\t\tObject javaObj = Wrapper.unwrapped(from);\n\t\t\t\tif (target.asClass().isInstance(javaObj)) {\n\t\t\t\t\treturn CONVERSION_EXACT;\n"
+        },
+        {
+          "before": "\t\t\t\t\treturn internalConversionWeightLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_OBJECT -> {\n\t\t\t\t// Other objects takes #1-#3 spots\n\t\t\t\tif (target != TypeInfo.OBJECT && target.asClass().isInstance(from)) {\n\t\t\t\t\t// No conversion required, but don't apply for java.lang.Object\n",
+          "after": "\t\t\t\t\treturn internalConversionWeightLast(from, target);\n\t\t\t\t}\n\t\t\t}\n\t\t\tcase JSTYPE_OBJECT: {\n\t\t\t\t// Other objects takes #1-#3 spots\n\t\t\t\tif (target != TypeInfo.OBJECT && target.asClass().isInstance(from)) {\n\t\t\t\t\t// No conversion required, but don't apply for java.lang.Object\n"
+        },
+        {
+          "before": "\t\t\t\t} else if (target.isPrimitive() && !target.isBoolean()) {\n\t\t\t\t\treturn 4 + getSizeRank(target);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n",
+          "after": "\t\t\t\t} else if (target.isPrimitive() && !target.isBoolean()) {\n\t\t\t\t\treturn 4 + getSizeRank(target);\n\t\t\t\t}\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\n"
         }
       ]
     },

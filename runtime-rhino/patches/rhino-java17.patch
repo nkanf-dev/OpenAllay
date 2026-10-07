@@ -706,19 +706,45 @@
 @@ -9,0 +10,2 @@
 +
 +import dev.latvian.mods.rhino.util.ListCompat;
-@@ -167,5 +169,6 @@
+@@ -167,5 +169,8 @@
 -		switch (e) {
 -			case Error err -> throw err; // special handling of Error so scripts would not catch them
 -			case RhinoException err -> throw err;
 -			case null, default -> throw new WrappedException(cx, e);
 -		}
-+		if (e instanceof Error err) {
++		if (e instanceof Error) {
++			Error err = (Error) e;
 +			throw err; // special handling of Error so scripts would not catch them
-+		} else if (e instanceof RhinoException err) {
++		} else if (e instanceof RhinoException) {
++			RhinoException err = (RhinoException) e;
 +			throw err;
 +		}
 +		throw new WrappedException(cx, e);
-@@ -1323,10 +1326,15 @@
+@@ -1001 +1006,2 @@
+-		if (value instanceof Class<?> c) {
++		if (value instanceof Class<?>) {
++			Class<?> c = (Class<?>) value;
+@@ -1096 +1102,2 @@
+-		} else if (target instanceof ArrayTypeInfo array) {
++		} else if (target instanceof ArrayTypeInfo) {
++			ArrayTypeInfo array = (ArrayTypeInfo) target;
+@@ -1259 +1266,2 @@
+-		if (javaObject instanceof CustomJavaToJsWrapper w) {
++		if (javaObject instanceof CustomJavaToJsWrapper) {
++			CustomJavaToJsWrapper w = (CustomJavaToJsWrapper) javaObject;
+@@ -1263 +1271,2 @@
+-		if (javaObject instanceof Map map) {
++		if (javaObject instanceof Map) {
++			Map map = (Map) javaObject;
+@@ -1265 +1274,2 @@
+-		} else if (javaObject instanceof List list) {
++		} else if (javaObject instanceof List) {
++			List list = (List) javaObject;
+@@ -1267 +1277,2 @@
+-		} else if (javaObject instanceof Set<?> set) {
++		} else if (javaObject instanceof Set<?>) {
++			Set<?> set = (Set<?>) javaObject;
+@@ -1323,10 +1334,21 @@
 -		return switch (value) {
 -			case NativeArray array -> ArrayValueProvider.fromNativeArray(array);
 -			// special casing this because it can wrap i.e. sets as well
@@ -729,36 +755,54 @@
 -			case Iterable<?> itr -> ArrayValueProvider.fromIterable(itr);
 -			case null, default -> value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);
 -		};
-+		if (value instanceof NativeArray array) {
++		if (value instanceof NativeArray) {
++			NativeArray array = (NativeArray) value;
 +			return ArrayValueProvider.fromNativeArray(array);
 +		// special casing this because it can wrap i.e. sets as well
-+		} else if (value instanceof NativeJavaList list) {
++		} else if (value instanceof NativeJavaList) {
++			NativeJavaList list = (NativeJavaList) value;
 +			return ArrayValueProvider.fromJavaList(list.list, list);
-+		} else if (value instanceof NativeJavaArray array) {
++		} else if (value instanceof NativeJavaArray) {
++			NativeJavaArray array = (NativeJavaArray) value;
 +			return arrayValueProviderOf(array.array);
-+		} else if (value instanceof Wrapper w) {
++		} else if (value instanceof Wrapper) {
++			Wrapper w = (Wrapper) value;
 +			return arrayValueProviderOf(w.unwrap()); // other stuff like NJO wrapping set falls through to this
-+		} else if (value instanceof List<?> list) {
++		} else if (value instanceof List<?>) {
++			List<?> list = (List<?>) value;
 +			return ArrayValueProvider.fromJavaList(list, list);
-+		} else if (value instanceof Iterable<?> itr) {
++		} else if (value instanceof Iterable<?>) {
++			Iterable<?> itr = (Iterable<?>) value;
 +			return ArrayValueProvider.fromIterable(itr);
 +		}
 +		return value == null ? ArrayValueProvider.FromObject.FROM_NULL : new ArrayValueProvider.FromObject(value);
-@@ -1363,3 +1371,3 @@
+@@ -1355 +1377,2 @@
+-		if (from instanceof NativeJavaList n) {
++		if (from instanceof NativeJavaList) {
++			NativeJavaList n = (NativeJavaList) from;
+@@ -1363,3 +1386,3 @@
 -				var list = new ArrayList<>(n.list.size());
 -
 -				for (var o : n.list) {
 +				java.util.ArrayList<java.lang.Object> list = new ArrayList<>(n.list.size());
 +
 +				for (java.lang.Object o : n.list) {
-@@ -1399,3 +1407,3 @@
+@@ -1391 +1414,2 @@
+-		if (from instanceof NativeJavaList n) {
++		if (from instanceof NativeJavaList) {
++			NativeJavaList n = (NativeJavaList) from;
+@@ -1399,3 +1423,3 @@
 -				var set = new LinkedHashSet<>(n.list.size());
 -
 -				for (var o : n.list) {
 +				java.util.LinkedHashSet<java.lang.Object> set = new LinkedHashSet<>(n.list.size());
 +
 +				for (java.lang.Object o : n.list) {
-@@ -1422,6 +1430,6 @@
+@@ -1413 +1437,2 @@
+-		if (from instanceof NativeJavaMap n) {
++		if (from instanceof NativeJavaMap) {
++			NativeJavaMap n = (NativeJavaMap) from;
+@@ -1422,6 +1447,6 @@
 -					return Map.of();
 -				}
 -
@@ -771,29 +815,44 @@
 +				java.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(n.map.size());
 +
 +				for (java.util.Map.Entry<?, ?> entry : ((Map<?, ?>) n.map).entrySet()) {
-@@ -1434,4 +1442,4 @@
+@@ -1433,5 +1458,6 @@
+-		} else if (from instanceof NativeObject obj) {
 -			var keys = obj.getIds(this);
 -			var map = new LinkedHashMap<>(keys.length);
 -
 -			for (var key : keys) {
++		} else if (from instanceof NativeObject) {
++			NativeObject obj = (NativeObject) from;
 +			java.lang.Object[] keys = obj.getIds(this);
 +			java.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(keys.length);
 +
 +			for (java.lang.Object key : keys) {
-@@ -1448,3 +1456,3 @@
+@@ -1442 +1468,2 @@
+-		} else if (from instanceof Map<?, ?> m) {
++		} else if (from instanceof Map<?, ?>) {
++			Map<?, ?> m = (Map<?, ?>) from;
+@@ -1448,3 +1475,3 @@
 -			var map = new LinkedHashMap<>(m.size());
 -
 -			for (var entry : m.entrySet()) {
 +			java.util.LinkedHashMap<java.lang.Object, java.lang.Object> map = new LinkedHashMap<>(m.size());
 +
 +			for (java.util.Map.Entry<?, ?> entry : m.entrySet()) {
-@@ -1484 +1492 @@
+@@ -1475 +1502,2 @@
+-		if (from instanceof NativeJavaClass n) {
++		if (from instanceof NativeJavaClass) {
++			NativeJavaClass n = (NativeJavaClass) from;
+@@ -1477 +1505,2 @@
+-		} else if (from instanceof Class<?> c) {
++		} else if (from instanceof Class<?>) {
++			Class<?> c = (Class<?>) from;
+@@ -1484 +1513 @@
 -			var s = ScriptRuntime.toString(this, from);
 +			java.lang.String s = ScriptRuntime.toString(this, from);
-@@ -1499 +1507 @@
+@@ -1499 +1528 @@
 -		var cl = type.asClass();
 +		java.lang.Class<?> cl = type.asClass();
-@@ -1571,6 +1579,8 @@
+@@ -1571,6 +1600,8 @@
 -			return switch (from) {
 -				case NativeJavaClass ignore -> JSTYPE_JAVA_CLASS;
 -				case NativeJavaArray ignore -> JSTYPE_JAVA_ARRAY;
@@ -808,12 +867,56 @@
 +				return JSTYPE_JAVA_OBJECT;
 +			}
 +			return JSTYPE_OBJECT;
-@@ -1591 +1601 @@
+@@ -1591,3 +1622,4 @@
 -			var arrayType = target.componentType();
+-
+-			if (from instanceof NativeArray array) {
 +			dev.latvian.mods.rhino.type.TypeInfo arrayType = target.componentType();
-@@ -1616 +1626 @@
++
++			if (from instanceof NativeArray) {
++				NativeArray array = (NativeArray) from;
+@@ -1616 +1648 @@
 -		var typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);
 +		dev.latvian.mods.rhino.util.wrap.TypeWrapperFactory<?> typeWrapper = factory.getTypeWrappers().getWrapperFactory(unwrappedValue, target);
+@@ -1623 +1655 @@
+-			case JSTYPE_NULL -> {
++			case JSTYPE_NULL: {
+@@ -1630 +1662 @@
+-			case JSTYPE_UNDEFINED -> {
++			case JSTYPE_UNDEFINED: {
+@@ -1636 +1668 @@
+-			case JSTYPE_BOOLEAN -> {
++			case JSTYPE_BOOLEAN: {
+@@ -1646 +1678 @@
+-			case JSTYPE_NUMBER -> {
++			case JSTYPE_NUMBER: {
+@@ -1657 +1689 @@
+-			case JSTYPE_STRING -> {
++			case JSTYPE_STRING: {
+@@ -1675 +1707 @@
+-			case JSTYPE_JAVA_CLASS -> {
++			case JSTYPE_JAVA_CLASS: {
+@@ -1684 +1716,2 @@
+-			case JSTYPE_JAVA_OBJECT, JSTYPE_JAVA_ARRAY -> {
++			case JSTYPE_JAVA_OBJECT:
++			case JSTYPE_JAVA_ARRAY: {
+@@ -1699 +1732 @@
+-			case JSTYPE_OBJECT -> {
++			case JSTYPE_OBJECT: {
+@@ -1731 +1764,2 @@
+-		if (target instanceof TypeWrapperFactory<?> f) {
++		if (target instanceof TypeWrapperFactory<?>) {
++			TypeWrapperFactory<?> f = (TypeWrapperFactory<?>) target;
+@@ -1811 +1845,2 @@
+-			case JSTYPE_JAVA_OBJECT, JSTYPE_JAVA_ARRAY -> {
++			case JSTYPE_JAVA_OBJECT:
++			case JSTYPE_JAVA_ARRAY: {
+@@ -1825 +1860 @@
+-			case JSTYPE_OBJECT -> {
++			case JSTYPE_OBJECT: {
+@@ -1864,0 +1900,2 @@
++
++				break;
 --- a/dev/latvian/mods/rhino/ContextFactory.java
 +++ b/dev/latvian/mods/rhino/ContextFactory.java
 @@ -51,2 +51,2 @@
