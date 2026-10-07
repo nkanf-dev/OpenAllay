@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern]
+        options: [skills, modern, shared-fixtures]
         default: skills
         required: true
 permissions:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   skills-runtime:
-    if: inputs.scope != 'modern'
+    if: inputs.scope == 'skills'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -80,3 +80,30 @@ jobs:
             fabric/build/test-results/
             neoforge/build/test-results/
             build/reports/problems/
+
+  shared-fixtures:
+    if: inputs.scope == 'shared-fixtures'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Verify only the failed shared fixture classes
+        run: ./gradlew --max-workers=2 --stacktrace :engine-core:test --tests dev.openallay.bridge.server.ServerBridgeArchitectureTest --tests dev.openallay.guide.semantic.SemanticDependencyPackagingTest --tests dev.openallay.server.ServerAgentImageServiceTest
+      - name: Retain original focused fixture results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-shared-fixtures-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: engine-core/build/test-results/
