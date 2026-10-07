@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare]
         default: skills
         required: true
 permissions:
@@ -1494,3 +1494,36 @@ jobs:
           ${{ runner.temp }}/bridge-verify-2132/*-junit/
 
           engine-core/build/test-results/'
+
+  retained-skill-prepare:
+    if: inputs.scope == 'retained-skill-prepare'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '17'
+    - name: Materialize authentic complete retained skill owners
+      run: python3 -B scripts/materialize-retained-skill-java8.py --project "$PWD" --recipe
+        engine-core/src/retainedSkillJava8Test/recipe.json --javac "$JAVA_HOME/bin/javac"
+        --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/retained-skill-materialization"
+    - name: Retain exact converter passes and generated canonical source packet
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: retained-skill-prepare-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/retained-skill-materialization/source-packet/
+
+          ${{ runner.temp }}/retained-skill-materialization/record-pass1/conversion-receipt.json
+
+          ${{ runner.temp }}/retained-skill-materialization/record-pass2/conversion-receipt.json
+
+          ${{ runner.temp }}/retained-skill-materialization/commands.json
+
+          ${{ runner.temp }}/retained-skill-materialization/command-*.log'
