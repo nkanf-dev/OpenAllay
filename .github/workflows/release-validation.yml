@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers]
         default: skills
         required: true
 permissions:
@@ -1079,5 +1079,38 @@ jobs:
         path: 'build/observation-replay/
 
           engine-core/src/worldObservationJava8Test/gradle/build/
+
+          engine-core/build/test-results/'
+
+  rhino-var-consumers:
+    if: inputs.scope == 'rhino-var-consumers'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Compile attributed canonical language edits and verify actual consumers
+      run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
+        --tests dev.latvian.mods.rhino.Java8ValueOwnersTest
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
+        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.schema.HostSchemaCatalogTest'
+    - name: Retain exact runtime compile and current consumer diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: rhino-var-consumers-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'runtime-rhino/build/test-results/
 
           engine-core/build/test-results/'
