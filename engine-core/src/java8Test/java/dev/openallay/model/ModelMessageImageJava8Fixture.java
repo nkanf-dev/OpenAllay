@@ -112,7 +112,34 @@ public final class ModelMessageImageJava8Fixture {
         fact(name + ".genericTypes", types);
         check(original.equals(rebuilt) && rebuilt.equals(original), name + ".constructorEquality");
         check(original.hashCode() == rebuilt.hashCode(), name + ".constructorHash");
-        fact(name + ".hash", original.hashCode());
+        int expectedRawHash = 0;
+        for (String componentName : expectedNames) {
+            java.lang.reflect.Field field = owner.getDeclaredField(componentName);
+            // Fixture-only reads authenticate the generated record formula, not defensive accessors.
+            // No field writes or production access authorization are added.
+            field.setAccessible(true);
+            Object raw = field.get(original);
+            Class<?> type = field.getType();
+            int componentHash;
+            if (type == boolean.class) componentHash = Boolean.hashCode((Boolean) raw);
+            else if (type == byte.class) componentHash = Byte.hashCode((Byte) raw);
+            else if (type == short.class) componentHash = Short.hashCode((Short) raw);
+            else if (type == char.class) componentHash = Character.hashCode((Character) raw);
+            else if (type == int.class) componentHash = Integer.hashCode((Integer) raw);
+            else if (type == long.class) componentHash = Long.hashCode((Long) raw);
+            else if (type == float.class) componentHash = Float.hashCode((Float) raw);
+            else if (type == double.class) componentHash = Double.hashCode((Double) raw);
+            else componentHash = java.util.Objects.hashCode(raw);
+            expectedRawHash = 31 * expectedRawHash + componentHash;
+        }
+        check(original.hashCode() == expectedRawHash, name + ".rawFieldZeroSeed31HashContract");
+        // Exact numeric reports are retained for the explicit deterministic owner set only.
+        // Other owners transitively include enum, resolver or Gson2.8 JsonNull identity hashes.
+        if (owner == ModelContent.Text.class || owner == ModelContent.Image.class
+                || owner == ModelContent.Reasoning.class || owner == ModelContent.ToolResult.class
+                || owner == ImageReference.class || owner == ImageInputLimits.class) {
+            fact(name + ".hash", original.hashCode());
+        }
         fact(name + ".string", original.toString());
         check(!original.equals(null) && !original.equals(new Object()), name + ".foreignEquality");
         if (!(original instanceof ModelRequest) && !(original instanceof ClientObservationAnchor)) {

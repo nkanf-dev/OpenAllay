@@ -459,7 +459,7 @@
   "fixture_artifacts": [
     {
       "path": "engine-core/src/java8Test/java/dev/openallay/model/ModelMessageImageJava8Fixture.java",
-      "sha256": "2b7ec341c1504545fb93a8b5766e60cb3eca8939ee905622b76f10a427015c5b"
+      "sha256": "2ebaaf7be7fb2d416fd494bec960776c7ba0e62e92ef08d8c1b249d2c6e8a964"
     },
     {
       "path": "engine-core/src/java8Test/java/dev/openallay/model/ModelMessageImageJava8Test.java",
@@ -614,5 +614,36 @@
       }
     ]
   },
-  "runner_sha256": "efdf2a9d0304c379505267747ee18874bb61a4d9a6d412a99ca21281d7a612e0"
+  "runner_sha256": "efdf2a9d0304c379505267747ee18874bb61a4d9a6d412a99ca21281d7a612e0",
+  "hash_oracle_contract": {
+    "formula": "int hash = 0; ordered component fold hash = 31 * hash + componentHash; Java int overflow retained.",
+    "input": "Fixture-only read of each underlying declared component field in explicit authenticated component order; never defensive accessor copies. No writes.",
+    "primitive_semantics": "Exact Boolean/Byte/Short/Character/Integer/Long/Float/Double.hashCode of boxed raw primitive; Float/Double hash use canonical NaN and distinguish signed zero; reference components Objects.hashCode(raw).",
+    "assertion": "Every value fixture compares actual object.hashCode() with this per-VM independent formula, in original-modern/release8/genuine8 executions.",
+    "cross_vm_report": "Boolean rawFieldZeroSeed31HashContract for all selected values. Exact numeric hash retained only for explicit Text, Image, Reasoning, ToolResult, ImageReference, ImageInputLimits fixture cases with deterministic underlying values.",
+    "identity_containing_owners": [
+      "ModelContent.ToolUse",
+      "ModelToolDefinition",
+      "WorldViewRequest",
+      "ModelMessage",
+      "ModelTurn",
+      "ClientObservationAnchor",
+      "WorldViewCapture",
+      "ModelRequest"
+    ],
+    "observed_changed_numeric_vector_lines": [
+      "dev.openallay.model.ModelContent$ToolUse.hash",
+      "dev.openallay.model.ModelToolDefinition.hash",
+      "dev.openallay.world.WorldViewRequest.hash",
+      "dev.openallay.model.ModelMessage.hash",
+      "dev.openallay.model.ModelTurn.hash",
+      "dev.openallay.model.ModelMessage.hash",
+      "dev.openallay.world.ClientObservationAnchor.hash",
+      "dev.openallay.world.WorldViewCapture.hash",
+      "dev.openallay.model.ModelMessage.hash",
+      "dev.openallay.model.ModelRequest.hash"
+    ],
+    "reason": "Enum identity hashes and Gson2.8 JsonNull singleton identity hashes are VM-local, including transitive aggregates; request resolver identity may also be VM-local (fixture resolver already has stable hash31). Production hash formula is not normalized or changed.",
+    "failed_run_preserved": "37570895814"
+  }
 }
