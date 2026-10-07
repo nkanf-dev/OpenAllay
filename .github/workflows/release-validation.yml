@@ -1367,12 +1367,14 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify baseline parser errors and actual ScriptRuntime coercion language
+    - name: Verify composed native adapter member and object binding owners
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.ParserSwitchLanguageTest --tests dev.latvian.mods.rhino.ScriptRuntimeLanguageTest
+        --tests dev.latvian.mods.rhino.JavaAdapterLanguageTest --tests dev.latvian.mods.rhino.NativeGraphMemberBindingTest
+        --tests dev.latvian.mods.rhino.ObjectSlotBindingLanguageTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
-        --tests dev.openallay.script.RhinoJavascriptStringGuardTest --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.UnrestrictedJavaAccessTest
+        --tests dev.openallay.script.RhinoJavascriptRuntimeTest --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest
+        --tests dev.openallay.script.RhinoJavascriptSchemaHelperTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
