@@ -143,7 +143,7 @@ if ((($oaPattern2_holder.value = node) instanceof org.commonmark.node.BulletList
 final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
 if ((($oaPattern3_holder.value = node) instanceof org.commonmark.node.OrderedList && (($oaPattern3_holder.bound = (OrderedList) $oaPattern3_holder.value) != null))) {
                 return list(node, path, true,
-                        Objects.requireNonNullElse($oaPattern3_holder.bound.getMarkerStartNumber(), 1));
+                        dev.openallay.util.Java8Objects.requireNonNullElse($oaPattern3_holder.bound.getMarkerStartNumber(), 1));
             }
             final class $oaPattern4_Holder { org.commonmark.node.Node value; BlockQuote bound; }
 final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
@@ -377,12 +377,12 @@ if ((($oaPattern14_holder.value = node) instanceof org.commonmark.node.Code && (
             final class $oaPattern15_Holder { org.commonmark.node.Node value; HtmlBlock bound; }
 final $oaPattern15_Holder $oaPattern15_holder = new $oaPattern15_Holder();
 if ((($oaPattern15_holder.value = node) instanceof org.commonmark.node.HtmlBlock && (($oaPattern15_holder.bound = (HtmlBlock) $oaPattern15_holder.value) != null))) {
-                return Objects.requireNonNullElse($oaPattern15_holder.bound.getLiteral(), "");
+                return dev.openallay.util.Java8Objects.requireNonNullElse($oaPattern15_holder.bound.getLiteral(), "");
             }
             final class $oaPattern16_Holder { org.commonmark.node.Node value; HtmlInline bound; }
 final $oaPattern16_Holder $oaPattern16_holder = new $oaPattern16_Holder();
 if ((($oaPattern16_holder.value = node) instanceof org.commonmark.node.HtmlInline && (($oaPattern16_holder.bound = (HtmlInline) $oaPattern16_holder.value) != null))) {
-                return Objects.requireNonNullElse($oaPattern16_holder.bound.getLiteral(), "");
+                return dev.openallay.util.Java8Objects.requireNonNullElse($oaPattern16_holder.bound.getLiteral(), "");
             }
             return plainChildren(node);
         }
@@ -410,7 +410,7 @@ if ((($oaPattern18_holder.value = child) instanceof org.commonmark.node.Code && 
         }
 
         private static String id(String path, String kind, String content) {
-            return SemanticIds.create(path, kind, Objects.requireNonNullElse(content, ""));
+            return SemanticIds.create(path, kind, dev.openallay.util.Java8Objects.requireNonNullElse(content, ""));
         }
     }
 }

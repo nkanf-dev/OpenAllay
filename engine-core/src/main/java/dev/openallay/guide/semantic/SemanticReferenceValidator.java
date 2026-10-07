@@ -15,7 +15,7 @@ public final class SemanticReferenceValidator {
 
     public Validation validate(String token, SemanticReferenceIndex index) {
         Objects.requireNonNull(index, "index");
-        Matcher matcher = TOKEN.matcher(Objects.requireNonNullElse(token, ""));
+        Matcher matcher = TOKEN.matcher(dev.openallay.util.Java8Objects.requireNonNullElse(token, ""));
         if (!matcher.matches()) {
             return Validation.failure("semantic_content_invalid");
         }
@@ -36,7 +36,7 @@ public final class SemanticReferenceValidator {
         Optional<String> origin = index.origin(kind, target);
         if (origin.isPresent()) {
             return Validation.success(new SemanticReference(
-                    kind, target, label, true, origin.orElseThrow()));
+                    kind, target, label, true, origin.orElseThrow(() -> new java.util.NoSuchElementException("No value present"))));
         }
         if (!kind.permitsUngroundedPresentation()) {
             return Validation.failure("semantic_reference_unresolved");
@@ -45,7 +45,7 @@ public final class SemanticReferenceValidator {
     }
 
     Matcher matcher(String source) {
-        return TOKEN.matcher(Objects.requireNonNullElse(source, ""));
+        return TOKEN.matcher(dev.openallay.util.Java8Objects.requireNonNullElse(source, ""));
     }
 
     public static boolean isResourceId(String value) {

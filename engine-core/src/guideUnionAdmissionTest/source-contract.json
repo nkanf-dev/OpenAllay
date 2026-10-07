@@ -196,6 +196,7 @@
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceValidator.java",
     "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
     "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Objects.java",
     "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
     "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
     "engine-core/src/main/java/dev/openallay/value/ValueType.java",
@@ -219,18 +220,19 @@
     "engine-core/src/main/java/dev/openallay/guide/semantic/RichComponentEnvelope.java": "9f6326edc08d97a65ee9e716467b4326e10c33df5781f278adf909d3d05b3661",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticDiagnostic.java": "2595ed926df17fb73ac400aaf901c37b5cb031b2ef63f1c1dc132dd54bda109b",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticIds.java": "6f44963f7331a0a31672e3dda7da85a6013b7394d28a7621b78ce685c44fa387",
-    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticMessageParser.java": "a7d1da9c2c5ef3bf2883a77d2eac0c47837c215456e742f29d1504ddaf938bfe",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticMessageParser.java": "f8e8974437d85fdd473c594abf318bc75df19a8d2865130e0c444397ed395759",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticPlainText.java": "c85f83657deebd9d23b6385bf217921b6baef351a12e689c935ec0caa3434b3c",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReference.java": "3b7d171778e0215cb3384323cf34e35ec39ab02889f0efbdc71101899e70aec8",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceIndex.java": "bc99a6a5d8e82690b6be92bfd9cbdec883ec041ceae78406838e7861a7f4fde6",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceKind.java": "9fb844cdcafd406dcfe722d667d9237f6d4a013e33ee79be42d7c7984ffb0303",
-    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceValidator.java": "f3ab63182b6fc508e89676c4e28527bf69d337237a839c3c21d4efcb5f6536be",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceValidator.java": "385550b32197cbe0134ec018e3403b6ddeaac22b7ae28089908e6f284f640e2c",
     "engine-core/src/main/java/dev/openallay/util/Java8Collections.java": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
     "engine-core/src/main/java/dev/openallay/util/Java8Hex.java": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
     "engine-core/src/main/java/dev/openallay/util/Java8Strings.java": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
     "engine-core/src/main/java/dev/openallay/value/ValueSchema.java": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81",
     "engine-core/src/main/java/dev/openallay/value/ValueType.java": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e",
-    "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974"
+    "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
+    "engine-core/src/main/java/dev/openallay/util/Java8Objects.java": "720e6264b47824c82d930c5eea93bbf2df64badb43d2314a0562d976679c44c9"
   },
   "fullSourceFrontierPaths": [
     "engine-core/src/main/java/dev/openallay/OpenAllayConstants.java",
@@ -380,6 +382,7 @@
     "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
     "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
     "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Objects.java",
     "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
     "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
     "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
@@ -456,12 +459,12 @@
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticDiagnostic.java": "2595ed926df17fb73ac400aaf901c37b5cb031b2ef63f1c1dc132dd54bda109b",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticDocumentCodec.java": "6f2e5faaf248b9ce46fe73064dc87001468d397a49dece253b4e1938d51c1846",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticIds.java": "6f44963f7331a0a31672e3dda7da85a6013b7394d28a7621b78ce685c44fa387",
-    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticMessageParser.java": "a7d1da9c2c5ef3bf2883a77d2eac0c47837c215456e742f29d1504ddaf938bfe",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticMessageParser.java": "f8e8974437d85fdd473c594abf318bc75df19a8d2865130e0c444397ed395759",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticPlainText.java": "c85f83657deebd9d23b6385bf217921b6baef351a12e689c935ec0caa3434b3c",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReference.java": "3b7d171778e0215cb3384323cf34e35ec39ab02889f0efbdc71101899e70aec8",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceIndex.java": "bc99a6a5d8e82690b6be92bfd9cbdec883ec041ceae78406838e7861a7f4fde6",
     "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceKind.java": "9fb844cdcafd406dcfe722d667d9237f6d4a013e33ee79be42d7c7984ffb0303",
-    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceValidator.java": "f3ab63182b6fc508e89676c4e28527bf69d337237a839c3c21d4efcb5f6536be",
+    "engine-core/src/main/java/dev/openallay/guide/semantic/SemanticReferenceValidator.java": "385550b32197cbe0134ec018e3403b6ddeaac22b7ae28089908e6f284f640e2c",
     "engine-core/src/main/java/dev/openallay/guide/ui/GuideDisplayConfig.java": "a45b8fe62b2394c40d1a678208f9a3124a109c4d5922884d61d67224d1a5ae82",
     "engine-core/src/main/java/dev/openallay/guide/ui/GuideItemView.java": "8b7e9325873a77e8bfc7aba8568b6987e41f21eabda7b6a0957b9b092c92ddd1",
     "engine-core/src/main/java/dev/openallay/guide/ui/GuideRecipeCard.java": "dc03ede1244c50f99c99b0611e8fdb97c54fe96ef973c2be1f230c5c25384b6a",
@@ -534,7 +537,8 @@
     "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java": "1507b8a04e8dc5ec8b489c07979e81955001e947a9c9868211919ae1f45ed6f5",
     "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java": "f23c6533af3fdea4a4a7cad60cf5dda6dbb111463e4390549522e50f3b787047",
     "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java": "374c7d12e8d02ed33234c8029c2f2717713f92fec90fdde34971242c0730c4aa",
-    "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974"
+    "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
+    "engine-core/src/main/java/dev/openallay/util/Java8Objects.java": "720e6264b47824c82d930c5eea93bbf2df64badb43d2314a0562d976679c44c9"
   },
   "fixturePins": {
     "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionKnownFixture.java": "adbd92247f0d888427499292f967f06a9e2d56355d1de402807706d3bc8bdecb",
@@ -592,5 +596,20 @@
   "semanticRunner": {
     "path": "scripts/verify-guide-union-semantic-java8.py",
     "sha256": "57e4b2ddb6d50eb992cab99b5651ac9fae8ff86f4ca2c73b6500cac95e188b3d"
+  },
+  "finiteSemanticApiRepair": {
+    "failedRun": 37635937512,
+    "actualErrors": 7,
+    "mapping": "Actualtwoowners6Objects.requireNonNullElse calls tocanonicalJava8Objects; guardedOptional noarg toexactNoSuchElementException message supplier",
+    "helper": {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Objects.java",
+      "sha256": "720e6264b47824c82d930c5eea93bbf2df64badb43d2314a0562d976679c44c9"
+    },
+    "fixture": {
+      "path": "scripts/java8-api-port/Java8ObjectsFixture.java",
+      "sha256": "9b6ed38f9fa2513233a0f87769507eb2d781beabe050f14d7a7b8afa7d0ffd15"
+    },
+    "original17SemanticKnownPrefixPassed": true,
+    "pending": "Actual3JVM helperoracle+closedactual36-source retry"
   }
 }
