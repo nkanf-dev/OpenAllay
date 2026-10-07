@@ -80,7 +80,7 @@ public final class VoiceHttpJava8Fixture {
                 require("Bearer synthetic-only".equals(exchange.getRequestHeaders().getFirst("Authorization")), "authorization boundary");
                 require(exchange.getRequestHeaders().getFirst("Content-Type").startsWith("multipart/form-data; boundary="), "multipart media type");
                 captured.complete(read(exchange.getRequestBody()));
-                reply(exchange, 200, "{\"text\":\"  build  ",\"usage\":{\"audio_seconds\":1.25,\"input_tokens\":9007199254740993,\"output_tokens\":7}}".getBytes(StandardCharsets.UTF_8));
+                reply(exchange, 200, "{\"text\":\"  build  \",\"usage\":{\"audio_seconds\":1.25,\"input_tokens\":9007199254740993,\"output_tokens\":7}}".getBytes(StandardCharsets.UTF_8));
             });
             server.http.start();
             PcmClip clip = new PcmClip(new byte[] {0, 1, 2, 3});
