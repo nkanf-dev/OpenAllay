@@ -63,7 +63,7 @@ public final class ModelProfilesConfigWriter {
     }
 
     private static int exactSeconds(Duration duration) {
-        long seconds = duration.toSeconds();
+        long seconds = duration.getSeconds();
         if (!duration.equals(Duration.ofSeconds(seconds))
                 || seconds > Integer.MAX_VALUE) {
             throw new IllegalArgumentException(

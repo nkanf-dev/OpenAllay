@@ -38,30 +38,56 @@ public final class ModelProfilesConfigLoader {
     }
 
     private static final Set<String> ROOT_FIELDS =
-            Set.of("defaultProfileId", "profiles");
-    private static final Set<String> REQUIRED_PROFILE_FIELDS = Set.of(
+            dev.openallay.util.Java8Collections.setOf("defaultProfileId", "profiles");
+    private static final Set<String> REQUIRED_PROFILE_FIELDS = dev.openallay.util.Java8Collections.setOf(
             "id", "displayName", "enabled", "protocol", "baseUrl", "model",
             "credentialRef", "connectTimeoutSeconds", "requestTimeoutSeconds");
     private static final Set<String> OPTIONAL_PROFILE_FIELDS =
-            Set.of("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort", "tokenEncoding",
+            dev.openallay.util.Java8Collections.setOf("contextWindowTokens", "maxOutputTokens", "metadata", "reasoningEffort", "tokenEncoding",
                     "imageInputCapabilityOverride");
     private static final Set<String> METADATA_FIELDS =
-            Set.of("source", "upstreamModelId", "capturedAt");
+            dev.openallay.util.Java8Collections.setOf("source", "upstreamModelId", "capturedAt");
 
-    public record Load(
-            ModelProfilesConfig config,
-            List<ResolvedModelProfile> profiles) {
-        public Load {
+    @dev.openallay.value.ValueType(Load.ValueSchemaProvider.class)
+public static final class Load {
+    private final ModelProfilesConfig config;
+    private final List<ResolvedModelProfile> profiles;
+    public Load(ModelProfilesConfig config, List<ResolvedModelProfile> profiles) {
+
             Objects.requireNonNull(config, "config");
-            profiles = List.copyOf(profiles);
+            profiles = dev.openallay.util.Java8Collections.listCopyOf(profiles);
             if (profiles.size() != config.profiles().size()) {
                 throw new IllegalArgumentException("every profile must have a resolution");
             }
+
+        this.config = config;
+        this.profiles = profiles;
+    }
+    public ModelProfilesConfig config() { return config; }
+    public List<ResolvedModelProfile> profiles() { return profiles; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Load)) return false;
+        Load that = (Load) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(profiles, that.profiles);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(profiles);
+        return hash;
+    }
+    @Override public String toString() { return "Load[config=" + config + ", profiles=" + profiles + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Load> schema() {
+            return new dev.openallay.value.ValueSchema<>(Load.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Load>>asList(new dev.openallay.value.ValueSchema.Component<>(Load.class, "config", Load::config), new dev.openallay.value.ValueSchema.Component<>(Load.class, "profiles", Load::profiles)), arguments -> new Load((ModelProfilesConfig) arguments[0], (List) arguments[1]));
         }
     }
+}
 
     public ToolResult<Load> load(Path profilesPath, Map<String, String> environment) {
-        return load(profilesPath, CredentialResolver.environment(environment), Map.of());
+        return load(profilesPath, CredentialResolver.environment(environment), dev.openallay.util.Java8Collections.mapOf());
     }
 
     public ToolResult<Load> load(
@@ -90,7 +116,7 @@ public final class ModelProfilesConfigLoader {
     }
 
     public ToolResult<Load> load(Reader reader, Map<String, String> environment) {
-        return load(reader, environment, Map.of());
+        return load(reader, environment, dev.openallay.util.Java8Collections.mapOf());
     }
 
     public ToolResult<Load> load(
@@ -106,11 +132,11 @@ public final class ModelProfilesConfigLoader {
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
         Objects.requireNonNull(reader, "reader");
         Objects.requireNonNull(credentials, "credentials");
-        Map<ModelMetadata.Key, ModelMetadata> metadataCopy = Map.copyOf(metadata);
+        Map<ModelMetadata.Key, ModelMetadata> metadataCopy = dev.openallay.util.Java8Collections.mapCopyOf(metadata);
         try {
             JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
             JsonObject root = object(parsed, "Model profiles configuration");
-            exactFields(root, ROOT_FIELDS, Set.of(), "model profiles configuration");
+            exactFields(root, ROOT_FIELDS, dev.openallay.util.Java8Collections.setOf(), "model profiles configuration");
             String defaultProfileId = string(root, "defaultProfileId");
             JsonArray encodedProfiles = array(root, "profiles");
             List<ModelProfileDefinition> definitions = new ArrayList<>();
@@ -119,9 +145,8 @@ public final class ModelProfilesConfigLoader {
             }
             ModelProfilesConfig config = new ModelProfilesConfig(
                     defaultProfileId, definitions);
-            List<ResolvedModelProfile> resolved = config.profiles().stream()
-                    .map(profile -> resolve(profile, credentials, metadataCopy))
-                    .toList();
+            List<ResolvedModelProfile> resolved = dev.openallay.util.Java8Collections.toList(config.profiles().stream()
+                    .map(profile -> resolve(profile, credentials, metadataCopy)));
             return new ToolResult.Success<>(new Load(config, resolved));
         } catch (RuntimeException failure) {
             return invalid(message(failure));
@@ -133,7 +158,7 @@ public final class ModelProfilesConfigLoader {
         ModelProfileDefinition.MetadataProvenance metadata = null;
         if (object.has("metadata") && !object.get("metadata").isJsonNull()) {
             JsonObject encoded = object(object.get("metadata"), "profile metadata");
-            exactFields(encoded, METADATA_FIELDS, Set.of(), "profile metadata");
+            exactFields(encoded, METADATA_FIELDS, dev.openallay.util.Java8Collections.setOf(), "profile metadata");
             metadata = new ModelProfileDefinition.MetadataProvenance(
                     string(encoded, "source"),
                     string(encoded, "upstreamModelId"),
@@ -196,7 +221,8 @@ public final class ModelProfilesConfigLoader {
         } catch (RuntimeException failure) {
             return failed(definition, imageCapability, "credential_store_unavailable", "Stored credentials are unavailable");
         }
-        if (resolvedCredential instanceof ToolResult.Failure<SecretValue> failure) {
+        if (resolvedCredential instanceof ToolResult.Failure) {
+            ToolResult.Failure<SecretValue> failure = (ToolResult.Failure<SecretValue>) resolvedCredential;
             return failed(definition, imageCapability, failure.code(), failure.message());
         }
         SecretValue secret = ((ToolResult.Success<SecretValue>) resolvedCredential).value();
@@ -283,7 +309,7 @@ public final class ModelProfilesConfigLoader {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be nonblank text");
         }
         return value.getAsString();
@@ -317,7 +343,7 @@ public final class ModelProfilesConfigLoader {
     }
 
     private static String message(Throwable failure) {
-        return failure.getMessage() == null || failure.getMessage().isBlank()
+        return failure.getMessage() == null || dev.openallay.util.Java8Strings.isBlank(failure.getMessage())
                 ? "Invalid model profiles configuration"
                 : failure.getMessage();
     }
