@@ -14,15 +14,15 @@ public final class ModelImages {
     /** Preserves every visual occurrence and its order, including repeated references. */
     public static List<ImageReference> occurrences(List<ModelMessage> messages) {
         ArrayList<ImageReference> images = new ArrayList<>();
-        for (ModelMessage message : List.copyOf(messages)) {
+        for (ModelMessage message : dev.openallay.util.Java8Collections.listCopyOf(messages)) {
             for (ModelContent content : message.content()) {
-                if (content instanceof ModelContent.Image image) images.add(image.reference());
-                else if (content instanceof ModelContent.ToolResult result) images.addAll(result.images());
+                if (content instanceof ModelContent.Image) images.add(((ModelContent.Image) content).reference());
+                else if (content instanceof ModelContent.ToolResult) images.addAll(((ModelContent.ToolResult) content).images());
             }
             message.inputObservation().flatMap(dev.openallay.world.ClientObservationAnchor::image)
                     .ifPresent(capture -> images.add(capture.image()));
         }
-        return List.copyOf(images);
+        return dev.openallay.util.Java8Collections.listCopyOf(images);
     }
 
     /** Complete typed references for retention or transport, never inferred from JSON fields. */
@@ -33,14 +33,14 @@ public final class ModelImages {
     /** Rejects conflicting metadata before a hash is used as an artifact identity. */
     public static List<ImageReference> unique(List<ImageReference> references) {
         LinkedHashMap<String, ImageReference> images = new LinkedHashMap<>();
-        for (ImageReference image : List.copyOf(references)) {
+        for (ImageReference image : dev.openallay.util.Java8Collections.listCopyOf(references)) {
             Objects.requireNonNull(image, "image");
             ImageReference previous = images.putIfAbsent(image.sha256(), image);
             if (previous != null && !previous.equals(image)) {
                 throw new IllegalArgumentException("Conflicting metadata for the same image hash");
             }
         }
-        return List.copyOf(images.values());
+        return dev.openallay.util.Java8Collections.listCopyOf(images.values());
     }
 
     /** Visual evidence retains tool origin; player-associated images stay player visual evidence. */
@@ -48,41 +48,42 @@ public final class ModelImages {
         ArrayList<ModelContent> content = new ArrayList<>();
         for (ModelMessage message : messages) {
             for (ModelContent block : message.content()) {
-                if (block instanceof ModelContent.Image image) content.add(image);
-                else if (block instanceof ModelContent.ToolResult result && !result.images().isEmpty()) {
+                if (block instanceof ModelContent.Image) content.add(block);
+                else if (block instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) block).images().isEmpty()) {
+                    ModelContent.ToolResult result = (ModelContent.ToolResult) block;
                     result.images().forEach(image -> content.add(new ModelContent.Image(image, result.toolUseId())));
                 }
             }
             message.inputObservation().filter(anchor -> anchor.image().isPresent()).ifPresent(anchor -> {
                 content.add(new ModelContent.Text(inputObservationLabel(anchor)));
-                content.add(new ModelContent.Image(anchor.image().orElseThrow().image()));
+                content.add(new ModelContent.Image(anchor.image().orElseThrow(java.util.NoSuchElementException::new).image()));
             });
         }
-        return List.copyOf(content);
+        return dev.openallay.util.Java8Collections.listCopyOf(content);
     }
 
     /** Provider-only attribution generated from typed provenance, never recovered from text. */
     public static String observationLabel(String toolUseId) {
-        if (toolUseId == null || toolUseId.isBlank()) throw new IllegalArgumentException("Tool observation requires an origin");
+        if (toolUseId == null || dev.openallay.util.Java8Strings.isBlank(toolUseId)) throw new IllegalArgumentException("Tool observation requires an origin");
         return "OpenAllay tool observation for tool call " + toolUseId + "; not a new player message. "
                 + "Capture metadata is in the original tool result.";
     }
 
     /** Provider-only supporting reference; the original typed focus remains host-accessible. */
     public static String inputObservationLabel(dev.openallay.world.ClientObservationAnchor anchor) {
-        var focus = anchor.focus();
+        dev.openallay.world.WorldFocusObservation focus = anchor.focus();
         StringBuilder text = new StringBuilder("OpenAllay player-input reference context")
                 .append("; source time ").append(anchor.capturedAt())
                 .append("; actor ").append(focus.actorId())
                 .append("; dimension ").append(focus.dimension());
-        var target = focus.target();
+        dev.openallay.world.WorldFocusObservation.Target target = focus.target();
         if (target.block() != null) {
-            var block = target.block();
+            dev.openallay.world.WorldFocusObservation.Block block = target.block();
             text.append("; target block ").append(block.id()).append(" at ")
                     .append(block.position().x()).append(',').append(block.position().y()).append(',')
                     .append(block.position().z()).append(" face ").append(block.face());
         } else if (target.entity() != null) {
-            var entity = target.entity();
+            dev.openallay.world.WorldFocusObservation.Entity entity = target.entity();
             text.append("; target entity ").append(entity.type()).append(" ").append(entity.name())
                     .append(" (").append(entity.uuid()).append(')');
         } else text.append("; target ").append(target.kind());
@@ -108,7 +109,7 @@ public final class ModelImages {
             if (message.inputObservation().flatMap(dev.openallay.world.ClientObservationAnchor::image).isPresent()) return true;
             for (ModelContent content : message.content()) {
                 if (content instanceof ModelContent.Image
-                        || content instanceof ModelContent.ToolResult result && !result.images().isEmpty()) {
+                        || content instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) content).images().isEmpty()) {
                     return true;
                 }
             }
