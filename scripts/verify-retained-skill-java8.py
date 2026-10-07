@@ -17,11 +17,12 @@ def main():
     p.add_argument("--project",type=Path,required=True)
     p.add_argument("--source-packet",type=Path,required=True,help="Actual materializer source-packet/ with raw pre/post and manifest")
     p.add_argument("--source-contract",type=Path,required=True,help="Repository-owned finite verification contract")
-    p.add_argument("--javac",type=Path,required=True)
-    p.add_argument("--java",type=Path,required=True)
-    p.add_argument("--javac8",type=Path,required=True)
-    p.add_argument("--java8",type=Path,required=True)
-    p.add_argument("--gson",type=Path,action="append",required=True)
+    p.add_argument("--verify-source-custody",action="store_true",help="Verify replay/hash/current-canonical equality without rerunning successful runtime vectors")
+    p.add_argument("--javac",type=Path)
+    p.add_argument("--java",type=Path)
+    p.add_argument("--javac8",type=Path)
+    p.add_argument("--java8",type=Path)
+    p.add_argument("--gson",type=Path,action="append")
     p.add_argument("--output",type=Path,required=True)
     a=p.parse_args(); project=a.project.resolve(); packet=a.source_packet.resolve(); out=a.output.resolve()
     if out==project or project in out.parents: raise ValueError("External fresh output required")
@@ -57,6 +58,16 @@ def main():
             if digest(blob)!=row[side+"_sha256"] or len(blob)!=row[side+"_bytes"]: raise ValueError("Materializer bound candidate hash changed: "+row["path"])
         name=row["path"].removeprefix("engine-core/src/main/java/")
         if row["pre_sha256"]!=recipe["rawPreimageSha256"][name]: raise ValueError("Wrong original canonical Skill source")
+        target=contract["normalizedCanonicalTargets"][row["path"]]
+        current=(project/row["path"]).read_bytes()
+        if digest(current)!=target["sha256"] or len(current)!=target["bytes"] or row["post_sha256"]!=target["sha256"] or row["post_bytes"]!=target["bytes"]:
+            raise ValueError("Candidate/current normalized production equality failed: "+row["path"])
+    history=json.loads((packet/"historical-source-custody.json").read_text())
+    if len(history)!=13 or {row["path"] for row in history}!=changed: raise ValueError("Historical source receipt boundary differs")
+    for row in history:
+        name=row["path"].removeprefix("engine-core/src/main/java/")
+        if row["sourceCommit"]!=recipe["acceptedSourceCommit"] or row["gitBlob"]!=recipe["rawPreimageGitBlob"][name] or row["rawSha256"]!=recipe["rawPreimageSha256"][name]:
+            raise ValueError("Historical source receipt pins differ")
     settled_model=project/contract["modelSourceContract"]
     model_contract=json.loads(settled_model.read_text())
     # Each model postimage must be the actual repository owner, never an external candidate overlay.
@@ -67,6 +78,13 @@ def main():
         if digest((project/name).read_bytes())!=wanted: raise ValueError("Model owner not at accepted contract postimage: "+name)
     for name,wanted in sources["sharedCurrentSourceHashes"].items():
         if digest((project/name).read_bytes())!=wanted: raise ValueError("Accepted shared dependency changed: "+name)
+    if a.verify_source_custody:
+        (out/"source-custody-receipt.json").write_text(json.dumps({"sourceContractSha256":digest(contract_path.read_bytes()),"materializerManifestSha256":digest(manifest_path.read_bytes()),
+            "historicalSourceReceiptSha256":digest((packet/"historical-source-custody.json").read_bytes()),"normalizedCanonicalOwners":contract["normalizedCanonicalTargets"],
+            "sourceEqualityVerified":True,"runtimeReexecuted":False,"preservedRuntimeOracle":contract["preservedRuntimeOracle"]},indent=2)+"\n")
+        print("PASS historical replay/current normalized canonical source custody; preserved runtime proof, no runtime replay")
+        return
+    if not all([a.javac,a.java,a.javac8,a.java8,a.gson]): raise ValueError("Runtime mode requires both actual compilers/runtimes and pinned Gson hosts")
     libraries=[]
     if len(a.gson)!=len(contract["gsonPins"]): raise ValueError("Require exactly the approved genuine Gson hosts")
     seen=set()

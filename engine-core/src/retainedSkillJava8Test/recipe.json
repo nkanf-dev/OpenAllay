@@ -445,5 +445,20 @@
   },
   "converter": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
   "converterSha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
-  "pendingRealDependencies": "model12 canonical owners independently owned; use only actual settled source files after model worker applies"
+  "pendingRealDependencies": "model12 canonical owners independently owned; use only actual settled source files after model worker applies",
+  "rawPreimageGitBlob": {
+    "dev/openallay/skill/LoadSkillTool.java": "09fc61d370568543441c79385cc9b39e8b2f6f0a",
+    "dev/openallay/skill/RetainedSkillContext.java": "15bad5580a37441a4666f25b6f3219ec634b0e23",
+    "dev/openallay/skill/SkillCatalogManifest.java": "2efff8e67c749d4737aa55f6f25ac5d4aa169ea7",
+    "dev/openallay/skill/SkillInstructionContext.java": "378682090d58c00d4ca7a3ed1eca8f11ca68c4ee",
+    "dev/openallay/skill/SkillDocument.java": "844816c4fb3ed0301b15eba27d162df0f3b3dbfe",
+    "dev/openallay/skill/SkillMetadata.java": "4cb870c19a5d72a187b6afbb0cfb48bc7bcc7f27",
+    "dev/openallay/skill/SkillSource.java": "5346d9e55c3ef78680d1696039cb5baa7dcb4864",
+    "dev/openallay/skill/SkillParser.java": "5d09cc265e24bd83a49956a3b52195343a87d3d5",
+    "dev/openallay/requirement/RequirementSet.java": "9812c23cc2cfc75407e00651050f5d1dabcf2242",
+    "dev/openallay/skill/SkillCatalog.java": "ffd2c91f663eebefd61c603e6752691b4a709000",
+    "dev/openallay/skill/SkillCatalogSnapshot.java": "da91fc6d0874babd70482d1596dc2c9841dc3b26",
+    "dev/openallay/requirement/RequirementCodec.java": "c21917d6efb5e399fe10c19af743767411b9b0c2",
+    "dev/openallay/tool/ToolDescriptor.java": "ac180e656b4b9bd0b065826339f7b137823e1547"
+  }
 }
