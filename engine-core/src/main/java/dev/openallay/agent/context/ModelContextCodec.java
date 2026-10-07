@@ -23,21 +23,25 @@ public final class ModelContextCodec {
             for (ModelContent item : message.content()) {
                 JsonObject value = new JsonObject();
                 java.util.Objects.requireNonNull(item);
-                if (item instanceof ModelContent.Text text) {
+                if (item instanceof ModelContent.Text) {
+                    ModelContent.Text text = (ModelContent.Text) item;
                     value.addProperty("type", "text");
                     value.addProperty("text", text.text());
-                } else if (item instanceof ModelContent.Image image) {
+                } else if (item instanceof ModelContent.Image) {
+                    ModelContent.Image image = (ModelContent.Image) item;
                     value.addProperty("type", "image");
                     dev.openallay.model.image.ImageReference reference = image.reference();
                     addImageReference(value, reference);
                     if (image.originToolUseId() == null) value.add("originToolUseId", com.google.gson.JsonNull.INSTANCE);
                     else value.addProperty("originToolUseId", image.originToolUseId());
-                } else if (item instanceof ModelContent.ToolUse use) {
+                } else if (item instanceof ModelContent.ToolUse) {
+                    ModelContent.ToolUse use = (ModelContent.ToolUse) item;
                     value.addProperty("type", "tool_use");
                     value.addProperty("id", use.id());
                     value.addProperty("name", use.name());
                     value.add("input", use.input());
-                } else if (item instanceof ModelContent.ToolResult result) {
+                } else if (item instanceof ModelContent.ToolResult) {
+                    ModelContent.ToolResult result = (ModelContent.ToolResult) item;
                     value.addProperty("type", "tool_result");
                     value.addProperty("toolUseId", result.toolUseId());
                     value.add("value", result.value());
@@ -65,31 +69,34 @@ public final class ModelContextCodec {
 
     public List<ModelMessage> decode(String json) {
         JsonObject envelope = object(dev.openallay.json.JsonTrees.parse(json));
-        fields(envelope, Set.of("messages"));
+        fields(envelope, dev.openallay.util.Java8Collections.setOf("messages"));
         ArrayList<ModelMessage> messages = new ArrayList<>();
         for (JsonElement encoded : array(envelope.get("messages"))) {
             JsonObject message = object(encoded);
-            fields(message, Set.of("role", "content", "inputObservation"));
+            fields(message, dev.openallay.util.Java8Collections.setOf("role", "content", "inputObservation"));
             ModelRole role = ModelRole.valueOf(text(message, "role"));
             ArrayList<ModelContent> content = new ArrayList<>();
             for (JsonElement raw : array(message.get("content"))) {
                 JsonObject item = object(raw);
                 switch (text(item, "type")) {
-                    case "text" -> {
-                        fields(item, Set.of("type", "text"));
+                    case "text": {
+                        fields(item, dev.openallay.util.Java8Collections.setOf("type", "text"));
                         content.add(new ModelContent.Text(text(item, "text")));
+                        break;
                     }
-                    case "image" -> {
-                        fields(item, Set.of("type", "sha256", "mimeType", "width", "height", "byteSize", "originToolUseId"));
+                    case "image": {
+                        fields(item, dev.openallay.util.Java8Collections.setOf("type", "sha256", "mimeType", "width", "height", "byteSize", "originToolUseId"));
                         content.add(new ModelContent.Image(imageReference(item), nullableText(item, "originToolUseId")));
+                        break;
                     }
-                    case "tool_use" -> {
-                        fields(item, Set.of("type", "id", "name", "input"));
+                    case "tool_use": {
+                        fields(item, dev.openallay.util.Java8Collections.setOf("type", "id", "name", "input"));
                         content.add(new ModelContent.ToolUse(text(item, "id"), text(item, "name"),
                                 object(item.get("input"))));
+                        break;
                     }
-                    case "tool_result" -> {
-                        fields(item, Set.of("type", "toolUseId", "value", "error", "images"));
+                    case "tool_result": {
+                        fields(item, dev.openallay.util.Java8Collections.setOf("type", "toolUseId", "value", "error", "images"));
                         JsonElement error = item.get("error");
                         if (!error.isJsonPrimitive() || !error.getAsJsonPrimitive().isBoolean()) {
                             throw new IllegalArgumentException("model context error flag must be boolean");
@@ -97,20 +104,21 @@ public final class ModelContextCodec {
                         ArrayList<dev.openallay.model.image.ImageReference> images = new ArrayList<>();
                         for (JsonElement rawImage : array(item.get("images"))) {
                             JsonObject image = object(rawImage);
-                            fields(image, Set.of("sha256", "mimeType", "width", "height", "byteSize"));
+                            fields(image, dev.openallay.util.Java8Collections.setOf("sha256", "mimeType", "width", "height", "byteSize"));
                             images.add(imageReference(image));
                         }
                         content.add(new ModelContent.ToolResult(text(item, "toolUseId"),
                                 item.get("value"), error.getAsBoolean(), images));
+                        break;
                     }
-                    default -> throw new IllegalArgumentException("unknown model context content type");
+                    default: throw new IllegalArgumentException("unknown model context content type");
                 }
             }
             messages.add(new ModelMessage(role, content,
                     dev.openallay.world.ClientObservationAnchorJson.decode(message.get("inputObservation"))));
         }
         ContextStructure.units(messages);
-        return List.copyOf(messages);
+        return dev.openallay.util.Java8Collections.listCopyOf(messages);
     }
 
     /** Excludes provider-private reasoning without altering actual calls, results, or error flags. */

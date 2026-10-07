@@ -38,6 +38,11 @@
           "old": "return sessions.keySet().stream()\n                .filter(key -> key.actorId().equals(actorId))\n                .sorted(java.util.Comparator.comparing(AgentSessionKey::sessionId))\n                .toList();",
           "new": "return dev.openallay.util.Java8Collections.toList(sessions.keySet().stream()\n                .filter(key -> key.actorId().equals(actorId))\n                .sorted(java.util.Comparator.comparing(AgentSessionKey::sessionId)));",
           "count": 1
+        },
+        {
+          "old": " history = dev.openallay.util.Java8Collections.listCopyOf(history); ",
+          "new": " history = dev.openallay.util.Java8Collections.listCopyOf(history);",
+          "count": 1
         }
       ]
     },
@@ -660,5 +665,6 @@
   },
   "runner_sha256": "04811c4e30cc1a2c0d2411e7270a36937f780246debbf7929fc27c845efe62be",
   "format_policy": "Onlyblankline trailingwhitespacecleanup afterauthenticconverter/APIops, nocanonicalhashJSONnormalization.",
-  "authority_policy": "Storeleaseobject/request/control equality fences unchanged, stale cancellation/finalize cannotoverwrite successors. SteerFIFO/dedupconsumed boundaries unchanged."
+  "authority_policy": "Storeleaseobject/request/control equality fences unchanged, stale cancellation/finalize cannotoverwrite successors. SteerFIFO/dedupconsumed boundaries unchanged.",
+  "exact_format_correction": "One authentic compact ControlLease constructor-body line: trailingoneASCIIspace removed afterrecordedAPIlowering. No other nonblankwhitespace trimming permitted."
 }

@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class ContextCheckpointCodec {
-    private static final Set<String> FIELDS = Set.of(
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf(
             "checkpointId", "sourceFromIndex", "sourceToIndexExclusive", "sourceHash",
             "modelIdentifier", "createdAt", "status",
             "summary", "failureCode", "failureMessage", "estimatedProjectionTokens");

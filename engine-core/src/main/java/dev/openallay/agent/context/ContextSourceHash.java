@@ -5,7 +5,7 @@ import dev.openallay.model.ModelMessage;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import dev.openallay.util.Java8Hex;
 import java.util.List;
 
 /** Stable hash for provider-neutral, reasoning-free checkpoint source messages. */
@@ -16,7 +16,7 @@ public final class ContextSourceHash {
         try {
             byte[] bytes = gson.toJson(ContextStructure.summarySafe(messages))
                     .getBytes(StandardCharsets.UTF_8);
-            return HexFormat.of().formatHex(
+            return Java8Hex.formatHex(
                     MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
