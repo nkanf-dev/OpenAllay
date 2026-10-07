@@ -301,7 +301,7 @@ public final class ClientToolExecutionEndpoint {
                             images, cancellation)
                     .thenAcceptAsync(attachments -> {
                         if (!current(payload, request, cancellation)) return;
-                        var message = new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, attachments);
+                        dev.openallay.bridge.protocol.ToolExecutionMessage message = new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, attachments);
                         message.requireImages(images);
                         sendMessage(payload.requestId(), payload.invocationId(), message);
                         request.remove(payload.invocationId());

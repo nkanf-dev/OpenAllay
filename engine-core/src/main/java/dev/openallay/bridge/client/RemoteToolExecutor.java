@@ -146,7 +146,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
                 return false;
             }
             try {
-                var complete = reassembler.accept(chunk);
+                java.util.Optional<java.lang.String> complete = reassembler.accept(chunk);
                 if (complete.isPresent()) {
                     if (!pending.remove(chunk.correlationId(), value)) {
                         reassembler.cancel(chunk.correlationId());

@@ -157,7 +157,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
             payloadWorker.execute(() -> {
                 List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments = new java.util.ArrayList<>();
                 try {
-                    for (var reference : references.values()) {
+                    for (dev.openallay.model.image.ImageReference reference : references.values()) {
                         synchronized (requestLock) {
                             if (!currentPreparation(pending)) return;
                         }
@@ -340,7 +340,7 @@ public final class PayloadGuideRemoteEndpoint implements GuideRemoteEndpoint {
                             .forEach(image -> references.put(image.sha256(), image));
                     List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
                             new java.util.ArrayList<>();
-                    for (var reference : references.values()) {
+                    for (dev.openallay.model.image.ImageReference reference : references.values()) {
                         synchronized (requestLock) {
                             if (!currentOperation(pending, messageId, operation)) return;
                         }

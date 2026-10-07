@@ -244,7 +244,7 @@ public final class GuideService implements GuideHistoryAdministration {
                 imageImportOwners.remove(owner);
                 throw new java.io.IOException("Image connection is closed");
             }
-            var reference = attachmentStore.importImage(actor, owner, captured);
+            dev.openallay.model.image.ImageReference reference = attachmentStore.importImage(actor, owner, captured);
             importedImageReferences.put(owner, reference);
             return reference;
         });
@@ -254,7 +254,7 @@ public final class GuideService implements GuideHistoryAdministration {
             dev.openallay.model.image.ImageReference reference) {
         if (attachmentStore == null) return CompletableFuture.completedFuture(new ToolResult.Success<>(false));
         return imageOperation(() -> {
-            for (var entry : List.copyOf(importedImageReferences.entrySet())) {
+            for (java.util.Map.Entry<java.lang.String, dev.openallay.model.image.ImageReference> entry : List.copyOf(importedImageReferences.entrySet())) {
                 if (entry.getValue().equals(reference)) {
                     attachmentStore.release(actor, entry.getKey());
                     importedImageReferences.remove(entry.getKey(), entry.getValue());
@@ -290,7 +290,7 @@ public final class GuideService implements GuideHistoryAdministration {
         return imageOperation(() -> {
             attachmentStore.retain(actor, imageOwnerPrefix + "draft:" + owner, captured);
             // Publish the durable draft pin before removing the short import lease.
-            for (var entry : List.copyOf(importedImageReferences.entrySet())) {
+            for (java.util.Map.Entry<java.lang.String, dev.openallay.model.image.ImageReference> entry : List.copyOf(importedImageReferences.entrySet())) {
                 if (captured.contains(entry.getValue())) {
                     attachmentStore.release(actor, entry.getKey());
                     importedImageReferences.remove(entry.getKey(), entry.getValue());
@@ -406,7 +406,7 @@ public final class GuideService implements GuideHistoryAdministration {
         String owner = sessionImageOwner(session);
         List<dev.openallay.model.image.ImageReference> union = new ArrayList<>(
                 retainedImages.getOrDefault(owner, List.of()));
-        for (var reference : references) if (!union.contains(reference)) union.add(reference);
+        for (dev.openallay.model.image.ImageReference reference : references) if (!union.contains(reference)) union.add(reference);
         if (union.isEmpty()) return session.imageCustody;
         List<dev.openallay.model.image.ImageReference> captured = List.copyOf(union);
         retainedImages.put(owner, captured);
@@ -1123,7 +1123,7 @@ public final class GuideService implements GuideHistoryAdministration {
             boolean preparingContext = session.preparingContextRequest != null
                     && session.preparingContextRequest.equals(active.requestId());
             if (preparingContext) session.unresolvedForkContext.add(active.requestId());
-            var note = new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
+            dev.openallay.model.ModelMessage note = new dev.openallay.model.ModelMessage(dev.openallay.model.ModelRole.ASSISTANT,
                     List.of(new dev.openallay.model.ModelContent.Text(
                             "[OpenAllay request ended: agent_cancelled] Agent request was cancelled")));
             List<dev.openallay.model.ModelMessage> current = new ArrayList<>(session.modelContext);

@@ -40,7 +40,7 @@ public final class CorrelationRegistry {
     }
 
     public synchronized int cancelActor(UUID actorId) {
-        var owned = entries.entrySet().stream()
+        java.util.List<java.util.UUID> owned = entries.entrySet().stream()
                 .filter(entry -> entry.getValue().actorId().equals(actorId))
                 .map(Map.Entry::getKey)
                 .toList();

@@ -157,7 +157,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     public List<dev.openallay.model.ModelMessage> refreshContext(
             List<dev.openallay.model.ModelMessage> messages) {
         List<dev.openallay.model.ModelMessage> current = messages;
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 current = skill.refreshContext(current);
             }
@@ -167,7 +167,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     @Override
     public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 skill.prepareContext(correlationId, messages);
             }
@@ -178,7 +178,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     public List<dev.openallay.model.ModelMessage> refreshContext(
             List<dev.openallay.model.ModelMessage> messages, dev.openallay.skill.RetainedSkillContext retained) {
         List<dev.openallay.model.ModelMessage> current = messages;
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 current = skill.refreshContext(current, retained);
             }
@@ -189,7 +189,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     @Override
     public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages,
             dev.openallay.skill.RetainedSkillContext retained) {
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 skill.prepareContext(correlationId, messages, retained);
             }
@@ -198,7 +198,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     @Override
     public void prepareSystem(String systemPrompt, dev.openallay.skill.RetainedSkillContext retained) {
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 skill.prepareSystem(systemPrompt, retained);
             }
@@ -217,7 +217,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     @Override
     public String skillSystemPrompt(String prompt) {
         String safe = prompt;
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 safe = skill.systemPrompt(safe);
             }
@@ -227,7 +227,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     @Override
     public void closeSkillContext(String correlationId) {
-        for (var registration : tools.registrations()) {
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
             if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
                 skill.closeRequestScope(correlationId);
             }

@@ -182,7 +182,7 @@ public final class ServerBridgeSession {
     }
 
     private void receiveSteerChunk(UUID actor, String json) {
-        var chunk = codec.decode(json, dev.openallay.bridge.protocol.ServerAgentSteerChunkPayload.class);
+        dev.openallay.bridge.protocol.ServerAgentSteerChunkPayload chunk = codec.decode(json, dev.openallay.bridge.protocol.ServerAgentSteerChunkPayload.class);
         if (!ownsRequest(actor, chunk.requestId())) {
             steerChunks.clearRequest(actor, chunk.requestId());
             sendAgentEvent(actor, agentEvents.encode(chunk.requestId(),
@@ -331,7 +331,7 @@ public final class ServerBridgeSession {
             UUID actor, dev.openallay.bridge.protocol.ServerAgentEventPayload event) {
         if (event.eventType().equals("request_released")) steerChunks.clearRequest(actor, event.requestId());
         UUID eventId = UUID.randomUUID();
-        for (var chunk : new dev.openallay.bridge.protocol.ResultChunker().split(
+        for (dev.openallay.bridge.protocol.RemoteToolResultChunkPayload chunk : new dev.openallay.bridge.protocol.ResultChunker().split(
                 eventId,
                 codec.encode(event),
                 BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {

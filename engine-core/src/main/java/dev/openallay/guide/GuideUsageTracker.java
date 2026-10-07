@@ -107,7 +107,7 @@ final class GuideUsageTracker {
     GuideUsageSnapshot inheritedSnapshot() { return inherited; }
 
     private static BuiltinModelCatalog.Pricing pricing(String model) {
-        var bundled = BuiltinModelCatalog.bundled();
+        dev.openallay.model.metadata.BuiltinModelCatalog.Load bundled = BuiltinModelCatalog.bundled();
         return model == null || bundled.catalog() == null ? null : bundled.catalog().match(model)
                 .map(match -> match.entry().pricing()).orElse(null);
     }
@@ -134,7 +134,7 @@ final class GuideUsageTracker {
         // Without complete canonical input, a threshold tier cannot safely be selected.
         BuiltinModelCatalog.Tier tier = null;
         if (usage.inputKnown()) {
-            for (var candidate : pricing.tiers()) {
+            for (dev.openallay.model.metadata.BuiltinModelCatalog.Tier candidate : pricing.tiers()) {
                 if (usage.inputTokens() >= candidate.minInputTokens()) tier = candidate;
             }
         } else if (pricing.tiers().size() == 1 && pricing.tiers().get(0).minInputTokens() == 0) {

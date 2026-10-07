@@ -63,7 +63,7 @@ public final class ServerAgentEventCodec {
         JsonObject body;
         try {
             BridgeJsonCodec.rejectDuplicateFields(payload.eventJson());
-            var parsed = dev.openallay.json.JsonTrees.parse(payload.eventJson());
+            com.google.gson.JsonElement parsed = dev.openallay.json.JsonTrees.parse(payload.eventJson());
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException("Server Agent event body must be an object");
             }

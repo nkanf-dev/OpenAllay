@@ -41,7 +41,7 @@ public record ClientCapabilitySnapshot(
     }
 
     private ClientCapabilitySnapshot withRequestSkills(SkillCatalogSnapshot requestSkills) {
-        var registrations = localTools.registrations().stream()
+        java.util.List<dev.openallay.tool.RegisteredTool> registrations = localTools.registrations().stream()
                 .filter(registration -> !requestSkills.metadata().isEmpty()
                         || !registration.tool().descriptor().id().equals(ClientCapabilityResolver.LOAD_SKILL_ID))
                 .map(registration -> registration.tool() instanceof dev.openallay.skill.LoadSkillTool

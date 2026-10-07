@@ -173,11 +173,11 @@ public class ClientBridgeSession {
                                 new IllegalStateException("Client image request is no longer active"));
                     }
                 }
-                var captured = dev.openallay.model.image.ModelImages.unique(references);
+                java.util.List<dev.openallay.model.image.ImageReference> captured = dev.openallay.model.image.ModelImages.unique(references);
                 return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
                     java.util.List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
                             new java.util.ArrayList<>();
-                    for (var reference : captured) {
+                    for (dev.openallay.model.image.ImageReference reference : captured) {
                         cancellation.throwIfCancelled();
                         requireCurrent(requestId, request);
                         try {
@@ -302,7 +302,7 @@ public class ClientBridgeSession {
                     request.userInput().toModelMessage().inputObservation()));
         }
         try {
-            for (var chunk : requestChunker.split(
+            for (dev.openallay.bridge.protocol.ServerAgentRequestChunkPayload chunk : requestChunker.split(
                     outbound.requestId(), codec.encode(outbound),
                     dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {
                 send("agent_request_chunk", chunk);
@@ -326,7 +326,7 @@ public class ClientBridgeSession {
                 if (payload.operation() == ServerAgentSteerPayload.Operation.REMOVE) {
                     send("agent_steer", payload);
                 } else {
-                    for (var chunk : steerChunker.split(
+                    for (dev.openallay.bridge.protocol.ServerAgentSteerChunkPayload chunk : steerChunker.split(
                             payload.requestId(), payload.messageId(), codec.encode(payload),
                             dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {
                         send("agent_steer_chunk", chunk);

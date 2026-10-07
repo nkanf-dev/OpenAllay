@@ -67,7 +67,7 @@ public record GuideEvidencePresentation(
         }
 
         public static Identity from(GuideSource source) {
-            var evidence = source.evidence();
+            dev.openallay.context.EvidenceMetadata evidence = source.evidence();
             Map<String, String> scope = new java.util.TreeMap<>(new SourceObservation(
                     evidence, source.lastCapturedAt()).identityDetails());
             // Position and operation size are retained in the individual UI records below.
@@ -86,7 +86,7 @@ public record GuideEvidencePresentation(
     }
 
     public static GuideEvidencePresentation from(GuideSource source) {
-        var evidence = Objects.requireNonNull(source, "source").evidence();
+        dev.openallay.context.EvidenceMetadata evidence = Objects.requireNonNull(source, "source").evidence();
         String sourceName = switch (evidence.sourceId()) {
             case "minecraft:client_player", "minecraft:server_player",
                     "minecraft:player_ui", "openallay:inventory" -> "player";

@@ -24,7 +24,7 @@ public record ServerAgentSteerPayload(
             dev.openallay.model.image.ModelImages.uniqueReferences(java.util.List.of(message.toModelMessage()))
                     .forEach(image -> required.put(image.sha256(), image));
             java.util.Map<String, dev.openallay.model.image.ImageReference> uploaded = new java.util.LinkedHashMap<>();
-            for (var attachment : imageAttachments) {
+            for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : imageAttachments) {
                 if (uploaded.putIfAbsent(attachment.reference().sha256(), attachment.reference()) != null) {
                     throw new IllegalArgumentException("Duplicate steer image attachment");
                 }

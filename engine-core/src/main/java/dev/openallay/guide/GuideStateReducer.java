@@ -46,7 +46,7 @@ public final class GuideStateReducer {
         List<GuideTimelineEntry> timeline = current.timeline();
         GuideRequestStatus status = current.status();
         List<GuideSource> sources = current.sources();
-        var usage = current.usage();
+        dev.openallay.model.ModelUsage usage = current.usage();
         Long retryAfter = current.retryAfterMillis();
         GuideFailure failure = current.failure();
         Instant terminalAt = null;

@@ -383,7 +383,7 @@ public final class PlayerClientToolRouter {
                     value.accepting = true;
                     json = complete.orElseThrow();
                 }
-                var message = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).decode(
+                dev.openallay.bridge.protocol.ToolExecutionMessage message = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).decode(
                         json, dev.openallay.bridge.protocol.ToolExecutionMessage.class);
                 JsonObject normalized = message.result();
                 ValidatedResult validated = validateNormalized(requestTools, value.toolId, normalized);
@@ -640,11 +640,11 @@ public final class PlayerClientToolRouter {
                 "allowedTools", "provenance"))) return false;
         for (String field : List.of("name", "document", "source", "fingerprint", "state",
                 "content", "nextCursor", "provenance")) {
-            var value = output.get(field);
+            com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return false;
         }
         for (String field : List.of("offset", "nextOffset")) {
-            var value = output.get(field);
+            com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
                     || !value.getAsString().matches("[0-9]+")) return false;
             try {
@@ -653,10 +653,10 @@ public final class PlayerClientToolRouter {
                 return false;
             }
         }
-        var complete = output.get("complete");
+        com.google.gson.JsonElement complete = output.get("complete");
         if (!complete.isJsonPrimitive() || !complete.getAsJsonPrimitive().isBoolean()) return false;
         for (String field : List.of("availableReferences", "allowedTools")) {
-            var value = output.get(field);
+            com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonArray() || dev.openallay.json.JsonReaders.elements(value.getAsJsonArray()).stream()
                     .anyMatch(item -> !item.isJsonPrimitive()
                             || !item.getAsJsonPrimitive().isString())) return false;
