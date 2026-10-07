@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8]
         default: skills
         required: true
 permissions:
@@ -1426,3 +1426,70 @@ jobs:
           ${{ runner.temp }}/bridge-authentic-prepare/authenticated/
 
           ${{ runner.temp }}/bridge-authentic-prepare/converted/conversion-receipt.json'
+
+  bridge-transport-java8:
+    if: inputs.scope == 'bridge-transport-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Verify authentic complete bridge transport owners and affected consumers
+      run: 'mkdir -p "$RUNNER_TEMP/bridge-dependencies"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/bridge-dependencies/gson-2.8.0.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        --output "$RUNNER_TEMP/bridge-dependencies/gson-2.13.2.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar
+        --output "$RUNNER_TEMP/bridge-dependencies/junit.jar"
+
+        python3 -B engine-core/src/bridgeTransportJava8Test/verify.py --source-root
+        "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/bridge-dependencies/gson-2.8.0.jar"
+        --junit-console "$RUNNER_TEMP/bridge-dependencies/junit.jar" --output "$RUNNER_TEMP/bridge-verify-280"
+
+        python3 -B engine-core/src/bridgeTransportJava8Test/verify.py --source-root
+        "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --gson "$RUNNER_TEMP/bridge-dependencies/gson-2.13.2.jar"
+        --junit-console "$RUNNER_TEMP/bridge-dependencies/junit.jar" --output "$RUNNER_TEMP/bridge-verify-2132"
+
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.bridge.RemoteToolBridgeTest
+        --tests dev.openallay.bridge.server.RemoteToolServerTest --tests dev.openallay.bridge.protocol.ServerAgentSteerChunkerTest
+        --tests dev.openallay.bridge.protocol.ServerAgentEventCodecTest --tests dev.openallay.bridge.protocol.BridgeJsonCodecTest
+        --tests dev.openallay.bridge.protocol.ServerAgentRequestChunkGuardTest --tests
+        dev.openallay.bridge.client.RemoteToolExecutorAliasTest'
+    - name: Retain original Java 8 bridge runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: bridge-transport-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/bridge-verify-280/receipt.json
+
+          ${{ runner.temp }}/bridge-verify-280/*-vectors.log
+
+          ${{ runner.temp }}/bridge-verify-280/*-junit/
+
+          ${{ runner.temp }}/bridge-verify-2132/receipt.json
+
+          ${{ runner.temp }}/bridge-verify-2132/*-vectors.log
+
+          ${{ runner.temp }}/bridge-verify-2132/*-junit/
+
+          engine-core/build/test-results/'
