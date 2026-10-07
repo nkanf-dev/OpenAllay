@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8]
         default: skills
         required: true
 permissions:
@@ -170,3 +170,74 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: engine-core/src/java8Test/primitives/build/
+
+  values-java8:
+    if: inputs.scope == 'values-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Verify the canonical value adapter on genuine Java 8 with Gson 2.8.0
+        run: ./gradlew -p engine-core/src/java8Test/gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" java8ValueSchemaTest -PjsonVerificationGsonVersion=2.8.0
+      - name: Verify the same canonical value adapter on genuine Java 8 with current Gson
+        run: ./gradlew -p engine-core/src/java8Test/gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" java8ValueSchemaTest -PjsonVerificationGsonVersion=2.13.2
+      - name: Verify actual engine JSON and strict Tool consumers
+        run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.json.ExplicitValueSchemaTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.json.EngineJsonHierarchyTest --tests dev.openallay.agent.tool.ToolSchemaGeneratorTest
+      - name: Retain original value schema and consumer test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-values-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            engine-core/src/java8Test/gradle/build/
+            engine-core/build/test-results/
+
+  rhino-leaves-java8:
+    if: inputs.scope == 'rhino-leaves-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+      - name: Fetch exact authentic Rhino sources and compile-only annotations
+        run: |
+          mkdir -p build/rhino-java8-inputs
+          curl --fail --location https://maven.latvian.dev/releases/dev/latvian/mods/rhino/2101.2.8-build.91/rhino-2101.2.8-build.91-sources.jar --output build/rhino-java8-inputs/rhino-sources.jar
+          curl --fail --location https://repo.maven.apache.org/maven2/org/jetbrains/annotations/24.1.0/annotations-24.1.0.jar --output build/rhino-java8-inputs/annotations.jar
+          printf '%s  %s\n' bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8 build/rhino-java8-inputs/rhino-sources.jar 27a770dc7ce50500918bb8c3c0660c98290630ec796b5e3cf6b90f403b3033c6 build/rhino-java8-inputs/annotations.jar | sha256sum --check
+      - name: Verify exact canonical source preparation
+        run: RHINO_SOURCE_ARCHIVE="$PWD/build/rhino-java8-inputs/rhino-sources.jar" python3 -B -m unittest discover -s scripts -p test_prepare_rhino_sources.py -v
+      - name: Compile and execute genuine canonical Rhino leaves on Java 8
+        run: python3 -B scripts/verify-rhino-java8-leaves.py build/rhino-java8-inputs/rhino-sources.jar --javac "$JAVA_HOME_17_X64/bin/javac" --java8 "$JAVA_HOME_8_X64/bin/java" --annotations build/rhino-java8-inputs/annotations.jar --output build/rhino-java8-leaf-proof
+      - name: Retain exact Rhino leaf proof without claiming full runtime acceptance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-rhino-leaves-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/rhino-java8-leaf-proof/receipt.json
+            build/rhino-java8-leaf-proof/classes/
