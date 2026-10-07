@@ -1,0 +1,49 @@
+{
+  "scope": "WholeGuide actualpublicAST arrowstatement/switchExpression completeowner classification, no partialunsupportedowners",
+  "selectedOwners": [
+    "dev/openallay/guide/GuideRequestSnapshot.java",
+    "dev/openallay/guide/GuideService.java",
+    "dev/openallay/guide/GuideStateReducer.java",
+    "dev/openallay/guide/GuideToolInvocationPresentation.java",
+    "dev/openallay/guide/GuideToolPresentation.java",
+    "dev/openallay/guide/history/GuideHistoryCodec.java",
+    "dev/openallay/guide/history/GuideHistoryScope.java",
+    "dev/openallay/guide/history/SqliteGuideHistoryStore.java",
+    "dev/openallay/guide/semantic/SemanticDocumentCodec.java",
+    "dev/openallay/guide/semantic/SemanticMessageParser.java",
+    "dev/openallay/guide/semantic/SemanticReferenceValidator.java",
+    "dev/openallay/guide/ui/GuideEvidencePresentation.java",
+    "dev/openallay/guide/ui/GuideToolDetailPresenter.java",
+    "dev/openallay/guide/ui/GuideToolDisplayStatus.java",
+    "dev/openallay/guide/ui/GuideUiProgress.java",
+    "dev/openallay/guide/ui/GuideUiView.java"
+  ],
+  "selectedPreimageSha256": {
+    "dev/openallay/guide/GuideRequestSnapshot.java": "bcde83bbba852eaf944cfe93eac98e7fb2d0b225ccd7cb1d38b349289b0790db",
+    "dev/openallay/guide/GuideService.java": "ea0c4c5c78ea74315cdbd80555a70259c7a6d4aaa716211b488396d322b88b8e",
+    "dev/openallay/guide/GuideStateReducer.java": "5100d7ce223bb055ebf0ff1ba1a2175daeabdd963c350972bb5f3dbc1fec6a93",
+    "dev/openallay/guide/GuideToolInvocationPresentation.java": "28c84be5423e31a7fe0f14cf6220a80f4e8b44ae056fbaea4f6f084751463b20",
+    "dev/openallay/guide/GuideToolPresentation.java": "8d3e00a9ff16c20c37da63304f60b81b6d88adfbbcc54eaf728fa00a90d8ff64",
+    "dev/openallay/guide/history/GuideHistoryCodec.java": "d382a8dc75623d9714c1b6b2dfe8de8c3fa6af70d20210d88c4a294cd738710b",
+    "dev/openallay/guide/history/GuideHistoryScope.java": "7a12cc85c1413be864c8da12c07131b0caf04dc0f2329706ad30584caa660409",
+    "dev/openallay/guide/history/SqliteGuideHistoryStore.java": "2ef8b9cc72d60601fe4f76f098a24e30f0f1ca296ac774ba2d6afef73415b6ca",
+    "dev/openallay/guide/semantic/SemanticDocumentCodec.java": "8e5122234a1e48e78d60f74196c285fa99e3ba2ee33824c863f29a0fddcb69ce",
+    "dev/openallay/guide/semantic/SemanticMessageParser.java": "45feee64fb63d1c978c65890fee2ed663b323f9ea4793e3b6cf45d2e3142921e",
+    "dev/openallay/guide/semantic/SemanticReferenceValidator.java": "8758e9acd63c927c51098a27ee9ae1512a54cbcdd290c62fc2092823bc98fde7",
+    "dev/openallay/guide/ui/GuideEvidencePresentation.java": "f03c00c5d52edf9afd586c3fb91cf5387d14bf591f714df383de60faea9b148a",
+    "dev/openallay/guide/ui/GuideToolDetailPresenter.java": "437aa9c237a902dc32fedd35f473c27a28bed08251616e43b8412ffdf13bc631",
+    "dev/openallay/guide/ui/GuideToolDisplayStatus.java": "674b3acdf9cd8b99ca600b5145ec67caabf354d4ce953ab752d62224cb80a351",
+    "dev/openallay/guide/ui/GuideUiProgress.java": "1758208b0b6666893f8d6cb9fa26581571ffa4215dde7535567ae6075ed1bc33",
+    "dev/openallay/guide/ui/GuideUiView.java": "9011dc669b432fb99e49f544a94b8647e0cca54fe6109528c018ed2277853eeb"
+  },
+  "sourceLanguageStage": "Guide200records+303bindingpattern currentcanonicalpost",
+  "acceptedToolOracleRun": 37578615739,
+  "fixtureReexecuted": false,
+  "inventoryReceiptRun": 37572819187,
+  "toolPins": {
+    "build-logic/src/main/java/dev/openallay/build/CanonicalSwitchPort.java": "8bda65c8d293d586e11a0bdd9afe6b50d9810d753f018e80a97f113a705c179f",
+    "scripts/switch-language-port/CanonicalSwitchPortFixture.java": "3771bc6cf00594b807c1c212f6d53f41d485f364c002e9333f1caac2ac8f3264",
+    "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c"
+  },
+  "unsupportedPolicy": "Actualcompleteowner offset/reason, no partialsource. Embeddedflow/mixedfallthrough/lvalue/label/type forms remainfailclosed untilrealcompileroracle."
+}

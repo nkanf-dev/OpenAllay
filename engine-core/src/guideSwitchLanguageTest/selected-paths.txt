@@ -1,0 +1,16 @@
+dev/openallay/guide/GuideRequestSnapshot.java
+dev/openallay/guide/GuideService.java
+dev/openallay/guide/GuideStateReducer.java
+dev/openallay/guide/GuideToolInvocationPresentation.java
+dev/openallay/guide/GuideToolPresentation.java
+dev/openallay/guide/history/GuideHistoryCodec.java
+dev/openallay/guide/history/GuideHistoryScope.java
+dev/openallay/guide/history/SqliteGuideHistoryStore.java
+dev/openallay/guide/semantic/SemanticDocumentCodec.java
+dev/openallay/guide/semantic/SemanticMessageParser.java
+dev/openallay/guide/semantic/SemanticReferenceValidator.java
+dev/openallay/guide/ui/GuideEvidencePresentation.java
+dev/openallay/guide/ui/GuideToolDetailPresenter.java
+dev/openallay/guide/ui/GuideToolDisplayStatus.java
+dev/openallay/guide/ui/GuideUiProgress.java
+dev/openallay/guide/ui/GuideUiView.java
