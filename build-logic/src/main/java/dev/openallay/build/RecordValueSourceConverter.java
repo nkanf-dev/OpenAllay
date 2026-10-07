@@ -144,7 +144,18 @@ public final class RecordValueSourceConverter {
                 } else if (method.getParameters().isEmpty()) {
                     accessors.add(method.getName().toString());
                     if (components.stream().anyMatch(c -> c.name().contentEquals(method.getName()))) {
-                        if (!tree.getImplementsClause().isEmpty()) fail("Explicit interface component accessor needs reviewed override policy");
+                        Component component = components.stream()
+                                .filter(c -> c.name().contentEquals(method.getName())).findFirst().orElseThrow();
+                        if (!method.getModifiers().getFlags().contains(javax.lang.model.element.Modifier.PUBLIC)
+                                || method.getReturnType() == null
+                                || !slice(source, unit, positions, method.getReturnType()).equals(component.type())
+                                || !method.getTypeParameters().isEmpty() || !method.getThrows().isEmpty()
+                                || method.getBody() == null) {
+                            fail("Unsupported component accessor signature");
+                        }
+                        if (!tree.getImplementsClause().isEmpty() && !sameUnitMarkerInterfaces(tree, unit)) {
+                            fail("Non-marker or external interface component accessor needs attributed override policy");
+                        }
                         String kept = source.substring(from, to);
                         for (AnnotationTree annotation : method.getModifiers().getAnnotations()) {
                             if (annotation.getAnnotationType().toString().equals("Override")
@@ -208,6 +219,27 @@ public final class RecordValueSourceConverter {
         return result.toString().replace("\n", newline);
     }
 
+    /** Marker declarations are source facts; unknown external/interface-method contracts fail closed. */
+    private static boolean sameUnitMarkerInterfaces(ClassTree owner, CompilationUnitTree unit) {
+        Map<String, ClassTree> declarations = new HashMap<>();
+        new com.sun.source.util.TreeScanner<Void, Void>() {
+            @Override public Void visitClass(ClassTree tree, Void ignored) {
+                String name = tree.getSimpleName().toString();
+                if (tree.getKind() == Tree.Kind.INTERFACE) {
+                    if (declarations.put(name, tree) != null) fail("Ambiguous marker interface declaration: " + name);
+                }
+                return super.visitClass(tree, ignored);
+            }
+        }.scan(unit, null);
+        for (Tree implemented : owner.getImplementsClause()) {
+            if (!(implemented instanceof IdentifierTree)) return false;
+            ClassTree contract = declarations.get(((IdentifierTree) implemented).getName().toString());
+            if (contract == null || !contract.getImplementsClause().isEmpty()) return false;
+            // ClassTree uses implements-clause for interface extends-clause in the public API.
+            if (contract.getMembers().stream().anyMatch(member -> member instanceof MethodTree)) return false;
+        }
+        return true;
+    }
     private static String castType(String type, List<? extends TypeParameterTree> variables) {
         Map<String, String> primitives = Map.of("boolean", "Boolean", "byte", "Byte", "short", "Short", "char", "Character", "int", "Integer", "long", "Long", "float", "Float", "double", "Double");
         if (primitives.containsKey(type)) return primitives.get(type);

@@ -51,6 +51,19 @@ public final class RecordConversionReport {
             check(genericSchema.components().get(0).genericType() instanceof java.lang.reflect.TypeVariable, "generic TypeVariable");
             check(genericSchema.components().get(1).genericType() instanceof java.lang.reflect.ParameterizedType, "generic ListType");
         }
+        List<String> mutable = new java.util.ArrayList<>(Arrays.asList("first", "second"));
+        RecordFixtureValues.MarkerCopy markerCopy = new RecordFixtureValues.MarkerCopy(mutable);
+        mutable.add("later");
+        check(markerCopy instanceof RecordFixtureValues.Marker, "marker interface retained");
+        check(markerCopy.input().equals(Arrays.asList("first", "second")), "marker constructor copy");
+        markerCopy.input().add("guest mutation");
+        check(markerCopy.input().equals(Arrays.asList("first", "second")), "marker accessor defensive copy");
+        check(markerCopy.equals(new RecordFixtureValues.MarkerCopy(Arrays.asList("first", "second"))), "marker field equality");
+        check(markerCopy.hashCode() == Arrays.asList("first", "second").hashCode(), "marker field hash zero seed");
+        if (converted) {
+            ValueSchema<RecordFixtureValues.MarkerCopy> markerSchema = ValueSchemas.of(RecordFixtureValues.MarkerCopy.class);
+            check(markerSchema.components().get(0).read(markerCopy) != markerSchema.components().get(0).read(markerCopy), "marker schema uses copy accessor");
+        }
         // Oracle output has no VM identity hashes, so exact bytes compare across17/8.
         System.out.println(empty.toString());
         System.out.println(numbers.toString());
@@ -58,6 +71,7 @@ public final class RecordConversionReport {
         System.out.println(override.toString());
         System.out.println(generic.toString());
         System.out.println(custom.toString());
+        System.out.println(markerCopy.toString());
         System.out.println("PASS record conversion vectors");
     }
     private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }

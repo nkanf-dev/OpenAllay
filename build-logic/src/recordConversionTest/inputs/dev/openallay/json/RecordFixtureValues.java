@@ -7,6 +7,11 @@ import java.util.List;
 /** Original modern records are fixture inputs, not a production engine copy. */
 public final class RecordFixtureValues {
     private RecordFixtureValues() {}
+    public interface Marker {}
+    public record MarkerCopy(List<String> input) implements Marker {
+        public MarkerCopy { input = dev.openallay.util.Java8Collections.listCopyOf(input); }
+        @Override public List<String> input() { return new java.util.ArrayList<>(input); }
+    }
     public record Empty() {}
     public record Numbers(boolean flag, byte small, short medium, char letter, int count,
             long large, float fraction, double precise, String nullable) {}

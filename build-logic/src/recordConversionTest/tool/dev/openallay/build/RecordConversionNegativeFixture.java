@@ -12,6 +12,8 @@ public final class RecordConversionNegativeFixture {
         rejects("record Bad(int value) { public static class ValueSchemaProvider {} }", "Bad");
         rejects("record Bad(int value) { public Bad(int value) { this.value = value; } }", "Bad");
         rejects("record Present(int value) {}", "Absent");
+        rejects("interface Contract { int value(); } record Bad(int value) implements Contract { @Override public int value() { return value; } }", "Bad");
+        rejects("record Bad(int value) implements ExternalMarker { @Override public int value() { return value; } }", "Bad");
         System.out.println("PASS fail-closed unsupported record forms");
     }
     private static void rejects(String source, String selected) throws Exception {
