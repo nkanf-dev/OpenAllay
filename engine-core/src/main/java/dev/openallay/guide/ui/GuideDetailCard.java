@@ -51,7 +51,7 @@ public static final class ItemGrid implements GuideDetailCard {
     public ItemGrid(String titleKey, List<GuideItemView> items) {
 
             titleKey = requireText(titleKey, "titleKey");
-            items = List.copyOf(items);
+            items = dev.openallay.util.Java8Collections.listCopyOf(items);
             if (items.isEmpty()) {
                 throw new IllegalArgumentException("item grid must not be empty");
             }
@@ -94,7 +94,7 @@ public static final class Requirements implements GuideDetailCard {
             if (requestedCrafts <= 0 || maximumCrafts < 0) {
                 throw new IllegalArgumentException("craftability counts are invalid");
             }
-            requirements = List.copyOf(requirements);
+            requirements = dev.openallay.util.Java8Collections.listCopyOf(requirements);
 
         this.craftable = craftable;
         this.conclusive = conclusive;
@@ -145,8 +145,8 @@ public static final class Requirement {
             if (required <= 0 || allocated < 0 || missing < 0 || allocated + missing != required) {
                 throw new IllegalArgumentException("requirement counts are inconsistent");
             }
-            allocatedItems = List.copyOf(allocatedItems);
-            alternatives = List.copyOf(alternatives);
+            allocatedItems = dev.openallay.util.Java8Collections.listCopyOf(allocatedItems);
+            alternatives = dev.openallay.util.Java8Collections.listCopyOf(alternatives);
 
         this.key = key;
         this.required = required;
@@ -193,8 +193,8 @@ public static final class Text implements GuideDetailCard {
     public Text(String titleKey, List<String> lines) {
 
             titleKey = requireText(titleKey, "titleKey");
-            lines = List.copyOf(lines);
-            if (lines.isEmpty() || lines.stream().anyMatch(line -> line == null || line.isBlank())) {
+            lines = dev.openallay.util.Java8Collections.listCopyOf(lines);
+            if (lines.isEmpty() || lines.stream().anyMatch(line -> line == null || dev.openallay.util.Java8Strings.isBlank(line))) {
                 throw new IllegalArgumentException("text card lines must not be blank");
             }
 
@@ -235,11 +235,11 @@ public static final class Table implements GuideDetailCard {
     public Table(String titleKey, List<String> columns, List<List<String>> rows, boolean complete, int omittedRows, int omittedFields) {
 
             titleKey = requireText(titleKey, "titleKey");
-            columns = List.copyOf(columns);
-            rows = rows.stream().map(List::copyOf).toList();
+            columns = dev.openallay.util.Java8Collections.listCopyOf(columns);
+            rows = dev.openallay.util.Java8Collections.toList(rows.stream().map(dev.openallay.util.Java8Collections::listCopyOf));
             int columnCount = columns.size();
             if (columns.isEmpty()
-                    || columns.stream().anyMatch(value -> value == null || value.isBlank())
+                    || columns.stream().anyMatch(value -> value == null || dev.openallay.util.Java8Strings.isBlank(value))
                     || rows.stream().anyMatch(row -> row.size() != columnCount)
                     || omittedRows < 0
                     || omittedFields < 0) {
@@ -293,7 +293,7 @@ public static final class KeyValue implements GuideDetailCard {
     public KeyValue(String titleKey, List<DataCell> entries, boolean complete, int omittedFields) {
 
             titleKey = requireText(titleKey, "titleKey");
-            entries = List.copyOf(entries);
+            entries = dev.openallay.util.Java8Collections.listCopyOf(entries);
             if (entries.isEmpty() || omittedFields < 0) {
                 throw new IllegalArgumentException("key/value card is invalid");
             }
@@ -346,7 +346,7 @@ public static final class DataPreview implements GuideDetailCard {
             if (cardinality < 0 || omittedRows < 0 || omittedFields < 0) {
                 throw new IllegalArgumentException("preview counts must not be negative");
             }
-            rows = List.copyOf(rows);
+            rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
 
         this.titleKey = titleKey;
         this.resultType = resultType;
@@ -394,7 +394,7 @@ public static final class DataRow {
     private final List<DataCell> cells;
     public DataRow(List<DataCell> cells) {
 
-            cells = List.copyOf(cells);
+            cells = dev.openallay.util.Java8Collections.listCopyOf(cells);
             if (cells.isEmpty()) {
                 throw new IllegalArgumentException("preview row must contain cells");
             }
@@ -491,7 +491,7 @@ public static final class Error implements GuideDetailCard {
 }
 
     private static String requireText(String value, String label) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " must not be blank");
         }
         return value;

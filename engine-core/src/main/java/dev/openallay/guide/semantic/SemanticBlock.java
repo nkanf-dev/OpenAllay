@@ -16,7 +16,7 @@ public static final class Paragraph implements SemanticBlock {
     public Paragraph(String nodeId, List<SemanticInline> content) {
 
             SemanticIds.require(nodeId);
-            content = List.copyOf(content);
+            content = dev.openallay.util.Java8Collections.listCopyOf(content);
 
         this.nodeId = nodeId;
         this.content = content;
@@ -55,7 +55,7 @@ public static final class Heading implements SemanticBlock {
             if (level < 1 || level > 6) {
                 throw new IllegalArgumentException("heading level must be between 1 and 6");
             }
-            content = List.copyOf(content);
+            content = dev.openallay.util.Java8Collections.listCopyOf(content);
 
         this.nodeId = nodeId;
         this.level = level;
@@ -98,7 +98,7 @@ public static final class ListBlock implements SemanticBlock {
             if (start < 1) {
                 throw new IllegalArgumentException("list start must be positive");
             }
-            items = items.stream().map(List::copyOf).toList();
+            items = dev.openallay.util.Java8Collections.toList(items.stream().map(dev.openallay.util.Java8Collections::listCopyOf));
 
         this.nodeId = nodeId;
         this.ordered = ordered;
@@ -139,7 +139,7 @@ public static final class Quote implements SemanticBlock {
     public Quote(String nodeId, List<SemanticBlock> content) {
 
             SemanticIds.require(nodeId);
-            content = List.copyOf(content);
+            content = dev.openallay.util.Java8Collections.listCopyOf(content);
 
         this.nodeId = nodeId;
         this.content = content;
@@ -216,7 +216,7 @@ public static final class Table implements SemanticBlock {
 
             SemanticIds.require(nodeId);
             java.util.Objects.requireNonNull(header, "header");
-            rows = List.copyOf(rows);
+            rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
 
         this.nodeId = nodeId;
         this.header = header;
@@ -252,7 +252,7 @@ public static final class TableRow {
     private final List<TableCell> cells;
     public TableRow(List<TableCell> cells) {
 
-            cells = List.copyOf(cells);
+            cells = dev.openallay.util.Java8Collections.listCopyOf(cells);
 
         this.cells = cells;
     }
@@ -284,7 +284,7 @@ public static final class TableCell {
     public TableCell(Alignment alignment, List<SemanticInline> content) {
 
             java.util.Objects.requireNonNull(alignment, "alignment");
-            content = List.copyOf(content);
+            content = dev.openallay.util.Java8Collections.listCopyOf(content);
 
         this.alignment = alignment;
         this.content = content;
