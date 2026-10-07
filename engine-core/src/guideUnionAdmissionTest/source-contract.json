@@ -538,7 +538,7 @@
   },
   "fixturePins": {
     "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionKnownFixture.java": "5972fa54b60e6310cef7575c5ee7e5bc8fd1acc934ebfcf9eee04b08b60f4549",
-    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionAdmissionFixture.java": "2fba098b8887fa07f7b3bedf7a71c95b15712821f70caddbf5d90323363745c3",
+    "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/GuideUnionAdmissionFixture.java": "e19d46290f2d285e522a92fa1f3e53a9b38c39ace97199e67eb81dd036bf8e7e",
     "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionKnownFixture.java": "22cdb37d8e357ea56a0c91736fc4cd55da98ae83bde0483f0daec6a6c9fb7f5a",
     "engine-core/src/guideUnionAdmissionTest/java/dev/openallay/guide/semantic/SemanticUnionJava8Fixture.java": "3a02311b5e902fb8ee16f935969941b3958a43dfdc97726fa0673383b108b631"
   },

@@ -57,7 +57,7 @@ public final class GuideUnionAdmissionFixture {
         rejected(()->new SemanticBlock.TableCell(SemanticBlock.Alignment.LEFT,Collections.<SemanticInline>singletonList(inline)));
         rejected(()->new GuideToolDetailView("title",GuideToolStatus.SUCCEEDED,GuideToolInvocationView.none(),GuideToolIntent.none(),Collections.<GuideDetailCard>singletonList(new ForeignCard()),Collections.<GuideToolMessage>emptyList(),Optional.<GuideToolDetailView.Debug>empty()));
         rejected(()->new GuideToolSummaryPresenter.Summary("id","title","key","description",GuideToolDisplayStatus.SUCCEEDED,Collections.<GuideToolSummaryPresenter.Capsule>singletonList(new ForeignCapsule())));
-        ForeignRow row=new ForeignRow();GuideUiModelChoice choice=new GuideUiModelChoice(GuideModelSelection.server(),"Server",GuideUiModelChoice.ModelOrigin.SERVER,false,true,true,false,dev.openallay.model.image.ImageInputCapability.UNKNOWN,"");
+        ForeignRow row=new ForeignRow();GuideUiModelChoice choice=new GuideUiModelChoice(GuideModelSelection.server(),"Server",ModelOrigin.SERVER,false,true,true,false,dev.openallay.model.image.ImageInputCapability.UNKNOWN,"");
         rejected(()->new GuideUiView("session",GuideModelMode.SERVER,false,true,false,false,false,null,Collections.<GuideUiSession>emptyList(),Collections.<GuideUiRow>singletonList(row),Collections.singletonList(choice),""));
         rejected(()->new GuideHudView(GuideUiConfig.defaults().hud(),"Assistant","session","","",null,0,Collections.<GuideUiRow>singletonList(row),GuideUiConfig.defaults().fullscreen(),true));
         GuideTimelineEntry.User known=new GuideTimelineEntry.User(0,id,"question");check(GuideTimelineEntry.requireKnown(known)==known,"known identity");
