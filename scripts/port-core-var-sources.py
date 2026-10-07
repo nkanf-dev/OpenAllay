@@ -97,8 +97,8 @@ def main():
     selected_file = project / "scripts/core-var-port/selected-paths.txt"
     selected = selected_file.read_text().splitlines()
     request = json.loads((project / "scripts/core-var-port/request.json").read_text())
-    if selected != request["selectedOwners"] or len(selected) != 15 or len(set(selected)) != 15:
-        raise ValueError("Selection differs from approved request")
+    if selected != request["selectedOwners"] or not selected or len(set(selected)) != len(selected):
+        raise ValueError("Selection differs from approved exact owner request")
     before = {str(p.relative_to(source_root)): p.read_bytes() for p in source_paths}
     if {name: digest(before[name]) for name in selected} != request["selectedPreimageSha256"]:
         raise ValueError("Approved selected preimages changed; refresh request before attribution")
@@ -122,6 +122,8 @@ def main():
     report = json.loads(report_path.read_text()); sites = read_sites(sites_path)
     if report["sources"] != len(before) or set(report["selectedParsedCounts"]) != set(selected):
         raise ValueError("Compiler parsed owner closure differs")
+    if "compilerInventorySelectedCounts" in request and report["selectedParsedCounts"] != request["compilerInventorySelectedCounts"]:
+        raise ValueError("Current compiler selected counts differ from accepted actual inventory")
     if report["rejectedForms"] or report["convertedSites"] != sum(report["selectedParsedCounts"].values()):
         raise ValueError("Incomplete fail-closed compiler conversion")
     for name in selected:
