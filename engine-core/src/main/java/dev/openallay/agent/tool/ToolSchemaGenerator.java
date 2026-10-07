@@ -54,6 +54,31 @@ public final class ToolSchemaGenerator {
         throw new IllegalArgumentException("Unsupported tool schema type: " + type.getTypeName());
     }
 
+    private record Component(String name, Type genericType, java.util.function.Function<Class<? extends java.lang.annotation.Annotation>, java.lang.annotation.Annotation> annotations) {
+        @SuppressWarnings("unchecked") <A extends java.lang.annotation.Annotation> A annotation(Class<A> type) {
+            return (A) annotations.apply(type);
+        }
+    }
+
+    private static java.util.List<Component> components(Class<?> type) {
+        java.util.List<Component> components = new java.util.ArrayList<>();
+        if (dev.openallay.value.ValueSchemas.supports(type)) {
+            for (dev.openallay.value.ValueSchema.Component<?> component : dev.openallay.value.ValueSchemas.of(type).components()) {
+                components.add(new Component(component.name(), component.genericType(), component::annotation));
+            }
+        } else {
+            for (RecordComponent component : type.getRecordComponents()) {
+                components.add(new Component(component.getName(), component.getGenericType(), annotation -> {
+                    java.lang.annotation.Annotation found = component.getAnnotation(annotation);
+                    if (found != null) return found;
+                    try { return type.getDeclaredField(component.getName()).getAnnotation(annotation); }
+                    catch (NoSuchFieldException failure) { throw new IllegalStateException(failure); }
+                }));
+            }
+        }
+        return components;
+    }
+
     private JsonObject classSchema(Class<?> type, Set<Type> visiting, boolean inputContract) {
         if (type == String.class || type == Character.class || type == char.class) {
             return typed("string");
@@ -111,7 +136,7 @@ public final class ToolSchemaGenerator {
         if (com.google.gson.JsonElement.class.isAssignableFrom(type) || type == Object.class) {
             return new JsonObject();
         }
-        if (type.isRecord()) {
+        if (type.isRecord() || dev.openallay.value.ValueSchemas.supports(type)) {
             if (!visiting.add(type)) {
                 throw new IllegalArgumentException("Recursive tool record is unsupported: " + type.getName());
             }
@@ -122,23 +147,23 @@ public final class ToolSchemaGenerator {
             }
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
-            for (RecordComponent component : type.getRecordComponents()) {
+            for (Component component : components(type)) {
                 JsonObject componentSchema = schema(
-                        component.getGenericType(), visiting, inputContract);
-                ToolDescription description = component.getAnnotation(ToolDescription.class);
+                        component.genericType(), visiting, inputContract);
+                ToolDescription description = component.annotation(ToolDescription.class);
                 if (description != null) {
                     componentSchema.addProperty("description", description.value());
                 }
-                ToolPattern pattern = component.getAnnotation(ToolPattern.class);
+                ToolPattern pattern = component.annotation(ToolPattern.class);
                 if (pattern != null) {
                     componentSchema.addProperty("pattern", pattern.value());
                 }
-                properties.add(component.getName(), componentSchema);
+                properties.add(component.name(), componentSchema);
                 if (inputContract
-                        && component.getAnnotation(ToolOptional.class) == null
-                        && !(component.getGenericType() instanceof ParameterizedType parameterized
+                        && component.annotation(ToolOptional.class) == null
+                        && !(component.genericType() instanceof ParameterizedType parameterized
                                 && parameterized.getRawType() == Optional.class)) {
-                    required.add(component.getName());
+                    required.add(component.name());
                 }
             }
             result.add("properties", properties);
@@ -147,8 +172,8 @@ public final class ToolSchemaGenerator {
             ToolAtLeastOne atLeastOne = inputContract
                     ? type.getAnnotation(ToolAtLeastOne.class) : null;
             if (atLeastOne != null) {
-                Set<String> componentNames = Arrays.stream(type.getRecordComponents())
-                        .map(RecordComponent::getName)
+                Set<String> componentNames = components(type).stream()
+                        .map(Component::name)
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
                 JsonArray anyOf = new JsonArray();
                 for (String name : atLeastOne.value()) {

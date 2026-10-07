@@ -161,7 +161,9 @@ public final class EngineJson {
             };
             RecordJsonAdapter.Fields fields = RecordJsonAdapter.fields(
                     builder(boundary).registerTypeAdapterFactory(metadata), type);
-            return RecordJsonAdapter.create(bound, type, fields).nullSafe();
+            return dev.openallay.value.ValueSchemas.supports(type.getRawType())
+                    ? ConstructorValueJsonAdapter.create(bound, type, fields).nullSafe()
+                    : RecordJsonAdapter.create(bound, type, fields).nullSafe();
         }
 
         private <T> TypeAdapter<T> hierarchyAdapter(Gson bound, TypeToken<T> type, int start,
@@ -251,7 +253,7 @@ public final class EngineJson {
         @Override public <T> TypeAdapter<T> create(Gson gson, com.google.gson.reflect.TypeToken<T> type) {
             Class<?> raw = type.getRawType();
             if (raw == Binding.class) return (TypeAdapter<T>) new BindingAdapter(owner);
-            if (raw != Instant.class && !raw.isRecord()) return null;
+            if (raw != Instant.class && !raw.isRecord() && !dev.openallay.value.ValueSchemas.supports(raw)) return null;
             if (!owner.nativeReached(gson, type)) return gson.getDelegateAdapter(this, type);
             return owner.hierarchyAdapter(gson, type, owner.hierarchy.size() - 1,
                     () -> owner.defaultAdapter(gson, type));

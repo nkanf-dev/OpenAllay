@@ -180,3 +180,9 @@ tasks.register('printSqliteProofSupportClasspath') {
 if (providers.gradleProperty('jsonVerificationGsonVersion').isPresent()) {
     apply from: rootProject.file('gradle/json-verification.gradle')
 }
+
+// Reuse exactly the Java8 explicit-value vectors with the actual EngineJson test owner.
+def explicitValueTestVectors = objects.sourceDirectorySet('explicitValueTestVectors', 'Explicit value vectors')
+explicitValueTestVectors.srcDir('src/java8Test/java')
+explicitValueTestVectors.include('dev/openallay/json/ValueSchemaJava8Fixture.java')
+sourceSets.test.java.source(explicitValueTestVectors)
