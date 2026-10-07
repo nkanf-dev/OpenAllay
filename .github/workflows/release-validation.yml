@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values]
         default: skills
         required: true
 permissions:
@@ -339,3 +339,36 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: build-logic/src/recordConversionTest/gradle/build/
+
+  host-values:
+    if: inputs.scope == 'host-values'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: true}
+      - name: Compile and execute the typed metadata subset on genuine Java 8
+        run: |
+          mkdir -p build/java8-host-metadata
+          "$JAVA_HOME_8_X64/bin/javac" -source 8 -target 8 -d build/java8-host-metadata engine-core/src/main/java/dev/openallay/value/ValueSchema.java engine-core/src/main/java/dev/openallay/value/ValueSchemas.java engine-core/src/main/java/dev/openallay/value/ValueType.java engine-core/src/main/java/dev/openallay/agent/tool/ToolDescription.java engine-core/src/main/java/dev/openallay/agent/tool/ToolOptional.java engine-core/src/test/java/dev/openallay/script/fixture/ExplicitHostValue.java
+          "$JAVA_HOME_8_X64/bin/java" -cp build/java8-host-metadata dev.openallay.script.fixture.ExplicitHostValue
+      - name: Verify actual closed Rhino host and schema consumers
+        run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.host.RhinoHostAdapterTest --tests dev.openallay.script.host.ExplicitHostValueTest --tests dev.openallay.script.schema.HostSchemaCatalogTest --tests dev.openallay.script.schema.ExplicitHostSchemaTest --tests dev.openallay.architecture.DirectRhinoHostArchitectureTest
+      - name: Retain original typed metadata and script results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-host-values-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/java8-host-metadata/
+            engine-core/build/test-results/
