@@ -10,7 +10,7 @@ import dev.openallay.net.HttpTransportPolicy;
 import dev.openallay.net.JdkHttpTransport;
 import dev.openallay.tool.ToolResult;
 import java.io.InputStream;
-import java.net.http.HttpTimeoutException;
+import dev.openallay.net.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashSet;

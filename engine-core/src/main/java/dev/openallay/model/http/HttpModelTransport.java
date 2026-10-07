@@ -12,7 +12,7 @@ import dev.openallay.net.HttpTransportPolicy;
 import dev.openallay.net.JdkHttpTransport;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.http.HttpTimeoutException;
+import dev.openallay.net.HttpTimeoutException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;

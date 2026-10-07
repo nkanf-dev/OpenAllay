@@ -9,7 +9,7 @@ import com.sun.net.httpserver.HttpServer;
 import dev.openallay.model.CancellationSignal;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.http.HttpTimeoutException;
+import dev.openallay.net.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CancellationException;
@@ -20,7 +20,50 @@ import org.junit.jupiter.api.Test;
 
 final class JdkHttpTransportTest {
     @Test
-    void usesJdkAsyncExchangeAndNamedDaemonDecoderWithoutFollowingRedirects()
+    void postJsonAndDuplicateHeadersReachErrorBodyDecoder() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/post", exchange -> {
+            assertEquals("POST", exchange.getRequestMethod());
+            assertEquals(2, exchange.getRequestHeaders().get("X-Duplicate").size());
+            assertEquals("{\"input\":true}", new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            exchange.getResponseHeaders().add("X-Reply", "one");
+            exchange.getResponseHeaders().add("X-Reply", "two");
+            byte[] bytes = "rejected".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(422, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        try {
+            var result = new JdkHttpTransport(new HttpTransportPolicy(Duration.ofSeconds(2), "test-http-post"))
+                    .execute(HttpExchangeRequest.newBuilder(URI.create("http://127.0.0.1:"
+                                    + server.getAddress().getPort() + "/post"))
+                                    .header("X-Duplicate", "one").header("X-Duplicate", "two")
+                                    .postJson("{\"input\":true}").build(), new CancellationSignal(),
+                            (status, headers, body) -> {
+                                assertEquals(422, status);
+                                assertEquals(2, headers.values().get("x-reply").size());
+                                assertEquals("one", headers.firstValue("X-Reply").orElseThrow());
+                                return new String(body.readAllBytes(), StandardCharsets.UTF_8);
+                            });
+            assertEquals("rejected", result.get(3, TimeUnit.SECONDS));
+            JdkHttpTransport.cleanupOf(result).get(3, TimeUnit.SECONDS);
+        } finally { server.stop(0); }
+    }
+
+    @Test
+    void alreadyCancelledRequestReturnsImmediateFutureWithoutDecoder() {
+        CancellationSignal cancellation = new CancellationSignal();
+        cancellation.cancel();
+        var result = new JdkHttpTransport(new HttpTransportPolicy(Duration.ofSeconds(2), "test-http-pre-cancel"))
+                .execute(HttpExchangeRequest.newBuilder(URI.create("http://127.0.0.1:1/unreachable")).build(),
+                        cancellation, (status, headers, body) -> { throw new AssertionError("decoder ran"); });
+        assertTrue(result.isDone());
+        assertThrows(CancellationException.class, result::join);
+    }
+
+    @Test
+    void usesJdkExchangeAndNamedDaemonDecoderWithoutFollowingRedirects()
             throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/redirect", exchange -> {

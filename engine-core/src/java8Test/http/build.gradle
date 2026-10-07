@@ -1,0 +1,46 @@
+plugins {
+    id 'java-base'
+}
+
+// Compile the canonical owners. Do not configure the engine dependency graph or copy sources.
+def repository = file('../../../..')
+def production = new File(repository, 'engine-core/src/main/java')
+def classes = layout.buildDirectory.dir('classes')
+def compiler = javaToolchains.compilerFor {
+    languageVersion = JavaLanguageVersion.of(21)
+}
+def java8Runtime = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(8)
+}
+def owners = [
+    'dev/openallay/net/JdkHttpTransport.java',
+    'dev/openallay/net/HttpExchangeRequest.java',
+    'dev/openallay/net/HttpResponseHeaders.java',
+    'dev/openallay/net/HttpTransportPolicy.java',
+    'dev/openallay/net/HttpTransport.java',
+    'dev/openallay/net/HttpCancellation.java',
+    'dev/openallay/net/HttpTimeoutException.java',
+    'dev/openallay/concurrent/NamedThreads.java',
+    'dev/openallay/util/Java8Collections.java',
+    'dev/openallay/util/Java8Strings.java',
+    'dev/openallay/util/Java8Futures.java'
+]
+def compileHttp = tasks.register('compileHttp', JavaCompile) {
+    javaCompiler = compiler
+    source(owners.collect { new File(production, it) })
+    source(fileTree('src/main/java') { include '**/*.java' })
+    classpath = files()
+    destinationDirectory = classes
+    options.release = 8
+    options.encoding = 'UTF-8'
+    options.compilerArgs.addAll(['-Xlint:all,-options', '-Werror'])
+}
+tasks.register('java8CompatibilityTest', JavaExec) {
+    group = 'verification'
+    description = 'Real Java 8 HTTP sockets, deadlines, cancellation, closure and owner termination.'
+    dependsOn(compileHttp)
+    javaLauncher = java8Runtime
+    classpath = files(classes)
+    mainClass = 'dev.openallay.net.HttpJava8Fixture'
+    maxHeapSize = '256m'
+}
