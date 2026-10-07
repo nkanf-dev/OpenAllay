@@ -65,6 +65,107 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 final class ClientSettingsServiceTest {
+    private static final class ForeignConnectionResult implements ModelConnectionResult {}
+
+    @Test
+    void foreignProbeResultCompletesExceptionallyAndPublishesOnlyKnownCleanup() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ClientSettingsService service = service(models, Set.of("ALPHA_KEY"));
+        ModelConnectionResult previous = service.testConnection(profile("alpha")).join();
+        List<ClientSettingsSnapshot> published = new ArrayList<>();
+        service.listen(published::add);
+        models.probe = new CompletableFuture<>();
+        CompletableFuture<ModelConnectionResult> outward = service.testConnection(profile("alpha"));
+        java.util.concurrent.atomic.AtomicReference<Throwable> observed = new java.util.concurrent.atomic.AtomicReference<>();
+        outward.whenComplete((value, failure) -> observed.set(failure));
+        models.probe.complete(new ForeignConnectionResult());
+        java.util.concurrent.CompletionException joined = org.junit.jupiter.api.Assertions.assertThrows(
+                java.util.concurrent.CompletionException.class, outward::join);
+        IncompatibleClassChangeError foreign = assertInstanceOf(IncompatibleClassChangeError.class, joined.getCause());
+        org.junit.jupiter.api.Assertions.assertSame(foreign, observed.get());
+        assertEquals("Unknown model connection result subtype", foreign.getMessage());
+        assertTrue(outward.isCompletedExceptionally());
+        assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+        org.junit.jupiter.api.Assertions.assertSame(previous, service.snapshot().models().connectionResult());
+        for (ClientSettingsSnapshot snapshot : published) {
+            org.junit.jupiter.api.Assertions.assertSame(previous, snapshot.models().connectionResult());
+        }
+        assertFalse(service.cancelConnectionTest());
+        models.probe = CompletableFuture.completedFuture(new ModelConnectionResult.Failure("synthetic", "Synthetic failure"));
+        assertEquals("synthetic", assertInstanceOf(ModelConnectionResult.Failure.class,
+                service.testConnection(profile("alpha")).join()).code());
+    }
+
+    @Test
+    void cancelledForeignProbeCompletionCannotPublishOrReplaceCancellation() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        models.probe = new CompletableFuture<>();
+        ClientSettingsService service = service(models, Set.of("ALPHA_KEY"));
+        CompletableFuture<ModelConnectionResult> outward = service.testConnection(profile("alpha"));
+        assertTrue(service.cancelConnectionTest());
+        ModelConnectionResult cancelled = outward.join();
+        long generation = service.snapshot().generation();
+        models.probe.complete(new ForeignConnectionResult());
+        org.junit.jupiter.api.Assertions.assertSame(cancelled, outward.join());
+        org.junit.jupiter.api.Assertions.assertSame(cancelled, service.snapshot().models().connectionResult());
+        assertEquals(generation, service.snapshot().generation());
+        assertEquals(SettingsOperation.Kind.IDLE, service.snapshot().operation().kind());
+    }
+
+    @Test
+    void closedForeignProbeCompletionCannotPublishOrLeaveFuturePending() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        models.probe = new CompletableFuture<>();
+        ClientSettingsService service = service(models, Set.of("ALPHA_KEY"));
+        CompletableFuture<ModelConnectionResult> outward = service.testConnection(profile("alpha"));
+        service.closeAsync().join();
+        ModelConnectionResult cancelled = outward.join();
+        long generation = service.snapshot().generation();
+        models.probe.complete(new ForeignConnectionResult());
+        org.junit.jupiter.api.Assertions.assertSame(cancelled, outward.join());
+        assertEquals(generation, service.snapshot().generation());
+        assertTrue(models.closed.get());
+    }
+
+    @Test
+    void connectionSnapshotConstructorAndSchemaRejectForeignButKeepKnownAndNotTested() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ModelProfileSettingsView baseline = service(models, Set.of("ALPHA_KEY")).snapshot().models();
+        assertEquals(null, baseline.connectionResult());
+        ForeignConnectionResult foreign = new ForeignConnectionResult();
+        org.junit.jupiter.api.Assertions.assertThrows(IncompatibleClassChangeError.class, () ->
+                new ModelProfileSettingsView(baseline.config(), baseline.profiles(), baseline.metadataFailure(), foreign));
+        org.junit.jupiter.api.Assertions.assertThrows(IncompatibleClassChangeError.class, () ->
+                dev.openallay.value.ValueSchemas.of(ModelProfileSettingsView.class).construct(new Object[] {
+                        baseline.config(), baseline.profiles(), baseline.metadataFailure(), foreign}));
+        ModelConnectionResult known = new ModelConnectionResult.Failure("synthetic", "Synthetic failure");
+        ModelProfileSettingsView accepted = new ModelProfileSettingsView(
+                baseline.config(), baseline.profiles(), baseline.metadataFailure(), known);
+        org.junit.jupiter.api.Assertions.assertSame(known, accepted.connectionResult());
+        assertEquals(accepted, dev.openallay.value.ValueSchemas.of(ModelProfileSettingsView.class).construct(new Object[] {
+                baseline.config(), baseline.profiles(), baseline.metadataFailure(), known}));
+    }
+
+    @Test
+    void actualEngineJsonAggregateConstructorRejectsDecodedForeignConnectionResult() {
+        FakeModels models = new FakeModels(state(config("alpha")));
+        ModelProfileSettingsView baseline = service(models, Set.of("ALPHA_KEY")).snapshot().models();
+        ForeignConnectionResult foreign = new ForeignConnectionResult();
+        com.google.gson.Gson gson = dev.openallay.json.EngineJson.derive(dev.openallay.json.EngineJson.create(), builder ->
+                builder.registerTypeAdapter(ModelConnectionResult.class, new com.google.gson.TypeAdapter<ModelConnectionResult>() {
+                    public void write(com.google.gson.stream.JsonWriter out, ModelConnectionResult value) throws java.io.IOException {
+                        out.beginObject().name("synthetic").value(true).endObject();
+                    }
+                    public ModelConnectionResult read(com.google.gson.stream.JsonReader in) throws java.io.IOException {
+                        in.skipValue(); return foreign;
+                    }
+                }));
+        com.google.gson.JsonObject document = dev.openallay.json.EngineJson.create().toJsonTree(baseline).getAsJsonObject();
+        document.add("connectionResult", new com.google.gson.JsonObject());
+        org.junit.jupiter.api.Assertions.assertThrows(IncompatibleClassChangeError.class,
+                () -> gson.fromJson(document, ModelProfileSettingsView.class));
+    }
+
     @Test
     void serverModelCapabilityIsConnectionScopedAndNeverEntersLocalProfiles() {
         FakeModels models = new FakeModels(state(config("alpha")));

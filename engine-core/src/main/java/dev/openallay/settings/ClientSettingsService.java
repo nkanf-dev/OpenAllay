@@ -1812,6 +1812,16 @@ ToolResult.Failure<ModelCatalog> failure =
             if (!isCurrentLocked(operationId)) {
                 return;
             }
+            try {
+                ModelConnectionResult.requireKnown(result);
+            } catch (IncompatibleClassChangeError foreign) {
+                activeProbe = null;
+                operation = SettingsOperation.idle();
+                // Publish only cleanup with the previous known result and notice.
+                publishLocked();
+                outward.completeExceptionally(foreign);
+                return;
+            }
             activeProbe = null;
             operation = SettingsOperation.idle();
             connectionResult = result;

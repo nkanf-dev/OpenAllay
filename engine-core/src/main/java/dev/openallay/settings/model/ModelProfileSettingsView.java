@@ -33,6 +33,7 @@ public final class ModelProfileSettingsView {
             }
         }
 
+        ModelConnectionResult.requireKnown(connectionResult);
         this.config = config;
         this.profiles = profiles;
         this.metadataFailure = metadataFailure;

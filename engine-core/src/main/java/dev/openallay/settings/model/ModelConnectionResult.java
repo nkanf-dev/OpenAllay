@@ -5,8 +5,16 @@ import java.time.Instant;
 import java.util.Objects;
 
 /** Credential-free result retained by the settings UI after a connection probe. */
-public sealed interface ModelConnectionResult
-        permits ModelConnectionResult.Success, ModelConnectionResult.Failure {
+public interface ModelConnectionResult {
+    /** Closed Java8 result ingress; null retains the not-tested snapshot state. */
+    static void requireKnown(ModelConnectionResult result) {
+        if (result == null) return;
+        Class<?> type = result.getClass();
+        if (type != Success.class && type != Failure.class) {
+            throw new IncompatibleClassChangeError("Unknown model connection result subtype");
+        }
+    }
+
     @dev.openallay.value.ValueType(Success.ValueSchemaProvider.class)
 public static final class Success implements ModelConnectionResult {
     private final String profileId;
@@ -16,9 +24,9 @@ public static final class Success implements ModelConnectionResult {
     private final long latencyMillis;
     public Success(String profileId, ModelProtocol protocol, String authority, Instant completedAt, long latencyMillis) {
 
-            requireText(profileId, "profileId");
+            ModelConnectionResultValidation.requireText(profileId, "profileId");
             Objects.requireNonNull(protocol, "protocol");
-            requireText(authority, "authority");
+            ModelConnectionResultValidation.requireText(authority, "authority");
             Objects.requireNonNull(completedAt, "completedAt");
             if (latencyMillis < 0) {
                 throw new IllegalArgumentException("latencyMillis must not be negative");
@@ -65,8 +73,8 @@ public static final class Failure implements ModelConnectionResult {
     private final String message;
     public Failure(String code, String message) {
 
-            requireText(code, "code");
-            requireText(message, "message");
+            ModelConnectionResultValidation.requireText(code, "code");
+            ModelConnectionResultValidation.requireText(message, "message");
 
         this.code = code;
         this.message = message;
@@ -94,7 +102,13 @@ public static final class Failure implements ModelConnectionResult {
     }
 }
 
-    private static void requireText(String value, String name) {
+
+}
+
+/** Package-private constructor validation; no new public interface method. */
+final class ModelConnectionResultValidation {
+    private ModelConnectionResultValidation() {}
+    static void requireText(String value, String name) {
         if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
