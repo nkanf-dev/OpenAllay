@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8]
         default: skills
         required: true
 permissions:
@@ -1367,11 +1367,12 @@ jobs:
       with:
         cache-provider: basic
         cache-read-only: true
-    - name: Verify RegExp error and AST switch consumers
+    - name: Verify repaired RegExp fixtures and function global array switches
       run: './gradlew --max-workers=2 :runtime-rhino:compileJava :runtime-rhino:test
-        --tests dev.latvian.mods.rhino.RegexpErrorAstSwitchTest
+        --tests dev.latvian.mods.rhino.RegexpErrorAstSwitchTest --tests dev.latvian.mods.rhino.FunctionGlobalArraySwitchTest
 
-        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest'
+        ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.RhinoJavascriptRuntimeTest
+        --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -1658,3 +1659,54 @@ jobs:
           ${{ runner.temp }}/retained-skill-runtime/commands.json
 
           ${{ runner.temp }}/retained-skill-runtime/*.log'
+
+  provider-codec-java8:
+    if: inputs.scope == 'provider-codec-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '8
+
+          17'
+    - name: Materialize and verify complete provider codec stream and logging owners
+      run: 'python3 -B scripts/materialize-provider-codec-java8.py --project "$PWD"
+        --recipe engine-core/src/providerCodecJava8Test/recipe.json --javac "$JAVA_HOME_17_X64/bin/javac"
+        --java "$JAVA_HOME_17_X64/bin/java" --output "$RUNNER_TEMP/provider-materialization"
+
+        mkdir -p "$RUNNER_TEMP/provider-dependencies"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+        --output "$RUNNER_TEMP/provider-dependencies/gson-2.8.0.jar"
+
+        curl --fail --location https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar
+        --output "$RUNNER_TEMP/provider-dependencies/gson-2.13.2.jar"
+
+        python3 -B scripts/verify-provider-codec-java8.py --project "$PWD" --source-packet
+        "$RUNNER_TEMP/provider-materialization/source-packet" --javac "$JAVA_HOME_17_X64/bin/javac"
+        --java "$JAVA_HOME_17_X64/bin/java" --javac8 "$JAVA_HOME_8_X64/bin/javac" --java8
+        "$JAVA_HOME_8_X64/bin/java" --gson "$RUNNER_TEMP/provider-dependencies/gson-2.8.0.jar"
+        --gson "$RUNNER_TEMP/provider-dependencies/gson-2.13.2.jar" --output "$RUNNER_TEMP/provider-oracle"'
+    - name: Retain original complete provider converter and runtime diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: provider-codec-java8-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/provider-materialization/source-packet/
+
+          ${{ runner.temp }}/provider-materialization/command-*.log
+
+          ${{ runner.temp }}/provider-materialization/record-pass1/conversion-receipt.json
+
+          ${{ runner.temp }}/provider-materialization/record-pass2/conversion-receipt.json
+
+          ${{ runner.temp }}/provider-oracle/receipt.json
+
+          ${{ runner.temp }}/provider-oracle/*.log'
