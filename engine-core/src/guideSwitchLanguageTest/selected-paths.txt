@@ -1,3 +1,2 @@
-dev/openallay/guide/semantic/SemanticDocumentCodec.java
 dev/openallay/guide/ui/GuideEvidencePresentation.java
-dev/openallay/guide/ui/GuideUiProgress.java
+dev/openallay/settings/ClientSettingsService.java

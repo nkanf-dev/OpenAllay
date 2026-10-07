@@ -1,23 +1,21 @@
 {
-  "scope": "Only3previouswholeGuide rejectedembedded-switch owners actualpostAPI canonicalclassification; no13acceptedregeneration",
+  "scope": "Exact2completeowner residual switchclassification: currentClientSettingsService11/currentGuideEvidence1; zero-modern-postASTguard/no partialsource",
   "selectedOwners": [
-    "dev/openallay/guide/semantic/SemanticDocumentCodec.java",
     "dev/openallay/guide/ui/GuideEvidencePresentation.java",
-    "dev/openallay/guide/ui/GuideUiProgress.java"
+    "dev/openallay/settings/ClientSettingsService.java"
   ],
   "selectedPreimageSha256": {
-    "dev/openallay/guide/semantic/SemanticDocumentCodec.java": "e810f55d7eea03adf65a6fe52523ba6122ca6698092a1814810fe6efcfc5f725",
-    "dev/openallay/guide/ui/GuideEvidencePresentation.java": "e3b6777f16f9864e99d32e9e5542793bb67859d4e283abb2121945d2af268a0c",
-    "dev/openallay/guide/ui/GuideUiProgress.java": "2dbf6c06f6b26267c90fc6fadfc33007f38a4c4c2a3139f3f31b5f3b2ba9e957"
+    "dev/openallay/settings/ClientSettingsService.java": "5d742f51cc7a7b466c8a24c9e84d83b9f73faae446d5db33ce0d6b93ba8516fe",
+    "dev/openallay/guide/ui/GuideEvidencePresentation.java": "5054edad4ec2ea363a832b3c9454e3fe12c342db53dd66fae76cefceade09d4e"
   },
-  "sourceLanguageStage": "CurrentGuide84API563invocations post6334e99fdc8d9cd2b0a33247a166364a79c45f86 plus prior303patterns",
-  "acceptedToolOracleRun": 37580526414,
+  "sourceLanguageStage": "Current702source cohortsnapshot held stable; productionsource edits onlyafteractualAPI382phase",
+  "acceptedToolOracleRun": 37652012462,
   "fixtureReexecuted": false,
   "inventoryReceiptRun": 37572819187,
   "toolPins": {
-    "build-logic/src/main/java/dev/openallay/build/CanonicalSwitchPort.java": "a1b6a83a909e9d87549401c26c1acb8f01335cac68f9d1c9a9eda8fdc37dbeff",
-    "scripts/switch-language-port/CanonicalSwitchPortFixture.java": "d502ce251e95e7219de423bef729b95b2e49595bb910a789163f8d69148f2040",
+    "build-logic/src/main/java/dev/openallay/build/CanonicalSwitchPort.java": "dae209d77c427c88e8d1cb750f99891e687a1fdc1aee4fd48f7e1d67ea4f1d14",
+    "scripts/switch-language-port/CanonicalSwitchPortFixture.java": "bef8709277a1f2f777936e4d17cf21141de42318c059ded18d945b6254b33f62",
     "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c"
   },
-  "unsupportedPolicy": "Actualembedded typedoperand/evaluation policy from14/17truefixture; Objectconcat/nondenotable/conditional/mixed/complexforms namedcompleteownerreject no partialsource."
+  "unsupportedPolicy": "Actualsimpleassignment/lazyconditional/membercall policy17proof; publicpostASTmodernswitchzero orcompleteownerreject. Sibling/fieldnegativeguards remain."
 }
