@@ -27,68 +27,7 @@ import java.util.Set;
 public final class RhinoJavascriptRuntime {
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(2);
 
-    private static final String HELPERS = """
-            const __openallayArrayView = value =>
-              Array.isArray(value)
-              || (value !== null
-                && typeof value === "object"
-                && Object.getPrototypeOf(value) === Array.prototype
-                && Number.isSafeInteger(Number(value.length)));
-            const helpers = Object.freeze({
-              groupBy(values, key) {
-                return values.reduce((groups, value) => {
-                  const group = String(key(value));
-                  (groups[group] ??= []).push(value);
-                  return groups;
-                }, {});
-              },
-              sum(values, select = value => value) {
-                return values.reduce((total, value) => total + Number(select(value)), 0);
-              },
-              minBy(values, select) {
-                return values.reduce((best, value) =>
-                  best === undefined || select(value) < select(best) ? value : best, undefined);
-              },
-              maxBy(values, select) {
-                return values.reduce((best, value) =>
-                  best === undefined || select(value) > select(best) ? value : best, undefined);
-              },
-              schema(value, depth) {
-                // Rhino's interpreter reuses lexical bindings in nested/repeated callbacks.
-                // Keep recursive traversal callback-free, with loop state in this call frame.
-                function visit(current, remaining) {
-                  if (current === null) return "null";
-                  if (__openallayArrayView(current)) {
-                    if (remaining <= 0 || current.length === 0) return [];
-                    const selected = current.slice(0, 8);
-                    const samples = [];
-                    const signatures = [];
-                    let sample;
-                    let signature;
-                    for (let index = 0; index < selected.length; index++) {
-                      if (!(index in selected)) continue;
-                      sample = visit(selected[index], remaining - 1);
-                      signature = JSON.stringify(sample);
-                      if (!signatures.includes(signature)) {
-                        samples.push(sample);
-                        signatures.push(signature);
-                      }
-                    }
-                    return samples;
-                  }
-                  if (typeof current !== "object") return typeof current;
-                  if (remaining <= 0) return "object";
-                  const keys = Object.keys(current).sort();
-                  const entries = [];
-                  for (let index = 0; index < keys.length; index++) {
-                    entries.push([keys[index], visit(current[keys[index]], remaining - 1)]);
-                  }
-                  return Object.fromEntries(entries);
-                }
-                return visit(value, depth === undefined ? 3 : Math.max(0, Number(depth) || 0));
-              }
-            });
-            """;
+    private static final String HELPERS = "const __openallayArrayView = value =>\n  Array.isArray(value)\n  || (value !== null\n    && typeof value === \"object\"\n    && Object.getPrototypeOf(value) === Array.prototype\n    && Number.isSafeInteger(Number(value.length)));\nconst helpers = Object.freeze({\n  groupBy(values, key) {\n    return values.reduce((groups, value) => {\n      const group = String(key(value));\n      (groups[group] ??= []).push(value);\n      return groups;\n    }, {});\n  },\n  sum(values, select = value => value) {\n    return values.reduce((total, value) => total + Number(select(value)), 0);\n  },\n  minBy(values, select) {\n    return values.reduce((best, value) =>\n      best === undefined || select(value) < select(best) ? value : best, undefined);\n  },\n  maxBy(values, select) {\n    return values.reduce((best, value) =>\n      best === undefined || select(value) > select(best) ? value : best, undefined);\n  },\n  schema(value, depth) {\n    // Rhino's interpreter reuses lexical bindings in nested/repeated callbacks.\n    // Keep recursive traversal callback-free, with loop state in this call frame.\n    function visit(current, remaining) {\n      if (current === null) return \"null\";\n      if (__openallayArrayView(current)) {\n        if (remaining <= 0 || current.length === 0) return [];\n        const selected = current.slice(0, 8);\n        const samples = [];\n        const signatures = [];\n        let sample;\n        let signature;\n        for (let index = 0; index < selected.length; index++) {\n          if (!(index in selected)) continue;\n          sample = visit(selected[index], remaining - 1);\n          signature = JSON.stringify(sample);\n          if (!signatures.includes(signature)) {\n            samples.push(sample);\n            signatures.push(signature);\n          }\n        }\n        return samples;\n      }\n      if (typeof current !== \"object\") return typeof current;\n      if (remaining <= 0) return \"object\";\n      const keys = Object.keys(current).sort();\n      const entries = [];\n      for (let index = 0; index < keys.length; index++) {\n        entries.push([keys[index], visit(current[keys[index]], remaining - 1)]);\n      }\n      return Object.fromEntries(entries);\n    }\n    return visit(value, depth === undefined ? 3 : Math.max(0, Number(depth) || 0));\n  }\n});\n";
 
     private final Duration timeout;
     private final JavascriptRuntimeLimits limits;
@@ -524,18 +463,7 @@ if (arguments.length != 1 || !((($oaPattern5_holder.value = arguments[0]) instan
                     String moduleSource = modules.source(id);
                     failures.registerModule(id, moduleSource);
                     // Six wrapper lines precede module source; the formatter maps them out.
-                    String program = """
-                            (function() {
-                              "use strict";
-                              const module = {exports: {}};
-                              const exports = module.exports;
-                              (function(module, exports, require) {
-                                "use strict";
-                                %s
-                              })(module, exports, require);
-                              return module.exports;
-                            })()
-                            """.formatted(moduleSource);
+                    String program = "(function() {\n  \"use strict\";\n  const module = {exports: {}};\n  const exports = module.exports;\n  (function(module, exports, require) {\n    \"use strict\";\n    %s\n  })(module, exports, require);\n  return module.exports;\n})()\n".formatted(moduleSource);
                     Object exports = callContext.evaluateString(
                             scope, program, JavascriptFailureFormatter.moduleSourceName(id), 1, null);
                     cache.put(id, exports);

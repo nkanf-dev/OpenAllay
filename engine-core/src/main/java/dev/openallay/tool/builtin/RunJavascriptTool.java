@@ -360,7 +360,7 @@ public Output(String handle, String resultType, long cardinality, List<String> f
             java.util.concurrent.atomic.AtomicBoolean settled) {
         try {
             ToolResult<Output> result;
-            try (scope) {
+            try (JavascriptInvocationScope ownedScope = scope) {
                 result = executeActive(context, input, cancellation, scope);
             }
             markSettled(settled);

@@ -20,6 +20,7 @@ public final class AgentTrace {
         }
         requiredContext = dev.openallay.util.Java8Collections.setCopyOf(requiredContext);
         steps = dev.openallay.util.Java8Collections.listCopyOf(steps);
+        steps.forEach(TraceStep::requireKnown);
         if (steps.isEmpty()) {
             throw new IllegalArgumentException("Trace must contain at least one step");
         }
