@@ -249,7 +249,8 @@ public record ClientSettingsRuntime(
             updateCommandGuidance(product, unrestrictedRuntime);
             Set<String> installedSkillMods = installedSkillMods(product);
             SkillSettingsBackend skills = new SkillSettingsBackend(
-                    configDirectory.resolve("skills"), product.skills(), installedSkillMods);
+                    configDirectory.resolve("skills"), product.skills(), installedSkillMods,
+                    product.platform().gameVersion());
             ExtensionSettingsBackend extensions = new ExtensionSettingsBackend(
                     configDirectory,
                     managedModsRoot(configDirectory),

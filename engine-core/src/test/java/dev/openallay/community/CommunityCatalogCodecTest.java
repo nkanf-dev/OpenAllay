@@ -2,6 +2,8 @@ package dev.openallay.community;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.net.URI;
 import java.time.Instant;
@@ -69,6 +71,32 @@ final class CommunityCatalogCodecTest {
                 .replace("]", "," + validEntry("alpha") + "]")));
         assertThrows(IllegalArgumentException.class, () -> codec.decode(valid()
                 .replace("\"publisher\":\"Publisher\",", "")));
+    }
+
+    @Test
+    void minecraftCompatibilityKeepsExactShapeAndUsesExistingVersionRanges() {
+        for (String range : java.util.List.of("26.2", "[26.2]", "[1.12.2,26.2]")) {
+            CommunityCatalogManifest manifest = codec.decode(valid()
+                    .replace("\"minecraft\":\"26.2\"", "\"minecraft\":\"" + range + "\""));
+            assertEquals(range, manifest.packages().getFirst().compatibility().minecraft());
+            assertEquals(manifest, codec.decode(codec.encode(manifest)));
+        }
+        var compatibility = codec.decode(valid().replace("26.2", "[1.12.2,26.2]"))
+                .packages().getFirst().compatibility();
+        for (String target : java.util.List.of("1.12.2", "1.16.5", "26.2")) {
+            assertTrue(compatibility.supports(target, "0.2"));
+            assertFalse(compatibility.supports(target, "0.4.0"));
+        }
+        assertFalse(compatibility.supports("1.12.1", "0.2"));
+        assertFalse(compatibility.supports("26.3", "0.2"));
+        for (String malformed : java.util.List.of("[]", "(1.12.2)", "[26.2,1.12.2]", "[1.12.2,26.2")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> codec.decode(valid().replace("26.2", malformed)));
+        }
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(valid()
+                .replace("\"minecraft\":\"26.2\"", "\"minecraft\":[\"26.2\"]")));
+        assertThrows(IllegalArgumentException.class, () -> codec.decode(valid()
+                .replace("\"minecraft\":\"26.2\"", "\"minecraftRange\":\"26.2\"")));
     }
 
     private static String valid() {

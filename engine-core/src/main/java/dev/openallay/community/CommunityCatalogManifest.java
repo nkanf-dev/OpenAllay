@@ -1,5 +1,6 @@
 package dev.openallay.community;
 
+import dev.openallay.extension.ExtensionCompatibility;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Comparator;
@@ -67,6 +68,12 @@ public record CommunityCatalogManifest(
                     || openallayApi == null || openallayApi.isBlank()) {
                 throw new IllegalArgumentException("Community package compatibility is required");
             }
+            minecraft = ExtensionCompatibility.requireRange(minecraft, "minecraft");
+        }
+
+        public boolean supports(String minecraftVersion, String skillApiVersion) {
+            return ExtensionCompatibility.includes(minecraft, minecraftVersion)
+                    && openallayApi.equals(skillApiVersion);
         }
     }
 

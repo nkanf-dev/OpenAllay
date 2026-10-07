@@ -43,13 +43,15 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     private final SkillSettingsStore store;
     private final CommunityCatalogClient communityCatalog;
     private final SkillPackageInstaller installer;
+    private final String minecraftVersion;
     private volatile SkillSettingsView current = SkillSettingsView.empty();
     private volatile SkillCommunityView community = SkillCommunityView.unavailable();
 
     public SkillSettingsBackend(
             Path localRoot,
             SkillRepository repository,
-            Set<String> installedMods) {
+            Set<String> installedMods,
+            String minecraftVersion) {
         this(
                 localRoot,
                 repository,
@@ -58,7 +60,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 installedMods,
                 new FilesystemSkillLoader(),
                 defaultCatalog(localRoot),
-                new SkillPackageInstaller(localRoot, new SkillParser(), installedMods));
+                new SkillPackageInstaller(localRoot, new SkillParser(), minecraftVersion, installedMods),
+                minecraftVersion);
     }
 
     public SkillSettingsBackend(
@@ -66,7 +69,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
             SkillRepository repository,
             SkillParser parser,
             Collection<SkillSource> bundledSources,
-            Set<String> installedMods) {
+            Set<String> installedMods,
+            String minecraftVersion) {
         this(
                 localRoot,
                 repository,
@@ -75,7 +79,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 installedMods,
                 new FilesystemSkillLoader(),
                 null,
-                new SkillPackageInstaller(localRoot, parser, installedMods));
+                new SkillPackageInstaller(localRoot, parser, minecraftVersion, installedMods),
+                minecraftVersion);
     }
 
     SkillSettingsBackend(
@@ -84,7 +89,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
             SkillParser parser,
             Collection<SkillSource> bundledSources,
             Set<String> installedMods,
-            FilesystemSkillLoader localLoader) {
+            FilesystemSkillLoader localLoader,
+            String minecraftVersion) {
         this(
                 localRoot,
                 repository,
@@ -93,7 +99,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 installedMods,
                 localLoader,
                 null,
-                new SkillPackageInstaller(localRoot, parser, installedMods));
+                new SkillPackageInstaller(localRoot, parser, minecraftVersion, installedMods),
+                minecraftVersion);
     }
 
     SkillSettingsBackend(
@@ -104,7 +111,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
             Set<String> installedMods,
             FilesystemSkillLoader localLoader,
             CommunityCatalogClient communityCatalog,
-            SkillPackageInstaller installer) {
+            SkillPackageInstaller installer,
+            String minecraftVersion) {
         this.localRoot = Objects.requireNonNull(localRoot, "localRoot")
                 .toAbsolutePath()
                 .normalize();
@@ -116,6 +124,10 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         this.store = new SkillSettingsStore(this.localRoot, parser);
         this.communityCatalog = communityCatalog;
         this.installer = Objects.requireNonNull(installer, "installer");
+        if (minecraftVersion == null || minecraftVersion.isBlank()) {
+            throw new IllegalArgumentException("minecraftVersion must not be blank");
+        }
+        this.minecraftVersion = minecraftVersion;
         reloadInternal();
         community = buildCommunity(Optional.empty());
     }
@@ -164,9 +176,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         CommunityCatalogManifest.PackageEntry entry = communityCatalog.current()
                 .flatMap(catalog -> catalog.packages().stream()
                         .filter(candidate -> candidate.id().equals(id))
-                        .filter(candidate -> candidate.compatibility().minecraft().equals("26.2")
-                                && candidate.compatibility().openallayApi().equals(
-                                        OpenAllayConstants.SKILL_API_VERSION))
+                        .filter(this::compatible)
                         .max((left, right) -> compareVersions(left.version(), right.version())))
                 .orElse(null);
         if (entry == null) {
@@ -330,14 +340,16 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                     .flatMap(skill -> Optional.ofNullable(
                             skill.metadata().attributes().get("openallay/version")));
             boolean installed = current.find(entry.id()).isPresent();
-            boolean compatible = entry.compatibility().minecraft().equals("26.2")
-                    && entry.compatibility().openallayApi().equals(
-                            OpenAllayConstants.SKILL_API_VERSION);
+            boolean compatible = compatible(entry);
             return SkillCommunityView.Package.from(
                     entry, installed, installedVersion, compatible);
         }).toList();
         return new SkillCommunityView(
                 true, Optional.of(catalog.generatedAt()), packages, notice);
+    }
+
+    private boolean compatible(CommunityCatalogManifest.PackageEntry entry) {
+        return entry.compatibility().supports(minecraftVersion, OpenAllayConstants.SKILL_API_VERSION);
     }
 
     private static CommunityCatalogClient defaultCatalog(Path localRoot) {

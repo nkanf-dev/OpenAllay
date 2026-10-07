@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 final class SkillSettingsBackendTest {
     @TempDir Path temporaryDirectory;
@@ -157,7 +159,8 @@ final class SkillSettingsBackendTest {
                 Set.of(),
                 new FilesystemSkillLoader(),
                 catalog,
-                new SkillPackageInstaller(root, new SkillParser()));
+                new SkillPackageInstaller(root, new SkillParser(), "26.2"),
+                "26.2");
         Path imported = temporaryDirectory.resolve("demo");
         Files.createDirectories(imported);
         Files.writeString(imported.resolve("SKILL.md"), skill("demo", "community body"));
@@ -248,7 +251,8 @@ final class SkillSettingsBackendTest {
                 List.of(bundled()), Set.of(), new FilesystemSkillLoader(),
                 new CommunityCatalogClient(URI.create("https://example.test/catalog.json"), cache,
                         transport, Duration.ofSeconds(5)),
-                new SkillPackageInstaller(root, new SkillParser(), transport, "26.2", "0.2"));
+                new SkillPackageInstaller(root, new SkillParser(), transport, "26.2", "0.2"),
+                "26.2");
         var candidate = prepared(backend.prepareCommunity("demo", new CancellationSignal()).join());
         assertEquals(Set.of("missing:extension"), candidate.requirements().extensions());
         assertTrue(repository.find("demo").isEmpty());
@@ -257,6 +261,105 @@ final class SkillSettingsBackendTest {
         assertInstanceOf(ToolResult.Success.class, candidate.commit());
         assertEquals("downloaded body", repository.find("demo").orElseThrow().instructions());
         assertTrue(backend.currentCommunityView().packages().getFirst().installed());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.12.2", "1.16.5", "26.2"})
+    void catalogUsesCurrentTargetAndSkillApiWhenSelectingLatestCompatiblePackage(
+            String minecraftVersion) throws Exception {
+        Path root = temporaryDirectory.resolve("skills");
+        byte[] archive;
+        try (var bytes = new java.io.ByteArrayOutputStream();
+                var zip = new java.util.zip.ZipOutputStream(bytes)) {
+            zip.putNextEntry(new java.util.zip.ZipEntry("SKILL.md"));
+            zip.write(skill("demo", "current target").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            zip.closeEntry();
+            zip.finish();
+            archive = bytes.toByteArray();
+        }
+        String checksum = java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(archive));
+        String otherTarget = minecraftVersion.equals("26.2") ? "1.12.2" : "26.2";
+        Path cache = temporaryDirectory.resolve("catalog.json");
+        writeCatalog(cache, List.of(
+                catalogEntry("demo", "1.0.0", minecraftVersion, "0.2", checksum),
+                catalogEntry("demo", "1.1.0", minecraftVersion, "0.2", checksum),
+                catalogEntry("demo", "1.2.0", "[1.12.2,26.2]", "0.2", checksum),
+                catalogEntry("demo", "9.0.0", otherTarget, "0.2", checksum),
+                catalogEntry("demo", "10.0.0", minecraftVersion, "0.4.0", checksum),
+                catalogEntry("other-target", "1.0.0", otherTarget, "0.2", checksum),
+                catalogEntry("other-api", "1.0.0", minecraftVersion, "0.4.0", checksum)));
+        java.util.concurrent.atomic.AtomicInteger downloads = new java.util.concurrent.atomic.AtomicInteger();
+        HttpTransport transport = new HttpTransport() {
+            @Override
+            public <T> CompletableFuture<T> execute(HttpExchangeRequest request,
+                    dev.openallay.net.HttpCancellation cancellation, ResponseDecoder<T> decoder) {
+                downloads.incrementAndGet();
+                try {
+                    return CompletableFuture.completedFuture(decoder.decode(200,
+                            new dev.openallay.net.HttpResponseHeaders(Map.of()),
+                            new java.io.ByteArrayInputStream(archive)));
+                } catch (IOException failure) {
+                    return CompletableFuture.failedFuture(failure);
+                }
+            }
+        };
+        SkillSettingsBackend backend = new SkillSettingsBackend(root, repository(), new SkillParser(),
+                List.of(bundled()), Set.of(), new FilesystemSkillLoader(),
+                new CommunityCatalogClient(URI.create("https://example.test/catalog.json"), cache,
+                        transport, Duration.ofSeconds(5)),
+                new SkillPackageInstaller(root, new SkillParser(), transport, minecraftVersion, "0.2"),
+                minecraftVersion);
+
+        assertEquals(List.of("1.0.0", "1.1.0", "1.2.0"), backend.currentCommunityView().packages().stream()
+                .filter(SkillCommunityView.Package::compatible)
+                .map(SkillCommunityView.Package::availableVersion).toList());
+        try (var candidate = prepared(backend.prepareCommunity("demo", new CancellationSignal()).join())) {
+            assertEquals("1.2.0", candidate.version());
+        }
+        for (String id : List.of("other-target", "other-api")) {
+            assertEquals("skill_package_not_found", assertInstanceOf(ToolResult.Failure.class,
+                    backend.prepareCommunity(id, new CancellationSignal()).join()).code());
+        }
+        assertEquals(1, downloads.get());
+        assertFalse(Files.exists(root.resolve("demo")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1.12.2", "1.16.5", "26.2"})
+    void defaultBackendPassesCurrentTargetToInstallerWithoutDownloading(String minecraftVersion)
+            throws Exception {
+        Path root = temporaryDirectory.resolve("skills");
+        Path cache = temporaryDirectory.resolve("catalogs/skills.json");
+        writeCatalog(cache, List.of(catalogEntry("demo", "1.0.0", minecraftVersion,
+                "0.2", "a".repeat(64))));
+        SkillSettingsBackend backend = new SkillSettingsBackend(
+                root, repository(), Set.of(), minecraftVersion);
+        assertTrue(backend.currentCommunityView().packages().getFirst().compatible());
+        CancellationSignal cancelled = new CancellationSignal();
+        cancelled.cancel();
+
+        assertEquals("skill_install_cancelled", assertInstanceOf(ToolResult.Failure.class,
+                backend.prepareCommunity("demo", cancelled).join()).code());
+        assertFalse(Files.exists(root.resolve("demo")));
+    }
+
+    private static void writeCatalog(Path cache, List<String> entries) throws IOException {
+        Files.createDirectories(cache.getParent());
+        Files.writeString(cache, """
+                {"schemaVersion":2,"kind":"skill","generatedAt":"2026-07-25T00:00:00Z",
+                 "packages":[%s]}
+                """.formatted(String.join(",", entries)));
+    }
+
+    private static String catalogEntry(
+            String id, String version, String minecraftVersion, String api, String checksum) {
+        return """
+                {"id":"%s","displayName":"Demo Skill","description":"A test Skill.",
+                 "publisher":"Test Publisher","version":"%s","archive":"https://example.test/demo.zip",
+                 "sha256":"%s","compatibility":{"minecraft":"%s","openallayApi":"%s"},
+                 "source":"https://example.test/demo"}
+                """.formatted(id, version, checksum, minecraftVersion, api);
     }
 
     @Test
@@ -338,7 +441,8 @@ final class SkillSettingsBackendTest {
                 repository,
                 new SkillParser(),
                 List.of(bundled()),
-                Set.of());
+                Set.of(),
+                "26.2");
     }
 
     private static SkillRepository repository() {

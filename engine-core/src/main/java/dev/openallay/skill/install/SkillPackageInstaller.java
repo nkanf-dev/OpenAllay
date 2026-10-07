@@ -40,18 +40,18 @@ public final class SkillPackageInstaller {
     private final Set<String> availableTools;
     private final Set<String> installedMods;
 
-    public SkillPackageInstaller(Path managedRoot, SkillParser parser) {
-        this(managedRoot, parser, Set.of());
+    public SkillPackageInstaller(Path managedRoot, SkillParser parser, String minecraftVersion) {
+        this(managedRoot, parser, minecraftVersion, Set.of());
     }
 
     public SkillPackageInstaller(
-            Path managedRoot, SkillParser parser, Set<String> installedMods) {
+            Path managedRoot, SkillParser parser, String minecraftVersion, Set<String> installedMods) {
         this(
                 managedRoot,
                 parser,
                 new JdkHttpTransport(new HttpTransportPolicy(
                         java.time.Duration.ofSeconds(15), "openallay-skill-package-http")),
-                "26.2",
+                minecraftVersion,
                 OpenAllayConstants.SKILL_API_VERSION,
                 Set.of("openallay:run_javascript", "openallay:load_skill"),
                 installedMods);
@@ -119,8 +119,7 @@ public final class SkillPackageInstaller {
             CommunityCatalogManifest.PackageEntry entry, CancellationSignal cancellation) {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(cancellation, "cancellation");
-        if (!entry.compatibility().minecraft().equals(minecraftVersion)
-                || !entry.compatibility().openallayApi().equals(openallayApiVersion)) {
+        if (!entry.compatibility().supports(minecraftVersion, openallayApiVersion)) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                     "skill_install_incompatible",
                     "The Skill package is not compatible with this OpenAllay game runtime"));

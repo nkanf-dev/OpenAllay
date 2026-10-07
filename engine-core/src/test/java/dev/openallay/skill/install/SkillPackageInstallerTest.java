@@ -22,6 +22,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 final class SkillPackageInstallerTest {
     @TempDir Path temporaryDirectory;
@@ -29,7 +31,7 @@ final class SkillPackageInstallerTest {
     @Test
     void importsDirectoryAndZipThroughSameValidatedAtomicPublication() throws Exception {
         Path root = temporaryDirectory.resolve("managed");
-        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser(), "26.2");
         Path source = temporaryDirectory.resolve("downloaded-skill");
         Files.createDirectories(source.resolve("references"));
         Files.writeString(source.resolve("SKILL.md"), skill("demo", "first"));
@@ -48,7 +50,7 @@ final class SkillPackageInstallerTest {
     @Test
     void invalidReplacementAndZipSlipRetainPriorPackage() throws Exception {
         Path root = temporaryDirectory.resolve("managed");
-        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser(), "26.2");
         Path source = temporaryDirectory.resolve("demo");
         Files.createDirectories(source);
         Files.writeString(source.resolve("SKILL.md"), skill("demo", "valid"));
@@ -102,10 +104,35 @@ final class SkillPackageInstallerTest {
         assertTrue(Files.readString(root.resolve("demo/SKILL.md")).endsWith("remote\n"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"1.12.2", "1.16.5", "26.2"})
+    void defaultInstallerUsesSuppliedTargetAndIndependentSkillApiWithoutDownloading(
+            String minecraftVersion) {
+        Path root = temporaryDirectory.resolve("managed");
+        SkillPackageInstaller installer = new SkillPackageInstaller(
+                root, new SkillParser(), minecraftVersion);
+        CancellationSignal cancelled = new CancellationSignal();
+        cancelled.cancel();
+        String otherTarget = minecraftVersion.equals("26.2") ? "1.12.2" : "26.2";
+
+        assertEquals("skill_install_cancelled", assertInstanceOf(ToolResult.Failure.class,
+                installer.prepare(entry("a".repeat(64), minecraftVersion), cancelled).join()).code());
+        assertEquals("skill_install_cancelled", assertInstanceOf(ToolResult.Failure.class,
+                installer.prepare(entry("a".repeat(64), "[1.12.2,26.2]"), cancelled).join()).code());
+        assertEquals("skill_install_incompatible", assertInstanceOf(ToolResult.Failure.class,
+                installer.prepare(entry("a".repeat(64), otherTarget), cancelled).join()).code());
+        assertEquals("skill_install_incompatible", assertInstanceOf(ToolResult.Failure.class,
+                installer.prepare(entry("a".repeat(64), "[1.0,1.12.2)"), cancelled).join()).code());
+        assertEquals("skill_install_incompatible", assertInstanceOf(ToolResult.Failure.class,
+                installer.prepare(entry("a".repeat(64), minecraftVersion, "0.4.0"), cancelled)
+                        .join()).code());
+        assertFalse(Files.exists(root));
+    }
+
     @Test
     void preparedDirectoryIsHiddenAndCommitsCapturedBytesDespiteSourceChanges() throws Exception {
         Path root = temporaryDirectory.resolve("managed");
-        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser(), "26.2");
         Path source = temporaryDirectory.resolve("source");
         Files.createDirectories(source.resolve("references"));
         String reviewed = skill("demo", "reviewed").replace(
@@ -137,7 +164,7 @@ final class SkillPackageInstallerTest {
     @Test
     void discardedAndTamperedCandidatesRetainPriorPackageAndCleanStaging() throws Exception {
         Path root = temporaryDirectory.resolve("managed");
-        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser(), "26.2");
         Path archive = temporaryDirectory.resolve("demo.zip");
         zip(archive, "SKILL.md", skill("demo", "prior"));
         success(installer.importLocal(archive));
@@ -189,7 +216,7 @@ final class SkillPackageInstallerTest {
     @Test
     void preparationPreservesExecutableAndLegacyDependencyRejections() throws Exception {
         Path root = temporaryDirectory.resolve("managed");
-        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser());
+        SkillPackageInstaller installer = new SkillPackageInstaller(root, new SkillParser(), "26.2");
         Path source = temporaryDirectory.resolve("source");
         Files.createDirectories(source.resolve("assets"));
         Files.writeString(source.resolve("SKILL.md"), skill("demo", "valid"));
@@ -257,6 +284,11 @@ final class SkillPackageInstallerTest {
 
     private static CommunityCatalogManifest.PackageEntry entry(
             String checksum, String minecraft) {
+        return entry(checksum, minecraft, "0.2");
+    }
+
+    private static CommunityCatalogManifest.PackageEntry entry(
+            String checksum, String minecraft, String api) {
         return new CommunityCatalogManifest.PackageEntry(
                 "demo",
                 "Demo Skill",
@@ -265,7 +297,7 @@ final class SkillPackageInstallerTest {
                 "1.0.0",
                 URI.create("https://example.test/demo.zip"),
                 checksum,
-                new CommunityCatalogManifest.Compatibility(minecraft, "0.2"),
+                new CommunityCatalogManifest.Compatibility(minecraft, api),
                 URI.create("https://example.test/demo"));
     }
 
