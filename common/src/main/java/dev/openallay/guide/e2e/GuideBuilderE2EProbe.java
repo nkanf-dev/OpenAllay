@@ -344,7 +344,7 @@ final class GuideBuilderE2EProbe {
                 }
                 if (scenario.equals("builder-legacy-shapes")) {
                     receipt = builderReceipt(request);
-                    JsonObject palette = dev.openallay.adapter.minecraft.v26_2.world.NativeBuilderPaletteProbe.capture();
+                    JsonObject palette = NativeMaterialPaletteOracle.capture();
                     JsonArray skipped = legacySkipped(palette);
                     boolean binding = palette.equals(receipt.get("materialPalette")) && skipped.equals(receipt.get("skipped"))
                             && skipped.size() == LEGACY_PRESET_ROLES.size()
