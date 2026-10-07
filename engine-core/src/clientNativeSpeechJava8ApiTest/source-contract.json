@@ -1,0 +1,42 @@
+{
+  "scope": "ONEwholeNativeSpeechToText actualpostTWO-switch-source11API scope-safequalifier acceptedmapping; no manualvariable rename/partialowner",
+  "selectedOwners": [
+    "dev/openallay/client/voice/NativeSpeechToText.java"
+  ],
+  "selectedCompleteOwnerCount": 1,
+  "selectedPreimageSha256": {
+    "dev/openallay/client/voice/NativeSpeechToText.java": "5c382ee9c3f1ad459fbbdfc737fde9713626d280e38d16215c69bfb226a33ad6"
+  },
+  "rawSourceCommit": "5a9017aed214e95c078876ebc094d88dc6a202fd",
+  "sourceLanguageStage": "Exact18wholeclient26switch canonicalpost applied72978246e970413434a5472855c0380b166f8f46; NativeSpeechToText TWOactualswitchpost retained. Earlierunsafe11APIpost neverapplied.",
+  "acceptedToolOracleRun": 37639819891,
+  "fixtureReexecuted": false,
+  "acceptedRootReceiptSha256": "83bc036c1e9dd74227befcb640b164139bd896deaf14b858c867c9b300fbe77f",
+  "acceptedRootReceipt": {
+    "run": 37639819891,
+    "source": "2a18abed571d99ba94673be1e638f148fa6c5aeb",
+    "toolHash": "1ac06b2a4e647ec883568475e1446e5f3283cacae8d7001b40237f4e4269ce90",
+    "currentMethodOwnerResolved": true,
+    "original17Release8True8Equal": true,
+    "safePathsImportInShadowedJavaScope": true,
+    "sourceWholeOwnerCollisionsRejected": true
+  },
+  "toolPins": {
+    "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java": "1ac06b2a4e647ec883568475e1446e5f3283cacae8d7001b40237f4e4269ce90",
+    "scripts/java8-api-port/CanonicalJava8ApiPortFixture.java": "bfa16e0c4fa2cb46add4a0c0040d7143b25a8f3473f6465c0caaaf922146cb92"
+  },
+  "helperPins": {
+    "engine-core/src/main/java/dev/openallay/util/Java8Collections.java": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
+    "engine-core/src/main/java/dev/openallay/util/Java8Strings.java": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
+    "engine-core/src/main/java/dev/openallay/util/Java8Hex.java": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
+    "engine-core/src/main/java/dev/openallay/util/Java8Futures.java": "be44b1a5deed7cd847fa1d6bc9acaf0a11fefe8ad6367ade750ac0e770a43268"
+  },
+  "publicCompiler": "Wholeactualcurrentengine-core production source set/nativecompile classpath metadata; originalmethodownerresolved/publicTreesScope qualificationguard and safePathsimportproof",
+  "unsupportedPolicy": "ExactsinglewholeownerSUPPORTED11maps required; scope java/dev/Paths collision meanswholeowner rejection/no partialpost. ExistingJava8helpers unchanged; noalias guess/manualrename.",
+  "runtimeJava8Acceptance": false,
+  "driver_sha256": "ca559a13cd0f3eb5fc72eab9dfffa3d7c996195635085e1484819dc3e45a3453",
+  "noLocalCompilerOrSourceCopy": true,
+  "ownerBoundary": "ONEclient/voice/NativeSpeechToText only; Guide/Agent/context/sharedtoolwritesexcluded",
+  "priorEvidence": "58wholeclient285API modern2102 accepted; old107generation/rawproof/frozenrejectedunsafe Native output remainshistorical; no oldoracle/runtime replay",
+  "residualClosure": "Native Files.readString/writeString,HttpClient/Optional.stream and --enable-native-access nativeplatform true8 exposure separateactual701compilerdiagnostic/repair. Thismapped11scope notnativephysicalspeech orwholeclient8acceptance."
+}
