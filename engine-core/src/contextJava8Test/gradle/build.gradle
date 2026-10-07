@@ -1,0 +1,49 @@
+plugins { id 'java' }
+def repo = file('../../../..')
+def engine = new File(repo, 'engine-core')
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+def owners = ['ItemStackSnapshot', 'InventorySlotSnapshot', 'InventorySnapshot', 'BlockPositionSnapshot',
+        'PlayerSnapshot', 'CallerSnapshot', 'ContextMetrics', 'SourceObservation', 'RecipeLayoutSnapshot', 'RecipeProcessingSnapshot']
+def support = ['EvidenceMetadata', 'ContextValidation', 'DataAuthority', 'DataCompleteness', 'CallerKind']
+def paths = (owners + support).collect { 'dev/openallay/context/' + it + '.java' } + [
+        'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/ValueType.java',
+        'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java']
+sourceSets.main.java.setSrcDirs([new File(engine, 'src/main/java'), new File(engine, 'src/contextJava8Test/java')])
+sourceSets.main.java.setIncludes(paths + ['dev/openallay/context/ContextSnapshotsJava8Fixture.java'])
+dependencies { implementation('com.google.code.gson:gson:2.8.0') }
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+tasks.register('java8ContextSnapshotsTest', JavaExec) {
+    dependsOn('classes'); mainClass = 'dev.openallay.context.ContextSnapshotsJava8Fixture'; args('java8')
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    doFirst { standardOutput = new ByteArrayOutputStream() }
+    doLast {
+        def report = layout.buildDirectory.file('context-java8.txt').get().asFile
+        report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        if (providers.gradleProperty('originalContextReport').isPresent()) {
+            if (!java.util.Arrays.equals(file(providers.gradleProperty('originalContextReport').get()).bytes, report.bytes)) {
+                throw new GradleException('Original canonical modern context vs Java8 context differs')
+            }
+        }
+    }
+}
+if (providers.gradleProperty('originalContextSourceRoot').isPresent()) {
+    def original = file(providers.gradleProperty('originalContextSourceRoot').get())
+    tasks.register('compileOriginalContext', JavaCompile) {
+        source = files(paths.collect { new File(original, 'engine-core/src/main/java/' + it) },
+                new File(engine, 'src/contextJava8Test/java/dev/openallay/context/ContextSnapshotsJava8Fixture.java'))
+        classpath = configurations.compileClasspath; destinationDirectory = layout.buildDirectory.dir('original-classes')
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+        options.release = 17; options.encoding = 'UTF-8'
+    }
+    tasks.register('originalContextOracle', JavaExec) {
+        dependsOn('compileOriginalContext'); mainClass = 'dev.openallay.context.ContextSnapshotsJava8Fixture'
+        classpath = files(tasks.named('compileOriginalContext').flatMap { it.destinationDirectory }) + configurations.runtimeClasspath
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+        doFirst { standardOutput = new ByteArrayOutputStream() }
+        doLast {
+            def report = layout.buildDirectory.file('context-original-modern.txt').get().asFile
+            report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        }
+    }
+}
