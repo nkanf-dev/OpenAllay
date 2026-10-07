@@ -1,0 +1,166 @@
+{
+  "acceptedSourceCommit": "ded3add1ad64b9601c154650d2b39b635cb03f55",
+  "scope": "Complete canonical model/profile configuration parsing/resolution/serialization values; no clientregistry method slicing or credential/metadata edits",
+  "recordPass1": {
+    "dev/openallay/model/config/ModelProfileDefinition.java": [
+      "ModelProfileDefinition.MetadataProvenance"
+    ],
+    "dev/openallay/model/config/ModelProfilesConfig.java": [
+      "ModelProfilesConfig"
+    ],
+    "dev/openallay/model/config/ModelProfilesConfigLoader.java": [
+      "ModelProfilesConfigLoader.Load"
+    ],
+    "dev/openallay/model/config/ResolvedModelProfile.java": [
+      "ResolvedModelProfile.DiagnosticView"
+    ]
+  },
+  "recordPass2": {
+    "dev/openallay/model/config/ModelProfileDefinition.java": [
+      "ModelProfileDefinition"
+    ],
+    "dev/openallay/model/config/ResolvedModelProfile.java": [
+      "ResolvedModelProfile"
+    ]
+  },
+  "apiEdits": {
+    "dev/openallay/model/config/ModelConfigLoader.java": [
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "Map.of(",
+        "after": "dev.openallay.util.Java8Collections.mapOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "value.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(value)",
+        "occurrences": 3
+      }
+    ],
+    "dev/openallay/model/config/ModelProfileDefinition.java": [
+      {
+        "before": "displayName.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(displayName)",
+        "occurrences": 1
+      },
+      {
+        "before": "model.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(model)",
+        "occurrences": 1
+      },
+      {
+        "before": "source.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(source)",
+        "occurrences": 1
+      },
+      {
+        "before": "upstreamModelId.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(upstreamModelId)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/config/ModelProfilesConfig.java": [
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/config/ModelProfilesConfigLoader.java": [
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 6
+      },
+      {
+        "before": "Map.of(",
+        "after": "dev.openallay.util.Java8Collections.mapOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "value.getAsString().isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(value.getAsString())",
+        "occurrences": 1
+      },
+      {
+        "before": "failure.getMessage().isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(failure.getMessage())",
+        "occurrences": 1
+      },
+      {
+        "before": "config.profiles().stream()\n                    .map(profile -> resolve(profile, credentials, metadataCopy))\n                    .toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(config.profiles().stream()\n                    .map(profile -> resolve(profile, credentials, metadataCopy)))",
+        "occurrences": 1
+      },
+      {
+        "before": "        if (resolvedCredential instanceof ToolResult.Failure<SecretValue> failure) {\n            return failed(definition, imageCapability, failure.code(), failure.message());",
+        "after": "        if (resolvedCredential instanceof ToolResult.Failure) {\n            ToolResult.Failure<SecretValue> failure = (ToolResult.Failure<SecretValue>) resolvedCredential;\n            return failed(definition, imageCapability, failure.code(), failure.message());",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/config/ResolvedModelProfile.java": [
+      {
+        "before": "java.util.Map.of(",
+        "after": "dev.openallay.util.Java8Collections.mapOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "canonicalModelId.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(canonicalModelId)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/config/ModelProfilesConfigWriter.java": [
+      {
+        "before": "duration.toSeconds()",
+        "after": "duration.getSeconds()",
+        "occurrences": 1
+      }
+    ]
+  },
+  "rawPreimageSha256": {
+    "dev/openallay/model/config/ModelConfigLoader.java": "ef840e932a731f85ca85a7ccc5917f81ca5c3e12505274e78cc8f9746e8ad691",
+    "dev/openallay/model/config/ModelProfileDefinition.java": "f903a8320853c1f6e3eac9a3daf14d5778c564a83239d628979370f27107436a",
+    "dev/openallay/model/config/ModelProfilesConfig.java": "c3f1762fbceb5c9185f21ed5edfada26c3fbbbea6ad7357e65991b90ca4d0ffe",
+    "dev/openallay/model/config/ModelProfilesConfigLoader.java": "234b00e8206825c57246d96d8c36f0148a76f2a1bf75c7beff6718938d5271e0",
+    "dev/openallay/model/config/ResolvedModelProfile.java": "a155bc52337e7b32bf243427dda8f308ef78aa318b20f922feaedf03c3a7b08b",
+    "dev/openallay/model/config/ModelProfilesConfigWriter.java": "ca03f179cde3d0cbbce6d66abf1b3894d7da5b245e4d7e778660888af89b80e7"
+  },
+  "rawPreimageGitBlob": {
+    "dev/openallay/model/config/ModelConfigLoader.java": "ae8255a97b69751bf9fe14ed7795e7dc2b51f389",
+    "dev/openallay/model/config/ModelProfileDefinition.java": "e8fa8a54fefc6a6eddefb24399980478b0eca17b",
+    "dev/openallay/model/config/ModelProfilesConfig.java": "eeaf330794dbd5892046d2701b4fc5ca96f5534c",
+    "dev/openallay/model/config/ModelProfilesConfigLoader.java": "4e0416af1a2614a572122264f16bfc14494d9768",
+    "dev/openallay/model/config/ResolvedModelProfile.java": "4250ddfcb88b7f4910d13e9e39b778153a687bf9",
+    "dev/openallay/model/config/ModelProfilesConfigWriter.java": "b9e34f53070119e3d9761f6cc4a830c052a7dd15"
+  },
+  "apiPostimageSha256": {
+    "dev/openallay/model/config/ModelConfigLoader.java": "e4b042bad05f3e732e9bbd84aa14fb7df68a1d94f8d6b72e66126c5f35abbc8d",
+    "dev/openallay/model/config/ModelProfileDefinition.java": "ef980f931bf6efe6586dcd50d9f6e8b123cacfac1c94d15e73e41afb4e3c6170",
+    "dev/openallay/model/config/ModelProfilesConfig.java": "4e981f0cece93275fb3a2f19cf868ba9195e87623a6369ddfe51345fd88ea979",
+    "dev/openallay/model/config/ModelProfilesConfigLoader.java": "1b4a22f0e742bb9248ce25ad07b9f4508b0b19f9335b7d9bc9dbb0d27a1be30c",
+    "dev/openallay/model/config/ResolvedModelProfile.java": "24b78837e95e0c277af4845e75dceea381cb41157147752908c49a4f91284434",
+    "dev/openallay/model/config/ModelProfilesConfigWriter.java": "8df781be35d2a684a8de7a3952ab42fb2f4c1700e0d3a438ab2a62806104415e"
+  },
+  "converter": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+  "converterSha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218"
+}
