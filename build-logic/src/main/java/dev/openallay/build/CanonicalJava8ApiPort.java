@@ -86,13 +86,21 @@ public final class CanonicalJava8ApiPort {
                         String declared=type.getQualifiedName().toString(),methodName=method.getSimpleName().toString();
                         Element qualifier=trees.getElement(new TreePath(getCurrentPath(),reference.getQualifierExpression()));
                         if(method.getModifiers().contains(Modifier.STATIC)&&qualifier instanceof TypeElement
-                                && Set.of("java.util.List","java.util.Set","java.util.Map").contains(declared)&&methodName.equals("copyOf")){
+                                && (Set.of("java.util.List","java.util.Set","java.util.Map").contains(declared)&&methodName.equals("copyOf")
+                                    || declared.equals("java.util.List")&&methodName.equals("of"))){
                             javax.lang.model.type.TypeMirror target=trees.getTypeMirror(getCurrentPath());
                             if(target.getKind()!=javax.lang.model.type.TypeKind.DECLARED)throw new IllegalArgumentException("Methodreference target has no attributed functional type");
                             TypeElement targetType=(TypeElement)((javax.lang.model.type.DeclaredType)target).asElement();
                             long abstractMethods=task.getElements().getAllMembers(targetType).stream().filter(member->member.getKind()==ElementKind.METHOD&&member.getModifiers().contains(Modifier.ABSTRACT)).count();
                             if(abstractMethods!=1)throw new IllegalArgumentException("Methodreference target is not a unique public functional descriptor");
-                            String mapped=helper(declared,methodName,1);
+                            if(methodName.equals("of")){
+                                ExecutableElement descriptor=(ExecutableElement)task.getElements().getAllMembers(targetType).stream().filter(member->member.getKind()==ElementKind.METHOD&&member.getModifiers().contains(Modifier.ABSTRACT)).findFirst().orElseThrow();
+                                javax.lang.model.type.ExecutableType signature=(javax.lang.model.type.ExecutableType)task.getTypes().asMemberOf((javax.lang.model.type.DeclaredType)target,descriptor);
+                                if(!signature.getParameterTypes().isEmpty()){
+                                    reasons.add("offset="+positions.getStartPosition(unit,reference)+" List.of methodreference requires provenzero-argument Supplier descriptor");return super.visitMemberReference(reference,unused);
+                                }
+                            }
+                            String mapped=helper(declared,methodName,methodName.equals("of")?0:1);
                             try{unshadowedRoot(mapped,getCurrentPath(),trees,task);}catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,reference)+" "+failure.getMessage());return super.visitMemberReference(reference,unused);}
                             int dot=mapped.lastIndexOf('.');
                             String typeArguments=reference.getTypeArguments()==null||reference.getTypeArguments().isEmpty()?"":"<"+String.join(",",reference.getTypeArguments().stream().map(Object::toString).toList())+">";
