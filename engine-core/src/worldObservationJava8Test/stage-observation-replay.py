@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import io
 import json
+import os
 from pathlib import Path, PurePosixPath
 import subprocess
 import tarfile
@@ -27,11 +28,22 @@ def logical_path(value):
         raise ValueError("Invalid logical source path: " + value)
     return value
 
-def run(command, cwd=None):
-    result = subprocess.run(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+def run(command, cwd=None, env=None):
+    result = subprocess.run(command, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     if result.returncode:
         raise RuntimeError("Command failed: " + str(command) + "\n" + result.stderr.decode("utf-8", errors="replace"))
     return result.stdout
+
+def apply_api_patch(candidate, api_patch):
+    # A candidate can live under an active checkout's build/. Without a discovery
+    # ceiling, git apply filters root-relative paths against that checkout prefix
+    # and can report success while skipping every detached candidate file.
+    env = os.environ.copy()
+    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_PREFIX"):
+        env.pop(name, None)
+    env["GIT_CEILING_DIRECTORIES"] = str(candidate.resolve().parent)
+    run(["git", "apply", "--no-index", "--check", str(api_patch.resolve())], cwd=candidate, env=env)
+    run(["git", "apply", "--no-index", str(api_patch.resolve())], cwd=candidate, env=env)
 
 def checked_blank_lines(data, changes):
     lines = data.splitlines(keepends=True)
@@ -142,7 +154,7 @@ def stage(args):
     convert(args.java, args.converter_classpath, metadata, nested_request, stage1)
     for owner in metadata["owners"]:
         if owner["nestedRecords"]:
-            require_hash((stage1 / "candidate" / owner["path"]).read_bytes(), owner["stage1Sha256"], "authentic nested conversion")
+            require_hash((stage1 / "candidate" / owner["path"]).read_bytes(), owner["stage1Sha256"], "authentic nested conversion " + owner["path"])
         else:
             write_sources(stage1 / "candidate", {owner["path"]: sources[owner["path"]]})
     outer_request = output / "outer-request.tsv"
@@ -151,14 +163,13 @@ def stage(args):
     convert(args.java, args.converter_classpath, metadata, outer_request, stage2)
     candidate = stage2 / "candidate"
     for owner in metadata["owners"]:
-        require_hash((candidate / owner["path"]).read_bytes(), owner["stage2Sha256"], "authentic outer conversion")
+        require_hash((candidate / owner["path"]).read_bytes(), owner["stage2Sha256"], "authentic outer conversion " + owner["path"])
     # --no-index keeps Git application confined to the detached candidate, without modifying active source.
-    run(["git", "apply", "--no-index", "--check", str(api_patch)], cwd=candidate)
-    run(["git", "apply", "--no-index", str(api_patch)], cwd=candidate)
+    apply_api_patch(candidate, api_patch)
     receipt = {"originalSource": args.original_source, "productionSourceCount": len(sources), "owners": []}
     for owner in metadata["owners"]:
-        data = require_hash((candidate / owner["path"]).read_bytes(), owner["apiLoweredSha256"], "API-lowered candidate")
-        cleaned = require_hash(checked_blank_lines(data, owner["blankLineChanges"]), owner["canonicalSha256"], "recorded blank-line cleanup")
+        data = require_hash((candidate / owner["path"]).read_bytes(), owner["apiLoweredSha256"], "API-lowered candidate " + owner["path"])
+        cleaned = require_hash(checked_blank_lines(data, owner["blankLineChanges"]), owner["canonicalSha256"], "recorded blank-line cleanup " + owner["path"])
         if cleaned != current[owner["path"]]:
             raise ValueError("Converted candidate differs from active canonical source")
         receipt["owners"].append({"path": owner["path"], "canonicalSha256": sha(cleaned)})

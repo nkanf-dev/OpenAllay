@@ -64,6 +64,43 @@ class ReplayTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exact recorded commit"):
                 replay.original_sources(Path("."), "recorded-commit", [])
 
+    def test_api_patch_applies_inside_checkout_build_without_prefix_filter(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "repo"
+            root.mkdir()
+            replay.run(["git", "init", "-q", str(root)])
+            candidate = root / "build" / "proof" / "stage2" / "candidate"
+            source = candidate / "engine-core" / "Owner.java"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"old\n")
+            api_patch = Path(folder) / "api.patch"
+            api_patch.write_bytes(b"diff --git a/engine-core/Owner.java b/engine-core/Owner.java\n"
+                                  b"--- a/engine-core/Owner.java\n+++ b/engine-core/Owner.java\n"
+                                  b"@@ -1 +1 @@\n-old\n+new\n")
+            # Reproduce the exact original bug: exit0 while every path is skipped.
+            replay.run(["git", "apply", "--no-index", str(api_patch)], cwd=candidate)
+            self.assertEqual(b"old\n", source.read_bytes())
+            replay.apply_api_patch(candidate, api_patch)
+            self.assertEqual(b"new\n", source.read_bytes())
+            self.assertFalse((root / "engine-core" / "Owner.java").exists())
+
+    def test_api_patch_missing_preimage_fails_and_preserves_source(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "repo"
+            root.mkdir()
+            replay.run(["git", "init", "-q", str(root)])
+            candidate = root / "build" / "proof" / "candidate"
+            source = candidate / "engine-core" / "Owner.java"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"unchanged\n")
+            api_patch = Path(folder) / "api.patch"
+            api_patch.write_bytes(b"diff --git a/engine-core/Owner.java b/engine-core/Owner.java\n"
+                                  b"--- a/engine-core/Owner.java\n+++ b/engine-core/Owner.java\n"
+                                  b"@@ -1 +1 @@\n-absent\n+unsafe\n")
+            with self.assertRaisesRegex(RuntimeError, "Command failed"):
+                replay.apply_api_patch(candidate, api_patch)
+            self.assertEqual(b"unchanged\n", source.read_bytes())
+
     def test_existing_output_is_rejected_without_converter(self):
         with tempfile.TemporaryDirectory() as folder:
             args = type("Args", (), {"source_root": Path(folder), "output": Path(folder),
