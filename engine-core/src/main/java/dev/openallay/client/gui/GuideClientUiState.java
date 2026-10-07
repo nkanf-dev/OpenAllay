@@ -59,8 +59,10 @@ public final class GuideClientUiState implements AutoCloseable {
 
     /** Shared admission receipt semantics; native views do not own acceptance policy. */
     public static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
-        return result instanceof ToolResult.Success<?> success
-                && (editing ? Boolean.TRUE.equals(success.value()) : success.value() instanceof UUID);
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<?>) $oaPattern0_holder.value) != null))
+                && (editing ? Boolean.TRUE.equals($oaPattern0_holder.bound.value()) : $oaPattern0_holder.bound.value() instanceof UUID);
     }
 
     public String ownerId() { return ownerId; }
