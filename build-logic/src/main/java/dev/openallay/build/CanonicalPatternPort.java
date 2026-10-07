@@ -113,11 +113,17 @@ public final class CanonicalPatternPort {
                 TreePath select = new TreePath(expressionPath, invocation.getMethodSelect());
                 javax.lang.model.type.TypeMirror receiver = trees.getTypeMirror(new TreePath(select, member.getExpression()));
                 if (receiver.getKind() != javax.lang.model.type.TypeKind.DECLARED) throw captured;
-                javax.lang.model.type.TypeMirror asMember = task.getTypes().asMemberOf((javax.lang.model.type.DeclaredType) receiver, method);
+                javax.lang.model.type.TypeMirror capturedReceiver = task.getTypes().capture(receiver);
+                if (capturedReceiver.getKind() != javax.lang.model.type.TypeKind.DECLARED) throw captured;
+                javax.lang.model.type.TypeMirror asMember = task.getTypes().asMemberOf(
+                        (javax.lang.model.type.DeclaredType) capturedReceiver, method);
                 if (asMember.getKind() != javax.lang.model.type.TypeKind.EXECUTABLE) throw captured;
                 javax.lang.model.type.TypeMirror returned = ((javax.lang.model.type.ExecutableType) asMember).getReturnType();
                 if (returned.getKind() != javax.lang.model.type.TypeKind.TYPEVAR
-                        || !task.getTypes().isSameType(task.getTypes().erasure(returned), task.getTypes().erasure(expression))) throw captured;
+                        || !task.getTypes().isSameType(task.getTypes().erasure(returned), task.getTypes().erasure(expression))) {
+                    throw new IllegalArgumentException("Attributed capture/member return mismatch: expression="
+                            + expression.getKind() + ":" + expression + " member=" + returned.getKind() + ":" + returned);
+                }
                 javax.lang.model.type.TypeMirror upper = ((javax.lang.model.type.TypeVariable) expression).getUpperBound();
                 if (upper.getKind() != javax.lang.model.type.TypeKind.DECLARED || containsTypeVariable(upper)
                         || !task.getTypes().isAssignable(expression, upper)
