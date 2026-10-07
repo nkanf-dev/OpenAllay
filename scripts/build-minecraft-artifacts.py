@@ -70,6 +70,73 @@ def groups(data):
     return list(result.items())
 
 
+LEGACY_RECIPES = {"forge-flat": ("1.16.5", "jar", "forge16165"),
+                  "forge-install": ("1.12.2", "zip", "forge1122-component")}
+
+
+def package_path(family, release_version):
+    filename = artifacts.describe(family, release_version)["filename"]
+    if family["packagingRecipe"] in LEGACY_RECIPES:
+        return ROOT / "native-builds" / LEGACY_RECIPES[family["packagingRecipe"]][2] / "build/libs" / filename
+    return ROOT / family["loader"] / "build/libs" / filename
+
+
+def legacy_package(path, family, release_version):
+    recipe = family["packagingRecipe"]
+    target, kind, _ = LEGACY_RECIPES[recipe]
+    require(family == artifacts.family_for("forge", target, [target]) and family["artifactKind"] == kind,
+            "Legacy packaging recipe must match its exact accepted stock Forge tuple")
+    packer = module("legacy_release_package", "package-legacy-forge-release.py")
+    result = packer.verify_release(path, family, release_version, ROOT)
+    require(type(result) is dict and set(result) == {"coreBytes", "sqlite", "sharedRuntimes"},
+            "Legacy verifier must return the current exact package proof shape")
+    require(type(result["coreBytes"]) is bytes and 0 < len(result["coreBytes"]) <= artifacts.MAX_ARTIFACT_BYTES, "Legacy feature product missing")
+    artifacts.shape(result["sqlite"], {"artifactSha256", "payloadSha256"}, "Legacy SQLite proof")
+    for value in result["sqlite"].values():
+        artifacts.hash_text(value)
+    artifacts.shape(result["sharedRuntimes"], {"extension-api", "runtime-rhino"}, "Legacy shared runtime proof")
+    for value in result["sharedRuntimes"].values():
+        artifacts.hash_text(value)
+    return result
+
+
+def package_proofs(path, family):
+    if family["packagingRecipe"] in LEGACY_RECIPES:
+        result = legacy_package(path, family, version())
+        return result["sqlite"], result["sharedRuntimes"]
+    return sqlite_package(path, family["loader"]), (forge_runtime_hashes(path) if family["loader"] == "forge" else {})
+
+
+def legacy_builder(archive, family, lock):
+    entries = builder.archive_entries(archive, "legacy feature JAR")
+    expected = builder.resource_path(lock)
+    require([name for name in entries if name.startswith(builder.RESOURCE_DIRECTORY) and name.endswith(".jar")] == [expected],
+            "Legacy product must contain exactly one raw universal Builder")
+    require(not any(name.startswith("dev/openallay/builder/") for name in entries)
+            and builder.DESCRIPTOR not in entries, "Builder cannot be flattened into legacy core")
+    content = archive.read(expected)
+    provenance = builder.prepare.decode_json(archive.read(builder.PROVENANCE))
+    builder.verify_provenance(provenance, lock, hashlib.sha256(content).hexdigest(), False)
+    builder.verify_universal(content, lock)
+    # Component core has no FML descriptor. Its facade ownership is checked by
+    # the install recipe, not by pretending the feature engine is a loader mod.
+    if family["packagingRecipe"] == "forge-flat":
+        builder.reject_builder_registration(archive, entries, "forge", lock)
+    else:
+        require(not any(name in entries for name in ("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "fabric.mod.json", "mcmod.info")),
+                "Forge12 feature core cannot claim facade ownership")
+        for name in entries:
+            if name.endswith(".jar") and name != expected:
+                with zipfile.ZipFile(BytesIO(archive.read(name))) as dependency:
+                    require(not any(entry.startswith("dev/openallay/builder/") or entry == builder.DESCRIPTOR
+                                    for entry in dependency.namelist()), "Duplicate Builder in legacy dependency")
+    with zipfile.ZipFile(BytesIO(content)) as nested:
+        descriptor = builder.verify_manifest(nested.read(builder.DESCRIPTOR), lock)
+    declarations = {row["minecraftVersionRange"] for row in descriptor["support"]["targets"] if row["loader"] == "forge"}
+    require(set(family["supportedTargets"]).issubset(declarations), "Builder does not declare accepted legacy target")
+    return content
+
+
 def metadata(path, family, release_version):
     described = artifacts.describe(family, release_version)
     with zipfile.ZipFile(path) as archive:
@@ -166,7 +233,7 @@ def verify(families, directory=None, engine_manifest=None):
     expected = [artifacts.describe(family, release_version)["filename"] for family in families]
     if directory is not None:
         require(directory.is_dir(), "Missing staged release directory")
-        require(sorted(path.name for path in directory.glob("*.jar")) == sorted(expected),
+        require(sorted(path.name for path in directory.iterdir() if path.suffix in (".jar", ".zip")) == sorted(expected),
                 "Staged release must contain exactly the selected accepted artifacts")
     engine = native.engine_files(ROOT) if engine_manifest is None else None
     expected_engine = ({name: hashlib.sha256(content).hexdigest() for name, content in engine.items()}
@@ -177,13 +244,20 @@ def verify(families, directory=None, engine_manifest=None):
     require("dev/openallay/guide/GuideService.class" in expected_engine
             and "dev/openallay/FeatureServices.class" in expected_engine, "Compiled engine manifest missing required owners")
     lock = builder.prepare.load_manifest(ROOT / "distribution/extensions.lock.json")
+    require(lock["source"]["revision"] == "6e977110cbe8e0ca0b39c012f0cdfc10bafffef2",
+            "All release families require the canonical accepted Builder source")
     builder_bytes = None
     records = []
     sqlite_payload = None
     for family, filename in zip(families, expected):
-        path = (directory / filename if directory is not None else ROOT / family["loader"] / "build/libs" / filename).resolve(strict=True)
-        metadata(path, family, release_version)
-        with zipfile.ZipFile(path) as archive:
+        path = (directory / filename if directory is not None else package_path(family, release_version)).resolve(strict=True)
+        legacy = family["packagingRecipe"] in LEGACY_RECIPES
+        proof = legacy_package(path, family, release_version) if legacy else None
+        if not legacy:
+            metadata(path, family, release_version)
+        with zipfile.ZipFile(BytesIO(proof["coreBytes"]) if legacy else path) as archive:
+            require(len(archive.namelist()) == len(set(archive.namelist())) and archive.testzip() is None,
+                    "Invalid feature product archive")
             for name, digest in expected_engine.items():
                 require(hashlib.sha256(archive.read(name)).hexdigest() == digest,
                         "Shared engine was changed or omitted: " + name)
@@ -193,20 +267,26 @@ def verify(families, directory=None, engine_manifest=None):
                     content = archive.read(name)
                     require(len(content) >= 8 and content[:4] == b"\xca\xfe\xba\xbe" and 45 <= int.from_bytes(content[6:8], "big") <= int(profile["java_version"]) + 44,
                             "Product class exceeds target Java: " + name)
-        builder.verify_package(path, family["loader"], lock)
-        builder_support(path, family, lock)
-        with zipfile.ZipFile(path) as archive:
-            content = archive.read(builder.resource_path(lock))
+        if legacy:
+            with zipfile.ZipFile(BytesIO(proof["coreBytes"])) as archive:
+                content = legacy_builder(archive, family, lock)
+        else:
+            builder.verify_package(path, family["loader"], lock)
+            builder_support(path, family, lock)
+            with zipfile.ZipFile(path) as archive:
+                content = archive.read(builder.resource_path(lock))
         require(builder_bytes is None or content == builder_bytes, "All families must bundle identical universal Builder bytes")
         builder_bytes = content
-        tokenizer.verify(path, family["loader"])
-        sqlite = sqlite_package(path, family["loader"])
+        if not legacy:
+            tokenizer.verify(path, family["loader"])
+        sqlite = proof["sqlite"] if legacy else sqlite_package(path, family["loader"])
         require(sqlite_payload is None or sqlite["payloadSha256"] == sqlite_payload,
                 "All accepted families must bundle identical SQLite provider/native payloads")
         sqlite_payload = sqlite["payloadSha256"]
-        interval = module("accepted_package_guard", "verify-minecraft-binary-intervals.py")
-        interval.package_guard(path, family, release_version, ROOT)
-        if engine is not None:
+        if not legacy:
+            interval = module("accepted_package_guard", "verify-minecraft-binary-intervals.py")
+            interval.package_guard(path, family, release_version, ROOT)
+        if engine is not None and not legacy:
             native.verify(path, family["loader"], family["buildTarget"], int(profile["java_version"]),
                           engine, bundled_builder=True, family=family)
         records.append({**artifacts.describe(family, release_version), "artifactPath": str(path),
@@ -266,7 +346,7 @@ def forge_runtime_hashes(path):
 
 
 BUILD_RECEIPT_FIELDS = {"kind", "outcome", "sourceSha", "version", "sourceRunId", "sourceRunAttempt",
-                        "family", "artifactSha256", "engineManifestSha256", "commands", "sqlite", "sharedRuntimes"}
+                        "family", "artifactSha256", "engineManifestSha256", "commands", "sqlite", "sharedRuntimes", "packagingProofSha256"}
 
 
 RELEASE_BUILD_SELECTION = "distribution/release-build-selection.json"
@@ -392,7 +472,7 @@ def read_reuse_selection():
         return {}
     data = artifacts.read_json(path)
     artifacts.shape(data, {"version", "groups"}, "Release build selection")
-    require(data["version"] == version() and type(data["groups"]) is list and data["groups"],
+    require(data["version"] == version() and type(data["groups"]) is list,
             "Release reuse selection must match the current product release")
     selected = {}
     accepted = catalog()["acceptedFamilies"]
@@ -458,6 +538,12 @@ def verify_build_receipts(families, directory, receipt_directory):
     for family in families:
         receipt = artifacts.read_json(receipt_directory / (family["id"] + ".json"))
         artifacts.shape(receipt, BUILD_RECEIPT_FIELDS, "Compile/package release receipt")
+        if family["packagingRecipe"] in LEGACY_RECIPES:
+            sidecar = directory / (artifacts.describe(family, release_version)["filename"] + ".packaging.json")
+            require(artifacts.file_hash(sidecar, artifacts.MAX_EVIDENCE_BYTES) == artifacts.hash_text(receipt["packagingProofSha256"]),
+                    "Legacy complete package ownership proof changed after build")
+        else:
+            require(receipt["packagingProofSha256"] is None, "Nested recipe cannot carry a legacy bypass proof")
         require(receipt["kind"] == "compile-package" and receipt["outcome"] == "passed",
                 "A compile/package release receipt is required; runtime receipts are a separate class")
         require(receipt["version"] == release_version
@@ -471,27 +557,32 @@ def verify_build_receipts(families, directory, receipt_directory):
         require(type(commands) is list and commands, "Missing checked-in native wrapper build provenance")
         for row in commands:
             artifacts.shape(row, {"command", "runtime"}, "Native build command")
-            command = row["command"]
-            require(type(command) is list and command and all(type(value) is str for value in command), "Invalid native build command")
-            require(row["runtime"] in ("root", "java21") and command[0] in ("gradlew", "native-builds/early-neoforge/gradlew"),
-                    "Build command must use a checked-in wrapper")
-            require(not any(value.split(":")[-1] in ("test", "build", "check", "runClient", "runServer") for value in command),
+            require(type(row["command"]) is list and row["command"] and all(type(value) is str for value in row["command"]),
+                    "Invalid native build command")
+            require(not any(value.split(":")[-1] in ("test", "build", "check", "runClient", "runServer") for value in row["command"]),
                     "Release receipt must describe compilation/packaging, not repeated game/test gates")
-        root_commands = [row["command"] for row in commands if row["runtime"] == "root"]
-        require(len(root_commands) == 1 and "-PminecraftTarget=" + family["buildTarget"] in root_commands[0]
-                and "-PtestBundledExtensions=false" in root_commands[0]
-                and any(value.startswith("-PminecraftArtifact=") and family["id"] in value.split("=", 1)[1].split(",")
-                        for value in root_commands[0]), "Receipt command does not select this exact accepted family")
-        selection = next(value.split("=", 1)[1] for value in root_commands[0] if value.startswith("-PminecraftArtifact="))
-        require(commands == command_receipt(family["buildTarget"], select(catalog(), family["buildTarget"], selection)),
-                "Receipt commands differ from the checked-in native compiler plan")
+        if family["packagingRecipe"] in LEGACY_RECIPES:
+            expected_commands = command_receipt(family["buildTarget"], [family])
+        else:
+            for row in commands:
+                require(row["runtime"] in ("root", "java21") and row["command"][0] in ("gradlew", "native-builds/early-neoforge/gradlew"),
+                        "Nested recipe must use its checked-in native wrapper")
+            root_commands = [row["command"] for row in commands if row["runtime"] == "root"]
+            require(len(root_commands) == 1 and "-PminecraftTarget=" + family["buildTarget"] in root_commands[0]
+                    and "-PtestBundledExtensions=false" in root_commands[0]
+                    and any(value.startswith("-PminecraftArtifact=") and family["id"] in value.split("=", 1)[1].split(",")
+                            for value in root_commands[0]), "Receipt command does not select this exact accepted family")
+            selection = next(value.split("=", 1)[1] for value in root_commands[0] if value.startswith("-PminecraftArtifact="))
+            expected_commands = command_receipt(family["buildTarget"], select(catalog(), family["buildTarget"], selection))
+        require(commands == expected_commands, "Receipt commands differ from the checked-in native compiler plan")
         receipts.append(receipt)
     records = verify(families, directory, engine_manifest=engine)
     for family, record, receipt in zip(families, records, receipts):
         path = Path(record["artifactPath"])
         require(record["artifactSha256"] == artifacts.hash_text(receipt["artifactSha256"]), "New release artifact changed after build")
-        require(sqlite_package(path, family["loader"]) == receipt["sqlite"], "Nested SQLite bytes changed after package checks")
-        require((forge_runtime_hashes(path) if family["loader"] == "forge" else {}) == receipt["sharedRuntimes"],
+        sqlite, runtimes = package_proofs(path, family)
+        require(sqlite == receipt["sqlite"], "SQLite bytes changed after package checks")
+        require(runtimes == receipt["sharedRuntimes"],
                 "Separately compiled shared runtime bytes changed after build")
     return records
 
@@ -565,12 +656,18 @@ def build_and_stage(directory, target=None, family_ids=None):
             destination = directory / record["filename"]
             shutil.copyfile(path, destination)
             require(artifacts.file_hash(destination, artifacts.MAX_ARTIFACT_BYTES) == record["artifactSha256"], "Staged release bytes changed")
+            sqlite, runtimes = package_proofs(path, family)
+            packaging_sha = None
+            if family["packagingRecipe"] in LEGACY_RECIPES:
+                sidecar = Path(str(path) + ".packaging.json")
+                packaging_sha = artifacts.file_hash(sidecar, artifacts.MAX_EVIDENCE_BYTES)
+                shutil.copyfile(sidecar, Path(str(destination) + ".packaging.json"))
             write_json(receipt_directory / (family["id"] + ".json"), {
                 "kind": "compile-package", "outcome": "passed", "sourceSha": source, "version": version(),
                 "sourceRunId": run, "sourceRunAttempt": attempt, "family": family,
                 "artifactSha256": record["artifactSha256"], "engineManifestSha256": engine_sha,
-                "commands": command_receipt(target, families), "sqlite": sqlite_package(path, family["loader"]),
-                "sharedRuntimes": forge_runtime_hashes(path) if family["loader"] == "forge" else {}})
+                "commands": command_receipt(target, families), "sqlite": sqlite,
+                "sharedRuntimes": runtimes, "packagingProofSha256": packaging_sha})
     records = verify_build_receipts(selected, directory, receipt_directory)
     checksums(directory, records)
     return records
@@ -603,6 +700,8 @@ def merge_staged(groups_directory, directory):
         for family in families:
             filename = artifacts.describe(family, version())["filename"]
             shutil.copyfile(group / filename, directory / filename)
+            if family["packagingRecipe"] in LEGACY_RECIPES:
+                shutil.copyfile(group / (filename + ".packaging.json"), directory / (filename + ".packaging.json"))
             shutil.copyfile(group / "build-receipts" / (family["id"] + ".json"), receipts / (family["id"] + ".json"))
         observed.update(ids)
     require(observed == {family["id"] for family in data["acceptedFamilies"]}, "Merged release must contain every accepted family exactly once")

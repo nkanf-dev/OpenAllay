@@ -27,12 +27,12 @@ class CommandSelectionTest(unittest.TestCase):
         targets = [file.stem for file in (PROFILE_ROOT / "gradle/minecraft-targets").glob("*.properties")]
         self.assertGreaterEqual(len(targets), 15)
         for target in targets:
-            if target in recipe.EARLY or target == "1.19.2":
+            if target in recipe.EARLY or target in recipe.LEGACY:
                 continue
             with self.subTest(target=target):
                 self.assertEqual(recipe.commands(ROOT, target), [([
                     str(ROOT / "gradlew"), "--max-workers=2", "-PminecraftTarget=" + target,
-                    "-PtestBundledExtensions=false", ":fabric:assemble", ":neoforge:assemble"], "root")])
+                    "-PtestBundledExtensions=false", *[":" + loader + ":assemble" for loader in recipe.target_loaders(ROOT, target)["loaders"]]], "root")])
 
     def test_pom_only_targets_use_actual_isolated_export(self):
         for target in ("1.20.2", "1.20.3", "1.20.5"):
@@ -100,7 +100,7 @@ class CommandSelectionTest(unittest.TestCase):
 
 class SourceReuseContractTest(unittest.TestCase):
     def text(self, relative):
-        return (ROOT / relative).read_text()
+        return (PROFILE_ROOT / relative).read_text()
 
     def test_guard_precedes_modern_loader_plugin_for_pom_only_targets(self):
         source = self.text("neoforge/build.gradle")

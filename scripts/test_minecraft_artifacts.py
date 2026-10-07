@@ -67,8 +67,8 @@ class MinecraftArtifactsTest(unittest.TestCase):
         return ARTIFACTS.verify_receipt(self.family, self.receipt_path, self.artifact, self.artifact_sha)
 
     def test_current_defaults_and_filenames_stay_singleton_26_2(self):
-        self.assertEqual(len(self.catalog["acceptedFamilies"]), 2)
-        for loader in ARTIFACTS.LOADERS:
+        self.assertEqual(len(self.catalog["acceptedFamilies"]), 35)
+        for loader in ARTIFACTS.DEFAULT_LOADERS:
             result = self.run_cli("resolve", "--loader", loader, "--version", "0.4.1")
             self.assertEqual(result.returncode, 0, result.stderr)
             family = json.loads(result.stdout)
@@ -109,7 +109,7 @@ class MinecraftArtifactsTest(unittest.TestCase):
                    ("buildTarget", "26.3"), ("supportedTargets", []), ("supportedTargets", ["26.2", "26.2"])]
         for key, value in changes:
             self.catalog = copy.deepcopy(CATALOG)
-            self.catalog["acceptedFamilies"][0][key] = value
+            next(family for family in self.catalog["acceptedFamilies"] if family["id"] == "fabric-26.2")[key] = value
             self.write_catalog()
             self.assert_failure(self.run_cli("validate"))
         self.catalog = copy.deepcopy(CATALOG)
@@ -242,8 +242,9 @@ class MinecraftArtifactsTest(unittest.TestCase):
             self.verify()
 
     def test_catalog_addition_needs_receipt_and_partial_receipt_options_fail(self):
+        # Replace the already-admitted interval only inside this synthetic receipt fixture.
+        self.catalog["acceptedFamilies"] = [family for family in self.catalog["acceptedFamilies"] if family["id"] != self.family["id"]]
         self.catalog["acceptedFamilies"].append(self.family)
-        self.catalog["candidateIntervals"] = self.catalog["candidateIntervals"][1:]
         self.write_catalog()
         self.assert_failure(self.run_cli("resolve", "--target", "26.1", "--loader", "fabric"))
         for options in [("--receipt", str(self.receipt_path)), ("--artifact", str(self.artifact)), ("--sha256", self.artifact_sha)]:
