@@ -47,7 +47,7 @@ import difflib
 reports={};majors={}
 for flavor in ['modern','release8','java8']:
     classes=out/(flavor+'-classes');classes.mkdir();compiler=javac8 if flavor=='java8' else javac17;target=['-source','8','-target','8'] if flavor=='java8' else ['--release','17' if flavor=='modern' else '8']
-    run([compiler]+target+['-encoding','UTF-8','-sourcepath','','-d',classes,original if flavor=='modern' else post,root/c['fixture']['path']]+[root[item['path']] for item in c['support']])
+    run([compiler]+target+['-encoding','UTF-8','-sourcepath','','-d',classes,original if flavor=='modern' else post,root/c['fixture']['path']]+[root / item['path'] for item in c['support']])
     majors[flavor]={}
     for path in classes.rglob('*.class'):
         b=path.read_bytes();assert b[:4]==b'\xca\xfe\xba\xbe';major=int.from_bytes(b[6:8],'big');majors[flavor][str(path.relative_to(classes))]=major

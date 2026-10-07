@@ -616,7 +616,7 @@
       "new": "noteKeys = dev.openallay.util.Java8Collections.toList(noteKeys.stream().map(value -> key(value, \"noteKey\")));"
     }
   ],
-  "runner_sha256": "dadabe1686d93eb1f194b9ef3cfae4f4af25ef02da112b8ae879d75c5024e5e0",
+  "runner_sha256": "d26b755f9dfee9c01be89287f5dd5bed06ff8e6b954296f69189c68b9b8cd13c",
   "previous_acceptance_preserved": "Oldacceptedconverter/packets/recipes remain frozen; explicit source-only63wholeowner conversion equivalence proof permits narrow new acceptance, not blanket runtime replay/pinrewrite",
   "canonical_policy": "samecount/names + exact declaredtype shapes; primitive/reference difference distinct; reference spelling mismatch fails closed pending attributed signature proof; true explicitcanonical still unsupported",
   "wholeClientJava8Accepted": false
