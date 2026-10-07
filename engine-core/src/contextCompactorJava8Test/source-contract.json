@@ -1,5 +1,5 @@
 {
-  "scope": "ElevencompletecanonicalContextCompactor/resultprojection/tokenizerfact/ObservingModelClientowners; realbudget/summary/source/cancellation nofakeproductionalgorithm.",
+  "scope": "ElevencompletecanonicalContextCompactor/resultprojection/tokenizerfact/ObservingModelClientowners; realbudget/summary/source/cancellation nofakeproductionalgorithm; exact92productionfrontier includesacceptedJava8Futures.",
   "original_custody_commit": "2e553b9f548bd2cd4ffbf64ac91d58fa27f95dfb",
   "owners": [
     {
@@ -709,6 +709,11 @@
       "path": "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java",
       "sha256": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
       "bytes": 3587
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "b6d8885c726960be323c8d501396a7ebc0d866c35066bf90e11932ad96ed00da",
+      "bytes": 473
     }
   ],
   "fixtures": [
