@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 159556,
-    "sha256": "348002518be52784042fd31f2754ad6f9219d63d600cbb56d17e62774b85ed01",
-    "modified_upstream_files": 98,
+    "bytes": 162414,
+    "sha256": "9a462445699bdd0fd849d67694f88ee214bca72feccca60486db190570ccd086",
+    "modified_upstream_files": 99,
     "added_source_files": 1,
-    "hunks": 359,
+    "hunks": 367,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Context23positivebindings/two conversion switcheslowered; coercion/weight/callbacksemanticsretained. Fullrelease17pendingremaininglanguage/realRecord/defaultcapabilityAPIs.",
+  "source_only_status": "NineteenGeneric/type/interop bindingsloweredinsixowners fromactualJava8diagnostic; capturedreflectionreceiveronce. CapabilityAPIsremaining/fullrelease17unchanged.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -927,9 +927,9 @@
       "primary_binary_name": "dev.latvian.mods.rhino.Kit",
       "source_bytes": 10956,
       "source_sha256": "98c85aa4f7e1c8c001b958bcac71c2b305dd58c41a3c72d1d0c4355c69e756e9",
-      "patched_bytes": 10956,
-      "patched_sha256": "98c85aa4f7e1c8c001b958bcac71c2b305dd58c41a3c72d1d0c4355c69e756e9",
-      "modified": false,
+      "patched_bytes": 10997,
+      "patched_sha256": "7cb97c7169be093271a21f878c8a7c0413ea1558c689ace0f9c2c25b00987d2c",
+      "modified": true,
       "line_count": 396,
       "license_evidence": [
         "MPL-2.0 header"
@@ -1039,8 +1039,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.NativeArray",
       "source_bytes": 73254,
       "source_sha256": "86bf3cbea8ad39bc09d31c59ec54b52789d1882ff3e48678442e7eda588ba351",
-      "patched_bytes": 73401,
-      "patched_sha256": "7fe355da1eda1b643e158d299983e769127a5c211022b0a3110a072936a02597",
+      "patched_bytes": 73429,
+      "patched_sha256": "d4ccab9ca5b732142286b89b055e9ec130420c08d696afd424b6477e0af204d1",
       "modified": true,
       "line_count": 2407,
       "license_evidence": [
@@ -1291,8 +1291,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.NativeJavaMethod",
       "source_bytes": 13912,
       "source_sha256": "205f3f02f141bf0a37f5b21662389337e007bbb5394d0fcdd78e0f6449e929c9",
-      "patched_bytes": 14325,
-      "patched_sha256": "91cf39b74f2b79bcc4f8c3d074c7b857afc9b4c3759203f3dc46cdd08468cc81",
+      "patched_bytes": 14427,
+      "patched_sha256": "1cce82e2f89dfc6591800e4c553bab803695f0686a12340ddafb504d962941ed",
       "modified": true,
       "line_count": 463,
       "license_evidence": [
@@ -3363,8 +3363,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.type.TypeConsolidator",
       "source_bytes": 7599,
       "source_sha256": "0cb1cd3034c2dceb858326562b16e731eac6bc1ac9b61a09ce74b4f3d2b7e1a6",
-      "patched_bytes": 9210,
-      "patched_sha256": "ef364b1ba8935041a5121c6bb37930fb1cccab676417a5ebe706ef602c339fc0",
+      "patched_bytes": 9394,
+      "patched_sha256": "acf1488aecb7f166647622f2bf46f6041b56ceebb6b51a7e572822ce29b9d5ae",
       "modified": true,
       "line_count": 221,
       "license_evidence": [
@@ -3405,8 +3405,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.type.TypeInfoFactory",
       "source_bytes": 2484,
       "source_sha256": "1421e01b3a0d7f6d502b9c0c765442096e186be8250a43023e1e4815778222c1",
-      "patched_bytes": 2650,
-      "patched_sha256": "fd9268f6ef9938dedc3ba353a383cbaf795b8bd66b0093ae85f1858e0796bded",
+      "patched_bytes": 2861,
+      "patched_sha256": "25c7ed256b8046192504e1fb46de9b99c27e969f9685ed56a4bba930d3a898f8",
       "modified": true,
       "line_count": 80,
       "license_evidence": [
@@ -3433,8 +3433,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.type.TypeUtils",
       "source_bytes": 2670,
       "source_sha256": "f51d5fd43898c900b988dd0aebc6353faa253ce329ab9bcd2f723f6749d2c787",
-      "patched_bytes": 2741,
-      "patched_sha256": "37cce24d9bc0f84005f2fd07516ae9c49d15cc55338c716499b308bc64a8fcab",
+      "patched_bytes": 3020,
+      "patched_sha256": "cef3eeba9122f0a6af8e101d6b2aaf2ac18cb0db7c659d645bb024a72edc9a73",
       "modified": true,
       "line_count": 108,
       "license_evidence": [

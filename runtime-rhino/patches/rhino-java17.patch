@@ -1231,6 +1231,13 @@
 -			this.initCause(throwable);
 +		if (javaCause instanceof Throwable && javaCause != this) {
 +			this.initCause((Throwable) javaCause);
+--- a/dev/latvian/mods/rhino/Kit.java
++++ b/dev/latvian/mods/rhino/Kit.java
+@@ -32 +32 @@
+-			if (!(anotherObj instanceof ComplexKey another)) {
++			if (!(anotherObj instanceof ComplexKey)) {
+@@ -34,0 +35 @@
++			ComplexKey another = (ComplexKey) anotherObj;
 --- a/dev/latvian/mods/rhino/LambdaAccessorSlot.java
 +++ b/dev/latvian/mods/rhino/LambdaAccessorSlot.java
 @@ -35 +35 @@
@@ -1318,7 +1325,11 @@
 -		var newAttrs = newWritable ? (currentAttrs & ~READONLY) : (currentAttrs | READONLY);
 +		int currentAttrs = current.getAttributes();
 +		int newAttrs = newWritable ? (currentAttrs & ~READONLY) : (currentAttrs | READONLY);
-@@ -2384 +2386 @@
+@@ -778 +780,2 @@
+-					if (id instanceof String strId) {
++					if (id instanceof String) {
++						String strId = (String) id;
+@@ -2384 +2387 @@
 -		return list.getFirst();
 +		return ListCompat.getFirst(list);
 --- a/dev/latvian/mods/rhino/NativeCallSite.java
@@ -1869,22 +1880,35 @@
 -			var type2 = vararg2 && j >= sig2.size() ? sig2.getLast() : sig2.get(j);
 +			dev.latvian.mods.rhino.type.TypeInfo type1 = vararg1 && j >= sig1.size() ? ListCompat.getLast(sig1) : sig1.get(j);
 +			dev.latvian.mods.rhino.type.TypeInfo type2 = vararg2 && j >= sig2.size() ? ListCompat.getLast(sig2) : sig2.get(j);
-@@ -345,3 +347,3 @@
+@@ -345,7 +347,9 @@
 -		var pars = meth.parameters();
 -
 -		var argTypes = pars.typeInfos();
+-
+-		if (thisObj instanceof NativeJavaObject nativeJavaObject
+-			&& nativeJavaObject.typeInfo instanceof ParameterizedTypeInfo ignored) {
+-			argTypes = TypeConsolidator.consolidateAll(argTypes, nativeJavaObject.getTypeMapping());
 +		dev.latvian.mods.rhino.CachedParameters pars = meth.parameters();
 +
 +		java.util.List<dev.latvian.mods.rhino.type.TypeInfo> argTypes = pars.typeInfos();
-@@ -367 +369 @@
++
++		if (thisObj instanceof NativeJavaObject) {
++			NativeJavaObject nativeJavaObject = (NativeJavaObject) thisObj;
++			if (nativeJavaObject.typeInfo instanceof ParameterizedTypeInfo) {
++				argTypes = TypeConsolidator.consolidateAll(argTypes, nativeJavaObject.getTypeMapping());
++			}
+@@ -367 +371 @@
 -				varArgs = cx.jsToJava(args[args.length - 1], argTypes.getLast());
 +				varArgs = cx.jsToJava(args[args.length - 1], ListCompat.getLast(argTypes));
-@@ -370 +372 @@
+@@ -370 +374 @@
 -				var componentType = argTypes.getLast().componentType();
 +				dev.latvian.mods.rhino.type.TypeInfo componentType = ListCompat.getLast(argTypes).componentType();
-@@ -431 +433 @@
+@@ -431,2 +435,3 @@
 -		var returnType = meth.getReturnType();
+-		if (thisObj instanceof NativeJavaObject nativeJavaObject) {
 +		dev.latvian.mods.rhino.type.TypeInfo returnType = meth.getReturnType();
++		if (thisObj instanceof NativeJavaObject) {
++			NativeJavaObject nativeJavaObject = (NativeJavaObject) thisObj;
 --- a/dev/latvian/mods/rhino/NativeJavaObject.java
 +++ b/dev/latvian/mods/rhino/NativeJavaObject.java
 @@ -89,2 +89,4 @@
@@ -3627,12 +3651,22 @@
 +		}
 +		java.util.HashMap<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> transformed = new HashMap<>(mapping);
 +		for (java.util.Map.Entry<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> entry : transformed.entrySet()) {
-@@ -193,2 +195,2 @@
+@@ -190,5 +192,9 @@
+-        if (superType instanceof ParameterizedType parameterized
+-            && parameterized.getRawType() instanceof Class<?> parent
+-        ) {
 -            final var params = parent.getTypeParameters(); // T
 -            final var args = parameterized.getActualTypeArguments(); // T is mapped to
++        if (superType instanceof ParameterizedType) {
++            ParameterizedType parameterized = (ParameterizedType) superType;
++            Type rawParent = parameterized.getRawType();
++            if (!(rawParent instanceof Class<?>)) {
++                return;
++            }
++            Class<?> parent = (Class<?>) rawParent;
 +            final java.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] params = parent.getTypeParameters(); // T
 +            final java.lang.reflect.Type[] args = parameterized.getActualTypeArguments(); // T is mapped to
-@@ -209 +211 @@
+@@ -209 +215 @@
 -                var entry = mapping.entrySet().iterator().next();
 +                java.util.Map.Entry<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> entry = mapping.entrySet().iterator().next();
 --- a/dev/latvian/mods/rhino/type/TypeInfo.java
@@ -3662,7 +3696,7 @@
 @@ -22 +22 @@
 - * fallback (this fork is JDK-21 only).
 + * fallback (this source port targets JDK 17).
-@@ -33,15 +33,14 @@
+@@ -33,15 +33,19 @@
 -		return switch (type) {
 -			case Class<?> clz -> create(clz);
 -			case ParameterizedType paramType -> create(paramType.getRawType()).withParams(createArray(paramType.getActualTypeArguments()));
@@ -3678,30 +3712,35 @@
 -					yield create(upper[0]);
 -				} else {
 -					yield create(lower[0]);
-+		if (type instanceof Class<?> clz) {
++		if (type instanceof Class<?>) {
++			Class<?> clz = (Class<?>) type;
 +			return create(clz);
-+		} else if (type instanceof ParameterizedType paramType) {
++		} else if (type instanceof ParameterizedType) {
++			ParameterizedType paramType = (ParameterizedType) type;
 +			return create(paramType.getRawType()).withParams(createArray(paramType.getActualTypeArguments()));
-+		} else if (type instanceof GenericArrayType arrType) {
++		} else if (type instanceof GenericArrayType) {
++			GenericArrayType arrType = (GenericArrayType) type;
 +			return create(arrType.getGenericComponentType()).asArray();
-+		} else if (type instanceof TypeVariable<?> variable) {
++		} else if (type instanceof TypeVariable<?>) {
++			TypeVariable<?> variable = (TypeVariable<?>) type;
 +			return create(variable);
-+		} else if (type instanceof WildcardType wildcard) {
++		} else if (type instanceof WildcardType) {
++			WildcardType wildcard = (WildcardType) type;
 +			java.lang.reflect.Type[] lower = wildcard.getLowerBounds();
 +			if (lower.length == 0) {
 +				java.lang.reflect.Type[] upper = wildcard.getUpperBounds();
 +				if (upper.length == 0 || upper[0] == Object.class) {
 +					return TypeInfo.NONE;
-@@ -48,0 +48,3 @@
+@@ -48,0 +53,3 @@
 +				return create(upper[0]);
 +			} else {
 +				return create(lower[0]);
-@@ -50,2 +52,2 @@
+@@ -50,2 +57,2 @@
 -			case null, default -> TypeInfo.NONE;
 -		};
 +		}
 +		return TypeInfo.NONE;
-@@ -58 +60 @@
+@@ -58 +65 @@
 -		var arr = new TypeInfo[array.length];
 +		dev.latvian.mods.rhino.type.TypeInfo[] arr = new TypeInfo[array.length];
 --- a/dev/latvian/mods/rhino/type/TypeStringContext.java
@@ -3714,12 +3753,38 @@
 @@ -16 +16 @@
 -		for (var i : info) {
 +		for (dev.latvian.mods.rhino.type.TypeInfo i : info) {
-@@ -82 +82 @@
+@@ -79 +79,2 @@
+-		if (type instanceof Class<?> clz) {
++		if (type instanceof Class<?>) {
++			Class<?> clz = (Class<?>) type;
+@@ -81,2 +82,3 @@
+-		} else if (type instanceof ParameterizedType paramType) {
 -			var rawType = paramType.getRawType();
++		} else if (type instanceof ParameterizedType) {
++			ParameterizedType paramType = (ParameterizedType) type;
 +			java.lang.reflect.Type rawType = paramType.getRawType();
-@@ -88 +88 @@
+@@ -84 +86,2 @@
+-			if (rawType instanceof Class<?> clz) {
++			if (rawType instanceof Class<?>) {
++				Class<?> clz = (Class<?>) rawType;
+@@ -87,2 +90,3 @@
+-		} else if (type instanceof GenericArrayType arrType) {
 -			var componentType = arrType.getGenericComponentType();
++		} else if (type instanceof GenericArrayType) {
++			GenericArrayType arrType = (GenericArrayType) type;
 +			java.lang.reflect.Type componentType = arrType.getGenericComponentType();
+@@ -92 +96,2 @@
+-		} else if (type instanceof WildcardType wildcard) {
++		} else if (type instanceof WildcardType) {
++			WildcardType wildcard = (WildcardType) type;
+@@ -100 +105,2 @@
+-		if (type instanceof Class<?> c) {
++		if (type instanceof Class<?>) {
++			Class<?> c = (Class<?>) type;
+@@ -102 +108,2 @@
+-		} else if (type instanceof GenericArrayType arr) {
++		} else if (type instanceof GenericArrayType) {
++			GenericArrayType arr = (GenericArrayType) type;
 --- a/dev/latvian/mods/rhino/type/VariableTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/VariableTypeInfo.java
 @@ -44 +44 @@

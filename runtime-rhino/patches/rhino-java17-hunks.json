@@ -1,6 +1,6 @@
 {
   "source_archive_sha256": "bc5b779005b68ce8d00f775aae2b44db82d0c8636264a1d26955c486ee0fe8b8",
-  "patch_sha256": "348002518be52784042fd31f2754ad6f9219d63d600cbb56d17e62774b85ed01",
+  "patch_sha256": "9a462445699bdd0fd849d67694f88ee214bca72feccca60486db190570ccd086",
   "files": [
     {
       "old_path": "dev/latvian/mods/rhino/AccessorSlot.java",
@@ -383,6 +383,10 @@
         {
           "before": "\t\t// The standard set path that will be done by this call will\n\t\t// clear any elements as required.\n\t\tbuiltIn.defineOrdinaryProperty(cx, id, desc, checkValid, key, index);\n\t\tvar currentAttrs = current.getAttributes();\n\t\tvar newAttrs = newWritable ? (currentAttrs & ~READONLY) : (currentAttrs | READONLY);\n\t\tcurrent.setAttributes(newAttrs);\n\t}\n\n",
           "after": "\t\t// The standard set path that will be done by this call will\n\t\t// clear any elements as required.\n\t\tbuiltIn.defineOrdinaryProperty(cx, id, desc, checkValid, key, index);\n\t\tint currentAttrs = current.getAttributes();\n\t\tint newAttrs = newWritable ? (currentAttrs & ~READONLY) : (currentAttrs | READONLY);\n\t\tcurrent.setAttributes(newAttrs);\n\t}\n\n"
+        },
+        {
+          "before": "\t\t\t\t// assume that the representation is sparse\n\t\t\t\tObject[] e = getIds(cx); // will only find in object itself\n\t\t\t\tfor (Object id : e) {\n\t\t\t\t\tif (id instanceof String strId) {\n\t\t\t\t\t\t// > MAXINT will appear as string\n\t\t\t\t\t\tlong index = toArrayIndex(cx, strId);\n\t\t\t\t\t\tif (index >= longVal) {\n",
+          "after": "\t\t\t\t// assume that the representation is sparse\n\t\t\t\tObject[] e = getIds(cx); // will only find in object itself\n\t\t\t\tfor (Object id : e) {\n\t\t\t\t\tif (id instanceof String) {\n\t\t\t\t\t\tString strId = (String) id;\n\t\t\t\t\t\t// > MAXINT will appear as string\n\t\t\t\t\t\tlong index = toArrayIndex(cx, strId);\n\t\t\t\t\t\tif (index >= longVal) {\n"
         }
       ]
     },
@@ -587,6 +591,14 @@
         {
           "before": "\t\t}\n\n\t\tObject retval = meth.invoke(javaObject, args, cx, scope);\n\t\tvar returnType = meth.getReturnType();\n\t\tif (thisObj instanceof NativeJavaObject nativeJavaObject) {\n\t\t\treturnType = returnType.consolidate(nativeJavaObject.getTypeMapping());\n\t\t}\n",
           "after": "\t\t}\n\n\t\tObject retval = meth.invoke(javaObject, args, cx, scope);\n\t\tdev.latvian.mods.rhino.type.TypeInfo returnType = meth.getReturnType();\n\t\tif (thisObj instanceof NativeJavaObject nativeJavaObject) {\n\t\t\treturnType = returnType.consolidate(nativeJavaObject.getTypeMapping());\n\t\t}\n"
+        },
+        {
+          "before": "\n\t\tjava.util.List<dev.latvian.mods.rhino.type.TypeInfo> argTypes = pars.typeInfos();\n\n\t\tif (thisObj instanceof NativeJavaObject nativeJavaObject\n\t\t\t&& nativeJavaObject.typeInfo instanceof ParameterizedTypeInfo ignored) {\n\t\t\targTypes = TypeConsolidator.consolidateAll(argTypes, nativeJavaObject.getTypeMapping());\n\t\t}\n\n\t\tif (pars.isVarArg()) {\n",
+          "after": "\n\t\tjava.util.List<dev.latvian.mods.rhino.type.TypeInfo> argTypes = pars.typeInfos();\n\n\t\tif (thisObj instanceof NativeJavaObject) {\n\t\t\tNativeJavaObject nativeJavaObject = (NativeJavaObject) thisObj;\n\t\t\tif (nativeJavaObject.typeInfo instanceof ParameterizedTypeInfo) {\n\t\t\t\targTypes = TypeConsolidator.consolidateAll(argTypes, nativeJavaObject.getTypeMapping());\n\t\t\t}\n\t\t}\n\n\t\tif (pars.isVarArg()) {\n"
+        },
+        {
+          "before": "\n\t\tObject retval = meth.invoke(javaObject, args, cx, scope);\n\t\tdev.latvian.mods.rhino.type.TypeInfo returnType = meth.getReturnType();\n\t\tif (thisObj instanceof NativeJavaObject nativeJavaObject) {\n\t\t\treturnType = returnType.consolidate(nativeJavaObject.getTypeMapping());\n\t\t}\n\n",
+          "after": "\n\t\tObject retval = meth.invoke(javaObject, args, cx, scope);\n\t\tdev.latvian.mods.rhino.type.TypeInfo returnType = meth.getReturnType();\n\t\tif (thisObj instanceof NativeJavaObject) {\n\t\t\tNativeJavaObject nativeJavaObject = (NativeJavaObject) thisObj;\n\t\t\treturnType = returnType.consolidate(nativeJavaObject.getTypeMapping());\n\t\t}\n\n"
         }
       ]
     },
@@ -823,6 +835,10 @@
         {
           "before": "                }\n                return Collections.emptyMap();\n            case 1:\n                var entry = mapping.entrySet().iterator().next();\n                if (DEBUG) {\n                    System.out.println(\"collected singleton mapping: \" + entry.getKey() + \" -> \" + entry.getValue());\n                }\n",
           "after": "                }\n                return Collections.emptyMap();\n            case 1:\n                java.util.Map.Entry<dev.latvian.mods.rhino.type.VariableTypeInfo, dev.latvian.mods.rhino.type.TypeInfo> entry = mapping.entrySet().iterator().next();\n                if (DEBUG) {\n                    System.out.println(\"collected singleton mapping: \" + entry.getKey() + \" -> \" + entry.getValue());\n                }\n"
+        },
+        {
+          "before": "        Type superType,\n        Map<VariableTypeInfo, TypeInfo> pushTo\n    ) {\n        if (superType instanceof ParameterizedType parameterized\n            && parameterized.getRawType() instanceof Class<?> parent\n        ) {\n            final java.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] params = parent.getTypeParameters(); // T\n            final java.lang.reflect.Type[] args = parameterized.getActualTypeArguments(); // T is mapped to\n            for (int i = 0; i < args.length; i++) {\n",
+          "after": "        Type superType,\n        Map<VariableTypeInfo, TypeInfo> pushTo\n    ) {\n        if (superType instanceof ParameterizedType) {\n            ParameterizedType parameterized = (ParameterizedType) superType;\n            Type rawParent = parameterized.getRawType();\n            if (!(rawParent instanceof Class<?>)) {\n                return;\n            }\n            Class<?> parent = (Class<?>) rawParent;\n            final java.lang.reflect.TypeVariable<? extends java.lang.Class<?>>[] params = parent.getTypeParameters(); // T\n            final java.lang.reflect.Type[] args = parameterized.getActualTypeArguments(); // T is mapped to\n            for (int i = 0; i < args.length; i++) {\n"
         }
       ]
     },
@@ -853,6 +869,10 @@
         {
           "before": "\t\tif (array.length == 0) {\n\t\t\treturn TypeInfo.EMPTY_ARRAY;\n\t\t}\n\t\tvar arr = new TypeInfo[array.length];\n\t\tfor (int i = 0; i < array.length; i++) {\n\t\t\tarr[i] = create(array[i]);\n\t\t}\n",
           "after": "\t\tif (array.length == 0) {\n\t\t\treturn TypeInfo.EMPTY_ARRAY;\n\t\t}\n\t\tdev.latvian.mods.rhino.type.TypeInfo[] arr = new TypeInfo[array.length];\n\t\tfor (int i = 0; i < array.length; i++) {\n\t\t\tarr[i] = create(array[i]);\n\t\t}\n"
+        },
+        {
+          "before": "\tVariableTypeInfo create(TypeVariable<?> typeVariable);\n\n\tdefault TypeInfo create(Type type) {\n\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn create(clz);\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\treturn create(paramType.getRawType()).withParams(createArray(paramType.getActualTypeArguments()));\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\treturn create(arrType.getGenericComponentType()).asArray();\n\t\t} else if (type instanceof TypeVariable<?> variable) {\n\t\t\treturn create(variable);\n\t\t} else if (type instanceof WildcardType wildcard) {\n\t\t\tjava.lang.reflect.Type[] lower = wildcard.getLowerBounds();\n\t\t\tif (lower.length == 0) {\n\t\t\t\tjava.lang.reflect.Type[] upper = wildcard.getUpperBounds();\n",
+          "after": "\tVariableTypeInfo create(TypeVariable<?> typeVariable);\n\n\tdefault TypeInfo create(Type type) {\n\t\tif (type instanceof Class<?>) {\n\t\t\tClass<?> clz = (Class<?>) type;\n\t\t\treturn create(clz);\n\t\t} else if (type instanceof ParameterizedType) {\n\t\t\tParameterizedType paramType = (ParameterizedType) type;\n\t\t\treturn create(paramType.getRawType()).withParams(createArray(paramType.getActualTypeArguments()));\n\t\t} else if (type instanceof GenericArrayType) {\n\t\t\tGenericArrayType arrType = (GenericArrayType) type;\n\t\t\treturn create(arrType.getGenericComponentType()).asArray();\n\t\t} else if (type instanceof TypeVariable<?>) {\n\t\t\tTypeVariable<?> variable = (TypeVariable<?>) type;\n\t\t\treturn create(variable);\n\t\t} else if (type instanceof WildcardType) {\n\t\t\tWildcardType wildcard = (WildcardType) type;\n\t\t\tjava.lang.reflect.Type[] lower = wildcard.getLowerBounds();\n\t\t\tif (lower.length == 0) {\n\t\t\t\tjava.lang.reflect.Type[] upper = wildcard.getUpperBounds();\n"
         }
       ]
     },
@@ -1785,6 +1805,14 @@
         {
           "before": "\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tvar rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tvar componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n",
           "after": "\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tjava.lang.reflect.Type rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tjava.lang.reflect.Type componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic static Class<?> getRawType(Type type) {\n\t\tif (type instanceof Class<?> clz) {\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType paramType) {\n\t\t\tjava.lang.reflect.Type rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?> clz) {\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType arrType) {\n\t\t\tjava.lang.reflect.Type componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n\t\t} else if (type instanceof WildcardType wildcard) {\n\t\t\treturn getRawType(wildcard.getUpperBounds()[0]);\n\t\t}\n\n",
+          "after": "\t}\n\n\tpublic static Class<?> getRawType(Type type) {\n\t\tif (type instanceof Class<?>) {\n\t\t\tClass<?> clz = (Class<?>) type;\n\t\t\treturn clz;\n\t\t} else if (type instanceof ParameterizedType) {\n\t\t\tParameterizedType paramType = (ParameterizedType) type;\n\t\t\tjava.lang.reflect.Type rawType = paramType.getRawType();\n\n\t\t\tif (rawType instanceof Class<?>) {\n\t\t\t\tClass<?> clz = (Class<?>) rawType;\n\t\t\t\treturn clz;\n\t\t\t}\n\t\t} else if (type instanceof GenericArrayType) {\n\t\t\tGenericArrayType arrType = (GenericArrayType) type;\n\t\t\tjava.lang.reflect.Type componentType = arrType.getGenericComponentType();\n\t\t\treturn Array.newInstance(getRawType(componentType), 0).getClass();\n\t\t} else if (type instanceof TypeVariable) {\n\t\t\treturn Object.class;\n\t\t} else if (type instanceof WildcardType) {\n\t\t\tWildcardType wildcard = (WildcardType) type;\n\t\t\treturn getRawType(wildcard.getUpperBounds()[0]);\n\t\t}\n\n"
+        },
+        {
+          "before": "\t}\n\n\tpublic static Type getComponentType(Type type, Type fallback) {\n\t\tif (type instanceof Class<?> c) {\n\t\t\treturn c.getComponentType();\n\t\t} else if (type instanceof GenericArrayType arr) {\n\t\t\treturn arr.getGenericComponentType();\n\t\t} else {\n\t\t\treturn fallback;\n",
+          "after": "\t}\n\n\tpublic static Type getComponentType(Type type, Type fallback) {\n\t\tif (type instanceof Class<?>) {\n\t\t\tClass<?> c = (Class<?>) type;\n\t\t\treturn c.getComponentType();\n\t\t} else if (type instanceof GenericArrayType) {\n\t\t\tGenericArrayType arr = (GenericArrayType) type;\n\t\t\treturn arr.getGenericComponentType();\n\t\t} else {\n\t\t\treturn fallback;\n"
         }
       ]
     },
@@ -2213,6 +2241,16 @@
         {
           "before": "\t\ttry {\n\t\t\tObject r = function.resumeGenerator(cx, scope, GeneratorState.GENERATOR_SEND, savedState, value);\n\n\t\t\tif (r instanceof YieldStarResult ysResult) {\n\t\t\t\t// This special result tells us that we are executing a \"yield *\"\n\t\t\t\tstate = State.SUSPENDED_YIELD;\n\t\t\t\ttry {\n",
           "after": "\t\ttry {\n\t\t\tObject r = function.resumeGenerator(cx, scope, GeneratorState.GENERATOR_SEND, savedState, value);\n\n\t\t\tif (r instanceof YieldStarResult) {\n\t\t\t\tYieldStarResult ysResult = (YieldStarResult) r;\n\t\t\t\t// This special result tells us that we are executing a \"yield *\"\n\t\t\t\tstate = State.SUSPENDED_YIELD;\n\t\t\t\ttry {\n"
+        }
+      ]
+    },
+    {
+      "path": "dev/latvian/mods/rhino/Kit.java",
+      "old_path": "dev/latvian/mods/rhino/Kit.java",
+      "hunks": [
+        {
+          "before": "\n\t\t@Override\n\t\tpublic boolean equals(Object anotherObj) {\n\t\t\tif (!(anotherObj instanceof ComplexKey another)) {\n\t\t\t\treturn false;\n\t\t\t}\n\t\t\treturn key1.equals(another.key1) && key2.equals(another.key2);\n\t\t}\n\n",
+          "after": "\n\t\t@Override\n\t\tpublic boolean equals(Object anotherObj) {\n\t\t\tif (!(anotherObj instanceof ComplexKey)) {\n\t\t\t\treturn false;\n\t\t\t}\n\t\t\tComplexKey another = (ComplexKey) anotherObj;\n\t\t\treturn key1.equals(another.key1) && key2.equals(another.key2);\n\t\t}\n\n"
         }
       ]
     }
