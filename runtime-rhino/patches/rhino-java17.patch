@@ -3529,17 +3529,178 @@
 +		ResolvedOverload ovl = (ResolvedOverload) other;
 --- a/dev/latvian/mods/rhino/ScriptRuntime.java
 +++ b/dev/latvian/mods/rhino/ScriptRuntime.java
-@@ -674,2 +674,2 @@
+@@ -297,13 +297,6 @@
+-		return switch (c) { // <SP>
+-			// <LF>
+-			// <CR>
+-			// <TAB>
+-			// <NBSP>
+-			// <FF>
+-			// <VT>
+-			// <LS>
+-			// <PS>
+-			case ' ', '\n', '\r', '\t', '\u00A0', '\u000C', '\u000B', '\u2028', '\u2029', '\uFEFF' -> // <BOM>
+-				true;
+-			default -> Character.getType(c) == Character.SPACE_SEPARATOR;
+-		};
++		switch (c) { // <SP>
++			case ' ': case '\n': case '\r': case '\t': case '\u00A0':
++			case '\u000C': case '\u000B': case '\u2028': case '\u2029': case '\uFEFF':
++				return true; // <LF>, <CR>, <TAB>, <NBSP>, <FF>, <VT>, <LS>, <PS>, <BOM>
++			default: return Character.getType(c) == Character.SPACE_SEPARATOR;
++		}
+@@ -674,2 +667,2 @@
 -		var c = s.indexOf('\'') == -1 ? '\'' : '"';
 -		var escaped = escapeString(s, c);
 +		char c = s.indexOf('\'') == -1 ? '\'' : '"';
 +		java.lang.String escaped = escapeString(s, c);
-@@ -803 +803 @@
+@@ -706,11 +699,12 @@
+-			int escape = switch (c) {
+-				case '\b' -> 'b';
+-				case '\f' -> 'f';
+-				case '\n' -> 'n';
+-				case '\r' -> 'r';
+-				case '\t' -> 't';
+-				case 0xb -> 'v'; // Java lacks \v.
+-				case ' ' -> ' ';
+-				case '\\' -> '\\';
+-				default -> -1;
+-			};
++			int escape;
++			switch (c) {
++				case '\b': escape = 'b'; break;
++				case '\f': escape = 'f'; break;
++				case '\n': escape = 'n'; break;
++				case '\r': escape = 'r'; break;
++				case '\t': escape = 't'; break;
++				case 0xb: escape = 'v'; break; // Java lacks \v.
++				case ' ': escape = ' '; break;
++				case '\\': escape = '\\'; break;
++				default: escape = -1; break;
++			}
+@@ -803 +797 @@
 -			var builder = new StringBuilder();
 +			java.lang.StringBuilder builder = new StringBuilder();
-@@ -2205 +2205 @@
+@@ -900 +894,2 @@
+-		if (value instanceof Scriptable obj) {
++		if (value instanceof Scriptable) {
++			Scriptable obj = (Scriptable) value;
+@@ -905 +900,2 @@
+-				if (v instanceof Function f) {
++				if (v instanceof Function) {
++					Function f = (Function) v;
+@@ -1711 +1707 @@
+-			if (!(v instanceof Callable f)) {
++			if (!(v instanceof Callable)) {
+@@ -1713,0 +1710 @@
++			Callable f = (Callable) v;
+@@ -1755 +1752 @@
+-		if (!(iterator instanceof Callable f)) {
++		if (!(iterator instanceof Callable)) {
+@@ -1757,0 +1755 @@
++		Callable f = (Callable) iterator;
+@@ -1935 +1933 @@
+-		if (!(value instanceof Callable f)) {
++		if (!(value instanceof Callable)) {
+@@ -1944,0 +1943 @@
++		Callable f = (Callable) value;
+@@ -2001 +2000,2 @@
+-		if (function instanceof RefCallable rfunction) {
++		if (function instanceof RefCallable) {
++			RefCallable rfunction = (RefCallable) function;
+@@ -2019 +2019 @@
+-		if (!(fun instanceof Function function)) {
++		if (!(fun instanceof Function)) {
+@@ -2021,0 +2022 @@
++		Function function = (Function) fun;
+@@ -2205 +2206 @@
 -			var type = ((ScriptableObject) value).getTypeOf();
 +			dev.latvian.mods.rhino.MemberType type = ((ScriptableObject) value).getTypeOf();
+@@ -2220 +2221,2 @@
+-		if (obj instanceof NativeSymbol ns) {
++		if (obj instanceof NativeSymbol) {
++			NativeSymbol ns = (NativeSymbol) obj;
+@@ -2382 +2384 @@
+-		if (!(val instanceof Scriptable s)) {
++		if (!(val instanceof Scriptable)) {
+@@ -2384,0 +2387 @@
++		Scriptable s = (Scriptable) val;
+@@ -2579 +2582,2 @@
+-		} else if (y instanceof CharSequence c) {
++		} else if (y instanceof CharSequence) {
++			CharSequence c = (CharSequence) y;
+@@ -2722,7 +2726,12 @@
+-				return switch (op) {
+-					case Token.GE -> val1.toString().compareTo(val2.toString()) >= 0;
+-					case Token.LE -> val1.toString().compareTo(val2.toString()) <= 0;
+-					case Token.GT -> val1.toString().compareTo(val2.toString()) > 0;
+-					case Token.LT -> val1.toString().compareTo(val2.toString()) < 0;
+-					default -> throw Kit.codeBug();
+-				};
++				switch (op) {
++					case Token.GE:
++						return val1.toString().compareTo(val2.toString()) >= 0;
++					case Token.LE:
++						return val1.toString().compareTo(val2.toString()) <= 0;
++					case Token.GT:
++						return val1.toString().compareTo(val2.toString()) > 0;
++					case Token.LT:
++						return val1.toString().compareTo(val2.toString()) < 0;
++					default:
++						throw Kit.codeBug();
++				}
+@@ -2733,7 +2742,12 @@
+-		return switch (op) {
+-			case Token.GE -> d1 >= d2;
+-			case Token.LE -> d1 <= d2;
+-			case Token.GT -> d1 > d2;
+-			case Token.LT -> d1 < d2;
+-			default -> throw Kit.codeBug();
+-		};
++		switch (op) {
++			case Token.GE:
++				return d1 >= d2;
++			case Token.LE:
++				return d1 <= d2;
++			case Token.GT:
++				return d1 > d2;
++			case Token.LT:
++				return d1 < d2;
++			default:
++				throw Kit.codeBug();
++		}
+@@ -2870 +2884,2 @@
+-			if (t instanceof EcmaError ee) {
++			if (t instanceof EcmaError) {
++				EcmaError ee = (EcmaError) t;
+@@ -2874 +2889,2 @@
+-			} else if (t instanceof WrappedException we) {
++			} else if (t instanceof WrappedException) {
++				WrappedException we = (WrappedException) t;
+@@ -2884 +2900,2 @@
+-			} else if (t instanceof EvaluatorException ee) {
++			} else if (t instanceof EvaluatorException) {
++				EvaluatorException ee = (EvaluatorException) t;
+@@ -2947 +2964,2 @@
+-		if (t instanceof EcmaError ee) {
++		if (t instanceof EcmaError) {
++			EcmaError ee = (EcmaError) t;
+@@ -2951 +2969,2 @@
+-		} else if (t instanceof WrappedException we) {
++		} else if (t instanceof WrappedException) {
++			WrappedException we = (WrappedException) t;
+@@ -2956 +2975,2 @@
+-		} else if (t instanceof EvaluatorException ee) {
++		} else if (t instanceof EvaluatorException) {
++			EvaluatorException ee = (EvaluatorException) t;
+@@ -3131 +3151,2 @@
+-				if (id instanceof String str) {
++				if (id instanceof String) {
++					String str = (String) id;
+@@ -3138 +3159,2 @@
+-				} else if (id instanceof Integer index) {
++				} else if (id instanceof Integer) {
++					Integer index = (Integer) id;
 --- a/dev/latvian/mods/rhino/ScriptableObject.java
 +++ b/dev/latvian/mods/rhino/ScriptableObject.java
 @@ -1464,3 +1464,3 @@

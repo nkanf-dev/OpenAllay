@@ -6,11 +6,11 @@
   },
   "patch": {
     "filename": "rhino-java17.patch",
-    "bytes": 208227,
-    "sha256": "265667e0c7f403f5cf8f5415c57f835027117b8b7a597c6ea6185823e3eec0b2",
+    "bytes": 213448,
+    "sha256": "fa16916580c44f024617a220503869716501c7910d953dbfa8200641833da649",
     "modified_upstream_files": 103,
     "added_source_files": 1,
-    "hunks": 438,
+    "hunks": 455,
     "added_sources": [
       {
         "path": "dev/latvian/mods/rhino/util/ListCompat.java",
@@ -19,7 +19,7 @@
       }
     ]
   },
-  "source_only_status": "Parser13actualswitchesloweredexcludingcommentedoldalgorithm; grammar/controltargetsretained/fullrelease17pendingremaininglanguage/APIs.",
+  "source_only_status": "ScriptRuntime4switches18bindingslowered; conversions/comparison/callback/optional/throwableorder retained. Fullrelease17pendingremainingnativebindings/record/defaultAPIs.",
   "source_count": 276,
   "upstream_source_lines": 72504,
   "produced_source_count": 277,
@@ -1627,8 +1627,8 @@
       "primary_binary_name": "dev.latvian.mods.rhino.ScriptRuntime",
       "source_bytes": 108896,
       "source_sha256": "b67866a42c23ab263bcb30539341f679393e34e3f38504323efe160bce3d03cb",
-      "patched_bytes": 108960,
-      "patched_sha256": "6cf33c475c0317c7abb89e977a03780a9fcdd5d5308984a9a7426597fe9fdd2b",
+      "patched_bytes": 109806,
+      "patched_sha256": "508c15de2c452345b37383bbcaef89b0f87a776c0a71dbf379ea31750065e39b",
       "modified": true,
       "line_count": 3461,
       "license_evidence": [
