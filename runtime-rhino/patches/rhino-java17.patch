@@ -6,6 +6,84 @@
 @@ -219 +221 @@
 -			Class<?> valueType = pTypes.getLast();
 +			Class<?> valueType = ListCompat.getLast(pTypes);
+--- a/dev/latvian/mods/rhino/ArrayLikeAbstractOperations.java
++++ b/dev/latvian/mods/rhino/ArrayLikeAbstractOperations.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -233 +235,11 @@
+-	public record StringLikeComparator(Context cx) implements Comparator<Object> {
++	public static final class StringLikeComparator implements Comparator<Object> {
++		private final Context cx;
++
++		public StringLikeComparator(Context cx) {
++			this.cx = cx;
++		}
++
++		public Context cx() {
++			return cx;
++		}
++
+@@ -240,3 +252,34 @@
+-	}
+-
+-	public record ElementComparator(Comparator<Object> child) implements Comparator<Object> {
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof StringLikeComparator)) {
++				return false;
++			}
++			StringLikeComparator that = (StringLikeComparator) other;
++			return Objects.equals(cx, that.cx);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(cx);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "StringLikeComparator[cx=" + cx + "]";
++		}
++	}
++
++	public static final class ElementComparator implements Comparator<Object> {
++		private final Comparator<Object> child;
++
++		public ElementComparator(Comparator<Object> child) {
++			this.child = child;
++		}
++
++		public Comparator<Object> child() {
++			return child;
++		}
++
+@@ -266,0 +310,21 @@
++		}
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof ElementComparator)) {
++				return false;
++			}
++			ElementComparator that = (ElementComparator) other;
++			return Objects.equals(child, that.child);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(child);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "ElementComparator[child=" + child + "]";
 --- a/dev/latvian/mods/rhino/CachedParameters.java
 +++ b/dev/latvian/mods/rhino/CachedParameters.java
 @@ -1,0 +2,2 @@
@@ -536,6 +614,55 @@
 +		hash = 31 * hash + Objects.hashCode(types);
 +		return hash;
 +	}
+--- a/dev/latvian/mods/rhino/type/JSFunctionTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSFunctionTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -7 +9,18 @@
+-public record JSFunctionTypeInfo(List<JSOptionalParam> params, TypeInfo returnType) implements TypeInfo {
++public final class JSFunctionTypeInfo implements TypeInfo {
++	private final List<JSOptionalParam> params;
++
++	private final TypeInfo returnType;
++
++	public JSFunctionTypeInfo(List<JSOptionalParam> params, TypeInfo returnType) {
++		this.params = params;
++		this.returnType = returnType;
++	}
++
++	public List<JSOptionalParam> params() {
++		return params;
++	}
++
++	public TypeInfo returnType() {
++		return returnType;
++	}
++
+@@ -24 +43 @@
+-		for (var param : params) {
++		for (JSOptionalParam param : params) {
+@@ -45 +64 @@
+-		for (var param : params) {
++		for (JSOptionalParam param : params) {
+@@ -50,0 +70,17 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSFunctionTypeInfo)) {
++			return false;
++		}
++		JSFunctionTypeInfo that = (JSFunctionTypeInfo) other;
++		return Objects.equals(params, that.params) && Objects.equals(returnType, that.returnType);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(params);
++		hash = 31 * hash + Objects.hashCode(returnType);
++		return hash;
++	}
 --- a/dev/latvian/mods/rhino/type/JSNumberConstantTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSNumberConstantTypeInfo.java
 @@ -1,0 +2,2 @@
@@ -569,6 +696,47 @@
 +	public int hashCode() {
 +		int hash = 0;
 +		hash = 31 * hash + Objects.hashCode(number);
++		return hash;
++	}
+--- a/dev/latvian/mods/rhino/type/JSObjectTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSObjectTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -7 +9,11 @@
+-public record JSObjectTypeInfo(List<JSOptionalParam> fields) implements TypeInfo {
++public final class JSObjectTypeInfo implements TypeInfo {
++	private final List<JSOptionalParam> fields;
++
++	public JSObjectTypeInfo(List<JSOptionalParam> fields) {
++		this.fields = fields;
++	}
++
++	public List<JSOptionalParam> fields() {
++		return fields;
++	}
++
+@@ -36 +48 @@
+-		for (var field : fields) {
++		for (JSOptionalParam field : fields) {
+@@ -52 +64 @@
+-		for (var field : fields) {
++		for (JSOptionalParam field : fields) {
+@@ -55,0 +68,16 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSObjectTypeInfo)) {
++			return false;
++		}
++		JSObjectTypeInfo that = (JSObjectTypeInfo) other;
++		return Objects.equals(fields, that.fields);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(fields);
 +		return hash;
 +	}
 --- a/dev/latvian/mods/rhino/type/JSOptionalParam.java
@@ -626,10 +794,87 @@
 +	}
 --- a/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
 +++ b/dev/latvian/mods/rhino/type/JSOrTypeInfo.java
-@@ -16 +16,2 @@
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -8 +10,11 @@
+-public record JSOrTypeInfo(List<TypeInfo> types) implements TypeInfo {
++public final class JSOrTypeInfo implements TypeInfo {
++	private final List<TypeInfo> types;
++
++	public JSOrTypeInfo(List<TypeInfo> types) {
++		this.types = types;
++	}
++
++	public List<TypeInfo> types() {
++		return types;
++	}
++
+@@ -16,2 +28,4 @@
 -		if (info instanceof JSOrTypeInfo(List<TypeInfo> types1)) {
-+		if (info instanceof JSOrTypeInfo other) {
+-			var list = new ArrayList<TypeInfo>(types.size() + types1.size());
++		if (info instanceof JSOrTypeInfo) {
++			JSOrTypeInfo other = (JSOrTypeInfo) info;
 +			List<TypeInfo> types1 = other.types();
++			List<TypeInfo> list = new ArrayList<TypeInfo>(types.size() + types1.size());
+@@ -22 +36 @@
+-			var list = new ArrayList<TypeInfo>(types.size() + 1);
++			List<TypeInfo> list = new ArrayList<TypeInfo>(types.size() + 1);
+@@ -49 +63 @@
+-		for (var type : types) {
++		for (TypeInfo type : types) {
+@@ -52,0 +67,16 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSOrTypeInfo)) {
++			return false;
++		}
++		JSOrTypeInfo that = (JSOrTypeInfo) other;
++		return Objects.equals(types, that.types);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(types);
++		return hash;
++	}
+--- a/dev/latvian/mods/rhino/type/JSStringConstantTypeInfo.java
++++ b/dev/latvian/mods/rhino/type/JSStringConstantTypeInfo.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -9 +11,11 @@
+-public record JSStringConstantTypeInfo(String constant) implements TypeInfo {
++public final class JSStringConstantTypeInfo implements TypeInfo {
++	private final String constant;
++
++	public JSStringConstantTypeInfo(String constant) {
++		this.constant = constant;
++	}
++
++	public String constant() {
++		return constant;
++	}
++
+@@ -34,0 +47,16 @@
++
++	@Override
++	public boolean equals(Object other) {
++		if (!(other instanceof JSStringConstantTypeInfo)) {
++			return false;
++		}
++		JSStringConstantTypeInfo that = (JSStringConstantTypeInfo) other;
++		return Objects.equals(constant, that.constant);
++	}
++
++	@Override
++	public int hashCode() {
++		int hash = 0;
++		hash = 31 * hash + Objects.hashCode(constant);
++		return hash;
++	}
 --- a/dev/latvian/mods/rhino/type/TypeConsolidator.java
 +++ b/dev/latvian/mods/rhino/type/TypeConsolidator.java
 @@ -1,0 +2,2 @@
@@ -684,6 +929,286 @@
 -		};
 +		}
 +		return TypeInfo.NONE;
+--- a/dev/latvian/mods/rhino/util/ArrayValueProvider.java
++++ b/dev/latvian/mods/rhino/util/ArrayValueProvider.java
+@@ -1,0 +2,2 @@
++
++import java.util.Objects;
+@@ -42 +44 @@
+-		var arr = target.newArray(len);
++		Object arr = target.newArray(len);
+@@ -68 +70 @@
+-		var list = new ArrayList<>(len);
++		List<Object> list = new ArrayList<Object>(len);
+@@ -94 +96 @@
+-		var set = new HashSet<>(len);
++		Set<Object> set = new HashSet<Object>(len);
+@@ -107 +109,11 @@
+-	record FromObject(Object object) implements ArrayValueProvider {
++	final class FromObject implements ArrayValueProvider {
++		private final Object object;
++
++		public FromObject(Object object) {
++			this.object = object;
++		}
++
++		public Object object() {
++			return object;
++		}
++
+@@ -122,0 +135,21 @@
++		}
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof FromObject)) {
++				return false;
++			}
++			FromObject that = (FromObject) other;
++			return Objects.equals(object, that.object);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(object);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "FromObject[object=" + object + "]";
+@@ -130 +163,11 @@
+-	record FromNativeArray(NativeArray array) implements ArrayValueProvider {
++	final class FromNativeArray implements ArrayValueProvider {
++		private final NativeArray array;
++
++		public FromNativeArray(NativeArray array) {
++			this.array = array;
++		}
++
++		public NativeArray array() {
++			return array;
++		}
++
+@@ -145,5 +188,38 @@
+-	}
+-
+-	record FromJavaArray(Object array, int length) implements ArrayValueProvider {
+-		@Override
+-		public int getLength(Context cx) {
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof FromNativeArray)) {
++				return false;
++			}
++			FromNativeArray that = (FromNativeArray) other;
++			return Objects.equals(array, that.array);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(array);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "FromNativeArray[array=" + array + "]";
++		}
++	}
++
++	final class FromJavaArray implements ArrayValueProvider {
++		private final Object array;
++
++		private final int length;
++
++		public FromJavaArray(Object array, int length) {
++			this.array = array;
++			this.length = length;
++		}
++
++		public Object array() {
++			return array;
++		}
++
++		public int length() {
+@@ -153,0 +230,5 @@
++		public int getLength(Context cx) {
++			return length;
++		}
++
++		@Override
+@@ -162,3 +243,35 @@
+-	}
+-
+-	record FromPlainJavaArray(Object[] array) implements ArrayValueProvider {
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof FromJavaArray)) {
++				return false;
++			}
++			FromJavaArray that = (FromJavaArray) other;
++			return Objects.equals(array, that.array) && length == that.length;
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(array);
++			hash = 31 * hash + Integer.hashCode(length);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "FromJavaArray[array=" + array + ", length=" + length + "]";
++		}
++	}
++
++	final class FromPlainJavaArray implements ArrayValueProvider {
++		private final Object[] array;
++
++		public FromPlainJavaArray(Object[] array) {
++			this.array = array;
++		}
++
++		public Object[] array() {
++			return array;
++		}
++
+@@ -177,0 +291,21 @@
++		}
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof FromPlainJavaArray)) {
++				return false;
++			}
++			FromPlainJavaArray that = (FromPlainJavaArray) other;
++			return Objects.equals(array, that.array);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(array);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "FromPlainJavaArray[array=" + array + "]";
+@@ -185 +319,18 @@
+-	record FromJavaList(List<?> list, Object errorSource) implements ArrayValueProvider {
++	final class FromJavaList implements ArrayValueProvider {
++		private final List<?> list;
++
++		private final Object errorSource;
++
++		public FromJavaList(List<?> list, Object errorSource) {
++			this.list = list;
++			this.errorSource = errorSource;
++		}
++
++		public List<?> list() {
++			return list;
++		}
++
++		public Object errorSource() {
++			return errorSource;
++		}
++
+@@ -198,0 +350,22 @@
++		}
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof FromJavaList)) {
++				return false;
++			}
++			FromJavaList that = (FromJavaList) other;
++			return Objects.equals(list, that.list) && Objects.equals(errorSource, that.errorSource);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Objects.hashCode(list);
++			hash = 31 * hash + Objects.hashCode(errorSource);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "FromJavaList[list=" + list + ", errorSource=" + errorSource + "]";
+@@ -205,2 +378,2 @@
+-		if (iterable instanceof Collection<?> c) {
+-			len = c.size();
++		if (iterable instanceof Collection<?>) {
++			len = ((Collection<?>) iterable).size();
+@@ -210 +383 @@
+-			for (var ignored : iterable) {
++			for (Object ignored : iterable) {
+@@ -218,3 +391,14 @@
+-	record FromIterator(int length, Iterator<?> iterator, Object errorSource) implements ArrayValueProvider {
+-		@Override
+-		public int getLength(Context cx) {
++	final class FromIterator implements ArrayValueProvider {
++		private final int length;
++
++		private final Iterator<?> iterator;
++
++		private final Object errorSource;
++
++		public FromIterator(int length, Iterator<?> iterator, Object errorSource) {
++			this.length = length;
++			this.iterator = iterator;
++			this.errorSource = errorSource;
++		}
++
++		public int length() {
+@@ -223,0 +408,13 @@
++		public Iterator<?> iterator() {
++			return iterator;
++		}
++
++		public Object errorSource() {
++			return errorSource;
++		}
++
++		@Override
++		public int getLength(Context cx) {
++			return length;
++		}
++
+@@ -232,0 +430,23 @@
++
++		@Override
++		public boolean equals(Object other) {
++			if (!(other instanceof FromIterator)) {
++				return false;
++			}
++			FromIterator that = (FromIterator) other;
++			return length == that.length && Objects.equals(iterator, that.iterator) && Objects.equals(errorSource, that.errorSource);
++		}
++
++		@Override
++		public int hashCode() {
++			int hash = 0;
++			hash = 31 * hash + Integer.hashCode(length);
++			hash = 31 * hash + Objects.hashCode(iterator);
++			hash = 31 * hash + Objects.hashCode(errorSource);
++			return hash;
++		}
++
++		@Override
++		public String toString() {
++			return "FromIterator[length=" + length + ", iterator=" + iterator + ", errorSource=" + errorSource + "]";
++		}
 --- a/dev/latvian/mods/rhino/util/Possible.java
 +++ b/dev/latvian/mods/rhino/util/Possible.java
 @@ -4,0 +5,2 @@
