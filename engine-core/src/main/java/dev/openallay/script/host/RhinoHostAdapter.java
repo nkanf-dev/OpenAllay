@@ -9,6 +9,7 @@ import dev.latvian.mods.rhino.Undefined;
 import dev.openallay.script.result.JavascriptResultShape;
 import dev.openallay.script.schema.HostSchema;
 import dev.openallay.script.schema.RhinoTypeSchema;
+import dev.openallay.value.ValueSchemas;
 import java.lang.reflect.Type;
 import java.time.temporal.TemporalAmount;
 import java.time.temporal.TemporalAccessor;
@@ -26,7 +27,7 @@ import java.util.function.Supplier;
 /**
  * Closed Java-to-Rhino adapter for immutable detached request snapshots.
  *
- * <p>It never delegates to Rhino's generic Java wrapper. Only record components, collection
+ * <p>It never delegates to Rhino's generic Java wrapper. Only explicit value/record components, collection
  * elements, String-keyed map entries, Gson leaves, and stable scalar values are visible.
  */
 public final class RhinoHostAdapter {
@@ -90,8 +91,8 @@ public final class RhinoHostAdapter {
         if (value instanceof Map<?, ?> map) {
             return cached(map, () -> HostObjectView.map(context, scope, this, map));
         }
-        if (value.getClass().isRecord()) {
-            return cached(value, () -> HostObjectView.record(context, scope, this, value));
+        if (ValueSchemas.supports(value.getClass()) || value.getClass().isRecord()) {
+            return cached(value, () -> HostObjectView.value(context, scope, this, value));
         }
         throw HostAccessException.unsupported(value.getClass());
     }

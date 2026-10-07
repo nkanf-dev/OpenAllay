@@ -3,6 +3,8 @@ package dev.openallay.script.schema;
 import com.google.gson.JsonElement;
 import dev.latvian.mods.rhino.type.TypeInfo;
 import dev.openallay.script.host.HostAccessException;
+import dev.openallay.value.ValueSchema;
+import dev.openallay.value.ValueSchemas;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
@@ -72,6 +74,13 @@ public final class RhinoTypeSchema {
             }
             return new HostSchema.Dictionary("map", requireParameter(type, 1), true);
         }
+        if (ValueSchemas.supports(raw)) {
+            LinkedHashMap<String, HostSchema> fields = new LinkedHashMap<>();
+            for (ValueSchema.Component<?> component : explicitSchema(raw).components()) {
+                fields.put(component.name(), require(TypeInfo.of(component.genericType())));
+            }
+            return new HostSchema.RecordValue("record", raw.getName(), fields);
+        }
         if (raw.isRecord()) {
             LinkedHashMap<String, HostSchema> fields = new LinkedHashMap<>();
             for (RecordComponent component : raw.getRecordComponents()) {
@@ -126,6 +135,10 @@ public final class RhinoTypeSchema {
             if (!declared.asClass().isInstance(value)) {
                 throw mismatch(declared, value);
             }
+            if (ValueSchemas.supports(declared.asClass())) {
+                validateExplicitValue(declared.asClass(), record, value);
+                return;
+            }
             RecordComponent[] components = declared.asClass().getRecordComponents();
             try {
                 MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(
@@ -151,6 +164,32 @@ public final class RhinoTypeSchema {
         Class<?> raw = declared.asClass();
         if (!boxed(raw).isInstance(value)) {
             throw mismatch(declared, value);
+        }
+    }
+
+    private static <T> ValueSchema<T> explicitSchema(Class<T> owner) {
+        try {
+            return ValueSchemas.of(owner);
+        } catch (RuntimeException failure) {
+            throw unsupported(TypeInfo.of(owner));
+        }
+    }
+
+    private static <T> void validateExplicitValue(
+            Class<T> owner, HostSchema.RecordValue record, Object value) {
+        ValueSchema<T> schema = explicitSchema(owner);
+        T actual = owner.cast(value);
+        for (ValueSchema.Component<T> component : schema.components()) {
+            Object child;
+            try {
+                child = component.read(actual);
+            } catch (Throwable failure) {
+                throw new HostAccessException(
+                        "javascript_host_access_failed",
+                        "Could not validate detached value components");
+            }
+            validateValue(TypeInfo.of(component.genericType()),
+                    record.fields().get(component.name()), child);
         }
     }
 

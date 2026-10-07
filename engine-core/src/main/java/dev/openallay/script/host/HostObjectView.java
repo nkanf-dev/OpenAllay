@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-/** Lazy component/key-only view over one detached Java record, map, or Gson object. */
+/** Lazy component/key-only view over one detached Java value, map, or Gson object. */
 public final class HostObjectView extends ScriptableObject implements Map<String, Object> {
     @FunctionalInterface
     interface Reader {
@@ -74,7 +74,7 @@ public final class HostObjectView extends ScriptableObject implements Map<String
         preventExtensions();
     }
 
-    static HostObjectView record(
+    static HostObjectView value(
             Context context, Scriptable scope, RhinoHostAdapter adapter, Object value) {
         HostRecordSchema schema = HostRecordSchema.of(value.getClass());
         return new HostObjectView(
