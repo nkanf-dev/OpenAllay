@@ -46,7 +46,7 @@ public final class QueryOperation {
         if (fields == null) this.fields = null;
         else {
             List<String> copy = new ArrayList<>();
-            for (String field : fields) copy.add(Objects.requireNonNull(field, "field"));
+            for (String selectedField : fields) copy.add(Objects.requireNonNull(selectedField, "field"));
             this.fields = Collections.unmodifiableList(copy);
         }
         this.direction = direction;
