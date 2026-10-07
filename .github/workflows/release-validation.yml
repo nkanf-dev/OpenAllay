@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8]
         default: skills
         required: true
 permissions:
@@ -241,3 +241,36 @@ jobs:
           path: |
             build/rhino-java8-leaf-proof/receipt.json
             build/rhino-java8-leaf-proof/classes/
+
+  commonmark-java8:
+    if: inputs.scope == 'commonmark-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Compile and verify the full canonical parser runtime on Java 8
+        run: ./gradlew --no-daemon -p runtime-commonmark -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64,$JAVA_HOME_21_X64" java8Proof -PcommonmarkJava8Executable="$JAVA_HOME_8_X64/bin/java"
+      - name: Retain full parser API and golden behavior evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-commonmark-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            runtime-commonmark/build/java8-proof/
+            runtime-commonmark/build/libs/
+            runtime-commonmark/build/reports/
