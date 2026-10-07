@@ -18,7 +18,7 @@ import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
+import dev.openallay.util.Java8Hex;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -110,7 +110,7 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
     @Override
     public void retain(UUID actor, String owner, List<ImageReference> references) throws IOException {
         String key = directKey(owner);
-        List<ImageReference> captured = List.copyOf(Objects.requireNonNull(references, "references"));
+        List<ImageReference> captured = dev.openallay.util.Java8Collections.listCopyOf(Objects.requireNonNull(references, "references"));
         withActor(actor, directory -> {
             Map<String, Set<String>> retained = readOwners(directory);
             Set<String> hashes = validateReferences(directory, captured);
@@ -127,11 +127,11 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
         String prefix = namespacePrefix(namespace);
         Map<String, List<ImageReference>> captured = new TreeMap<>();
         Objects.requireNonNull(owners, "owners").forEach((owner, references) ->
-                captured.put(prefix + identifierHash(owner), List.copyOf(references)));
+                captured.put(prefix + identifierHash(owner), dev.openallay.util.Java8Collections.listCopyOf(references)));
         withActor(actor, directory -> {
             Map<String, Set<String>> retained = readOwners(directory);
             Map<String, Set<String>> replacement = new TreeMap<>();
-            for (var owner : captured.entrySet()) {
+            for (Map.Entry<String, List<ImageReference>> owner : captured.entrySet()) {
                 Set<String> hashes = validateReferences(directory, owner.getValue());
                 if (!hashes.isEmpty()) replacement.put(owner.getKey(), hashes);
             }
@@ -158,8 +158,8 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
             Set<String> retained = new TreeSet<>();
             readOwners(directory).values().forEach(retained::addAll);
             List<Path> unretained = new ArrayList<>();
-            try (var entries = Files.list(directory)) {
-                for (Path entry : entries.toList()) {
+            try (java.util.stream.Stream<Path> entries = Files.list(directory)) {
+                for (Path entry : dev.openallay.util.Java8Collections.toList(entries)) {
                     String name = entry.getFileName().toString();
                     if (!isHash(name)) continue; // Never traverse or remove export/foreign files.
                     requireRegularFile(entry);
@@ -219,17 +219,18 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
 
     private ImageReference inspect(byte[] bytes) throws IOException {
         limits.checkByteSize(bytes.length);
-        try (var input = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
-            var readers = ImageIO.getImageReaders(input);
+        try (MemoryCacheImageInputStream input = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
+            java.util.Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) throw new IOException("image is not a decodable PNG or JPEG");
             ImageReader reader = readers.next();
             try {
                 String format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                String mimeType = switch (format) {
-                    case "png" -> "image/png";
-                    case "jpeg", "jpg" -> "image/jpeg";
-                    default -> throw new IOException("only PNG and JPEG image inputs are supported");
-                };
+                String mimeType;
+                switch (format) {
+                    case "png": mimeType = "image/png"; break;
+                    case "jpeg": case "jpg": mimeType = "image/jpeg"; break;
+                    default: throw new IOException("only PNG and JPEG image inputs are supported");
+                }
                 reader.setInput(input, true, true);
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
@@ -263,7 +264,7 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
         try (FileChannel channel = FileChannel.open(
                     file, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
                 BufferedReader reader = new BufferedReader(
-                    Channels.newReader(channel, StandardCharsets.US_ASCII))) {
+                    Channels.newReader(channel, StandardCharsets.US_ASCII.newDecoder(), -1))) {
             StringBuilder line = new StringBuilder(196);
             int next;
             while ((next = reader.read()) != -1) {
@@ -275,7 +276,7 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
                     line.append((char) next);
                 }
             }
-            if (!line.isEmpty()) throw new IOException("incomplete managed image owner manifest");
+            if (line.length() != 0) throw new IOException("incomplete managed image owner manifest");
         }
         return owners;
     }
@@ -413,7 +414,7 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
     }
 
     private static String identifierHash(String identifier) {
-        if (identifier == null || identifier.isBlank()) {
+        if (identifier == null || dev.openallay.util.Java8Strings.isBlank(identifier)) {
             throw new IllegalArgumentException("image retention identifier cannot be blank");
         }
         return digest(identifier.getBytes(StandardCharsets.UTF_8));
@@ -425,7 +426,7 @@ public final class FileImageAttachmentStore implements ImageAttachmentStore {
 
     private static String digest(byte[] bytes) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+            return Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }

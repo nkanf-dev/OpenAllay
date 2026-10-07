@@ -20,16 +20,17 @@ final class ToolObservationImageIndex {
             Map<String, List<ImageReference>> images = new LinkedHashMap<>();
             for (ModelMessage message : messages) {
                 for (ModelContent content : message.content()) {
-                    if (content instanceof ModelContent.ToolResult result && !result.images().isEmpty()) {
+                    if (content instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) content).images().isEmpty()) {
+                        ModelContent.ToolResult result = (ModelContent.ToolResult) content;
                         ArrayList<ImageReference> occurrences = new ArrayList<>(
-                                images.getOrDefault(result.toolUseId(), List.of()));
+                                images.getOrDefault(result.toolUseId(), dev.openallay.util.Java8Collections.listOf()));
                         occurrences.addAll(result.images());
-                        images.put(result.toolUseId(), List.copyOf(occurrences));
+                        images.put(result.toolUseId(), dev.openallay.util.Java8Collections.listCopyOf(occurrences));
                     }
                 }
             }
-            if (!images.isEmpty()) requests.put(requestId, Map.copyOf(images));
+            if (!images.isEmpty()) requests.put(requestId, dev.openallay.util.Java8Collections.mapCopyOf(images));
         });
-        return Map.copyOf(requests);
+        return dev.openallay.util.Java8Collections.mapCopyOf(requests);
     }
 }

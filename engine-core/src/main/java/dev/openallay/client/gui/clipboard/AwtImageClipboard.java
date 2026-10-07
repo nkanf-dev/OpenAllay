@@ -53,7 +53,7 @@ public final class AwtImageClipboard implements ImageClipboard {
             if (imageOffered) {
                 try {
                     Object transferred = value.getTransferData(DataFlavor.imageFlavor);
-                    if (transferred instanceof Image image) return Read.image(ClipboardImageEncoder.bitmap(image));
+                    if (transferred instanceof Image) return Read.image(ClipboardImageEncoder.bitmap((Image) transferred));
                 } catch (IOException | UnsupportedFlavorException | RuntimeException invalidImage) {
                     // An encoded image or copied image file can still be valid.
                 }
@@ -63,11 +63,11 @@ public final class AwtImageClipboard implements ImageClipboard {
                 imageOffered = true;
                 try {
                     Object data = value.getTransferData(flavor);
-                    InputStream stream = data instanceof InputStream input ? input
-                            : data instanceof byte[] bytes ? new ByteArrayInputStream(bytes) : null;
+                    InputStream stream = data instanceof InputStream ? (InputStream) data
+                            : data instanceof byte[] ? new ByteArrayInputStream((byte[]) data) : null;
                     if (stream == null) continue;
-                    try (stream) {
-                        BufferedImage image = ClipboardImageDecoder.read(stream);
+                    try (InputStream capturedStream = stream) {
+                        BufferedImage image = ClipboardImageDecoder.read(capturedStream);
                         if (image != null) return Read.image(image);
                     }
                 } catch (IOException | UnsupportedFlavorException | RuntimeException invalidImage) {
@@ -77,9 +77,11 @@ public final class AwtImageClipboard implements ImageClipboard {
             if (value.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
                 try {
                     Object data = value.getTransferData(DataFlavor.javaFileListFlavor);
-                    if (data instanceof List<?> files) {
+                    if (data instanceof List<?>) {
+                        List<?> files = (List<?>) data;
                         for (Object entry : files) {
-                            if (!(entry instanceof File file) || !isImageFile(file.toPath())) continue;
+                            if (!(entry instanceof File) || !isImageFile(((File) entry).toPath())) continue;
+                            File file = (File) entry;
                             imageOffered = true;
                             BufferedImage image = readFile(file.toPath());
                             if (image != null) return Read.image(image);
@@ -91,7 +93,7 @@ public final class AwtImageClipboard implements ImageClipboard {
             }
             for (DataFlavor flavor : value.getTransferDataFlavors()) {
                 if (!flavor.isMimeTypeEqual("text/uri-list")) continue;
-                try (var reader = new BufferedReader(flavor.getReaderForText(value))) {
+                try (BufferedReader reader = new BufferedReader(flavor.getReaderForText(value))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         Path file = localFile(line);
@@ -119,7 +121,7 @@ public final class AwtImageClipboard implements ImageClipboard {
     }
 
     private static BufferedImage readFile(Path file) {
-        try (var stream = java.nio.file.Files.newInputStream(file)) {
+        try (InputStream stream = java.nio.file.Files.newInputStream(file)) {
             return ClipboardImageDecoder.read(stream);
         } catch (IOException | RuntimeException invalidImage) {
             return null;
@@ -127,7 +129,7 @@ public final class AwtImageClipboard implements ImageClipboard {
     }
 
     private static Path localFile(String line) {
-        String text = line.strip();
+        String text = dev.openallay.util.Java8Strings.strip(line);
         if (text.isEmpty() || text.startsWith("#")) return null;
         try {
             URI uri = new URI(text);
@@ -137,7 +139,7 @@ public final class AwtImageClipboard implements ImageClipboard {
                 if (!host.equalsIgnoreCase("localhost")) return null;
                 uri = new URI("file", null, uri.getPath(), null);
             }
-            return Path.of(uri);
+            return java.nio.file.Paths.get(uri);
         } catch (URISyntaxException | IllegalArgumentException invalidUri) {
             return null;
         }
