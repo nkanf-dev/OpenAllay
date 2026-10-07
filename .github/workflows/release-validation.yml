@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8, engine-json-java8, rhino-collections, recipe-context-java8, tool-schema-java8, rhino-var-tool, tool-schema-consumers, observation-java8, rhino-var-consumers, credentials-java8, model-values-java8, core-var-tool, model-catalog-java8, core-var-consumers, rhino-binding-consumers, bridge-transport-prepare, bridge-transport-java8, retained-skill-prepare, model-message-image-java8, retained-skill-java8, provider-codec-java8, provider-consumers, bridge-history-prepare, rhino-function-baseline, bridge-history-java8, image-attachment-java8, provider-source-custody, canonical-language-inventory, rhino-source-java8-diagnostics, model-profiles-java8, agent-request-prepare, model-profile-consumers, agent-request-java8, rhino-null-baseline, model-profile-source-custody, guide-record-language, agent-session-prepare, canonical-pattern-oracle, rhino-scalar-baseline, agent-session-java8, guide-pattern-language, rhino-context-generic-consumers, client-settings-record-language, context-compactor-prepare, context-compactor-java8, record-constructor-types, canonical-switch-oracle, guide-switch-language, client-settings-pattern-language, canonical-java8-api-oracle, agent-event-trace-prepare, guide-java8-api-language, agent-event-trace-java8, pattern-captured-identifier, client-captured-owner-pattern, guide-sealed-inventory, rhino-parser-baseline, exceptional-future-java8, final-agent-language-prepare, remaining-record-language, guide-union-semantic-java8, client-settings-java8-api-language, attributed-record-proof, attributed-remaining-records]
         default: skills
         required: true
 permissions:
@@ -3529,3 +3529,48 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
         path: build-logic/src/attributedRecordTest/gradle/build/
+
+  attributed-remaining-records:
+    if: inputs.scope == 'attributed-remaining-records'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: '21
+
+          25'
+    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      with:
+        cache-provider: basic
+        cache-read-only: true
+    - name: Attribute the complete last record owner signatures and accessor contracts
+      run: './gradlew --max-workers=2 :engine-core:exportCanonicalVarCompileClasspath
+        -PcanonicalVarClasspathOutput="$RUNNER_TEMP/three-record-classpath.json"
+
+        mkdir -p "$RUNNER_TEMP/three-record-tool"
+
+        "$JAVA_HOME_21_X64/bin/javac" --release 17 -d "$RUNNER_TEMP/three-record-tool"
+        build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java
+        build-logic/src/main/java/dev/openallay/build/AttributedRecordProof.java
+
+        python3 -B -c ''from pathlib import Path; import os,json,hashlib,subprocess;
+        root=Path.cwd(); contract=json.loads((root/"build-logic/src/attributedRecordTest/remaining-three-contract.json").read_text());
+        [None if hashlib.sha256((root/p).read_bytes()).hexdigest()==h else (_ for _
+        in ()).throw(AssertionError(p)) for p,h in contract["tool_pins"].items()]; temp=Path(os.environ["RUNNER_TEMP"]);
+        metadata=json.loads((temp/"three-record-classpath.json").read_text()); subprocess.run([str(Path(os.environ["JAVA_HOME_21_X64"])/"bin/java"),"-cp",str(temp/"three-record-tool"),"dev.openallay.build.AttributedRecordProof",metadata["sourceRoot"],metadata["classpath"],str(root/"build-logic/src/attributedRecordTest/remaining-three-request.tsv"),str(temp/"three-record-materialization")],check=True)'' '
+    - name: Retain actual source compiler and runtime evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: attributed-remaining-records-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: '${{ runner.temp }}/three-record-classpath.json
+
+          ${{ runner.temp }}/three-record-materialization/'
