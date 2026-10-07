@@ -8,7 +8,8 @@ final class ContextConversionBindingTest {
     @Test void scalarCoercionAndNullPrimitiveErrorsKeepBranches() {
         Context cx = new ContextFactory().enter();
         assertNull(cx.jsToJava(null, TypeInfo.STRING));
-        assertThrows(EvaluatorException.class, () -> cx.jsToJava(null, TypeInfo.PRIMITIVE_INT));
+        assertNull(cx.jsToJava(null, TypeInfo.PRIMITIVE_INT));
+        assertThrows(EvaluatorException.class, () -> cx.internalJsToJava(null, TypeInfo.PRIMITIVE_INT));
         assertEquals("undefined", cx.jsToJava(Undefined.INSTANCE, TypeInfo.STRING));
         assertEquals("true", cx.jsToJava(Boolean.TRUE, TypeInfo.STRING));
         assertEquals(Boolean.TRUE, cx.jsToJava(Boolean.TRUE, TypeInfo.BOOLEAN));
