@@ -11,6 +11,26 @@ import subprocess
 def sha(blob): return hashlib.sha256(blob).hexdigest()
 
 
+def normalize_format(name, blob):
+    # Preserve every source line terminator and every nonblank byte except one
+    # explicitly recorded converter-retained compact-constructor line suffix.
+    exact_owner="dev/openallay/skill/SkillDocument.java"
+    exact_line=" chunks = dev.openallay.util.Java8Collections.listCopyOf(chunks); "
+    output=[]; edits=[]
+    for index,line in enumerate(blob.decode("utf-8").splitlines(True),1):
+        if line.endswith("\r\n"): body=line[:-2]; ending="\r\n"
+        elif line.endswith("\n") or line.endswith("\r"): body=line[:-1]; ending=line[-1]
+        else: body=line; ending=""
+        after=body
+        if body and all(character in " \t" for character in body):
+            after=""
+        elif name==exact_owner and body==exact_line:
+            after=exact_line[:-1]
+        if after!=body: edits.append({"line":index,"before":body,"after":after})
+        output.append(after+ending)
+    return "".join(output).encode("utf-8"),edits
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--project",type=Path,required=True)
@@ -57,11 +77,13 @@ def main():
             working[name]=converted/"candidate/engine-core/src/main/java"/name
     packet=output/"source-packet"; packet.mkdir(); patch=""; rows=[]
     for name in sorted(before):
-        path="engine-core/src/main/java/"+name; old=before[name]; new=working[name].read_bytes()
+        path="engine-core/src/main/java/"+name; old=before[name]; raw=working[name].read_bytes()
+        new,format_edits=normalize_format(name,raw)
         for side,blob in [("pre",old),("post",new)]:
             target=packet/side/path; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(blob)
         patch+="".join(difflib.unified_diff(old.decode().splitlines(True),new.decode().splitlines(True),fromfile="a/"+path,tofile="b/"+path))
-        rows.append({"path":path,"pre_sha256":sha(old),"post_sha256":sha(new),"pre_bytes":len(old),"post_bytes":len(new)})
+        rows.append({"path":path,"pre_sha256":sha(old),"post_sha256":sha(new),"pre_bytes":len(old),"post_bytes":len(new),
+                     "converterRawPostSha256":sha(raw),"converterRawPostBytes":len(raw),"formatEdits":format_edits})
     if before!={n:(project/"engine-core/src/main/java"/n).read_bytes() for n in before}: raise ValueError("Source changed during materialization")
     (packet/"source.patch").write_bytes(patch.encode())
     (packet/"manifest.json").write_text(json.dumps({"scope":recipe["scope"],"files":rows,"patch_sha256":sha(patch.encode()),

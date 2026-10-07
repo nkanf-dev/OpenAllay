@@ -155,7 +155,7 @@
     },
     "materializer": {
       "path": "scripts/materialize-retained-skill-java8.py",
-      "sha256": "b6b4c50893bf75db17a2f7b13a45515a582e7a53d40b2547c110d223a8df0096"
+      "sha256": "c6d826cf4f102539e2bd3da05e9847516be77ddceafcb55fa4dbcb1cae173214"
     },
     "recipe": {
       "path": "engine-core/src/retainedSkillJava8Test/recipe.json",
@@ -167,5 +167,6 @@
     }
   },
   "candidateCustody": "Only13 changed Skill owners from the actual materializer pre/post manifest; any other overlay is rejected. Shared/model owners resolve only from repository source.",
-  "modelAdmission": "Current repository Model12 raw bytes must match post_sha256 in separately accepted repository-owned model source contract. No external candidate overlay."
+  "modelAdmission": "Current repository Model12 raw bytes must match post_sha256 in separately accepted repository-owned model source contract. No external candidate overlay.",
+  "materializerFormatting": "Blank-line ASCII space/tab removal + one exact SkillDocument chunks-line trailing space; raw converter posthashes and exact line changes recorded before normalized source hashes"
 }
