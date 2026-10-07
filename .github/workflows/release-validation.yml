@@ -4,7 +4,7 @@ on:
     inputs:
       scope:
         type: choice
-        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers]
+        options: [skills, modern, shared-fixtures, json-java8, primitives-java8, values-java8, rhino-leaves-java8, commonmark-java8, http-java8, record-converter, host-values, http-incomplete, query-values, full-query-java8, rhino-values, voice-http-java8, semantic-integration, rhino-carriers, context-java8, voice-consumers, tool-result-java8]
         default: skills
         required: true
 permissions:
@@ -710,3 +710,38 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: engine-core/build/test-results/
+
+  tool-result-java8:
+    if: inputs.scope == 'tool-result-java8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            25
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: true}
+      - name: Verify canonical result values and constructor JSON on genuine Java 8
+        run: |
+          ./gradlew --no-daemon --max-workers=2 -p engine-core/src/toolResultJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" java8ToolResultTest -PjsonVerificationGsonVersion=2.8.0
+          ./gradlew --no-daemon --max-workers=2 -p engine-core/src/toolResultJava8Test/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" java8ToolResultTest -PjsonVerificationGsonVersion=2.13.2
+      - name: Verify actual executor, codec, bridge and closed host result behavior
+        run: |
+          ./gradlew --no-daemon --max-workers=2 :engine-core:test --tests dev.openallay.tool.ToolResultTest --tests dev.openallay.tool.ToolResultExplicitValueTest --tests dev.openallay.trace.replay.ToolArgumentCodecTest --tests dev.openallay.trace.replay.ToolCodecAndNormalizerTest --tests dev.openallay.agent.tool.LocalAgentToolExecutorTest --tests dev.openallay.bridge.client.ClientToolExecutionEndpointTest --tests dev.openallay.bridge.server.RemoteToolServerTest -PjsonVerificationGsonVersion=2.8.0
+          ./gradlew --no-daemon --max-workers=2 :engine-core:test --tests dev.openallay.tool.ToolResultExplicitValueTest -PjsonVerificationGsonVersion=2.13.2
+      - name: Retain original canonical result proof and consumer diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: java8-tool-result-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            engine-core/src/toolResultJava8Test/gradle/build/
+            engine-core/build/test-results/
