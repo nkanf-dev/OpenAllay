@@ -13,12 +13,12 @@ import dev.openallay.world.WorldPosition;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.TreeMap;
-import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
+
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
+
+
+
 
 /** Reads only public native focus data and a live slot hit-test, without changing client UI state. */
 public final class ClientFocusCapture {
@@ -26,7 +26,7 @@ public final class ClientFocusCapture {
 
     private ClientFocusCapture() {}
 
-    public static WorldFocusObservation capture(Minecraft client, PlatformService platform) {
+    public static WorldFocusObservation capture(net.minecraft.client.Minecraft client, PlatformService platform) {
         requireOwnerThread(client);
         return capture(client, platform, Instant.now());
     }
@@ -36,7 +36,7 @@ public final class ClientFocusCapture {
      * This always reads current native state; it cannot reconstruct an earlier observation.
      */
     public static WorldFocusObservation capture(
-            Minecraft client, PlatformService platform, Instant capturedAt) {
+            net.minecraft.client.Minecraft client, PlatformService platform, Instant capturedAt) {
         requireOwnerThread(client);
         Objects.requireNonNull(platform, "platform");
         Objects.requireNonNull(capturedAt, "capturedAt");
@@ -44,9 +44,9 @@ public final class ClientFocusCapture {
             throw new IllegalStateException("No active client player or level");
         }
 
-        var player = client.player;
+        net.minecraft.client.player.LocalPlayer player = client.player;
         String dimension = MinecraftClientContextFacts.dimension(client);
-        var nativeScreen = MinecraftFocusNativeFacts.screen(client);
+        java.lang.Object nativeScreen = MinecraftFocusNativeFacts.screen(client);
         boolean overlay = MinecraftFocusNativeFacts.overlay(client) != null;
         WorldFocusObservation.Menu menu = menu(client, nativeScreen, overlay);
         WorldFocusObservation.Hover hover = hover(client, nativeScreen, overlay);
@@ -88,13 +88,13 @@ public final class ClientFocusCapture {
     }
 
     /** Current native main-camera numbers, never the player's body rotation or configured FOV. */
-    public static WorldFocusObservation.Camera camera(Minecraft client) {
+    public static WorldFocusObservation.Camera camera(net.minecraft.client.Minecraft client) {
         requireOwnerThread(client);
         return dev.openallay.client.observation.MinecraftCameraFacts.focus(client);
     }
 
-    private static WorldFocusObservation.Target target(Minecraft client) {
-        var hit = dev.openallay.client.observation.MinecraftHitFacts.hit(client);
+    private static WorldFocusObservation.Target target(net.minecraft.client.Minecraft client) {
+        net.minecraft.world.phys.HitResult hit = dev.openallay.client.observation.MinecraftHitFacts.hit(client);
         if (hit == null) {
             return new WorldFocusObservation.Target("none", null, null, null);
         }
@@ -104,8 +104,8 @@ public final class ClientFocusCapture {
             return new WorldFocusObservation.Target("miss", position, null, null);
         }
         if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("block")) {
-            BlockPos blockPos = dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit);
-            var state = dev.openallay.client.observation.MinecraftHitFacts.state(client, blockPos);
+            net.minecraft.core.BlockPos blockPos = dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit);
+            net.minecraft.world.level.block.state.BlockState state = dev.openallay.client.observation.MinecraftHitFacts.state(client, blockPos);
             TreeMap<String, String> properties = new TreeMap<>();
             properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
             return new WorldFocusObservation.Target(
@@ -122,7 +122,7 @@ public final class ClientFocusCapture {
                     null);
         }
         if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("entity")) {
-            var entity = dev.openallay.client.observation.MinecraftHitFacts.entity(hit);
+            net.minecraft.world.entity.Entity entity = dev.openallay.client.observation.MinecraftHitFacts.entity(hit);
             return new WorldFocusObservation.Target(
                     "entity",
                     position,
@@ -140,7 +140,7 @@ public final class ClientFocusCapture {
     }
 
     private static WorldFocusObservation.Screen screen(
-            Minecraft client, Object nativeScreen, boolean overlay) {
+            net.minecraft.client.Minecraft client, Object nativeScreen, boolean overlay) {
         if (nativeScreen == null) {
             return new WorldFocusObservation.Screen(
                     "", "", MinecraftFocusNativeFacts.screenWidth(client, nativeScreen), MinecraftFocusNativeFacts.screenHeight(client, nativeScreen),
@@ -160,8 +160,8 @@ public final class ClientFocusCapture {
     }
 
     private static WorldFocusObservation.Menu menu(
-            Minecraft client, Object nativeScreen, boolean overlay) {
-        var nativeMenu = MinecraftFocusNativeFacts.menu(client, nativeScreen);
+            net.minecraft.client.Minecraft client, Object nativeScreen, boolean overlay) {
+        net.minecraft.world.inventory.AbstractContainerMenu nativeMenu = MinecraftFocusNativeFacts.menu(client, nativeScreen);
         boolean displayed = !overlay && MinecraftFocusNativeFacts.container(nativeScreen);
         String type = "";
         boolean typeAvailable = false;
@@ -189,18 +189,20 @@ public final class ClientFocusCapture {
     }
 
     private static WorldFocusObservation.Hover hover(
-            Minecraft client, Object nativeScreen, boolean overlay) {
+            net.minecraft.client.Minecraft client, Object nativeScreen, boolean overlay) {
         double x = dev.openallay.client.context.MinecraftMouseCoordinates.x(client);
         double y = dev.openallay.client.context.MinecraftMouseCoordinates.y(client);
         boolean mouseGrabbed = MinecraftMouseCoordinates.grabbed(client);
         if (overlay || mouseGrabbed || !(MinecraftFocusNativeFacts.container(nativeScreen))) {
             return new WorldFocusObservation.Hover(x, y, mouseGrabbed, "none", -1, -1, null, "");
         }
-        if (!(nativeScreen instanceof GuideNativeSlotHitTest accessor)) {
+        final class $oaPattern0_Holder { java.lang.Object value; GuideNativeSlotHitTest bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = nativeScreen) instanceof dev.openallay.client.context.GuideNativeSlotHitTest && (($oaPattern0_holder.bound = (GuideNativeSlotHitTest) $oaPattern0_holder.value) != null)))) {
             return new WorldFocusObservation.Hover(
                     x, y, mouseGrabbed, "unavailable", -1, -1, null, "native_hover_invoker_unavailable");
         }
-        Slot slot = accessor.openallay$getHoveredSlot(x, y);
+        net.minecraft.world.inventory.Slot slot = $oaPattern0_holder.bound.openallay$getHoveredSlot(x, y);
         if (slot == null) {
             return new WorldFocusObservation.Hover(x, y, mouseGrabbed, "none", -1, -1, null, "");
         }
@@ -208,7 +210,7 @@ public final class ClientFocusCapture {
                 x, y, mouseGrabbed, "slot", MinecraftFocusNativeFacts.slotIndex(slot), MinecraftMenuFacts.containerSlot(slot), item(client, MinecraftFocusNativeFacts.slotItem(slot)), "");
     }
 
-    private static WorldFocusObservation.Item item(Minecraft client, ItemStack stack) {
+    private static WorldFocusObservation.Item item(net.minecraft.client.Minecraft client, net.minecraft.world.item.ItemStack stack) {
         String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
         int count = stack.getCount();
         String name = stack.isEmpty() ? "" : MinecraftFocusNativeFacts.itemName(stack);
@@ -228,11 +230,11 @@ public final class ClientFocusCapture {
         return new WorldFocusObservation.Item(id, count, name, damage, maxDamage, components, available, diagnostic);
     }
 
-    private static WorldFocusObservation.Position position(Vec3 position) {
+    private static WorldFocusObservation.Position position(net.minecraft.world.phys.Vec3 position) {
         return new WorldFocusObservation.Position(MinecraftFocusNativeFacts.x(position), MinecraftFocusNativeFacts.y(position), MinecraftFocusNativeFacts.z(position));
     }
 
-    private static WorldPosition blockPosition(BlockPos position) {
+    private static WorldPosition blockPosition(net.minecraft.core.BlockPos position) {
         return new WorldPosition(position.getX(), position.getY(), position.getZ());
     }
 
@@ -242,7 +244,7 @@ public final class ClientFocusCapture {
                 ? compact : compact.substring(0, MAX_DIAGNOSTIC_LENGTH - 3) + "...";
     }
 
-    private static void requireOwnerThread(Minecraft client) {
+    private static void requireOwnerThread(net.minecraft.client.Minecraft client) {
         Objects.requireNonNull(client, "client");
         if (!MinecraftClientContextFacts.ownerThread(client)) {
             throw new IllegalStateException("Client focus must be captured on the Minecraft client thread");

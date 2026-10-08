@@ -7,10 +7,10 @@ import dev.openallay.client.presentation.GuideNotificationPort;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.client.gui.Font;
+
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 import dev.openallay.client.gui.GuideTextLine;
 import dev.openallay.client.gui.GuideNativeFont;
 
@@ -24,7 +24,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     private boolean hidden;
     private boolean finished;
     private long fullyVisible;
-    private Font cachedFont;
+    private net.minecraft.client.gui.Font cachedFont;
     private Object cachedLanguage;
     private Display cachedDisplay;
     private Layout layout;
@@ -41,7 +41,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         availableWidth = MAX_WIDTH;
     }
 
-    public GuideNativeToast(GuideNotificationPort.Notification notification, Font font, int guiWidth) {
+    public GuideNativeToast(GuideNotificationPort.Notification notification, net.minecraft.client.gui.Font font, int guiWidth) {
         this.notification = Objects.requireNonNull(notification, "notification");
         availableWidth = Math.max(40, Math.min(MAX_WIDTH, guiWidth - 16));
         refreshLayout(font);
@@ -61,9 +61,9 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
 
     @Override public void onFinishedRendering() { finished = true; }
 
-    @Override protected Visibility guideWantedVisibility() {
+    @Override protected net.minecraft.client.gui.components.toasts.Toast.Visibility guideWantedVisibility() {
         return valid() && fullyVisible < notification.durationSeconds() * 1000L
-                ? Visibility.SHOW : Visibility.HIDE;
+                ? net.minecraft.client.gui.components.toasts.Toast.Visibility.SHOW : net.minecraft.client.gui.components.toasts.Toast.Visibility.HIDE;
     }
 
     @Override protected void updateGuideToast(long fullyVisibleForMs) {
@@ -106,42 +106,42 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
     }
 
     /** Pure display selection: card facts stay primary; terminal reply/failure remains a separate line. */
-    static Display display(GuideNotificationPort.Notification notification, Component guideKey) {
-        Component status = notification.taskFailed() ? MinecraftComponents.translatable("screen.openallay.notification.failed")
+    static Display display(GuideNotificationPort.Notification notification, net.minecraft.network.chat.Component guideKey) {
+        net.minecraft.network.chat.Component status = notification.taskFailed() ? MinecraftComponents.translatable("screen.openallay.notification.failed")
                 : notification.replyCompleted() || notification.taskCompleted()
                         ? MinecraftComponents.translatable("screen.openallay.notification.completed") : MinecraftComponents.empty();
-        Component title, description, secondary;
+        net.minecraft.network.chat.Component title, description, secondary;
         if (!notification.cardPreviews().isEmpty()) {
-            var card = notification.cardPreviews().get(0);
+            dev.openallay.guide.GuidePresentationEvent.CardPreview card = notification.cardPreviews().get(0);
             title = MinecraftComponents.literal(card.title());
             description = MinecraftComponents.literal(card.description());
-            secondary = notification.preview().isBlank() ? MinecraftComponents.empty()
+            secondary = dev.openallay.util.Java8Strings.isBlank(notification.preview()) ? MinecraftComponents.empty()
                     : MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(status), ": "), notification.preview());
         } else {
             title = status;
             description = MinecraftComponents.literal(notification.preview());
             secondary = MinecraftComponents.empty();
         }
-        var summary = MinecraftComponents.empty();
+        net.minecraft.network.chat.Component summary = MinecraftComponents.empty();
         if (notification.cardCount() > 1) {
-            if (!MinecraftComponents.getString(summary).isBlank()) MinecraftComponents.append(summary, " · ");
+            if (!dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(summary))) MinecraftComponents.append(summary, " · ");
             MinecraftComponents.append(summary, MinecraftComponents.translatable("screen.openallay.notification.more_cards", notification.cardCount() - 1));
         }
         if (notification.additionalTasks() > 0) {
-            if (!MinecraftComponents.getString(summary).isBlank()) MinecraftComponents.append(summary, " · ");
+            if (!dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(summary))) MinecraftComponents.append(summary, " · ");
             MinecraftComponents.append(summary, MinecraftComponents.translatable("screen.openallay.notification.more_tasks", notification.additionalTasks()));
         }
         // 26.2 ToastManager has no native click target. This is the existing generic Guide key only.
-        Component hint = guideKey == null ? MinecraftComponents.empty()
+        net.minecraft.network.chat.Component hint = guideKey == null ? MinecraftComponents.empty()
                 : MinecraftComponents.translatable("screen.openallay.notification.view", guideKey);
         return new Display(title, description, secondary, summary, hint);
     }
 
-    private void refreshLayout(Font font) {
-        Component key = dev.openallay.client.gui.GuideNativeKeyMappings.unbound(dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE) ? null
+    private void refreshLayout(net.minecraft.client.gui.Font font) {
+        net.minecraft.network.chat.Component key = dev.openallay.client.gui.GuideNativeKeyMappings.unbound(dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE) ? null
                 : dev.openallay.client.gui.GuideNativeKeyMappings.display(dev.openallay.client.gui.OpenAllayKeyMappings.OPEN_GUIDE);
         Display display = display(notification, key);
-        var language = GuideNativeFont.languageIdentity();
+        java.lang.Object language = GuideNativeFont.languageIdentity();
         if (font == cachedFont && language == cachedLanguage && display.equals(cachedDisplay)) return;
         cachedFont = font;
         cachedLanguage = language;
@@ -149,26 +149,26 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
         width = availableWidth;
         int textWidth = Math.max(1, width - 20);
         int hintWidth = Math.min(textWidth, GuideNativeFont.width(font, display.hint()));
-        int summaryWidth = MinecraftComponents.getString(display.hint()).isBlank() ? textWidth : textWidth - hintWidth - 8;
+        int summaryWidth = dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(display.hint())) ? textWidth : textWidth - hintWidth - 8;
         layout = new Layout(wrapped(font, MinecraftComponents.style(MinecraftComponents.copy(display.title()), net.minecraft.ChatFormatting.BOLD), textWidth, 1),
-                wrapped(font, display.description(), textWidth, MinecraftComponents.getString(display.secondary()).isBlank() ? 2 : 1),
+                wrapped(font, display.description(), textWidth, dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(display.secondary())) ? 2 : 1),
                 wrapped(font, display.secondary(), textWidth, 1),
-                summaryWidth > 8 ? wrapped(font, display.summary(), summaryWidth, 1) : List.of(),
+                summaryWidth > 8 ? wrapped(font, display.summary(), summaryWidth, 1) : dev.openallay.util.Java8Collections.listOf(),
                 wrapped(font, display.hint(), Math.max(1, hintWidth), 1), width - 10 - hintWidth);
     }
 
-    private static List<GuideTextLine> wrapped(Font font, Component text, int width, int maximumLines) {
-        if (MinecraftComponents.getString(text).isBlank()) return List.of();
+    private static List<GuideTextLine> wrapped(net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component text, int width, int maximumLines) {
+        if (dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(text))) return dev.openallay.util.Java8Collections.listOf();
         List<GuideTextLine> all = GuideNativeFont.split(font, text, width);
         if (all.size() <= maximumLines) return all;
         List<GuideTextLine> visible = new ArrayList<>(all.subList(0, maximumLines));
         StringBuilder last = new StringBuilder(visible.get(visible.size() - 1).plainText());
         String ending = MinecraftComponents.getString(GuideNativeFont.substrByWidth(font, MinecraftComponents.literal(last.toString()), Math.max(1, width - GuideNativeFont.width(font, "…"))));
         visible.set(visible.size() - 1, GuideNativeFont.visual(MinecraftComponents.style(MinecraftComponents.literal(ending + "…"), text.getStyle())));
-        return List.copyOf(visible);
+        return dev.openallay.util.Java8Collections.listCopyOf(visible);
     }
 
-    @Override protected void paintGuideToast(GuideGraphics graphics, Font font, long fullyVisibleForMs) {
+    @Override protected void paintGuideToast(GuideGraphics graphics, net.minecraft.client.gui.Font font, long fullyVisibleForMs) {
         if (!valid()) return;
         refreshLayout(font);
         graphics.fill(0, 0, width(), height(), OpenAllayWidgetTheme.CHARCOAL);
@@ -186,7 +186,7 @@ public final class GuideNativeToast extends GuideNativeToastBinding implements G
                 width(), height(), guideSlotCount(), layout.title().size(), layout.description().size());
     }
 
-    private static void text(GuideGraphics graphics, Font font,
+    private static void text(GuideGraphics graphics, net.minecraft.client.gui.Font font,
                              List<GuideTextLine> lines, int y, int color) {
         for (int index = 0; index < lines.size(); index++) graphics.text(font, lines.get(index), 10, y + index * 10, color);
     }
@@ -377,23 +377,23 @@ private static final class ExtractSnapshot {
 }
     @dev.openallay.value.ValueType(Display.ValueSchemaProvider.class)
 static final class Display {
-    private final Component title;
-    private final Component description;
-    private final Component secondary;
-    private final Component summary;
-    private final Component hint;
-    Display(Component title, Component description, Component secondary, Component summary, Component hint) {
+    private final net.minecraft.network.chat.Component title;
+    private final net.minecraft.network.chat.Component description;
+    private final net.minecraft.network.chat.Component secondary;
+    private final net.minecraft.network.chat.Component summary;
+    private final net.minecraft.network.chat.Component hint;
+    Display(net.minecraft.network.chat.Component title, net.minecraft.network.chat.Component description, net.minecraft.network.chat.Component secondary, net.minecraft.network.chat.Component summary, net.minecraft.network.chat.Component hint) {
         this.title = title;
         this.description = description;
         this.secondary = secondary;
         this.summary = summary;
         this.hint = hint;
     }
-    public Component title() { return title; }
-    public Component description() { return description; }
-    public Component secondary() { return secondary; }
-    public Component summary() { return summary; }
-    public Component hint() { return hint; }
+    public net.minecraft.network.chat.Component title() { return title; }
+    public net.minecraft.network.chat.Component description() { return description; }
+    public net.minecraft.network.chat.Component secondary() { return secondary; }
+    public net.minecraft.network.chat.Component summary() { return summary; }
+    public net.minecraft.network.chat.Component hint() { return hint; }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
         if (!(other instanceof Display)) return false;
@@ -413,7 +413,7 @@ static final class Display {
     public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
         public ValueSchemaProvider() {}
         @Override public dev.openallay.value.ValueSchema<Display> schema() {
-            return new dev.openallay.value.ValueSchema<>(Display.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Display>>asList(new dev.openallay.value.ValueSchema.Component<>(Display.class, "title", Display::title), new dev.openallay.value.ValueSchema.Component<>(Display.class, "description", Display::description), new dev.openallay.value.ValueSchema.Component<>(Display.class, "secondary", Display::secondary), new dev.openallay.value.ValueSchema.Component<>(Display.class, "summary", Display::summary), new dev.openallay.value.ValueSchema.Component<>(Display.class, "hint", Display::hint)), arguments -> new Display((Component) arguments[0], (Component) arguments[1], (Component) arguments[2], (Component) arguments[3], (Component) arguments[4]));
+            return new dev.openallay.value.ValueSchema<>(Display.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Display>>asList(new dev.openallay.value.ValueSchema.Component<>(Display.class, "title", Display::title), new dev.openallay.value.ValueSchema.Component<>(Display.class, "description", Display::description), new dev.openallay.value.ValueSchema.Component<>(Display.class, "secondary", Display::secondary), new dev.openallay.value.ValueSchema.Component<>(Display.class, "summary", Display::summary), new dev.openallay.value.ValueSchema.Component<>(Display.class, "hint", Display::hint)), arguments -> new Display((net.minecraft.network.chat.Component) arguments[0], (net.minecraft.network.chat.Component) arguments[1], (net.minecraft.network.chat.Component) arguments[2], (net.minecraft.network.chat.Component) arguments[3], (net.minecraft.network.chat.Component) arguments[4]));
         }
     }
 }

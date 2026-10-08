@@ -20,18 +20,34 @@ final class NativeOpenAlCapturePort implements OpenAlCapture.NativePort<ALCdevic
     @Override public List<String> names() {
         // LWJGL 2's native alcGetString preserves the full double-NUL capture list.
         String names = ALC10.alcGetString(null, ALC11.ALC_CAPTURE_DEVICE_SPECIFIER);
-        return names == null ? List.of() : Arrays.stream(names.split("\u0000"))
-                .filter(name -> !name.isBlank()).toList();
+        return names == null ? dev.openallay.util.Java8Collections.listOf() : dev.openallay.util.Java8Collections.toList(Arrays.stream(names.split("\u0000"))
+                .filter(name -> !dev.openallay.util.Java8Strings.isBlank(name)));
     }
     @Override public ALCdevice open(String name, int sampleRate, int bufferFrames) throws CaptureException {
         ALCdevice device = ALC11.alcCaptureOpenDevice(name, sampleRate, AL10.AL_FORMAT_MONO16, bufferFrames);
         if (device == null) {
             int error = ALC10.alcGetError(null);
-            throw new CaptureException(switch (error) {
-                case ALC10.ALC_INVALID_DEVICE -> Failure.DEVICE_UNAVAILABLE;
-                case ALC10.ALC_INVALID_VALUE, ALC10.ALC_INVALID_ENUM -> Failure.UNSUPPORTED_FORMAT;
-                default -> Failure.OPEN_FAILED;
-            }, "Could not open the microphone with the game's OpenAL capture provider.");
+            {
+dev.openallay.client.voice.AudioCapture.Failure $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((error)) {
+case ALC10.ALC_INVALID_DEVICE:
+{
+$oaSwitch0_exit_result = Failure.DEVICE_UNAVAILABLE; break $oaSwitch0_exit;
+}
+case ALC10.ALC_INVALID_VALUE:
+case ALC10.ALC_INVALID_ENUM:
+{
+$oaSwitch0_exit_result = Failure.UNSUPPORTED_FORMAT; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = Failure.OPEN_FAILED; break $oaSwitch0_exit;
+}
+}
+}
+throw new CaptureException($oaSwitch0_exit_result, "Could not open the microphone with the game's OpenAL capture provider.");
+}
         }
         return device;
     }

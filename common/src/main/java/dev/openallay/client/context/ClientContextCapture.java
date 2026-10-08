@@ -50,13 +50,13 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Optional;
 import java.util.Set;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
+
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
-import net.minecraft.world.item.ItemStack;
+
 
 public final class ClientContextCapture {
-    private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
+    private static final String CAPTURE_GENERATION_PLACEHOLDER = dev.openallay.util.Java8Strings.repeat("0", 64);
     private final dev.openallay.context.ContextSnapshotMetricsJson metricsJson;
     private final PlatformService platform;
     private final RecipeClientRuntime recipeClient;
@@ -78,16 +78,16 @@ public final class ClientContextCapture {
     }
 
     public ToolInvocationContext capture(
-            Minecraft client, Set<ContextCapability> capabilities, String correlationId) {
+            net.minecraft.client.Minecraft client, Set<ContextCapability> capabilities, String correlationId) {
         return capture(client, capabilities, correlationId, false);
     }
 
     public ToolInvocationContext capture(
-            Minecraft client, Set<ContextCapability> capabilities, String correlationId, boolean unrestrictedJavascript) {
+            net.minecraft.client.Minecraft client, Set<ContextCapability> capabilities, String correlationId, boolean unrestrictedJavascript) {
         if (!MinecraftClientContextFacts.ownerThread(client)) {
             throw new IllegalStateException("Client context must be captured on the Minecraft client thread");
         }
-        LocalPlayer player = client.player;
+        net.minecraft.client.player.LocalPlayer player = client.player;
         if (!MinecraftClientContextFacts.active(client)) {
             throw new IllegalStateException("No active client player or level");
         }
@@ -134,8 +134,8 @@ public final class ClientContextCapture {
     }
 
     private ObservableGameStateSnapshot observableGameState(
-            LocalPlayer player,
-            Minecraft client,
+            net.minecraft.client.player.LocalPlayer player,
+            net.minecraft.client.Minecraft client,
             Instant capturedAt,
             PlayerSnapshot playerSnapshot) {
         return new ObservableGameStateSnapshot(
@@ -151,7 +151,7 @@ public final class ClientContextCapture {
     }
 
     private ObservableGameStateSnapshot.RuntimeState runtimeState(
-            Minecraft client, Instant capturedAt) {
+            net.minecraft.client.Minecraft client, Instant capturedAt) {
         String connectionKind = MinecraftClientContextFacts.singleplayer(client)
                 ? "singleplayer"
                 : !MinecraftClientContextFacts.connected(client) ? "disconnected" : "multiplayer";
@@ -162,7 +162,7 @@ public final class ClientContextCapture {
                 connectionKind,
                 evidence(DataCompleteness.COMPLETE, capturedAt,
                         "openallay:observable_runtime", "minecraft:client_runtime"),
-                List.of());
+                dev.openallay.util.Java8Collections.listOf());
     }
 
     private ObservableGameStateSnapshot.ModsState modsState(Instant capturedAt) {
@@ -172,11 +172,11 @@ public final class ClientContextCapture {
         try {
             installed = platform.installedMods();
             completeness = DataCompleteness.COMPLETE;
-            diagnostics = List.of();
+            diagnostics = dev.openallay.util.Java8Collections.listOf();
         } catch (RuntimeException unavailable) {
-            installed = List.of();
+            installed = dev.openallay.util.Java8Collections.listOf();
             completeness = DataCompleteness.UNKNOWN;
-            diagnostics = List.of(new SectionDiagnostic(
+            diagnostics = dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                     "loader_metadata_unavailable",
                     "The active loader did not provide public installed-mod metadata"));
         }
@@ -188,25 +188,25 @@ public final class ClientContextCapture {
                 "openallay:loader_metadata",
                 platform.gameVersion(),
                 platform.platformName().toLowerCase(Locale.ROOT),
-                Map.of()), diagnostics);
+                dev.openallay.util.Java8Collections.mapOf()), diagnostics);
     }
 
     private ObservableGameStateSnapshot.OptionsState optionsState(
-            Minecraft client, Instant capturedAt) {
+            net.minecraft.client.Minecraft client, Instant capturedAt) {
         List<OptionValue> values = new ArrayList<>();
-        for (String line : MinecraftClientOptionsFacts.report(MinecraftClientContextFacts.options(client)).lines().toList()) {
+        for (String line : dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Strings.lines(MinecraftClientOptionsFacts.report(MinecraftClientContextFacts.options(client))))) {
             int separator = line.indexOf(':');
             if (separator <= 0) {
                 continue;
             }
-            String key = line.substring(0, separator).strip();
-            String value = line.substring(separator + 1).strip();
+            String key = dev.openallay.util.Java8Strings.strip(line.substring(0, separator));
+            String value = dev.openallay.util.Java8Strings.strip(line.substring(separator + 1));
             if (!safeOptionKey(key)) {
                 continue;
             }
             values.add(new OptionValue(optionGroup(key), key, key, value));
         }
-        for (var mapping : MinecraftClientContextFacts.keyMappings(client)) {
+        for (net.minecraft.client.KeyMapping mapping : MinecraftClientContextFacts.keyMappings(client)) {
             values.add(new OptionValue(
                     "controls",
                     MinecraftClientContextFacts.keyName(mapping),
@@ -218,7 +218,7 @@ public final class ClientContextCapture {
                 values,
                 evidence(DataCompleteness.PARTIAL, capturedAt,
                         "minecraft:client_options", "minecraft:options_report"),
-                List.of(new SectionDiagnostic(
+                dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                         "mod_option_adapters_not_registered",
                         MinecraftClientOptionsFacts.reportDiagnostic())));
     }
@@ -252,9 +252,9 @@ public final class ClientContextCapture {
     }
 
     private ObservableGameStateSnapshot.PacksState packsState(
-            Minecraft client, Instant capturedAt) {
-        Set<String> selected = Set.copyOf(MinecraftClientPackFacts.selectedIds(client));
-        List<ObservableGameStateSnapshot.PackInfo> packs = MinecraftClientPackFacts.available(client).stream()
+            net.minecraft.client.Minecraft client, Instant capturedAt) {
+        Set<String> selected = dev.openallay.util.Java8Collections.setCopyOf(MinecraftClientPackFacts.selectedIds(client));
+        List<ObservableGameStateSnapshot.PackInfo> packs = dev.openallay.util.Java8Collections.toList(MinecraftClientPackFacts.available(client).stream()
                 .map(pack -> new ObservableGameStateSnapshot.PackInfo(
                         pack.id(),
                         pack.title(),
@@ -263,14 +263,13 @@ public final class ClientContextCapture {
                         pack.required(),
                         pack.compatibility(),
                         pack.source()))
-                .sorted(Comparator.comparing(ObservableGameStateSnapshot.PackInfo::id))
-                .toList();
+                .sorted(Comparator.comparing(ObservableGameStateSnapshot.PackInfo::id)));
         return new ObservableGameStateSnapshot.PacksState(
                 packs,
-                List.of(),
+                dev.openallay.util.Java8Collections.listOf(),
                 evidence(DataCompleteness.PARTIAL, capturedAt,
                         "minecraft:client_packs", "minecraft:resource_pack_repository"),
-                List.of(new SectionDiagnostic(
+                dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                         "data_pack_state_not_synchronized",
                         "The client has no complete public view of server data-pack selection")));
     }
@@ -285,14 +284,14 @@ public final class ClientContextCapture {
                 false,
                 irisLoaded ? "iris" : "none",
                 "",
-                Map.of(),
+                dev.openallay.util.Java8Collections.mapOf(),
                 evidence(DataCompleteness.UNKNOWN, capturedAt,
                         "openallay:shader_state", "openallay:optional_shader_adapter"),
-                List.of(new SectionDiagnostic(code, message)));
+                dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(code, message)));
     }
 
     private ObservableGameStateSnapshot.DiagnosticsState diagnosticsState(
-            LocalPlayer player, Minecraft client, Instant capturedAt) {
+            net.minecraft.client.player.LocalPlayer player, net.minecraft.client.Minecraft client, Instant capturedAt) {
         List<DiagnosticValue> values = new ArrayList<>();
         add(values, "position", "x", Double.toString(MinecraftClientContextFacts.x(player)));
         add(values, "position", "y", Double.toString(MinecraftClientContextFacts.y(player)));
@@ -307,7 +306,7 @@ public final class ClientContextCapture {
         Runtime runtime = Runtime.getRuntime();
         add(values, "performance", "fps", Integer.toString(dev.openallay.client.MinecraftNativeClientFacts.fps(client)));
         add(values, "performance", "frame_time_ns", Long.toString(dev.openallay.client.MinecraftNativeClientFacts.frameTimeNanos(client)));
-        var gpuUtilization = dev.openallay.client.MinecraftGpuFacts.utilization(client);
+        java.util.OptionalDouble gpuUtilization = dev.openallay.client.MinecraftGpuFacts.utilization(client);
         gpuUtilization.ifPresent(value ->
                 add(values, "performance", "gpu_utilization", Double.toString(value)));
         add(values, "performance", "heap_used_bytes",
@@ -328,16 +327,15 @@ public final class ClientContextCapture {
         add(values, "player", "selected_hotbar_slot",
                 Integer.toString(dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(dev.openallay.context.minecraft.MinecraftPlayerFacts.inventory(player))));
         add(values, "player", "camera", MinecraftClientContextFacts.cameraMode(client));
-        add(values, "player", "active_effects", MinecraftClientContextFacts.effects(player).stream()
+        add(values, "player", "active_effects", dev.openallay.util.Java8Collections.toList(MinecraftClientContextFacts.effects(player).stream()
                 .map(dev.openallay.context.minecraft.MinecraftActiveEffectFacts::id)
-                .sorted()
-                .toList().toString());
+                .sorted()).toString());
 
-        var hit = dev.openallay.client.observation.MinecraftHitFacts.hit(client);
+        net.minecraft.world.phys.HitResult hit = dev.openallay.client.observation.MinecraftHitFacts.hit(client);
         if (hit != null) {
             add(values, "target", "type", dev.openallay.client.observation.MinecraftHitFacts.kind(hit));
             if (dev.openallay.client.observation.MinecraftHitFacts.kind(hit).equals("block")) {
-                var state = dev.openallay.client.observation.MinecraftHitFacts.state(client, dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit));
+                net.minecraft.world.level.block.state.BlockState state = dev.openallay.client.observation.MinecraftHitFacts.state(client, dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit));
                 add(values, "target", "block_id",
                         MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString());
                 add(values, "target", "block_position", MinecraftClientContextFacts.blockPosition(dev.openallay.client.observation.MinecraftHitFacts.blockPosition(hit)));
@@ -347,7 +345,7 @@ public final class ClientContextCapture {
             }
         }
         if (client.getConnection() != null) {
-            var info = client.getConnection().getPlayerInfo(MinecraftClientContextFacts.uuid(player));
+            net.minecraft.client.multiplayer.PlayerInfo info = client.getConnection().getPlayerInfo(MinecraftClientContextFacts.uuid(player));
             if (info != null) {
                 add(values, "network", "latency_ms", Integer.toString(MinecraftClientContextFacts.latency(info)));
             }
@@ -373,8 +371,8 @@ public final class ClientContextCapture {
     }
 
     private ObservableGameStateSnapshot.PlayerUiState playerUiState(
-            Minecraft client, PlayerSnapshot playerSnapshot, Instant capturedAt) {
-        var focus = ClientFocusCapture.capture(client, platform, capturedAt);
+            net.minecraft.client.Minecraft client, PlayerSnapshot playerSnapshot, Instant capturedAt) {
+        dev.openallay.world.WorldFocusObservation focus = ClientFocusCapture.capture(client, platform, capturedAt);
         String identity = focus.screen().className().isEmpty() ? "gameplay" : focus.screen().className();
         return new ObservableGameStateSnapshot.PlayerUiState(
                 playerSnapshot,
@@ -382,13 +380,13 @@ public final class ClientContextCapture {
                 focus.screen().title(),
                 evidence(DataCompleteness.PARTIAL, capturedAt,
                         "minecraft:player_ui", "minecraft:client_player_ui"),
-                List.of(new SectionDiagnostic(
+                dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                         "sampled_client_focus", "Current focus is a detached client-visible sample")),
                 Optional.of(focus));
     }
 
     private ObservableGameStateSnapshot.WorldQueriesState worldQueriesState(
-            Minecraft client, Instant capturedAt) {
+            net.minecraft.client.Minecraft client, Instant capturedAt) {
         Map<String, QueryValue> values = new TreeMap<>();
         long gameTime = MinecraftClientContextFacts.gameTime(client);
         values.put("time", clientQuery("time",
@@ -397,7 +395,7 @@ public final class ClientContextCapture {
                 MinecraftClientContextFacts.thunder(client) ? "thunder" : MinecraftClientContextFacts.rain(client) ? "rain" : "clear"));
         values.put("difficulty", clientQuery(
                 "difficulty", dev.openallay.context.minecraft.MinecraftDifficultyFacts.name(MinecraftClientContextFacts.difficulty(client))));
-        var border = MinecraftClientContextFacts.border(client);
+        net.minecraft.world.level.border.WorldBorder border = MinecraftClientContextFacts.border(client);
         values.put("world_border", clientQuery("world_border",
                 "center=" + border.getCenterX() + "," + border.getCenterZ()
                         + ",size=" + border.getSize()));
@@ -407,7 +405,7 @@ public final class ClientContextCapture {
                 values,
                 evidence(DataCompleteness.PARTIAL, capturedAt,
                         "minecraft:client_world_queries", "minecraft:client_level_state"),
-                List.of(new SectionDiagnostic(
+                dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                         "client_visible_not_server_authoritative",
                         "Query values are synchronized client-visible state, not command execution")));
     }
@@ -417,7 +415,7 @@ public final class ClientContextCapture {
     }
 
     public RecipeProviderReadiness recipeProviderReadiness(
-            Minecraft client, RecipeProviderReadinessGate gate) {
+            net.minecraft.client.Minecraft client, RecipeProviderReadinessGate gate) {
         if (!MinecraftClientContextFacts.ownerThread(client)) {
             throw new IllegalStateException("Recipe readiness must be sampled on the Minecraft client thread");
         }
@@ -434,12 +432,12 @@ public final class ClientContextCapture {
                 RecipeViewerProviderRegistry.providers(Instant.now(), platform));
     }
 
-    private PlayerSnapshot player(LocalPlayer player, Minecraft client, Instant capturedAt) {
+    private PlayerSnapshot player(net.minecraft.client.player.LocalPlayer player, net.minecraft.client.Minecraft client, Instant capturedAt) {
         List<InventorySlotSnapshot> inventory = new ArrayList<>();
         for (int slot = 0; slot < MinecraftClientContextFacts.inventorySize(player); slot++) {
             inventory.add(new InventorySlotSnapshot(slot, stack(MinecraftClientContextFacts.inventoryItem(player, slot))));
         }
-        var position = MinecraftClientContextFacts.position(player);
+        net.minecraft.core.BlockPos position = MinecraftClientContextFacts.position(player);
         String mode = MinecraftClientContextFacts.gameMode(client);
         EvidenceMetadata evidence = evidence(
                 DataCompleteness.COMPLETE,
@@ -465,7 +463,7 @@ public final class ClientContextCapture {
                 evidence);
     }
 
-    private RegistrySnapshot registries(Minecraft client, Instant capturedAt) {
+    private RegistrySnapshot registries(net.minecraft.client.Minecraft client, Instant capturedAt) {
         return new RegistrySnapshot(evidence(
                 DataCompleteness.COMPLETE,
                 capturedAt,
@@ -474,7 +472,7 @@ public final class ClientContextCapture {
                 RegistryCatalogCapture.capture("minecraft:client_registry", () -> MinecraftClientContextFacts.ownerThread(client)));
     }
 
-    private RecipeSnapshot recipes(LocalPlayer player, Minecraft client, Instant capturedAt) {
+    private RecipeSnapshot recipes(net.minecraft.client.player.LocalPlayer player, net.minecraft.client.Minecraft client, Instant capturedAt) {
         RecipeClientConfig config = recipeClient.config();
         RecipeKnowledgeProvider vanilla = new RecipeKnowledgeProvider() {
             @Override
@@ -571,7 +569,7 @@ public final class ClientContextCapture {
     }
 
     private RecipeProviderSnapshot vanillaRecipes(
-            LocalPlayer player, Minecraft client, Instant capturedAt) {
+            net.minecraft.client.player.LocalPlayer player, net.minecraft.client.Minecraft client, Instant capturedAt) {
         List<RecipeEntrySnapshot> recipes = dev.openallay.context.minecraft.MinecraftRecipeSnapshots.capture(
                 dev.openallay.context.minecraft.MinecraftRecipeCapture.clientRecipes(player, client),
                 "minecraft:client_recipe_book", RecipeUnlockState.UNLOCKED,
@@ -579,16 +577,16 @@ public final class ClientContextCapture {
                         "minecraft:client_recipe_book", "minecraft:client_recipe_book"));
         return RecipeProviderSnapshot.available(
                 "minecraft:client_recipe_book", DataCompleteness.PARTIAL, recipes,
-                List.of(new dev.openallay.recipe.RecipeProviderDiagnostic(
+                dev.openallay.util.Java8Collections.listOf(new dev.openallay.recipe.RecipeProviderDiagnostic(
                         "minecraft:client_recipe_book", "recipe_book_only",
                         "Only synchronized unlocked recipe-book entries are visible")));
     }
 
-    private ItemStackSnapshot stack(ItemStack stack) {
+    private ItemStackSnapshot stack(net.minecraft.world.item.ItemStack stack) {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        var id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem());
+        net.minecraft.resources.ResourceLocation id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem());
         return new ItemStackSnapshot(id.toString(), stack.getCount(), MinecraftFocusNativeFacts.itemName(stack));
     }
 
@@ -609,6 +607,6 @@ public final class ClientContextCapture {
                 provenance,
                 platform.gameVersion(),
                 platform.platformName().toLowerCase(Locale.ROOT),
-                Map.of());
+                dev.openallay.util.Java8Collections.mapOf());
     }
 }
