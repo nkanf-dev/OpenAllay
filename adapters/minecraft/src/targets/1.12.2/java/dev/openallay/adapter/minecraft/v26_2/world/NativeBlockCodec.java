@@ -62,7 +62,37 @@ final class NativeBlockCodec {
     public static String read(WorldServer level, BlockPos pos) { return snapshot(level,pos).json(); }
 
     /** Owner-only pre-hook snapshot. Non-BE states remain immutable native values until needed. */
-    record Snapshot(IBlockState state,NBTTagCompound tag) { String json(){return encode(state,tag);} }
+    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
+static final class Snapshot {
+    private final IBlockState state;
+    private final NBTTagCompound tag;
+    Snapshot(IBlockState state, NBTTagCompound tag) {
+        this.state = state;
+        this.tag = tag;
+    }
+    public IBlockState state() { return state; }
+    public NBTTagCompound tag() { return tag; }
+String json(){return encode(state,tag);}
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Snapshot)) return false;
+        Snapshot that = (Snapshot) other;
+        return java.util.Objects.equals(state, that.state) && java.util.Objects.equals(tag, that.tag);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(tag);
+        return hash;
+    }
+    @Override public String toString() { return "Snapshot[state=" + state + ", tag=" + tag + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
+            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "state", Snapshot::state), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "tag", Snapshot::tag)), arguments -> new Snapshot((IBlockState) arguments[0], (NBTTagCompound) arguments[1]));
+        }
+    }
+}
     static Snapshot snapshot(WorldServer level,BlockPos pos) {
         checkOwnerAndPosition(level,pos);
         IBlockState state=level.getBlockState(pos);
@@ -211,7 +241,36 @@ final class NativeBlockCodec {
     }
 
     /** Reuses the exact native verification readback; callers must not serialize it again. */
-    record VerifiedWrite(String actual, boolean changed) {}
+    @dev.openallay.value.ValueType(VerifiedWrite.ValueSchemaProvider.class)
+static final class VerifiedWrite {
+    private final String actual;
+    private final boolean changed;
+    VerifiedWrite(String actual, boolean changed) {
+        this.actual = actual;
+        this.changed = changed;
+    }
+    public String actual() { return actual; }
+    public boolean changed() { return changed; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof VerifiedWrite)) return false;
+        VerifiedWrite that = (VerifiedWrite) other;
+        return java.util.Objects.equals(actual, that.actual) && changed == that.changed;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actual);
+        hash = 31 * hash + Boolean.hashCode(changed);
+        return hash;
+    }
+    @Override public String toString() { return "VerifiedWrite[actual=" + actual + ", changed=" + changed + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<VerifiedWrite> schema() {
+            return new dev.openallay.value.ValueSchema<>(VerifiedWrite.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VerifiedWrite>>asList(new dev.openallay.value.ValueSchema.Component<>(VerifiedWrite.class, "actual", VerifiedWrite::actual), new dev.openallay.value.ValueSchema.Component<>(VerifiedWrite.class, "changed", VerifiedWrite::changed)), arguments -> new VerifiedWrite((String) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
     static VerifiedWrite writeVerified(WorldServer level, BlockPos pos, String stateJson, Runnable requireActive) {
         checkOwnerAndPosition(level, pos);
         Objects.requireNonNull(requireActive, "requireActive");
@@ -434,5 +493,38 @@ final class NativeBlockCodec {
         return new ExtensionException("placement_failed", reason + " at " + pos);
     }
 
-    private record Prepared(IBlockState state, TileEntity entity, NBTTagCompound tag) {}
+    @dev.openallay.value.ValueType(Prepared.ValueSchemaProvider.class)
+private static final class Prepared {
+    private final IBlockState state;
+    private final TileEntity entity;
+    private final NBTTagCompound tag;
+    private Prepared(IBlockState state, TileEntity entity, NBTTagCompound tag) {
+        this.state = state;
+        this.entity = entity;
+        this.tag = tag;
+    }
+    public IBlockState state() { return state; }
+    public TileEntity entity() { return entity; }
+    public NBTTagCompound tag() { return tag; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Prepared)) return false;
+        Prepared that = (Prepared) other;
+        return java.util.Objects.equals(state, that.state) && java.util.Objects.equals(entity, that.entity) && java.util.Objects.equals(tag, that.tag);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(entity);
+        hash = 31 * hash + java.util.Objects.hashCode(tag);
+        return hash;
+    }
+    @Override public String toString() { return "Prepared[state=" + state + ", entity=" + entity + ", tag=" + tag + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Prepared> schema() {
+            return new dev.openallay.value.ValueSchema<>(Prepared.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Prepared>>asList(new dev.openallay.value.ValueSchema.Component<>(Prepared.class, "state", Prepared::state), new dev.openallay.value.ValueSchema.Component<>(Prepared.class, "entity", Prepared::entity), new dev.openallay.value.ValueSchema.Component<>(Prepared.class, "tag", Prepared::tag)), arguments -> new Prepared((IBlockState) arguments[0], (TileEntity) arguments[1], (NBTTagCompound) arguments[2]));
+        }
+    }
+}
 }
