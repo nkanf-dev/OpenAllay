@@ -124,10 +124,14 @@ public final class ClientToolExecutionEndpoint {
                 .orElse(false);
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
                 dev.openallay.util.Java8Collections.toList(frozenTools.registrations().stream()
-                        .map(registration -> registration.tool() instanceof LoadSkillTool skill
+                        .map(registration -> {
+final class $oaPattern0_Holder { dev.openallay.tool.Tool<?, ?> value; LoadSkillTool bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return (($oaPattern0_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern0_holder.bound = (LoadSkillTool) $oaPattern0_holder.value) != null))
                                 ? new RegisteredTool(registration.providerId(),
-                                        skill.forRequest(false, commandsEnabled, "client"))
-                                : registration)),
+                                        $oaPattern0_holder.bound.forRequest(false, commandsEnabled, "client"))
+                                : registration;
+})),
                 dev.openallay.util.Java8Collections.setOf());
         SkillCatalogManifest skillDocuments = requestTools.find("openallay:load_skill")
                 .filter(LoadSkillTool.class::isInstance)
@@ -269,8 +273,10 @@ public final class ClientToolExecutionEndpoint {
         }
         ToolResult<?> decoded = arguments.decode(
                 parsed.getAsJsonObject(), tool.descriptor().inputType());
-        if (decoded instanceof ToolResult.Failure<?> failure) {
-            return CompletableFuture.completedFuture(failure);
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<?>) $oaPattern1_holder.value) != null))) {
+            return CompletableFuture.completedFuture($oaPattern1_holder.bound);
         }
         cancellation.throwIfCancelled();
         try {
@@ -291,9 +297,13 @@ public final class ClientToolExecutionEndpoint {
         if (!current(payload, request, cancellation)) return;
         try {
             com.google.gson.JsonObject normalized = normalizer.normalize(result, tool.descriptor().outputType());
-            List<dev.openallay.model.image.ImageReference> images = result instanceof ToolResult.Success<?> success
-                    && success.value() instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
-                    ? dev.openallay.util.Java8Collections.listCopyOf(visual.images()) : dev.openallay.util.Java8Collections.listOf();
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+final class $oaPattern3_Holder { java.lang.Object value; dev.openallay.agent.tool.ModelImageToolOutput bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+List<dev.openallay.model.image.ImageReference> images = (($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<?>) $oaPattern2_holder.value) != null))
+                    && (($oaPattern3_holder.value = $oaPattern2_holder.bound.value()) instanceof dev.openallay.agent.tool.ModelImageToolOutput && (($oaPattern3_holder.bound = (dev.openallay.agent.tool.ModelImageToolOutput) $oaPattern3_holder.value) != null))
+                    ? dev.openallay.util.Java8Collections.listCopyOf($oaPattern3_holder.bound.images()) : dev.openallay.util.Java8Collections.listOf();
             dev.openallay.model.image.ModelImages.unique(images);
             request.images.prepare(payload.requestId(), payload.invocationId(), request.sessionId,
                             images, cancellation)
@@ -357,10 +367,12 @@ public final class ClientToolExecutionEndpoint {
             ToolInvocationContext context,
             Object input,
             CancellationSignal cancellation) {
-        if (raw instanceof LoadSkillTool skill) {
+        final class $oaPattern4_Holder { dev.openallay.tool.Tool<?, ?> value; LoadSkillTool bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = raw) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern4_holder.bound = (LoadSkillTool) $oaPattern4_holder.value) != null))) {
             // The server projection owns retained plaintext. The client has no delivery receipts.
             return CompletableFuture.completedFuture(
-                    skill.invokeFresh(context, (LoadSkillTool.Input) input));
+                    $oaPattern4_holder.bound.invokeFresh(context, (LoadSkillTool.Input) input));
         }
         return ((Tool<I, O>) raw)
                 .invokeAsync(context, (I) input, cancellation)
