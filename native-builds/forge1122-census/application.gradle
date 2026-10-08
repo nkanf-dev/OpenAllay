@@ -152,3 +152,16 @@ task buildNativeApplication {
 }
 
 if (java8DiagnosticOnly) apply from: project.file('java8-diagnostic.gradle')
+
+if (project.hasProperty('nativeLanguageCandidates')) {
+    if (project.property('nativeLanguageCandidates')!='true') throw new GradleException('Explicit native language candidate mode required')
+    task materializeNativeLanguageCandidates {
+        dependsOn prepareNativeApplication
+        doLast {
+            def request=new groovy.json.JsonSlurper().parse(project.file(project.property('nativeBuildRequest')))
+            project.exec { commandLine 'python3','-B',new File(request.canonicalSourceRoot,'scripts/materialize-native-language-cohort.py'),
+                '--project',request.canonicalSourceRoot,'--native-output',request.output,
+                '--javac',request.javac17,'--java',request.java17,'--output',request.output+'-language-candidate' }
+        }
+    }
+}
