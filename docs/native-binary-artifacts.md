@@ -2,14 +2,16 @@
 
 ## Release 0.4.4 files
 
-OpenAllay 0.4.4 adds stock Forge **1.16.5**. Its catalog contains **34 JARs**
-for GitHub and Modrinth, covering **26 exact Minecraft versions and 49
-version/loader pairs**, from 1.16.5 through 26.3.
+OpenAllay 0.4.4 includes stock Forge **1.12.2 and 1.16.5**. Its catalog contains **35 JARs**
+for GitHub and Modrinth, covering **27 exact Minecraft versions and 50
+version/loader pairs**, from 1.12.2 through 26.3. GitHub also includes
+`SHA256SUMS`, for **36 release assets**.
 Choose the file for your exact version and loader. Fabric requires matching
 Fabric API.
 
 | Exact Minecraft versions | Loader | Java | Download files |
 | --- | --- | --- | --- |
+| `1.12.2` | Forge 14.23.5.2864 | 8 | `openallay-forge-1.12.2-0.4.4.jar` |
 | `1.16.5` | Forge 36.2.42 | 17 | `openallay-forge-1.16.5-0.4.4.jar` |
 | `1.18.2` | Forge | 17 | `openallay-forge-1.18.2-0.4.4.jar` |
 | `1.19.2` | Forge | 17 | `openallay-forge-1.19.2-0.4.4.jar` |
@@ -34,14 +36,15 @@ Fabric API.
 
 ### Install the selected file
 
+- **Forge 1.12.2:** use Forge **14.23.5.2864**, select **Java 8**, and put
+  `openallay-forge-1.12.2-0.4.4.jar` in `mods/`. Minecraft Builder is included.
 - **Forge 1.16.5:** use Forge **36.2.42**, select **Java 17**, and put the matching
   OpenAllay JAR in `mods/`.
 - **Other JAR downloads:** install the selected JAR in `mods/` and use the Java
   version listed above. Some files cover multiple exact Minecraft versions.
 
-The [Forge runtime guide](forge-runtime-installation.md) lists the Forge 1.16.5
-installation steps. The [Forge 1.12.2 Java8 port](verification/forge1122-java8-port.md)
-is an in-progress, nonpublishing candidate. Minecraft **26.2 / Java 25** remains the development mainline.
+The [Forge runtime guide](forge-runtime-installation.md) lists the Forge 1.12.2
+and 1.16.5 installation steps. Minecraft **26.2 / Java 25** remains the development mainline.
 Public **Extension API 0.4.0**, bundled **Builder 0.4.0**, and **Skill API 0.2**
 are independent of the product patch version.
 

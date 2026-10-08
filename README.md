@@ -24,7 +24,7 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.4.4** supports **26 Minecraft versions**: Forge on **1.16.5,
+OpenAllay **0.4.4** supports **27 Minecraft versions**: Forge on **1.12.2, 1.16.5,
 1.18.2, and 1.19.2**, plus Fabric and NeoForge on **1.20.1 through
 26.3**. Choose the file for your exact Minecraft version and loader from
 [GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.4).
@@ -32,16 +32,19 @@ Fabric also needs the matching **Fabric API**.
 
 | Minecraft version | Java version | Installation |
 | --- | --- | --- |
+| 1.12.2 | 8 | Forge 14.23.5.2864 JAR; install in `mods` |
 | 1.16.5 | 17 | Forge 36.2.42 JAR; install in `mods` |
 | 1.18.2, 1.19.2 and 1.20.1–1.20.4 | 17 | Matching loader JAR |
 | 1.20.5–1.20.6 and 1.21–1.21.11 | 21 | Matching loader JAR |
 | 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | 25 | Matching loader JAR |
 
-GitHub and Modrinth provide **34 JARs** for Minecraft **1.16.5 through 26.3**. Some JARs cover several
-versions. See the [release compatibility table](docs/native-binary-artifacts.md#release-044-files)
+The 0.4.4 download catalog contains **35 JARs** for Minecraft **1.12.2 through 26.3**,
+covering **50 version/loader pairs**. Both GitHub and Modrinth use these same JAR families.
+GitHub also includes `SHA256SUMS`, for **36 release assets** in total. Some JARs cover several versions. See the [release compatibility table](docs/native-binary-artifacts.md#release-044-files)
 and [Forge runtime setup](docs/forge-runtime-installation.md).
 Minecraft **26.2 / Java 25** remains the development mainline.
-The [Forge 1.12.2 Java8 port](docs/verification/forge1122-java8-port.md) is in progress.
+For Minecraft **1.12.2**, install **Forge 14.23.5.2864**, select **Java 8**,
+and put `openallay-forge-1.12.2-0.4.4.jar` in `mods`. Minecraft Builder is included.
 
 1. Put the matching JAR in your instance's `mods` folder and start Minecraft.
 2. Enter a world and press **K**, or run `/guide`.
@@ -100,6 +103,7 @@ Preset availability follows the game's native materials:
 
 | Minecraft | Available building workflows |
 | --- | --- |
+| 1.12.2 | Geometry, terrain, templates, cancellation, and undo with native block-state readback |
 | 1.16.5 | Geometry, decoration, terrain, templates, house, cottage, windmill, farm, and dock |
 
 On 1.16.5, choose one of the five presets listed above; the skyscraper preset
