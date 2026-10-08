@@ -75,27 +75,38 @@ def main():
         'classOnlyProjection':True,'trustedForwardRoundtripByteExact':True,'literalCommentDeclarationPreserved':True,'originalUntypedLambdaParameterPreserved':True,'explicitWrittenNativeGenericTypesProjected':True})
     selected=out/'all-native-owners.txt';selected.write_text('\n'.join(sorted(expected))+'\n')
     run([a.java,'-cp',toolclasses,'dev.openallay.build.CanonicalVarTypePort',working,classpath,selected,out/'var-sites.tsv',out/'var-report.json'],'whole-var-public-attribution')
+    normalized_baseline={name:(working/name).read_bytes() for name in expected}
+    held={}
+    write(out/'normalized-baseline.json',[{'path':name,'sha256':sha(blob)} for name,blob in sorted(normalized_baseline.items())])
     sites={}
     for row in (out/'var-sites.tsv').read_text().splitlines():
         name,start,type_b64,variable=row.split('\t');sites.setdefault(name,[]).append((int(start),base64.b64decode(type_b64).decode()))
     for name,edits in sites.items():path=working/name;path.write_bytes(apply_var(path.read_bytes(),edits))
     stages=[]
     for kind,tool in [('pattern','CanonicalPatternPort'),('switch','CanonicalSwitchPort'),('api','CanonicalJava8ApiPort')]:
+        active=expected-set(held)
+        selected.write_text('\n'.join(sorted(active))+'\n')
+        stage_pre={name:(working/name).read_bytes() for name in expected}
+        write(out/(kind+'-stage-pre.json'),[{'path':name,'sha256':sha(blob),'selected':name in active} for name,blob in sorted(stage_pre.items())])
         output=out/(kind+'-materialized')
         run([a.java,'-cp',toolclasses,'dev.openallay.build.'+tool,working,classpath,selected,output],'whole-'+kind+'-public-attribution')
         statuses=[]
         for row in (output/'owner-status.tsv').read_text().splitlines():
             cells=row.split('\t');name,status,count=cells[:3]
-            if name not in expected:raise ValueError('Foreign language source owner')
+            if name not in active:raise ValueError('Foreign or already held language source owner')
             statuses.append({'path':name,'state':status,'sites':int(count),'detail':cells[3:]})
             if status=='SUPPORTED':
                 before=(output/'pre'/name).read_bytes()
-                if (working/name).read_bytes()!=before:raise ValueError('Exact language stage source changed')
+                if stage_pre[name]!=before or (working/name).read_bytes()!=before:raise ValueError('Exact language stage source changed')
                 (working/name).write_bytes((output/'post'/name).read_bytes())
-            elif status!='REJECTED':raise ValueError('Unknown actual converter owner result')
-        if len(statuses)!=len(expected):raise ValueError('Incomplete whole native language frontier')
+            elif status=='REJECTED':
+                held[name]={'stage':kind,'sites':int(count),'detail':cells[3:]}
+                (working/name).write_bytes(normalized_baseline[name])
+            else:raise ValueError('Unknown actual converter owner result')
+        if len(statuses)!=len(active):raise ValueError('Incomplete active native language frontier')
         stages.append({'stage':kind,'owners':statuses})
     write(out/'stage-results.json',stages)
+    write(out/'held-whole-owners.json',held)
     compile_current('actual-modern17-whole-native-after-language')
     projection=out/'canonical-projection'
     curated=project/'native-builds/forge1122-census/curated-classes.tsv'
@@ -105,7 +116,20 @@ def main():
     for row in rows:
         cells=row.split('\t');(supported if cells[1]=='SUPPORTED' else rejected).append(cells)
     write(out/'projection-results.json',{'supported':supported,'rejected':rejected})
-    if rejected:raise ValueError('Whole-owner canonical symbol projection rejected; no candidate patch published')
+    for cells in rejected:
+        name=cells[0]
+        if name not in expected:raise ValueError('Foreign projection owner')
+        held[name]={'stage':'class-symbol-projection','detail':cells[2:]}
+        (working/name).write_bytes(normalized_baseline[name])
+        target=projection/'post'/name;target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(originals[name])
+    # Every held owner keeps its original physical source and authenticated forward-normalized baseline.
+    for name in held:
+        (working/name).write_bytes(normalized_baseline[name])
+        target=projection/'post'/name;target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(originals[name])
+    write(out/'held-whole-owners.json',held)
+    if rejected:compile_current('actual-modern17-whole-native-after-projection-holds')
     # Trusted forward producer round trip. Reuse exact existing metadata acceptance/tool custody classes.
     round_units=out/'round-trip-units.tsv'
     round_units.write_text('\n'.join('\t'.join([r[0],r[1],r[2],str(projection/'post'/r[1])]) for r in unitrows)+'\n')
@@ -119,7 +143,11 @@ def main():
         if (out/'trusted-forward'/name).read_bytes()!=(working/name).read_bytes():raise ValueError('Residual class-token projection mismatch '+name)
     packet=out/'source-packet';packet.mkdir();patch='';files=[]
     for row in unitrows:
-        name=row[1];original=originals[name];candidate=(projection/'post'/name).read_bytes();origin=Path(row[3]).relative_to(project).as_posix()
+        name=row[1]
+        if name in held:
+            if (projection/'post'/name).read_bytes()!=originals[name]:raise ValueError('Held owner physical bytes changed')
+            continue
+        original=originals[name];candidate=(projection/'post'/name).read_bytes();origin=Path(row[3]).relative_to(project).as_posix()
         if Path(row[3]).read_bytes()!=original:raise ValueError('Original canonical source changed during whole candidate stage')
         if candidate==original:continue
         for side,blob in [('pre',original),('post',candidate)]:
@@ -127,7 +155,7 @@ def main():
         patch+=''.join(difflib.unified_diff(original.decode().splitlines(True),candidate.decode().splitlines(True),fromfile='a/'+origin,tofile='b/'+origin))
         files.append({'path':origin,'preSha256':sha(original),'postSha256':sha(candidate),'mode':row[2]})
     (packet/'source.patch').write_text(patch)
-    write(packet/'manifest.json',{'sourceOwners':len(unitrows),'files':files,'patchSha256':sha(patch.encode()),
+    write(packet/'manifest.json',{'sourceOwners':len(unitrows),'heldUnchangedOwners':held,'admittedOwnerCount':len(expected)-len(held),'files':files,'patchSha256':sha(patch.encode()),
         'toolPins':[{'path':p.relative_to(project).as_posix(),'sha256':sha(p.read_bytes())} for p in tools],
         'wholeNormalizedModern17BeforeAfterPassed':True,'trustedClassNamespaceRoundTripByteExact':True,
         'gameLaunch':False,'nativeJava8Acceptance':False,'sourceWrites':False,'featureAlgorithmsCopied':False})
