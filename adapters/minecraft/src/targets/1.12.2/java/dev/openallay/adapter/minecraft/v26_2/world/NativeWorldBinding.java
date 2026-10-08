@@ -100,7 +100,7 @@ final class NativeWorldBinding implements WorldBinding {
         // Null storage is a canonical-air proof in ordinary worlds. Native isEmpty
         // merges modded air and cannot be used. Non-null storage takes the bounded slow path.
         if(level.getWorldType()==net.minecraft.world.WorldType.DEBUG_ALL_BLOCK_STATES)return false;
-        var chunk=NativeLoadedChunks.get(level,new BlockPos(minX,minY,minZ));
+        net.minecraft.world.chunk.Chunk chunk=NativeLoadedChunks.get(level,new BlockPos(minX,minY,minZ));
         if(chunk.getBlockStorageArray()[Math.floorDiv(minY,16)]!=net.minecraft.world.chunk.Chunk.NULL_BLOCK_STORAGE)return false;
         for(BlockPos pos:chunk.getTileEntityMap().keySet())
             if(Math.floorDiv(pos.getY(),16)==Math.floorDiv(minY,16))return false;
@@ -123,9 +123,9 @@ final class NativeWorldBinding implements WorldBinding {
         BlockPos pos=new BlockPos(x,y,z);
         NativeBlockCodec.Snapshot before=NativeBlockCodec.snapshot(level,pos);
         requireActive.run();
-        var current=before.state();
-        var actual=current.getBlock().getActualState(current,new NativeActualStateReader(level,pos),pos);
-        var persisted=NativeActualStateRepair.persisted(current,actual);
+        net.minecraft.block.state.IBlockState current=before.state();
+        net.minecraft.block.state.IBlockState actual=current.getBlock().getActualState(current,new NativeActualStateReader(level,pos),pos);
+        net.minecraft.block.state.IBlockState persisted=NativeActualStateRepair.persisted(current,actual);
         // Fence/pane/stair connection shapes in 1.12 are computed on read. If the
         // actual native projection has the same persisted metadata, nothing needs
         // writing. Finish still runs real neighbor notification after this proof.
@@ -145,7 +145,7 @@ final class NativeWorldBinding implements WorldBinding {
             if(!level.isOutsideBuildHeight(second))validatePosition(second.getX(),second.getY(),second.getZ());
         }
         requireActive.run();
-        var block=NativeLoadedChunks.get(level,pos).getBlockState(pos).getBlock();
+        net.minecraft.block.Block block=NativeLoadedChunks.get(level,pos).getBlockState(pos).getBlock();
         level.notifyNeighborsOfStateChange(pos,block,false);
         requireActive.run();
         level.updateComparatorOutputLevel(pos,block);

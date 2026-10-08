@@ -157,8 +157,12 @@ private static final class Pending<T> {
         checkActive();
     }
     static RuntimeException propagate(Throwable cause) {
-        if (cause instanceof ExtensionException extension) return extension;
-        if (cause instanceof Error error) throw error;
+        final class $oaPattern0_Holder { java.lang.Throwable value; ExtensionException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.api.extension.ExtensionException && (($oaPattern0_holder.bound = (ExtensionException) $oaPattern0_holder.value) != null))) return $oaPattern0_holder.bound;
+        final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
         if (cause instanceof IllegalArgumentException)
             return new ExtensionException("invalid_native_input", "The native world operation has invalid input", cause);
         return new ExtensionException("native_failure", "The native world operation failed", cause);

@@ -39,8 +39,7 @@ final class NativeBlockCodec {
     private static final int WRITE_FLAGS = 18;
     // Native 1.12 chest/shulker metadata; attached Forge data is opaque and rejected for nonidentity transforms.
     // Only exact native container payload fields may retain nonidentity transforms.
-    private static final Set<String> CONTAINER_FIELDS = Set.of(
-            "id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", "Lock", "CustomName");
+    private static final Set<String> CONTAINER_FIELDS = dev.openallay.util.Java8Collections.setOf("id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", "Lock", "CustomName");
 
     // Native states are canonical immutable values. Keep a bounded, owner-thread-local
     // palette, never world handles, live entities, positions or mutable SNBT compounds.
@@ -185,19 +184,56 @@ String json(){return encode(state,tag);}
         if (degrees % 90 != 0) {
             throw new IllegalArgumentException("Rotation must be a multiple of 90 degrees");
         }
-        Rotation rotation = switch (Math.floorMod(degrees, 360)) {
-            case 0 -> Rotation.NONE;
-            case 90 -> Rotation.CLOCKWISE_90;
-            case 180 -> Rotation.CLOCKWISE_180;
-            case 270 -> Rotation.COUNTERCLOCKWISE_90;
-            default -> throw new IllegalArgumentException("Invalid rotation: " + degrees);
-        };
-        Mirror nativeMirror = switch (Objects.requireNonNull(mirror, "mirror")) {
-            case "none" -> Mirror.NONE;
-            case "x", "front_back" -> Mirror.FRONT_BACK;
-            case "z", "left_right" -> Mirror.LEFT_RIGHT;
-            default -> throw new IllegalArgumentException("Unknown mirror: " + mirror);
-        };
+        net.minecraft.util.Rotation $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((Math.floorMod(degrees, 360))) {
+case 0:
+{
+$oaSwitch1_exit_result = Rotation.NONE; break $oaSwitch1_exit;
+}
+case 90:
+{
+$oaSwitch1_exit_result = Rotation.CLOCKWISE_90; break $oaSwitch1_exit;
+}
+case 180:
+{
+$oaSwitch1_exit_result = Rotation.CLOCKWISE_180; break $oaSwitch1_exit;
+}
+case 270:
+{
+$oaSwitch1_exit_result = Rotation.COUNTERCLOCKWISE_90; break $oaSwitch1_exit;
+}
+default:
+{
+throw new IllegalArgumentException("Invalid rotation: " + degrees);
+}
+}
+}
+Rotation rotation = $oaSwitch1_exit_result;
+        net.minecraft.util.Mirror $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((Objects.requireNonNull(mirror, "mirror"))) {
+case "none":
+{
+$oaSwitch0_exit_result = Mirror.NONE; break $oaSwitch0_exit;
+}
+case "x":
+case "front_back":
+{
+$oaSwitch0_exit_result = Mirror.FRONT_BACK; break $oaSwitch0_exit;
+}
+case "z":
+case "left_right":
+{
+$oaSwitch0_exit_result = Mirror.LEFT_RIGHT; break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException("Unknown mirror: " + mirror);
+}
+}
+}
+Mirror nativeMirror = $oaSwitch0_exit_result;
         if (tag != null && !tag.hasNoTags() && (rotation != Rotation.NONE || nativeMirror != Mirror.NONE)
                 && !canTransformContainer(state, tag)) {
             throw new ExtensionException("unsupported_opaque_block_entity_transform",
@@ -309,14 +345,14 @@ static final class VerifiedWrite {
     }
 
     private static boolean canTransformContainer(IBlockState state,NBTTagCompound tag) {
-        var id=NativeWorldRegistries.blockId(state.getBlock());
+        net.minecraft.util.ResourceLocation id=NativeWorldRegistries.blockId(state.getBlock());
         if(id==null || !"minecraft".equals(id.getResourceDomain())) return false;
         Class<?> blockClass=state.getBlock().getClass();
         Class<? extends TileEntity> expected;
         if(blockClass==BlockChest.class) expected=net.minecraft.tileentity.TileEntityChest.class;
         else if(blockClass==BlockShulkerBox.class) expected=net.minecraft.tileentity.TileEntityShulkerBox.class;
         else return false;
-        var expectedId=TileEntity.getKey(expected);
+        net.minecraft.util.ResourceLocation expectedId=TileEntity.getKey(expected);
         return expectedId!=null && expectedId.toString().equals(NativeBlockEntityTags.requiredId(tag))
                 && NativeBlockEntityTags.hasOnlyContainerFields(tag,CONTAINER_FIELDS);
     }
@@ -334,10 +370,10 @@ static final class VerifiedWrite {
         }
         TileEntity entity = NativeBlockEntityLifecycle.createDetached(level, pos, state);
         Class<? extends TileEntity> expectedType=entity.getClass();
-        var expectedId=TileEntity.getKey(expectedType);
+        net.minecraft.util.ResourceLocation expectedId=TileEntity.getKey(expectedType);
         if(tag!=null) {
             String rawId=NativeBlockEntityTags.requiredId(tag);
-            var id=NativeWorldResourceIds.parse(rawId,"blockEntity id");
+            net.minecraft.util.ResourceLocation id=NativeWorldResourceIds.parse(rawId,"blockEntity id");
             if(expectedId==null || !id.equals(expectedId))
                 throw new IllegalArgumentException("blockEntity id "+rawId+" does not match block "+json.get("id"));
             tag.setString("id",id.toString());
@@ -360,7 +396,7 @@ static final class VerifiedWrite {
 
     private static IBlockState decode(JsonObject json) {
         String rawId = string(json.get("id"), "id");
-        var id = NativeWorldResourceIds.parse(rawId, "block id");
+        net.minecraft.util.ResourceLocation id = NativeWorldResourceIds.parse(rawId, "block id");
         Block block = NativeWorldRegistries.block(id.toString())
                 .orElseThrow(() -> new IllegalArgumentException("Unknown block id: " + rawId));
         IBlockState state = block.getDefaultState();
@@ -407,7 +443,7 @@ static final class VerifiedWrite {
 
     private static JsonObject encodeState(IBlockState state) {
         JsonObject json = new JsonObject();
-        var id = NativeWorldRegistries.blockId(state.getBlock());
+        net.minecraft.util.ResourceLocation id = NativeWorldRegistries.blockId(state.getBlock());
         if (id == null) throw new IllegalArgumentException("Cannot encode an unregistered block");
         json.addProperty("id", id.toString());
         json.add("properties", NativeBlockStateProperties.encode(state));
@@ -435,9 +471,15 @@ static final class VerifiedWrite {
             while (reader.hasNext()) {
                 String name = reader.nextName();
                 if (json.has(name)) throw new IllegalArgumentException("Duplicate block-state field: " + name);
-                switch (name) {
-                    case "id" -> json.addProperty(name, readString(reader, name));
-                    case "properties" -> {
+                switch ((name)) {
+case "id":
+{
+json.addProperty(name, readString(reader, name));
+break;
+}
+case "properties":
+{
+{
                         JsonObject properties = new JsonObject();
                         reader.beginObject();
                         while (reader.hasNext()) {
@@ -448,14 +490,24 @@ static final class VerifiedWrite {
                         reader.endObject();
                         json.add(name, properties);
                     }
-                    case "blockEntity" -> {
+break;
+}
+case "blockEntity":
+{
+{
                         if (reader.peek() == JsonToken.NULL) {
                             reader.nextNull();
                             json.add(name, com.google.gson.JsonNull.INSTANCE);
                         } else json.addProperty(name, readString(reader, name));
                     }
-                    default -> throw new IllegalArgumentException("Unknown block-state field: " + name);
-                }
+break;
+}
+default:
+{
+throw new IllegalArgumentException("Unknown block-state field: " + name);
+}
+}
+
             }
             reader.endObject();
             if (reader.peek() != JsonToken.END_DOCUMENT) throw new IllegalArgumentException("Trailing block-state JSON data");
@@ -472,10 +524,12 @@ static final class VerifiedWrite {
     }
 
     private static String string(JsonElement value, String field) {
-        if (!(value instanceof JsonPrimitive primitive) || !primitive.isString()) {
+        final class $oaPattern0_Holder { com.google.gson.JsonElement value; JsonPrimitive bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = value) instanceof com.google.gson.JsonPrimitive && (($oaPattern0_holder.bound = (JsonPrimitive) $oaPattern0_holder.value) != null))) || !$oaPattern0_holder.bound.isString()) {
             throw new IllegalArgumentException(field + " must be a string");
         }
-        return primitive.getAsString();
+        return $oaPattern0_holder.bound.getAsString();
     }
 
     private static void checkOwnerAndPosition(WorldServer level, BlockPos pos) {
