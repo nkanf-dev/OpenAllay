@@ -1,0 +1,22 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+allprojects {
+    if (project == rootProject) {
+        def runtime = configurations.create('stock8MixinRuntime') { transitive = false }
+        repositories { maven { url = uri('https://repo.spongepowered.org/repository/maven-public/') } }
+        dependencies { stock8MixinRuntime 'org.spongepowered:mixin:0.8.5' }
+        tasks.register('stock8RuntimeInputs') {
+            doLast {
+                def records=runtime.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                    [coordinate:artifact.moduleVersion.id.toString(),classifier:artifact.classifier ?: '',path:artifact.file.canonicalPath,
+                     sha256:MessageDigest.getInstance('SHA-256').digest(artifact.file.bytes).encodeHex().toString()]
+                }
+                if(records.size()!=1 || records[0].classifier!='' || records[0].coordinate!='org.spongepowered:mixin:0.8.5')
+                    throw new GradleException('One normal genuine Mixin runtime artifact required')
+                def output=file(property('stock8RuntimeInputsOutput'));output.parentFile.mkdirs()
+                if(output.exists())throw new GradleException('Fresh runtime metadata path required')
+                output.setText(JsonOutput.prettyPrint(JsonOutput.toJson(records))+'\n','UTF-8')
+            }
+        }
+    }
+}

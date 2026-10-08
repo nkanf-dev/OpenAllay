@@ -56,7 +56,7 @@ def main():
     roles={r['role']:r for r in request['components']}
     legacy.require(REQUIRED.issubset(roles) and set(roles).issubset(REQUIRED|OPTIONAL) and len(roles)==len(request['components']),'Exact current graph classified Java8 component roles required')
     legacy.require(roles['engine']['sha256']==engine_receipt['engineSha256'],'Complete current engine output identity differs')
-    contents={};owners={};services={};licenses={};inputs=[]
+    contents={};owners={};services={};licenses={};inputs=[];role_projections=[]
     def merge(entries,role):
         for name,data in entries.items():
             if name.startswith(FORBIDDEN):raise ValueError('Stock game/host/ASM alias forbidden: '+role+'!'+name)
@@ -73,7 +73,14 @@ def main():
     for role,r in roles.items():
         legacy.exact(r,('role','coordinate','path','sha256'),'component')
         path=legacy.reference({'path':r['path'],'sha256':r['sha256']});raw=path.read_bytes()
-        merge(scan8(raw,role),role);inputs.append({'role':role,'coordinate':r['coordinate'],'sha256':r['sha256']})
+        if role=='sqlite':
+            projection_spec=importlib.util.spec_from_file_location('sqlite_runtime_role',ROOT/'scripts/sqlite-runtime-role.py')
+            projection=importlib.util.module_from_spec(projection_spec);projection_spec.loader.exec_module(projection)
+            projected,proof=projection.project_sqlite_runtime(path,r['coordinate'])
+            projection.audit_projected_entries(projected,proof)
+            merge(projected,role);role_projections.append(proof)
+        else:merge(scan8(raw,role),role)
+        inputs.append({'role':role,'coordinate':r['coordinate'],'sha256':r['sha256']})
     builder=legacy.reference(request['builder']).read_bytes();scan8(builder,'builder')
     builder_lock=legacy.load(legacy.reference(request['builderLock']))
     sys.path.insert(0,str(ROOT/'scripts'));spec=importlib.util.spec_from_file_location('bundle_verifier',ROOT/'scripts/verify-bundled-extensions.py');verifier=importlib.util.module_from_spec(spec);spec.loader.exec_module(verifier)
@@ -110,7 +117,7 @@ def main():
     result={'target':'forge1122','version':request['version'],'sourceRevision':source,'outputSha256':legacy.sha(raw),
         'entries':legacy.inventory(raw),'owners':owners,'inputs':inputs,'engineReceiptSha256':request['engineReceipt']['sha256'],
         'nativeReceiptSha256':request['nativeReceipt']['sha256'],'builderSha256':legacy.sha(builder),
-        'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'all entries preserved; higher-major dependency requires genuine Java8 source artifact, not omission','engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
+        'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'exact fixed SQLite JVM-runtime role projection; other physical entries preserved and Java8 scanned','runtimeRoleProjections':role_projections,'engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
     legacy.write_new(a.receipt,legacy.encoded(result))
 
 if __name__=='__main__':main()

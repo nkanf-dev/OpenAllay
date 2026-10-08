@@ -1,0 +1,10 @@
+{
+  "provider": {
+    "artifactId": 11534398405,
+    "runId": 37742880188,
+    "sourceRevision": "2fa8a868b470050c550052c9428740d018c79f5c",
+    "sha256": "20a94917a9fd2faa2c8b9461dfc3aab712d3bf0d2339bff18910f5411dd320ac"
+  },
+  "nativeJarSha256": "f8d429995896da94e3a5cec0bb9257e2cec8aff452c598aa6b33b11c48382264",
+  "nativeSource": "2fa8a868b470050c550052c9428740d018c79f5c"
+}

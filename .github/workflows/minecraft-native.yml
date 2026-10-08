@@ -6,6 +6,10 @@ on:
         type: boolean
         default: false
         description: One residual API cohort over the complete native source universe
+      native_java8_package_only:
+        type: boolean
+        default: false
+        description: Reuse one provider-verified normal native AP/reobf artifact and package current runtime graph only
       native_java8_package_probe:
         type: boolean
         default: false
@@ -37,7 +41,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates }}
+    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates && !inputs.native_java8_package_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -292,3 +296,30 @@ jobs:
             ${{ runner.temp }}/forge1122-java8-native/native-union-fixture/*.json
             ${{ runner.temp }}/forge1122-java8-native/native-union-fixture/*.log
             ${{ runner.temp }}/forge1122-java8-native/jar/
+
+  forge1122-stock8-package-only:
+    if: ${{ inputs.native_java8_package_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25.0.2+10.0.LTS'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - name: Package only after exact retained native/source custody and current engine byte parity
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/package-retained-stock8-native.py --native-pin native-builds/forge1122-census/accepted-stock8-native.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: stock8-flat-package-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-stock8-package-reuse/
+            build/forge1122-stock8-product/
+            ${{ runner.temp }}/forge1122-stock8-package-reuse/*.json
