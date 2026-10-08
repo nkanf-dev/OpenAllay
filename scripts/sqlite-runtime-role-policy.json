@@ -1,0 +1,988 @@
+{
+  "coordinate": "org.xerial:sqlite-jdbc:3.50.3.0",
+  "upstream": {
+    "bytes": 14346720,
+    "sha256": "a3f53a2aa15ae9425a9e793bbe9c8e5288febeb4b65ef5c1a4e80d4c2045cf08",
+    "retained_role": "unchanged canonical JPMS/Graal native-image tooling input",
+    "retrieval_coordinate": "org.xerial:sqlite-jdbc:3.50.3.0"
+  },
+  "excluded_game_entries": [
+    {
+      "path": "META-INF/versions/9/org/sqlite/nativeimage/SqliteJdbcFeature$SqliteJdbcFeatureException.class",
+      "bytes": 1127,
+      "sha256": "e4c5f16f73d04dfa876fed4949cc2cf32a6e7e0cb38606fbaa49077c5232b7e0",
+      "role": "graalvm-hosted-build"
+    },
+    {
+      "path": "META-INF/versions/9/org/sqlite/nativeimage/SqliteJdbcFeature$1.class",
+      "bytes": 245,
+      "sha256": "ef6c612c5398d366792e3ab5d33357e1bbb227210d6877bf14dc4e16dcf65478",
+      "role": "graalvm-hosted-build"
+    },
+    {
+      "path": "META-INF/versions/9/org/sqlite/nativeimage/SqliteJdbcFeature.class",
+      "bytes": 8175,
+      "sha256": "0f967d485fe986859d962fcb1707ff96636ffc91e5ada7fc34d954952197179f",
+      "role": "graalvm-hosted-build"
+    },
+    {
+      "path": "META-INF/native-image/org.xerial/sqlite-jdbc/native-image.properties",
+      "bytes": 84,
+      "sha256": "3688dc753c97851fd6c613b92eebdf808969a628c9da76f7d2be57d93069aef1",
+      "role": "graalvm-hosted-registration"
+    },
+    {
+      "path": "META-INF/versions/9/module-info.class",
+      "bytes": 578,
+      "sha256": "634727b4233abea945035f98df1a5c04c0051502fc476812a24aeb657ddfbe01",
+      "role": "jpms-metadata"
+    }
+  ],
+  "preserved_entries": [
+    {
+      "path": "META-INF/MANIFEST.MF",
+      "bytes": 1594,
+      "sha256": "345a31bd3b7b17a2832abe0529741f91c89d7f82520a13f379c125d5bff57d64",
+      "role": "game-runtime"
+    },
+    {
+      "path": "sqlite-jdbc.properties",
+      "bytes": 34,
+      "sha256": "13f365009c54b237edb33bcce3d18dd3c7bb4f0d88fe85ca0165d0eecd96781d",
+      "role": "game-runtime"
+    },
+    {
+      "path": "META-INF/maven/org.xerial/sqlite-jdbc/VERSION",
+      "bytes": 15,
+      "sha256": "c5ff8f05f4d60c3016830f9366d25cbfdf9cc58ca06479631a5dc95b75be8b63",
+      "role": "game-runtime"
+    },
+    {
+      "path": "META-INF/maven/org.xerial/sqlite-jdbc/LICENSE.zentus",
+      "bytes": 1312,
+      "sha256": "89167dab92289c7e5e2b65b044f0856b703d05e5d5e35c3548e73d9c7d2f5048",
+      "role": "game-runtime"
+    },
+    {
+      "path": "META-INF/maven/org.xerial/sqlite-jdbc/LICENSE",
+      "bytes": 11560,
+      "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5",
+      "role": "game-runtime"
+    },
+    {
+      "path": "META-INF/services/java.sql.Driver",
+      "bytes": 15,
+      "sha256": "6f13d8db0c78f5b44c08720b0544d0a17718eb1b8fde920a4509e636bc9b8214",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteLimits.class",
+      "bytes": 1977,
+      "sha256": "1d6ec84d7261c1d6d066d6cbab4c22301a981537f5413a9d7061f2fa847a3579",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$TransactionMode.class",
+      "bytes": 1539,
+      "sha256": "c1fc2588a04820beb69c1196dad7f4ee5eae3fa8de1149d4aeeb3d1cdd816ebc",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteCommitListener.class",
+      "bytes": 178,
+      "sha256": "681d1f23cf0d22a151d48646cc737acbb6a85d9db5163f398b97fdca365caa21",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$Pragma.class",
+      "bytes": 13960,
+      "sha256": "6cc4ed3428167a07e0fb1d0d041d2489e9cc7b8785e18c6d3d01881077fd2238",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteErrorCode.class",
+      "bytes": 14933,
+      "sha256": "abb9c4efceba35170ccaf6eb026c93954d647e62a91eec3f2f9edcf4511e528a",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/ExtendedCommand$SQLExtension.class",
+      "bytes": 307,
+      "sha256": "fa50133749112142820e01ab06f02b087299ee9f517cc93a47f52bd8b2f0a63c",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteJDBCLoader.class",
+      "bytes": 12549,
+      "sha256": "01406a18fd2f5a16f64f36e66d57a74a119172b914a5eef9032b3ed362201949",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$LockingMode.class",
+      "bytes": 1316,
+      "sha256": "0f7f96c9cf68c3461557aacbb8ad9251f3d3f8d194c2caea927a346ec71e8ec7",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/BusyHandler.class",
+      "bytes": 1242,
+      "sha256": "7125637b6b653893502836634992dedb10d866c490f022efaba08fd9b61f861b",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$HexKeyMode.class",
+      "bytes": 1357,
+      "sha256": "f42133f1c69a09436d5d56c351a1da212ff8c63b959fe9a54654976f2a899cdb",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$DateClass.class",
+      "bytes": 1496,
+      "sha256": "f979f0bff37e394bbcfdddf99334a2a0bfbb58c34b246f3158c8a377e0d18e46",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/JDBC.class",
+      "bytes": 3365,
+      "sha256": "8f5a26a9d967cd0e91d8644f34d2ef35280c6dca623fa5de49bf025fe710bff3",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteDataSource.class",
+      "bytes": 8176,
+      "sha256": "c37e185e7ab8f991a1bf31f20075d237b550c3bf8fa0f3da1c2faa79e9a65eaa",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$Encoding.class",
+      "bytes": 2303,
+      "sha256": "249e61b53e2538f477b594893aca75f12f7de911549c096ea77283643995754c",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConnection.class",
+      "bytes": 13825,
+      "sha256": "93dd757afc140e20370621ce807d1d15aee6c681575c039741a77395865ed83c",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/ExtendedCommand.class",
+      "bytes": 1506,
+      "sha256": "50482373c1222358811d24836c754bc86dc4d4e21b3bb929178c5ce3a8d59575",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/DB$ProgressObserver.class",
+      "bytes": 219,
+      "sha256": "ea1b63cab3cf76d8abe59eb64a396436faee7c6d924ea8eeb6f49a945cd6eb1f",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/DB.class",
+      "bytes": 17081,
+      "sha256": "66990a1a44b2d01773c46454d7dbf3cd126ae6646d2a2fa45c5094abfb73f072",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/SafeStmtPtr$SafePtrLongFunction.class",
+      "bytes": 493,
+      "sha256": "438f0c7714c01ac68c959654ff987c69116db81de7ba4eca3b7169cafd3bc56e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/SafeStmtPtr.class",
+      "bytes": 4890,
+      "sha256": "574c5fc77a667fb39e85ba03a71cfa8868dedc6af099d36d4205ee3ad2990f54",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/Codes.class",
+      "bytes": 1240,
+      "sha256": "ccfdcdc75cbd8ddc6456d9083b7c2af46fcc9d8917998194197eb9a3b32d8df1",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/CoreStatement.class",
+      "bytes": 5710,
+      "sha256": "1321a307a5862272258be09807431267ee4e54ee25279f33f4eaab76a57670ae",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/SafeStmtPtr$SafePtrDoubleFunction.class",
+      "bytes": 497,
+      "sha256": "8c19b4ae942844f4abbc6ede459a23d61dd69936613fb598c7c6b15e1246aff3",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/CoreDatabaseMetaData.class",
+      "bytes": 3579,
+      "sha256": "5597cc2ca455ef4c5e82da1c8c9fabb6fdef81b1ae8c1462c8c0352f79cdf5ba",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/SafeStmtPtr$SafePtrConsumer.class",
+      "bytes": 485,
+      "sha256": "34679a6e923747c673107919de8e5808c9b27a0e7f40fb63a452bd84a13b9120",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/NativeDB.class",
+      "bytes": 10145,
+      "sha256": "7bc736fb8ed9b06873f00230827f7faee14561f39ed7d7dce21a1e539e40fc55",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/CoreResultSet.class",
+      "bytes": 4613,
+      "sha256": "24fff33e0638213e85345709b93b04456f03418780bce32940b181b6775f097e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/SafeStmtPtr$SafePtrFunction.class",
+      "bytes": 524,
+      "sha256": "684df18f8172a18afd0bd8c65fd5aa5735e7c3e948beca09ba6a545dfa781448",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/CorePreparedStatement$1.class",
+      "bytes": 790,
+      "sha256": "8ed15b5904cc044cc42f3a22eb87974f31b412ff457c471a0dd49154dd701ed2",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/CorePreparedStatement.class",
+      "bytes": 5683,
+      "sha256": "11a15048430d07bdb966b59d6e7a2642b2d74f199e67e196637a8d5589578c0a",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/core/SafeStmtPtr$SafePtrIntFunction.class",
+      "bytes": 491,
+      "sha256": "83a270a2942b65b1deb78bfd255cb06280b09f324b720ce99411d42fb9cf0fc0",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteJDBCLoader$VersionHolder.class",
+      "bytes": 2509,
+      "sha256": "781821a8f81801a939fc3e2b7d6fe1efbd711ee7f2bd58823bb6896d3829679d",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Windows/aarch64/sqlitejdbc.dll",
+      "bytes": 1099776,
+      "sha256": "3f88accdf47ec5847d5b121e3465377a16217075c401b5e83f77f0381a18d130",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Windows/armv7/sqlitejdbc.dll",
+      "bytes": 810496,
+      "sha256": "dca3569e445ddce6c3b3275f4755ae0f5e98f1b8b794fb4bcc31dd923ded9e2e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Windows/x86/sqlitejdbc.dll",
+      "bytes": 929280,
+      "sha256": "8b01045fe7b685a3146ee75120e3631fec84deeccff8f265bad02de25631d5c6",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Windows/x86_64/sqlitejdbc.dll",
+      "bytes": 992768,
+      "sha256": "8f234cc28e5e797c4b8fa23f329c77be89541f1635384f6e35dccca116d79454",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Musl/aarch64/libsqlitejdbc.so",
+      "bytes": 1087992,
+      "sha256": "dc5f380d0997ead36deddd941c8ea2848f523f265fed26ffb2d21c159d2df2b6",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Musl/x86/libsqlitejdbc.so",
+      "bytes": 1063032,
+      "sha256": "5b54a7237dfa5b6e65e8649556e8a53459a53e68fa943766376d9d0c00a0d2ed",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Musl/x86_64/libsqlitejdbc.so",
+      "bytes": 1079200,
+      "sha256": "6b7dbb31d06aa75b218ceffbee887aa18e44eca3c2917c9c99b7f4146a75dcbc",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Mac/aarch64/libsqlitejdbc.dylib",
+      "bytes": 1107728,
+      "sha256": "11753dbab11c3c17c9f1c55cb8486529dfcc8a086001eb08ebab2f211c226628",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Mac/x86_64/libsqlitejdbc.dylib",
+      "bytes": 1259308,
+      "sha256": "e0d79034b1bd2502e13bf78802ec46c51efbb237b0985ff14f70225828f289c5",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Android/aarch64/libsqlitejdbc.so",
+      "bytes": 1195648,
+      "sha256": "8ddc0aad6567a75169de7a6237c04d7d7b5e18632d347231139a993d965f314c",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Android/x86/libsqlitejdbc.so",
+      "bytes": 1344316,
+      "sha256": "479c15b0f0b0582e1cf87ff0e2d14087d22dc177a5d842774d69be512ae24a91",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Android/x86_64/libsqlitejdbc.so",
+      "bytes": 1229736,
+      "sha256": "f5a0613bd7cee68b0dbd3e3a00e66e5cb517512165c7fb3a8379f15a5d968ab3",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux-Android/arm/libsqlitejdbc.so",
+      "bytes": 1158508,
+      "sha256": "42afd4c3280214d329ec2dc0d9c38eb219913b731d08a50295052ad1d62f97c7",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/FreeBSD/aarch64/libsqlitejdbc.so",
+      "bytes": 1192280,
+      "sha256": "da11049d16c31987e559107d23a81982e74a56eb9ca69032525cc3c74cde04f6",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/FreeBSD/x86/libsqlitejdbc.so",
+      "bytes": 952712,
+      "sha256": "69a062f2ece31be3f0bfb958ab42d1f5b8f91a903347632f83d21beb8af93c60",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/FreeBSD/x86_64/libsqlitejdbc.so",
+      "bytes": 1059360,
+      "sha256": "c9de196c9dbb9864264ab8b0c9c3ab6386d5e422dd902522e0dd2ce0e14d9752",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/armv6/libsqlitejdbc.so",
+      "bytes": 960996,
+      "sha256": "db72fe26e3786ac1145992de494339f6b638789b93e5a2f9b07b3e3af3f794c2",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/aarch64/libsqlitejdbc.so",
+      "bytes": 1088240,
+      "sha256": "d6ddcd72943f29ec631fa6ac49eb185cc3cbb32385509b760996552849f4cd71",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/armv7/libsqlitejdbc.so",
+      "bytes": 956896,
+      "sha256": "a41fcce55f621f5f0cdd503911c08b52fae84502aae50ef403ddb590db992599",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/x86/libsqlitejdbc.so",
+      "bytes": 957064,
+      "sha256": "c098c6813855a3398fc4a2ed89168677011ce4acb67e095c2d5f67f577560fa4",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/riscv64/libsqlitejdbc.so",
+      "bytes": 759968,
+      "sha256": "8cb1b4eb1d00935387f7df9b1ccf786b9b9c09aab592d69a751efab85d5679a9",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/x86_64/libsqlitejdbc.so",
+      "bytes": 1072480,
+      "sha256": "2cbffd50063f2500e0ec3455035f4e5fd1f64ef6e5963771da062b68c38730cb",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/ppc64/libsqlitejdbc.so",
+      "bytes": 1264144,
+      "sha256": "a87748e8d9b1baa706cbef40932a038aea7460a86bd664693afbf11b45166d13",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/native/Linux/arm/libsqlitejdbc.so",
+      "bytes": 969168,
+      "sha256": "1e24e12688b4c2bc4ba785ab8b17c0bcd7dec05242bf7eb1909a51a819c5116b",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$DatePrecision.class",
+      "bytes": 1481,
+      "sha256": "c4795bef7758ff1ae730ecbba33d549ae0e89dd52d6a7f1957fca2ade3429eca",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/LoggerFactory$SLF4JLogger.class",
+      "bytes": 2060,
+      "sha256": "466a183e5985f90a4a51a651457119858671a01bff9b4fd8c241ad7e6519ca80",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/OSInfo$LogHolder.class",
+      "bytes": 665,
+      "sha256": "96e9bfbd1753f98490fabf0e75b041eacd85de414e3442388a8156ce4aa3794b",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/QueryUtils.class",
+      "bytes": 3135,
+      "sha256": "480b2d0e44c49855887ae90e5b3c31f546feb0762d8ec23cfb79d01095c647bb",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/StringUtils.class",
+      "bytes": 1205,
+      "sha256": "9c5bc064e459ae13b64d85a800a565c81b0c73abd7a7182a4b40ff0ca741dde6",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/Logger.class",
+      "bytes": 437,
+      "sha256": "17a508985c4a61f560ac82f6067f6817f33709e73d7226f4dc1fd7d97c2f04bb",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/ResourceFinder.class",
+      "bytes": 2318,
+      "sha256": "5434592a7f92c7c57fc1ad2c9672ebda92d6945880f1742596fb931c61671560",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/LoggerFactory$JDKLogger.class",
+      "bytes": 2244,
+      "sha256": "ae590028a8e4357faa5bfd9e1b3f61e4194741758e4e5528fd48e893c1a69a61",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/LibraryLoaderUtil.class",
+      "bytes": 1556,
+      "sha256": "de7261a3e5f23da0e831eb4f2fff87540629d9249a2ce4e141c4e70e4fea197a",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/OSInfo.class",
+      "bytes": 9040,
+      "sha256": "a4764383820d1ea140253a669b729f89b25dc273c31df2b36f66a023ac4e3205",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/LoggerFactory.class",
+      "bytes": 1184,
+      "sha256": "1bc68d6f8baf988e07a9b841ae8164b468aecaa6fc0c0e9aee2dbff62ef46976",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/util/ProcessRunner.class",
+      "bytes": 1945,
+      "sha256": "a9e0795c81f585af73df73c5b0829ab6b74bf614f76e3568f8566ab88c88f031",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$TempStore.class",
+      "bytes": 1351,
+      "sha256": "2778cde9b48bc7d498c71e290b2361f2914aebe01f99b43df9a28290407e9844",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/Function.class",
+      "bytes": 4973,
+      "sha256": "63d1605d365bb469391d536dcc7cc1c4fa88e727f0ea174c69d82ae46c2d393d",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/javax/SQLiteConnectionPoolDataSource.class",
+      "bytes": 1132,
+      "sha256": "3545ebaf87d59dbac84386abfa6545c80fa9771c4eb676ac2dbebaee11c6d616",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/javax/SQLitePooledConnection$1.class",
+      "bytes": 2931,
+      "sha256": "1bb0b94cffe8be9efc1cf7407c98aa4c22e23d4d91c4201a1d5026f6882c17e7",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/javax/SQLitePooledConnection.class",
+      "bytes": 2348,
+      "sha256": "1845c4235e98703a95747d54bd67818d27b1c775d8413af09f32ac01589dae66",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/javax/SQLitePooledConnectionHandle.class",
+      "bytes": 9049,
+      "sha256": "1539ac6773233e02a860dffec9ae707225b9a9bef7f92cc712224b19cbdc7738",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConnectionConfig.class",
+      "bytes": 5450,
+      "sha256": "b507af3b10ae609b98f918cb8acefc57b2e3202372df2cc4830a7eeedb5d2287",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$JournalMode.class",
+      "bytes": 1523,
+      "sha256": "64c9e2f40551822c9958ca9d7117475bd0eda344016fb2303d581ea040837bdc",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$OnOff.class",
+      "bytes": 601,
+      "sha256": "44e12e22986c28b3bc92694a5c548b6a03a0961c927dcdde7994d9fe9cbc7eeb",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3Statement$SQLCallable.class",
+      "bytes": 461,
+      "sha256": "618e56f2318f594e5739eb8b2fe4c5471301cba54f799c467b505c0d16ac5a65",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3DatabaseMetaData$PrimaryKeyFinder.class",
+      "bytes": 3510,
+      "sha256": "6ef619852bd0c0f8dc5538ea8b766a75415ae9838d0ccc6a39fbbba39b65aace",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3DatabaseMetaData$LogHolder.class",
+      "bytes": 728,
+      "sha256": "60d8d5074a074e3aa15c5c361769f6d8cfb99503dbe279cef313c01f8720e836",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3Statement.class",
+      "bytes": 13517,
+      "sha256": "3abf2462092d9309228474a6d347f4a2b90c3e7624caec54792dd8b971b142e5",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3ResultSet.class",
+      "bytes": 24058,
+      "sha256": "ce32b086beb56ed7334ab4a669f98a066b86104289474991617be21c7af6648e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3DatabaseMetaData$ImportedKeyFinder.class",
+      "bytes": 5144,
+      "sha256": "fe1a9ea04ebbb29bfdbadcca1f0cfe235e5b2d0ae9e01ba91801e80202342630",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3DatabaseMetaData.class",
+      "bytes": 47078,
+      "sha256": "507350edeba20bdee4f620504bb4a3e235851fe45e288a19c32cfba1af70d660",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3PreparedStatement.class",
+      "bytes": 16165,
+      "sha256": "c67c8110cba8d055f3acbddd2729cae2fa50c48ecb3621ab35b13e94685a8f29",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3Savepoint.class",
+      "bytes": 1066,
+      "sha256": "d5228dae6523ed564f15cea9b011304182930b48231f3354b36b1e3b2e36584e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3DatabaseMetaData$ImportedKeyFinder$ForeignKey.class",
+      "bytes": 2842,
+      "sha256": "3fb90b737fb4c397d914dd1d3ccc445bdec7efd42be0dde886017b1dd88b9083",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3Connection.class",
+      "bytes": 7799,
+      "sha256": "aee23b85bf774a1a74ec39eaa1567eb6d71d9ccd03eaf426693094216eedd13f",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc3/JDBC3Statement$BackupObserver.class",
+      "bytes": 1828,
+      "sha256": "e0c79cb385382e13e07a70db9d2d5d85c0496ead9b1fcc13324ad24334c7e12a",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteUpdateListener$Type.class",
+      "bytes": 1174,
+      "sha256": "fd4838e4132587bfc542d94c9e52d9813ff003a49032b0efbeeb84603462e851",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/Function$Aggregate.class",
+      "bytes": 698,
+      "sha256": "faecff0ec4fbae0b0de40a1742b2283e7c7f2028481fafa9d572f97f09cab9b6",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/Collation.class",
+      "bytes": 1439,
+      "sha256": "75a20390e9460a065d136b8bad53c75c5b7e9c707eebd460cbda43bb6b6bf34a",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/FileException.class",
+      "bytes": 353,
+      "sha256": "219542d9856818cf93eb8e2a40755f6438187d79c40f0b224c107069375fc837",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/ExtendedCommand$RestoreCommand.class",
+      "bytes": 2463,
+      "sha256": "83e4cce805f8c89cd7d76b893fd077a7e8e278ff64f2b1823ba590b7501d097e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$PragmaValue.class",
+      "bytes": 244,
+      "sha256": "0b9abaf688a1fc29635027e1d69b39e7606cf60fc7a9769dc904783f75bc1817",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig.class",
+      "bytes": 17358,
+      "sha256": "bbf528ab0cbe17fc2b74b2c08ce1ec2dfd3ac3addc721163e7edca53b2d9f459",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/NativeLibraryNotFoundException.class",
+      "bytes": 404,
+      "sha256": "9c21f5c230c92505ca89f811538ff85efe773e732f02ac93c1decfbaaac5ab86",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteOpenMode.class",
+      "bytes": 2067,
+      "sha256": "a01ab9e94462a26522483e5c5d79012d20ace394d316e747d8ef4446b84a5620",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateFormat$1.class",
+      "bytes": 1022,
+      "sha256": "bb705eda12c4ce0a90a9cd2c67ce30e1188f53dab9835c5e243b24a74a8993c7",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$UnpaddedNumberField.class",
+      "bytes": 1277,
+      "sha256": "a2bf5d4487985128fadc532282e3afe3373b611c9c93ec1a011e5d5572dd2111",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$CopyQuotedStrategy.class",
+      "bytes": 1251,
+      "sha256": "a916439a2d0bb97892f099e9ec3b2b78fe9b88956739777f7b9b811fa6d5b6e4",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$StringLiteral.class",
+      "bytes": 1019,
+      "sha256": "dfedaab1f9f7b75f970e37b51204d9333eb3964ca5913907689986965d6b95d0",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateFormat.class",
+      "bytes": 7080,
+      "sha256": "9d02c1744f8885838c101bc4952215cd2618d0af44db2fba89b42c3087115c91",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$CaseInsensitiveTextStrategy.class",
+      "bytes": 3313,
+      "sha256": "e4a84b0952704d9cfb866c0a137a14af9cf31a7481f3ccbfa416a2bc0d7283fa",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$4.class",
+      "bytes": 606,
+      "sha256": "642defe6d71fad7716c55f1620405f42fe76aa8f73238ca54abd479d6f7a51cf",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter.class",
+      "bytes": 12758,
+      "sha256": "9d7a15ebb596541c3fa456f0146ef06e577a1e7d6918e7968fe77460d58de1ad",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$3.class",
+      "bytes": 606,
+      "sha256": "16b3255af55e0da257910799331189e06e4621892f42666757e4fefb32fd8b42",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$UnpaddedMonthField.class",
+      "bytes": 1242,
+      "sha256": "066f8a30341f145889d89150a92ce529baff3fab1dcc9b631c93f9504f99ddbc",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$NumberRule.class",
+      "bytes": 328,
+      "sha256": "e025c4e7221fdef0e4b19e75a1e11372d78a8fa81f282523351bc2033ac0a595",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$NumberStrategy.class",
+      "bytes": 1684,
+      "sha256": "bb8611e20c10d3ae56dd0d401b46ced6bddcc6ccc1e16aea7ae72751702497ad",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TwoDigitYearField.class",
+      "bytes": 1110,
+      "sha256": "a92241706fdbdcf1c26c5d1b1221148cb5a3a57a373119d5cc047e4416dba616",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/ExceptionUtils.class",
+      "bytes": 737,
+      "sha256": "a7ba37683c95cdf46a9e4f23eeb80bafc5757111a357fb978e46fb46e03a53b3",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$Strategy.class",
+      "bytes": 1035,
+      "sha256": "d094a4315b24996f2e31d1b3406794f4fd74cedbda6eb9fc990b31d9de052e2e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TextField.class",
+      "bytes": 1258,
+      "sha256": "2f664a6fe52d1e42d875be8d9ca345a0700ecaa560a525eb43ec5d8adb9d5488",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TimeZoneNumberRule.class",
+      "bytes": 1819,
+      "sha256": "c54d0619677f7582df7b4158678d4384f49dc50469a9d59233e6757167e1f221",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$1.class",
+      "bytes": 1024,
+      "sha256": "5d90847e858ab7a5f28b89f5c6332b9228d14a8a22f7139a86f7aec772a53a87",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$Iso8601_Rule.class",
+      "bytes": 1906,
+      "sha256": "ad32e5de606e8d35009ebcda72d9068c51f942d42ba60ab43a5c5d1136caba6f",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TimeZoneDisplayKey.class",
+      "bytes": 1228,
+      "sha256": "e243000ca74664f78bc47f180b7c490a9701da6ec5caca8d2a6c48f9890fd30e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FormatCache.class",
+      "bytes": 4759,
+      "sha256": "1a4e83a2047be64b77b1c8db6d32876524d90947c9d192cabce904fd944c6a71",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TwelveHourField.class",
+      "bytes": 1256,
+      "sha256": "346b6b2e1482623a69f45f647a8f00a004c0aec81ab10993243ec9b1e336b79d",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TwoDigitMonthField.class",
+      "bytes": 1112,
+      "sha256": "89765d1dd034a0b0c17143ad42fd00a98700e27634f2b3d3ed72914607fbad42",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$PaddedNumberField.class",
+      "bytes": 1469,
+      "sha256": "d9ed06e0616e16eb3850701ef597cd7e3d1ebf9e3eace8df86f02a4cc23556cc",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FormatCache$MultipartKey.class",
+      "bytes": 985,
+      "sha256": "5388751417cbc6e80fc4f699daf30a26a9bbe092a09a8ad586fb464b50b1bc99",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$2.class",
+      "bytes": 571,
+      "sha256": "df93fa2c6e13b9c126d540f5751a4a407407f2e0980166186496c71fac35bbbb",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/package-info.class",
+      "bytes": 121,
+      "sha256": "91a0dd92a3f71ef808e9c7b3d353ed8fe5db54bca082cfc4a8fa3fbe7bcd2b55",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$CharacterLiteral.class",
+      "bytes": 930,
+      "sha256": "b5ebab3f7640b3f526e66302664c098e4ca8209d71dd9ef86f0e19d3f3cd2481",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TwoDigitNumberField.class",
+      "bytes": 1209,
+      "sha256": "74447bd810edcef6dfaa380cd6f9ffc637ab3ff57000c5df2b9e4f923576e6da",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$TimeZoneStrategy.class",
+      "bytes": 3785,
+      "sha256": "4abcfccb358e5fd0e69652497aa10fa795e69cb2037273c4b0dbf8838a323544",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/DateParser.class",
+      "bytes": 578,
+      "sha256": "63d1ab923157cfe4442da76a60020fcb8096542984dd4c80d0e4a3aa92294715",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser$ISO8601TimeZoneStrategy.class",
+      "bytes": 2246,
+      "sha256": "0275165ad148325bd28206c167060bc220f4d2ce79a79d0bc2e1b615fc8d8be4",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$Rule.class",
+      "bytes": 307,
+      "sha256": "f91bfabfe62a3a734fe8ba5130e3b0a09b972da272bfd5e863aaf98a8c423421",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDateParser.class",
+      "bytes": 12605,
+      "sha256": "32b9ffa554cfac78911f2cd9e61515ca4acbb8a52454c12bc9314be4efbe2364",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TimeZoneNameRule.class",
+      "bytes": 1636,
+      "sha256": "9d0c0aadd0ce45519fc216596504705a1d8b031df74f82e1afe92a119b08e36e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/FastDatePrinter$TwentyFourHourField.class",
+      "bytes": 1263,
+      "sha256": "50bda3ce128cade0c37669a4425828124c4f01b4e47af510f8ce54cc23dc5f97",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/DatePrinter.class",
+      "bytes": 716,
+      "sha256": "1a3b3d5cf236a7c6ece70587804786d1e5af02be73c577bc9b7e850be31d210b",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/date/DateFormatUtils.class",
+      "bytes": 4228,
+      "sha256": "0ef4aae41c03b190bfc9b779702418b3be4de86f81cc68384f72bd5e15e9e587",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/ExtendedCommand$BackupCommand.class",
+      "bytes": 2451,
+      "sha256": "b87af143b3f673f73ab6727563df68a74fff613a7ba1aae4a1ddea41c9f1ee01",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/ProgressHandler.class",
+      "bytes": 1249,
+      "sha256": "c98c6882597f94e6f2f341945a03d8ccc420c441d19da8a89f14e9da6e1da7ce",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4Statement.class",
+      "bytes": 1867,
+      "sha256": "7aa768fdbedd27ef6c9e456e32e52705a1bbef1e2a98052255adf469a83e9d17",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4PooledConnection.class",
+      "bytes": 637,
+      "sha256": "d6c3e9ddd35efe5ab0cf09ba92439b26262f8f5906ee2abd78c3ca0653f7a7e8",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4DatabaseMetaData.class",
+      "bytes": 2461,
+      "sha256": "404328b1f9d93ffdd28669159c84771debae155473fdd12cba01ed937c33c2c3",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4PreparedStatement.class",
+      "bytes": 4684,
+      "sha256": "aa2a755b91b4ae4fb84ea460b7e3676baef2f29a7eec294ab1a3271aa5b0a3ef",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4ResultSet.class",
+      "bytes": 21176,
+      "sha256": "34a34c51397239908064e4baf2fe89d80b83a18d976a4c93ac2148573b962353",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4ResultSet$SqliteClob.class",
+      "bytes": 3018,
+      "sha256": "ecd6ccd8f9933ba42ecf1f48ed49220ac24fb59dae80a4ccf95d3b690fe4b2b0",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/jdbc4/JDBC4Connection.class",
+      "bytes": 3617,
+      "sha256": "c230ad92ce22f29194f8f465d6f76ba9d3e9c2e1c332a0e164766ca142b028db",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/Function$Window.class",
+      "bytes": 479,
+      "sha256": "a6715a3aa9731570511631ad8f8d404ca8b0bdf39c5ac3f7c16ebb60ae403407",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteUpdateListener.class",
+      "bytes": 312,
+      "sha256": "73d111f6c2a847273349b69a561990841fb7e3a5d7dcb791b5a5f5ef494b821e",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteException.class",
+      "bytes": 685,
+      "sha256": "9d04de89cbc83489a42898ccf0cb489b50c569b8febf9a8855088fdba4862c45",
+      "role": "game-runtime"
+    },
+    {
+      "path": "org/sqlite/SQLiteConfig$SynchronousMode.class",
+      "bytes": 1389,
+      "sha256": "9dfa659c99845b4845d4a0a47bec08b1c530fecdff14f86819569626ec1b7fc2",
+      "role": "game-runtime"
+    },
+    {
+      "path": "META-INF/maven/org.xerial/sqlite-jdbc/pom.xml",
+      "bytes": 20029,
+      "sha256": "6797d7680a14ffe15b09be25d7becaa28e82bc5d8b5d9deb465b038f95014ec8",
+      "role": "game-runtime"
+    },
+    {
+      "path": "META-INF/maven/org.xerial/sqlite-jdbc/pom.properties",
+      "bytes": 59,
+      "sha256": "d5820175f514a583a2c1584581a5ce8bdef4d4b90b52f11f2bf43931c351e60f",
+      "role": "game-runtime"
+    }
+  ],
+  "preserved_base_class_count": 125,
+  "preserved_native_payload_count": 24,
+  "packaging_decision": "ROOT authorized ordinaryJVM8 gameartifact isnotJPMS/Graalnative-image buildinput; originalfullupstreamretained"
+}
