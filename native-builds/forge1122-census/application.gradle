@@ -19,8 +19,8 @@ def roles=req.closure.collectEntries { [(it.role):it] }
 if (!(roles.keySet().containsAll(['engine','sdk','builder'])) || req.closure.any {
     it.keySet() != (['role','path','sha256','compile'] as Set) || !new File(it.path).isAbsolute() ||
     !file(it.path).isFile() || sha(file(it.path)) != it.sha256 || !(it.compile instanceof Boolean)
-}) throw new GradleException('Exact retained current engine17/SDK8/Builder8 closure hashes required')
-['engine':61,'sdk':52,'builder':52].each { role, expected ->
+}) throw new GradleException('Exact current engine8/SDK8/Builder8 closure hashes required')
+['engine':52,'sdk':52,'builder':52].each { role, expected ->
     new java.util.zip.ZipFile(file(roles[role].path)).withCloseable { zip ->
         def majorVersions=[] as Set
         zip.entries().each { entry ->
@@ -29,7 +29,7 @@ if (!(roles.keySet().containsAll(['engine','sdk','builder'])) || req.closure.any
                 majorVersions.add(((bytes[6]&255)<<8)|(bytes[7]&255))
             }
         }
-        if (majorVersions.empty || majorVersions.any { it>expected } || role=='engine' && !majorVersions.contains(61))
+        if (majorVersions.empty || majorVersions.any { it>expected } || role=='engine' && !majorVersions.contains(52))
             throw new GradleException("Retained ${role} classfile contract differs: ${majorVersions}")
     }
 }
