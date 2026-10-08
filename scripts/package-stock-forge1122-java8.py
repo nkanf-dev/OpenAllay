@@ -133,6 +133,9 @@ def main():
         'Real Forge14 release metadata required, not a filename rename')
     for name in ['openallay.client.mixins.json','openallay.world.mixins.json','openallay.forge.mixins.json']:
         legacy.require(json.loads(contents[name])['compatibilityLevel']=='JAVA_8','Native Mixin compatibility must be Java8')
+    language_spec=importlib.util.spec_from_file_location('legacy_languages',ROOT/'scripts/legacy-language-resources.py')
+    language=importlib.util.module_from_spec(language_spec);language_spec.loader.exec_module(language)
+    language_legacy=language.project_legacy_languages(contents,owners)
     for name,lines in services.items():
         for provider in lines:legacy.require(provider.replace('.','/')+'.class' in contents,'Service class absent '+provider)
         contents[name]=('\n'.join(sorted(lines))+'\n').encode()
@@ -159,7 +162,7 @@ def main():
     result={'target':'forge1122','version':request['version'],'sourceRevision':source,'outputSha256':legacy.sha(raw),
         'entries':legacy.inventory(raw),'owners':owners,'inputs':inputs,'engineReceiptSha256':request['engineReceipt']['sha256'],
         'nativeReceiptSha256':request['nativeReceipt']['sha256'],'builderSha256':legacy.sha(builder),'runtimeClassPathOwnership':class_inputs,
-        'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'exact fixed SQLite JVM-runtime role projection; other physical entries preserved and Java8 scanned','runtimeRoleProjections':role_projections,'nativeMetadataExpansion':metadata_expansion,'engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
+        'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'exact fixed SQLite JVM-runtime role projection; other physical entries preserved and Java8 scanned','runtimeRoleProjections':role_projections,'nativeMetadataExpansion':metadata_expansion,'languageLegacy':language_legacy,'engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
     legacy.write_new(a.receipt,legacy.encoded(result))
 
 if __name__=='__main__':main()
