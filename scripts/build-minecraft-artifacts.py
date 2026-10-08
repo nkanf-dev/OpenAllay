@@ -31,6 +31,7 @@ builder = module("minecraft_artifact_builder", "verify-bundled-extensions.py")
 native = module("minecraft_artifact_engine", "verify-native-target-package.py")
 compiler = module("minecraft_artifact_compiler", "compile-native-target.py")
 tokenizer = module("minecraft_artifact_tokenizer", "verify-tokenizer-packaging.py")
+commonmark_custody = module("commonmark_provider_custody", "verify-commonmark-provider-custody.py")
 require = artifacts.require
 
 
@@ -208,7 +209,7 @@ COMMONMARK_RUNTIME_SHA256 = "dff5404332182c794aec52538a9a620b61032041a3b08ddbb97
 def commonmark_package(archive, entries, loader):
     version = native.read_properties(ROOT / "gradle.properties")["commonmark_version"]
     directory = "META-INF/jars/" if loader == "fabric" else "META-INF/jarjar/"
-    expected = directory + "openallay-commonmark-" + version + ".jar"
+    expected = directory + ("dev.openallay." if loader == "neoforge" else "") + "openallay-commonmark-" + version + ".jar"
     matches = [name for name in entries if name.endswith(".jar") and "commonmark" in Path(name).name.lower()]
     require(matches == [expected], "Exactly one canonical CommonMark runtime must be nested; upstream binary JARs are forbidden")
     require(not any(name.startswith("org/commonmark/") and name.endswith(".class") for name in entries),
@@ -222,11 +223,10 @@ def commonmark_package(archive, entries, loader):
         require(len(registered) == 1 and registered[0]["identifier"] == {"group": "dev.openallay", "artifact": "runtime-commonmark"},
                 "Canonical CommonMark needs exactly one project-owned FML registration")
         require(registered[0]["version"]["artifactVersion"] == version
-                and registered[0]["version"]["range"] == "[" + version + "]",
+                and registered[0]["version"]["range"] == "[" + version + (",)" if loader == "neoforge" else "]"),
                 "Canonical CommonMark JarJar external version/range differs")
     content = archive.read(expected)
-    require(hashlib.sha256(content).hexdigest() == COMMONMARK_RUNTIME_SHA256,
-            "Nested CommonMark differs from the accepted complete Java8 source-port artifact")
+    commonmark_custody.verify_commonmark_payload(content, loader, version)
     with zipfile.ZipFile(BytesIO(content)) as nested:
         names = nested.namelist()
         require(len(names) == len(set(names)) and nested.testzip() is None, "Corrupt canonical CommonMark runtime")
@@ -294,6 +294,21 @@ def sqlite_package(path, loader):
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
 
 
+def engine_entry(archive, family, name, path=None):
+    """Keep executable/resource parity; three stock8 legal resources have exact flat owners."""
+    if family["packagingRecipe"] == "forge-stock8" and name in ("META-INF/licenses/maven-artifact/LICENSE",
+            "META-INF/licenses/maven-artifact/NOTICE", "data/openallay/models/LICENSE.models.dev"):
+        stock8 = module("stock8_license_owner", "materialize-stock8-release.py")
+        owner = stock8.engine_legal_owners(path)[name]
+        relocated, owner_sha = owner["path"], owner["sha256"]
+        require(name not in archive.namelist() and relocated in archive.namelist(), "Stock8 engine legal resource must have one exact engine legal owner")
+        content = archive.read(relocated)
+        require(hashlib.sha256(content).hexdigest() == owner_sha,
+                "Stock8 engine legal resource differs from retained complete ownership proof")
+        return content
+    return archive.read(name)
+
+
 def verify(families, directory=None, engine_manifest=None, approved_package_sources=None):
     release_version = version()
     expected = [artifacts.describe(family, release_version)["filename"] for family in families]
@@ -325,7 +340,7 @@ def verify(families, directory=None, engine_manifest=None, approved_package_sour
             require(len(archive.namelist()) == len(set(archive.namelist())) and archive.testzip() is None,
                     "Invalid feature product archive")
             for name, digest in expected_engine.items():
-                require(hashlib.sha256(archive.read(name)).hexdigest() == digest,
+                require(hashlib.sha256(engine_entry(archive, family, name, path)).hexdigest() == digest,
                         "Shared engine was changed or omitted: " + name)
             profile = native.read_properties(ROOT / "gradle/minecraft-targets" / (family["buildTarget"] + ".properties"))
             for name in archive.namelist():

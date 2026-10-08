@@ -171,6 +171,23 @@ def check_product(raw, accepted, package_raw, native_raw, root, release_source):
             digest(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())}, "sharedRuntimes": runtimes}, binding
 
 
+def engine_legal_owners(path):
+    """Return three exact original non-executable engine legal-resource ownership rows."""
+    wrapper = decode(Path(str(path) + ".packaging.json").read_bytes())
+    raw = base64.b64decode(wrapper["originalPackageCustody"], validate=True)
+    approved = decode((ROOT / CUSTODY_PATH).read_bytes())
+    require(digest(raw) == approved["packageCustodySha256"], "Original stock8 legal custody bytes differ")
+    original = decode(raw)
+    rows = {'META-INF/licenses/maven-artifact/LICENSE': {'path': 'META-INF/licenses/engine/META-INF/licenses/maven-artifact/LICENSE', 'sha256': 'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30', 'bytes': 11358}, 'META-INF/licenses/maven-artifact/NOTICE': {'path': 'META-INF/licenses/engine/META-INF/licenses/maven-artifact/NOTICE', 'sha256': '18cb424970283724a13c53f833f87aaa43eb16e5e6dfac1cd708fc29ffd9ff06', 'bytes': 169}, 'data/openallay/models/LICENSE.models.dev': {'path': 'META-INF/licenses/engine/data/openallay/models/LICENSE.models.dev', 'sha256': 'dc2dc41c9fea2fd3c41c21c6f484844cab367800b88ff24781f980ad3a9d160a', 'bytes': 1067}}
+    for source, expected in rows.items():
+        name = expected["path"]
+        row = original["entries"][name]
+        require(not source.endswith((".class", ".jar")) and original["owners"][name] == "engine" and
+                row["major"] is None and row["bytes"] == expected["bytes"] and row["sha256"] == expected["sha256"],
+                "Exact original engine legal-resource ownership required")
+    return rows
+
+
 def verify_release(path, family, version, root, *, approved_package_source=None):
     accepted = pin(root)
     require(family == {"id": "forge-1.12.2", "loader": "forge", "buildTarget": "1.12.2", "supportedTargets": ["1.12.2"],

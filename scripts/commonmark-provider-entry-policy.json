@@ -1,0 +1,906 @@
+{
+  "providerSha256": "dff5404332182c794aec52538a9a620b61032041a3b08ddbb972ddf246021a02",
+  "providerBytes": 271216,
+  "providerVersion": "0.28.0",
+  "providerEntryCount": 222,
+  "providerEntries": {
+    "META-INF/MANIFEST.MF": {
+      "bytes": 255,
+      "sha256": "ee5f693949ccdad6b8a371d423eb1dc1c86d766090f36cd57a3b6768a102edca"
+    },
+    "META-INF/licenses/commonmark/LICENSE-commonmark.txt": {
+      "bytes": 1300,
+      "sha256": "11cfcf6da0142fb1971c1f40f5924ddded14454e2793d7f1dd87c9f4abe42dfd"
+    },
+    "META-INF/licenses/commonmark/THIRD-PARTY-NOTICES.txt": {
+      "bytes": 829,
+      "sha256": "6fb680d1a478d61625a48d3bfd58e51d2e6629860e616b06f47a53f985352a56"
+    },
+    "META-INF/licenses/commonmark/core-LICENSE.txt": {
+      "bytes": 1300,
+      "sha256": "11cfcf6da0142fb1971c1f40f5924ddded14454e2793d7f1dd87c9f4abe42dfd"
+    },
+    "META-INF/licenses/commonmark/tables-LICENSE.txt": {
+      "bytes": 1300,
+      "sha256": "11cfcf6da0142fb1971c1f40f5924ddded14454e2793d7f1dd87c9f4abe42dfd"
+    },
+    "META-INF/openallay/commonmark-source-changes/commonmark-java8-hunks.json": {
+      "bytes": 58550,
+      "sha256": "a610599f1bec14e3cf1461811228e2b6deb100dc23ec2b4074e882a484599b66"
+    },
+    "META-INF/openallay/commonmark-source-changes/commonmark-java8.patch": {
+      "bytes": 41240,
+      "sha256": "556dd41e7bfdbb62123bd8b7a1b5c101c82f87834c28e2561ede61bf54fd039e"
+    },
+    "META-INF/openallay/commonmark-source-changes/commonmark-source-manifest.json": {
+      "bytes": 54994,
+      "sha256": "918d30353a8c54edbab2b5251b7242bcdd5c934ea00f59c9c5a36136ba8fb121"
+    },
+    "org/commonmark/Extension.class": {
+      "bytes": 114,
+      "sha256": "afb82cc2a0ad6bc85e73e6b484a312e57e589ce2b780957bf87f653cb75dc31f"
+    },
+    "org/commonmark/ext/gfm/tables/TableBlock.class": {
+      "bytes": 330,
+      "sha256": "f9bae40289d9365ca89d7ccbf6460f6c499d76f9c2d25285d9172f089c3dc525"
+    },
+    "org/commonmark/ext/gfm/tables/TableBody.class": {
+      "bytes": 326,
+      "sha256": "f3c80324efee8a10db703bb5ab28ff4e288e73def26bb60836fea68e173fa799"
+    },
+    "org/commonmark/ext/gfm/tables/TableCell$Alignment.class": {
+      "bytes": 1347,
+      "sha256": "2f276376f91b5e76913f6fff892de251ec5f020490443e43a25577b9556d1b4b"
+    },
+    "org/commonmark/ext/gfm/tables/TableCell.class": {
+      "bytes": 1194,
+      "sha256": "354506054637c91652110976d3915fc5ad975b67117ed4663b8bead17c5948d3"
+    },
+    "org/commonmark/ext/gfm/tables/TableHead.class": {
+      "bytes": 326,
+      "sha256": "1464eed327b397053e751ae9327c1e5e8c793ca40a8c0d86841c9e786d565d9f"
+    },
+    "org/commonmark/ext/gfm/tables/TableRow.class": {
+      "bytes": 323,
+      "sha256": "164d36c58a34037444e28783dd7906601046759ced3b97fc983a672b66a2283e"
+    },
+    "org/commonmark/ext/gfm/tables/TablesExtension$1.class": {
+      "bytes": 1254,
+      "sha256": "0ba8eada8332fd98170fe7051a35471f724fa9ab32d5dc480b6a950471204b9e"
+    },
+    "org/commonmark/ext/gfm/tables/TablesExtension$2.class": {
+      "bytes": 1310,
+      "sha256": "e603c3afa96a943662b9a0d37d0b6115a90371b9539b885727ef57967cff04cc"
+    },
+    "org/commonmark/ext/gfm/tables/TablesExtension$3.class": {
+      "bytes": 1672,
+      "sha256": "0815284b85009594ae04dd50eb2c7facabcd813a02006c7754fb977f21e1fe4f"
+    },
+    "org/commonmark/ext/gfm/tables/TablesExtension.class": {
+      "bytes": 3101,
+      "sha256": "3309db6e9cbe1c3e011227bb77705b85e741e58600884f2b76ba194f05cdecf6"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableBlockParser$1.class": {
+      "bytes": 274,
+      "sha256": "a638d61cd2af89208e186886391b140eedeed06e46020401c78a77c688b49e3a"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableBlockParser$Factory.class": {
+      "bytes": 3041,
+      "sha256": "bc44f5c9f4fc5cc3cd91050d18a83ea96f92276e6ab209b6f156c8cea1c7ed82"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableBlockParser$TableCellInfo.class": {
+      "bytes": 1031,
+      "sha256": "a0d9d0d56ba597f259133a4a6a0dd2ee3406420871a45d2deb8ca8414caad384"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableBlockParser.class": {
+      "bytes": 9233,
+      "sha256": "bb78b6450a9c4004e7d27d03f65012479f888fef3707eaad4e76b8869447a85b"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableHtmlNodeRenderer$1.class": {
+      "bytes": 964,
+      "sha256": "2e02437e57744c716d6e508aef12b3a6f6a69bcfb65dc7264c4111ba0652b615"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableHtmlNodeRenderer.class": {
+      "bytes": 5016,
+      "sha256": "4f43a47279e15219d06a676a6dafe31f1f0c97a85dd5b39a0a2c3d1a1c1ec3b0"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableMarkdownNodeRenderer.class": {
+      "bytes": 4215,
+      "sha256": "06970f7bfc059e1c2eca409b0f0de3801443bd8af338ab2e6e2103980d7543ef"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableNodeRenderer.class": {
+      "bytes": 1654,
+      "sha256": "9afab790518a162e3f897a20ea466bc8b44c05964b11bed647dfb187aae71c22"
+    },
+    "org/commonmark/ext/gfm/tables/internal/TableTextContentNodeRenderer.class": {
+      "bytes": 2730,
+      "sha256": "1f80e9b8921e63fe29a25c42493f7761d6484cf0745a3649d9073a022a795fd0"
+    },
+    "org/commonmark/internal/BlockContent.class": {
+      "bytes": 1069,
+      "sha256": "b12f27f49613b8704d6edf7015e8c132ee846b454b74258986eb8351c1d7a1b9"
+    },
+    "org/commonmark/internal/BlockContinueImpl.class": {
+      "bytes": 752,
+      "sha256": "88336d737a76a0e89a7fb551820aee1aad1eaffd3fcdedd0bccf23b8d7e563d1"
+    },
+    "org/commonmark/internal/BlockQuoteParser$Factory.class": {
+      "bytes": 1759,
+      "sha256": "587fbd69c0a1e05216d02b0c3b86b3b3728d98fdf63c468139446773c5f63705"
+    },
+    "org/commonmark/internal/BlockQuoteParser.class": {
+      "bytes": 2435,
+      "sha256": "971d13dacaae5f47b30271df249d65ca2dce254ff2818a85ef4480324e570145"
+    },
+    "org/commonmark/internal/BlockStartImpl.class": {
+      "bytes": 1707,
+      "sha256": "7fece517c41e27e725473593842491d96c67158abb8ccd075044f9bb52744914"
+    },
+    "org/commonmark/internal/Bracket.class": {
+      "bytes": 1850,
+      "sha256": "16d0e6142f2dc72089f24a48b27c90ff7dbcca69b4adc1042a35283e75479603"
+    },
+    "org/commonmark/internal/Definitions.class": {
+      "bytes": 1968,
+      "sha256": "05a0df26bade2a646927b10ed7ced7660b5c294d16c163312c5af99e7866a8f6"
+    },
+    "org/commonmark/internal/Delimiter.class": {
+      "bytes": 2359,
+      "sha256": "2fa57990bbf8b3447e3984e7e876e0b3510815147734d18431736bfd39506ea4"
+    },
+    "org/commonmark/internal/DocumentBlockParser.class": {
+      "bytes": 1497,
+      "sha256": "639e380819d6876be7f250f9b9c438e094a3d54326734d63d3586688d992888c"
+    },
+    "org/commonmark/internal/DocumentParser$MatchedBlockParserImpl.class": {
+      "bytes": 1163,
+      "sha256": "cb9a3c3e935888687d1dc958829aae52f2e7bb8d49db5b2cf25c5d689aa3ea11"
+    },
+    "org/commonmark/internal/DocumentParser$OpenBlockParser.class": {
+      "bytes": 1113,
+      "sha256": "77bb11e63d1767fc6123d748c0558b2689fc3b0486000307aabdbd41bbc5f7d1"
+    },
+    "org/commonmark/internal/DocumentParser.class": {
+      "bytes": 19956,
+      "sha256": "4b57ed49116c050d5e57aa8f617103074e6750b0f9c8889c1d3f025daff98323"
+    },
+    "org/commonmark/internal/FencedCodeBlockParser$Factory.class": {
+      "bytes": 2096,
+      "sha256": "31c780ae1160a81303cce2f8f4bd5ab2cf3de7fb57c7051d8e16678ce6abb8d4"
+    },
+    "org/commonmark/internal/FencedCodeBlockParser.class": {
+      "bytes": 4457,
+      "sha256": "783db3a27a763ce904258d394290d2e017cc0417e9f0bc8224155857ed51ddcc"
+    },
+    "org/commonmark/internal/HeadingParser$Factory.class": {
+      "bytes": 2603,
+      "sha256": "6e55eed15d940d6f184e8ff4fb9edce495f5708ea9051ef8182182adeb9dff7b"
+    },
+    "org/commonmark/internal/HeadingParser.class": {
+      "bytes": 4142,
+      "sha256": "ed250bfcb3318b8b941fe0eb214462759f25b216cc56c2c27b77982f8b4abcef"
+    },
+    "org/commonmark/internal/HtmlBlockParser$1.class": {
+      "bytes": 241,
+      "sha256": "a25ee1ab33aee4757e8013951e39297de47933125d590d007f373538a9a737b5"
+    },
+    "org/commonmark/internal/HtmlBlockParser$Factory.class": {
+      "bytes": 2631,
+      "sha256": "14c39c610af313a95deb8c99257729bda84e6110941df71b8a771d4fb2ad8b14"
+    },
+    "org/commonmark/internal/HtmlBlockParser.class": {
+      "bytes": 4626,
+      "sha256": "92db34177fb7486ffbeb6277d0176346f9d06ef9a20d81234723817ce69b7a06"
+    },
+    "org/commonmark/internal/IndentedCodeBlockParser$Factory.class": {
+      "bytes": 1632,
+      "sha256": "0ab6a16e466c61532e9af4ded85099c9bb46d3207af21653653959fe82042ef7"
+    },
+    "org/commonmark/internal/IndentedCodeBlockParser.class": {
+      "bytes": 2708,
+      "sha256": "2becfc7ee38a2edd5d2520bc64024018c3bc8ab5ccc4db153b51ea1469ae9911"
+    },
+    "org/commonmark/internal/InlineParserContextImpl.class": {
+      "bytes": 2837,
+      "sha256": "a9a35e9d9611350885789f0e0439f5d1f333ad47a33b0bce7b8b1a64819f65dc"
+    },
+    "org/commonmark/internal/InlineParserImpl$1.class": {
+      "bytes": 879,
+      "sha256": "9f5a688633942ef4363635a95f7f05bcea4e65b1aafd69693ff38a1156cbd733"
+    },
+    "org/commonmark/internal/InlineParserImpl$DelimiterData.class": {
+      "bytes": 808,
+      "sha256": "46886a4b99a2f718d9c836b0950f1ce5d7ad689cd6274e3e6798afce97781ce9"
+    },
+    "org/commonmark/internal/InlineParserImpl$DestinationTitle.class": {
+      "bytes": 614,
+      "sha256": "d17ee8a8d3a4258e72887c466fce21d44feb07eb38e3a02b95fd22f5d262fcc9"
+    },
+    "org/commonmark/internal/InlineParserImpl$LinkInfoImpl.class": {
+      "bytes": 2127,
+      "sha256": "995a785180b8c97d0875212d33a6d25554ed2e337ef579e4065b14dae8209518"
+    },
+    "org/commonmark/internal/InlineParserImpl.class": {
+      "bytes": 27227,
+      "sha256": "6ab8349722c31eacf98e9c24a7d03258ddef55aad498929aa47220ec60abe1d5"
+    },
+    "org/commonmark/internal/LinkReferenceDefinitionParser$State.class": {
+      "bytes": 1629,
+      "sha256": "bba17e1754150bde84518ba866b5853c5edfa77763bea72749b53a849d51a04f"
+    },
+    "org/commonmark/internal/LinkReferenceDefinitionParser.class": {
+      "bytes": 7358,
+      "sha256": "bfcc20ace65a66b8fdcfaac842681ef62dc699bbb75f38b26c838724d335ecba"
+    },
+    "org/commonmark/internal/ListBlockParser$Factory.class": {
+      "bytes": 3030,
+      "sha256": "0696277ed61ccecf0f6a5a17a6a44e2602b291ffdb65bb22d04abea6fc43ca15"
+    },
+    "org/commonmark/internal/ListBlockParser$ListData.class": {
+      "bytes": 605,
+      "sha256": "abcc0c52117fba30a4917245a7f69a81d87e864ab63847fab956af216fdbc9de"
+    },
+    "org/commonmark/internal/ListBlockParser$ListMarkerData.class": {
+      "bytes": 626,
+      "sha256": "3625d934c5dc2afdf4a0bb713d16a220c15c906437b9b6e1caeb91f0cdb3d578"
+    },
+    "org/commonmark/internal/ListBlockParser.class": {
+      "bytes": 5289,
+      "sha256": "053fc1fb99f08d5186789614c2b1e4384d28db7e114d4fd4d308d7dc951c0b26"
+    },
+    "org/commonmark/internal/ListItemParser.class": {
+      "bytes": 2324,
+      "sha256": "e23bc0cb6750b48f0d850c213a4e53ab355899f6e1186aa70bdea6a81a421f2c"
+    },
+    "org/commonmark/internal/ParagraphParser.class": {
+      "bytes": 3973,
+      "sha256": "d611e633178c98ab80b5a230eb1a8dca796fb28b0229804f182606e1629fe8cb"
+    },
+    "org/commonmark/internal/StaggeredDelimiterProcessor.class": {
+      "bytes": 3096,
+      "sha256": "243f37677ef60d7693de3d9635fe3d948e4db5ddc3d7613781a2ed1f03d0328c"
+    },
+    "org/commonmark/internal/ThematicBreakParser$Factory.class": {
+      "bytes": 1961,
+      "sha256": "75a3a3742e3821b5eed863164ba352dbe31d9ab416b0a1be66856e6887c82f57"
+    },
+    "org/commonmark/internal/ThematicBreakParser.class": {
+      "bytes": 1839,
+      "sha256": "57796be415e716b9d9a48489fe0717bc595e0d63db8ae78cbef7a52852b1ff76"
+    },
+    "org/commonmark/internal/inline/AsteriskDelimiterProcessor.class": {
+      "bytes": 419,
+      "sha256": "8533b46867482185055d301bcbefa05a666f1b59eab85f851a2470fa28c1580c"
+    },
+    "org/commonmark/internal/inline/AutolinkInlineParser$Factory.class": {
+      "bytes": 1011,
+      "sha256": "4671697f4d8f0b752d181bc6c389fadaa25a6c292bfc90a5ed88ea7a3c557da0"
+    },
+    "org/commonmark/internal/inline/AutolinkInlineParser.class": {
+      "bytes": 3146,
+      "sha256": "277b88c2ac27dea6f358ec922a086135009546a0b1690194e07f44b9d141b193"
+    },
+    "org/commonmark/internal/inline/BackslashInlineParser$Factory.class": {
+      "bytes": 1015,
+      "sha256": "da567a99bb051b4a3e57c1813b299e8ac737f1648157461215cd3f458c973c3f"
+    },
+    "org/commonmark/internal/inline/BackslashInlineParser.class": {
+      "bytes": 2010,
+      "sha256": "6cf4845e34b3ba16f3be80c026af820e83af329f1e4c7376f4d5a25a938998df"
+    },
+    "org/commonmark/internal/inline/BackticksInlineParser$Factory.class": {
+      "bytes": 1015,
+      "sha256": "08e739a946d3076555fdb6eb6f6314f28fca25436a76089b26acc24545050484"
+    },
+    "org/commonmark/internal/inline/BackticksInlineParser.class": {
+      "bytes": 2604,
+      "sha256": "5a5aa6f6cc296fc3435b0543207e227f6f332d77de48be15e7d9ae5be35de6f3"
+    },
+    "org/commonmark/internal/inline/CoreLinkProcessor.class": {
+      "bytes": 2464,
+      "sha256": "4b8aac92e69e40f5e0bc6038117b3c5850a5cdacdb24f5b41e94f075272c16bb"
+    },
+    "org/commonmark/internal/inline/EmphasisDelimiterProcessor.class": {
+      "bytes": 2936,
+      "sha256": "d21c46966a3e331b1e0b5b65eeff4512c0db9db2c1abc62070180d8182f42ccd"
+    },
+    "org/commonmark/internal/inline/EntityInlineParser$Factory.class": {
+      "bytes": 1003,
+      "sha256": "32742cbf29461e4e77f89023c0c3fd8cc48715912105c86f0c1ab50b1e90568c"
+    },
+    "org/commonmark/internal/inline/EntityInlineParser.class": {
+      "bytes": 3110,
+      "sha256": "776a602c7d13f65019cbdd03d4c758d12a5647645f8120077e22116a1685c065"
+    },
+    "org/commonmark/internal/inline/HtmlInlineParser$Factory.class": {
+      "bytes": 995,
+      "sha256": "ab517aca7db5932c5f716cfb4cc39d7481f147f586f87dee48f9750f8a3affcd"
+    },
+    "org/commonmark/internal/inline/HtmlInlineParser.class": {
+      "bytes": 4721,
+      "sha256": "71e74a153d51272f9d7982e16f21e92192cac675880045ff21f50aab110716dc"
+    },
+    "org/commonmark/internal/inline/LinkResultImpl$Type.class": {
+      "bytes": 1316,
+      "sha256": "070dd89b6035da198c397ca001365fb28ae53566245b4aad775fb5a87a71d96b"
+    },
+    "org/commonmark/internal/inline/LinkResultImpl.class": {
+      "bytes": 1443,
+      "sha256": "a016dde515187c024cbcd4b642cd0ee76aacf6c199fd39f648d3f394b54db5ad"
+    },
+    "org/commonmark/internal/inline/ParsedInlineImpl.class": {
+      "bytes": 835,
+      "sha256": "dcba4deb93175d0a282ccc9e8a83f74b9894b82ee6af6906a97ff1d42f4b56f4"
+    },
+    "org/commonmark/internal/inline/UnderscoreDelimiterProcessor.class": {
+      "bytes": 425,
+      "sha256": "349c8e25a0cd1778170e6fb5d7e1bee514fcad8679ccc226b91e1aa64d3631d1"
+    },
+    "org/commonmark/internal/renderer/NodeRendererMap.class": {
+      "bytes": 2999,
+      "sha256": "5535af82b5723523f8dde11e41916fe603486bf2e526ea8d4b9ebc430f5cd5d5"
+    },
+    "org/commonmark/internal/util/Escaping$1.class": {
+      "bytes": 1106,
+      "sha256": "da0f608e4e0b1ac114e74b25007ed74e1e7560d71b0dd8c10a40b4d9193c30d1"
+    },
+    "org/commonmark/internal/util/Escaping$2.class": {
+      "bytes": 1444,
+      "sha256": "1fe8f9906b5b0fbf0c1e287664fa564dbcb1ade6699b675e948038b5d4bd83ff"
+    },
+    "org/commonmark/internal/util/Escaping$Replacer.class": {
+      "bytes": 287,
+      "sha256": "1fd882ad574ab46aaee065bf8e195ab1b7f9acfbe91dd96f33b6aa424f351d23"
+    },
+    "org/commonmark/internal/util/Escaping.class": {
+      "bytes": 3859,
+      "sha256": "341470455ef5e60623fafbe9fdc5fd6a7f84e129fdd27ea730662e01e4bff894"
+    },
+    "org/commonmark/internal/util/Html5Entities.class": {
+      "bytes": 3304,
+      "sha256": "7eb3d76762bd09911f17682f5e851cf7ab5e85f31413a8a6d2d383951a33df34"
+    },
+    "org/commonmark/internal/util/Java8Collections$NullRejectList.class": {
+      "bytes": 1186,
+      "sha256": "97979ee7f8841ec27c5de227dc985e3077e5a9d38eb6af3be98b3ac2f51a3001"
+    },
+    "org/commonmark/internal/util/Java8Collections$NullRejectMap.class": {
+      "bytes": 1265,
+      "sha256": "68577847c142be900cd356111f5c5657cefb7f16faab7589e6ab1c491b0fd5bc"
+    },
+    "org/commonmark/internal/util/Java8Collections$NullRejectSet.class": {
+      "bytes": 932,
+      "sha256": "084b87332d4448d73e0908e8fc439f591bf7bc957f6babf12d3ee3a978d8ca60"
+    },
+    "org/commonmark/internal/util/Java8Collections.class": {
+      "bytes": 2977,
+      "sha256": "d97659e158bee900b2f43f0616668fc9a211aebb41844f9c66edc9805bb9b667"
+    },
+    "org/commonmark/internal/util/LineReader.class": {
+      "bytes": 2574,
+      "sha256": "07861387ae3311524742b956b73190f7256ddb5b15af3e2d3d7dbe2bc56ca65b"
+    },
+    "org/commonmark/internal/util/LinkScanner.class": {
+      "bytes": 2595,
+      "sha256": "efcd82069df3089759196c076847e0acf2ff4a1393667f068d7175820da8f5c8"
+    },
+    "org/commonmark/internal/util/Parsing.class": {
+      "bytes": 501,
+      "sha256": "264884dc4a78a2ab8b285a9a7562b2545421164c481fab518b302c8f78d4ad38"
+    },
+    "org/commonmark/internal/util/entities.txt": {
+      "bytes": 24470,
+      "sha256": "fea6cf4d3bd2aa7ffd421116551654e2a22e40a17e4cd087c8725138113bad69"
+    },
+    "org/commonmark/node/AbstractVisitor.class": {
+      "bytes": 4534,
+      "sha256": "a1cb1e0a180f03f201cc08bbe7f662c40c778830b1ef16a7ed92802529bd35f3"
+    },
+    "org/commonmark/node/Block.class": {
+      "bytes": 860,
+      "sha256": "72d6f384020ec12cf4a3e33ba4cab3d6fc249f8f9601467ce9465ac892fed62e"
+    },
+    "org/commonmark/node/BlockQuote.class": {
+      "bytes": 557,
+      "sha256": "70c86abd95b2ce6f2591e77c64f645da2161a4ef4a8802eca5545267721b3748"
+    },
+    "org/commonmark/node/BulletList.class": {
+      "bytes": 1334,
+      "sha256": "a3f0227d68bc5418e0e11f1a6aa81d1daa7cf3c4a79e77ffbbbcb3e8c31ae478"
+    },
+    "org/commonmark/node/Code.class": {
+      "bytes": 879,
+      "sha256": "ee2378b54e40103a6edf2c9b90ec0f0ea725339140bcb13703c2f913c14a37c3"
+    },
+    "org/commonmark/node/CustomBlock.class": {
+      "bytes": 561,
+      "sha256": "ae3c130eb75906f8d3f58dcfe447ce3d75a10e8e8e4fcbed2725caf3dbb07539"
+    },
+    "org/commonmark/node/CustomNode.class": {
+      "bytes": 556,
+      "sha256": "09dd175b55dc5521436696de3b95a517f34a75e295cb1df10d4d79651d34130a"
+    },
+    "org/commonmark/node/DefinitionMap.class": {
+      "bytes": 2756,
+      "sha256": "2214416b7d1263dc5d37bf34d0c377980f94f193cb85b47249edab76e027d1b2"
+    },
+    "org/commonmark/node/Delimited.class": {
+      "bytes": 202,
+      "sha256": "7d0252e22ac6ae0a1e958c737ef1a8d5c7b250dae5c701dec1e18b8902007663"
+    },
+    "org/commonmark/node/Document.class": {
+      "bytes": 549,
+      "sha256": "3174dbd52b904d02b9cd5c21cd7a1af2c7d73548267a1e8442100f577ed3f3ce"
+    },
+    "org/commonmark/node/Emphasis.class": {
+      "bytes": 1028,
+      "sha256": "70e696d7caf057dfe81b6fe3d44b60115f38209afeee1d03ddf8a07db2ce4cc4"
+    },
+    "org/commonmark/node/FencedCodeBlock.class": {
+      "bytes": 3343,
+      "sha256": "27d52d6e4b5ce215cccbdeefdae9da6c72bd543275c487ae3a5dec7c79f69224"
+    },
+    "org/commonmark/node/HardLineBreak.class": {
+      "bytes": 568,
+      "sha256": "aa8d211245aea8cf87f59d19248c090d66e82859fdef8c6f1c3488b24c58a8b7"
+    },
+    "org/commonmark/node/Heading.class": {
+      "bytes": 747,
+      "sha256": "006806c4b7c28faf600622379294f577027be994262d953f229ed65deb24a25c"
+    },
+    "org/commonmark/node/HtmlBlock.class": {
+      "bytes": 812,
+      "sha256": "f5c604a4c123acf30e426af0a960054827d24fe3f3299ab3601471ebb29f70ef"
+    },
+    "org/commonmark/node/HtmlInline.class": {
+      "bytes": 815,
+      "sha256": "5589078f14c04eeae38cbb68760cba091814a6b9563d22880b7009d1a81831b3"
+    },
+    "org/commonmark/node/Image.class": {
+      "bytes": 1407,
+      "sha256": "a2d7542fc95e397fd238db09f0303e5710f97d40c6c1b965f30713e0e31156dc"
+    },
+    "org/commonmark/node/IndentedCodeBlock.class": {
+      "bytes": 844,
+      "sha256": "5f7020ad245f5591c8de008c1cb0b38bd3f6d4b03191f034cdb58a953e29feb2"
+    },
+    "org/commonmark/node/Link.class": {
+      "bytes": 1403,
+      "sha256": "469c74d22c0299bf22e3dbbc58311a4771c172764a258d48e119a9ff1cb916e3"
+    },
+    "org/commonmark/node/LinkReferenceDefinition.class": {
+      "bytes": 1436,
+      "sha256": "af6cc164d134e24ecf7d42a2f70cc9c782aa53165387edbd7ad05ca55535da74"
+    },
+    "org/commonmark/node/ListBlock.class": {
+      "bytes": 502,
+      "sha256": "0114236ef3ed3a8f5ff46109bd5543dd5e419facc4827318162a863820799259"
+    },
+    "org/commonmark/node/ListItem.class": {
+      "bytes": 1427,
+      "sha256": "612beae72ba2758cefa8ab07bf3fc796920023567fadde8cbbc7652c63a07546"
+    },
+    "org/commonmark/node/Node.class": {
+      "bytes": 3669,
+      "sha256": "9cafc98e0e4769c0bb2d43f15dcacac408419a74383dd951fb9f3cc8cff45cdb"
+    },
+    "org/commonmark/node/Nodes$1.class": {
+      "bytes": 203,
+      "sha256": "a1fa937e8cbeb837a64293182d09c963a4454504a0acc469975b8c9049f712b7"
+    },
+    "org/commonmark/node/Nodes$NodeIterable.class": {
+      "bytes": 1202,
+      "sha256": "96d03a224edc2da17f0044ac135baadcf4f5336ec43847946cfb79642459ffe5"
+    },
+    "org/commonmark/node/Nodes$NodeIterator.class": {
+      "bytes": 1525,
+      "sha256": "01ad0d96a83d588476f5fd313eee8ce05de63eab5751a0e7db0f96602b8efd65"
+    },
+    "org/commonmark/node/Nodes.class": {
+      "bytes": 995,
+      "sha256": "3d2235ff7b1d3a10c40cd80799cfc9e1ae0e74e467b83d06dd6e72fd889ebf75"
+    },
+    "org/commonmark/node/OrderedList.class": {
+      "bytes": 2030,
+      "sha256": "fa6e12148603e7ea421c030adc81d68f77995a8b900a07046b0f0272a6ab6513"
+    },
+    "org/commonmark/node/Paragraph.class": {
+      "bytes": 553,
+      "sha256": "c8ab21f44f87bba02b9b53492427f7e7d3ebb4102d8e4c539adb5991292c178b"
+    },
+    "org/commonmark/node/SoftLineBreak.class": {
+      "bytes": 568,
+      "sha256": "688a9aac53d8ed67590a0a88fb3a4f42dc637406f87f4b154d881272dedef1fc"
+    },
+    "org/commonmark/node/SourceSpan.class": {
+      "bytes": 3252,
+      "sha256": "0818e3142f86a163e62ce2e8ae8eda4257a45e1c61cae62355ce80a3cc2164e9"
+    },
+    "org/commonmark/node/SourceSpans.class": {
+      "bytes": 2453,
+      "sha256": "4968b0d9560fd26e2f15cc12da2af490eff66707e1d2fef82231e9b79c0d503d"
+    },
+    "org/commonmark/node/StrongEmphasis.class": {
+      "bytes": 1052,
+      "sha256": "39810099856ab5f03fc7b12d9d6721f37962ab65519a5f75433614d8619fad82"
+    },
+    "org/commonmark/node/Text.class": {
+      "bytes": 1115,
+      "sha256": "93fe2c0c8bf2b1746d48bd85daee8d8d322430c5a63285f4611c50c922734f59"
+    },
+    "org/commonmark/node/ThematicBreak.class": {
+      "bytes": 828,
+      "sha256": "958c2558568ce26368ca4039fd209488ae1e89f90f30e679f02d10388abc0730"
+    },
+    "org/commonmark/node/Visitor.class": {
+      "bytes": 1187,
+      "sha256": "746f8ce3cfedb2fe9895e426f18c1eed83578a2b77419f1eae7b812e12667c9c"
+    },
+    "org/commonmark/node/package-info.class": {
+      "bytes": 125,
+      "sha256": "0de4049893b859876ae45dfda3ae87c140c46103eeef41c5ed030329107ed02b"
+    },
+    "org/commonmark/package-info.class": {
+      "bytes": 120,
+      "sha256": "82867871f4a92f12474ba472d8be474e58db4559150d7397ba649a1dd3cbf3bd"
+    },
+    "org/commonmark/parser/IncludeSourceSpans.class": {
+      "bytes": 1235,
+      "sha256": "fe5de94c4cb434cd57c0bb34664503d3135597aa05d08528a878d6a2a83cdf29"
+    },
+    "org/commonmark/parser/InlineParser.class": {
+      "bytes": 210,
+      "sha256": "8e3fb713272d16ef1292b6a02b7981e3907125fa7804ed625537c94a0b0e95d4"
+    },
+    "org/commonmark/parser/InlineParserContext.class": {
+      "bytes": 988,
+      "sha256": "3f65eee0f92ea198d9a1b7c87295157eaa6204431d00e13a8b440655bdee5e12"
+    },
+    "org/commonmark/parser/InlineParserFactory.class": {
+      "bytes": 242,
+      "sha256": "68d96536b11c4e3610f889031173136b6fa3778162eaca838cd0a88dee2d3e0e"
+    },
+    "org/commonmark/parser/Parser$1.class": {
+      "bytes": 210,
+      "sha256": "e896a7b9abbdfbb25f8fe435f8fbf937592ffe042654411f102cd900318f4c6c"
+    },
+    "org/commonmark/parser/Parser$Builder.class": {
+      "bytes": 7817,
+      "sha256": "92805e85f258e4d0921866ac792569c089ced625eee6b4ed907f070a146093be"
+    },
+    "org/commonmark/parser/Parser$ParserExtension.class": {
+      "bytes": 367,
+      "sha256": "828684e100c8912f004d8a4b41d53dbc6db4f0d6733f49fc723f18bd402d0c0e"
+    },
+    "org/commonmark/parser/Parser.class": {
+      "bytes": 4822,
+      "sha256": "a086056e1461e2a9986d8052926d6c86aa7c5f6cd5513a9c4d3d88c9b0564611"
+    },
+    "org/commonmark/parser/PostProcessor.class": {
+      "bytes": 204,
+      "sha256": "f97ba5f9ac0b43db48ce4609e5d93bef0183c36e0670e2ed1567044ecafec678"
+    },
+    "org/commonmark/parser/SourceLine.class": {
+      "bytes": 1754,
+      "sha256": "ef99c7b91be7c56feab0144963513edc0ba125536b23c9fb7b498e5eca25a509"
+    },
+    "org/commonmark/parser/SourceLines.class": {
+      "bytes": 2793,
+      "sha256": "7f0b258a3dc4fe3ec0f665dbff91c035ffbf0ffacdbed37a8fa64a07e229cc4a"
+    },
+    "org/commonmark/parser/beta/InlineContentParser.class": {
+      "bytes": 257,
+      "sha256": "6530b93ec854ce6d3b5ec6325f049ec75c34c77ba1e699acc89fa10dfe869e04"
+    },
+    "org/commonmark/parser/beta/InlineContentParserFactory.class": {
+      "bytes": 344,
+      "sha256": "cf6f1b0d719d29b7d8bc97dae7d97b5dc7bce39d1ed4e1e1aa3912d65e631e06"
+    },
+    "org/commonmark/parser/beta/InlineParserState.class": {
+      "bytes": 201,
+      "sha256": "36083d614f8f601dc88188b4dfd27e20bc62c9f23d7d0d4d8f81ffd8396713a2"
+    },
+    "org/commonmark/parser/beta/LinkInfo.class": {
+      "bytes": 358,
+      "sha256": "444cc207c89661642d82f5b773691e468db6b8901c114eee0cbb14005b147c97"
+    },
+    "org/commonmark/parser/beta/LinkProcessor.class": {
+      "bytes": 312,
+      "sha256": "636b5dcbf5a5c494af10e92a3ff7dca824fb265afaafc0199453f55072c3a8f6"
+    },
+    "org/commonmark/parser/beta/LinkResult.class": {
+      "bytes": 1045,
+      "sha256": "b3b237e03d382cda97d3a63b430928ef6caec55c4b9ef5bacbf7e5e722eaa97d"
+    },
+    "org/commonmark/parser/beta/ParsedInline.class": {
+      "bytes": 878,
+      "sha256": "dc6e040cd51dbef41afda481bb682260c387e21133e92bc7447f54dac87255e1"
+    },
+    "org/commonmark/parser/beta/Position.class": {
+      "bytes": 413,
+      "sha256": "7a1e9b0779ed6f35f0becde8a72a57dd49312e5a00644e44cf017e08663e2461"
+    },
+    "org/commonmark/parser/beta/Scanner.class": {
+      "bytes": 6515,
+      "sha256": "04bc6a2eedd092b243c8157eea7fc3f8b90759a1965662588a99d2e070c39b22"
+    },
+    "org/commonmark/parser/beta/package-info.class": {
+      "bytes": 132,
+      "sha256": "3769aef43a6a502e56f9106c07a90ba7a9d41ebdaf5fda50b02bba2d44b809ea"
+    },
+    "org/commonmark/parser/block/AbstractBlockParser.class": {
+      "bytes": 1725,
+      "sha256": "c011c2f9ab879b3cc98f4a1aa4aa408ac9b6c91427fb235d74d3ba502c5e39b1"
+    },
+    "org/commonmark/parser/block/AbstractBlockParserFactory.class": {
+      "bytes": 413,
+      "sha256": "54b929026763455655bf5816e9994c6f72f46863c9c460c46160cee36f6ec1fb"
+    },
+    "org/commonmark/parser/block/BlockContinue.class": {
+      "bytes": 776,
+      "sha256": "f50a890baf947b18da2dfe5763aa426013d2a30d46e31a0cef4b7fb22ee1334a"
+    },
+    "org/commonmark/parser/block/BlockParser.class": {
+      "bytes": 753,
+      "sha256": "d7b541b9403513bed76a35e01907a6d4e95cae0e8dbc5cd45eb7d37f8e03fe95"
+    },
+    "org/commonmark/parser/block/BlockParserFactory.class": {
+      "bytes": 298,
+      "sha256": "c3609ed1025567b9e43b2b53efa8a5078411d7c98ea02f1e6bbfbbeb56850376"
+    },
+    "org/commonmark/parser/block/BlockStart.class": {
+      "bytes": 960,
+      "sha256": "0dd8e1f68b7a443b317ac0712fad211edb514892abef80cef8ae6b4856259846"
+    },
+    "org/commonmark/parser/block/MatchedBlockParser.class": {
+      "bytes": 291,
+      "sha256": "8fe894e814418918c7cc4bd5f315807c717ecada7cb51be41fe063d027941b10"
+    },
+    "org/commonmark/parser/block/ParserState.class": {
+      "bytes": 385,
+      "sha256": "b435e0c1eca6a55b90e93783e665d7eb85701621e88f525420bb0112b253b3cb"
+    },
+    "org/commonmark/parser/block/package-info.class": {
+      "bytes": 133,
+      "sha256": "bdad6ca7ca5a8b200b7001c0791e5042e5a491b36c66e7542be84d47d31f3029"
+    },
+    "org/commonmark/parser/delimiter/DelimiterProcessor.class": {
+      "bytes": 360,
+      "sha256": "3c050d1b5b565eb8b28977d7a780d86fe9fbb578e82a9cd5ae7fbcb4cca25a4b"
+    },
+    "org/commonmark/parser/delimiter/DelimiterRun.class": {
+      "bytes": 449,
+      "sha256": "f6adfa141a977b404758c00d569cb77d4d85037a9151becce7e7477bf8ad8356"
+    },
+    "org/commonmark/parser/package-info.class": {
+      "bytes": 127,
+      "sha256": "f1323a378855f25645d4c762e7b8367c36eccd595c8ca270a5f66cc31475a0a5"
+    },
+    "org/commonmark/renderer/NodeRenderer.class": {
+      "bytes": 602,
+      "sha256": "098a82f18bd2b156befec0ff54b0aea071c8e0322420dea4825049b3db6c6da6"
+    },
+    "org/commonmark/renderer/Renderer.class": {
+      "bytes": 249,
+      "sha256": "ead5d2a138b2af7cb6034126286759f2f39c7303047f484d53ad24d17b6fde8d"
+    },
+    "org/commonmark/renderer/html/AttributeProvider.class": {
+      "bytes": 356,
+      "sha256": "81965b1b0c94e6a38de804987be7dd982e91bd396d24f2f70404e55f5de9ec33"
+    },
+    "org/commonmark/renderer/html/AttributeProviderContext.class": {
+      "bytes": 158,
+      "sha256": "19877020183b163da692ec13b15ddfc12c43d1822d035859ff46ea7d0b6c3bf3"
+    },
+    "org/commonmark/renderer/html/AttributeProviderFactory.class": {
+      "bytes": 283,
+      "sha256": "53d4af6c08039384b67a7ed9d3ae298d5bf18db7a68d9b820a9817f1b2d4ec98"
+    },
+    "org/commonmark/renderer/html/CoreHtmlNodeRenderer$1.class": {
+      "bytes": 266,
+      "sha256": "878994169288595b383fabf68d8b2f69bcf73b2964fd20c8441e51bcb39799d7"
+    },
+    "org/commonmark/renderer/html/CoreHtmlNodeRenderer$AltTextVisitor.class": {
+      "bytes": 1835,
+      "sha256": "91c60e322f661999a7be85eda1207c57698822d3e3f52001f8c11cc2dee455de"
+    },
+    "org/commonmark/renderer/html/CoreHtmlNodeRenderer.class": {
+      "bytes": 11597,
+      "sha256": "0fdfc2f877746911805f26076a7ba1a14eb538fef5d5b30b13e22372cdef9c47"
+    },
+    "org/commonmark/renderer/html/DefaultUrlSanitizer.class": {
+      "bytes": 2156,
+      "sha256": "0e6d607c1db5f92fa9c8078b5c1a2d9535864cf915cd35d73d6b2ceb6264fc10"
+    },
+    "org/commonmark/renderer/html/HtmlNodeRendererContext.class": {
+      "bytes": 829,
+      "sha256": "430a7f2741efa8cbf1d2bb0e77e79562a0106dc8d94ab19182aa5f6cb6260f5d"
+    },
+    "org/commonmark/renderer/html/HtmlNodeRendererFactory.class": {
+      "bytes": 270,
+      "sha256": "e6d97bdc9a9a837cf7f896f64fce55a883559202461018ab7f6db4bb6c7c9c4a"
+    },
+    "org/commonmark/renderer/html/HtmlRenderer$1.class": {
+      "bytes": 1164,
+      "sha256": "b2903a37aceea04817b609a3e0469db0eb62cf05715673e5eeb0915ec10805af"
+    },
+    "org/commonmark/renderer/html/HtmlRenderer$Builder.class": {
+      "bytes": 4943,
+      "sha256": "d3f5b44ed7fd61b994b126e7c310fa35c252babb20e6ec362df012a0cedbf893"
+    },
+    "org/commonmark/renderer/html/HtmlRenderer$HtmlRendererExtension.class": {
+      "bytes": 437,
+      "sha256": "81dbd375010fabb1bd4d2c597f8338fc48e4d0d8a71795e39668f16e0022f50d"
+    },
+    "org/commonmark/renderer/html/HtmlRenderer$RendererContext.class": {
+      "bytes": 5534,
+      "sha256": "3201c065fc30ff96be3c52865c05f79e445b59468f56b2e889814574d5d1c0ae"
+    },
+    "org/commonmark/renderer/html/HtmlRenderer.class": {
+      "bytes": 4629,
+      "sha256": "eb7e7f363350f935624a711739cfbf5d800aadf67914eb6146c239d8e74428e7"
+    },
+    "org/commonmark/renderer/html/HtmlWriter.class": {
+      "bytes": 3159,
+      "sha256": "b72c1c4cdaedb912121939d3433c580ebea856c53d9f2d84880ebea7227a11df"
+    },
+    "org/commonmark/renderer/html/UrlSanitizer.class": {
+      "bytes": 228,
+      "sha256": "17633afd94bb2af3031443c94a2b1a1ff4f1a769be0fcf494c1c87147a517935"
+    },
+    "org/commonmark/renderer/html/package-info.class": {
+      "bytes": 134,
+      "sha256": "e77171b6a77ff94616fd331a808034fbb6b70988772bb5ab483f3fc932ce3d12"
+    },
+    "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$1.class": {
+      "bytes": 286,
+      "sha256": "b1e86f06dffedfa06cdd5077ac8701c8b67849a44e02a6c0fc5b26dae862f27c"
+    },
+    "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$BulletListHolder.class": {
+      "bytes": 1163,
+      "sha256": "775f5e1a15c0abf6942b1160479511d5d5c662061ffd3b194d6df572f6c901fb"
+    },
+    "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$LineBreakVisitor.class": {
+      "bytes": 1327,
+      "sha256": "29c74483fc4fad6b6fd2e8bf225de271bbe63cabba1447dcd38f762e1f35167f"
+    },
+    "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$ListHolder.class": {
+      "bytes": 618,
+      "sha256": "7ddf1a6ac42dc5ae9677713f2f67c9faf3686a09c4bcfc326d53f70507f88b0e"
+    },
+    "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer$OrderedListHolder.class": {
+      "bytes": 1613,
+      "sha256": "2f931a88835b28b5428a983bb1356dcc18dabc019afb70a397e477d4729ef2a3"
+    },
+    "org/commonmark/renderer/markdown/CoreMarkdownNodeRenderer.class": {
+      "bytes": 16012,
+      "sha256": "cf3a634f404258fc8950ac76aa069efd9aa71a43a739e2347b40a0d59bf3698b"
+    },
+    "org/commonmark/renderer/markdown/MarkdownNodeRendererContext.class": {
+      "bytes": 405,
+      "sha256": "476d8c1b5d01847d023091818f8071f2c86a3a3ab294080b8c9bf14f02ffa5e8"
+    },
+    "org/commonmark/renderer/markdown/MarkdownNodeRendererFactory.class": {
+      "bytes": 404,
+      "sha256": "e3dc0ebe0f5b3d3f0691210bc7a45482c7c0e265da652a9f0ac81ce44fafa626"
+    },
+    "org/commonmark/renderer/markdown/MarkdownRenderer$1.class": {
+      "bytes": 1567,
+      "sha256": "a76794964d324ace848354e799b57b39bc69e27e2d296a0fbe35d57bbd1eaa09"
+    },
+    "org/commonmark/renderer/markdown/MarkdownRenderer$Builder.class": {
+      "bytes": 2566,
+      "sha256": "850129ca32224092c59b53c5e6def0fed4311a1920ec07639a24d2f4e8474e9c"
+    },
+    "org/commonmark/renderer/markdown/MarkdownRenderer$MarkdownRendererExtension.class": {
+      "bytes": 481,
+      "sha256": "9ae4252e74bdce3ea473e6002e1cd358e038cccd7030d738925147283856e568"
+    },
+    "org/commonmark/renderer/markdown/MarkdownRenderer$RendererContext.class": {
+      "bytes": 3184,
+      "sha256": "7b09e69e98c3c2d9058a86c752b2a064490e3f7b908bebbb8f97ede31a59ffc8"
+    },
+    "org/commonmark/renderer/markdown/MarkdownRenderer.class": {
+      "bytes": 2928,
+      "sha256": "9bdb427ff6e9a9c8c105ac31d72b9cf2d1f291731b53da718ed14ea784c1f1dd"
+    },
+    "org/commonmark/renderer/markdown/MarkdownWriter.class": {
+      "bytes": 4870,
+      "sha256": "c57cdbb46fccb7fb5d2c12f0dc9436e755be828e85a99682e2b862e199de1e8c"
+    },
+    "org/commonmark/renderer/markdown/package-info.class": {
+      "bytes": 138,
+      "sha256": "46111e77ea079c6ae717bdba4384ee2f0634b89a7bad99c31c6f6f215b5bd5ee"
+    },
+    "org/commonmark/renderer/text/CoreTextContentNodeRenderer$BulletListHolder.class": {
+      "bytes": 1108,
+      "sha256": "b19bbacbea5218df2df43f734191767f2e7335c117209af62859ba152cca8301"
+    },
+    "org/commonmark/renderer/text/CoreTextContentNodeRenderer$ListHolder.class": {
+      "bytes": 764,
+      "sha256": "d066eeaa47394b371d11e4137eb69d394a5a6b6edfcabd1137d53f6358f36909"
+    },
+    "org/commonmark/renderer/text/CoreTextContentNodeRenderer$OrderedListHolder.class": {
+      "bytes": 1605,
+      "sha256": "34bf27c8efecc9c81769e1e17e9cbfabbebc919dfa31ddbf3cbd613bcc74e5f0"
+    },
+    "org/commonmark/renderer/text/CoreTextContentNodeRenderer.class": {
+      "bytes": 9836,
+      "sha256": "20338cd31093d11c1bf84e18eac89647fe98c502260c6d6f99c694d2f6afa243"
+    },
+    "org/commonmark/renderer/text/LineBreakRendering.class": {
+      "bytes": 1276,
+      "sha256": "11950cad9c7c4e411249862b282d4d986de3b36d5ad3cd299d0979309d491dca"
+    },
+    "org/commonmark/renderer/text/TextContentNodeRendererContext.class": {
+      "bytes": 489,
+      "sha256": "e5a07360be2ae5bd524e63ab0e02969a041f50fe9f6c291da29b376fa092c07e"
+    },
+    "org/commonmark/renderer/text/TextContentNodeRendererFactory.class": {
+      "bytes": 291,
+      "sha256": "b5a8ae95df93588c864e816a413f21f3f68c5663f09de575c071cb8d1f773386"
+    },
+    "org/commonmark/renderer/text/TextContentRenderer$1.class": {
+      "bytes": 1255,
+      "sha256": "f286f47528a3c87bd99ba35e46494a27e200844406e52e3131fb44531a3ab89e"
+    },
+    "org/commonmark/renderer/text/TextContentRenderer$Builder.class": {
+      "bytes": 3418,
+      "sha256": "aff249603cf3388aed1beada58f2a32e8d2aa86bbf37a397659cc144c38a0c3f"
+    },
+    "org/commonmark/renderer/text/TextContentRenderer$RendererContext.class": {
+      "bytes": 3026,
+      "sha256": "24210cf702e02b60db72b18a2c5a859004b970bc254527fbd3771f78c480d5cc"
+    },
+    "org/commonmark/renderer/text/TextContentRenderer$TextContentRendererExtension.class": {
+      "bytes": 486,
+      "sha256": "9515499e8435c0b4765f0ccc6f1e5c38ee5b818d04d8fed596b28ea5220db7b5"
+    },
+    "org/commonmark/renderer/text/TextContentRenderer.class": {
+      "bytes": 3385,
+      "sha256": "514b88b79615829f2effa9525b88aa8fd71867ebcf8c96cc2563c00b74dfc6d4"
+    },
+    "org/commonmark/renderer/text/TextContentWriter.class": {
+      "bytes": 4217,
+      "sha256": "97c99c44c12eb7516439ee7252f5e265cda8ecc00e0910788ec012d26d48ddfe"
+    },
+    "org/commonmark/renderer/text/package-info.class": {
+      "bytes": 134,
+      "sha256": "700104b8522526a34441f52a7350d1e2c907ea0250e3a9444dace9b88d1da6e5"
+    },
+    "org/commonmark/text/AsciiMatcher$1.class": {
+      "bytes": 224,
+      "sha256": "69de077c1bc0ae5b62570d89dd4092f375d1c6d0172433760b221422d223cd98"
+    },
+    "org/commonmark/text/AsciiMatcher$Builder.class": {
+      "bytes": 2611,
+      "sha256": "202c48e839964c4ffd2e6a786e3cf86910c1e7061c0452c8b7bc115044e2f9c1"
+    },
+    "org/commonmark/text/AsciiMatcher.class": {
+      "bytes": 1578,
+      "sha256": "f24f5c4de90a20c1d774c631956edb40f84d2e45d0c743926ef1a459309b436b"
+    },
+    "org/commonmark/text/CharMatcher.class": {
+      "bytes": 148,
+      "sha256": "16795308c32265d5c199f15aa2ce8ab301995589f12a0abd83659e8e6af30b2a"
+    },
+    "org/commonmark/text/Characters.class": {
+      "bytes": 2853,
+      "sha256": "39d4b50b52dc80062cbcc2a55eae7d4eb33337bcd19d89493b02e4935d0ecd6c"
+    },
+    "org/commonmark/text/package-info.class": {
+      "bytes": 125,
+      "sha256": "948a053a436487344947da59f48e72b839bec8f95c515dbf4381f4dd2313a861"
+    }
+  },
+  "fabricWrapper": {
+    "schemaVersion": 1,
+    "id": "dev_openallay_runtime-commonmark",
+    "version": "0.28.0",
+    "name": "runtime-commonmark",
+    "custom": {
+      "fabric-loom:generated": true
+    }
+  },
+  "authorityRun": 37763109785
+}
