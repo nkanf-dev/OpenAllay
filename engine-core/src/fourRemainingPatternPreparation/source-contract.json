@@ -2743,8 +2743,8 @@
     },
     {
       "path": "dev/openallay/script/UnrestrictedJavaAccess.java",
-      "sha256": "b42a1f90d155f12e015be5d66843e84404a2975e0b352ebc694191d21eba8711",
-      "bytes": 34658
+      "sha256": "bc12d2e7baf8c5c54871b87e8486acf8059fe022b681d4b9a9ac5de3f800c600",
+      "bytes": 39471
     },
     {
       "path": "dev/openallay/script/UnrestrictedJavascriptConfig.java",
@@ -3522,7 +3522,7 @@
   "tools": [
     {
       "path": "build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java",
-      "sha256": "79e317362b90d5eda8aaef119c73ddb6822035f13f73fae893e3698b20cffd9c"
+      "sha256": "7f124439307315f0e713539c9270d38f61f874d24ae4919c4dea786553fb0537"
     },
     {
       "path": "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java",
@@ -3568,6 +3568,17 @@
         "path": "dev/openallay/skill/AgentSkillManager.java",
         "pre": "7427b5f02a0be4abb2dc93a6d74b4a35ffcd05f76e519654fbc2e1937463e22f",
         "post": "edf31f34436188689c9f5809302e11b49fe5d5aab03da26094f7ea6a12ec5e84"
+      }
+    ]
+  },
+  "composition_policy_gate": "Newsymbolicpeer-bindingcomposition fixture MUSTpass original17/release8/true8 before4wholeowner sourceclassification; acceptedtypebounds/whilepolicies retained. No wholeowneroutputs acceptedfromfailed37721768016.",
+  "known_unrestricted_post_source": {
+    "source": "5eb7ef42c3a8ba9c3924df62d53730ba36888ab0",
+    "changes": [
+      {
+        "path": "dev/openallay/script/UnrestrictedJavaAccess.java",
+        "pre": "b42a1f90d155f12e015be5d66843e84404a2975e0b352ebc694191d21eba8711",
+        "post": "bc12d2e7baf8c5c54871b87e8486acf8059fe022b681d4b9a9ac5de3f800c600"
       }
     ]
   }

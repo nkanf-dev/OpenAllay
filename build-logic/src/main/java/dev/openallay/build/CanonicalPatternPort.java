@@ -163,7 +163,8 @@ public final class CanonicalPatternPort {
     private static int position(long value){if(value<0||value>Integer.MAX_VALUE)throw new IllegalArgumentException("Missing public AST source position");return(int)value;}
     private static String apply(String text,int base,int end,List<Edit> edits){
         StringBuilder out=new StringBuilder(text.substring(base,end));List<Edit> sorted=new ArrayList<>(edits);sorted.sort(Comparator.comparingInt(Edit::start).reversed());int previous=end;
-        for(Edit edit:sorted){if(edit.start()<base||edit.end()>end||edit.end()>previous)throw new IllegalArgumentException("Overlapping pattern source edits");out.replace(edit.start()-base,edit.end()-base,edit.replacement());previous=edit.start();}return out.toString();
+        for(Edit edit:sorted){if(edit.start()<base||edit.end()>end||edit.end()>previous)throw new IllegalArgumentException("Overlapping pattern source edits span=" + edit.start() + ":" + edit.end()
+                        + " previous=" + previous + " boundary=" + base + ":" + end);out.replace(edit.start()-base,edit.end()-base,edit.replacement());previous=edit.start();}return out.toString();
     }
     public static void main(String[] args)throws Exception{
         if(args.length!=4)throw new IllegalArgumentException("completeActualSourceRoot actualProductionClasspath selectedOwners freshExternalOutput");
@@ -191,10 +192,27 @@ public final class CanonicalPatternPort {
                     }catch(IllegalArgumentException failure){reasons.add("offset="+positions.getStartPosition(unit,site.pattern())+" "+failure.getMessage());}
                 }
                 if(!reasons.isEmpty()){rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(String.join("\n",reasons).getBytes(StandardCharsets.UTF_8)));continue;}
-                List<Edit> all=new ArrayList<>();Map<Tree,List<String>> declarations=new IdentityHashMap<>();Map<Tree,TreePath> boundaries=new IdentityHashMap<>();int index=0;
+                try {
+                List<Edit> all=new ArrayList<>();List<Edit> bindingReferences=new ArrayList<>();
+                Map<Candidate,String> holders=new IdentityHashMap<>();int plannedIndex=0;
                 for(Candidate site:sites){
-                    String prefix;do{prefix="$oaPattern"+index++ +"_";}while(text.contains(prefix));String holder=prefix+"holder",localClass=prefix+"Holder";
-                    int exprStart=position(positions.getStartPosition(unit,site.pattern().getExpression())),exprEnd=position(positions.getEndPosition(unit,site.pattern().getExpression()));Tree type=site.binding().getVariable().getType();String typeText=text.substring(position(positions.getStartPosition(unit,type)),position(positions.getEndPosition(unit,type)));String operand=text.substring(exprStart,exprEnd);
+                    String prefix;do{prefix="$oaPattern"+plannedIndex++ +"_";}while(text.contains(prefix));
+                    String holder=prefix+"holder";holders.put(site,holder);
+                    Element binding=trees.getElement(TreePath.getPath(unit,site.binding().getVariable()));
+                    if(binding==null)throw new IllegalStateException("Missing original binding element");
+                    new TreePathScanner<Void,Void>(){@Override public Void visitIdentifier(IdentifierTree tree,Void ignored){
+                        if(binding.equals(trees.getElement(getCurrentPath())))bindingReferences.add(new Edit(
+                                position(positions.getStartPosition(unit,tree)),position(positions.getEndPosition(unit,tree)),holder+".bound"));
+                        return super.visitIdentifier(tree,ignored);
+                    }}.scan(unit,null);
+                }
+                all.addAll(bindingReferences);
+                Map<Tree,List<String>> declarations=new IdentityHashMap<>();Map<Tree,TreePath> boundaries=new IdentityHashMap<>();int index=0;
+                for(Candidate site:sites){
+                    String holder=holders.get(site);String prefix=holder.substring(0,holder.length()-"holder".length());String localClass=prefix+"Holder";
+                    int exprStart=position(positions.getStartPosition(unit,site.pattern().getExpression())),exprEnd=position(positions.getEndPosition(unit,site.pattern().getExpression()));Tree type=site.binding().getVariable().getType();String typeText=text.substring(position(positions.getStartPosition(unit,type)),position(positions.getEndPosition(unit,type)));List<Edit> operandReferences=new ArrayList<>();
+                    for(Edit reference:bindingReferences)if(reference.start()>=exprStart&&reference.end()<=exprEnd)operandReferences.add(reference);
+                    String operand=apply(text,exprStart,exprEnd,operandReferences);
                     javax.lang.model.type.TypeMirror patternMirror=trees.getTypeMirror(TreePath.getPath(unit,type));
                     String runtimeType=AttributedVarTypes.denotable(task.getTypes().erasure(patternMirror),false);
                     javax.lang.model.type.TypeMirror operandMirror=operandType(site,task,trees);String operandType=operandMirror.getKind()==javax.lang.model.type.TypeKind.NULL?"java.lang.Object":AttributedVarTypes.denotable(operandMirror,false);
@@ -202,8 +220,9 @@ public final class CanonicalPatternPort {
                     declarations.computeIfAbsent(site.owner(),ignored->new ArrayList<>()).add(declaration);boundaries.put(site.owner(),site.ownerPath());
                     String test="(("+holder+".value = "+operand+") instanceof "+runtimeType+" && (("+holder+".bound = ("+typeText+") "+holder+".value) != null))";
                     all.add(new Edit(position(positions.getStartPosition(unit,site.pattern())),position(positions.getEndPosition(unit,site.pattern())),test));
-                    Element binding=trees.getElement(TreePath.getPath(unit,site.binding().getVariable()));if(binding==null)throw new IllegalStateException("Missing original binding element");
-                    new TreePathScanner<Void,Void>(){@Override public Void visitIdentifier(IdentifierTree tree,Void ignored){if(binding.equals(trees.getElement(getCurrentPath()))){all.add(new Edit(position(positions.getStartPosition(unit,tree)),position(positions.getEndPosition(unit,tree)),holder+".bound"));}return super.visitIdentifier(tree,ignored);}}.scan(unit,null);
+                    // Peer binding reads consumed by this complete instanceof replacement already
+                    // appear in its exact operand. Keep no overlapping raw reference edit.
+                    all.removeAll(operandReferences);
                 }
                 List<Tree> ordered=new ArrayList<>(boundaries.keySet());ordered.sort(Comparator.comparingLong(tree->positions.getEndPosition(unit,tree)-positions.getStartPosition(unit,tree)));
                 for(Tree owner:ordered){
@@ -220,6 +239,10 @@ public final class CanonicalPatternPort {
                     }
                 }
                 String result=apply(text,0,text.length(),all);products.put(name,result.getBytes(StandardCharsets.UTF_8));rows.add(name+"\tSUPPORTED\t"+sites.size()+"\t0");
+                } catch (IllegalArgumentException failure) {
+                    String diagnostic="owner="+name+" patterns="+sites.size()+" "+failure.getMessage();
+                    rows.add(name+"\tREJECTED\t"+sites.size()+"\t"+Base64.getEncoder().encodeToString(diagnostic.getBytes(StandardCharsets.UTF_8)));
+                }
             }
         }
         for(var original:originals.entrySet())if(!Arrays.equals(original.getValue(),Files.readAllBytes(root.resolve(original.getKey()))))throw new IllegalStateException("Canonical input drift");Files.createDirectories(output);for(var product:products.entrySet())for(String side:List.of("pre","post")){Path path=output.resolve(side).resolve(product.getKey());Files.createDirectories(path.getParent());Files.write(path,side.equals("pre")?originals.get(product.getKey()):product.getValue());}Files.write(output.resolve("owner-status.tsv"),rows,StandardCharsets.UTF_8);System.out.println("PASS public attributed pattern conversion preflight owners="+originals.size()+" supported="+products.size());
