@@ -436,6 +436,25 @@
           "receiptSha256": "18331e5c4d367d8fbd5dbc60038c97b0beb01412d03de4f8fac6b169501683ca"
         }
       ]
+    },
+    {
+      "target": "1.16.5",
+      "sourceSha": "2737373510f48d9204bc5035c720576206359304",
+      "runId": 37778915974,
+      "runAttempt": 1,
+      "jobId": 113316821709,
+      "jobName": "build-packages (1.16.5, forge-1.16.5)",
+      "artifactId": 11550668732,
+      "artifactName": "release-packages-1.16.5-2737373510f48d9204bc5035c720576206359304",
+      "archiveSha256": "d1a22fc39733937a6b747e65679ad6ba58c10b0673efa6215dd55e8e485bf795",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "forge-1.16.5",
+          "artifactSha256": "962bd542a6dddcbaf4153f23d1e896ddf7d09ef789e225a0544df911542c6bd2",
+          "receiptSha256": "1bb58c547752835fbdf63f9b04b5509ee1f5a540a7691310b5c9552134fae39f"
+        }
+      ]
     }
   ]
 }
