@@ -118,6 +118,33 @@ task compileNativeApplication {
             byte[] bytes=f.bytes
             if ((((bytes[6]&255)<<8)|(bytes[7]&255))!=52) throw new GradleException('Native application output must be Java8')
         }
+        // Cheap constructor/closed-family fixtures reuse the actual accepted native outputs and normal FG classpath.
+        // Their classes live outside native application output and are never packed.
+        def fixtureSources=[
+            new File(canonical,'common/src/nativeJava8UnionFixture/java/dev/openallay/client/gui/nativeview/NativeClosedFamilyIngressFixture.java'),
+            new File(canonical,'common/src/nativeJava8UnionFixture/java/dev/openallay/integration/jei/NativeJeiClosedValueIngressFixture.java')]
+        def fixtureClasses=new File(out,'native-union-fixture/classes');fixtureClasses.mkdirs()
+        def fixtureCp=classes.absolutePath+File.pathSeparator+cp
+        execute([javac17.absolutePath,'--release','8','-proc:none','-encoding','UTF-8','-classpath',fixtureCp,
+            '-d',fixtureClasses.absolutePath]+fixtureSources*.absolutePath)
+        def java8=new File(System.getProperty('java.home'),'bin/java')
+        def receipts=[]
+        ['dev.openallay.client.gui.nativeview.NativeClosedFamilyIngressFixture',
+         'dev.openallay.integration.jei.NativeJeiClosedValueIngressFixture'].each { main ->
+            def command=[java8.absolutePath,'-cp',fixtureClasses.absolutePath+File.pathSeparator+fixtureCp,main]
+            def log=new File(out,'native-union-fixture/'+main.substring(main.lastIndexOf('.')+1)+'.log')
+            def result
+            log.withOutputStream { stream ->
+                result=project.exec { commandLine command; standardOutput=stream;errorOutput=stream;ignoreExitValue=true }
+            }
+            receipts.add([main:main,exitCode:result.exitValue,command:command,logSha256:sha(log)])
+        }
+        new File(out,'native-union-fixture/receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
+            scope:'actual compiled native source closed-family constructor/aggregate Java8 fixtures',
+            classesRuntime:'genuine Java8 build-island JVM',nativeClassVersion:52,fixtureJarShipped:false,
+            sources:fixtureSources.collect { [path:it.absolutePath,sha256:sha(it)] },results:receipts,
+            gameLaunch:false]))+'\n','UTF-8')
+        if (receipts.any {it.exitCode!=0}) throw new GradleException('Actual native closed-family fixture failed; exact logs retained')
     }
 }
 tasks.jar.enabled=true

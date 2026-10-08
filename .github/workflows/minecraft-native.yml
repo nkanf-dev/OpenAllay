@@ -287,4 +287,6 @@ jobs:
             ${{ runner.temp }}/forge1122-java8-native/namespace-receipt.json
             ${{ runner.temp }}/forge1122-java8-native/native-build-receipt.json
             ${{ runner.temp }}/forge1122-java8-native/ap/
+            ${{ runner.temp }}/forge1122-java8-native/native-union-fixture/*.json
+            ${{ runner.temp }}/forge1122-java8-native/native-union-fixture/*.log
             ${{ runner.temp }}/forge1122-java8-native/jar/
