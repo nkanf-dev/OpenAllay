@@ -1,0 +1,2917 @@
+{
+  "scope": "ALLactualmodel68wholeowners current702production syntaxfrontier API->Pattern->Switch stagedpublicattribution closure, no oneDTOloops",
+  "rawSourceCommit": "817e4320dcef540d9a015c056105f6d4d8f9c28d",
+  "full_sources": [
+    {
+      "path": "dev/openallay/FeatureServices.java",
+      "sha256": "137547ac9e1416f858002401fa7394ea05be84732545782b38ca5e70a367d824"
+    },
+    {
+      "path": "dev/openallay/OpenAllayConstants.java",
+      "sha256": "a82818cb4b070d783e76030210f33ddc1955cdc94a0545229545ba8cd5ec8f23"
+    },
+    {
+      "path": "dev/openallay/agent/AgentEvent.java",
+      "sha256": "c5b2c50c886779cc99fc6ead8bca2de4ea5f1e562ff670d8af253f8c40787cb7"
+    },
+    {
+      "path": "dev/openallay/agent/AgentRequest.java",
+      "sha256": "065ae7a76568ac9147459e7de0ec8074b06a7aef6d1900719319743966debc6d"
+    },
+    {
+      "path": "dev/openallay/agent/AgentResult.java",
+      "sha256": "b2bff5079241424479dda4eac7c4df261f71374d0098ed3b447e09a89beb8ee7"
+    },
+    {
+      "path": "dev/openallay/agent/AgentState.java",
+      "sha256": "d9c4b9236366aab5bbc34bf98a478118e36a4b2ac59220ff03682a0dbe0313bb"
+    },
+    {
+      "path": "dev/openallay/agent/AgentSystemPrompt.java",
+      "sha256": "f676d9bdd14f8fb9dc4463c2720249a0972f0ffb5fff7a14298de1b7def81284"
+    },
+    {
+      "path": "dev/openallay/agent/GameGuideAgent.java",
+      "sha256": "7b5d56d7536c1516d1d64bda5dcc7b33f408e6d5f2aa9bc099d35e383a8209c8"
+    },
+    {
+      "path": "dev/openallay/agent/ModelCallReceipts.java",
+      "sha256": "680b0f561f818dbb1783800d49b332eafbe3bb3d9ac2d43c522ff1061fcea5ae"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextBudget.java",
+      "sha256": "45abce2842aedb98bf1acb7c063a020e339d2e67e33064b8955ad3e4158cd66a"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextCheckpoint.java",
+      "sha256": "0ca8d3b36bc99b8d5d3a494566111c6a4d1cab614628c87c01da5cf283728b9f"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextCheckpointCodec.java",
+      "sha256": "08487fdc727eb5092d6d741170f45d4586e2338d0112a1d5427a3298ee93d11d"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextCompactor.java",
+      "sha256": "a9e309c2d067bc726268cbebe617567ba4704ae8f89404c2d81c313688ff22d2"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextProjection.java",
+      "sha256": "e5c3b13aceefc8d6718a107d84649a2e64f9131accd7a09080412a52bc4bf118"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextSourceHash.java",
+      "sha256": "e2434d7300f0f9df380a68ed6e797885fdde6cd0ea793bab416d0c20fe24f1de"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextStructure.java",
+      "sha256": "0550cf760f7184754877f65aaa3c6a39c9b169ed258f13b9a466d29f03b3945b"
+    },
+    {
+      "path": "dev/openallay/agent/context/ContextTokenEstimator.java",
+      "sha256": "414c72f5751dc31a8f82170972b0eaea8b669b99907f9c3bd2aee7ed99c4299d"
+    },
+    {
+      "path": "dev/openallay/agent/context/ModelContextCodec.java",
+      "sha256": "6192e0b42e4bcad055accc86186c5829e907ec61d1458e88e9c387bf147003b3"
+    },
+    {
+      "path": "dev/openallay/agent/session/AgentSessionKey.java",
+      "sha256": "3d7e37417a33cdb45ec670464e4d115e4674855b400f5659f0263d7b20d6443a"
+    },
+    {
+      "path": "dev/openallay/agent/session/AgentSessionStore.java",
+      "sha256": "3dd0956a5dffc1755bd5b07f38742858d5d1ccb7d7e92ef3ed800866e142433d"
+    },
+    {
+      "path": "dev/openallay/agent/tool/AgentToolExecutor.java",
+      "sha256": "cc7d5e6469ec86a77c8f59f9af49cd3bed55f907f8451e1b1ab60892bf77d212"
+    },
+    {
+      "path": "dev/openallay/agent/tool/AgentToolResult.java",
+      "sha256": "71eadc5774dcb72206f785a4a977b3fb230d7d400748410e7826acb19d012015"
+    },
+    {
+      "path": "dev/openallay/agent/tool/CompositeAgentToolExecutor.java",
+      "sha256": "276496ae53c766b80c6b90ee1ca8c231003bb3098fcc297404ddf2bfa33eca78"
+    },
+    {
+      "path": "dev/openallay/agent/tool/LocalAgentToolExecutor.java",
+      "sha256": "7a1a78b2a1b49c075c56a34f9d4e2edfbe944279c77bc69aa68e737d64c5c8b7"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ModelImageToolOutput.java",
+      "sha256": "96a57f7cb82fadb53c62824712b17c8bf92ca804c2a516def29b0ced3a100c90"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ModelToolResultProjection.java",
+      "sha256": "e38038a98e4664e5a3b3943aa47543b3a69b7e00b6af912d25f5fa13511c6a14"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ModelToolTextRenderer.java",
+      "sha256": "69d9b723b8f3ac2f1d7c62eaa949cc2171dcd7fc8a05ec94edde8dc9f0b2cb7f"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolAtLeastOne.java",
+      "sha256": "a3d3d837caa57f6e21039a275ed02cd88b108185e7e775c6c6d314c8cb286c5d"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolDescription.java",
+      "sha256": "733ca1de6a9ed877c0e4c20ed7c13b36d1cb205e597404f9d933fa687572c855"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolNameCodec.java",
+      "sha256": "572a0ab786d70551df1574bc8cc0b86c8d1085e52a3118df53aa8fa596aad82f"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolOptional.java",
+      "sha256": "405c4657336abe284bda9b3d84106ec98745832ae09df92ab17127bc713ae7b4"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolPattern.java",
+      "sha256": "bb6f2bf3e993f5f759aa2b12c1e65bd8104afdf2d9c76cb9ac62f8170cd10245"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolRuntimeCatalog.java",
+      "sha256": "65cf333027b2c79f2489fe6046d4580b76e30133bb23cbb7c9c86945aa6c6c94"
+    },
+    {
+      "path": "dev/openallay/agent/tool/ToolSchemaGenerator.java",
+      "sha256": "b21fc5b06023d71e84a49cb4b837c7e3bb92daffeb383dacbaa7db649dc4e7cc"
+    },
+    {
+      "path": "dev/openallay/agent/trace/LiveAgentTrace.java",
+      "sha256": "99200ebff210405bec9165e979d1c2e1e6f0fdbda4e28e9c139e046dc501dfeb"
+    },
+    {
+      "path": "dev/openallay/agent/trace/LiveAgentTraceRecorder.java",
+      "sha256": "34616fc1e2687fd1c4366acc555d482548a9f8eb6a316507761a4867cc3dac36"
+    },
+    {
+      "path": "dev/openallay/agent/trace/LiveTraceEvent.java",
+      "sha256": "efd140c1aca7e7742e9537be56bb825867c54b5d5b5d3c81f9bd6d8894fca9a0"
+    },
+    {
+      "path": "dev/openallay/agent/trace/LiveTraceJson.java",
+      "sha256": "68d71a55f528ecfc5b17f2aa56857b3890ac5d9f6e0a1d0103b86776af5e350a"
+    },
+    {
+      "path": "dev/openallay/agent/trace/LiveTraceStore.java",
+      "sha256": "a29e4df639fbf74454a95c55654de66000ffe91e6318214315d90d64c04f5b72"
+    },
+    {
+      "path": "dev/openallay/benchmark/AgentBenchmarkRecorder.java",
+      "sha256": "54d3385a0dead168314381c34bfd5ea3c00fef979df979fbf9a8280b2934c806"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkCase.java",
+      "sha256": "3a26f4a87fc081637853545b63063c62fbf3e54576a6ca723ebdc877514e3d5c"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkCorpus.java",
+      "sha256": "b151580bb2ca04fe5dfc3249a32821253c9a72ebf13406273bb22f081f423500"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkCorpusCodec.java",
+      "sha256": "e42582298e8bb20805c2d6394845dd2f46c4e64dad09e821166c071978de8814"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkMetrics.java",
+      "sha256": "fadc68cdf373cb86b5ed74a3ff9a625fb26beadc47c4979f220fa5040d9b3b33"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkOutcome.java",
+      "sha256": "f740961b19b0a628f6f13cad7247ac9c597e59a6dae1e7c14867686efa6b034d"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkReport.java",
+      "sha256": "e4312bfa9ea654a57d4f220688596f8975fe538dd5ea9553e553796ee8e5bb9a"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkRunner.java",
+      "sha256": "f3aa645ba157fdf1c62cd03f0bf827414d5bda27cb45c3749e913a0b89901a48"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkSelector.java",
+      "sha256": "ee6d4edddf5aa21350460e19d76a0f42af86e8646029f5553d7f5b42a041421f"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkTraceAudit.java",
+      "sha256": "cb3c4a31fa5ff793d62281ce096af4b72f1cc78777b840d379555fc15ccb5172"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkTraceAuditor.java",
+      "sha256": "154b61266b326fb22953993bffa3c20e8e0c829598567806bc8912c7a929f9b6"
+    },
+    {
+      "path": "dev/openallay/benchmark/BenchmarkVerifier.java",
+      "sha256": "ac4f4ce0499f6e77ea9002c92ffd2a72f88f7cec8108793a8183152d00eba230"
+    },
+    {
+      "path": "dev/openallay/bridge/CorrelationRegistry.java",
+      "sha256": "d8c88984d0de2d25f0fb39ce0e9832e458fbff2a583c760e7628898c35019542"
+    },
+    {
+      "path": "dev/openallay/bridge/client/ClientBridgeSession.java",
+      "sha256": "df7886ba430b43256cb43d3a2906bae53720bb0aab553fa5280f8892ea514760"
+    },
+    {
+      "path": "dev/openallay/bridge/client/ClientPlacedToolExecutor.java",
+      "sha256": "298fe7116ea9f74bda02bd71cb332d2bb3fce8a302a111697da57bd3c5a76284"
+    },
+    {
+      "path": "dev/openallay/bridge/client/ClientToolExecutionEndpoint.java",
+      "sha256": "e248cb23fd6c1b72fed7ba5577ea4efb71a2ed52957dab44abfc64fbc35359b6"
+    },
+    {
+      "path": "dev/openallay/bridge/client/RemoteCapabilityStore.java",
+      "sha256": "f07a77d9638dda23d58313446299022ce99254153021353daa9d2640eda653f9"
+    },
+    {
+      "path": "dev/openallay/bridge/client/RemoteToolExecutor.java",
+      "sha256": "3541009f68822a82d5a5303cf36d2527d13ad8381a813ba3bb54005dc8afdc0f"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/BridgeJsonCodec.java",
+      "sha256": "6c2c1e899450331d5dabacf82827397cf3bba2d382c45913f71ae539072d7ded"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/BridgeProtocol.java",
+      "sha256": "d8f8998d3dd9976d51bc733d3997d54b0514849ad39d9302d6908e8b79501003"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/CapabilityPayload.java",
+      "sha256": "4121c82079ad260a96a953ff6ee5dc2145db6cb1a681b4c3bbec9a84666d661c"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ClientToolCallPayload.java",
+      "sha256": "27a94aaef0bc2e07d6d0ebd3d243d6297a17b8f98fb1df738561ec68f557781b"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ClientToolCancelPayload.java",
+      "sha256": "442e4f180b88804341eaa5c314edd0a9cd0f1804905ddd38f052f551cbb56dc2"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ClientToolResultChunkPayload.java",
+      "sha256": "bd8cbaf35967c9095b80f950e6a4c4315650a26b5627dbbd84a666eefd097497"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/RemoteCancelPayload.java",
+      "sha256": "4a09d98eedb657e16809aa554d00b430ab4d4cbad5ab1d1faddea609e5937b80"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/RemoteToolCallPayload.java",
+      "sha256": "6e5357edcfbd3b0b1fee0a24028d3277e7d8a3031fa2ed2b70b3722d1dfc44d1"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/RemoteToolRequestClosePayload.java",
+      "sha256": "21f667fcd759776cdfadb8dd3767389898a583405051f2bd970fe6570f3571f0"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/RemoteToolResultChunkPayload.java",
+      "sha256": "f0d8c9040d096bea0ecff1987ee6fcc172072158517c14bbc902cb9e331084e1"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ResultChunker.java",
+      "sha256": "0aa8958d1f8c9795de9092d81b6d09125e41abeec97d4791dc14aa12903debdf"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentCancelPayload.java",
+      "sha256": "80e065d3a50923a21013e77bfc144f27491e1dfb33bae336adab3ddfbb3d44ef"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentEventChunkPayload.java",
+      "sha256": "53f53c70b23ab0b245071a184b03b54758d727387ecabf101aa5f3bac44b6c1d"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentEventCodec.java",
+      "sha256": "59705fdcc599e94139bbddfe8156f3883999ef18573d1240b64f14b17534c14f"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentEventPayload.java",
+      "sha256": "8b6c9acbc76a8e9972bcda0d9440eaf1903975492f1706934a6d7d653c3ff2cc"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentHistoryContent.java",
+      "sha256": "ff07fba59ab200fd5ebf3d96d757caa9fae016b63dbfac69226e4ded63652e7e"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentHistoryMessage.java",
+      "sha256": "f013d8eecf16da1a53b628f45a648fb1de72a327a95766a201d6a61aeb08b05a"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentImageAttachment.java",
+      "sha256": "2047b51a90048a13cf8f6b372dce71353b64586fdddc673d64bb350ebaf7e489"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentRequestChunkPayload.java",
+      "sha256": "d9f68bf3cdc0dea54833e4255710ad0941dc758c93bdb049fc5d687d51e9f272"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentRequestChunker.java",
+      "sha256": "88197694caf2b629fa6e0613e49107d14eb578d8e25de253e7e6aca014974de3"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentRequestPayload.java",
+      "sha256": "4b48a8ca2ae3720a5a625430170cc55f561a2757240127211a848e1e484f493f"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentSteerChunkPayload.java",
+      "sha256": "ae1a0297e2622dae484061c295518b637d3758e4d29aeaf1dcf33bb4055c2799"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentSteerChunker.java",
+      "sha256": "e16c2d4aab16f0ef43bbc12fdc5b660a996b6252066c7ce872ba7197a36bba60"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ServerAgentSteerPayload.java",
+      "sha256": "d5c7f44c09e2c85c6eb7a0a734a30575a9340c145203c42e11a109f4b795d28c"
+    },
+    {
+      "path": "dev/openallay/bridge/protocol/ToolExecutionMessage.java",
+      "sha256": "aaf7eea0234995631a6e675e39f771044cb238eb722efe3176a2a6bd51825f09"
+    },
+    {
+      "path": "dev/openallay/bridge/server/BridgeFrameCorrelation.java",
+      "sha256": "65f44fae3f94c9628b0e0d494854250cfc27d77f8b8740d8b6cf685cd74736ed"
+    },
+    {
+      "path": "dev/openallay/bridge/server/ExportedToolPolicy.java",
+      "sha256": "f65166f728a67ec09956bae0506150e48a9e8b9cd51cde73a9cdfcddb8e0a2a8"
+    },
+    {
+      "path": "dev/openallay/bridge/server/PlayerClientToolRouter.java",
+      "sha256": "f8f7ba9bee53fac97daec9602690bd1bd487324123d5ca80f16853ac84d13582"
+    },
+    {
+      "path": "dev/openallay/bridge/server/RemoteToolServer.java",
+      "sha256": "fc0b14ad5f4465be028e1b6d2336501971033b1e990190ad10649e6c66a767a1"
+    },
+    {
+      "path": "dev/openallay/bridge/server/ServerBridgeSession.java",
+      "sha256": "b81965305e488c10c13bf19b04f860645a4479f852f16f818e7ceca9d36a014e"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityCatalogSnapshot.java",
+      "sha256": "41e9123ab73afd912024bc1ec38fc17981e53e3a53aa59b31ab0f2839406ef86"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityCatalogState.java",
+      "sha256": "4f47b3c5c2a23120e2db3eda05904bb86bd08e25ffe4d7387f713cb99402c6f4"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityChildPage.java",
+      "sha256": "0acac8e6a3b06f75e665b4a3471abb590682454bf352e8419161533387abb84a"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityKind.java",
+      "sha256": "c24bbabaf64ea03f6d5e7637cbaa465c047c92823e2b4522713de9f6c11eccea"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityPolicy.java",
+      "sha256": "f1c2249154dc611c477817d9e56a10f58edc56923abd515477dd62a0bccc4eb0"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityPolicyLoader.java",
+      "sha256": "6a14334bf825ff94e6e8a379a9512eb287eda4773016248471b5e049816055e7"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityPolicyStore.java",
+      "sha256": "3b1c53992f210ce2c240e41b4422ab3d221e1bab001b1a9b466befad3beba12d"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilityPolicyWriter.java",
+      "sha256": "55939732e8575eb999c559cf79fcfbfa43a52b87160429ca26a02e0ea2d2708e"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilitySettingsCatalog.java",
+      "sha256": "00d4a869765fcaa8f493052b155613bce1e641c6e9bbf9d839fa1963466a01cc"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilitySettingsDescriptor.java",
+      "sha256": "41c72b9ffbc85bf5eb8825466828c8c870c4084a4679f359d1eb996386bc0218"
+    },
+    {
+      "path": "dev/openallay/capability/CapabilitySettingsEntry.java",
+      "sha256": "0fc4f70d1441913aabe585de30972a435271ad34a5c2390632846098601478cc"
+    },
+    {
+      "path": "dev/openallay/capability/ClientCapabilityResolver.java",
+      "sha256": "532a393e4bdc92ad101f52071bafb57492d066013d6e206119cdd46548887bf9"
+    },
+    {
+      "path": "dev/openallay/capability/ClientCapabilitySnapshot.java",
+      "sha256": "6a8921c9c034ba21606e17cceb90af44c4be13ca16de2f1dfd4329d1d58551de"
+    },
+    {
+      "path": "dev/openallay/client/ClientEventDispatcher.java",
+      "sha256": "e7bf7c4082a1bdbc800d68598140f68c398559f14cad67c44a938583a70bbd2e"
+    },
+    {
+      "path": "dev/openallay/client/ClientGuideRuntime.java",
+      "sha256": "dda4b663ba5c37ba692b3f5c1e7920f087713af3e5e89b8c99dc9d48a065ee0e"
+    },
+    {
+      "path": "dev/openallay/client/ClientModelRuntimeRegistry.java",
+      "sha256": "344db96515649934ceb9ea639e29892b5aa37d5ae9f7bb67912055e02898cfd9"
+    },
+    {
+      "path": "dev/openallay/client/gui/ComposerImageDraft.java",
+      "sha256": "5d1418c75269b2863f303c413d1923f4e31e7e7605672ef76eb372baa47445b4"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideClientUiState.java",
+      "sha256": "c1e61fe7527f587d97ab9ed94e4bd940e04ffcf7534fbe7753030f286e92f00b"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideInputCharacter.java",
+      "sha256": "02a50386c362805ede1f873c3180e5e3fef9939ef2e6f7fc005aa1f16c1b276b"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideInputKey.java",
+      "sha256": "0de4876b699d1e61ba7cd585266636a534b09e9e5c985a444b392f296c5a8eff"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideInputMouse.java",
+      "sha256": "b6f0e5c3ee719d3f15a06df20400e86d036f5c4d7621b408d6ed4bb3ac8ccc3d"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideKeyIntent.java",
+      "sha256": "4347cad17b033508420d4d277ed72069b711c3d8ac4714a570e50cdbf3eb5d10"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideTextLine.java",
+      "sha256": "3237b1ef1e2e1229d7b0783288896f1199d050574027d325def7f4faf56b4551"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideWidgetInput.java",
+      "sha256": "69c7899b973094393c4265e7421a8e9bbab6654e5457b7ad12f0f1c961152e34"
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideWidgetInputs.java",
+      "sha256": "6a6495bbf10f38fbe5c9c38fcd0d53a5ddd0642504224b2e95bd632df8df92c2"
+    },
+    {
+      "path": "dev/openallay/client/gui/OpenAllayWidgetTheme.java",
+      "sha256": "eb855d8055e03027b0d1020e6f942732f6dd99da80eb100440f45b2e8d0a5753"
+    },
+    {
+      "path": "dev/openallay/client/gui/clipboard/AwtImageClipboard.java",
+      "sha256": "894e2a50409810a2c2a094ddef6222a609516732c5bcb83da654bbea1393acae"
+    },
+    {
+      "path": "dev/openallay/client/gui/clipboard/ClipboardImageDecoder.java",
+      "sha256": "b6c8cdbaf8193947e52be6d015e0b006e5f59e5a4f357aed9d70c03c5ccb9cf7"
+    },
+    {
+      "path": "dev/openallay/client/gui/clipboard/ClipboardImageEncoder.java",
+      "sha256": "ed0f3efad1feb07fa643aa28500cddbf6f52e77cac52e07895d912b79f07efee"
+    },
+    {
+      "path": "dev/openallay/client/gui/clipboard/ImageClipboard.java",
+      "sha256": "f71142c3facd1feca25fc34029b1b8556c6425c9bf8461da5b574fda4833e308"
+    },
+    {
+      "path": "dev/openallay/client/gui/export/GuideSessionExportException.java",
+      "sha256": "d250d2faed28b7e278e7a16a7a72e945888fbdb33a5ee7b57f65d9ae2957efeb"
+    },
+    {
+      "path": "dev/openallay/client/gui/export/GuideSessionExporter.java",
+      "sha256": "939f528342d114523c146ed7a334a5f1d8638ca9a0460162eda4287df5ba7fff"
+    },
+    {
+      "path": "dev/openallay/client/gui/hud/GuideHudLayout.java",
+      "sha256": "2055361220384d4eb50e438f593ec6ab4d2154ca88e91c9df12ed8c7cbf8fe67"
+    },
+    {
+      "path": "dev/openallay/client/gui/hud/GuideHudReadingLayout.java",
+      "sha256": "dd9567160b5b761fc0da38a297d6ece4042948b409111e537306572bd5b32a55"
+    },
+    {
+      "path": "dev/openallay/client/gui/nativeview/NativeDomainViewBinding.java",
+      "sha256": "910ff05d9f23d6a1a28fd437cc47ae3afa78c0b85aa9b0e3e7575b60427f4d0c"
+    },
+    {
+      "path": "dev/openallay/client/gui/nativeview/NativeDomainViewBindings.java",
+      "sha256": "ff9c3aa3e016a9ac2e515a978459eb5a1e655da0a4d14ffdecd2337a1a304ab7"
+    },
+    {
+      "path": "dev/openallay/client/gui/nativeview/NativeDomainViewDiagnostic.java",
+      "sha256": "a5c896c457672e8535836e3be78007cceac2555122eed840f30a64233546a571"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/BuiltinModelSettingsProjection.java",
+      "sha256": "1c61bcc7a8adb98018763d944a86fb10eac7efe229175f67c11257f8dd5fff5e"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/CapabilitySettingsProjection.java",
+      "sha256": "5c5d701187723d2771943e1e454a5508be3f99d02b381ff33d762b962384619e"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/DiagnosticsSettingsProjection.java",
+      "sha256": "7d7179304003dad869427924d722ed75383c37b025b1a1b1325d8a37ee744ec1"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ExtensionSettingsProjection.java",
+      "sha256": "3290fa9641f1be3fe632d27ea8392bfbe56eabe13b4e0b9e77f7b768bcbd4538"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/GeneralSettingsProjection.java",
+      "sha256": "e7a695f740ca7777d7f67f15f5650a29a005d1dc1d3de9663bbe83f8437ba260"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/HistorySettingsProjection.java",
+      "sha256": "ffc335b1ca09f88d30953bf12db9d3fff8f5ab650f382bfdeb9b91c1c3043939"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelImageSettingsProjection.java",
+      "sha256": "b153ba883a6ee363063d3a62470e2721d7529139e2aa7fb4478b7d80a5098a07"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelProfileDraft.java",
+      "sha256": "bde28cddbd1c7430bb56a7972c49582e9a36d90541e83630c59f2cb5481886a5"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelReasoningSettingsProjection.java",
+      "sha256": "af4cedbdc659b2902f66575dfa51209f0b7c5a4edebcc07dd6838a72f70708a1"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelSettingsProjection.java",
+      "sha256": "5db8bc2948cf24cd177bb4aa345a41575eae024e4da725602d571ef3da1f31f7"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/RecipeSettingsProjection.java",
+      "sha256": "26f49f4854017ea4080cc277dc3a0a4cc81a821703c79b919bc0559c9a8d583c"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/RequirementSettingsProjection.java",
+      "sha256": "a4734ffa5389da6b90b56819080e2db690b4895d417e6a1f7808c87d1faae74c"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/SettingsLayout.java",
+      "sha256": "44aeae06d12e900609ad11cf6bab2100026aaf324647566857b87dc7c08c83ea"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/SettingsSaveCoordinator.java",
+      "sha256": "726d83bd3170440e388fee4e9dfb4ad7a3fb36a66f727c86b63c5779a93629f3"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/SettingsSection.java",
+      "sha256": "b4a124a85c12620bff01daf156d02643d8a19176e81f3ce7479841aba916f0e9"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/SkillSettingsProjection.java",
+      "sha256": "44e1a961d44c9cc522d51611195d7d8312a82fa2fa4c17bfa66a9dee9f97f05b"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/UiSettingsDraft.java",
+      "sha256": "10f752f3e944525ffbf5a46579d572c0d92425366f7813ee939e1fe464b2965c"
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/UiSettingsProjection.java",
+      "sha256": "448d76a019324eced6cb40a11ea32a6efeec559fe6c623c091912c9f0f79d60d"
+    },
+    {
+      "path": "dev/openallay/client/observation/ClientObservationInputCoordinator.java",
+      "sha256": "2231a506a1ecab336158ff973cf02de3666625aae0039eafb8f854e0047f2083"
+    },
+    {
+      "path": "dev/openallay/client/observation/GuideObservationInputActions.java",
+      "sha256": "dfa0e6192972e6c3d393bb1e949cdc3bb3ef1aecdffead269f18228cd03e499f"
+    },
+    {
+      "path": "dev/openallay/client/observation/GuideObservationSubmission.java",
+      "sha256": "8f9e8ff02549fb700acce8b89e6dd8b6dd2729b70db8e9d80815623f021e0733"
+    },
+    {
+      "path": "dev/openallay/client/observation/ObservationAnchorPresentation.java",
+      "sha256": "d8fcd54e9a0c77af24e69236afeeb1964bd03642204bf025783d1af02dfede04"
+    },
+    {
+      "path": "dev/openallay/client/observation/ObservationComposerLayout.java",
+      "sha256": "523144626eedb2301f18f794aad5839467ea5d73c9699895e8991ffbb5f9a949"
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuideNotificationController.java",
+      "sha256": "750ad436e615e020a3a64c6ea183d24e9c01cf22db747f7929ceda1b4383b101"
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuideNotificationPort.java",
+      "sha256": "ffba40fd76685b00e94d064e0ef6605f2830fcda9aa28bb9dd35939e6c01dff3"
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuidePresentationCoordinator.java",
+      "sha256": "c62c83e078103721050dd58870be54059f066c81c9e531cb2d8e85b1a68f41a5"
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuidePresentationHost.java",
+      "sha256": "183ad4b36c8a6a5f2846d72ab50e0796e5d640eb6b18c7aab6987e8d72549113"
+    },
+    {
+      "path": "dev/openallay/client/resource/ClientResource.java",
+      "sha256": "b27b094ae495c323ddfd0b1d9f50538a38e0d531dc0ba86df65df9224a2efbc7"
+    },
+    {
+      "path": "dev/openallay/client/resource/ClientResourceAccess.java",
+      "sha256": "16aecd02f3703d2fdc9979bbdbaeeb61c3cb562a9426b0e096d10e3f3721c22a"
+    },
+    {
+      "path": "dev/openallay/client/voice/AudioCapture.java",
+      "sha256": "3853cd638f8d27d3fb893a4fa23596e7f46db8b7fa1faa819cdfa39be00242f1"
+    },
+    {
+      "path": "dev/openallay/client/voice/AudioPermissionException.java",
+      "sha256": "f926b42c3e56b82b434d8f73d70c4fed2a9a73c715091e5a8c2d5e290c0799a2"
+    },
+    {
+      "path": "dev/openallay/client/voice/CaptureOpenOwner.java",
+      "sha256": "5e103de4933df9d6e2eb8bc1721cc6ca4877880c77afa623417c9bca285e4e2e"
+    },
+    {
+      "path": "dev/openallay/client/voice/HttpSpeechToText.java",
+      "sha256": "d689a7e34e99c15cfdd64b964e935cadfc0210f9eaefe76f62af58f24e74d36c"
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeModelFiles.java",
+      "sha256": "df21d0f0e1bfabef573b85321616f5834155f14dd6cbf76ef7536d61ae441401"
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeModelInstaller.java",
+      "sha256": "b4bbe623df02b150694e45616915957088f12e343a3fd1d99d30479d0a7a794c"
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeRuntimeCatalog.java",
+      "sha256": "2f6f3ba6f4c975f4c47e4d2bf1fe768705a7165062e9581cba158f005bb97589"
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeRuntimeNotices.java",
+      "sha256": "7f25400501fd669d026cea178e20443cb4f16fe694c0528f8f83ca3b7b4f48e1"
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeSpeechToText.java",
+      "sha256": "9dd793c51e125f51ff4a4243aa732822f2769b83ca04e57fafb8e27e6460eb74"
+    },
+    {
+      "path": "dev/openallay/client/voice/PcmClip.java",
+      "sha256": "00c7c09437f8dc2e6a72fc784f74d1cbc62456bbfebf7ff6ec01ca7953d24feb"
+    },
+    {
+      "path": "dev/openallay/client/voice/SpeechToText.java",
+      "sha256": "7c0d9b79bb3465ad3e2ec071980542f4daacf3dea14cb9c5ed464e14fc9e95ef"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceCancellation.java",
+      "sha256": "e2b59ae2c42bb46c16a42190bd29a81678952c9602bc3753b80e93f42db6953a"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceClientRuntime.java",
+      "sha256": "e561e5150f41ab0e93cf30caf8cbd62015191ab617750240d4cdb5fc8138849c"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceConfig.java",
+      "sha256": "e5701d7c6dcf7b88ad6ad1308abd1cc65ea76d656b1afffd284b35cf46ea38d3"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceConfigStore.java",
+      "sha256": "a9e2b23be6c4dd247582bdcc70054e9778babc17e9ab4d287972bc57d441bcdc"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceHttpCancellation.java",
+      "sha256": "80fb6c29dfa3b50700a3ea82d26b5451fa8452163573225928330ac5a0f1aefa"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceHttpSpeechEndpoint.java",
+      "sha256": "d3885cc761a074bc5a051f9f0c580fe1b3a06b32f2d6ef2e888f286163d1a141"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceInputActions.java",
+      "sha256": "5bc4bb1941289a60ad6bab0118aed6634ecd715a5e3dbc43ea3d4c6698a8e107"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceModelDownload.java",
+      "sha256": "39b75feb17586f3e3d489a38bcca54aee3e8bda1bde97d47fb6baf3f7bac53f4"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceRuntime.java",
+      "sha256": "0be12d76737916a11e21a3436281fe4390479ad7aab7ef52f37374815b9b90c2"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceSettingsActions.java",
+      "sha256": "58fa1ff0d4515cc7e032ebc6a3c29d727bc9b747a72cb616c3386dc47cf7d25d"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceSettingsView.java",
+      "sha256": "ef37a8ae6785cee4ace7c0f421ffe040facb3a501d9df9ee207a2149ebbcd573"
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceStatusPresentation.java",
+      "sha256": "f0fc170a0159f512bff1a21b9ee9792ba77baaefcf92860efd9e83d024db4fc4"
+    },
+    {
+      "path": "dev/openallay/command/CommandArgument.java",
+      "sha256": "f0c23f393f8fa5227084041509964cd6a958ccc5517f4a76fc5577dd66c526f1"
+    },
+    {
+      "path": "dev/openallay/command/DevelopmentCommandSpec.java",
+      "sha256": "fa1684ca946c6759628f4b270cf62188abd65626369ba091436b7a3bd76a6144"
+    },
+    {
+      "path": "dev/openallay/command/GuideCommandSpec.java",
+      "sha256": "4a17fa22968c1d11c44c5fe6119ac4791e4f77daa092eb73fc29fbf1a82e6a2d"
+    },
+    {
+      "path": "dev/openallay/community/CommunityCatalogClient.java",
+      "sha256": "0059ff8d661a79e937b08873e03340d612ddada048812ad16cfcb25d64e9ca9a"
+    },
+    {
+      "path": "dev/openallay/community/CommunityCatalogCodec.java",
+      "sha256": "84f236c9b05df4a7b477a7755cdff73402d5e904ad36c9ff033baa231743e910"
+    },
+    {
+      "path": "dev/openallay/community/CommunityCatalogManifest.java",
+      "sha256": "29fe6c01166b6869fbbf29a4fd30a70571c56c2629917fcdc4545f22e306e5f8"
+    },
+    {
+      "path": "dev/openallay/concurrent/NamedThreads.java",
+      "sha256": "e4c975206720eb3d9be6c42ae26d56f50c4c9688b8ddfb0f8c6d14a97484a814"
+    },
+    {
+      "path": "dev/openallay/context/BlockPositionSnapshot.java",
+      "sha256": "4f86dd7a87e6d5d77dabaecd80dd838a168bf32eabf554500232ceb5275d56c4"
+    },
+    {
+      "path": "dev/openallay/context/CallerKind.java",
+      "sha256": "2035e2c2ae5c2c4de4d9708053f0ca0e5f52c8ce41f1225385e1c2730e415622"
+    },
+    {
+      "path": "dev/openallay/context/CallerSnapshot.java",
+      "sha256": "4f19b36b9b04d19e8dda769ef5be87ffbb6bae61d50260d1b9fd8c770795025a"
+    },
+    {
+      "path": "dev/openallay/context/ContextCapability.java",
+      "sha256": "181c11d6a6401d0a6a81e8b32719639ce1940dcc26c8057a8c6b49ea8e2b38b6"
+    },
+    {
+      "path": "dev/openallay/context/ContextMetrics.java",
+      "sha256": "c351f83cf7e2caedb2aac07b5b92bb7a2bdad106b3fae12cbc5fc6c9ef09a84e"
+    },
+    {
+      "path": "dev/openallay/context/ContextSnapshotMetricsJson.java",
+      "sha256": "bfdf97e69f02650b285fe6f644fbc0660420b9fe1a4cce252528d4ed7c09c015"
+    },
+    {
+      "path": "dev/openallay/context/ContextValidation.java",
+      "sha256": "413b83e466d050e596533a72b30f323a19d3371aedb0aad15af39d7288deaba1"
+    },
+    {
+      "path": "dev/openallay/context/DataAuthority.java",
+      "sha256": "04b4f8024f76c374d00e6a117c847cabd814d17e93b7b9011928c713c48bacf3"
+    },
+    {
+      "path": "dev/openallay/context/DataCompleteness.java",
+      "sha256": "fbca30849903e1b47448a760a8689496a48fd57631c8057443392f8abfdc684d"
+    },
+    {
+      "path": "dev/openallay/context/EvidenceBearing.java",
+      "sha256": "ce1413f8e45baecfdcba09e3b22517a3a2796e07d83486f1ffb255403d6493d8"
+    },
+    {
+      "path": "dev/openallay/context/EvidenceMetadata.java",
+      "sha256": "95ff0f4885c589039edd39467b85bf008d0b2cf8dca75102e6c8e4de868df65d"
+    },
+    {
+      "path": "dev/openallay/context/FluidRequirementSnapshot.java",
+      "sha256": "e9f5f7dc9bd37d21caaa706d18d1015c14cb566979cea24997e258394b8cbb27"
+    },
+    {
+      "path": "dev/openallay/context/IngredientAlternativeSnapshot.java",
+      "sha256": "1e071171ebe5d62665768f2c0a2cb5eaa61a2aac5f8d0367bfa734247d85d925"
+    },
+    {
+      "path": "dev/openallay/context/IngredientRequirementSnapshot.java",
+      "sha256": "604a1224e7f954754c99d76cacdfa35eb1d1185589f5b3802b8e5061725c2915"
+    },
+    {
+      "path": "dev/openallay/context/InventorySlotSnapshot.java",
+      "sha256": "19ce959a1fbcb68cefc6498dd828e99de928f0cff6892c2c1650b267f7ecfc46"
+    },
+    {
+      "path": "dev/openallay/context/InventorySnapshot.java",
+      "sha256": "7ca3340084c1da8ef4800fe7d971f010c218354025aed2e96e4417110b32a924"
+    },
+    {
+      "path": "dev/openallay/context/ItemStackSnapshot.java",
+      "sha256": "096d8e07f68e665ecc0079aeb66fe69e199c0a6b35d8c615c523ecfe88cca3aa"
+    },
+    {
+      "path": "dev/openallay/context/PlayerSnapshot.java",
+      "sha256": "266c5118b19112c1aae030682f70e387bc188d1fa86cf7721d7bd1aef9bde473"
+    },
+    {
+      "path": "dev/openallay/context/RecipeEntrySnapshot.java",
+      "sha256": "dac53862af62218fe0fa119c4dcb8349ffd6431ce03f6b197dc664e3d0b9336d"
+    },
+    {
+      "path": "dev/openallay/context/RecipeLayoutSnapshot.java",
+      "sha256": "3d4be6c038ba53a8e202d1832f09c5e6416d3d391f643ffae16543797cb6d5dd"
+    },
+    {
+      "path": "dev/openallay/context/RecipeOutputSnapshot.java",
+      "sha256": "ca3ac5bae653a8b2fdd0a5a9d04caf400fe87708942d8e0c1f0bb985e0aedab2"
+    },
+    {
+      "path": "dev/openallay/context/RecipeProcessingSnapshot.java",
+      "sha256": "554352d4fcef3e47818bf50f95d52091b75697f8a9f3ce42351c4bd370710444"
+    },
+    {
+      "path": "dev/openallay/context/RecipeReference.java",
+      "sha256": "e40161fbdfdb989555c07d0c33bca9d494ff3169549b324a498f98e5a8d9c9c4"
+    },
+    {
+      "path": "dev/openallay/context/RecipeSnapshot.java",
+      "sha256": "7c03f2543491501cc90e75bdf87273c2ba41b49b9d5e26c859d0bc49215d6063"
+    },
+    {
+      "path": "dev/openallay/context/RegistryEntrySnapshot.java",
+      "sha256": "6ac69f95e29eae76cdb642dbe40cfe7f838e1e95b44df4c31514347ac89288b2"
+    },
+    {
+      "path": "dev/openallay/context/RegistrySnapshot.java",
+      "sha256": "47e132c2f7d2b761555ae43cc5da5388462945f6808d07c95f5ed4ba2cd62680"
+    },
+    {
+      "path": "dev/openallay/context/SourceObservation.java",
+      "sha256": "5b840d419b11eb3c489ad50189ba1e37a497cd60f5288b79544f2a562f8871aa"
+    },
+    {
+      "path": "dev/openallay/context/SourceObservationCollector.java",
+      "sha256": "1510bd1c466679b5a58b00944ac3de8b73e35aa81ea67f3a700c46f75aed2d26"
+    },
+    {
+      "path": "dev/openallay/context/ToolInvocationContext.java",
+      "sha256": "beadf7c641619dddde7d3b4e379d5b3acb75e5c977fb768eb9cff98511bfd1b2"
+    },
+    {
+      "path": "dev/openallay/context/game/ObservableGameStateSnapshot.java",
+      "sha256": "403d43ddb2a95c1020a58f119cdedd7ebeb934da44829a8aa263b442f45b9012"
+    },
+    {
+      "path": "dev/openallay/crafting/CraftabilityCalculator.java",
+      "sha256": "f3014590aebe4d5423580e72bb05cce7be8b1c73113f74d21b4627f4cf3bfe55"
+    },
+    {
+      "path": "dev/openallay/crafting/CraftabilityResult.java",
+      "sha256": "7e4ff5eeba1cf934b1ac1fa1621fb7bdf03f4afb09bcd2764644d932057d8a47"
+    },
+    {
+      "path": "dev/openallay/crafting/IngredientAllocation.java",
+      "sha256": "58c41ec2ab1c9f36e610700cb0dd3f1ca4d7fbf5ca6b760f76bffccbf251ce3b"
+    },
+    {
+      "path": "dev/openallay/crafting/MissingRequirement.java",
+      "sha256": "5c2786f9ce4d564f7d4e68527cc98b225462b3598cc4475bdbecd2d33fa45642"
+    },
+    {
+      "path": "dev/openallay/devmode/DevelopmentCommandHandler.java",
+      "sha256": "8e1867c4a752d3be488d87f04513930547757b73d23aee58f11f1891d15a0204"
+    },
+    {
+      "path": "dev/openallay/devmode/DevelopmentToolInspector.java",
+      "sha256": "ecc94c524a20a8d709df4231af816e203515cf54d7a97bd5ffe4bab314fca24f"
+    },
+    {
+      "path": "dev/openallay/extension/ExtensionCompatibility.java",
+      "sha256": "4428bbcb5f06005fe4b4b649b3ae17694fe37d7f3e1e405cec017edcca13603f"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptHostBinding.java",
+      "sha256": "a2ca462906e290e597f7977e7fdb69a3bda0662e71e2394f1352788718294517"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptHostMethod.java",
+      "sha256": "0cae0f203e4bad08b6c1b35e4421a163e4dc6149781efd8644e06a394f151bbe"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptHostValueType.java",
+      "sha256": "2c55a836ec0e05cafd64c30f47e86d52b0aa55543016d7424811ad2de240946a"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptInvocationContext.java",
+      "sha256": "f1d98f3d1279607bc415c0ec5f2630805abefd411041d79077ad35f5e1567d2c"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptInvocationParticipant.java",
+      "sha256": "fdc86b1d1093782a729413f00365546cf7651daf9b00ae39894320cb435542f3"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptInvocationScope.java",
+      "sha256": "7ea9574c5218876d71afb72c8ae526eee413a04bd489b2739df748fa1fb1e65b"
+    },
+    {
+      "path": "dev/openallay/extension/JavascriptModuleSource.java",
+      "sha256": "e51c972c56d795d069ccf17fdfe474ccc36e7560507b071091fa7abcfb759b8f"
+    },
+    {
+      "path": "dev/openallay/extension/OpenAllayExtension.java",
+      "sha256": "0016b727853bab9548e8598db6851f73c49393c60b8504a6a16603852874cc99"
+    },
+    {
+      "path": "dev/openallay/extension/OpenAllayExtensionContribution.java",
+      "sha256": "5a046a840e1bd072c0f9958cba02839c4af66289b83700ea544329f37a0320ea"
+    },
+    {
+      "path": "dev/openallay/extension/OpenAllayExtensionDescriptor.java",
+      "sha256": "b8386be44bd52f224dcf5a29712ade0d54c872a3f1d37187f51076b718b400b0"
+    },
+    {
+      "path": "dev/openallay/extension/OpenAllayExtensionEnvironment.java",
+      "sha256": "3a65c298efd133d39a930f7b8713282148bdaf4fc8acec97b2596d89c05c199a"
+    },
+    {
+      "path": "dev/openallay/extension/OpenAllayExtensionRegistry.java",
+      "sha256": "a0cddcd21a9627c27ffcc708bc96b4ffa397e41ff70ca1f7cf950073165d6d1a"
+    },
+    {
+      "path": "dev/openallay/extension/OpenAllayExtensionState.java",
+      "sha256": "cbaddd52dab42a1519edde0a8c0750728381b84f1a71ad5470cf3ab1c1b818fb"
+    },
+    {
+      "path": "dev/openallay/extension/catalog/ExtensionCatalogArtifact.java",
+      "sha256": "9f40e42e28d6518529a4f5913a30f2e48619c8d6337c0f268d1b8eb3e0a9a75e"
+    },
+    {
+      "path": "dev/openallay/extension/catalog/ExtensionCatalogClient.java",
+      "sha256": "bb66993beb5b06f11a6cd1669ad556a86a82345782c55f0c2b13e74db850a6ea"
+    },
+    {
+      "path": "dev/openallay/extension/catalog/ExtensionCatalogCodec.java",
+      "sha256": "94de968ec562c9a207ff282ae2e7535251a4af3a0e954aeee8305be5f1f586ed"
+    },
+    {
+      "path": "dev/openallay/extension/catalog/ExtensionCatalogEntry.java",
+      "sha256": "793ce26b75e1545dbca852b15916a2b19565acbb6792e1a0a15a0a83e1ec8578"
+    },
+    {
+      "path": "dev/openallay/extension/catalog/ExtensionCatalogManifest.java",
+      "sha256": "4672165d825e5c272a016d77878cdb1f148c681dc3775a2f7af8b1309aacea42"
+    },
+    {
+      "path": "dev/openallay/extension/install/ExtensionInstallResult.java",
+      "sha256": "96b7c8962521478aa00b5b863f2fc16f4506fa36e48d684a8ab73f6797393d7f"
+    },
+    {
+      "path": "dev/openallay/extension/install/ExtensionInstallState.java",
+      "sha256": "7e37f8d04a76d5a15428b064464df8a1431075cadb0041143b93e0feb4902dd2"
+    },
+    {
+      "path": "dev/openallay/extension/install/ExtensionPackageInstaller.java",
+      "sha256": "ce563f5a55c695870cd1222eb9046753002645090b258cac060359845d6e2e73"
+    },
+    {
+      "path": "dev/openallay/extension/install/ExtensionPackageManifest.java",
+      "sha256": "ffcfb1f32551b5749da814ce9aa4dd51735de0e9deb961d13b6b0c25ef95a69e"
+    },
+    {
+      "path": "dev/openallay/extension/install/ExtensionPackageManifestCodec.java",
+      "sha256": "0d2f60a13f5408c732e41b89f4c0427d044d2e8b40bade35385d7b488b0654d9"
+    },
+    {
+      "path": "dev/openallay/extension/install/PreparedExtensionInstall.java",
+      "sha256": "4263cec8b277bafe78030335bcd9532db3fd61e55b29ea48759e27dfb9a79f59"
+    },
+    {
+      "path": "dev/openallay/extension/universal/BundledUniversalExtensions.java",
+      "sha256": "768b59909162ff5cd2a111e84de9d78c751195cc6f5b11b57a2f8cfc5760fbe1"
+    },
+    {
+      "path": "dev/openallay/extension/universal/UniversalExtensionBridge.java",
+      "sha256": "c029ab318290410c330f17d60b2206d77bc41f4cc31fd9bc3a1e600a5c60e43a"
+    },
+    {
+      "path": "dev/openallay/extension/universal/UniversalExtensionDiscovery.java",
+      "sha256": "4e3d3b6099af25567e445f5b5e9442c01c5c425f45fee78db9d692b7514abcc2"
+    },
+    {
+      "path": "dev/openallay/extension/universal/UniversalExtensionJson.java",
+      "sha256": "39814118c75bb467894b1cc7f1e7c7f777ab5f0001c2cff3936f0dd362b598a2"
+    },
+    {
+      "path": "dev/openallay/extension/universal/UniversalExtensionManifest.java",
+      "sha256": "bec62d91fd61be10a343f6f6b6d78aa198c3a251ddc4173a588e57370950c4ac"
+    },
+    {
+      "path": "dev/openallay/extension/universal/UniversalExtensionSupport.java",
+      "sha256": "30f783278526b9a3b00248e50fea6a2577b4a4f214221f98b7524179e2e7cbb1"
+    },
+    {
+      "path": "dev/openallay/extension/universal/UniversalInvocationAdapter.java",
+      "sha256": "fade2107b493069ce5bf2ddb3277fe846bcc6aa91ee39de45c40d35c27c00841"
+    },
+    {
+      "path": "dev/openallay/guide/GuideClientModelProfile.java",
+      "sha256": "936b33ee26f0b8fa78d6c3e54492fc852b14d1c407666abc059d2a86c5fc6cec"
+    },
+    {
+      "path": "dev/openallay/guide/GuideCommandFacade.java",
+      "sha256": "00e701a5acdeda263cb0d85cff3bf79ddcce1a7c4cdb23b916d2cdafadcf0ed6"
+    },
+    {
+      "path": "dev/openallay/guide/GuideCompactResult.java",
+      "sha256": "da4327dd46fcefac7724dc46e574983da8a3a3077ee3fb25f5a56542daf28bbf"
+    },
+    {
+      "path": "dev/openallay/guide/GuideContextEstimate.java",
+      "sha256": "c81c6360df336002f55afc913e3168ec3bd2ca96d18fbbe02fa1e992c472406f"
+    },
+    {
+      "path": "dev/openallay/guide/GuideContextProvider.java",
+      "sha256": "fefaf9696adbcd7b2c660ec10d28b1081fb3a7813ac3b45c21ce6d3c6f934b1f"
+    },
+    {
+      "path": "dev/openallay/guide/GuideContextSpec.java",
+      "sha256": "c49fa5c59a5dfd48c143b1f530bdefc283b757e5b2057921b01c6a56c2ae28da"
+    },
+    {
+      "path": "dev/openallay/guide/GuideFailure.java",
+      "sha256": "7b45f7f087aeaa8cd08b3c15454f6e53d8832ee6668fe88b56b0118ec824b076"
+    },
+    {
+      "path": "dev/openallay/guide/GuideHistoryAdministration.java",
+      "sha256": "9f43a5ff5235361d1789530a7bb65210e8b745516db230d7a293598e039926b7"
+    },
+    {
+      "path": "dev/openallay/guide/GuideHistoryPageState.java",
+      "sha256": "6c576f6a09756a5e6483dff96a77eaef92445fc293c99ad6a8208deeac622ea7"
+    },
+    {
+      "path": "dev/openallay/guide/GuideHistorySettingsSnapshot.java",
+      "sha256": "5709839ea97603eb90e90a3ea82514038cf28870d11747d2be3120dcf9856666"
+    },
+    {
+      "path": "dev/openallay/guide/GuideHistoryWindowSnapshot.java",
+      "sha256": "188a1fba3af1d804d903176cc2987f1b0004dd7916bde07253fd6fcef02b51e7"
+    },
+    {
+      "path": "dev/openallay/guide/GuideLivePresentationSource.java",
+      "sha256": "2ea719745061c6aa8392a9c94ada7d331dcb87d95f20071d2989bca2944156f4"
+    },
+    {
+      "path": "dev/openallay/guide/GuideLocalEndpoint.java",
+      "sha256": "094a47adbd6a62fa9b74561e5b528f271c509c7af8cb5c9832782c09abe45e64"
+    },
+    {
+      "path": "dev/openallay/guide/GuideMessage.java",
+      "sha256": "7f6034519a03cf2d0f73fe815d8fe5f68281a15675d4a943bc29dd0a6125e01c"
+    },
+    {
+      "path": "dev/openallay/guide/GuideModelMode.java",
+      "sha256": "a9a7056c5a1abe52aaac33ba7920368ee16f140e4f9ea057f5fcfd9c0c7c313f"
+    },
+    {
+      "path": "dev/openallay/guide/GuideModelProfileException.java",
+      "sha256": "0dd5c83e590db7cd1273dbe57ab2e597479939d3a3255dd6a3418cf8176eedc3"
+    },
+    {
+      "path": "dev/openallay/guide/GuideModelSelection.java",
+      "sha256": "e7dcb9f446ce047c584aa10f7202e540b92674d111823adbf49e3da79af16636"
+    },
+    {
+      "path": "dev/openallay/guide/GuideNotice.java",
+      "sha256": "da169bfbd046c698e7e7075895752d45cf38cb54c9cd5dcf9da6e1fb88ddb905"
+    },
+    {
+      "path": "dev/openallay/guide/GuidePendingMessage.java",
+      "sha256": "257ea9fecb864d49e8b220d38deb606f8b3e615327083dcac142a26cbef0c35b"
+    },
+    {
+      "path": "dev/openallay/guide/GuidePersistenceSnapshot.java",
+      "sha256": "11ce188c644bb50ba4f19f88f2e25f85ac12110c152c23176a50ef2e2557d6ec"
+    },
+    {
+      "path": "dev/openallay/guide/GuidePreparedCompaction.java",
+      "sha256": "699b6e4c68597ad7c957ce4016a495b62dffcec7bc6e0e269d9e7046c70cb6c7"
+    },
+    {
+      "path": "dev/openallay/guide/GuidePresentationEvent.java",
+      "sha256": "49d283f432ec6685dd17e552b579d4fe8feedb9b9afd90769096bb6911a50559"
+    },
+    {
+      "path": "dev/openallay/guide/GuidePresentationListener.java",
+      "sha256": "59ff91b29a9a64826de7d4964cf50d29601d7e0e287ddd60256aed0f7e709728"
+    },
+    {
+      "path": "dev/openallay/guide/GuideRemoteEndpoint.java",
+      "sha256": "f1ff3f808a88403581110b9be558b8aa00b39b8b1f7d91177515783be5763547"
+    },
+    {
+      "path": "dev/openallay/guide/GuideRequestPhase.java",
+      "sha256": "ba22a7d6e19d363241f65bb7a95cf0d0e778adc77fe688cecb2e9c286ec5defe"
+    },
+    {
+      "path": "dev/openallay/guide/GuideRequestProgress.java",
+      "sha256": "113890b9232d73067df70d20773285518786615d43ca03d876168eeb8cf0ecf4"
+    },
+    {
+      "path": "dev/openallay/guide/GuideRequestSnapshot.java",
+      "sha256": "fbe2f31351004eb89dbc52ae22b307d4c8e66747e8e2945b50c4bceca0de267a"
+    },
+    {
+      "path": "dev/openallay/guide/GuideRequestStatus.java",
+      "sha256": "1b5d694192f471954111e900d8bd2d0b53e0c8204d7e40911a645bd7ff00f2cf"
+    },
+    {
+      "path": "dev/openallay/guide/GuideScreenOpener.java",
+      "sha256": "9f721dc561b65219ae90507b68f03d7ba05c6ef7841a7dc5c7d604666253a1a7"
+    },
+    {
+      "path": "dev/openallay/guide/GuideService.java",
+      "sha256": "5a17b3450e53e73e55356f7dbc3e1f110cfc68939647d9cce69e4e24db9ae1c8"
+    },
+    {
+      "path": "dev/openallay/guide/GuideServiceManager.java",
+      "sha256": "889d9bcfc2479e3e49db4537b7457a51c1ac72ddd0d33667dd411c92078ea66a"
+    },
+    {
+      "path": "dev/openallay/guide/GuideSessionSnapshot.java",
+      "sha256": "a58c660ed7d6631d2614aaab2ba3fd204adcb6d57d0e39357bc689637d865b34"
+    },
+    {
+      "path": "dev/openallay/guide/GuideSnapshot.java",
+      "sha256": "6e839eb3e2a668ea3af85f2b6e78e7495ca0329b59cd997dcf6fac6064a551a3"
+    },
+    {
+      "path": "dev/openallay/guide/GuideSource.java",
+      "sha256": "52b97ac86b1b2b6e94297f64dc95267c0a01f5c3fab571d685caae5aff4c6695"
+    },
+    {
+      "path": "dev/openallay/guide/GuideStateReducer.java",
+      "sha256": "04be8733552887c35ec5a1b607978cac2b7c488679a58dfad8776fb761a24304"
+    },
+    {
+      "path": "dev/openallay/guide/GuideSubscription.java",
+      "sha256": "850ff4ce42103602249e945586a7e4f10c8010502956dfdb6ad83b113bafa86a"
+    },
+    {
+      "path": "dev/openallay/guide/GuideTelemetrySnapshot.java",
+      "sha256": "a42261fd502684dee475a028bd2d0f95d270c8b37a56a9439983b8057948015d"
+    },
+    {
+      "path": "dev/openallay/guide/GuideTimelineEntry.java",
+      "sha256": "76d2fc2ce97d4fb79056caf93386fb568f667dd4b656719fdb7f566b806b88cd"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolActivity.java",
+      "sha256": "3fd9c30d561af48d26eee087b7787ca691b85dc42c0c7429bb1bdbd19df91b42"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolIntent.java",
+      "sha256": "a5000483ef7306a6749497445892f83bde81e02490e39f7e39cee8d700d9afb1"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolInvocationPresentation.java",
+      "sha256": "a4eb8cc502a7a8dbef6c62754c93e2535baea780e00b36205585ed8cac07975f"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolInvocationView.java",
+      "sha256": "d80861ef853ad1d488f2a45d43759fc12152f752ddddc6efd593d8f8197b1df0"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolMessage.java",
+      "sha256": "905857a1a8fbac2280122497c19dcd5127787f696187999586801821026c7892"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolMessageCodec.java",
+      "sha256": "b8afdeb772558a0ca8ca1c71e83efb571a15b73bb261c43492d34306cc5a8075"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolPresentation.java",
+      "sha256": "454ce62bc6881881249eb8f0ff34c24d7cc800278267b6c8517482bb2a98ebb1"
+    },
+    {
+      "path": "dev/openallay/guide/GuideToolStatus.java",
+      "sha256": "46d451d05ceaae52b916911cb7f38abf9df79e2b1840f71e44a27eebcb7d97ee"
+    },
+    {
+      "path": "dev/openallay/guide/GuideTopology.java",
+      "sha256": "b6064f829bd5a8c41802bcceeb0234f6a515fe7369a7dfd352786fcd4b12340f"
+    },
+    {
+      "path": "dev/openallay/guide/GuideUsageSnapshot.java",
+      "sha256": "fcaa4a3b8e452c2ab155653e6020f219389fc813eeee3599412c95dfbef782e0"
+    },
+    {
+      "path": "dev/openallay/guide/GuideUsageTracker.java",
+      "sha256": "b71e9f69084814c08c82ab8d253bdeba418ce4bba2afb0b33e12834f8609f369"
+    },
+    {
+      "path": "dev/openallay/guide/PayloadGuideRemoteEndpoint.java",
+      "sha256": "27d2d9ce38220c0997025f794bba27f36de608a4aa0c1a0cec6877b3acdcb51a"
+    },
+    {
+      "path": "dev/openallay/guide/ToolObservationImageIndex.java",
+      "sha256": "301288b1be8ed42ee3a32eb2dedd78c6444babc6587a885f805ad14857acd585"
+    },
+    {
+      "path": "dev/openallay/guide/composer/SlashCommandDispatcher.java",
+      "sha256": "8a219377ac2538c9d2f5dfe8b8fa8e6dc1d5a06d2835fa66a1f685ccd1eefe6a"
+    },
+    {
+      "path": "dev/openallay/guide/composer/SlashCommandParser.java",
+      "sha256": "5de3022da741cd8b049d8d01c571778be1a964980deee99f41eedd9931035001"
+    },
+    {
+      "path": "dev/openallay/guide/e2e/GuideClientE2EConfig.java",
+      "sha256": "9dfb77a298310768f636ee36a29a1adbf3c792d218f1799c6ead519bcdc40158"
+    },
+    {
+      "path": "dev/openallay/guide/e2e/GuideE2EReport.java",
+      "sha256": "e905bf042af6a0c238fd7f876408ad9413d001fe13a6f306f40615178504f1c5"
+    },
+    {
+      "path": "dev/openallay/guide/e2e/GuideE2EReportJson.java",
+      "sha256": "a609d583b65626899b996811eab382bea1ee7ca0dc73f222449859c329aa0f74"
+    },
+    {
+      "path": "dev/openallay/guide/export/GuideSessionExportCollector.java",
+      "sha256": "098d9f98d73c96bfcefe6fda1efa380bd14a18ee75b1ee3289adefb6d321be34"
+    },
+    {
+      "path": "dev/openallay/guide/export/GuideSessionExportSnapshot.java",
+      "sha256": "e4b42b9b704c35e4fb273655f4abe7f2bff723200f72d8a0eabe9b5a1fc4969b"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryAccess.java",
+      "sha256": "7f734ae639f00fcf85774433e4467afce44df6f3197dadd1eaeae4812ed7e51b"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryActivity.java",
+      "sha256": "63eb66622fcee1fa8f00b6405260c5b2e8756941e9d6a85f2b5a9c5055d5f48d"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryCodec.java",
+      "sha256": "2d634a8b98f5bc4700e0d86668e5276e2886647685584244804378e202e1b681"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryCommit.java",
+      "sha256": "5be71336240cd2efce07dc6544ef42b634eb7726382d86424b321ece4f515ed7"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryContextRequest.java",
+      "sha256": "c0372ec2b3e62156710d8b7ac9c302665068b739b5f21e2bb171dad566fe3392"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryContextSeed.java",
+      "sha256": "749282ae4a37fd166c978a50ffd6d44feb2f88ea489c7c523162c9604038c511"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryCursor.java",
+      "sha256": "197dac98d361aa8c5734c1dd04d978d020d38f3e8c9d7bd36d97a8f5e62d2a22"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryDeleteScope.java",
+      "sha256": "cbc3cf3cd7a5cb807415d23abfa0c88e258a99b83ff2f08f4838a0bc445ba651"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryException.java",
+      "sha256": "5395ccb1f585d16b3e991d12ccede4b3d3ccea552bc3dd79344aa8c52e2ba9c3"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryForkRequest.java",
+      "sha256": "f0d3c77bd1839ff3e435367a26db948236bc23150bf8f193c23df0e9f4c20936"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryForkResult.java",
+      "sha256": "36fabde127d509a6bf3eb50b3b8f62571e968ae4fe22dc685829ac9ed60d870a"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryMetadata.java",
+      "sha256": "f93486d414dafa5212f3ef39815fe8cd6a6b957b5fe119724ebfef5248dea09d"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryMutation.java",
+      "sha256": "41643d286f2dc79b78562ce5a8a1a2a0d90d41899efbac57330c41f8157ad4fd"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryPage.java",
+      "sha256": "0a4ec99040c767245df3dc49e1a01739beaffef59d92eca5e19684d4cffe763c"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryPageRequest.java",
+      "sha256": "3d7c6530634b2a5b76c0e69b76bd22f0f1ad05dba788d2301385855bb7366f92"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryRepository.java",
+      "sha256": "fdd9a08eb30a4c545793992e4b4ddf6e0e9dac4da75515ad88f41a57383e5baf"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryScope.java",
+      "sha256": "18fcb58ebef93a783e93d275232bbe960adca06b6b79c145fb7adacc6e9f90c9"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryScopeProvider.java",
+      "sha256": "21ee5b81dec39cc734b8019ce891e1b6a21aa21d01247c69db66f656cb002098"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideHistoryStore.java",
+      "sha256": "57ad325404b24b7cac455eb40110ecd1bc620676101f284365cfd267b5347292"
+    },
+    {
+      "path": "dev/openallay/guide/history/GuideImageOwnership.java",
+      "sha256": "d8bcf6a423283a1e452221f7ae3d3081d7b28b5236626991c8d07e5061918512"
+    },
+    {
+      "path": "dev/openallay/guide/history/SqliteGuideHistoryStore.java",
+      "sha256": "4744b323e029fb8eb4b9d5a4b426f6271ddff72602f364fa392e6027e59cd46f"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/BuiltinRichComponents.java",
+      "sha256": "962522526bfa6b9dd9d962adc97e436b1bbd6e83aec29dfc14ace1d753419471"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RecipeSemanticHandle.java",
+      "sha256": "bccfdda5d4deb51146e622d68daded863ef8b2a5cf2af33d19da9755b1f405e9"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RichComponent.java",
+      "sha256": "c7dc264b4fd19da57833e10ef6244e8cec39853da7635c1dad913ccf2e42c8f8"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RichComponentEnvelope.java",
+      "sha256": "9f6326edc08d97a65ee9e716467b4326e10c33df5781f278adf909d3d05b3661"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/RichComponentRegistry.java",
+      "sha256": "01140a2128b9288cb2bc9aab5b54f0d54cb88fb372e3ac5afa5be8ec4a8f04dc"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticBlock.java",
+      "sha256": "51222de707c7cf94a4a11eedeeb33c3715a383f8534783f3f7e149f317317b33"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticDiagnostic.java",
+      "sha256": "2595ed926df17fb73ac400aaf901c37b5cb031b2ef63f1c1dc132dd54bda109b"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticDocument.java",
+      "sha256": "88d9fe8137dc526ddcd7af5784b3eeb910c22ebe1d0ca5a4fc30becbcaf1455b"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticDocumentCodec.java",
+      "sha256": "6f2e5faaf248b9ce46fe73064dc87001468d397a49dece253b4e1938d51c1846"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticDocumentValidator.java",
+      "sha256": "d55b61f1770d804280fe2af5be31c82e866699b0bb61bc287c03b4340315bd45"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticIds.java",
+      "sha256": "6f44963f7331a0a31672e3dda7da85a6013b7394d28a7621b78ce685c44fa387"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticInline.java",
+      "sha256": "2d3f5a6ccbe345505c7faa9697de3fd4e19c58cc2961e119e37ba0cc467d7edc"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticMessageParser.java",
+      "sha256": "f8e8974437d85fdd473c594abf318bc75df19a8d2865130e0c444397ed395759"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticPlainText.java",
+      "sha256": "c85f83657deebd9d23b6385bf217921b6baef351a12e689c935ec0caa3434b3c"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticPromptGuidance.java",
+      "sha256": "769cf90fefd0ab3fd19a5a7fba1bf2b99e8fe93f2ceb9be7fac92c415a064649"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticReference.java",
+      "sha256": "3b7d171778e0215cb3384323cf34e35ec39ab02889f0efbdc71101899e70aec8"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticReferenceIndex.java",
+      "sha256": "bc99a6a5d8e82690b6be92bfd9cbdec883ec041ceae78406838e7861a7f4fde6"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticReferenceKind.java",
+      "sha256": "9fb844cdcafd406dcfe722d667d9237f6d4a013e33ee79be42d7c7984ffb0303"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticReferenceValidator.java",
+      "sha256": "385550b32197cbe0134ec018e3403b6ddeaac22b7ae28089908e6f284f640e2c"
+    },
+    {
+      "path": "dev/openallay/guide/semantic/SemanticStreamingState.java",
+      "sha256": "10704ca71d5e221225759cb460b80321ee58bc42018379fa118ca2ec6160b2cd"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDetailCard.java",
+      "sha256": "2b153586f9cdfb0a4400fbef376f53fd1119ea854935d570cfdaf832875881e4"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDisplayConfig.java",
+      "sha256": "a45b8fe62b2394c40d1a678208f9a3124a109c4d5922884d61d67224d1a5ae82"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDisplayConfigLoader.java",
+      "sha256": "ffb00dd623a4fb205265671272658a20f9221fc258c8c52b1f660a5ba88e0932"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDisplayConfigWriter.java",
+      "sha256": "2bfc5fa7a3f58aa189ae3681d567a67c1d8fce37c77a666927c81db363712a56"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideDisplayRuntime.java",
+      "sha256": "f138c6342abf7100be17582c0232ccf3a114a52823432b7e2fb8b87ada4c347f"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideEvidencePresentation.java",
+      "sha256": "5b78b437b83fe633df41cf3d2b0d9c3ca89142c266a91b13f8ed3cde619c23a1"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideItemView.java",
+      "sha256": "8b7e9325873a77e8bfc7aba8568b6987e41f21eabda7b6a0957b9b092c92ddd1"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideRecipeCard.java",
+      "sha256": "dc03ede1244c50f99c99b0611e8fdb97c54fe96ef973c2be1f230c5c25384b6a"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideRecipeDetailFacts.java",
+      "sha256": "10e1666a7ebc49cb5f1b428573b4e2bf082b2cb7f6d92b7c891b454bb8b1fe1e"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideRecipePresenter.java",
+      "sha256": "e40c3a4f2c48d4d1df8c1150bc67062567a87c2692268f9f95c2cf2bd4895935"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolDetailPresenter.java",
+      "sha256": "c4ce99b977d88842236affa7bdc0f1ceb7ac53e06a43ecfc00c05bf9eb21055e"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolDetailView.java",
+      "sha256": "e6af9197765c9f856826caaf46c8bae4bc18b6bc77e1b32515b12bc3ec86c3c9"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolDisplayStatus.java",
+      "sha256": "df0c85e4342261626eae9a17df77a948e262e12017d0ae4ae1065d22d29eab12"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolSummaryGeometry.java",
+      "sha256": "beede5b1a323a43b19edf6de42512f8c0bd755d98a98f1c0d363a0ce0a3e96f7"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideToolSummaryPresenter.java",
+      "sha256": "9631e0c08ad0d8b7d34e59da58b49518668ebe4bff5df79e68a2e1755680385b"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideTranscriptVirtualizer.java",
+      "sha256": "abcadf89d7a693b3053c2a225cfc8da0059345d62bf7948cda87d675086f9135"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiClickRoute.java",
+      "sha256": "18b342eee860a2028aa13f516a7c0b310e1dcc87732c584cb4b6df9288a394ac"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiConfig.java",
+      "sha256": "54376e54632149a089185e988f0960758ec8201708d50ef36f0741169a606303"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiLayout.java",
+      "sha256": "b321cf250b5efad100ba12c86b0b426f75902c484ec18134fbfa274881fab779"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiModelChoice.java",
+      "sha256": "5cfda19189f6e3ec8c9d436930babbb53d9acaff829f5782898b29d722083207"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiProgress.java",
+      "sha256": "c931d14e4d58d15c962d56155b02306a89cf161de98103c5ca55f92899be161f"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiRow.java",
+      "sha256": "a9172616467bab8091d862e25f29aa1678a0a288adbd10f31707f000d4091724"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiSession.java",
+      "sha256": "8089459ec74c094a3f869d2d0c8e2f2fc1bdddf2f5073aabaf7e41c32a080e7e"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideUiView.java",
+      "sha256": "93cd9157886a4876940b2852a8088eb23e0d0e2cd06dac35b8757593436575c2"
+    },
+    {
+      "path": "dev/openallay/guide/ui/GuideViewportAnchor.java",
+      "sha256": "30fc46587070af0b83dfddd16e4c156821a76537ae5cfeae8600ba3cfa86bcd1"
+    },
+    {
+      "path": "dev/openallay/guide/ui/ModelOrigin.java",
+      "sha256": "ae358e09daec8f430800c643b1251eabcf18e7a4948e94e0683545b762ac42f3"
+    },
+    {
+      "path": "dev/openallay/guide/ui/SemanticLayout.java",
+      "sha256": "641d1876d8f3350ac29931068585d5ea2ed285bb766a378f86f14d3bdd5d5969"
+    },
+    {
+      "path": "dev/openallay/guide/ui/SemanticLayoutCache.java",
+      "sha256": "203ebc72020ba31bdb8674fe1f1b476c5840d34491e5ecccf197041f075c1f9e"
+    },
+    {
+      "path": "dev/openallay/guide/ui/SemanticLayoutEngine.java",
+      "sha256": "11448d3102d819d17801475af722486630dbe0f554927f65a3d30038a2216806"
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudController.java",
+      "sha256": "effec4a63ba2c274fecdee8c3f40322459850cda22c4c97bdb67ca267cdf00ae"
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudPresenter.java",
+      "sha256": "d633908c10f3b06aff64f380979208560d5b64df34a6656cec5c25e0305edc71"
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudScrollState.java",
+      "sha256": "b5d831dcc0c49f86051bfc4c78d397b129e2b38a301301bbeca4ae75a6ddda1e"
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudToolCards.java",
+      "sha256": "e44018cdafc1809c0ef8b8d9e7defc2d4d676fe182b6dda6ee4a70654321db67"
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudView.java",
+      "sha256": "684b428ad3ba289b17c8c978720dc60f924a51bb5f5bd6fc63154b0cd30a56f7"
+    },
+    {
+      "path": "dev/openallay/guide/ui/hud/GuideHudVisibility.java",
+      "sha256": "3fbb37e56542c8c9fc9c0bf677f9cbf1aafbb9e8b060d074c2cae1cabac3ef88"
+    },
+    {
+      "path": "dev/openallay/integration/RecipeViewerExtensionDataModule.java",
+      "sha256": "be8e33c31d4c077196f67c7f12441cda450a30dee75bce04b0898f3ee99a66a7"
+    },
+    {
+      "path": "dev/openallay/integration/RecipeViewerExtensionSnapshot.java",
+      "sha256": "86ad659cea17bf9a0c39b6ebb3fb3ab11342baaf5be4ababdf0fc290a7d26afa"
+    },
+    {
+      "path": "dev/openallay/integration/ftb/quests/FtbQuestSnapshot.java",
+      "sha256": "74d346cdc1aaaa1189bd260830f4cd4da15659c74537310adcb364b5bb77ad0a"
+    },
+    {
+      "path": "dev/openallay/integration/ftb/quests/FtbQuestsBridge.java",
+      "sha256": "f28d3670373ec3c963b3431982ccdafb6b03d4b08346e6280445d2851ab8b6ca"
+    },
+    {
+      "path": "dev/openallay/integration/ftb/quests/FtbQuestsKnowledgeProvider.java",
+      "sha256": "188d2d56f23397ac270d2b5d04675dda6e987d8165fb60c0d1c1ef4d6b5f610a"
+    },
+    {
+      "path": "dev/openallay/integration/ftb/quests/FtbQuestsMapping.java",
+      "sha256": "d154b26cc80e68bf9ce2ac3f610aad51bbd7ab8471cf6ef5a6608bdce2a2d762"
+    },
+    {
+      "path": "dev/openallay/integration/ftb/quests/ReflectiveFtbQuestsBridge.java",
+      "sha256": "1109303ca31d2ce76ebce91f4d3c86e01b969e6a38b300b98ff1e34d5e662b4b"
+    },
+    {
+      "path": "dev/openallay/integration/jei/JeiOpenAllayExtension.java",
+      "sha256": "d4277d9b96713e7ce7ab4f4293dd17bc78db0f93591392a6e5b1fcce37573312"
+    },
+    {
+      "path": "dev/openallay/integration/patchouli/PatchouliBookParser.java",
+      "sha256": "2a7d0e2a6810fd31155cd0066b2c26a472691f48e5b25c8e8e81dca834c105cf"
+    },
+    {
+      "path": "dev/openallay/integration/patchouli/PatchouliKnowledgeProvider.java",
+      "sha256": "8bd8931b1df417d437e8355ae5ba4ddbaf33d182420d38108d94763e48f08a1c"
+    },
+    {
+      "path": "dev/openallay/integration/patchouli/PatchouliMultiblock.java",
+      "sha256": "28bd6015ee2ce3ce4707acfe352871a19860f50562efca89fb039cca60519089"
+    },
+    {
+      "path": "dev/openallay/integration/patchouli/PatchouliMultiblockStore.java",
+      "sha256": "60e11ad9ece5b3468f9950b0ab2e1d202805506e221fa841a7a201708ca8eed8"
+    },
+    {
+      "path": "dev/openallay/integration/patchouli/PatchouliParseResult.java",
+      "sha256": "649acd7b2037ec0db781b4c789e64c8b46cfb6db2a96c346dfdd3058400c688a"
+    },
+    {
+      "path": "dev/openallay/integration/patchouli/PatchouliTextNormalizer.java",
+      "sha256": "c9e3628ee06670ddec9325be02b4f0656c062b34a40d657b4ecf380f6aefc222"
+    },
+    {
+      "path": "dev/openallay/integration/rei/ReiOpenAllayExtension.java",
+      "sha256": "40cbab13e033097a8e620230eab5f61d76b4675492c2453e4f75bf223c652e95"
+    },
+    {
+      "path": "dev/openallay/json/ConstructorValueJsonAdapter.java",
+      "sha256": "638fe24a01f86e13701ad11073c3630938b76778e4138d34f53592c316b3ac60"
+    },
+    {
+      "path": "dev/openallay/json/EngineJson.java",
+      "sha256": "ba0183b406daac7f1e97ca0d95f1e42b24bb8b7e8ef571d81f833ebd2e24f9ac"
+    },
+    {
+      "path": "dev/openallay/json/RecordJsonAdapter.java",
+      "sha256": "7fa96c324f1eae6a2a86965b202f9bdfd0ae38a2437fba7dad49b620dc4098cb"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeDiagnostic.java",
+      "sha256": "a6e9f5117a9f87bcdc86be6afd90fcbc7ad527045bc4a63e70a05492616bc4f7"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeDocument.java",
+      "sha256": "af899671fb53880c25b412953cff387ff3470652b2d84ad3c91311d6ffce8280"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeKind.java",
+      "sha256": "45865e4e712dbb5babbf2c53ccfa8481e481ebf97c27d87d688e126de5fca46b"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeLoad.java",
+      "sha256": "76a8d829f0ac38406671dd66680923336bb36a141a0834492b78f7b43ea4bb28"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeRegistry.java",
+      "sha256": "e65c5c565b49ee643f988d0e4c53127f58d3f4fee262636760e4417615a0f201"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeSearch.java",
+      "sha256": "8d9545828f2a2caf979145ecd959d589499b92030144cc0bdb63fce5ed243c5e"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeSnapshot.java",
+      "sha256": "16b8c0f0bef6ecab3a9d8be53b17ca7c828d0161098b2b4e2d4d42f32b6fdde5"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeSourceProvider.java",
+      "sha256": "fed6c40cea840e06a167a8bc8a787d6daf82326802702cbba76dea3bf5512cf2"
+    },
+    {
+      "path": "dev/openallay/knowledge/KnowledgeSourceSnapshot.java",
+      "sha256": "b84e62d604f54e855e946f05f988709ffedeab5c8c09e1774625457c0d58a573"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/McModKnowledgeSource.java",
+      "sha256": "965cc6b161c688101daf8db00221fafbc15b91be67df0ce083527e76e1645a70"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/MinecraftWikiKnowledgeSource.java",
+      "sha256": "6f293b4d78ad3b2ef1c7acdabdf55c437ad13ced52d814ef3300b68f7c56df38"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/OnlineKnowledgeDiagnostic.java",
+      "sha256": "1c4052bf78988bb2f76df6cc7202a85143cd063773a62064ae0d7f55a630765d"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/OnlineKnowledgeException.java",
+      "sha256": "97c2e9b5ed5ec5d60cfd6cc2ff05eb1b8a28b19a1008bd9f945dd8ba6772cf3b"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/OnlineKnowledgeHit.java",
+      "sha256": "67a0ab65321fe7fed7bdb4452d006565576b587f64aadddee4a723f7c5013b6b"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/OnlineKnowledgeSearch.java",
+      "sha256": "c001ecc72a5bcf2a329f0a530f041d0e63bc8cf6fcd70871d838c7f13a439c44"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/OnlineKnowledgeSearchService.java",
+      "sha256": "bf84ed1254f86add176ac9bfd9bab5547b8f7026547362c4c1bfcb9358b018f6"
+    },
+    {
+      "path": "dev/openallay/knowledge/online/OnlineKnowledgeSource.java",
+      "sha256": "b5a2688a7610bb68d0ef3bb93f33b6aba28b65afb13065de9df9b9f7073472c5"
+    },
+    {
+      "path": "dev/openallay/knowledge/search/DeterministicKnowledgeRetriever.java",
+      "sha256": "a5331a0538b5d5a84db99006298cb484a2dcd3b08e20164b0672c56f76e3299e"
+    },
+    {
+      "path": "dev/openallay/knowledge/search/KnowledgeIndex.java",
+      "sha256": "63afb74d2b39108d47fb62c7d0d3aec8675bfe5a17f6d0e75ed8d5d25d45c47d"
+    },
+    {
+      "path": "dev/openallay/knowledge/search/KnowledgeRetriever.java",
+      "sha256": "849ff8d3153aedb3d04a31f4612a548a4a1c6b6fbb6d40296b407db773f02051"
+    },
+    {
+      "path": "dev/openallay/knowledge/search/KnowledgeSearchResult.java",
+      "sha256": "69b8aa62a0cd4e3caf8b79ccba88815e50f42379973b7747ba025a01cdb867f2"
+    },
+    {
+      "path": "dev/openallay/knowledge/search/KnowledgeTokenizer.java",
+      "sha256": "91b02efa809166611388ec946249a3786e32b295badee50dc3253ef1764c90ad"
+    },
+    {
+      "path": "dev/openallay/logging/OpenAllayLogger.java",
+      "sha256": "8ab259c3ff482f018ea3a1203d8f998b0e5027402f1a1fde83e2e21147abc9ee"
+    },
+    {
+      "path": "dev/openallay/model/CancellationSignal.java",
+      "sha256": "7f6f10330c371907404798eb8de1a66a60b122fca1dab9cf420697875b3ffcab"
+    },
+    {
+      "path": "dev/openallay/model/ModelClient.java",
+      "sha256": "a997f50e8622b08e0b9f3874194c73c59e85cc983b6a264331f1dd125c47e4a8"
+    },
+    {
+      "path": "dev/openallay/model/ModelClientException.java",
+      "sha256": "1eec916538ffae550d70ba54c86c843436c91503018baa16616589b3b88556a4"
+    },
+    {
+      "path": "dev/openallay/model/ModelContent.java",
+      "sha256": "27f4d5c31d410ccbaa336ff4918ed73a7417616cd42771e7998d9f38dff2119f"
+    },
+    {
+      "path": "dev/openallay/model/ModelEvent.java",
+      "sha256": "8f3a0df11c52f9d9769e4d4c1b46f640078a57d422a3edd483ce609c83e044aa"
+    },
+    {
+      "path": "dev/openallay/model/ModelFailure.java",
+      "sha256": "9932d8269059ec3ed3f5647a0fa37433d69206f09445135451902692f3391f9d"
+    },
+    {
+      "path": "dev/openallay/model/ModelMessage.java",
+      "sha256": "f482752ac99acef8fa9392991ce97138f7fb779faaaeaf5c0c6d9770c03a351c"
+    },
+    {
+      "path": "dev/openallay/model/ModelRateLimitException.java",
+      "sha256": "6140ee2b048ab3a83cbbf77b73a21b951ad7ab1cd9b93770a45b70b1a8f692b7"
+    },
+    {
+      "path": "dev/openallay/model/ModelRequest.java",
+      "sha256": "2f4365b10f9ac2f5bedc41b6404b91c4aaba900d5336b430c33addac60dcb391"
+    },
+    {
+      "path": "dev/openallay/model/ModelRole.java",
+      "sha256": "af6ed3a27c9885a89818faa09863c6fef6830be8265d1ddd1f2c35a62a33b9bd"
+    },
+    {
+      "path": "dev/openallay/model/ModelToolDefinition.java",
+      "sha256": "46beb3e7ce67da115fe6660fab6f24f88865b1f1978804d1683678966b867a4b"
+    },
+    {
+      "path": "dev/openallay/model/ModelTurn.java",
+      "sha256": "0f0a8d9056412797eed6a41ac51c5790fc26b0c21e9d35584afd875a7b0860b0"
+    },
+    {
+      "path": "dev/openallay/model/ModelUpstreamException.java",
+      "sha256": "970073927d2bd70463f9d3b0cfb5ca5612033ec1ed2ddbe15dab6f1207a460ad"
+    },
+    {
+      "path": "dev/openallay/model/ModelUsage.java",
+      "sha256": "95764703006530bdeb8353a89e45c3ec7ff2de33fe6a6f97a39983e62464afde"
+    },
+    {
+      "path": "dev/openallay/model/ObservingModelClient.java",
+      "sha256": "72f438d7ff76af765ac8cdf819c24f0803a482797934dd5b473ec3d27e89c67a"
+    },
+    {
+      "path": "dev/openallay/model/ProviderModelClients.java",
+      "sha256": "f77d7d2cdc00930728ec1c16d69b9a84dbdd14ca591188b07b4afa1991977ff5"
+    },
+    {
+      "path": "dev/openallay/model/ProviderToolIds.java",
+      "sha256": "741a10d2b9a9f202822dd708f5bfd589d8f5d5d54080a55551bbbc1c7b409342"
+    },
+    {
+      "path": "dev/openallay/model/anthropic/AnthropicJsonCodec.java",
+      "sha256": "b6245a807963e3f805303b88457197760bf8456b0cfbb4518d88448e97fa2620"
+    },
+    {
+      "path": "dev/openallay/model/anthropic/AnthropicMessagesClient.java",
+      "sha256": "b82ffc2ae7c7757105b7eefccb7aab55c162b88425e9efa1eed095bf8d5ab521"
+    },
+    {
+      "path": "dev/openallay/model/anthropic/AnthropicStreamAccumulator.java",
+      "sha256": "fad3e96fc85b980f45e49097de49ee375fb728b18bbeb772ffca433bebb4e243"
+    },
+    {
+      "path": "dev/openallay/model/catalog/ModelCatalog.java",
+      "sha256": "f6b3d6ad7c10369fdf92d39790a18d7209da3bcc8a05ffeb81ce5e0e21ee9302"
+    },
+    {
+      "path": "dev/openallay/model/catalog/ModelCatalogRequest.java",
+      "sha256": "2df21df5675fc94fe8962cdcc094e8f2b1bd3bde15044395711b595463ae26d3"
+    },
+    {
+      "path": "dev/openallay/model/catalog/ProviderModelCatalogClient.java",
+      "sha256": "e2d3593c5a68bea7cfa507013927c84a6011ca5b896f29c9a37b35ec3070307c"
+    },
+    {
+      "path": "dev/openallay/model/config/CredentialReference.java",
+      "sha256": "e8f20c44f0018b6ec2d7f515a2b64c15e095c17b412ce07ac8a8cb1b0ce25db1"
+    },
+    {
+      "path": "dev/openallay/model/config/CredentialResolver.java",
+      "sha256": "978b70c4f7507587d63edf2f58b9c0a77e4b22af565955b116d17211d33f547e"
+    },
+    {
+      "path": "dev/openallay/model/config/LocalCredentialStore.java",
+      "sha256": "5539e034cbab7a6bcc086c1fa0433d97b305a6bd44827dee53fbf80d7a1ffa44"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelConfig.java",
+      "sha256": "204b2882fe61a9f46bde0295a13e50afb0abd609635db8278a66d2fcc28018bc"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelConfigLoader.java",
+      "sha256": "e4b042bad05f3e732e9bbd84aa14fb7df68a1d94f8d6b72e66126c5f35abbc8d"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelProfileDefinition.java",
+      "sha256": "deddf8b2e172b8f3903950613af344571ea4534e5245cd711624fda815ea9a65"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelProfileSettingsStore.java",
+      "sha256": "3da39714af943e33e2dde2da6301c8562810531e19d5b8edacd207f4b744691d"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelProfilesConfig.java",
+      "sha256": "2c31b3dedef619164f154c238e3c8d4eb78dcd3213bcba9998155ca453b788b7"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelProfilesConfigLoader.java",
+      "sha256": "5d387416ed0579246c8c64f619cef33525c03cf5a71e06ea1a93f073ffe5d19a"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelProfilesConfigWriter.java",
+      "sha256": "8df781be35d2a684a8de7a3952ab42fb2f4c1700e0d3a438ab2a62806104415e"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelProtocol.java",
+      "sha256": "e41a1ca4885701f860511bacdfc1430703b5f8ea49ce4cdf6b08abbe942c724e"
+    },
+    {
+      "path": "dev/openallay/model/config/ModelReasoningEffort.java",
+      "sha256": "c3beadc476df2aebd3ae10801c7b3caf91c428ff07a2b25a68883a3dcaac4bb5"
+    },
+    {
+      "path": "dev/openallay/model/config/ResolvedModelProfile.java",
+      "sha256": "7bdb408f0a1050cbbaf5cff1d2877de63a64ced3d21c0e24142c7e902e052875"
+    },
+    {
+      "path": "dev/openallay/model/config/SecretValue.java",
+      "sha256": "d93ab2efc4695b8647ae666b6561c9cb2c3208ed6f7447cb03014dbefc05ee4e"
+    },
+    {
+      "path": "dev/openallay/model/http/HttpModelTransport.java",
+      "sha256": "cc0385613e7b4328eb4c9357073f0ef3432255759155024b11479bd8e22171ea"
+    },
+    {
+      "path": "dev/openallay/model/http/ModelHttpErrors.java",
+      "sha256": "f3e020feff0caf586980c002474fd235d48d76c07d5cad0217e58385fd7bfeea"
+    },
+    {
+      "path": "dev/openallay/model/http/ModelTransportDiagnostics.java",
+      "sha256": "9c5200b3a16e89626448d8e5b5f21d040b2ec6c21e5cfe57a51641761c8ff486"
+    },
+    {
+      "path": "dev/openallay/model/http/SseEvent.java",
+      "sha256": "83805cfc3efabf683e977a74bb9f839ae11ca4208549a2229db055a5c208528c"
+    },
+    {
+      "path": "dev/openallay/model/http/SseParser.java",
+      "sha256": "8b2fc7160015f81339c3c4cd201e5c4989c0b4a092c734e16e828df895aa5cc6"
+    },
+    {
+      "path": "dev/openallay/model/image/FileImageAttachmentStore.java",
+      "sha256": "4fb1b129dc8fd80c081e2a773b8b975de7da9e7ebf7b2a93cb9ef40183722ab1"
+    },
+    {
+      "path": "dev/openallay/model/image/ImageAttachmentStore.java",
+      "sha256": "9482249f6aed3f9957b9ca76f4648cab4baeda997953148388c0d2cc8c43cdb0"
+    },
+    {
+      "path": "dev/openallay/model/image/ImageInputCapability.java",
+      "sha256": "abdea0fd3909287130f278cfae5d93a6844a9cc6b8b5db3e1cb557007d32d91e"
+    },
+    {
+      "path": "dev/openallay/model/image/ImageInputLimits.java",
+      "sha256": "ff4bff957d12c025e92662cd699221ef48c225d84d4e8c239b86b144c9514090"
+    },
+    {
+      "path": "dev/openallay/model/image/ImagePayloadResolver.java",
+      "sha256": "a57abeeca074bf8b2e738abbc567b5dcb5ec7a74713720af4b4dc2b0e17ffcb5"
+    },
+    {
+      "path": "dev/openallay/model/image/ImageReference.java",
+      "sha256": "52ffa4fbf3b7d7f50eaccfc073e90a8a125865ff52385570e1e3b4a99996f283"
+    },
+    {
+      "path": "dev/openallay/model/image/ModelImages.java",
+      "sha256": "6113286ccf7ed417279009c22c0c39bc968da78f2f9756317c5d56ff46836256"
+    },
+    {
+      "path": "dev/openallay/model/metadata/BuiltinModelCatalog.java",
+      "sha256": "94b5b0b8dbe69b12226df6e6875ce68d305b0afb7549917c99e1a11d8b1f7575"
+    },
+    {
+      "path": "dev/openallay/model/metadata/BuiltinModelMatcher.java",
+      "sha256": "17f69f52547eb88e8499be3d8d87f7ef780e7bf7e8ca201b88bbfcdba9c96350"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelContextResolution.java",
+      "sha256": "02e2f61cb33bdb1a09d336f2a99d63e3ab4f37c5f9263dbd9a5c1ae838a4c48f"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelImageCapabilityResolution.java",
+      "sha256": "fe6806e6112bedc1191e61215fea7cf403767e8a28d0a002a63fc4ffe4ab2af2"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelMetadata.java",
+      "sha256": "d1476af28364fadbb14848c63598f99df8e985ea3fd7266c7603644974d1e0ee"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelMetadataBootstrap.java",
+      "sha256": "9a138da4c4a7fc1f0bd7e805d669c9ec88777824b25941984f489380fbf380a4"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelMetadataCache.java",
+      "sha256": "7818744923f06f55835fea072fdd6af9ca9969c1892097b4f1935e9f477c48f1"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelMetadataResolution.java",
+      "sha256": "a76e910eb3a113a6d989d401d921e0448203b25bd435cc584fb3dd32f10ea453"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelMetadataResolver.java",
+      "sha256": "57b79d6dccc4026e9992dd749392764924ed40b86c10a5176b1865d15f5bd049"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelMetadataUpdate.java",
+      "sha256": "3bb7deaa0c87a1402a49fd0c03d16e250e356c541f146cbefcbb3a324cb2a251"
+    },
+    {
+      "path": "dev/openallay/model/metadata/ModelOutputResolution.java",
+      "sha256": "24ae8509348c556c7b117b19825d479d3cdf185d0139b74499bbf63e14daf735"
+    },
+    {
+      "path": "dev/openallay/model/metadata/OpenRouterMetadataResolver.java",
+      "sha256": "bc7790fc179f058ecd74eb822af26ae33a5b00c11e2688661318f63b18315044"
+    },
+    {
+      "path": "dev/openallay/model/openai/OpenAiChatClient.java",
+      "sha256": "dc2f6cddeddf4c95238722830522ba20c207fa9d6114596fbb318278fbfcead0"
+    },
+    {
+      "path": "dev/openallay/model/openai/OpenAiJsonCodec.java",
+      "sha256": "5aed13899258a48454645390ff59d367707338d4d6a6532bc4bac68db537700e"
+    },
+    {
+      "path": "dev/openallay/model/openai/OpenAiStreamAccumulator.java",
+      "sha256": "ecca426b8f3c10aecfac5fd9cc77255b9716fc8797eebaef38a2d237798bd7f7"
+    },
+    {
+      "path": "dev/openallay/model/scheduling/ModelRequestScheduler.java",
+      "sha256": "feac287be0eb00f440dffd1cf1d9f68acd5340f45b38197bfa4972cfd15fbe1d"
+    },
+    {
+      "path": "dev/openallay/model/tokenizer/ModelContextTokenEstimator.java",
+      "sha256": "a2d59f7fcb0a609b7b3e813e395cf7d85159c2ab86d04a1263095674e7068100"
+    },
+    {
+      "path": "dev/openallay/model/tokenizer/ModelTokenEncoding.java",
+      "sha256": "afcc2351f9df448301d7724e179b614e61c6af3aa484f1105279605574cb51c4"
+    },
+    {
+      "path": "dev/openallay/model/tokenizer/TokenizerMetadata.java",
+      "sha256": "4d1aab4fa024252b12aa4bfefdb2db7dbc2f41f9638eb743e4197f075d42cd76"
+    },
+    {
+      "path": "dev/openallay/net/HttpCancellation.java",
+      "sha256": "2884bde4c25d3a729629ad993749fa4f3f681208b11cc14d7b7abccf1bc0f9fe"
+    },
+    {
+      "path": "dev/openallay/net/HttpExchangeRequest.java",
+      "sha256": "661a7d1e57e34a8b5ea69f4775cd94fd88743347b73a08c164ce7b634fc55789"
+    },
+    {
+      "path": "dev/openallay/net/HttpResponseHeaders.java",
+      "sha256": "902098845b56132102788a39be64e94bcef42fee9100966dbbf1a614d43e98ef"
+    },
+    {
+      "path": "dev/openallay/net/HttpTimeoutException.java",
+      "sha256": "1151622b04de5e4ab21100f14b5ca12423b904f914831f5e94098639e68a2b54"
+    },
+    {
+      "path": "dev/openallay/net/HttpTransport.java",
+      "sha256": "ee1323c91f57d4587629484b8055b483c6fc6d26ce0d5faa6b208e4172a19d2d"
+    },
+    {
+      "path": "dev/openallay/net/HttpTransportPolicy.java",
+      "sha256": "3703cbea44b213a787a736ed24a340824116844d5ad617cadacd5aef5c693562"
+    },
+    {
+      "path": "dev/openallay/net/JdkHttpTransport.java",
+      "sha256": "edaa147d50dfa1d78b445aa27dfc8ad9328814430f78d26487f8322baf2c693f"
+    },
+    {
+      "path": "dev/openallay/platform/InstalledModMetadata.java",
+      "sha256": "780b79a98d57b2533f8821662dad769e0b514b67c60e5e65bb3da2186c846114"
+    },
+    {
+      "path": "dev/openallay/platform/PlatformService.java",
+      "sha256": "02c19f717a3347eae4e13ec7c20ed07e0aa38ab38457c94088f6affb5bea471a"
+    },
+    {
+      "path": "dev/openallay/platform/PlatformServices.java",
+      "sha256": "eb1d652770aec3fc771aa27dc5e94746c5a23027b27a714de8b895f0b2f0f2e4"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeCanonicalizer.java",
+      "sha256": "287f2e5abff65d200bb89013d552a8db3e6033b20558815c85272933a78c9047"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeCatalog.java",
+      "sha256": "38e9ae78ba38b4bdb26a5b2b871565b13f0ceab1a67dffc99c087db3f7f0dae8"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeCatalogDiagnostic.java",
+      "sha256": "fcb97c49dc04658276f5286774bb06d0a19d31e58f9c191347c71523da09c912"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeCatalogMerger.java",
+      "sha256": "6e3f6085d5090912be46bafd819d9736c876d457b1299fabd54d9f11eef86cab"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeCatalogStatus.java",
+      "sha256": "04d74dc0fb6b2205623db99f0c4e27dc8ad1ed7e045c2eb326e20adf3f4383b7"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeKnowledgeProvider.java",
+      "sha256": "9725db42f26c83725c024b4b3c14254bda52a4a8442f8d7268b27c6b38478d6c"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeKnowledgeService.java",
+      "sha256": "ca06087732a28e43ea54105d5cc84344b9554f34027341d3716fa3f798032981"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeNavigationResult.java",
+      "sha256": "4839f2c0094fddef7810404ef623c5ec5d12a0b06a9fc4ef929edc9494aeb6e4"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeProviderDiagnostic.java",
+      "sha256": "f14d664ff745d1354562ee9fca92fb407029cade886422c78240852b85873913"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeProviderReadiness.java",
+      "sha256": "4b1d171549f00ce38c9fd6001f01c2c0f64b3b3bc08e7b9c20b56843a652cb6b"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeProviderReadinessGate.java",
+      "sha256": "da0ba09be98bd7c328e2d5f860a420efdfc630db1ecd6fd1f9413959387b992b"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeProviderSnapshot.java",
+      "sha256": "20a1013b70aa1333c0304b9acd179184b37f65be83299a5b6a67e9e958ad2adf"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeProviderState.java",
+      "sha256": "b59c6a626d56e4a21ef07ac39b954b154077660368926f30e85602e67b5e1108"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeProviderStatus.java",
+      "sha256": "80a2eaa4a1df5518aac685a28165f5b170bfe89641a3e52c1c7c90f57e59913b"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeSemanticGroup.java",
+      "sha256": "2506d137584c841709edab0909c6ea6a1e38cbfcf52ae2187011f3ae14688876"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeUnlockState.java",
+      "sha256": "496ff73b8186079157b9d0a61b150832e791839ff9db8f7479682b8325edc39c"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeViewerNavigator.java",
+      "sha256": "cc9639c163b329d9f4a46109848ec94a8f2f44087c634df7b35d9deb091f72fe"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeViewerNavigatorRegistry.java",
+      "sha256": "b7a5c737286f4eab2f02d38cdc102b476c777f045238e6c34426d233586dc3af"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeViewerProviderRegistry.java",
+      "sha256": "dda32d473868c9e26534cd423a024e40247fe6b0dc9643edc874a02050d19a9a"
+    },
+    {
+      "path": "dev/openallay/recipe/RecipeVisibilityPolicy.java",
+      "sha256": "ab627da12ea8d291373e2f06a6f9a22aee165cf10a0c67e36d468f3b8e97ecc1"
+    },
+    {
+      "path": "dev/openallay/recipe/config/RecipeClientConfig.java",
+      "sha256": "1c2e414380f37801e7c8929a2e6e9c2cdd2ddf80125b0993f2ea380e003682d1"
+    },
+    {
+      "path": "dev/openallay/recipe/config/RecipeClientConfigLoader.java",
+      "sha256": "0123fae652a6673a0fb3d99bd1a8988a18a50ec0a8710b55f9bcbd39051e796f"
+    },
+    {
+      "path": "dev/openallay/recipe/config/RecipeClientConfigWriter.java",
+      "sha256": "e54723dae334771c7dbd1f040b5568a57a2794b53c4725919701520008fe49a2"
+    },
+    {
+      "path": "dev/openallay/recipe/config/RecipeClientRuntime.java",
+      "sha256": "3a706fb72ba2c23075f84d4ea2dd6c219cf8e0c7088b80570b57ce991a38bf4e"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementAssessment.java",
+      "sha256": "3a1fb62448f1b2518e9195909c5099f4b24878123111770d46d5c9c8486952af"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementAvailability.java",
+      "sha256": "24a0a2690bf11bfb1868e4102e928b755572be0b06c5c8bffd0d303f16a35c52"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementCodec.java",
+      "sha256": "86962b9ec31d457cd99b63cbc9a19c9ce8dca495cd457d8536b9267fad23d5f5"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementEnvironment.java",
+      "sha256": "4ba62b310c517ac7043ae1e2f7cfa3b0b6a18a2d9ee33dce1f9b7d7a83bfb818"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementEvaluator.java",
+      "sha256": "7aee4cc8fe71e96865919a4ec4a69f7aee51d04a4757ed9039bca08689c15b38"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementKind.java",
+      "sha256": "73ed1fcaea64b5a2cf4219ed886f8246e014338aba6260b504f768957b650632"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementReport.java",
+      "sha256": "36499509c0e73e66ecbf489b034efcc2731836ee6bb5b8b7be5caaa69a42e304"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementSet.java",
+      "sha256": "e3bf87881c5d50be42ebc78959bb22f9722e7ae47824d6ce2d0b8548fcd08ffb"
+    },
+    {
+      "path": "dev/openallay/requirement/RequirementStatus.java",
+      "sha256": "52cfb26f2a96811dd13d5c1dfd352d273757cf34ef8f8f78af14a6efe79f2529"
+    },
+    {
+      "path": "dev/openallay/script/JavascriptExecution.java",
+      "sha256": "24ca39c24e694cbc57f3b765eeb4eb4c5c2a74e3419d3805eb7799069b93d8f4"
+    },
+    {
+      "path": "dev/openallay/script/JavascriptExecutionException.java",
+      "sha256": "d5635ad230ff9b9dcd507044cff513034fb5c3fddfb8aa278dcf432bae0cb3a7"
+    },
+    {
+      "path": "dev/openallay/script/JavascriptFailureFormatter.java",
+      "sha256": "612b5f1b1f48753711b9ac4594abdb75757506faa61ad1bdd557da55b5d6192f"
+    },
+    {
+      "path": "dev/openallay/script/JavascriptModuleCatalog.java",
+      "sha256": "237106a230b2dc16d38c8e0b4c610a5cc9b8138fe61f3ff2a145ad113872c39e"
+    },
+    {
+      "path": "dev/openallay/script/JavascriptRuntimeLimits.java",
+      "sha256": "f664e3b2613fdad1ae7abd59d8130680a7360dba4d451f08827977130b5839e9"
+    },
+    {
+      "path": "dev/openallay/script/OpenAllayRhinoContext.java",
+      "sha256": "6dafbd35dd148e3195d9b3fcad640b9e5825f43c45b17bc12a0de817ae7b988d"
+    },
+    {
+      "path": "dev/openallay/script/OpenAllayRhinoContextFactory.java",
+      "sha256": "b44b3549a85883802e274e677995189e29343efc2329235af992d6f0245a5ed8"
+    },
+    {
+      "path": "dev/openallay/script/RhinoBuiltinBindings.java",
+      "sha256": "15377c6ef9302412d8a0238f03b45f2e9c5070b98222daf56ad4fd6f5c756b36"
+    },
+    {
+      "path": "dev/openallay/script/RhinoExtensionBindings.java",
+      "sha256": "b65d889a3f2b1f0fcd59446ab91dda3727293cf00cc470bd1aac8066c3f414f3"
+    },
+    {
+      "path": "dev/openallay/script/RhinoJavascriptRuntime.java",
+      "sha256": "1c3069d9a17f006e9fa710ca8bdc0ac3e0dc9076a6374154b1a84b97de7a82a1"
+    },
+    {
+      "path": "dev/openallay/script/RhinoJsonNormalizer.java",
+      "sha256": "1d134fdccd951e9c6d845879c43fb0c798765870202a14c5cb3d1d707850c297"
+    },
+    {
+      "path": "dev/openallay/script/UnrestrictedJavaAccess.java",
+      "sha256": "bc12d2e7baf8c5c54871b87e8486acf8059fe022b681d4b9a9ac5de3f800c600"
+    },
+    {
+      "path": "dev/openallay/script/UnrestrictedJavascriptConfig.java",
+      "sha256": "32725d0e45d81c3e3c5db102191aa99c4803ebf0072da071061e7923e9b37ed0"
+    },
+    {
+      "path": "dev/openallay/script/UnrestrictedJavascriptConfigLoader.java",
+      "sha256": "2baee3d5f759b99fd9e71bd6ae31f4e84699468dba0c131a8dfa02f4e723eed9"
+    },
+    {
+      "path": "dev/openallay/script/UnrestrictedJavascriptConfigStore.java",
+      "sha256": "87a38410d0fe9df56ecacbe00ee70a5f83f8e1e5292e53b75bc2b60108140fbe"
+    },
+    {
+      "path": "dev/openallay/script/UnrestrictedJavascriptConfigWriter.java",
+      "sha256": "bf3cba6ee8a445fe3d5252b0a398b271aef97b9f7e5e85b1bb655f07b44bc9ce"
+    },
+    {
+      "path": "dev/openallay/script/UnrestrictedJavascriptRuntime.java",
+      "sha256": "e142dd65c3736e2285e995c80b76ca2ebc631ef0d010fe7344f6ce19da3651c8"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandCapabilityConfig.java",
+      "sha256": "0a3d2dd332ddae36774c128c48df4c601e86605c1b5f59fc4034eab0d60f8600"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandCapabilityConfigLoader.java",
+      "sha256": "537b0ee0324053680a754b7717d69f364ebe5a2260b89339e52ca0fda5595787"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandCapabilityConfigStore.java",
+      "sha256": "6ffc1dfedcde0bab74aec4ee2f484435fa783740e73e2d749446bb63937120c2"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandCapabilityConfigWriter.java",
+      "sha256": "ef81cf1075c39b7414c67954f3471fe8daf809e5cb5109068e94f6c1b6369a5a"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandCapabilityRuntime.java",
+      "sha256": "8b90e3d6526ab95bac98768fb3c34a17008ef24ae0ce35430d9ed3fcef1f38b2"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandCatalogSnapshot.java",
+      "sha256": "afcbfdf40730be5cb8ca14f172fae748e1234f7637bb7aa342af8b331e53141f"
+    },
+    {
+      "path": "dev/openallay/script/command/CommandExecutionResult.java",
+      "sha256": "4633b237926925c0ce4fc16d585f961d2350f5185468fcb51e1de08541df8f06"
+    },
+    {
+      "path": "dev/openallay/script/command/JavascriptCommandBridge.java",
+      "sha256": "8387ded5685a875777a52b36226c391af0636fe8f171017c5ef42c84b8fe01e5"
+    },
+    {
+      "path": "dev/openallay/script/data/MinecraftAgentHostGraph.java",
+      "sha256": "8879767da24ec3ff38dccd51b2f5635bcf3241fe16bbd47aff9657cd595ec64b"
+    },
+    {
+      "path": "dev/openallay/script/extension/JavascriptDataModule.java",
+      "sha256": "e2c9e6f92bc95316e7fbc325d8db0cdd061757ea49f2ae69d90f96715e7336b3"
+    },
+    {
+      "path": "dev/openallay/script/extension/JavascriptDataModuleRegistry.java",
+      "sha256": "8423a366a00f6f096c4b6d49b474380c259d0f4e21185acc4ae8ad877b3de129"
+    },
+    {
+      "path": "dev/openallay/script/host/HostAccessException.java",
+      "sha256": "f27550665f7273571131096cd66091c1efa2786e6b303bdc70578e96d2b8e550"
+    },
+    {
+      "path": "dev/openallay/script/host/HostListView.java",
+      "sha256": "f01ba20fac578a6cbe98d04583b3cff1071efd9c91bb790e3d3da0021ec6b171"
+    },
+    {
+      "path": "dev/openallay/script/host/HostObjectView.java",
+      "sha256": "5143d28eba9771ba2bf5bd375fa1368e934e195e3ed403b902c50fcd24dcc909"
+    },
+    {
+      "path": "dev/openallay/script/host/HostRecordSchema.java",
+      "sha256": "19fdc8de8a5ea9c4275a0a103047058b3017f898bc78c13e20edc0c5feec1aa3"
+    },
+    {
+      "path": "dev/openallay/script/host/RhinoHostAdapter.java",
+      "sha256": "5c1292112ace30c36b179e36aa6721bc5dc874408df812952c8a506cb77dcf7f"
+    },
+    {
+      "path": "dev/openallay/script/result/JavascriptResultShape.java",
+      "sha256": "63edc596fdd1b3210fbf1c5a0ae444aeebf7c74a6f9b1bc645e9cab4ee43d326"
+    },
+    {
+      "path": "dev/openallay/script/result/JavascriptResultViewProvider.java",
+      "sha256": "05fb76fe11ba66a02f9ec8f74b8e8a3156b0691da3ef509c7530b9a08f9aa620"
+    },
+    {
+      "path": "dev/openallay/script/result/JavascriptResultViewRegistry.java",
+      "sha256": "e83291e83e0676813979bb8687901197fa248008bb73418e646f134129b3cee6"
+    },
+    {
+      "path": "dev/openallay/script/result/JavascriptSemanticKind.java",
+      "sha256": "975604ac33fd9537b04f9669d03cca25db67e323ac9027ffde3bcc0e7b8bd5d4"
+    },
+    {
+      "path": "dev/openallay/script/schema/CoreJavascriptContract.java",
+      "sha256": "c0c1b0c6cc5ccb9d38c1be24264de5a7fc36a656dd78f2eff05f0334a6bf3bce"
+    },
+    {
+      "path": "dev/openallay/script/schema/DeclaredHostRoots.java",
+      "sha256": "8d3336dcd2ab5453c8f85a5cb690ec88ceb7b9feac495b74a8c8cf3b0b633785"
+    },
+    {
+      "path": "dev/openallay/script/schema/HostRootDescriptor.java",
+      "sha256": "e75cf64e49e515576021945b6f3c80b8e2b1c75883e06914cd4f9cf1903b99bf"
+    },
+    {
+      "path": "dev/openallay/script/schema/HostSchema.java",
+      "sha256": "5b38efe5aca91396ffb1fd77da2d3da609bed5f78369d573acc3cdf5c3418809"
+    },
+    {
+      "path": "dev/openallay/script/schema/HostSchemaCatalog.java",
+      "sha256": "871ac13b57dee903a7f6e443d69f39e88945b3ec8dc382ebb7eb2c4ab4ed1e18"
+    },
+    {
+      "path": "dev/openallay/script/schema/RhinoTypeSchema.java",
+      "sha256": "5f0f15f66ea4515972c64c3a4c404d8579b7c366eb6c94a01de51a4df70450d8"
+    },
+    {
+      "path": "dev/openallay/script/workspace/AgentResultWorkspace.java",
+      "sha256": "4099106e383ef67879c8cad448f0eaa2c9fcd9b49ffb3555bf0272c8b679bc4e"
+    },
+    {
+      "path": "dev/openallay/script/workspace/AgentResultWorkspaceRegistry.java",
+      "sha256": "99fec505d55bce84a1f9b40ffcdcc6b617383832b3ce90390b5cca33e170af23"
+    },
+    {
+      "path": "dev/openallay/script/workspace/JavascriptResultPresenter.java",
+      "sha256": "17ea5ac9887e7a3823c0a7166ecabdc2c7f466d4756c6312c024017624c3c1f4"
+    },
+    {
+      "path": "dev/openallay/script/workspace/WorkspaceException.java",
+      "sha256": "6ddfa8950fded0089b247b5e191cfe6baf0ad1c52b14df52910d54c8b45ea680"
+    },
+    {
+      "path": "dev/openallay/server/ServerAgentService.java",
+      "sha256": "107cbc387e65d278742e91d7ca6baa84dd765d094c8ead90ca39c2c440f85e61"
+    },
+    {
+      "path": "dev/openallay/server/ServerGuideEvents.java",
+      "sha256": "13f9e453a8bd85abde6f385a5b58d373540ef0065a038733c649b164b1f52786"
+    },
+    {
+      "path": "dev/openallay/server/ServerGuideRuntime.java",
+      "sha256": "878109985953949381c95e765e9ad3b9b14fdd5b85084993db0fc0fc3e50d805"
+    },
+    {
+      "path": "dev/openallay/server/ServerModelCapabilityProjection.java",
+      "sha256": "755f5294133533c9d37112b8d217b41fdf00d48cca0f78d2ffaa48c87834c962"
+    },
+    {
+      "path": "dev/openallay/settings/AtomicSettingsFile.java",
+      "sha256": "0836d63de410bc74fdf90b05289814c68460669b5bae9e561e7761397227c1ee"
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsHistoryBinding.java",
+      "sha256": "dfda5506bc16fefb9956cd0516d6c7b135d6037d917a2c5d89cf04e384aca185"
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsRuntime.java",
+      "sha256": "d522ad803a2fc19c72191906ca64538cae6ba5f3038ef6206aec06d4d04347f6"
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsService.java",
+      "sha256": "9617f7a632dcd7938103aeea741ef5a46e2a1d771483ab762579341851373cb0"
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsSnapshot.java",
+      "sha256": "605646576e754b49acd7479485b5578df9ebae7936092678fd2559114780bc6c"
+    },
+    {
+      "path": "dev/openallay/settings/SettingsNotice.java",
+      "sha256": "b3fe60b2a4a71b2fc9ee89b26418df6a9bcbe5604a76d5d41d844b759b581e80"
+    },
+    {
+      "path": "dev/openallay/settings/SettingsOperation.java",
+      "sha256": "bc21c2017b511abb7f5fd7c0095ae634ec0329902050f0aa2e660db69c946995"
+    },
+    {
+      "path": "dev/openallay/settings/SettingsWriteException.java",
+      "sha256": "92c27941e8c9349a98f3396b3148384e90650bb716002fbe8ac1f3cbe18a64a7"
+    },
+    {
+      "path": "dev/openallay/settings/capability/CapabilitySettingsBackend.java",
+      "sha256": "79d6b389699cb9562744012d19beca9141e87788e77127437b5e359a43bc2ef5"
+    },
+    {
+      "path": "dev/openallay/settings/capability/CapabilitySettingsView.java",
+      "sha256": "02e656b27187eb7a0daca18f590594a4d38675d4e1278478f6630bccbdaed75c"
+    },
+    {
+      "path": "dev/openallay/settings/capability/RecipeSettingsBackend.java",
+      "sha256": "ccaa85e8c6a3effa89bb409cc7e5508575f6ca023df6635d1613fcef517fcfbb"
+    },
+    {
+      "path": "dev/openallay/settings/capability/RecipeSettingsView.java",
+      "sha256": "9c4d98c395886c7d6e8169da1fb8074853c0f431f382827566a1ba087e8d5ee3"
+    },
+    {
+      "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticCard.java",
+      "sha256": "cb59957cc6aba1f24ff3601d56ed1515fee02d6a83fdc980dce67c2f1016a3ad"
+    },
+    {
+      "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticsAggregator.java",
+      "sha256": "b3448d16e2a824126add6c43702987e0a2ad7c43d53fd441aac92d4855e3d4ac"
+    },
+    {
+      "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticsSnapshot.java",
+      "sha256": "5dc8adbb5e86743ea9d9dc4a6c06eaac4f5f130adea7fba270f31aa5fcb8a87e"
+    },
+    {
+      "path": "dev/openallay/settings/extension/ExtensionSettingsBackend.java",
+      "sha256": "8e7d0fbaf3922e6424cf0bc5e8e35bdfd5462a93899b6e4b7a79cdfe621e93bc"
+    },
+    {
+      "path": "dev/openallay/settings/extension/ExtensionSettingsView.java",
+      "sha256": "ac54c109d2405537074b707f462a796f44afc653ce0faa4f9291286cf2eb12eb"
+    },
+    {
+      "path": "dev/openallay/settings/history/HistorySettingsView.java",
+      "sha256": "f3c7fdc477df452d3a86e14dbd284076e4c3c9d1cf8800418d5aecbcffd1f070"
+    },
+    {
+      "path": "dev/openallay/settings/model/ModelConnectionProbe.java",
+      "sha256": "c7d1f92a83d22ea80b8d347c08d96d3a052e470ea5fde99a78d5948752c9a5d4"
+    },
+    {
+      "path": "dev/openallay/settings/model/ModelConnectionResult.java",
+      "sha256": "3037da9970a1eb29f05c8a789a5078083036e9abf4736e7b9065e4e34a3a8973"
+    },
+    {
+      "path": "dev/openallay/settings/model/ModelProfileSettingsView.java",
+      "sha256": "c7e2527aebf80c41dc6bb5d52deea5a434603d57dd826aeae1013ed6af3d5725"
+    },
+    {
+      "path": "dev/openallay/settings/model/ModelSettingsBackend.java",
+      "sha256": "8243c0eb2693fe2d95f6e92544b3357a73df0eaa1d2bf09f108913732413aad2"
+    },
+    {
+      "path": "dev/openallay/settings/model/ServerModelSettingsView.java",
+      "sha256": "8e77c678ef9ac15ac7d1bbf4b47c5a2cd6659f7949dd685a7400cafd31ec157f"
+    },
+    {
+      "path": "dev/openallay/settings/requirement/PreparedPackageInstall.java",
+      "sha256": "b466d3516666493b80e7d6ac783768662ded4c2592c99f32e297ee5211845f77"
+    },
+    {
+      "path": "dev/openallay/settings/requirement/RefreshingPreparedPackageInstall.java",
+      "sha256": "6268b663b46aa24f404152efe59a787ccf5d1d614d3b0a2dbe3a01c0e5eaf741"
+    },
+    {
+      "path": "dev/openallay/settings/requirement/RequirementChange.java",
+      "sha256": "78759b32e33be63bc876654e9196a23f11f2aeb43113b1686dbfb5f239123af7"
+    },
+    {
+      "path": "dev/openallay/settings/requirement/RequirementReview.java",
+      "sha256": "11b7e639e83b7bfcbc0264c2ff526138dd2071be11aaf10597ad1d0b09aee26c"
+    },
+    {
+      "path": "dev/openallay/settings/requirement/RequirementSettingsEnvironment.java",
+      "sha256": "9e4c4c7208d752bfd614858f597047f92b2d29109ef0c1006c50e85806b5072a"
+    },
+    {
+      "path": "dev/openallay/settings/skill/SkillCommunityView.java",
+      "sha256": "42260bc1eea1fb1087ce446d5f43318ea45c4f86074635f1208d5b2b9c6275fb"
+    },
+    {
+      "path": "dev/openallay/settings/skill/SkillSettingsBackend.java",
+      "sha256": "2b36c93aeab1f982f56f28a53f1be49074bd9959fce13e27adb75683f825d7e5"
+    },
+    {
+      "path": "dev/openallay/settings/skill/SkillSettingsView.java",
+      "sha256": "5ab3db56d5f189c98cc0cbc411812c4ad75045dd60e0b0631378e02ecc3efd31"
+    },
+    {
+      "path": "dev/openallay/skill/AgentSkillManager.java",
+      "sha256": "edf31f34436188689c9f5809302e11b49fe5d5aab03da26094f7ea6a12ec5e84"
+    },
+    {
+      "path": "dev/openallay/skill/BundledSkillLoader.java",
+      "sha256": "6d2276471942490b534d6c6d3b592c54b504e213d276d03ff0f7e9176c1b46a3"
+    },
+    {
+      "path": "dev/openallay/skill/FilesystemSkillLoader.java",
+      "sha256": "c6e242723be520ce249fd66aec319c1e6754c7318778fae9999396a8c3ec40a9"
+    },
+    {
+      "path": "dev/openallay/skill/LoadSkillTool.java",
+      "sha256": "d0afa0ca46da60294514b9bfcb3506df795aec4541bf00dc3e2caee1d915cb46"
+    },
+    {
+      "path": "dev/openallay/skill/ManageSkillTool.java",
+      "sha256": "8eda84946fd828cef3a159e393d9e9fccfb0c6a4fbf94d3e0fef68ff2c430d8e"
+    },
+    {
+      "path": "dev/openallay/skill/RetainedSkillContext.java",
+      "sha256": "19cf57a9d3abf094807fb02f78613969344649a45978e784254e8cf9c6fe4422"
+    },
+    {
+      "path": "dev/openallay/skill/SkillCatalog.java",
+      "sha256": "94c6065e9798ba59c6026d92e437934031a3a4c66bbadbe8d2635d9be13cc336"
+    },
+    {
+      "path": "dev/openallay/skill/SkillCatalogManifest.java",
+      "sha256": "d92855c8a8d91750ed0bd005a420e5fcd8f633c7b17f7adec77d67074fc7366d"
+    },
+    {
+      "path": "dev/openallay/skill/SkillCatalogSnapshot.java",
+      "sha256": "4297a534d8c0a7fbf9aa5053370da10d9a829dcf4a76e3289faa18c92dcaf7b7"
+    },
+    {
+      "path": "dev/openallay/skill/SkillDiagnostic.java",
+      "sha256": "a603a5275e23d2cb7cd82079467900a3999000b86a0e04b186bbfec03d12656e"
+    },
+    {
+      "path": "dev/openallay/skill/SkillDocument.java",
+      "sha256": "3f7a6bc3076ec2917e1463ed1092f2ea0996c9efcdf0c341efcaa97720296f08"
+    },
+    {
+      "path": "dev/openallay/skill/SkillInstructionContext.java",
+      "sha256": "0504763c150485534ddc2917cc77b1b50b22736b2ca3f904bb047e30c6acc2bd"
+    },
+    {
+      "path": "dev/openallay/skill/SkillManagementException.java",
+      "sha256": "1d067a4d08d58ce3eeb5f00eb9d47ea5495dabd6da308ced943dc99c9419680d"
+    },
+    {
+      "path": "dev/openallay/skill/SkillMetadata.java",
+      "sha256": "39f166e2a1df4768ecd23d9d1e33c3ba7537b4b00387ca9287bcc0efbda7f0b5"
+    },
+    {
+      "path": "dev/openallay/skill/SkillParser.java",
+      "sha256": "0317e345e51c4bde387587ec78a89ffec29d5a62c6558062162a4c348f1366d6"
+    },
+    {
+      "path": "dev/openallay/skill/SkillRepository.java",
+      "sha256": "cdf58c9793715757ceb7f1602fae14f988b7c0a3b5abf8be4409f2b3fb2659c1"
+    },
+    {
+      "path": "dev/openallay/skill/SkillSettingsStore.java",
+      "sha256": "259b12d4fb36f455e6ab7fa550fd629c85b8c375467f7e5fa811d417bcfed606"
+    },
+    {
+      "path": "dev/openallay/skill/SkillSource.java",
+      "sha256": "9fd3296791d1422e8dcaec5c3c7278108357f5fe35df4418aa646f44bbe44869"
+    },
+    {
+      "path": "dev/openallay/skill/install/PreparedSkillInstall.java",
+      "sha256": "5170065505128358e91c6730f3b50135a90f517d86df93988051fb1235a1aa88"
+    },
+    {
+      "path": "dev/openallay/skill/install/SkillPackageInstaller.java",
+      "sha256": "23ea2414cc84923719e5b7ad91affbe5fdbcf9488ddf5dd21442164fd71a4baa"
+    },
+    {
+      "path": "dev/openallay/tool/InstructionModelFacingToolOutput.java",
+      "sha256": "ac0239625606769d2e7a0f4e5f4cf7bb057a60e82df8e5936992846865958141"
+    },
+    {
+      "path": "dev/openallay/tool/ModelFacingToolOutput.java",
+      "sha256": "c3c4fbb9597dc35941419ac8d1ecaeb51f5cd0e79ec9465c29eb8b09c34075a3"
+    },
+    {
+      "path": "dev/openallay/tool/ModelResultSource.java",
+      "sha256": "acaa07eb2708e4e19fbf9b1217e1c0c6a2b6a036ffc23178792e660e6f319b51"
+    },
+    {
+      "path": "dev/openallay/tool/ModelResultView.java",
+      "sha256": "462f5c12a016b2a6763340155af334ff7c633d583d21cc161ce538b79c15ef2b"
+    },
+    {
+      "path": "dev/openallay/tool/RegisteredTool.java",
+      "sha256": "eff674fa10355ac2bf34c7753e08f4cbc803babc1b106b0c30fb8f710c4c2424"
+    },
+    {
+      "path": "dev/openallay/tool/RequestScopeParticipant.java",
+      "sha256": "3d1f5b9fe581690abd5c381e9a960265ab5aeb8f9ab75de0a3e3f388f6dedea0"
+    },
+    {
+      "path": "dev/openallay/tool/Tool.java",
+      "sha256": "dc74d71001edab70cd02c32125f6ba75882a1d1bdc585be61f5f10b03c03f96b"
+    },
+    {
+      "path": "dev/openallay/tool/ToolAccess.java",
+      "sha256": "47dae836276ee1f921243a8ef328f9b21977f28b101c1a418a86c695ed8d58eb"
+    },
+    {
+      "path": "dev/openallay/tool/ToolDescriptor.java",
+      "sha256": "f879d31f46e21ac05f8401895df805c68a3c9515beaa618a998bf4d0c50211b4"
+    },
+    {
+      "path": "dev/openallay/tool/ToolProvider.java",
+      "sha256": "ce86eb0c6aded18a66b66c43244644dc79007152e6c29cf509db0d3dffb1d579"
+    },
+    {
+      "path": "dev/openallay/tool/ToolRegistry.java",
+      "sha256": "496e30742b3db2e6ab2f5a55f083ae074db76a3eb80d64f6a7c14f0ed57bd1a6"
+    },
+    {
+      "path": "dev/openallay/tool/ToolResult.java",
+      "sha256": "6fa63fc6450fabea5af1b008ed1d71a02893f4f1371064489478264e9e31f7dd"
+    },
+    {
+      "path": "dev/openallay/tool/WorkspaceModelFacingToolOutput.java",
+      "sha256": "06425d128c465473bf27dfe9a4085d11be6c5eb70d3810735a0870f62b7a3c16"
+    },
+    {
+      "path": "dev/openallay/tool/builtin/RunJavascriptTool.java",
+      "sha256": "2f7151d9dd016e44111e9d50a488c5bd5f447ae9508f2161ce26027a51816bbb"
+    },
+    {
+      "path": "dev/openallay/tool/gamestate/GameStateSection.java",
+      "sha256": "02bb7227a07e93b6ae44f9697b4b26641af429082a251ce3d2dabe63f426f177"
+    },
+    {
+      "path": "dev/openallay/tool/gamestate/WorldQueryOperation.java",
+      "sha256": "d5b411fd8c914832b28a4e08308a0998b6a75b9172670090cfcff8044c17bf43"
+    },
+    {
+      "path": "dev/openallay/tool/query/QueryOperation.java",
+      "sha256": "ec568d59a6d5ba4cbe53e496839c6a6013efe371f362c5fd581eec9163964cce"
+    },
+    {
+      "path": "dev/openallay/tool/query/RegistryQueryEngine.java",
+      "sha256": "ed925fc074a4286a0cbb9e9f5ad2af4b606c209d380673a8fed76c3a237b6b86"
+    },
+    {
+      "path": "dev/openallay/tool/result/JsonResultProjection.java",
+      "sha256": "8fd4612257e181e5e1635bdd4a21c1d77cc599fbb51d7d25a63b2467d1e80f8b"
+    },
+    {
+      "path": "dev/openallay/tool/result/NaturalModelView.java",
+      "sha256": "3055a1c2e49e4ceefff0158136054d71d9eefadeb359ad35edea7bd384821c63"
+    },
+    {
+      "path": "dev/openallay/trace/json/TraceParser.java",
+      "sha256": "44f8528eb13f8d7810f1946fb7f329f127763759fc252781185863e22a166fdb"
+    },
+    {
+      "path": "dev/openallay/trace/minecraft/TraceRepository.java",
+      "sha256": "fb3a71854758cad77be58ae01df633e9d84aed5b545cdce313c441d964359773"
+    },
+    {
+      "path": "dev/openallay/trace/model/AgentTrace.java",
+      "sha256": "8633d5f1497f84728c563634db69d88730bc17cc0867fcbc3d90159f76c8d87d"
+    },
+    {
+      "path": "dev/openallay/trace/model/AssistantMessageStep.java",
+      "sha256": "5bc548cfc42f90dea1678c7eecc5908884e664fb5c5c7ca2f0549c73a5198cb1"
+    },
+    {
+      "path": "dev/openallay/trace/model/ExpectationMatch.java",
+      "sha256": "115d59bab804938cd2bf99823795ad36a3a88e9cf4f0d3206ffaae84c79b3a97"
+    },
+    {
+      "path": "dev/openallay/trace/model/ToolCallStep.java",
+      "sha256": "eb6a86a1991ac7c796fad0b995b548ffb6a2133292c62fb6b2838904d9235a15"
+    },
+    {
+      "path": "dev/openallay/trace/model/TraceExpectation.java",
+      "sha256": "44ab9f2cd7ec26bbac33335fd8c04e30e59cbf45c45bca4f3f0ec33d10f8a64d"
+    },
+    {
+      "path": "dev/openallay/trace/model/TraceStep.java",
+      "sha256": "6ee6b6bc6bd22002581f4264d0a29055901c4cfe2c55bb7112f54996aa7442de"
+    },
+    {
+      "path": "dev/openallay/trace/replay/AgentTraceReplayer.java",
+      "sha256": "257299fe973e74ade7c168a2fd48e954953725f2068cb99bef415ab6fa97d992"
+    },
+    {
+      "path": "dev/openallay/trace/replay/ExpectationMatcher.java",
+      "sha256": "3a8f7e3a49754d766679f7e9104325c1b660fc67b73d822255810c1fbe705567"
+    },
+    {
+      "path": "dev/openallay/trace/replay/ReplayMetrics.java",
+      "sha256": "78a5cc6cec9f8bbb393e1667d37ddc24d0654de750da5be1f9ca1c4e62ef7bb6"
+    },
+    {
+      "path": "dev/openallay/trace/replay/ReplayReport.java",
+      "sha256": "bdad4586073aa02e5ce9eebdd4d33ebeb06c92bb1e4ebd6fe0505d3fe6f835b9"
+    },
+    {
+      "path": "dev/openallay/trace/replay/ReplayStepReport.java",
+      "sha256": "52f74a8d9560c953d9bafff2f9df856dbde2c0333eae95ce8aeaf629b27ba067"
+    },
+    {
+      "path": "dev/openallay/trace/replay/ToolArgumentCodec.java",
+      "sha256": "cb6f65da5730beaf83ba9690095e3c233ed3302f2f07ddabfbee1662f5d5f529"
+    },
+    {
+      "path": "dev/openallay/trace/replay/ToolResultNormalizer.java",
+      "sha256": "e8980809b75e41a0aa58c6eed6c85586eccec5dd9a990921f8ddc1de6aac55e2"
+    },
+    {
+      "path": "dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3"
+    },
+    {
+      "path": "dev/openallay/util/Java8Futures.java",
+      "sha256": "be44b1a5deed7cd847fa1d6bc9acaf0a11fefe8ad6367ade750ac0e770a43268"
+    },
+    {
+      "path": "dev/openallay/util/Java8Hex.java",
+      "sha256": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22"
+    },
+    {
+      "path": "dev/openallay/util/Java8Objects.java",
+      "sha256": "720e6264b47824c82d930c5eea93bbf2df64badb43d2314a0562d976679c44c9"
+    },
+    {
+      "path": "dev/openallay/util/Java8Strings.java",
+      "sha256": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073"
+    },
+    {
+      "path": "dev/openallay/value/RecordMetadata.java",
+      "sha256": "3cb1573ce1a0773a85b0ff797cfa444b55cb2ef610a503c142743f3683b9d8ab"
+    },
+    {
+      "path": "dev/openallay/value/ValueSchema.java",
+      "sha256": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81"
+    },
+    {
+      "path": "dev/openallay/value/ValueSchemas.java",
+      "sha256": "3b1ab1d755049ee829d20c6f8d0a8504def3368f4d4a68a9f61f8fb975040b5c"
+    },
+    {
+      "path": "dev/openallay/value/ValueType.java",
+      "sha256": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e"
+    },
+    {
+      "path": "dev/openallay/world/BlockObservation.java",
+      "sha256": "514ad17bcb0b9b8418b7407e0d2dfe4b587e23e36b21d4e80b8eb6ebf90b732d"
+    },
+    {
+      "path": "dev/openallay/world/ClientObservationAnchor.java",
+      "sha256": "c52ea7420c6c34b0b6901f35a4568287cba9ff5d61ea9dea724750d350dc4708"
+    },
+    {
+      "path": "dev/openallay/world/ClientObservationAnchorJson.java",
+      "sha256": "b999fcf3d95fb6f03337b66335bea1e54442a40dfdd11e0a79591a7b8188c5d8"
+    },
+    {
+      "path": "dev/openallay/world/EntityObservation.java",
+      "sha256": "1a378546cdefe92e1de2db70b970c41f478a2efe60f2c7b24d75c520167f3c90"
+    },
+    {
+      "path": "dev/openallay/world/JavascriptWorldBridge.java",
+      "sha256": "566cd70c37f55143fca93a74fc5f4d44f3eda6ef34b0f52233151f3d73478f4c"
+    },
+    {
+      "path": "dev/openallay/world/WorldBlockSnapshot.java",
+      "sha256": "90e02565fc5e6534b9504865f5460d80adea30234992eaafd617af929c85abeb"
+    },
+    {
+      "path": "dev/openallay/world/WorldBounds.java",
+      "sha256": "3fe221a566b6e8f252ca6e7ee7ed6b4898ebcd91ec1cdd84d06beafb86d7be6e"
+    },
+    {
+      "path": "dev/openallay/world/WorldEntitySnapshot.java",
+      "sha256": "7afc424bec5e5fdb9417c9f9ef67dcbfdd2847fa931915c1983828641d29a5f0"
+    },
+    {
+      "path": "dev/openallay/world/WorldEntitySummary.java",
+      "sha256": "b98658bae364607a75c8351f9ffd2047a1b7871d8a8bb8c738308c962bb83a88"
+    },
+    {
+      "path": "dev/openallay/world/WorldFocusObservation.java",
+      "sha256": "0b16b1b7b595a1113a610822dfb7f5487b9207531e9bf4f54be003d7e67aa905"
+    },
+    {
+      "path": "dev/openallay/world/WorldObservationCoordinator.java",
+      "sha256": "9e5e5b49380428b62fc56e1c6780e4adba67517f5a7a1be83963693ee089b1f6"
+    },
+    {
+      "path": "dev/openallay/world/WorldObservationCoverage.java",
+      "sha256": "afa62667270eb826f656d1a20bd9e8d43cbf8eba89fd3b264efa5ccb28206cf9"
+    },
+    {
+      "path": "dev/openallay/world/WorldObservationCoverageCalculator.java",
+      "sha256": "7d7be0075ed3c8b6a25e7d1141f1ba921f398be20f9d51363e1b98687e87f1e1"
+    },
+    {
+      "path": "dev/openallay/world/WorldObservationEvidence.java",
+      "sha256": "06211987148ad0210896887e18387a0b97c7a3d6be140eeffd25979ec6afe45d"
+    },
+    {
+      "path": "dev/openallay/world/WorldObservationRequest.java",
+      "sha256": "8d7fd412234d0545d7d727c118cfccf3ebaf1cbd0bc2e66dc151e6e69f2b9279"
+    },
+    {
+      "path": "dev/openallay/world/WorldObservationRuntime.java",
+      "sha256": "6033e0e3aafeda7a0ac3d65f42d86d7e0dd26fb430aef41ac49fdab70c23b47c"
+    },
+    {
+      "path": "dev/openallay/world/WorldPosition.java",
+      "sha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0"
+    },
+    {
+      "path": "dev/openallay/world/WorldViewCapture.java",
+      "sha256": "1507b8a04e8dc5ec8b489c07979e81955001e947a9c9868211919ae1f45ed6f5"
+    },
+    {
+      "path": "dev/openallay/world/WorldViewRequest.java",
+      "sha256": "f23c6533af3fdea4a4a7cad60cf5dda6dbb111463e4390549522e50f3b787047"
+    }
+  ],
+  "selected_owners": [
+    "dev/openallay/model/CancellationSignal.java",
+    "dev/openallay/model/ModelClient.java",
+    "dev/openallay/model/ModelClientException.java",
+    "dev/openallay/model/ModelContent.java",
+    "dev/openallay/model/ModelEvent.java",
+    "dev/openallay/model/ModelFailure.java",
+    "dev/openallay/model/ModelMessage.java",
+    "dev/openallay/model/ModelRateLimitException.java",
+    "dev/openallay/model/ModelRequest.java",
+    "dev/openallay/model/ModelRole.java",
+    "dev/openallay/model/ModelToolDefinition.java",
+    "dev/openallay/model/ModelTurn.java",
+    "dev/openallay/model/ModelUpstreamException.java",
+    "dev/openallay/model/ModelUsage.java",
+    "dev/openallay/model/ObservingModelClient.java",
+    "dev/openallay/model/ProviderModelClients.java",
+    "dev/openallay/model/ProviderToolIds.java",
+    "dev/openallay/model/anthropic/AnthropicJsonCodec.java",
+    "dev/openallay/model/anthropic/AnthropicMessagesClient.java",
+    "dev/openallay/model/anthropic/AnthropicStreamAccumulator.java",
+    "dev/openallay/model/catalog/ModelCatalog.java",
+    "dev/openallay/model/catalog/ModelCatalogRequest.java",
+    "dev/openallay/model/catalog/ProviderModelCatalogClient.java",
+    "dev/openallay/model/config/CredentialReference.java",
+    "dev/openallay/model/config/CredentialResolver.java",
+    "dev/openallay/model/config/LocalCredentialStore.java",
+    "dev/openallay/model/config/ModelConfig.java",
+    "dev/openallay/model/config/ModelConfigLoader.java",
+    "dev/openallay/model/config/ModelProfileDefinition.java",
+    "dev/openallay/model/config/ModelProfileSettingsStore.java",
+    "dev/openallay/model/config/ModelProfilesConfig.java",
+    "dev/openallay/model/config/ModelProfilesConfigLoader.java",
+    "dev/openallay/model/config/ModelProfilesConfigWriter.java",
+    "dev/openallay/model/config/ModelProtocol.java",
+    "dev/openallay/model/config/ModelReasoningEffort.java",
+    "dev/openallay/model/config/ResolvedModelProfile.java",
+    "dev/openallay/model/config/SecretValue.java",
+    "dev/openallay/model/http/HttpModelTransport.java",
+    "dev/openallay/model/http/ModelHttpErrors.java",
+    "dev/openallay/model/http/ModelTransportDiagnostics.java",
+    "dev/openallay/model/http/SseEvent.java",
+    "dev/openallay/model/http/SseParser.java",
+    "dev/openallay/model/image/FileImageAttachmentStore.java",
+    "dev/openallay/model/image/ImageAttachmentStore.java",
+    "dev/openallay/model/image/ImageInputCapability.java",
+    "dev/openallay/model/image/ImageInputLimits.java",
+    "dev/openallay/model/image/ImagePayloadResolver.java",
+    "dev/openallay/model/image/ImageReference.java",
+    "dev/openallay/model/image/ModelImages.java",
+    "dev/openallay/model/metadata/BuiltinModelCatalog.java",
+    "dev/openallay/model/metadata/BuiltinModelMatcher.java",
+    "dev/openallay/model/metadata/ModelContextResolution.java",
+    "dev/openallay/model/metadata/ModelImageCapabilityResolution.java",
+    "dev/openallay/model/metadata/ModelMetadata.java",
+    "dev/openallay/model/metadata/ModelMetadataBootstrap.java",
+    "dev/openallay/model/metadata/ModelMetadataCache.java",
+    "dev/openallay/model/metadata/ModelMetadataResolution.java",
+    "dev/openallay/model/metadata/ModelMetadataResolver.java",
+    "dev/openallay/model/metadata/ModelMetadataUpdate.java",
+    "dev/openallay/model/metadata/ModelOutputResolution.java",
+    "dev/openallay/model/metadata/OpenRouterMetadataResolver.java",
+    "dev/openallay/model/openai/OpenAiChatClient.java",
+    "dev/openallay/model/openai/OpenAiJsonCodec.java",
+    "dev/openallay/model/openai/OpenAiStreamAccumulator.java",
+    "dev/openallay/model/scheduling/ModelRequestScheduler.java",
+    "dev/openallay/model/tokenizer/ModelContextTokenEstimator.java",
+    "dev/openallay/model/tokenizer/ModelTokenEncoding.java",
+    "dev/openallay/model/tokenizer/TokenizerMetadata.java"
+  ],
+  "tools": [
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java",
+      "sha256": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java",
+      "sha256": "0438bff520114e55728f4d4b4f25c42503ceeb04a292b8dc5cc06d4bc045982d"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java",
+      "sha256": "7f124439307315f0e713539c9270d38f61f874d24ae4919c4dea786553fb0537"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalSwitchPort.java",
+      "sha256": "dae209d77c427c88e8d1cb750f99891e687a1fdc1aee4fd48f7e1d67ea4f1d14"
+    }
+  ],
+  "runner_sha256": "a478b4d512e23424d327f82eb78d7865f97fc87ef66ed27bd29d70d2ca7ea5bc",
+  "actualCompilerFrontierRun": 37722679367,
+  "knownActualSyntaxOwners": [
+    "dev/openallay/model/ProviderModelClients.java",
+    "dev/openallay/model/catalog/ProviderModelCatalogClient.java",
+    "dev/openallay/model/config/ModelProfileSettingsStore.java",
+    "dev/openallay/model/http/HttpModelTransport.java",
+    "dev/openallay/model/metadata/ModelMetadataBootstrap.java",
+    "dev/openallay/model/scheduling/ModelRequestScheduler.java",
+    "dev/openallay/model/tokenizer/ModelContextTokenEstimator.java"
+  ],
+  "stagePolicy": "One remote currentfullsource fork; reattribute API thenPattern thenSwitch exactstagedposts. Rejectanyphase => completeownerheldoriginal/no finalpost. No staleparallelpatch merge, featureclone/manualtypeguess.",
+  "acceptedToolOracles": "Currentrepo acceptedAPI map/Patterncapture/Switchfinite policies reused exactsourcepins; no new toolproof or runtime replay.",
+  "releaseTarget": "StockForge1.12.2 Java8 singlemodsJAR; modernlanguageclosure notwhole8API acceptance",
+  "noLocalJavaOrCopies": true
+}
