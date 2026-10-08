@@ -2,6 +2,10 @@ name: Build release packages
 on:
   workflow_dispatch:
     inputs:
+      native_record_candidates:
+        type: boolean
+        default: false
+        description: Parse exact selected native source record candidates only, no Forge build
       native_java8_diagnostic:
         type: boolean
         default: false
@@ -17,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic }}
+    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -173,3 +177,22 @@ jobs:
             ${{ runner.temp }}/forge1122-java8-native/namespace-receipt.json
             ${{ runner.temp }}/forge1122-java8-native/java8-diagnostic/*.json
             ${{ runner.temp }}/forge1122-java8-native/java8-diagnostic/*.log
+
+  forge1122-native-record-source-candidates:
+    if: ${{ inputs.native_record_candidates }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: One parse-only exact native record source candidate packet
+        run: python3 -B scripts/materialize-native-record-language.py --project "$PWD" --javac "$JAVA_HOME/bin/javac" --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/native-record-candidate"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-record-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/native-record-candidate/
