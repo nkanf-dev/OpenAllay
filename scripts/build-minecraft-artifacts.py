@@ -209,7 +209,7 @@ COMMONMARK_RUNTIME_SHA256 = "dff5404332182c794aec52538a9a620b61032041a3b08ddbb97
 def commonmark_package(archive, entries, loader):
     version = native.read_properties(ROOT / "gradle.properties")["commonmark_version"]
     directory = "META-INF/jars/" if loader == "fabric" else "META-INF/jarjar/"
-    expected = directory + ("dev.openallay." if loader == "neoforge" else "") + "openallay-commonmark-" + version + ".jar"
+    expected = directory + ("" if loader == "fabric" else "dev.openallay.") + "openallay-commonmark-" + version + ".jar"
     matches = [name for name in entries if name.endswith(".jar") and "commonmark" in Path(name).name.lower()]
     require(matches == [expected], "Exactly one canonical CommonMark runtime must be nested; upstream binary JARs are forbidden")
     require(not any(name.startswith("org/commonmark/") and name.endswith(".class") for name in entries),
@@ -223,7 +223,7 @@ def commonmark_package(archive, entries, loader):
         require(len(registered) == 1 and registered[0]["identifier"] == {"group": "dev.openallay", "artifact": "runtime-commonmark"},
                 "Canonical CommonMark needs exactly one project-owned FML registration")
         require(registered[0]["version"]["artifactVersion"] == version
-                and registered[0]["version"]["range"] == "[" + version + (",)" if loader == "neoforge" else "]"),
+                and registered[0]["version"]["range"] in ("[" + version + "]", "[" + version + ",)"),
                 "Canonical CommonMark JarJar external version/range differs")
     content = archive.read(expected)
     commonmark_custody.verify_commonmark_payload(content, loader, version)

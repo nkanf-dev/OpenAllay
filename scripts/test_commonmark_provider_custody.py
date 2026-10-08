@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Self-contained custody regressions; optional real-capture probe is an explicit CLI mode."""
+import ast
 import importlib.util
 import json
 from pathlib import Path
@@ -55,6 +56,43 @@ class CustodyTest(unittest.TestCase):
         with self.assertRaises(ValueError):helper.verify_commonmark_payload(archive(changed),"fabric","0.28.0")
     def test_fml_requires_entire_original_jar_bytes(self):
         with self.assertRaises(ValueError):helper.verify_commonmark_payload(archive(self.fabric),"neoforge","0.28.0")
+
+
+class FmlRegistrationTest(unittest.TestCase):
+    def test_normal_project_filename_and_exact_supported_ranges_reach_payload_guard(self):
+        import types
+        tree=ast.parse((ROOT/"scripts/build-minecraft-artifacts.py").read_text())
+        function=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=="commonmark_package")
+        class ReachedPayload(Exception):pass
+        def payload(content,loader,version):raise ReachedPayload()
+        def require(condition,message):
+            if not condition:raise ValueError(message)
+        namespace={"native":types.SimpleNamespace(read_properties=lambda path:{"commonmark_version":"0.28.0"}),
+            "ROOT":ROOT,"Path":Path,"json":json,"require":require,
+            "commonmark_custody":types.SimpleNamespace(verify_commonmark_payload=payload)}
+        exec(compile(ast.Module(body=[function],type_ignores=[]),"actual_commonmark_package","exec"),namespace)
+        expected="META-INF/jarjar/dev.openallay.openallay-commonmark-0.28.0.jar"
+        for loader in ("forge","neoforge"):
+            for range_value in ("[0.28.0]","[0.28.0,)"):
+                metadata={"jars":[{"path":expected,"identifier":{"group":"dev.openallay","artifact":"runtime-commonmark"},
+                    "version":{"artifactVersion":"0.28.0","range":range_value}}]}
+                class Archive:
+                    def read(self,name):return json.dumps(metadata).encode() if name=="META-INF/jarjar/metadata.json" else b"payload"
+                with self.assertRaises(ReachedPayload):namespace["commonmark_package"](Archive(),[expected],loader)
+    def test_unknown_path_or_range_does_not_reach_payload_guard(self):
+        import types
+        tree=ast.parse((ROOT/"scripts/build-minecraft-artifacts.py").read_text())
+        function=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=="commonmark_package")
+        namespace={"native":types.SimpleNamespace(read_properties=lambda path:{"commonmark_version":"0.28.0"}),"ROOT":ROOT,"Path":Path,"json":json,
+            "require":lambda condition,message:None if condition else (_ for _ in ()).throw(ValueError(message)),
+            "commonmark_custody":types.SimpleNamespace(verify_commonmark_payload=lambda *args:(_ for _ in ()).throw(AssertionError("Reached payload guard")))}
+        exec(compile(ast.Module(body=[function],type_ignores=[]),"actual_commonmark_package","exec"),namespace)
+        expected="META-INF/jarjar/dev.openallay.openallay-commonmark-0.28.0.jar"
+        metadata={"jars":[{"path":expected,"identifier":{"group":"dev.openallay","artifact":"runtime-commonmark"},"version":{"artifactVersion":"0.28.0","range":"(0.27.0,]"}}]}
+        class Archive:
+            def read(self,name):return json.dumps(metadata).encode()
+        with self.assertRaises(ValueError):namespace["commonmark_package"](Archive(),[expected],"forge")
+        with self.assertRaises(ValueError):namespace["commonmark_package"](Archive(),["META-INF/jarjar/openallay-commonmark-0.28.0.jar"],"forge")
 
 def real_capture_probe(directory):
     # No mocked policy/digest in this mode: use normal checked-in 222-entry artifact custody.
