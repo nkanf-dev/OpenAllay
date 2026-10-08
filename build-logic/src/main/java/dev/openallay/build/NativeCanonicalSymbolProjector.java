@@ -29,7 +29,20 @@ public final class NativeCanonicalSymbolProjector {
         Map<String,byte[]> originals=new TreeMap<>(),products=new TreeMap<>();List<String> statuses=new ArrayList<>();
         try(StandardJavaFileManager manager=compiler.getStandardFileManager(diagnostics,Locale.ROOT,StandardCharsets.UTF_8)){
             JavacTask task=(JavacTask)compiler.getTask(null,manager,diagnostics,List.of("--release","17","-proc:none","-encoding","UTF-8","-classpath",args[1]),null,manager.getJavaFileObjectsFromFiles(files));
-            List<CompilationUnitTree> units=new ArrayList<>();task.parse().forEach(units::add);Trees trees=Trees.instance(task);SourcePositions positions=trees.getSourcePositions();task.analyze();
+            List<CompilationUnitTree> units=new ArrayList<>();task.parse().forEach(units::add);Trees trees=Trees.instance(task);SourcePositions positions=trees.getSourcePositions();
+            // Snapshot original public parse-node identities/spans before attribution inserts inferred nodes.
+            Set<Tree> originalNodes=Collections.newSetFromMap(new IdentityHashMap<>());
+            Map<Tree,long[]> originalSpans=new IdentityHashMap<>();
+            for(CompilationUnitTree parsed:units) new TreeScanner<Void,Void>() {
+                @Override public Void scan(Tree node,Void unused) {
+                    if(node!=null) {
+                        originalNodes.add(node);
+                        originalSpans.put(node,new long[]{positions.getStartPosition(parsed,node),positions.getEndPosition(parsed,node)});
+                    }
+                    return super.scan(node,unused);
+                }
+            }.scan(parsed,null);
+            task.analyze();
             for(Diagnostic<?> d:diagnostics.getDiagnostics())if(d.getKind()==Diagnostic.Kind.ERROR)throw new IllegalStateException("Whole actual native source attribution failed: "+d);
             for(CompilationUnitTree unit:units){
                 String name=root.relativize(Path.of(unit.getSourceFile().toUri())).toString().replace(java.io.File.separatorChar,'/');
@@ -40,12 +53,18 @@ public final class NativeCanonicalSymbolProjector {
                 List<Edit> edits=new ArrayList<>();List<String> rejects=new ArrayList<>();
                 class Binder extends TreePathScanner<Void,Void>{
                     private boolean project(Tree node){
+                        // Compiler-injected inferred lambda parameter types have no original source token.
+                        // Omit only nodes absent from the authenticated pre-attribution parse identity set.
+                        if(!originalNodes.contains(node)) return true;
                         Element symbol=trees.getElement(getCurrentPath());
                         if(!(symbol instanceof TypeElement type))return false;
                         String actual=task.getElements().getBinaryName(type).toString();if(!nativeType(actual))return false;
                         String canonical=inverse.get(actual);
                         if(canonical==null){rejects.add("No reviewed canonical native identity for "+actual);return true;}
-                        int start=pos(positions.getStartPosition(unit,node)),end=pos(positions.getEndPosition(unit,node));String spelling=text.substring(start,end);
+                        long[] span=originalSpans.get(node);
+                        int start=pos(span[0]),end=pos(span[1]);
+                        if(end<start || end>text.length())throw new IllegalArgumentException("Original native class span invalid in "+name+" role="+node.getKind()+" identity="+actual);
+                        String spelling=text.substring(start,end);
                         String replacement=node instanceof IdentifierTree?canonical.substring(canonical.lastIndexOf('.')+1).replace('$','.'):
                             canonical.replace('$','.');
                         // A simple nested reference remains source-addressable via its enclosing mapped owner.
