@@ -145,6 +145,22 @@ jobs:
           path: |
             build/release-build-logs/
             build/reports/problems/
+            build/legacy-release-inputs/*/canonical.log
+            build/legacy-release-inputs/*/native-inputs.log
+            build/legacy-release-inputs/*/native-build.log
+            build/legacy-release-inputs/*/package.log
+            build/legacy-release-inputs/*/current-runtime-classpath.json
+            build/legacy-release-inputs/*/base-closure-provider.json
+            build/legacy-release-inputs/*/builder-provider.json
+            build/legacy-release-inputs/*/accepted-product-provider.json
+            build/legacy-release-inputs/*/old-native16-provider.json
+            build/legacy-release-inputs/*/closure.json
+            build/legacy-release-inputs/*/resolution.json
+            build/legacy-release-inputs/*/mapping-inputs.json
+            build/legacy-release-inputs/*/native-request.json
+            build/legacy-release-inputs/*/compiler-lock.json
+            build/legacy-release-inputs/*/provider-receipt.json
+            build/legacy-release-inputs/*/REQUEST.json
   stage:
     if: ${{ always() && !cancelled() && (inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')) }}
     permissions:

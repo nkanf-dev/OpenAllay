@@ -197,6 +197,12 @@ def execute(command, log, java=None):
     command=list(map(str,command))
     with Path(log).open('xb') as stream:
         result=subprocess.run(command,cwd=ROOT,env=env,stdout=stream,stderr=subprocess.STDOUT)
+    if result.returncode:
+        # Preserve the original failure in both its file and bounded CI stdout.
+        with Path(log).open('rb') as stream:
+            stream.seek(max(0, Path(log).stat().st_size - 64 * 1024))
+            tail=stream.read().decode('utf-8', errors='replace').splitlines()[-160:]
+            print('\n'.join(tail), file=sys.stderr)
     require(result.returncode==0, 'Producer failed; inspect '+str(log))
     return {'command':command,'exitCode':result.returncode,'log':ref(log)}
 
