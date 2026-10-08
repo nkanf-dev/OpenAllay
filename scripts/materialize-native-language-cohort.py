@@ -53,8 +53,8 @@ def main():
     run([a.javac,'--release','17','-encoding','UTF-8','-d',toolclasses,*tools],'actual-public-tool-compile')
     # Public compiler projection fixture on a real existing native class, not a fake host fixture.
     fixture=out/'projection-fixture';(fixture/'actual/p').mkdir(parents=True)
-    actual_text='package p; class Probe { net.minecraft.item.ItemStack value; java.util.function.Function<net.minecraft.item.ItemStack,net.minecraft.item.ItemStack> identity = argument -> argument; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
-    canonical_text='package p; class Probe { net.minecraft.world.item.ItemStack value; java.util.function.Function<net.minecraft.world.item.ItemStack,net.minecraft.world.item.ItemStack> identity = argument -> argument; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
+    actual_text='package p; class Probe { net.minecraft.item.ItemStack value; java.util.function.Function<net.minecraft.item.ItemStack,net.minecraft.item.ItemStack> identity = argument -> argument; net.minecraft.util.math.RayTraceResult hit; net.minecraft.client.network.NetworkPlayerInfo player; net.minecraft.world.border.WorldBorder border; net.minecraft.client.gui.toasts.IToast.Visibility visibility; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
+    canonical_text='package p; class Probe { net.minecraft.world.item.ItemStack value; java.util.function.Function<net.minecraft.world.item.ItemStack,net.minecraft.world.item.ItemStack> identity = argument -> argument; net.minecraft.world.phys.HitResult hit; net.minecraft.client.multiplayer.PlayerInfo player; net.minecraft.world.level.border.WorldBorder border; net.minecraft.client.gui.components.toasts.Toast.Visibility visibility; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
     (fixture/'actual/p/Probe.java').write_text(actual_text)
     (fixture/'original').mkdir();(fixture/'original/Probe.java').write_text(canonical_text)
     fixture_units=fixture/'units.tsv'
@@ -72,7 +72,7 @@ def main():
     if (fixture/'trusted-forward/p/Probe.java').read_text()!=actual_text:raise ValueError('Actual fixture source roundtrip residual differs')
     write(fixture/'proof.json',{'realNativeIdentity':'net.minecraft.item.ItemStack','canonicalIdentity':'net.minecraft.world.item.ItemStack',
         'actualSha256':sha(actual_text.encode()),'canonicalSha256':sha(canonical_text.encode()),
-        'classOnlyProjection':True,'trustedForwardRoundtripByteExact':True,'literalCommentDeclarationPreserved':True,'originalUntypedLambdaParameterPreserved':True,'explicitWrittenNativeGenericTypesProjected':True})
+        'classOnlyProjection':True,'trustedForwardRoundtripByteExact':True,'literalCommentDeclarationPreserved':True,'originalUntypedLambdaParameterPreserved':True,'explicitWrittenNativeGenericTypesProjected':True,'reviewedOriginalHeldTypes':['HitResult','PlayerInfo','WorldBorder','Toast.Visibility']})
     selected=out/'all-native-owners.txt';selected.write_text('\n'.join(sorted(expected))+'\n')
     run([a.java,'-cp',toolclasses,'dev.openallay.build.CanonicalVarTypePort',working,classpath,selected,out/'var-sites.tsv',out/'var-report.json'],'whole-var-public-attribution')
     normalized_baseline={name:(working/name).read_bytes() for name in expected}
