@@ -13,7 +13,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 
@@ -78,7 +77,7 @@ public static final class Model {
     public ModelFamily family() { return family; }
     public List<ModelFile> files() { return files; }
 public ModelFile file(Role role) {
-            return files.stream().filter(file -> file.role() == role).findFirst().orElseThrow();
+            return files.stream().filter(file -> file.role() == role).findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         }
 public Path file(Path directory, Role role) { return directory.resolve(file(role).path()); }
     @Override public boolean equals(Object other) {
@@ -116,7 +115,7 @@ public Path file(Path directory, Role role) { return directory.resolve(file(role
         if (Files.size(manifest) > MAX_MANIFEST_BYTES) throw new NativeSpeechToText.Failure("model_integrity");
         Model model;
         try (InputStream input = Files.newInputStream(manifest); AutoCloseable hook = cancellation.onCancel(() -> close(input))) {
-            byte[] bytes = input.readNBytes(MAX_MANIFEST_BYTES + 1);
+            byte[] bytes = dev.openallay.util.Java8Streams.readNBytes(input, MAX_MANIFEST_BYTES + 1);
             cancellation.check();
             if (bytes.length > MAX_MANIFEST_BYTES) throw new NativeSpeechToText.Failure("model_integrity");
             model = parse(new String(bytes, StandardCharsets.UTF_8));

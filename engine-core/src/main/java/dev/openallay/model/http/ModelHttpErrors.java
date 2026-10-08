@@ -104,7 +104,7 @@ private static final class BadRequestClassifier {
             }
             bytes.write(buffer, 0, read);
         }
-        String encoded = bytes.toString(java.nio.charset.StandardCharsets.UTF_8);
+        String encoded = dev.openallay.util.Java8ApiSupport.toString(bytes, java.nio.charset.StandardCharsets.UTF_8);
         try {
             JsonElement parsed = dev.openallay.json.JsonTrees.parse(encoded);
             if (!parsed.isJsonObject()) {

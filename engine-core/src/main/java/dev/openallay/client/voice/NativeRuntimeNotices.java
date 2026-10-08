@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.HexFormat;
 import java.util.List;
 
 /** Fixed runtime notices. Model manifests cannot supply notices or executable selections. */
@@ -72,7 +71,7 @@ static final class Notice {
     static byte[] resource(Notice notice) throws IOException {
         try (InputStream input = NativeRuntimeNotices.class.getResourceAsStream(RESOURCE_ROOT + notice.name())) {
             if (input == null) throw new IOException("Missing runtime notice resource");
-            byte[] bytes = input.readNBytes(notice.bytes() + 1);
+            byte[] bytes = dev.openallay.util.Java8Streams.readNBytes(input, notice.bytes() + 1);
             if (bytes.length != notice.bytes() || !hash(bytes).equals(notice.sha256())) throw new IOException("Invalid runtime notice resource");
             return bytes;
         }
@@ -80,7 +79,7 @@ static final class Notice {
     private static void verify(Path file, Notice notice) throws IOException {
         if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) != notice.bytes()) throw new IOException("Invalid installed runtime notice");
         try (InputStream input = Files.newInputStream(file)) {
-            byte[] bytes = input.readNBytes(notice.bytes() + 1);
+            byte[] bytes = dev.openallay.util.Java8Streams.readNBytes(input, notice.bytes() + 1);
             if (bytes.length != notice.bytes() || !hash(bytes).equals(notice.sha256())) throw new IOException("Invalid installed runtime notice");
         }
     }

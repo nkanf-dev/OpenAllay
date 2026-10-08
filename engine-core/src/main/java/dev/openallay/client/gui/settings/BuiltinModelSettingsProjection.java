@@ -175,7 +175,7 @@ public static BuiltinModelSettingsProjection from(ModelProfileDraft draft,
             return new BuiltinModelSettingsProjection(lines);
         }
         java.util.Optional<dev.openallay.model.metadata.BuiltinModelMatcher.Match> matched = loaded.catalog().match(draft.model());
-        if (matched.isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(matched)) {
             lines.add(Line.of("unmatched"));
             return new BuiltinModelSettingsProjection(lines);
         }

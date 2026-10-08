@@ -21,7 +21,7 @@ public final class VoiceConfigStore {
         if (!Files.exists(path)) return new ToolResult.Success<>(config);
         try {
             if (Files.size(path) > 64 * 1024) throw new IllegalArgumentException();
-            VoiceConfig next = decode(Files.readString(path));
+            VoiceConfig next = decode(dev.openallay.util.Java8Files.readString(path));
             config = next;
             return new ToolResult.Success<>(next);
         } catch (Exception failure) { return new ToolResult.Failure<>("invalid_voice_config", "Voice settings are invalid; the last valid settings are retained"); }

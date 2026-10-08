@@ -269,10 +269,10 @@ if ((($oaPattern3_holder.value = loadedUnrestricted) instanceof dev.openallay.to
                     managedModsRoot(configDirectory),
                     product.extensions(),
                     product.javascriptModules());
-            if (product.tools().find("openallay:manage_skill").isEmpty()) {
+            if (dev.openallay.util.Java8ApiSupport.isEmpty(product.tools().find("openallay:manage_skill"))) {
                 Set<String> availableTools = product.tools().descriptors().stream()
                         .map(descriptor -> descriptor.id())
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                        .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
                 product.tools().register(
                         "openallay:managed-skills",
                         dev.openallay.util.Java8Collections.listOf(new ManageSkillTool(new AgentSkillManager(

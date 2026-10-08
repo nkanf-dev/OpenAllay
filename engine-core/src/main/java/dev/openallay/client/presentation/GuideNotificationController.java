@@ -183,7 +183,7 @@ public final class GuideNotificationController implements GuidePresentationListe
         windowActive = active;
         visible = actuallyVisible.stream().filter(receipts::containsKey)
                 .filter(key -> key.connectionGeneration().equals(generation)
-                        && key.sessionId().equals(sessionId)).collect(java.util.stream.Collectors.toUnmodifiableSet());
+                        && key.sessionId().equals(sessionId)).collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         suppressVisibleSession();
     }
 
@@ -312,8 +312,8 @@ break;
     }
     private void pruneDeletedSessions() {
         receipts.entrySet().removeIf(entry -> !currentOwner(entry.getKey()));
-        pending.entrySet().removeIf(entry -> service == null || service.presentationSessionOwner(entry.getKey().session)
-                .filter(entry.getKey().owner::equals).isEmpty());
+        pending.entrySet().removeIf(entry -> service == null || dev.openallay.util.Java8ApiSupport.isEmpty(service.presentationSessionOwner(entry.getKey().session)
+                .filter(entry.getKey().owner::equals)));
         owned.entrySet().removeIf(entry -> {
             if (service != null && service.presentationSessionOwner(entry.getKey().session)
                     .filter(entry.getKey().owner::equals).isPresent()) return false;

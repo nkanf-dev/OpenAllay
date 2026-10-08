@@ -112,7 +112,7 @@ public ModelMetadata find(String source, String providerModelId) {
             return state;
         }
         try {
-            state = new Snapshot(decode(Files.readString(path)), null);
+            state = new Snapshot(decode(dev.openallay.util.Java8Files.readString(path)), null);
         } catch (IOException | RuntimeException failure) {
             state = new Snapshot(
                     dev.openallay.util.Java8Collections.mapOf(),
@@ -154,7 +154,7 @@ public ModelMetadata find(String source, String providerModelId) {
                 path.getFileName().toString(),
                 ".tmp");
         try {
-            Files.writeString(temporary, json);
+            dev.openallay.util.Java8Files.writeString(temporary, json);
             try {
                 Files.move(
                         temporary,

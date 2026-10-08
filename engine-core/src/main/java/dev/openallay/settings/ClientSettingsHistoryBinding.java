@@ -32,7 +32,7 @@ public final class ClientSettingsHistoryBinding
             return ClientSettingsService.HistoryRuntimeState.disconnected();
         }
         GuideHistorySettingsSnapshot snapshot = current.historySettingsSnapshot();
-        if (snapshot.guide().isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(snapshot.guide())) {
             return new ClientSettingsService.HistoryRuntimeState(
                     snapshot.configured(),
                     java.util.Optional.empty(),
@@ -45,7 +45,7 @@ final java.util.Optional<dev.openallay.guide.GuideSnapshot> $oaSwitch0_exit_resu
 final dev.openallay.guide.history.GuideHistoryActivity $oaSwitch0_exit_result_prior2 = snapshot.activity();
 dev.openallay.settings.diagnostics.SettingsDiagnosticsAggregator.HistoryScopeKind $oaSwitch0_exit_result;
 $oaSwitch0_exit: {
-switch ((snapshot.scopeKind().orElseThrow())) {
+switch ((snapshot.scopeKind().orElseThrow(() -> new java.util.NoSuchElementException("No value present")))) {
 case SINGLEPLAYER:
 {
 $oaSwitch0_exit_result = SettingsDiagnosticsAggregator.HistoryScopeKind.SINGLEPLAYER_WORLD; break $oaSwitch0_exit;

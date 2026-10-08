@@ -113,7 +113,7 @@ public final class ProviderModelCatalogClient {
     }
 
     private static String read(InputStream body) throws java.io.IOException {
-        return new String(body.readAllBytes(), StandardCharsets.UTF_8);
+        return new String(dev.openallay.util.Java8Streams.readAllBytes(body), StandardCharsets.UTF_8);
     }
 
     private static ToolResult.Failure<ModelCatalog> statusFailure(int status) {

@@ -59,7 +59,7 @@ public final class ClientObservationInputCoordinator {
                     return;
                 }
                 GuideClientUiState.ObservationCapture appliedCapture = state.captureObservation(captured.session());
-                CompletableFuture<ToolResult<Boolean>> custody = anchor.image().isEmpty()
+                CompletableFuture<ToolResult<Boolean>> custody = dev.openallay.util.Java8ApiSupport.isEmpty(anchor.image())
                         ? CompletableFuture.completedFuture(new ToolResult.Success<>(true)) : state.observationImagesSettled();
                 custody.whenComplete((ack, pinFailure) -> client.execute(() -> {
                     final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }

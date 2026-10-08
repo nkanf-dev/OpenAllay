@@ -145,7 +145,7 @@ public static final class DiagnosticsInputs {
             if (!sourcesKnown && (!sources.isEmpty() || sourcesRetained)) {
                 throw new IllegalArgumentException("Unknown sources cannot expose observed source state");
             }
-            if (guide.isEmpty() != (historyScopeKind == HistoryScopeKind.NONE)) {
+            if (dev.openallay.util.Java8ApiSupport.isEmpty(guide) != (historyScopeKind == HistoryScopeKind.NONE)) {
                 throw new IllegalArgumentException("history scope kind must match Guide availability");
             }
 
@@ -261,10 +261,10 @@ public DiagnosticsInputs(
     private static SettingsDiagnosticCard historyCard(
             DiagnosticsInputs inputs, GuideSummary guide) {
         FriendlyStatus status;
-        if (inputs.guide().isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(inputs.guide())) {
             status = FriendlyStatus.NOT_CONNECTED;
         } else {
-            GuideSnapshot snapshot = inputs.guide().orElseThrow();
+            GuideSnapshot snapshot = inputs.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             {
 dev.openallay.settings.diagnostics.SettingsDiagnosticCard.FriendlyStatus $oaSwitch1_exit_result;
 $oaSwitch1_exit: {
@@ -320,7 +320,7 @@ status = $oaSwitch1_exit_result;
         List<String> notes = new java.util.ArrayList<>();
         if (inputs.guide().isPresent()) {
             notes.add("screen.openallay.settings.diagnostics.history.on_demand");
-            selectedSession(inputs.guide().orElseThrow()).ifPresent(session -> {
+            selectedSession(inputs.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"))).ifPresent(session -> {
                 if (session.historyWindow().state()
                         == GuideHistoryPageState.LOADING) {
                     notes.add("screen.openallay.settings.diagnostics.history.page_loading");
@@ -337,7 +337,7 @@ status = $oaSwitch1_exit_result;
 
     private static SettingsDiagnosticCard contextCard(DiagnosticsInputs inputs, GuideSummary guide) {
         Optional<GuideSnapshot> guideSnapshot = inputs.guide();
-        FriendlyStatus status = guideSnapshot.isEmpty()
+        FriendlyStatus status = dev.openallay.util.Java8ApiSupport.isEmpty(guideSnapshot)
                 ? FriendlyStatus.NOT_CONNECTED
                 : guide.failedCheckpoints() > 0
                         ? FriendlyStatus.ATTENTION
@@ -493,17 +493,17 @@ if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof 
     }
 
     private static GuideSummary summarizeGuide(Optional<GuideSnapshot> optional) {
-        if (optional.isEmpty()) return GuideSummary.empty();
-        GuideSnapshot guide = optional.orElseThrow();
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(optional)) return GuideSummary.empty();
+        GuideSnapshot guide = optional.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         long active = guide.sessions().stream()
                 .flatMap(session -> session.requests().stream())
                 .filter(request -> !request.terminal())
                 .count();
         Optional<GuideSessionSnapshot> selected = selectedSession(guide);
-        if (selected.isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(selected)) {
             return new GuideSummary(active, 0, 0, 0);
         }
-        List<ContextCheckpoint> checkpoints = selected.orElseThrow().checkpoints();
+        List<ContextCheckpoint> checkpoints = selected.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).checkpoints();
         int successful = (int) checkpoints.stream()
                 .filter(value -> value.status() == ContextCheckpoint.Status.SUCCEEDED).count();
         int failed = checkpoints.size() - successful;
@@ -518,10 +518,10 @@ if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof 
 
     private static Optional<GuideRequestSnapshot> latestRequest(GuideSessionSnapshot session) {
         if (session.requests().isEmpty()) return Optional.empty();
-        return session.requests().stream()
+        return dev.openallay.util.Java8ApiSupport.or(session.requests().stream()
                 .filter(request -> !request.terminal())
-                .reduce((first, second) -> second)
-                .or(() -> Optional.of(session.requests().get(session.requests().size() - 1)));
+                .reduce((first, second) -> second),
+                () -> Optional.of(session.requests().get(session.requests().size() - 1)));
     }
 
     private static SettingsDiagnosticCard card(

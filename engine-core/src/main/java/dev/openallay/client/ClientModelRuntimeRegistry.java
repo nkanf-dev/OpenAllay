@@ -256,7 +256,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
                     unavailable.code(), unavailable.getMessage()));
         }
         GuideClientModelProfile profile = captured.profiles().stream()
-                .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow();
+                .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         return selected.prepareCompaction(selected.defaultProfileId(), actor, sessionId, controlId,
                         durableSeed, cancellation, images, usage, profile.imageInputCapability())
                 .thenApply(result -> {
@@ -343,7 +343,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
             dev.openallay.agent.AgentRequest.validateUserInput(userInput);
             ClientGuideRuntime selected = runtime(captured, profileId);
             GuideClientModelProfile profile = captured.profiles().stream()
-                    .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow();
+                    .filter(value -> value.id().equals(profileId)).findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             boolean containsImages = hasImages(dev.openallay.util.Java8Collections.listOf(userInput))
                     || hasImages(sessions.history(new AgentSessionKey(actor, sessionId)));
             if (containsImages

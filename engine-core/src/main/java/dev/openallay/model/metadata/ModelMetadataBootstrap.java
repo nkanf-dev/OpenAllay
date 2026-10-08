@@ -149,7 +149,7 @@ public final class ModelMetadataBootstrap {
                 failure.set(null);
                 return CompletableFuture.completedFuture(null);
             }
-            return CompletableFuture.allOf(refreshes.toArray(CompletableFuture[]::new))
+            return CompletableFuture.allOf(dev.openallay.util.Java8ApiSupport.toArray(refreshes, CompletableFuture[]::new))
                     .thenCompose(ignored -> cache.load())
                     .thenAccept(updated -> {
                         if (updated.failure() != null) {

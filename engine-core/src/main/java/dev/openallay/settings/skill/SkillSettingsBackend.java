@@ -337,10 +337,10 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
     }
 
     private SkillCommunityView buildCommunity(Optional<SkillCommunityView.Notice> notice) {
-        if (communityCatalog == null || communityCatalog.current().isEmpty()) {
+        if (communityCatalog == null || dev.openallay.util.Java8ApiSupport.isEmpty(communityCatalog.current())) {
             return new SkillCommunityView(false, Optional.empty(), dev.openallay.util.Java8Collections.listOf(), notice);
         }
-        CommunityCatalogManifest catalog = communityCatalog.current().orElseThrow();
+        CommunityCatalogManifest catalog = communityCatalog.current().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         List<SkillCommunityView.Package> packages = dev.openallay.util.Java8Collections.toList(catalog.packages().stream().map(entry -> {
             Optional<String> installedVersion = current.find(entry.id())
                     .flatMap(skill -> Optional.ofNullable(
@@ -406,7 +406,7 @@ if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolRe
 
         List<SkillSettingsView.Skill> skills = new ArrayList<>();
         for (dev.openallay.skill.SkillMetadata metadata : repository.metadata()) {
-            SkillDocument document = repository.find(metadata.name()).orElseThrow();
+            SkillDocument document = repository.find(metadata.name()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             String markdown = parsedSources.getOrDefault(metadata.name(), dev.openallay.util.Java8Collections.listOf()).stream()
                     .filter(parsed -> parsed.document().metadata().origin() == metadata.origin())
                     .filter(parsed -> sameContent(parsed.document(), document))

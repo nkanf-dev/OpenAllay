@@ -232,7 +232,7 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
     public void removeObservationImage(String session) {
         if (closed) return;
         ClientObservationAnchor anchor = draft(session).observation;
-        if (anchor == null || anchor.image().isEmpty()) return;
+        if (anchor == null || dev.openallay.util.Java8ApiSupport.isEmpty(anchor.image())) return;
         setObservation(draft(session), new ClientObservationAnchor(anchor.associationId(),
                 anchor.capturedAt(), anchor.focus(), Optional.empty()), true);
     }
@@ -260,7 +260,7 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
     public List<ImageReference> inputImageReferences(String session, ObservationCapture capture) {
         java.util.stream.Stream<ImageReference> observed = closed || capture == null || !ownerId.equals(capture.ownerId())
                 || generation != capture.generation() || !session.equals(capture.session()) ? java.util.stream.Stream.empty()
-                : capture.anchor().stream().flatMap(anchor -> anchor.image().stream()).map(view -> view.image());
+                : dev.openallay.util.Java8ApiSupport.stream(capture.anchor()).flatMap(anchor -> dev.openallay.util.Java8ApiSupport.stream(anchor.image())).map(view -> view.image());
         return dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(images.attachments(session).stream()
                 .map(ComposerImageDraft.Attachment::reference).filter(Objects::nonNull), observed).distinct());
     }
@@ -404,12 +404,12 @@ return (($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolRe
     }
     private void retainImages() {
         java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> draftAnchors = drafts.values().stream().map(value -> value.observation).filter(Objects::nonNull);
-        java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> heldAnchors = observationLeases.values().stream().flatMap(value -> value.anchor().stream());
+        java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> heldAnchors = observationLeases.values().stream().flatMap(value -> dev.openallay.util.Java8ApiSupport.stream(value.anchor()));
         java.util.stream.Stream<dev.openallay.world.ClientObservationAnchor> pendingAnchors = drafts.values().stream().flatMap(value -> value.pending.stream())
-                .flatMap(value -> value.observation().stream());
+                .flatMap(value -> dev.openallay.util.Java8ApiSupport.stream(value.observation()));
         List<ImageReference> refs = dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(images.retainedReferences().stream(),
                 java.util.stream.Stream.concat(java.util.stream.Stream.concat(draftAnchors, heldAnchors), pendingAnchors)
-                        .flatMap(anchor -> anchor.image().stream()).map(view -> view.image())).distinct());
+                        .flatMap(anchor -> dev.openallay.util.Java8ApiSupport.stream(anchor.image())).map(view -> view.image())).distinct());
         // Serialize retain updates so a slower old lease update cannot drop a newly added image.
         leaseWork = leaseWork.handle((ignored, failure) -> null).thenCompose(ignored -> retain.apply(refs));
     }

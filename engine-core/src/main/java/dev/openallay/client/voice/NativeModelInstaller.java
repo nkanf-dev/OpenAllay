@@ -12,7 +12,6 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 
@@ -282,8 +281,8 @@ static final class Download {
         try {
             fetchAll(modelDownloads, staging, cancellation, progress, completed, total);
             Files.write(staging.resolve(NativeModelFiles.MANIFEST), manifest, StandardOpenOption.CREATE_NEW);
-            Files.writeString(staging.resolve("MODEL_LICENSE"), MODEL_LICENSE, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
-            Files.writeString(staging.resolve("ATTRIBUTION.txt"), ATTRIBUTION, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+            dev.openallay.util.Java8Files.writeString(staging.resolve("MODEL_LICENSE"), MODEL_LICENSE, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+            dev.openallay.util.Java8Files.writeString(staging.resolve("ATTRIBUTION.txt"), ATTRIBUTION, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
             NativeModelFiles.readValidated(staging, cancellation);
             cancellation.check();
             try { Files.move(staging, destination, StandardCopyOption.ATOMIC_MOVE); }

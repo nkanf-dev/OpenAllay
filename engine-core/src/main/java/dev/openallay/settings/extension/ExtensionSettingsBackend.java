@@ -83,7 +83,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         this.installer = Objects.requireNonNull(installer, "installer");
         this.catalogClient = catalogClient;
         if (catalogClient != null && catalogClient.current().isPresent()) {
-            catalog = catalogClient.current().orElseThrow();
+            catalog = catalogClient.current().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         }
     }
 

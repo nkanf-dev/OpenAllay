@@ -66,7 +66,7 @@ public final class AnthropicMessagesClient implements ModelClient {
             InputStream body,
             Consumer<ModelEvent> events,
             CancellationSignal cancellation) throws java.io.IOException {
-        byte[] encoded = body.readAllBytes();
+        byte[] encoded = dev.openallay.util.Java8Streams.readAllBytes(body);
         cancellation.throwIfCancelled();
         return codec.parseTurn(new String(encoded, StandardCharsets.UTF_8), events);
     }

@@ -114,7 +114,7 @@ public static final class Root {
 private static Root from(
                 HostSchemaCatalog catalog, HostSchemaCatalog.RootSummary summary) {
             HostSchema schema = catalog.describe(summary.name())
-                    .orElseThrow()
+                    .orElseThrow(() -> new java.util.NoSuchElementException("No value present"))
                     .schema();
             return new Root(
                     summary.name(),

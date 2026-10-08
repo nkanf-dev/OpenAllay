@@ -306,7 +306,7 @@ public static final class HistoryRuntimeState {
             guide = Objects.requireNonNull(guide, "guide");
             Objects.requireNonNull(activity, "activity");
             Objects.requireNonNull(scopeKind, "scopeKind");
-            if (guide.isEmpty()
+            if (dev.openallay.util.Java8ApiSupport.isEmpty(guide)
                     != (scopeKind == SettingsDiagnosticsAggregator.HistoryScopeKind.NONE)) {
                 throw new IllegalArgumentException(
                         "history scope kind must match current Guide availability");
@@ -1234,7 +1234,7 @@ ToolResult.Failure<PreparedPackageInstall> failure =
                 return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                         "package_preview_stale", "Prepare a fresh package preview"));
             }
-            RequirementChange change = requirementReviewLocked().orElseThrow().changes().stream()
+            RequirementChange change = requirementReviewLocked().orElseThrow(() -> new java.util.NoSuchElementException("No value present")).changes().stream()
                     .filter(value -> value.kind() == kind && value.id().equals(id)).findFirst().orElse(null);
             if (change == null) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                     "requirement_not_enableable", "This requirement has no available settings change"));
@@ -2539,11 +2539,11 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
 
     private static GuideFailure historyFailure(
             HistoryRuntimeState state, HistoryAction action) {
-        if (!state.configured() || state.guide().isEmpty()) {
+        if (!state.configured() || dev.openallay.util.Java8ApiSupport.isEmpty(state.guide())) {
             return new GuideFailure(
                     "history_unavailable", "Durable Guide history is unavailable");
         }
-        GuideSnapshot guide = state.guide().orElseThrow();
+        GuideSnapshot guide = state.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         long active = activeRequestCount(guide);
         if (!state.activity().idleForDeletion()
                 || active > 0
@@ -2563,10 +2563,10 @@ if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolRe
     }
 
     private static HistorySettingsView historyView(HistoryRuntimeState state) {
-        if (state.guide().isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(state.guide())) {
             return HistorySettingsView.disconnected();
         }
-        GuideSnapshot guide = state.guide().orElseThrow();
+        GuideSnapshot guide = state.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         long active = activeRequestCount(guide);
         boolean busy = !state.activity().idleForDeletion()
                 || active > 0

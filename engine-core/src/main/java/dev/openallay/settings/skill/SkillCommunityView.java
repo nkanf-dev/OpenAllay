@@ -93,8 +93,8 @@ static Package from(
                     entry.version(),
                     installed,
                     installed
-                            && (installedVersion.isEmpty()
-                                    || !installedVersion.orElseThrow().equals(entry.version())),
+                            && (dev.openallay.util.Java8ApiSupport.isEmpty(installedVersion)
+                                    || !installedVersion.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).equals(entry.version())),
                     compatible,
                     entry.source().toString(),
                     entry.archive().toString(),

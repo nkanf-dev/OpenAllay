@@ -137,7 +137,7 @@ static final class Call {
     @FunctionalInterface interface ProcessLauncher { Process start(Path job, List<String> command) throws IOException; }
     private static String runProcess(Call call, VoiceCancellation cancellation) throws Exception {
         return runProcess(call, cancellation, (job, command) -> new ProcessBuilder(command).directory(job.toFile())
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start());
+                .redirectOutput(NativeJavaRuntime.discardFile()).redirectError(NativeJavaRuntime.discardFile()).start());
     }
     static String runProcess(Call call, VoiceCancellation cancellation, ProcessLauncher launcher) throws Exception {
         Path job = Files.createTempDirectory("openallay-asr-");
@@ -164,7 +164,7 @@ static final class Call {
                 cancellation.check();
                 if (owned.exitValue() != 0 || !Files.isRegularFile(transcript)) throw new Failure("native_failed");
                 if (Files.size(transcript) > MAX_TEXT_BYTES) throw new Failure("native_failed");
-                return Files.readString(transcript, StandardCharsets.UTF_8);
+                return dev.openallay.util.Java8Files.readString(transcript, StandardCharsets.UTF_8);
             }
         } finally {
             if (process != null && process.isAlive()) {
@@ -211,7 +211,9 @@ NativeModelFiles.Role primary = $oaSwitch0_exit_result;
         String secondary = model.family() == NativeModelFiles.ModelFamily.WHISPER
                 ? model.file(call.modelDirectory(), NativeModelFiles.Role.WHISPER_DECODER).toString() : "";
         // Fixed executable and argv; model metadata can never add VM flags or a classpath entry.
-        return dev.openallay.util.Java8Collections.listOf(java.toString(), "-Xms32m", "-Xmx256m", "--enable-native-access=ALL-UNNAMED", "-Djava.io.tmpdir=" + audio.getParent(), "-cp", classes.toString(), Worker.class.getName(), model.family().name(), model.file(call.modelDirectory(), primary).toString(), secondary, model.file(call.modelDirectory(), NativeModelFiles.Role.TOKENS).toString(), runtime.resolve(artifacts.get(0).name()).toString(), runtime.resolve(artifacts.get(1).name()).toString(), NativeRuntimeCatalog.platform(), audio.toString(), transcript.toString(), call.request().language(), Integer.toString(call.request().cpuThreads()));
+        List<String> command = new ArrayList<>(dev.openallay.util.Java8Collections.listOf(java.toString(), "-Xms32m", "-Xmx256m", "-Djava.io.tmpdir=" + audio.getParent(), "-cp", classes.toString(), Worker.class.getName(), model.family().name(), model.file(call.modelDirectory(), primary).toString(), secondary, model.file(call.modelDirectory(), NativeModelFiles.Role.TOKENS).toString(), runtime.resolve(artifacts.get(0).name()).toString(), runtime.resolve(artifacts.get(1).name()).toString(), NativeRuntimeCatalog.platform(), audio.toString(), transcript.toString(), call.request().language(), Integer.toString(call.request().cpuThreads())));
+        if (NativeJavaRuntime.supportsNativeAccess()) command.add(3, "--enable-native-access=ALL-UNNAMED");
+        return dev.openallay.util.Java8Collections.listCopyOf(command);
     }
     private static void deleteJob(Path job) {
         try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(job)) {
@@ -253,7 +255,7 @@ NativeModelFiles.Role primary = $oaSwitch0_exit_result;
                     invoke(utils, "load", new Class<?>[0]);
                     String text = recognize(loader, args, threads, samples);
                     if (text == null || text.length() > 32_768) throw new IllegalArgumentException("text");
-                    Files.writeString(java.nio.file.Paths.get(args[8]), text, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+                    dev.openallay.util.Java8Files.writeString(java.nio.file.Paths.get(args[8]), text, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
                 }
             } catch (Throwable failure) {
                 // No native diagnostics, audio, filesystem paths or model data enter the chat.
@@ -361,7 +363,7 @@ if ((($oaPattern2_holder.value = cause) instanceof java.lang.Error && (($oaPatte
             }
         }
         private static final class IsolatedLoader extends URLClassLoader {
-            IsolatedLoader(URL[] jars) { super(jars, ClassLoader.getPlatformClassLoader()); }
+            IsolatedLoader(URL[] jars) { super(jars, NativeJavaRuntime.platformParent()); }
             @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
                 synchronized (getClassLoadingLock(name)) {
                     Class<?> loaded = findLoadedClass(name);
