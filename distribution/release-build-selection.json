@@ -1,4 +1,72 @@
 {
   "version": "0.4.4",
-  "groups": []
+  "groups": [
+    {
+      "target": "1.12.2",
+      "sourceSha": "910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "runId": 37765962724,
+      "runAttempt": 1,
+      "jobId": 113273653005,
+      "jobName": "build-packages (1.12.2, forge-1.12.2)",
+      "artifactId": 11544033551,
+      "artifactName": "release-packages-1.12.2-910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "archiveSha256": "fa683c3c729984d6ee8fbe96360f6e72749eb7ba3e64976e407ae6733de76fef",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "forge-1.12.2",
+          "artifactSha256": "c0af998be547c7292f49e7eb70f20c6c33f80b725bea86f6de5e804f10132a69",
+          "receiptSha256": "928fa99e01b785ee545f2c57f68a625b5bb03fe474037cccdfefeccbaac3bac4"
+        }
+      ]
+    },
+    {
+      "target": "26.1",
+      "sourceSha": "910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "runId": 37765962724,
+      "runAttempt": 1,
+      "jobId": 113273655616,
+      "jobName": "build-packages (26.1, fabric-26.1-through-26.1.2,neoforge-26.1-through-26.1.2)",
+      "artifactId": 11546152167,
+      "artifactName": "release-packages-26.1-910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "archiveSha256": "d2993921f7b71f976cdbf1ddffe9bea0cfd9110953939a9227656a6b75b230d0",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-26.1-through-26.1.2",
+          "artifactSha256": "fe9d1efa437be75a6e0e3450023190dcfb24b8d8752e3545a029669e29eb711b",
+          "receiptSha256": "90d429d8b731c258e1d113c3cd45a50edad5ffd52a683b0b7cacfd7f9121e731"
+        },
+        {
+          "id": "neoforge-26.1-through-26.1.2",
+          "artifactSha256": "4667a89c166aed553ab8fa674cb0f7e0b602a5b689a815f8749aca80a94544ba",
+          "receiptSha256": "23abb3ee79f0bbecc736ddd7e16a5f3d74d06e5965d29233bebab407411c7754"
+        }
+      ]
+    },
+    {
+      "target": "26.2",
+      "sourceSha": "910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "runId": 37765962724,
+      "runAttempt": 1,
+      "jobId": 113273655656,
+      "jobName": "build-packages (26.2, fabric-26.2,neoforge-26.2)",
+      "artifactId": 11546936444,
+      "artifactName": "release-packages-26.2-910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "archiveSha256": "1e9439b152b9056423314ee023d463cbd5f5df2baa7f85825fe6021e36123703",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "neoforge-26.2",
+          "artifactSha256": "47f594323eeb5a51edf748b0acb570b8b465c8ea4a9d9063e0f1e46c81f70f4a",
+          "receiptSha256": "aeb540987ad440b2ef2059a5f06a43997bf78a381efc616a390e8f753550566f"
+        },
+        {
+          "id": "fabric-26.2",
+          "artifactSha256": "9f1a33669392a5c770606eb9ad1a3c8aabcc1cb13a65ab2fdb891126f25922ec",
+          "receiptSha256": "e52dfcca32d6971ea0de899a5430013bf232bda199c46ec023b84eb52ec71b96"
+        }
+      ]
+    }
+  ]
 }
