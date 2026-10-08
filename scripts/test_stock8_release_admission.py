@@ -95,6 +95,9 @@ class Stock8AdmissionTest(unittest.TestCase):
         packing, native_source, release = "a" * 40, "b" * 40, "c" * 40
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            policy_path = root / materializer.NATIVE_DELTA_POLICY
+            policy_path.parent.mkdir(parents=True)
+            policy_path.write_bytes((ROOT / materializer.NATIVE_DELTA_POLICY).read_bytes())
             source = root / "common/src/main/java/Test.java"
             source.parent.mkdir(parents=True)
             source.write_bytes(b"genuine selected source")
@@ -103,9 +106,15 @@ class Stock8AdmissionTest(unittest.TestCase):
             def fake_git(root, *args):
                 if args[0] == "diff":
                     return b"scripts/materialize-stock8-release.py\0docs/releases/0.4.4.md\0native-builds/forge16165/build.gradle\0"
+                if args[0] == "ls-tree":
+                    self.assertEqual(args, ("ls-tree", "-r", "--name-only", "-z", packing))
+                    return b"common/src/main/java/Test.java\0"
                 self.assertEqual(args, ("show", native_source + ":common/src/main/java/Test.java"))
                 return b"genuine selected source"
-            with patch.object(materializer, "git", side_effect=fake_git), patch.object(materializer.subprocess, "run"):
+            # The complete 263-entry selector has its own custody tests.
+            # This fixture isolates retained source IDs and selected-byte rejection.
+            with patch.object(materializer, "git", side_effect=fake_git), patch.object(materializer.subprocess, "run"), \
+                    patch.object(materializer, "verify_selection", return_value={"selectedSources": 263}):
                 result = materializer.source_custody(root, packing, custody, release)
                 self.assertEqual(result["packingSource"], packing)
                 self.assertEqual(result["nativeProducerSource"], native_source)
