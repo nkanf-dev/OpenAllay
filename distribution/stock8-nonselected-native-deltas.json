@@ -1,5 +1,5 @@
 {
-  "reviewedPatchSha256": "017e5b028b07f3d1cd55d0d3bbda58d76a5d27e8f70b3270818d08b7dc5ff2af",
+  "reviewedPatchSha256": "693e961f7904b4ac222f27c0cc04d93c379e4f02c2fa28d54cac080e082ebe85",
   "files": [
     {
       "path": "common/src/targets/1.21.8/java/dev/openallay/client/gui/GuideNativeWidget.java",
@@ -16,8 +16,8 @@
     {
       "path": "common/src/targets/1.21.11/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
       "preSha256": null,
-      "postSha256": "4552368acfeccbb85ffe6d71733b955094dd2a9ec609531b1bbed221e3a311f9",
-      "bytes": 1457
+      "postSha256": null,
+      "bytes": 0
     },
     {
       "path": "common/src/targets/1.21.4/java/dev/openallay/client/observation/MinecraftNativeImageCapture.java",
@@ -52,8 +52,8 @@
     {
       "path": "common/src/targets/1.21.11/java/dev/openallay/server/NativeServerDeferredHandoff.java",
       "preSha256": null,
-      "postSha256": "908c815f4b200707486f662cfe0f59fe55ea373c37b671dc16e64a5ad95032e6",
-      "bytes": 565
+      "postSha256": "7c91916824e7446e2a05c771d75f9fe22838d3ef2e807a31c51e9d68fe0b71c5",
+      "bytes": 591
     },
     {
       "path": "common/src/targets/26.1/java/dev/openallay/client/gui/MinecraftClientWindow.java",
@@ -90,6 +90,48 @@
       "preSha256": null,
       "postSha256": "b1e5ef6e798bfc65b203a7ba8c29d02f94cd38fe212a8a5eed61665ca91bab10",
       "bytes": 1802
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/client/observation/GuideImageBitmaps.java",
+      "preSha256": "23a379252f2c4776d41017651c1cb494668e51521d83f743a0023c998169f8ab",
+      "postSha256": "751228abf606f28bc1d47de5dd14033b4e9688f21140bb9f30664c461981a777",
+      "bytes": 2011
+    },
+    {
+      "path": "common/src/targets/1.21.1/java/dev/openallay/server/NativeServerDeferredHandoff.java",
+      "preSha256": null,
+      "postSha256": "908c815f4b200707486f662cfe0f59fe55ea373c37b671dc16e64a5ad95032e6",
+      "bytes": 565
+    },
+    {
+      "path": "common/src/targets/1.21.10/java/dev/openallay/client/gui/GuideNativeItemLookup.java",
+      "preSha256": null,
+      "postSha256": "17e7d37a426f66f058425ab7aa7a3bbe4989a6a69d61f2881d3a119e25409af1",
+      "bytes": 970
+    },
+    {
+      "path": "common/src/targets/1.21.10/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
+      "preSha256": null,
+      "postSha256": "4552368acfeccbb85ffe6d71733b955094dd2a9ec609531b1bbed221e3a311f9",
+      "bytes": 1457
+    },
+    {
+      "path": "common/src/targets/1.21.8/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "preSha256": "3ef04ac30337d58870936b096caa19b005b94462d3b217fbf6022bb72a3fd56c",
+      "postSha256": "3027078e421bda701fbb2132a80d8afdff3ee8edbf6a667004a99490da7b1e47",
+      "bytes": 1168
+    },
+    {
+      "path": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeKeyBindings.java",
+      "preSha256": null,
+      "postSha256": "a7063e7dddaa16ed5de33d78cae1b69025d41c531bb3759ada0b6c25c1efb413",
+      "bytes": 1090
+    },
+    {
+      "path": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "preSha256": "c071b0d4d7ad0c096a7bbe769f296bf10d74d4c34e7337a7bfa658b799665f10",
+      "postSha256": "ea50ce4c2eef52370aef788665c293278cc0b553caef4dd5a808f655de9950f6",
+      "bytes": 965
     }
   ],
   "shadowEvidence": [
@@ -197,6 +239,55 @@
       "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/client/gui/GuideInputCodes.java",
       "selectedBytesUnchanged": true,
       "selectedSha256": "6f514a14190fad55c8fd11b7a9396820e4ad238b4eec71b9a5a0fe24641ee9ba"
+    },
+    {
+      "changedPath": "common/src/targets/1.21.8/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "99fedd21e2a2441abdd384752e986cb681bb1f7d06357386657d8139261ae9ca"
+    },
+    {
+      "changedPath": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "99fedd21e2a2441abdd384752e986cb681bb1f7d06357386657d8139261ae9ca"
+    },
+    {
+      "changedPath": "common/src/targets/1.16.5/java/dev/openallay/client/observation/GuideImageBitmaps.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/client/observation/GuideImageBitmaps.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/client/observation/GuideImageBitmaps.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "faa6893f9484a81cc50922494e7bfd1ff18ad14adb23999e4ef359399d032772"
+    },
+    {
+      "changedPath": "common/src/targets/1.21.1/java/dev/openallay/server/NativeServerDeferredHandoff.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/server/NativeServerDeferredHandoff.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/server/NativeServerDeferredHandoff.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "1f656901865a08806e8636b7db65efcc6c030e92899e45cbd69c158a8b733e76"
+    },
+    {
+      "changedPath": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeKeyBindings.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/guide/e2e/GuideProbeKeyBindings.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/guide/e2e/GuideProbeKeyBindings.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "cf4ef74da0b3f5cb5181c56a1473ea55d3e9143090dd2a07770ca79dff0a90f5"
+    },
+    {
+      "changedPath": "common/src/targets/1.21.10/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "8fb5a938522285eb2f191cdad2245ea74a22871950970cbe463c1e2c841f6749"
+    },
+    {
+      "changedPath": "common/src/targets/1.21.10/java/dev/openallay/client/gui/GuideNativeItemLookup.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/client/gui/GuideNativeItemLookup.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/client/gui/GuideNativeItemLookup.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "aa038eb44fbc3d3bd1ca0220c4b6534539f3929a56869afc43140d52bf1d8c50"
     }
   ],
   "selectorInputs": [
@@ -229,6 +320,53 @@
       "path": "scripts/forge1122_source_selection.py",
       "sha256": "845bab50998de7b41ecdae57119872fc36187c856984decb4282f87b1a631c3e",
       "gitSha256": "845bab50998de7b41ecdae57119872fc36187c856984decb4282f87b1a631c3e"
+    }
+  ],
+  "approvedGroupChanges": [
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/client/observation/GuideImageBitmaps.java",
+      "preSha256": "23a379252f2c4776d41017651c1cb494668e51521d83f743a0023c998169f8ab",
+      "postSha256": "751228abf606f28bc1d47de5dd14033b4e9688f21140bb9f30664c461981a777"
+    },
+    {
+      "path": "common/src/targets/1.21.1/java/dev/openallay/server/NativeServerDeferredHandoff.java",
+      "preSha256": null,
+      "postSha256": "908c815f4b200707486f662cfe0f59fe55ea373c37b671dc16e64a5ad95032e6"
+    },
+    {
+      "path": "common/src/targets/1.21.10/java/dev/openallay/client/gui/GuideNativeItemLookup.java",
+      "preSha256": null,
+      "postSha256": "17e7d37a426f66f058425ab7aa7a3bbe4989a6a69d61f2881d3a119e25409af1"
+    },
+    {
+      "path": "common/src/targets/1.21.10/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
+      "preSha256": null,
+      "postSha256": "4552368acfeccbb85ffe6d71733b955094dd2a9ec609531b1bbed221e3a311f9"
+    },
+    {
+      "path": "common/src/targets/1.21.11/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java",
+      "preSha256": "4552368acfeccbb85ffe6d71733b955094dd2a9ec609531b1bbed221e3a311f9",
+      "postSha256": null
+    },
+    {
+      "path": "common/src/targets/1.21.11/java/dev/openallay/server/NativeServerDeferredHandoff.java",
+      "preSha256": "908c815f4b200707486f662cfe0f59fe55ea373c37b671dc16e64a5ad95032e6",
+      "postSha256": "7c91916824e7446e2a05c771d75f9fe22838d3ef2e807a31c51e9d68fe0b71c5"
+    },
+    {
+      "path": "common/src/targets/1.21.8/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "preSha256": "3ef04ac30337d58870936b096caa19b005b94462d3b217fbf6022bb72a3fd56c",
+      "postSha256": "3027078e421bda701fbb2132a80d8afdff3ee8edbf6a667004a99490da7b1e47"
+    },
+    {
+      "path": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeKeyBindings.java",
+      "preSha256": null,
+      "postSha256": "a7063e7dddaa16ed5de33d78cae1b69025d41c531bb3759ada0b6c25c1efb413"
+    },
+    {
+      "path": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
+      "preSha256": "c071b0d4d7ad0c096a7bbe769f296bf10d74d4c34e7337a7bfa658b799665f10",
+      "postSha256": "ea50ce4c2eef52370aef788665c293278cc0b553caef4dd5a808f655de9950f6"
     }
   ]
 }

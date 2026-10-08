@@ -90,13 +90,13 @@ def source_custody(root, packing_source, native_custody, release_source):
     subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", packing_source, release_source], check=True)
     changed = git(root, "diff", "--no-renames", "--name-only", "-z", packing_source, release_source).decode().split("\0")
     admitted = {"gradle/minecraft-artifacts.json", "gradle/minecraft-target-loaders.json",
-                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH, COMMENT_POLICY_PATH, NATIVE_DELTA_POLICY}
+                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH, COMMENT_POLICY_PATH, NATIVE_DELTA_POLICY, "distribution/release-build-selection.json"}
     native_delta_paths={row['path'] for row in native_delta_policy(root)['files']}
     original_tree=set(git(root,"ls-tree","-r","--name-only","-z",packing_source).decode().split("\0"))
     for path in filter(None, changed):
         if path in native_delta_paths:
             original=git(root,"show",packing_source+":"+path) if path in original_tree else None
-            verify_unselected_pair(root,path,original,(root/path).read_bytes())
+            verify_unselected_pair(root,path,original,(root/path).read_bytes() if (root/path).is_file() else None)
             continue
         if path in COMMENT_PATHS:
             verify_comment_pair(root, path, git(root, "show", packing_source + ":" + path), (root / path).read_bytes())

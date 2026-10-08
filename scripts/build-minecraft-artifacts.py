@@ -14,6 +14,7 @@ import subprocess
 import sys
 import zipfile
 from minecraft_target_loaders import target_loaders
+from stock8_selection_custody import group_change_paths, verify_group_pair
 from release_comment_custody import PATHS as COMMENT_PATHS, POLICY_PATH as COMMENT_POLICY_PATH, verify_pair as verify_comment_pair
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -442,6 +443,9 @@ REUSE_ORCHESTRATION_PATHS = {
     "docs/releases/0.4.4.md", "docs/forge-runtime-installation.md", "docs/minecraft-support-policy.md",
     "scripts/materialize-stock8-release.py", "scripts/package-legacy-forge-release.py",
     "scripts/test_release_stage_only.py", "scripts/test_stock8_release_admission.py",
+    "distribution/stock8-nonselected-native-deltas.json", "scripts/stock8_selection_custody.py",
+    "scripts/test_stock8_nonselected_custody.py", "scripts/test_release_native_api_family_sources.py",
+    "scripts/capture-commonmark-provider-nested.py", "scripts/test_commonmark_provider_custody.py",
     COMMENT_POLICY_PATH, "scripts/release_comment_custody.py", "scripts/test_release_comment_custody.py",
 }
 REUSE_NATIVE_PATHS = {
@@ -525,6 +529,9 @@ def verify_reused_source(old_source, current_source, families):
     subprocess.run(["git", "merge-base", "--is-ancestor", old_source, current_source], cwd=ROOT, check=True)
     changed = git_output("diff", "--no-renames", "--name-only", "-z", old_source, current_source).split("\0")
     native_units = set()
+    finite_native = group_change_paths(ROOT)
+    old_tree = set(git_output("ls-tree", "-r", "--name-only", "-z", old_source).split("\0"))
+    current_tree = set(git_output("ls-tree", "-r", "--name-only", "-z", current_source).split("\0"))
     for path in filter(None, changed):
         if path in COMMENT_PATHS:
             verify_comment_pair(ROOT, path, git_output("show", old_source + ":" + path, binary=True),
@@ -535,7 +542,12 @@ def verify_reused_source(old_source, current_source, families):
             continue
         if path in REUSE_ORCHESTRATION_PATHS:
             continue
-        require(path in REUSE_NATIVE_PATHS, "Reused release source changes an unapproved native leaf: " + path)
+        if path in finite_native:
+            original = git_output("show", old_source + ":" + path, binary=True) if path in old_tree else None
+            current = git_output("show", current_source + ":" + path, binary=True) if path in current_tree else None
+            verify_group_pair(ROOT, path, original, current)
+        else:
+            require(path in REUSE_NATIVE_PATHS, "Reused release source changes an unapproved native leaf: " + path)
         match = NATIVE_LEAF.fullmatch(path)
         require(match is not None, "Reused release source has an out-of-scope production change: " + path)
         module, _, scope, relative = match.groups()

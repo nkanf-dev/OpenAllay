@@ -8,7 +8,7 @@ import subprocess
 from forge1122_source_selection import selected_native_units
 
 POLICY_PATH="distribution/stock8-nonselected-native-deltas.json"
-POLICY_SHA256="b9c44c3f88d336987e772c3b022f53d683f453e90bc3920704d45ea2e503ee41"
+POLICY_SHA256="17f2c977364cfc123b9a2c60a282bede70a919858c6dc8b62e5e1b7837aad1ba"
 CONTROL_PATHS=frozenset(('gradle/minecraft-source-selection.gradle','native-builds/forge16165/source-selection.json',
     'native-builds/forge1122-census/source-retirements.json','native-builds/forge1122-census/core-compile-profile.json',
     'native-builds/forge1122-census/curated-classes.tsv','scripts/forge1122_source_selection.py'))
@@ -23,20 +23,24 @@ def sha(raw):return hashlib.sha256(raw).hexdigest()
 
 def policy(root):
     raw=(root/POLICY_PATH).read_bytes()
-    require(sha(raw)==POLICY_SHA256, 'Reviewed15 native custody policy bytes changed')
+    require(sha(raw)==POLICY_SHA256, 'Reviewed finite native custody policy bytes changed')
     value=json.loads(raw)
-    require(set(value)=={'reviewedPatchSha256','files','shadowEvidence','selectorInputs'} and
-            value['reviewedPatchSha256']=='017e5b028b07f3d1cd55d0d3bbda58d76a5d27e8f70b3270818d08b7dc5ff2af',
-            'Exact reviewed15 native cohort required')
+    require(set(value)=={'reviewedPatchSha256','files','shadowEvidence','selectorInputs','approvedGroupChanges'} and
+            value['reviewedPatchSha256']=='693e961f7904b4ac222f27c0cc04d93c379e4f02c2fa28d54cac080e082ebe85',
+            'Exact reviewed finite native cohort required')
     rows=value['files'];evidence=value['shadowEvidence']
-    require(len(rows)==15 and len({row['path'] for row in rows})==15 and
-            {row['path'] for row in rows}=={row['changedPath'] for row in evidence}, 'Exact15 cohort/shadow evidence required')
+    require(len(rows)==22 and len({row['path'] for row in rows})==22 and
+            {row['path'] for row in rows}=={row['changedPath'] for row in evidence}, 'Exact22 cohort/shadow evidence required')
     require(len(value['selectorInputs'])==6 and {row['path'] for row in value['selectorInputs']}==CONTROL_PATHS, 'Exact native selector input scope required')
     for row in rows:
         require(set(row)=={'path','preSha256','postSha256','bytes'} and row['path'].startswith('common/src/targets/') and
                 '/java/' in row['path'] and row['path'].endswith('.java') and
                 (row['preSha256'] is None or re.fullmatch(r'[0-9a-f]{64}',row['preSha256'])) and
-                re.fullmatch(r'[0-9a-f]{64}',row['postSha256']), 'Exact cohort raw source row required')
+                (row['postSha256'] is None or re.fullmatch(r'[0-9a-f]{64}',row['postSha256'])), 'Exact cohort raw source row required')
+    repairs=value['approvedGroupChanges']
+    require(len(repairs)==9 and len({row['path'] for row in repairs})==9 and {row['path'] for row in repairs}.issubset({row['path'] for row in rows}), 'Exact9 accepted-group repair operations required')
+    for row in repairs:
+        require(set(row)=={'path','preSha256','postSha256'} and all(row[key] is None or re.fullmatch(r'[0-9a-f]{64}',row[key]) for key in ('preSha256','postSha256')), 'Exact accepted-group raw pair required')
     for row in value['selectorInputs']:
         require(set(row)=={'path','sha256','gitSha256'} and all(re.fullmatch(r'[0-9a-f]{64}',row[key]) for key in ('sha256','gitSha256')), 'Exact selector Git/physical hash pair required')
     return value
@@ -46,8 +50,20 @@ def verify_unselected_pair(root,path,original,current):
     value=policy(root);rows={row['path']:row for row in value['files']}
     require(path in rows,'Unknown native production change cannot reuse stock8')
     row=rows[path]
-    require((None if original is None else sha(original))==row['preSha256'] and sha(current)==row['postSha256'],
+    require((None if original is None else sha(original))==row['preSha256'] and (None if current is None else sha(current))==row['postSha256'],
             'Nonselected native leaf differs from exact reviewed raw before/after: '+path)
+
+
+def group_change_paths(root):
+    return {row['path'] for row in policy(root)['approvedGroupChanges']}
+
+
+def verify_group_pair(root,path,original,current):
+    rows={row['path']:row for row in policy(root)['approvedGroupChanges']}
+    require(len(rows)==9 and path in rows, 'Unknown accepted-group native repair')
+    row=rows[path]
+    require((None if original is None else sha(original))==row['preSha256'] and
+            (None if current is None else sha(current))==row['postSha256'], 'Accepted-group repair raw pair differs')
 
 
 def verify_control_bytes(row,raw):
@@ -79,4 +95,4 @@ def verify_selection(root,original_selected,native_source):
                 row['selectedBytesUnchanged'] is True and
                 logical[row['changedPath'].split('/java/',1)[1]]==(row['selectedStock12After'],row['selectedSha256']),
                 'Reviewed native leaf is not shadowed by exact unchanged Forge12 owner')
-    return {'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':15}
+    return {'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':22}

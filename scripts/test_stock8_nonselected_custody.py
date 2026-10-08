@@ -38,7 +38,7 @@ class SelectionCustodyTest(unittest.TestCase):
             return m.verify_selection(ROOT,self.expected,'b'*40)
 
     def test_full263_effective_ledger_passes(self):
-        result=self.verify();self.assertEqual(result,{'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':15})
+        result=self.verify();self.assertEqual(result,{'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':22})
 
     def test_added_shadow_deleted_owner_changed_selected_bytes_fail(self):
         for mutate in (lambda v:v.append({'origin':'common/src/targets/1.12.2/java/New.java','logicalPath':'New.java','sha256':'e'*64}),
@@ -83,6 +83,19 @@ class SelectionCustodyTest(unittest.TestCase):
         self.assertNotIn(b'InputConstants.KEY_PAGE_UP',raw);self.assertNotIn(b'InputConstants.KEY_PAGE_DOWN',raw)
         wrong=raw.replace(b'InputConstants.KEY_PAGEUP',b'InputConstants.KEY_PAGE_UP').replace(b'InputConstants.KEY_PAGEDOWN',b'InputConstants.KEY_PAGE_DOWN')
         with self.assertRaises(ValueError):m.verify_unselected_pair(ROOT,row['path'],None,wrong)
+
+    def test_finite_group_operations_and_nullable_deleted_leaf(self):
+        repairs=self.policy['approvedGroupChanges']
+        self.assertEqual(len(repairs),9)
+        deleted=next(r for r in repairs if r['postSha256'] is None)
+        self.assertEqual(deleted['path'],'common/src/targets/1.21.11/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java')
+        with patch.object(m,'policy',return_value=self.policy),patch.object(m,'sha',return_value=deleted['preSha256']):m.verify_group_pair(ROOT,deleted['path'],b'old',None)
+        with patch.object(m,'policy',return_value=self.policy),patch.object(m,'sha',return_value='e'*64),self.assertRaises(ValueError):m.verify_group_pair(ROOT,deleted['path'],b'old',None)
+        with self.assertRaises(ValueError):m.verify_group_pair(ROOT,'common/src/main/java/Unknown.java',b'old',b'new')
+        original=next(r for r in self.policy['files'] if r['path']==deleted['path'])
+        self.assertIsNone(original['preSha256']);self.assertIsNone(original['postSha256'])
+        m.verify_unselected_pair(ROOT,deleted['path'],None,None)
+        with self.assertRaises(ValueError):m.verify_unselected_pair(ROOT,deleted['path'],None,b'resurrected')
 
     def test_original_physical_and_source_custody_guards_remain(self):
         text=(ROOT/'scripts/materialize-stock8-release.py').read_text()
