@@ -1,0 +1,35 @@
+{
+  "scope": "Six public JDK convenience families primitive oracle only: Optional/Collectors/ObjectsElse/Files stricttext/streamIO/Stringformat; no productioncallers mapped or wholeengine8 claim.",
+  "sources": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Files.java",
+      "sha256": "fa188d5bb0eb45256b3377ce20b36aa3759d92cdd801e8ca90bbf7d8ff6e4ce6"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Streams.java",
+      "sha256": "912682c15a58e9cdc5b92aaae56ab24cea1112dcb44d7953e2e8d13b728b19a9"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8ApiSupport.java",
+      "sha256": "576cb2bb30b32d2bc478fc81cebfaedacc5752ded1bfc19df5345fbf2ea2cc8c"
+    },
+    {
+      "path": "engine-core/src/residualPublicApiJava8Test/java/dev/openallay/util/ResidualApiJava8Fixture.java",
+      "sha256": "8635cbc39befad166fabd34e88484e632666fecfe35a1113085b6ec5eb0a7060"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Objects.java",
+      "sha256": "720e6264b47824c82d930c5eea93bbf2df64badb43d2314a0562d976679c44c9"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+      "sha256": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22"
+    }
+  ],
+  "runner_sha256": "496d0225e353c123c441727365308d0bb1afa291c0572301f87510b41e11553e",
+  "semantic_cases": "Identity/NSEE/null/immutability/duplicate/parallelcollector/strictCharsetREPORT/options/fileownership/EOFposition/progress/noClose/exactIOcause/defaultLocale/formaterrors. CustomCharset usesactualinstance encoder/decoder notencoding-namealias; URIencodefamily notincludedwithoutactualerroradmission."
+}
