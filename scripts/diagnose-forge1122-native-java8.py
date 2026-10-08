@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 PIN={'artifactId':11406765949,'runId':37450040748,
@@ -36,6 +37,43 @@ def main():
         path=paths[0].parent/(artifact['role']+'.jar')
         if transport.sha(path)!=artifact['sha256']:raise ValueError('Actual type oracle constituent hash differs')
         closure.append({'role':artifact['role'],'path':str(path),'sha256':artifact['sha256'],'compile':artifact['role'] in compile_roles})
+    # Current normal Gradle engine publication is the authentic external type oracle.
+    # It is never labeled Java8 runtime output, even if all current source lowering is accepted.
+    engine_env=dict(os.environ)
+    engine_home=engine_env['JAVA_HOME_21_X64']
+    engine_env['JAVA_HOME']=engine_home;engine_env['PATH']=engine_home+'/bin:'+engine_env['PATH']
+    engine_metadata=work/'current-engine-classpath.json'
+    engine_command=[str(ROOT/'gradlew'),'--no-daemon','--max-workers=2',':engine-core:jar',
+        ':engine-core:exportCanonicalVarCompileClasspath',
+        '-PcanonicalVarClasspathOutput='+str(engine_metadata),'--stacktrace']
+    with (reports/'current-engine-producer.log').open('w') as log:
+        engine_result=subprocess.run(engine_command,cwd=ROOT,env=engine_env,stdout=log,stderr=subprocess.STDOUT,timeout=1800)
+    if engine_result.returncode:
+        transport.write(reports/'current-engine-producer.json',{'command':engine_command,'exitCode':engine_result.returncode,
+            'sourceRevision':os.environ['GITHUB_SHA'],'typeOracleOnly':True,'runtimeJava8Accepted':False})
+        raise SystemExit(engine_result.returncode)
+    jars=[p for p in (ROOT/'engine-core/build/libs').glob('*.jar') if not p.name.endswith(('-sources.jar','-javadoc.jar','-test-fixtures.jar'))]
+    if len(jars)!=1:raise ValueError('One genuine current normal engine production JAR required')
+    engine_jar=jars[0]
+    with zipfile.ZipFile(engine_jar) as archive:
+        for required in ['dev/openallay/value/ValueType.class','dev/openallay/value/ValueSchema.class',
+            'dev/openallay/value/ValueSchema$Provider.class','dev/openallay/value/RecordMetadata.class','dev/openallay/value/ValueSchemas.class']:
+            if required not in archive.namelist():raise ValueError('Genuine current engine type owner absent: '+required)
+    major_hist={}
+    with zipfile.ZipFile(engine_jar) as archive:
+        for name in archive.namelist():
+            if name.endswith('.class'):
+                major=int.from_bytes(archive.read(name)[6:8],'big');major_hist[str(major)]=major_hist.get(str(major),0)+1
+    metadata=json.loads(engine_metadata.read_text())
+    expected_sources=sorted(str(p.resolve()) for p in (ROOT/'engine-core/src/main/java').rglob('*.java'))
+    if metadata['sources']!=expected_sources or metadata['producer']!=':engine-core:compileJava':
+        raise ValueError('Current complete engine producer/source metadata differs')
+    engine_row=next(r for r in closure if r['role']=='engine')
+    engine_row.update(path=str(engine_jar.resolve()),sha256=transport.sha(engine_jar))
+    transport.write(reports/'current-engine-producer.json',{'command':engine_command,'exitCode':0,
+        'sourceRevision':os.environ['GITHUB_SHA'],'engine':engine_row,'classMajors':major_hist,
+        'metadataSha256':transport.sha(engine_metadata),'typeOracleOnly':True,'runtimeJava8Accepted':False,
+        'completeCanonicalSourceCount':len(expected_sources)})
     tool=os.environ['JAVA_HOME_17_X64']
     request={'canonicalSourceRoot':str(ROOT),'javac17':tool+'/bin/javac','java17':tool+'/bin/java',
         'closure':closure,'actualMcpUnits':transport.actual_units(),
