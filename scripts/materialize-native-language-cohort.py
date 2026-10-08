@@ -56,8 +56,8 @@ def main():
     run([a.javac,'--release','17','-encoding','UTF-8','-d',toolclasses,*tools],'actual-public-tool-compile')
     # Public compiler projection fixture on a real existing native class, not a fake host fixture.
     fixture=out/'projection-fixture';(fixture/'actual/p').mkdir(parents=True)
-    actual_text='package p; class Probe { net.minecraft.item.ItemStack value; java.util.function.Function<net.minecraft.item.ItemStack,net.minecraft.item.ItemStack> identity = argument -> argument; net.minecraft.util.math.RayTraceResult hit; net.minecraft.client.network.NetworkPlayerInfo player; net.minecraft.world.border.WorldBorder border; net.minecraft.client.gui.toasts.IToast.Visibility visibility; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
-    canonical_text='package p; class Probe { net.minecraft.world.item.ItemStack value; java.util.function.Function<net.minecraft.world.item.ItemStack,net.minecraft.world.item.ItemStack> identity = argument -> argument; net.minecraft.world.phys.HitResult hit; net.minecraft.client.multiplayer.PlayerInfo player; net.minecraft.world.level.border.WorldBorder border; net.minecraft.client.gui.components.toasts.Toast.Visibility visibility; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
+    actual_text='package p; class Probe { net.minecraft.item.ItemStack value; java.util.function.Function<net.minecraft.item.ItemStack,net.minecraft.item.ItemStack> identity = argument -> argument; net.minecraft.util.math.RayTraceResult hit; net.minecraft.client.network.NetworkPlayerInfo player; net.minecraft.world.border.WorldBorder border; net.minecraft.client.gui.toasts.IToast.Visibility visibility; net.minecraft.client.gui.toasts.IToast.Visibility selected(boolean show) { return show ? net.minecraft.client.gui.toasts.IToast.Visibility.SHOW : net.minecraft.client.gui.toasts.IToast.Visibility.HIDE; } net.minecraft.util.text.ITextComponent title, description, secondary; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
+    canonical_text='package p; class Probe { net.minecraft.world.item.ItemStack value; java.util.function.Function<net.minecraft.world.item.ItemStack,net.minecraft.world.item.ItemStack> identity = argument -> argument; net.minecraft.world.phys.HitResult hit; net.minecraft.client.multiplayer.PlayerInfo player; net.minecraft.world.level.border.WorldBorder border; net.minecraft.client.gui.components.toasts.Toast.Visibility visibility; net.minecraft.client.gui.components.toasts.Toast.Visibility selected(boolean show) { return show ? net.minecraft.client.gui.components.toasts.Toast.Visibility.SHOW : net.minecraft.client.gui.components.toasts.Toast.Visibility.HIDE; } net.minecraft.network.chat.Component title, description, secondary; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
     (fixture/'actual/p/Probe.java').write_text(actual_text)
     (fixture/'original').mkdir();(fixture/'original/Probe.java').write_text(canonical_text)
     fixture_units=fixture/'units.tsv'
@@ -148,6 +148,14 @@ def main():
         'trusted-class-namespace-forward-roundtrip')
     for name in expected:
         if (out/'trusted-forward'/name).read_bytes()!=(working/name).read_bytes():raise ValueError('Residual class-token projection mismatch '+name)
+    # One diagnostic over the already prepared complete source universe; no second Forge provisioning.
+    census_args=out/'actual-release8-whole-native.args'
+    census_args.write_text('\n'.join(json.dumps(str(p)) for p in sorted(working.rglob('*.java')))+'\n')
+    census_classes=out/'actual-release8-whole-native-classes';census_classes.mkdir()
+    census_exit=run([a.javac,'--release','8','-proc:none','-encoding','UTF-8','-XDrawDiagnostics','-Xmaxerrs','10000',
+        '-classpath',classpath,'-d',census_classes,'@'+str(census_args)],'actual-release8-whole-native',fail=False)
+    write(out/'actual-release8-census.json',{'sourceCount':len(expected),'compilerExitCode':census_exit,
+        'compiler':'public javac --release 8','gameLaunch':False,'packageProduced':False})
     packet=out/'source-packet';packet.mkdir();patch='';files=[]
     for row in unitrows:
         name=row[1]

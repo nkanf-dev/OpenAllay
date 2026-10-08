@@ -52,6 +52,7 @@ public final class NativeCanonicalSymbolProjector {
                 if(!modes.get(name).equals("CANONICAL_SEMANTIC"))throw new IllegalArgumentException("Exact curated unit mode required");
                 List<Edit> edits=new ArrayList<>();List<String> rejects=new ArrayList<>();
                 class Binder extends TreePathScanner<Void,Void>{
+                    private final Set<Tree> projectedOriginalNodes=Collections.newSetFromMap(new IdentityHashMap<>());
                     private boolean project(Tree node){
                         // Compiler-injected inferred lambda parameter types have no original source token.
                         // Omit only nodes absent from the authenticated pre-attribution parse identity set.
@@ -64,6 +65,9 @@ public final class NativeCanonicalSymbolProjector {
                         long[] span=originalSpans.get(node);
                         int start=pos(span[0]),end=pos(span[1]);
                         if(end<start || end>text.length())throw new IllegalArgumentException("Original native class span invalid in "+name+" role="+node.getKind()+" identity="+actual);
+                        // javac shares one original written type tree among comma declarators.
+                        // Native identity and exact original span above stay mandatory; project only that same tree once.
+                        if(!projectedOriginalNodes.add(node))return true;
                         String spelling=text.substring(start,end);
                         String replacement=node instanceof IdentifierTree?canonical.substring(canonical.lastIndexOf('.')+1).replace('$','.'):
                             canonical.replace('$','.');
@@ -82,7 +86,7 @@ public final class NativeCanonicalSymbolProjector {
                 new Binder().scan(unit,null);
                 if(!rejects.isEmpty()){statuses.add(name+"\tREJECTED\t"+Base64.getEncoder().encodeToString(String.join("\n",rejects).getBytes(StandardCharsets.UTF_8)));continue;}
                 edits.sort(Comparator.comparingInt(Edit::start).reversed());StringBuilder post=new StringBuilder(text);int boundary=text.length();
-                for(Edit edit:edits){if(edit.end()>boundary)throw new IllegalStateException("Overlapping native class-symbol edits "+name);post.replace(edit.start(),edit.end(),edit.replacement());boundary=edit.start();}
+                for(Edit edit:edits){if(edit.end()>boundary)throw new IllegalStateException("Overlapping original native class-symbol edits "+name+" span="+edit+" boundary="+boundary);post.replace(edit.start(),edit.end(),edit.replacement());boundary=edit.start();}
                 products.put(name,post.toString().getBytes(StandardCharsets.UTF_8));statuses.add(name+"\tSUPPORTED\t"+edits.size()+"\tCANONICAL_SEMANTIC");
             }
         }
