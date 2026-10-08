@@ -47,6 +47,7 @@ public final class CanonicalSwitchPort {
                 String expression=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),prefix+evaluation,true);
             }
             if(parent instanceof ReturnTree returned&&returned.getExpression()==child){String expression=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
+            if(parent instanceof ThrowTree thrown&&thrown.getExpression()==child){String expression=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
             if(parent instanceof ExpressionStatementTree expression&&expression.getExpression()==child){String replacement=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);return new Lift(cursor,replacement,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
             if(parent instanceof VariableTree variable&&variable.getInitializer()==child&&cursor.getParentPath().getLeaf() instanceof BlockTree){String expression=apply(text,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),edits);return new Lift(cursor,expression,pos(positions.getStartPosition(unit,parent)),pos(positions.getEndPosition(unit,parent)),prefix+evaluation,false);}
             if(parent instanceof AssignmentTree assignment && assignment.getExpression()==child && assignment.getVariable() instanceof IdentifierTree){
@@ -159,6 +160,7 @@ public final class CanonicalSwitchPort {
                             Lift lift=embeddedLift(site,text,positions,trees,result,evaluation);from=lift.from();to=lift.to();Tree boundaryTree=lift.boundary().getLeaf();
                             if(lift.lambda())replacement="{\n"+lift.prefix()+"return "+lift.expression()+";\n}";
                             else if(boundaryTree instanceof ReturnTree)replacement="{\n"+lift.prefix()+"return "+lift.expression()+";\n}";
+                            else if(boundaryTree instanceof ThrowTree)replacement="{\n"+lift.prefix()+"throw "+lift.expression()+";\n}";
                             else if(boundaryTree instanceof VariableTree)replacement=lift.prefix()+lift.expression();
                             else replacement="{\n"+lift.prefix()+lift.expression()+";\n}";
                         }
