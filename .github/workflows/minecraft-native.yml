@@ -2,6 +2,10 @@ name: Build release packages
 on:
   workflow_dispatch:
     inputs:
+      stage_only:
+        type: boolean
+        default: false
+        description: Stage every exact approved current-version original group without compiling
       stock8_acceptance:
         type: choice
         default: none
@@ -46,7 +50,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates && !inputs.native_java8_package_only && (inputs.stock8_acceptance == 'none' || inputs.stock8_acceptance == '') }}
+    if: ${{ !inputs.stage_only && !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates && !inputs.native_java8_package_only && (inputs.stock8_acceptance == 'none' || inputs.stock8_acceptance == '') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -121,6 +125,7 @@ jobs:
             build/release-build-logs/
             build/reports/problems/
   stage:
+    if: ${{ always() && !cancelled() && (inputs.stage_only || needs.build-packages.result == 'success') }}
     permissions:
       contents: read
       actions: read
@@ -132,7 +137,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Require complete exact original-group approval before stage-only fetch
+        if: ${{ inputs.stage_only }}
+        env:
+          RELEASE_DISPATCH_INPUTS: ${{ toJson(inputs) }}
+        run: python3 -B scripts/build-minecraft-artifacts.py stage-only-selection
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        if: ${{ !inputs.stage_only }}
         with:
           pattern: release-packages-*
           path: build/release-groups

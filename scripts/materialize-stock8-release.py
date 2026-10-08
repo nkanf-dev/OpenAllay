@@ -158,7 +158,7 @@ def check_product(raw, accepted, package_raw, native_raw, root, release_source):
             digest(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())}, "sharedRuntimes": runtimes}, binding
 
 
-def verify_release(path, family, version, root):
+def verify_release(path, family, version, root, *, approved_package_source=None):
     accepted = pin(root)
     require(family == {"id": "forge-1.12.2", "loader": "forge", "buildTarget": "1.12.2", "supportedTargets": ["1.12.2"],
                       "filenameTemplate": "openallay-forge-1.12.2-{version}.jar", "packagingRecipe": "forge-stock8",
@@ -167,10 +167,11 @@ def verify_release(path, family, version, root):
     require(set(wrapper) == {"kind", "pin", "releaseSourceSha", "originalPackageCustody", "originalNativeCustody", "sourceBinding"} and
             wrapper["kind"] == "retained-stock8" and wrapper["pin"] == accepted, "Exact retained stock8 stage custody required")
     current = git(root, "rev-parse", "HEAD").decode().strip()
-    require(wrapper["releaseSourceSha"] == current, "Stage source differs from checked-out release source")
+    package_source = current if approved_package_source is None else approved_package_source
+    require(wrapper["releaseSourceSha"] == package_source, "Stage source differs from approved original package source")
     package_raw = base64.b64decode(wrapper["originalPackageCustody"], validate=True)
     native_raw = base64.b64decode(wrapper["originalNativeCustody"], validate=True)
-    proof, binding = check_product(Path(path).read_bytes(), accepted, package_raw, native_raw, root, current)
+    proof, binding = check_product(Path(path).read_bytes(), accepted, package_raw, native_raw, root, package_source)
     require(binding == wrapper["sourceBinding"], "Retained source binding changed after staging")
     return proof
 

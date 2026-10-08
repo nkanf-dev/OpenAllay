@@ -81,13 +81,14 @@ def package_path(family, release_version):
     return ROOT / family["loader"] / "build/libs" / filename
 
 
-def legacy_package(path, family, release_version):
+def legacy_package(path, family, release_version, approved_package_source=None):
     recipe = family["packagingRecipe"]
     target, kind, _ = LEGACY_RECIPES[recipe]
     require(family == artifacts.family_for("forge", target, [target]) and family["artifactKind"] == kind,
             "Legacy packaging recipe must match its exact accepted stock Forge tuple")
     packer = module("legacy_release_package", "materialize-stock8-release.py" if recipe == "forge-stock8" else "package-legacy-forge-release.py")
-    result = packer.verify_release(path, family, release_version, ROOT)
+    result = (packer.verify_release(path, family, release_version, ROOT) if approved_package_source is None else
+              packer.verify_release(path, family, release_version, ROOT, approved_package_source=approved_package_source))
     require(type(result) is dict and set(result) == {"coreBytes", "sqlite", "sharedRuntimes"},
             "Legacy verifier must return the current exact package proof shape")
     require(type(result["coreBytes"]) is bytes and 0 < len(result["coreBytes"]) <= artifacts.MAX_ARTIFACT_BYTES, "Legacy feature product missing")
@@ -100,9 +101,9 @@ def legacy_package(path, family, release_version):
     return result
 
 
-def package_proofs(path, family):
+def package_proofs(path, family, approved_package_source=None):
     if family["packagingRecipe"] in LEGACY_RECIPES:
-        result = legacy_package(path, family, version())
+        result = legacy_package(path, family, version(), approved_package_source)
         return result["sqlite"], result["sharedRuntimes"]
     return sqlite_package(path, family["loader"]), (forge_runtime_hashes(path) if family["loader"] == "forge" else {})
 
@@ -280,7 +281,7 @@ def sqlite_package(path, loader):
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
 
 
-def verify(families, directory=None, engine_manifest=None):
+def verify(families, directory=None, engine_manifest=None, approved_package_sources=None):
     release_version = version()
     expected = [artifacts.describe(family, release_version)["filename"] for family in families]
     if directory is not None:
@@ -304,7 +305,7 @@ def verify(families, directory=None, engine_manifest=None):
     for family, filename in zip(families, expected):
         path = (directory / filename if directory is not None else package_path(family, release_version)).resolve(strict=True)
         legacy = family["packagingRecipe"] in LEGACY_RECIPES
-        proof = legacy_package(path, family, release_version) if legacy else None
+        proof = legacy_package(path, family, release_version, (approved_package_sources or {}).get(family["id"])) if legacy else None
         if not legacy:
             metadata(path, family, release_version)
         with zipfile.ZipFile(BytesIO(proof["coreBytes"]) if legacy else path) as archive:
@@ -410,6 +411,9 @@ REUSE_ORCHESTRATION_PATHS = {
     "scripts/build-minecraft-artifacts.py", "scripts/verify-release-package-source.py",
     "scripts/fetch-release-build-groups.py", "scripts/collect-release-group-metadata.py",
     "docs/releases/0.4.3.md", "README.md", "README.zh-CN.md", "docs/native-binary-artifacts.md",
+    "docs/releases/0.4.4.md", "docs/forge-runtime-installation.md", "docs/minecraft-support-policy.md",
+    "scripts/materialize-stock8-release.py", "scripts/package-legacy-forge-release.py",
+    "scripts/test_release_stage_only.py", "scripts/test_stock8_release_admission.py",
 }
 REUSE_NATIVE_PATHS = {
     "common/src/targets/1.20.1/java/dev/openallay/integration/jei/MinecraftJeiRecipeApi.java",
@@ -555,6 +559,27 @@ def read_reuse_selection():
     return selected
 
 
+def validate_stage_only_selection():
+    """No compilation: every current target must have exact checked-in original approval."""
+    dispatch = os.environ.get("RELEASE_DISPATCH_INPUTS")
+    if dispatch is not None:
+        inputs = json.loads(dispatch)
+        require(inputs.get("stage_only") is True and all(value in (False, "none", "")
+                for key, value in inputs.items() if key != "stage_only"), "Stage-only cannot compete with compiler/game/metadata modes")
+    data = catalog()
+    selected = read_reuse_selection()
+    expected = {target for target, _ in groups(data)}
+    require(selected and set(selected) == expected, "Stage-only requires every accepted build target exactly once")
+    current = source_identity()
+    for target, group in selected.items():
+        families = [family for family in data["acceptedFamilies"] if family["buildTarget"] == target]
+        require({row["id"] for row in group["familyArtifacts"]} == {family["id"] for family in families},
+                "Stage-only approval must cover every family in each target")
+        verify_reused_source(group["sourceSha"], current, families)
+    return {"stageOnly": True, "targetCount": len(selected), "familyCount": len(data["acceptedFamilies"]),
+            "stageSourceSha": current, "originalPackageSources": sorted({group["sourceSha"] for group in selected.values()})}
+
+
 def verify_receipt_source(family, receipt, receipt_path, current_source, engine_sha, selection, verified_groups):
     if receipt["sourceSha"] == current_source:
         return
@@ -587,6 +612,7 @@ def verify_build_receipts(families, directory, receipt_directory):
     verified_groups = set()
     release_version = version()
     receipts = []
+    approved_package_sources = {}
     for family in families:
         receipt = artifacts.read_json(receipt_directory / (family["id"] + ".json"))
         artifacts.shape(receipt, BUILD_RECEIPT_FIELDS, "Compile/package release receipt")
@@ -602,6 +628,7 @@ def verify_build_receipts(families, directory, receipt_directory):
                 and receipt["family"] == family and receipt["engineManifestSha256"] == engine_sha,
                 "Release receipt source/version/family/engine identity differs")
         verify_receipt_source(family, receipt, receipt_directory / (family["id"] + ".json"), source, engine_sha, reuse_selection, verified_groups)
+        approved_package_sources[family["id"]] = receipt["sourceSha"]
         require(type(receipt["sourceRunId"]) is str and re.fullmatch(r"[1-9][0-9]*", receipt["sourceRunId"])
                 and type(receipt["sourceRunAttempt"]) is str and re.fullmatch(r"[1-9][0-9]*", receipt["sourceRunAttempt"]),
                 "New release receipts must originate in an actual remote workflow run")
@@ -628,11 +655,11 @@ def verify_build_receipts(families, directory, receipt_directory):
             expected_commands = command_receipt(family["buildTarget"], select(catalog(), family["buildTarget"], selection))
         require(commands == expected_commands, "Receipt commands differ from the checked-in native compiler plan")
         receipts.append(receipt)
-    records = verify(families, directory, engine_manifest=engine)
+    records = verify(families, directory, engine_manifest=engine, approved_package_sources=approved_package_sources)
     for family, record, receipt in zip(families, records, receipts):
         path = Path(record["artifactPath"])
         require(record["artifactSha256"] == artifacts.hash_text(receipt["artifactSha256"]), "New release artifact changed after build")
-        sqlite, runtimes = package_proofs(path, family)
+        sqlite, runtimes = package_proofs(path, family, approved_package_sources[family["id"]])
         require(sqlite == receipt["sqlite"], "SQLite bytes changed after package checks")
         require(runtimes == receipt["sharedRuntimes"],
                 "Separately compiled shared runtime bytes changed after build")
@@ -648,13 +675,14 @@ def publication_records(families, directory, receipt_directory=None, build_recei
             receipt_path = build_receipt_directory / (family["id"] + ".json")
             receipt = artifacts.read_json(receipt_path)
             record.update({"artifactSourceSha": receipt["sourceSha"],
+                           "stageSourceSha": source_identity(),
                            "buildRunId": receipt["sourceRunId"],
                            "buildRunAttempt": receipt["sourceRunAttempt"],
                            "verification": receipt["kind"],
                            "receiptSha256": artifacts.file_hash(receipt_path, artifacts.MAX_JSON_BYTES)})
             if family["packagingRecipe"] == "forge-stock8":
                 stock8 = module("stock8_publication", "materialize-stock8-release.py").pin(ROOT)
-                record.update({"artifactSourceSha": stock8["productSource"], "stageSourceSha": receipt["sourceSha"],
+                record.update({"artifactSourceSha": stock8["productSource"], "stageSourceSha": source_identity(), "originalPackageSourceSha": receipt["sourceSha"],
                                "originalProductProvider": stock8["provider"]})
         return records
     original_selection = directory / "accepted-originals.json"
@@ -780,6 +808,7 @@ def main(argv=None):
     build.add_argument("--families")
     grouping = commands.add_parser("groups", help="Exact compile-only build groups for admitted families")
     grouping.add_argument("--github-output", type=Path, help="Append the exact compact group list to the workflow output file")
+    commands.add_parser("stage-only-selection", help="Require complete exact approved original groups before fetching")
     merging = commands.add_parser("merge-staged", help="Merge retained compile/package stages without rebuilding")
     merging.add_argument("groups_directory", type=Path)
     merging.add_argument("directory", type=Path)
@@ -806,6 +835,8 @@ def main(argv=None):
             if args.github_output is not None:
                 with args.github_output.open("a", encoding="utf-8") as output:
                     output.write("groups=" + json.dumps(result, separators=(",", ":")) + "\n")
+        elif args.command == "stage-only-selection":
+            result = validate_stage_only_selection()
         elif args.command == "merge-staged":
             result = merge_staged(args.groups_directory.resolve(), args.directory.resolve())
         elif args.command == "publication-records":

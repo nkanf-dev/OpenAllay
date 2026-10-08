@@ -135,7 +135,7 @@ def provider_check(proof, version, payloads):
         require(isinstance(digest,str) and re.fullmatch(r'[0-9a-f]{64}',digest), 'Provider payload digest required')
 
 
-def provenance_check(proof, root, version):
+def provenance_check(proof, root, version, *, approved_package_source=None):
     value=proof['provenance']
     exact(value,('releaseSource','engine','native','custody','builder'),'release provenance')
     source=value['releaseSource']
@@ -143,7 +143,8 @@ def provenance_check(proof, root, version):
     require(source['version']==version and re.fullmatch(r'[0-9a-f]{40}',source['revision'])
             and Path(source['sourceRoot']).is_absolute(), 'Actual release revision/version required')
     actual=subprocess.run(['git','-C',str(root),'rev-parse','HEAD'],capture_output=True,text=True,check=True).stdout.strip()
-    require(actual==source['revision'], 'Packaging must verify actual release source revision')
+    expected=actual if approved_package_source is None else approved_package_source
+    require(expected==source['revision'], 'Packaging must verify approved original release source revision')
     engine=value['engine']
     require(engine['canonical'] is True and engine['exitCode']==0 and engine['version']==version
             and engine['sourceRevision']==source['revision'] and engine['engineEntries'],
@@ -207,7 +208,7 @@ def validate_family(family, target, root):
     return identity
 
 
-def verify_release(path, family, release_version, root):
+def verify_release(path, family, release_version, root, *, approved_package_source=None):
     """Offline strict custody check; canonical engine/Builder parity belongs to caller."""
     path=Path(path);raw=path.read_bytes();receipt=load(str(path)+'.packaging.json')
     require(re.search(r'(?m)^version\s*=\s*'+re.escape(release_version)+r'\s*$',(Path(root)/'gradle.properties').read_text()), 'Actual release source version differs')
@@ -217,7 +218,10 @@ def verify_release(path, family, release_version, root):
     require(receipt['helperBuild'] is None, 'Forge16 packaging has no player helper build')
     payloads={'product':raw};mod_version(raw,target,release_version);core=raw
     provider_check(receipt['provider'],release_version,payloads)
-    provenance_check(receipt['provider'],root,release_version)
+    if approved_package_source is None:
+        provenance_check(receipt['provider'],root,release_version)
+    else:
+        provenance_check(receipt['provider'],root,release_version,approved_package_source=approved_package_source)
     return {'coreBytes':core,'sqlite':receipt['provider']['sqlite'],'sharedRuntimes':receipt['provider']['sharedRuntimes']}
 
 
