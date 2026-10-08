@@ -20,11 +20,11 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '21.0.10+7.0.LTS'
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '17.0.18+8'
@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '21.0.10+7.0.LTS'
@@ -82,9 +82,9 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with:
@@ -115,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Pack retained native and engine bytes without build replay
         env: {GH_TOKEN: '${{ github.token }}'}
@@ -148,7 +148,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Install isolated display and screenshot support
         run: |
@@ -198,7 +198,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
       - name: Build only the changed Builder candidate declaration
         env: {GH_TOKEN: '${{ github.token }}'}
@@ -224,7 +224,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Install isolated display and screenshot support
         run: |
@@ -274,7 +274,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Install isolated display and screenshot support
         run: |
@@ -325,13 +325,13 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '17.0.18+8'
       - name: Preserve exact metadata JDK17 path
         run: echo "CENSUS_JAVAP=$JAVA_HOME/bin/javap" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
           distribution: temurin
           java-version: '8.0.482+8'
@@ -353,11 +353,11 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: Capture immutable application JDK17 path before legacy build JDK8 setup
         run: printf 'OPENALLAY_NATIVE_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '8.0.482+8'}
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with: {cache-provider: basic, cache-read-only: false}
@@ -391,7 +391,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with: {cache-provider: basic, cache-read-only: false}
@@ -417,7 +417,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '8.0.482+8'}
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with: {cache-provider: basic, cache-read-only: false}
@@ -444,11 +444,11 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with: {persist-credentials: false, fetch-depth: 0}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '17.0.18+8'}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with: {distribution: temurin, java-version: '25'}
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with: {cache-provider: basic, cache-read-only: false}
