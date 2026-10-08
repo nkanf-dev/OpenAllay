@@ -8,8 +8,8 @@ plugins {
 }
 
 // This value is independent of minecraftTarget and the native java_version.
-// One Java17 production ABI serves all accepted native families. Test sources use the installed Java21 compiler.
-def engineJavaVersion = 17
+// One Java8 production ABI serves all accepted native families. Tests and test fixtures use the installed Java21 compiler.
+def engineJavaVersion = 8
 base { archivesName = 'openallay-engine-core' }
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -239,3 +239,52 @@ tasks.register('exportCanonicalVarCompileClasspath') {
 def guideUnionAdmissionVectors = objects.sourceDirectorySet('guideUnionAdmissionVectors', 'Guide union admission vectors')
 guideUnionAdmissionVectors.srcDir('src/guideUnionAdmissionTest/java')
 sourceSets.test.java.source(guideUnionAdmissionVectors)
+
+// Inspect actual emitted production classes and runtime artifacts, not source syntax alone.
+def verifyEngineJava8Bytecode = tasks.register('verifyEngineJava8Bytecode') {
+    group = 'verification'
+    description = 'Require Java8 class files throughout the canonical production engine/runtime graph.'
+    dependsOn(tasks.named('classes'))
+    dependsOn(configurations.runtimeClasspath.buildDependencies)
+    doLast {
+        def checkClass = { String name, byte[] bytes, String owner, boolean compiledOwner ->
+            // Java8 ignores multi-release entries; inspect the base classes it can load.
+            if (name.startsWith('META-INF/versions/') || !name.endsWith('.class')) return
+            if (bytes.length < 8 || bytes[0] != (byte) 0xca || bytes[1] != (byte) 0xfe
+                    || bytes[2] != (byte) 0xba || bytes[3] != (byte) 0xbe) {
+                throw new GradleException("Invalid production class ${owner}!${name}")
+            }
+            int major = ((bytes[6] & 255) << 8) | (bytes[7] & 255)
+            if (major > 52 || (compiledOwner && major != 52)) {
+                throw new GradleException("Production Java8 bytecode boundary: ${owner}!${name} major=${major}")
+            }
+        }
+        def compiled = tasks.named('compileJava', JavaCompile).get().destinationDirectory.get().asFile
+        rootProject.fileTree(compiled) { include '**/*.class' }.each { file ->
+            def name = compiled.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+            checkClass(name, file.bytes, compiled.canonicalPath, true)
+        }
+        sourceSets.main.runtimeClasspath.files.each { artifact ->
+            if (!artifact.exists()) throw new GradleException("Missing production runtime artifact ${artifact}")
+            if (artifact.isDirectory()) {
+                rootProject.fileTree(artifact) { include '**/*.class' }.each { file ->
+                    def name = artifact.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+                    checkClass(name, file.bytes, artifact.canonicalPath, false)
+                }
+            } else if (artifact.name.endsWith('.jar')) {
+                new ZipFile(artifact).withCloseable { jar ->
+                    jar.entries().each { entry ->
+                        if (!entry.isDirectory() && entry.name.endsWith('.class')) {
+                            jar.getInputStream(entry).withCloseable { input ->
+                                checkClass(entry.name, input.bytes, artifact.canonicalPath, false)
+                            }
+                        }
+                    }
+                }
+            } else {
+                throw new GradleException("Unknown production runtime artifact ${artifact}")
+            }
+        }
+    }
+}
+tasks.named('check') { dependsOn(verifyEngineJava8Bytecode) }

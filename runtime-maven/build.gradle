@@ -8,6 +8,8 @@ plugins {
 
 // Build-only input. Neither the raw Maven module nor its transitive dependencies
 // enter an engine/loader production classpath. This project is not a public SDK.
+// There are no production Java sources here: relocation preserves the real upstream
+// Java8 class files. The Java17 toolchain below is only for build tooling and tests.
 base { archivesName = 'openallay-maven-runtime' }
 java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
 tasks.withType(JavaCompile).configureEach {
