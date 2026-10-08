@@ -83,16 +83,7 @@ if (!((($oaPattern1_holder.value = captured) instanceof dev.openallay.tool.ToolR
             try { contexts.closeRequest(correlation); }
             finally { tool.closeRequestScope(correlation); }
         });
-        String source = """
-                var catalog = commands.list();
-                var helpNode = commands.describe('help');
-                var messageNode = commands.describe('me <action>');
-                var help = commands.run('/help me');
-                var message = commands.run('/me %s');
-                var error = commands.run('/help %s_missing');
-                return JSON.stringify({helpNode: helpNode.path, messageNode: messageNode.path,
-                  help: help, signed: message, error: error});
-                """.formatted(token, token);
+        String source = dev.openallay.util.Java8ApiSupport.formatted("var catalog = commands.list();\nvar helpNode = commands.describe('help');\nvar messageNode = commands.describe('me <action>');\nvar help = commands.run('/help me');\nvar message = commands.run('/me %s');\nvar error = commands.run('/help %s_missing');\nreturn JSON.stringify({helpNode: helpNode.path, messageNode: messageNode.path,\n  help: help, signed: message, error: error});\n", token, token);
         // The real Tool owns its bounded command waits and its existing daemon worker.
         // Neither the client nor server owner thread waits on this future.
         tool.invokeAsync(context, new RunJavascriptTool.Input(source, dev.openallay.util.Java8Collections.listOf()), cancellation)
