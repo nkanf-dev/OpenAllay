@@ -203,7 +203,7 @@ class ModrinthBoundaryTest(unittest.TestCase):
         self.assertIn("group: release-packages-${{ github.ref }}", normal)
         self.assertIn("cancel-in-progress: false", normal)
         self.assertIn("    permissions:\n      contents: read\n      actions: read", normal)
-        self.assertIn("inputs.stage_only || needs.build-packages.result == 'success'", normal)
+        self.assertIn("inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')", normal)
 
 
 if __name__ == "__main__":

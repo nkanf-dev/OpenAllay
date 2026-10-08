@@ -74,7 +74,7 @@ class StageOnlyTest(unittest.TestCase):
         self.assertIn('packagingProofSha256',code)
         workflow=(ROOT/'.github/workflows/minecraft-native.yml').read_text()
         self.assertIn('!inputs.stage_only && !inputs.metadata_only',workflow)
-        self.assertIn('inputs.stage_only || needs.build-packages.result',workflow)
+        self.assertIn("inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')",workflow)
         self.assertIn('stage-only-selection',workflow)
         self.assertIn('if: ${{ !inputs.stage_only }}',workflow)
 
