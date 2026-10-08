@@ -53,8 +53,8 @@ def main():
     run([a.javac,'--release','17','-encoding','UTF-8','-d',toolclasses,*tools],'actual-public-tool-compile')
     # Public compiler projection fixture on a real existing native class, not a fake host fixture.
     fixture=out/'projection-fixture';(fixture/'actual/p').mkdir(parents=True)
-    actual_text='package p; import net.minecraft.item.ItemStack; class Probe { ItemStack value; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
-    canonical_text='package p; import net.minecraft.world.item.ItemStack; class Probe { ItemStack value; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
+    actual_text='package p; class Probe { net.minecraft.item.ItemStack value; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
+    canonical_text='package p; class Probe { net.minecraft.world.item.ItemStack value; String text="unchanged literal"; /* net.minecraft.item.ItemStack */ }\n'
     (fixture/'actual/p/Probe.java').write_text(actual_text)
     (fixture/'original').mkdir();(fixture/'original/Probe.java').write_text(canonical_text)
     fixture_units=fixture/'units.tsv'
