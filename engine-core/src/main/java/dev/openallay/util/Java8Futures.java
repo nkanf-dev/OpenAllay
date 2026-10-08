@@ -23,4 +23,25 @@ public final class Java8Futures {
             return CompletableFuture.<T>supplyAsync(() -> recovery.apply(failure));
         }).thenCompose(java.util.function.Function.identity());
     }
+    private static final class Deadlines {
+        private static final java.util.concurrent.ScheduledThreadPoolExecutor TIMER = create();
+        private static java.util.concurrent.ScheduledThreadPoolExecutor create() {
+            java.util.concurrent.ScheduledThreadPoolExecutor executor = new java.util.concurrent.ScheduledThreadPoolExecutor(1, runnable -> {
+                Thread thread = new Thread(runnable, "openallay-future-timeouts");
+                thread.setDaemon(true); return thread;
+            });
+            executor.setRemoveOnCancelPolicy(true); return executor;
+        }
+    }
+    /** Same standard future identity. A deadline cannot replace an already settled outcome. */
+    public static <T> CompletableFuture<T> orTimeout(CompletableFuture<T> source, long timeout,
+            java.util.concurrent.TimeUnit unit) {
+        Objects.requireNonNull(source); Objects.requireNonNull(unit);
+        if (!source.isDone()) {
+            java.util.concurrent.ScheduledFuture<?> deadline = Deadlines.TIMER.schedule(
+                    () -> source.completeExceptionally(new java.util.concurrent.TimeoutException()), timeout, unit);
+            source.whenComplete((value, failure) -> deadline.cancel(false));
+        }
+        return source;
+    }
 }

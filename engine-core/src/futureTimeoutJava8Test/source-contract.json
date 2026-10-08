@@ -1,0 +1,14 @@
+{
+  "scope": "StandardCompletableFuture.orTimeout identity/deadline terminal semantics, no subclasspromise/nativecallersuntiloraclepass",
+  "sources": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "495b317b97157951ef6a4eab7c6c53883d1387ceddf4334f388bfb2c26b58643"
+    },
+    {
+      "path": "engine-core/src/futureTimeoutJava8Test/java/dev/openallay/util/FutureTimeoutJava8Fixture.java",
+      "sha256": "ed08e4b8394ea022b75edd516532d168380f09b9784ff8438b0fb3c2c67cf743"
+    }
+  ],
+  "runner_sha256": "42507017d96701334c515ee3ad69c0a54e4150db0bc2fc5796d466fe196ff65a"
+}
