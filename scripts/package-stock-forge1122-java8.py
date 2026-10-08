@@ -72,7 +72,7 @@ def main():
             if name.endswith('.class'):
                 legacy.require(name not in class_inputs,'Duplicate input runtime class owner '+name)
                 class_inputs[name]={'role':role,'sha256':legacy.sha(data)}
-            elif re.fullmatch(r'(?i)(?:LICENSE|NOTICE)(?:[._-][A-Za-z0-9_-]+)*',Path(name).name):
+            elif not name.endswith('.jar') and re.fullmatch(r'(?i)(?:LICENSE|NOTICE)(?:[._-][A-Za-z0-9_-]+)*',Path(name).name):
                 name='META-INF/licenses/'+role+'/'+name
             if name in contents:
                 legacy.require(contents[name]==data,'Conflicting physical source owner '+name)
