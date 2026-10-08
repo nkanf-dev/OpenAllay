@@ -56,17 +56,17 @@ class PublicationTest(unittest.TestCase):
     def test_exact_channel_counts_and_targets(self):
         github = self.select()
         modrinth = self.select("modrinth")
-        self.assertEqual(len(github), 34)
-        self.assertEqual(len(modrinth), 34)
-        self.assertEqual(len({target for row in github for target in row["supportedTargets"]}), 26)
-        self.assertEqual(len({target for row in modrinth for target in row["supportedTargets"]}), 26)
-        self.assertEqual(sum(len(row["supportedTargets"]) for row in github), 49)
-        self.assertEqual(sum(len(row["supportedTargets"]) for row in modrinth), 49)
+        self.assertEqual(len(github), 35)
+        self.assertEqual(len(modrinth), 35)
+        self.assertEqual(len({target for row in github for target in row["supportedTargets"]}), 27)
+        self.assertEqual(len({target for row in modrinth for target in row["supportedTargets"]}), 27)
+        self.assertEqual(sum(len(row["supportedTargets"]) for row in github), 50)
+        self.assertEqual(sum(len(row["supportedTargets"]) for row in modrinth), 50)
         self.assertEqual([row["id"] for row in github if row["artifactKind"] == "zip"], [])
         self.assertTrue(all(row["artifactKind"] == "jar" for row in modrinth))
         self.assertIn("forge-1.16.5", [row["id"] for row in modrinth])
 
-    def test_modrinth_production_filter_returns_only_34_real_mods(self):
+    def test_modrinth_production_filter_returns_35_real_mods(self):
         source = (ROOT / "scripts/publish-modrinth.sh").read_text()
         match = re.search(r"python3 - \"\$repository\" \"\$distribution\" \"\$tag\" \"\$publication_records\" <<'PY'\n(.*?)\nPY", source, re.S)
         (self.root / "scripts").symlink_to(ROOT / "scripts", target_is_directory=True)
@@ -74,8 +74,8 @@ class PublicationTest(unittest.TestCase):
                                 input=match.group(1), text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         selected = json.loads(result.stdout)
-        self.assertEqual(len(selected), 34)
-        self.assertNotIn("forge-1.12.2", [row["id"] for row in selected])
+        self.assertEqual(len(selected), 35)
+        self.assertIn("forge-1.12.2", [row["id"] for row in selected])
         self.records[-1]["publicationChannels"] = ["github"]
         result = subprocess.run([sys.executable, "-B", "-", str(self.root), str(self.directory), "v0.4.4", json.dumps(self.records)],
                                 input=match.group(1), text=True, capture_output=True)
@@ -92,7 +92,7 @@ class PublicationTest(unittest.TestCase):
             publisher.main()
         command = run.call_args.args[0]
         assets = command[4:command.index("--notes-file")]
-        self.assertEqual(len(assets), 35)
+        self.assertEqual(len(assets), 36)
         self.assertTrue(all(not name.endswith(".zip") for name in assets))
         self.assertIn(str(self.directory / "SHA256SUMS"), assets)
         self.assertTrue(all(not name.endswith(".json") for name in assets))
@@ -123,7 +123,7 @@ class PublicationTest(unittest.TestCase):
         row = dict(self.records[-1], id="forge-1.12.2",loader="forge",supportedTargets=["1.12.2"],
                    artifactKind="zip",publicationChannels=["github"])
         self.records[-1] = row
-        with self.assertRaisesRegex(ValueError, "Unknown or missing"):
+        with self.assertRaises(ValueError):
             self.select()
 
     def test_checksum_missing_extra_duplicate_and_changed_bytes_rejected(self):

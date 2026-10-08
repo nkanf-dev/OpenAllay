@@ -31,6 +31,21 @@
   ],
   "acceptedFamilies": [
     {
+      "id": "forge-1.12.2",
+      "loader": "forge",
+      "buildTarget": "1.12.2",
+      "supportedTargets": [
+        "1.12.2"
+      ],
+      "filenameTemplate": "openallay-forge-1.12.2-{version}.jar",
+      "packagingRecipe": "forge-stock8",
+      "artifactKind": "jar",
+      "publicationChannels": [
+        "github",
+        "modrinth"
+      ]
+    },
+    {
       "buildTarget": "1.16.5",
       "filenameTemplate": "openallay-forge-1.16.5-{version}.jar",
       "id": "forge-1.16.5",
@@ -565,16 +580,6 @@
       "targets": [
         "1.20.3",
         "1.20.4"
-      ],
-      "publishing": false
-    },
-    {
-      "loaders": [
-        "forge"
-      ],
-      "buildTarget": "1.12.2",
-      "targets": [
-        "1.12.2"
       ],
       "publishing": false
     }

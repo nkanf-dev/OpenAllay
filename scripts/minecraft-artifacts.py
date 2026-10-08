@@ -99,7 +99,7 @@ def family_for(loader, build_target, targets):
     label = label_for(targets)
     legacy = loader == "forge" and targets == [build_target] and build_target == "1.16.5"
     kind = "jar"
-    recipe = "forge-flat" if legacy else "nested-mod"
+    recipe = "forge-stock8" if loader == "forge" and targets == ["1.12.2"] else ("forge-flat" if legacy else "nested-mod")
     return {"id": loader + "-" + label, "loader": loader, "buildTarget": build_target,
             "supportedTargets": list(targets), "filenameTemplate": "openallay-" + loader + "-" + label + "-{version}." + kind,
             "packagingRecipe": recipe, "artifactKind": kind,
@@ -112,7 +112,7 @@ def validate_family(family, order):
     interval(family["supportedTargets"], order)
     if any(target_key(target) < target_key("1.18.2") for target in family["supportedTargets"]):
         require(family["loader"] == "forge" and family["supportedTargets"] == [family["buildTarget"]]
-                and family["buildTarget"] == "1.16.5", "Stock legacy recipes require the accepted Forge 1.16.5 tuple")
+                and family["buildTarget"] in ("1.12.2", "1.16.5"), "Stock legacy recipes require an exact accepted Forge tuple")
     require(family["buildTarget"] in family["supportedTargets"], "buildTarget must be inside its interval")
     require(family == family_for(family["loader"], family["buildTarget"], family["supportedTargets"]), "Family id/filename must match its loader and exact interval")
 

@@ -38,7 +38,7 @@ if [[ -n "${OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY:-}" ]]; then
 fi
 publication_records=$(python3 "$repository/scripts/build-minecraft-artifacts.py" "${publication_arguments[@]}")
 # Channel policy belongs to reviewed source. Verify the entire stage, then select
-# only real single-mod JARs. Forge 1.12.2 installs through its GitHub ZIP profile.
+# only real single-mod JARs, including the stock Forge 1.12.2 Java8 product.
 publication_records=$(python3 - "$repository" "$distribution" "$tag" "$publication_records" <<'PY'
 import json
 from pathlib import Path

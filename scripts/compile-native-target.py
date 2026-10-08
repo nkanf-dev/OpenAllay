@@ -39,8 +39,6 @@ def java21_environment(environment):
 
 def commands(root, target, *, loaders=None, artifact_ids=None, candidate_ids=None):
     target_exists(root, target)
-    if target == "1.12.2":
-        raise ValueError("Forge 1.12.2 Java8 port is in progress; its release recipe is pending")
     allowed = target_loaders(root, target)["loaders"]
     loaders = tuple(allowed) if loaders is None else tuple(loaders)
     if not loaders or len(set(loaders)) != len(loaders) or any(loader not in allowed for loader in loaders):
@@ -52,6 +50,20 @@ def commands(root, target, *, loaders=None, artifact_ids=None, candidate_ids=Non
         ids = selection.split(",")
         if not ids or len(set(ids)) != len(ids) or any(not re.fullmatch(r"[a-z0-9][a-z0-9.-]*", value) for value in ids):
             raise ValueError("Expected distinct safe native family IDs")
+    if target == "1.12.2":
+        if loaders != ("forge",) or candidate_ids is not None or artifact_ids != "forge-1.12.2":
+            raise ValueError("Stock Forge14 requires its exact accepted ordinary Java8 JAR family")
+        version = dict(re.findall(r"(?m)^([^#=\s]+)=([^\r\n]+)$", (root / "gradle.properties").read_text()))["version"]
+        if not re.fullmatch(r"[0-9][0-9A-Za-z]*(?:[.+-][0-9A-Za-z]+)*", version):
+            raise ValueError("Unsafe source product version")
+        output = root / "native-builds/forge1122/build/libs" / ("openallay-forge-1.12.2-" + version + ".jar")
+        canonical = [str(root / "gradlew"), "--max-workers=2", "-PminecraftTarget=26.2",
+                     "-PtestBundledExtensions=false", ":engine-core:assemble", ":runtime-json:assemble",
+                     ":extension-api:assemble", ":runtime-rhino:assemble", ":engine-core:processResources",
+                     ":buildBundledExtensions", ":stageBundledExtensions"]
+        materialize = ["python3", "-B", str(root / "scripts/materialize-stock8-release.py"),
+                       "--output", str(output)]
+        return [(canonical, "root"), (materialize, "retained-stock8")]
     if target in LEGACY:
         if loaders != ("forge",) or candidate_ids is not None or artifact_ids != "forge-" + target:
             raise ValueError("Stock legacy Forge requires its exact accepted release family")
@@ -92,7 +104,7 @@ def compile_target(root, target, environment=None, execute=subprocess.run, *,
                    loaders=None, artifact_ids=None, candidate_ids=None):
     selected = commands(root, target, loaders=loaders, artifact_ids=artifact_ids, candidate_ids=candidate_ids)
     environment = dict(os.environ if environment is None else environment)
-    if target in LEGACY and environment.get("GITHUB_ACTIONS") != "true":
+    if (target in LEGACY or target == "1.12.2") and environment.get("GITHUB_ACTIONS") != "true":
         raise ValueError("Stock legacy Forge release packaging runs remotely only")
     # Validate the installed isolated build JVM before allocating any native build output.
     isolated_env = java21_environment(environment) if any(runtime == "java21" for _, runtime in selected) else None

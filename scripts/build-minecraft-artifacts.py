@@ -70,7 +70,8 @@ def groups(data):
     return list(result.items())
 
 
-LEGACY_RECIPES = {"forge-flat": ("1.16.5", "jar", "forge16165")}
+LEGACY_RECIPES = {"forge-flat": ("1.16.5", "jar", "forge16165"),
+                  "forge-stock8": ("1.12.2", "jar", "forge1122")}
 
 
 def package_path(family, release_version):
@@ -85,7 +86,7 @@ def legacy_package(path, family, release_version):
     target, kind, _ = LEGACY_RECIPES[recipe]
     require(family == artifacts.family_for("forge", target, [target]) and family["artifactKind"] == kind,
             "Legacy packaging recipe must match its exact accepted stock Forge tuple")
-    packer = module("legacy_release_package", "package-legacy-forge-release.py")
+    packer = module("legacy_release_package", "materialize-stock8-release.py" if recipe == "forge-stock8" else "package-legacy-forge-release.py")
     result = packer.verify_release(path, family, release_version, ROOT)
     require(type(result) is dict and set(result) == {"coreBytes", "sqlite", "sharedRuntimes"},
             "Legacy verifier must return the current exact package proof shape")
@@ -108,18 +109,32 @@ def package_proofs(path, family):
 
 def legacy_builder(archive, family, lock):
     entries = builder.archive_entries(archive, "legacy feature JAR")
-    expected = builder.resource_path(lock)
+    expected = "META-INF/openallay/bundled-extensions/openallay-builder.jar" if family["packagingRecipe"] == "forge-stock8" else builder.resource_path(lock)
     require([name for name in entries if name.startswith(builder.RESOURCE_DIRECTORY) and name.endswith(".jar")] == [expected],
             "Legacy product must contain exactly one raw universal Builder")
     require(not any(name.startswith("dev/openallay/builder/") for name in entries)
             and builder.DESCRIPTOR not in entries, "Builder cannot be flattened into legacy core")
     content = archive.read(expected)
     provenance = builder.prepare.decode_json(archive.read(builder.PROVENANCE))
+    if family["packagingRecipe"] == "forge-stock8":
+        require(provenance["artifact"] == {"path": expected, "sha256": hashlib.sha256(content).hexdigest()}, "Actual stock8 Builder provenance differs")
+        provenance = {**provenance, "artifact": {"path": builder.resource_path(lock), "sha256": hashlib.sha256(content).hexdigest()}}
     builder.verify_provenance(provenance, lock, hashlib.sha256(content).hexdigest(), False)
-    builder.verify_universal(content, lock)
-    builder.reject_builder_registration(archive, entries, "forge", lock)
+    additional = frozenset({("forge", "1.12.2"), ("forge", "1.16.5")}) if family["packagingRecipe"] == "forge-stock8" else frozenset()
+    builder.verify_universal(content, lock, additional_target_pairs=additional)
+    if family["packagingRecipe"] == "forge-stock8":
+        require(json.loads(archive.read("mcmod.info"))[0]["modid"] == "openallay", "Stock8 core registration differs")
+        require("META-INF/jarjar/metadata.json" not in entries, "Stock8 raw Builder cannot be JarJar registered")
+        for path in entries:
+            if path.endswith(".jar") and path != expected:
+                with zipfile.ZipFile(BytesIO(archive.read(path))) as nested:
+                    names = builder.archive_entries(nested, "stock8 nested resource")
+                    require(builder.DESCRIPTOR not in names and not any(name.startswith("dev/openallay/builder/") for name in names),
+                            "Stock8 product cannot embed a second Builder owner")
+    else:
+        builder.reject_builder_registration(archive, entries, "forge", lock)
     with zipfile.ZipFile(BytesIO(content)) as nested:
-        descriptor = builder.verify_manifest(nested.read(builder.DESCRIPTOR), lock)
+        descriptor = builder.verify_manifest(nested.read(builder.DESCRIPTOR), lock, additional_target_pairs=additional)
     declarations = {row["minecraftVersionRange"] for row in descriptor["support"]["targets"] if row["loader"] == "forge"}
     require(set(family["supportedTargets"]).issubset(declarations), "Builder does not declare accepted legacy target")
     return content
@@ -637,6 +652,10 @@ def publication_records(families, directory, receipt_directory=None, build_recei
                            "buildRunAttempt": receipt["sourceRunAttempt"],
                            "verification": receipt["kind"],
                            "receiptSha256": artifacts.file_hash(receipt_path, artifacts.MAX_JSON_BYTES)})
+            if family["packagingRecipe"] == "forge-stock8":
+                stock8 = module("stock8_publication", "materialize-stock8-release.py").pin(ROOT)
+                record.update({"artifactSourceSha": stock8["productSource"], "stageSourceSha": receipt["sourceSha"],
+                               "originalProductProvider": stock8["provider"]})
         return records
     original_selection = directory / "accepted-originals.json"
     if original_selection.exists():
