@@ -27,6 +27,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for flag in ['project','native-output','javac','java','output']:p.add_argument('--'+flag,type=Path,required=True)
     p.add_argument('--selected-owners',type=Path)
+    p.add_argument('--api-only', action='store_true', help='One remaining API stage over the complete actual native universe; no var/pattern/switch replay')
     a=p.parse_args();project=a.project.resolve();native=a.native_output.resolve();out=a.output.resolve()
     if out.exists() or out==project or project in out.parents:raise ValueError('Fresh external whole-source candidate directory required')
     out.mkdir(parents=True);cp=(native/'classpath.txt').read_text().splitlines();classpath=os.pathsep.join(cp)
@@ -77,16 +78,18 @@ def main():
         'actualSha256':sha(actual_text.encode()),'canonicalSha256':sha(canonical_text.encode()),
         'classOnlyProjection':True,'trustedForwardRoundtripByteExact':True,'literalCommentDeclarationPreserved':True,'originalUntypedLambdaParameterPreserved':True,'explicitWrittenNativeGenericTypesProjected':True,'reviewedOriginalHeldTypes':['HitResult','PlayerInfo','WorldBorder','Toast.Visibility']})
     selected=out/'all-native-owners.txt';selected.write_text('\n'.join(sorted(eligible))+'\n')
-    run([a.java,'-cp',toolclasses,'dev.openallay.build.CanonicalVarTypePort',working,classpath,selected,out/'var-sites.tsv',out/'var-report.json'],'whole-var-public-attribution')
     normalized_baseline={name:(working/name).read_bytes() for name in expected}
     held={}
     write(out/'normalized-baseline.json',[{'path':name,'sha256':sha(blob)} for name,blob in sorted(normalized_baseline.items())])
-    sites={}
-    for row in (out/'var-sites.tsv').read_text().splitlines():
-        name,start,type_b64,variable=row.split('\t');sites.setdefault(name,[]).append((int(start),base64.b64decode(type_b64).decode()))
-    for name,edits in sites.items():path=working/name;path.write_bytes(apply_var(path.read_bytes(),edits))
+    if not a.api_only:
+        run([a.java,'-cp',toolclasses,'dev.openallay.build.CanonicalVarTypePort',working,classpath,selected,out/'var-sites.tsv',out/'var-report.json'],'whole-var-public-attribution')
+        sites={}
+        for row in (out/'var-sites.tsv').read_text().splitlines():
+            name,start,type_b64,variable=row.split('\t');sites.setdefault(name,[]).append((int(start),base64.b64decode(type_b64).decode()))
+        for name,edits in sites.items():path=working/name;path.write_bytes(apply_var(path.read_bytes(),edits))
     stages=[]
-    for kind,tool in [('pattern','CanonicalPatternPort'),('switch','CanonicalSwitchPort'),('api','CanonicalJava8ApiPort')]:
+    language_stages=[('api','CanonicalJava8ApiPort')] if a.api_only else [('pattern','CanonicalPatternPort'),('switch','CanonicalSwitchPort'),('api','CanonicalJava8ApiPort')]
+    for kind,tool in language_stages:
         active=eligible-set(held)
         selected.write_text('\n'.join(sorted(active))+'\n')
         stage_pre={name:(working/name).read_bytes() for name in expected}

@@ -52,6 +52,7 @@ def main():
     p.add_argument('--native-build-request', type=Path)
     p.add_argument('--java8-diagnostic',action='store_true')
     p.add_argument('--language-candidates',action='store_true')
+    p.add_argument('--residual-api-only',action='store_true')
     p.add_argument('--native-package-probe',action='store_true')
     p.add_argument('--selected-owners',type=Path)
     args = p.parse_args()
@@ -79,6 +80,7 @@ def main():
     if args.language_candidates:
         if args.java8_diagnostic or not args.native_build_request: raise ValueError('Distinct exact language candidate request required')
         cmd.append('-PnativeLanguageCandidates=true')
+        if args.residual_api_only: cmd.append('-PnativeResidualApiOnly=true')
         if args.selected_owners:cmd.append('-PnativeCandidateOwners='+str(args.selected_owners.resolve()))
     if args.java8_diagnostic:
         if not args.native_build_request: raise ValueError('Diagnostic requires exact source/closure request')

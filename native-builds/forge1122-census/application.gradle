@@ -165,10 +165,20 @@ if (project.hasProperty('nativeLanguageCandidates')) {
         dependsOn prepareNativeApplication
         doLast {
             def request=new groovy.json.JsonSlurper().parse(project.file(project.property('nativeBuildRequest')))
-            def command=['python3','-B',new File(request.canonicalSourceRoot,'scripts/materialize-native-language-cohort.py'),
-                '--project',request.canonicalSourceRoot,'--native-output',request.output,
-                '--javac',request.javac17,'--java',request.java17,'--output',request.output+'-language-candidate']
-            if (project.hasProperty('nativeCandidateOwners')) command.addAll(['--selected-owners',project.file(project.property('nativeCandidateOwners'))])
+            def command
+            if (project.hasProperty('nativeResidualApiOnly')) {
+                command=['python3','-B',new File(request.canonicalSourceRoot,'scripts/native-residual-api-cohort/prepare.py'),
+                    '--project',request.canonicalSourceRoot,'--native-output',request.output,
+                    '--javac',request.javac17,'--java',request.java17,
+                    '--true-javac8',new File(System.getenv('JAVA_HOME_8_X64'),'bin/javac'),
+                    '--true-java8',new File(System.getenv('JAVA_HOME_8_X64'),'bin/java'),
+                    '--output',request.output+'-language-candidate']
+            } else {
+                command=['python3','-B',new File(request.canonicalSourceRoot,'scripts/materialize-native-language-cohort.py'),
+                    '--project',request.canonicalSourceRoot,'--native-output',request.output,
+                    '--javac',request.javac17,'--java',request.java17,'--output',request.output+'-language-candidate']
+                if (project.hasProperty('nativeCandidateOwners')) command.addAll(['--selected-owners',project.file(project.property('nativeCandidateOwners'))])
+            }
             project.exec { commandLine command }
         }
     }
