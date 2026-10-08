@@ -59,3 +59,7 @@ net.minecraft.client.gui.screens.ConfirmScreen	net.minecraft.client.gui.GuiYesNo
 net.minecraft.client.gui.screens.worldselection.SelectWorldScreen	net.minecraft.client.gui.GuiWorldSelection	native world selection screen owner
 net.minecraft.client.gui.chat.NarratorChatListener	net.minecraft.client.gui.chat.NarratorChatListener	native narrator listener owner
 net.minecraft.client.gui.components.SubtitleOverlay	net.minecraft.client.gui.GuiSubtitleOverlay	native subtitle overlay owner
+net.minecraft.world.phys.HitResult	net.minecraft.util.math.RayTraceResult	actual base native hit payload identity; typed MinecraftHitFacts owns legacy block/entity discrimination, not subtype aliases
+net.minecraft.client.multiplayer.PlayerInfo	net.minecraft.client.network.NetworkPlayerInfo	actual per-player network metadata owner; native latency/member adapters remain typed MinecraftClientContextFacts
+net.minecraft.world.level.border.WorldBorder	net.minecraft.world.border.WorldBorder	actual world border constraint owner, native geometry shared semantic role
+net.minecraft.client.gui.components.toasts.Toast$Visibility	net.minecraft.client.gui.toasts.IToast$Visibility	actual native toast SHOW/HIDE enum nested identity from inherited native toast callback owner
