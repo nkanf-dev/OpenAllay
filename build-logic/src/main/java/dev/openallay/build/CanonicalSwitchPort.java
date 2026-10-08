@@ -19,7 +19,22 @@ public final class CanonicalSwitchPort {
     private static String apply(String text,int start,int end,List<Edit> edits){StringBuilder out=new StringBuilder(text.substring(start,end));List<Edit> sorted=new ArrayList<>(edits);sorted.sort(Comparator.comparingInt(Edit::start).reversed());int previous=end;for(Edit edit:sorted){if(edit.start()<start||edit.end()>end||edit.end()>previous)throw new IllegalArgumentException("Overlapping switch source edits");out.replace(edit.start()-start,edit.end()-start,edit.replacement());previous=edit.start();}return out.toString();}
     private static String slice(String text,CompilationUnitTree unit,SourcePositions positions,Tree tree){return text.substring(pos(positions.getStartPosition(unit,tree)),pos(positions.getEndPosition(unit,tree)));}
     private static boolean abrupt(Tree tree){if(tree instanceof ReturnTree||tree instanceof ThrowTree||tree instanceof ContinueTree||tree instanceof BreakTree||tree instanceof YieldTree)return true;if(tree instanceof BlockTree block&&!block.getStatements().isEmpty())return abrupt(block.getStatements().get(block.getStatements().size()-1));if(tree instanceof IfTree branch&&branch.getElseStatement()!=null)return abrupt(branch.getThenStatement())&&abrupt(branch.getElseStatement());return false;}
-    private static String labels(CaseTree rule){List<? extends ExpressionTree> expressions=rule.getExpressions();if(expressions.isEmpty())return "default:";List<String> labels=new ArrayList<>();for(ExpressionTree expression:expressions){if(!(expression instanceof LiteralTree||expression instanceof IdentifierTree||expression instanceof UnaryTree))throw new IllegalArgumentException("Unsupported pattern/null switch label");labels.add("case "+expression+":");}return String.join("\n",labels);}
+    private static String labels(CaseTree rule,CompilationUnitTree unit,Trees trees){
+        List<? extends ExpressionTree> expressions=rule.getExpressions();if(expressions.isEmpty())return "default:";List<String> labels=new ArrayList<>();
+        for(ExpressionTree expression:expressions){
+            Element symbol=trees.getElement(TreePath.getPath(unit,expression));
+            boolean valid=expression instanceof LiteralTree literal && literal.getValue()!=null
+                    && (literal.getValue() instanceof Number || literal.getValue() instanceof Character || literal.getValue() instanceof String);
+            if(expression instanceof UnaryTree unary && (unary.getKind()==Tree.Kind.UNARY_MINUS || unary.getKind()==Tree.Kind.UNARY_PLUS)
+                    && unary.getExpression() instanceof LiteralTree literal && literal.getValue() instanceof Number) valid=true;
+            if(symbol instanceof VariableElement variable){Object value=variable.getConstantValue();
+                valid=variable.getKind()==ElementKind.ENUM_CONSTANT || value instanceof Number || value instanceof Character || value instanceof String;
+            }
+            if(!valid)throw new IllegalArgumentException("Switch label has no actual JLS constant value or enum symbol");
+            labels.add("case "+expression+":");
+        }
+        return String.join("\n",labels);
+    }
     private static boolean enumSelector(Trees trees,TreePath path,ExpressionTree selector){TypeMirror type=trees.getTypeMirror(new TreePath(path,selector));return type.getKind()==TypeKind.DECLARED&&((DeclaredType)type).asElement().getKind()==ElementKind.ENUM;}
     private record Lift(TreePath boundary,String expression,int from,int to,String prefix,boolean lambda) {}
     private static String denotableAt(TreePath path,Trees trees){return AttributedVarTypes.denotable(trees.getTypeMirror(path),false);}
@@ -48,6 +63,17 @@ public final class CanonicalSwitchPort {
                 int from=pos(positions.getStartPosition(unit,parent)),to=pos(positions.getEndPosition(unit,parent));
                 edits.removeIf(edit->edit.start()>=from&&edit.end()<=to);edits.add(new Edit(from,to,temporary));
                 prefix.setLength(0);prefix.append(type).append(' ').append(temporary).append(";\nif (").append(condition).append(") {\n").append(trueBranch).append("} else {\n").append(falseBranch).append("}\n");
+                evaluation="";child=parent;cursor=cursor.getParentPath();continue;
+            }
+            if(parent instanceof BinaryTree binary && binary.getKind()==Tree.Kind.CONDITIONAL_OR && binary.getRightOperand()==child){
+                String temporary=result+"_or"+index++,type=denotableAt(cursor,trees);
+                if(!type.equals("boolean"))throw new IllegalArgumentException("Actual conditionalOR target is not boolean");
+                String left=slice(text,unit,positions,binary.getLeftOperand());
+                String active=apply(text,pos(positions.getStartPosition(unit,child)),pos(positions.getEndPosition(unit,child)),edits);
+                int from=pos(positions.getStartPosition(unit,parent)),to=pos(positions.getEndPosition(unit,parent));
+                String branch=prefix+evaluation+temporary+" = "+active+";\n";
+                edits.removeIf(edit->edit.start()>=from&&edit.end()<=to);edits.add(new Edit(from,to,temporary));
+                prefix.setLength(0);prefix.append("boolean ").append(temporary).append(";\nif (").append(left).append(") {\n").append(temporary).append(" = true;\n} else {\n").append(branch).append("}\n");
                 evaluation="";child=parent;cursor=cursor.getParentPath();continue;
             }
             if(parent instanceof MemberSelectTree member && member.getExpression()==child){
@@ -106,7 +132,7 @@ public final class CanonicalSwitchPort {
                 for(Site site:sites){try{
                     List<? extends CaseTree> cases=site.expression()?((SwitchExpressionTree)site.tree()).getCases():((SwitchTree)site.tree()).getCases();ExpressionTree selector=site.expression()?((SwitchExpressionTree)site.tree()).getExpression():((SwitchTree)site.tree()).getExpression();
                     for(CaseTree rule:cases)if(rule.getCaseKind()!=CaseTree.CaseKind.RULE)throw new IllegalArgumentException("Mixed/colon cases require explicit fallthrough proof");String label="$oaSwitch"+count++ +"_exit";while(text.contains(label))label+="_";String result=label+"_result";StringBuilder body=new StringBuilder("switch (").append(slice(text,unit,positions,selector)).append(") {\n");boolean defaultCase=false;
-                    for(CaseTree rule:cases){body.append(labels(rule)).append("\n{\n");defaultCase|=rule.getExpressions().isEmpty();Tree value=rule.getBody();List<Edit> caseEdits=new ArrayList<>();int start=pos(positions.getStartPosition(unit,value)),end=pos(positions.getEndPosition(unit,value));for(Edit edit:changes)if(edit.start()>=start&&edit.end()<=end)caseEdits.add(edit);
+                    for(CaseTree rule:cases){body.append(labels(rule,unit,trees)).append("\n{\n");defaultCase|=rule.getExpressions().isEmpty();Tree value=rule.getBody();List<Edit> caseEdits=new ArrayList<>();int start=pos(positions.getStartPosition(unit,value)),end=pos(positions.getEndPosition(unit,value));for(Edit edit:changes)if(edit.start()>=start&&edit.end()<=end)caseEdits.add(edit);
                         if(site.expression()){
                             if(value instanceof ExpressionTree)body.append(result).append(" = ").append(apply(text,start,end,caseEdits)).append("; break ").append(label).append(";\n");
                             else if(value instanceof ThrowTree)body.append(apply(text,start,end,caseEdits)).append('\n');
