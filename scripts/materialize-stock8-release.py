@@ -86,7 +86,8 @@ def source_custody(root, packing_source, native_custody, release_source):
     require(re.fullmatch(r"[0-9a-f]{40}", release_source), "Exact release source required")
     subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", packing_source, release_source], check=True)
     changed = git(root, "diff", "--no-renames", "--name-only", "-z", packing_source, release_source).decode().split("\0")
-    admitted = {"gradle/minecraft-artifacts.json", "gradle/minecraft-target-loaders.json", PIN_PATH, CUSTODY_PATH}
+    admitted = {"gradle/minecraft-artifacts.json", "gradle/minecraft-target-loaders.json",
+                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH}
     for path in filter(None, changed):
         require(path in admitted or path in ("README.md", "README.zh-CN.md", "AGENTS.md") or
                 path.startswith(("scripts/", "docs/", ".github/workflows/")),

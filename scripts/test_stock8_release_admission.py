@@ -102,7 +102,7 @@ class Stock8AdmissionTest(unittest.TestCase):
                        "selectedSourceHashes": {"common/src/main/java/Test.java": materializer.digest(source.read_bytes())}}
             def fake_git(root, *args):
                 if args[0] == "diff":
-                    return b"scripts/materialize-stock8-release.py\0docs/releases/0.4.4.md\0"
+                    return b"scripts/materialize-stock8-release.py\0docs/releases/0.4.4.md\0native-builds/forge16165/build.gradle\0"
                 self.assertEqual(args, ("show", native_source + ":common/src/main/java/Test.java"))
                 return b"genuine selected source"
             with patch.object(materializer, "git", side_effect=fake_git), patch.object(materializer.subprocess, "run"):
