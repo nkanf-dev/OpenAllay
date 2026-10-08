@@ -1,6 +1,6 @@
 package dev.openallay.client.observation;
 
-import net.minecraft.client.renderer.texture.NativeImage;
+import com.mojang.blaze3d.platform.NativeImage;
 
 /** Selected native image custody. Only this typed leaf exposes the actual NativeImage. */
 public final class GuideImageBitmaps {
