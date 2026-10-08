@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import zipfile
 
+from stock8_selection_custody import POLICY_PATH as NATIVE_DELTA_POLICY, policy as native_delta_policy, verify_unselected_pair, verify_selection
 from release_comment_custody import PATHS as COMMENT_PATHS, POLICY_PATH as COMMENT_POLICY_PATH, verify_pair as verify_comment_pair
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -89,8 +90,14 @@ def source_custody(root, packing_source, native_custody, release_source):
     subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", packing_source, release_source], check=True)
     changed = git(root, "diff", "--no-renames", "--name-only", "-z", packing_source, release_source).decode().split("\0")
     admitted = {"gradle/minecraft-artifacts.json", "gradle/minecraft-target-loaders.json",
-                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH, COMMENT_POLICY_PATH}
+                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH, COMMENT_POLICY_PATH, NATIVE_DELTA_POLICY}
+    native_delta_paths={row['path'] for row in native_delta_policy(root)['files']}
+    original_tree=set(git(root,"ls-tree","-r","--name-only","-z",packing_source).decode().split("\0"))
     for path in filter(None, changed):
+        if path in native_delta_paths:
+            original=git(root,"show",packing_source+":"+path) if path in original_tree else None
+            verify_unselected_pair(root,path,original,(root/path).read_bytes())
+            continue
         if path in COMMENT_PATHS:
             verify_comment_pair(root, path, git(root, "show", packing_source + ":" + path), (root / path).read_bytes())
             continue
@@ -101,6 +108,7 @@ def source_custody(root, packing_source, native_custody, release_source):
     require(native_custody["packingSource"] == packing_source, "Original packing source differs")
     selected = native_custody["selectedSourceHashes"]
     require(type(selected) is dict and selected, "Original selected native source ledger required")
+    verify_selection(root,selected,native_source)
     for path, expected in selected.items():
         safe(path)
         require(SHA.fullmatch(expected) and digest(git(root, "show", native_source + ":" + path)) == expected and

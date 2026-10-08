@@ -70,4 +70,6 @@ def selected_native_units(project):
             'mode':'ACTUAL_MCP' if '/src/targets/1.12.2/' in relative or relative in actual else 'CANONICAL_SEMANTIC'})
     return rows,{'kind':'read-only parse-source projection; normal Gradle receipt authoritative','roots':roots,
         'profiles':profiles,'mixinConfigs':configs,'neutralSelectorSha256':sha((project/'gradle/minecraft-source-selection.gradle').read_bytes()),
-        'curatedClassesSha256':sha((project/'native-builds/forge1122-census/curated-classes.tsv').read_bytes()),'java':rows}
+        'curatedClassesSha256':sha((project/'native-builds/forge1122-census/curated-classes.tsv').read_bytes()),'java':rows,
+        'resources':[{'owner':owner,'logicalPath':logical,'origin':path.relative_to(project).as_posix(),
+                      'sha256':sha(path.read_bytes())} for (owner,logical),path in sorted(resources.items())]}
