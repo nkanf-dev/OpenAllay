@@ -23,7 +23,7 @@ public abstract class GuideNativeButton extends Button implements GuideNativeToo
     public final boolean isGuideHovered() { return isHovered; }
     public final void setTooltip(GuideTooltip tooltip) { guideTooltip = tooltip; }
     @Override protected final MutableComponent createNarrationMessage() {
-        return guideNarration.create(() -> super.createNarrationMessage());
+        return guideNarration.create(() -> super.createNarrationMessage()).copy();
     }
     @Override public final void updateNarration(NarrationElementOutput output) {
         super.updateNarration(output);

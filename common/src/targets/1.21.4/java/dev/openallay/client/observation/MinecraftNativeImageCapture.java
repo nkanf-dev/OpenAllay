@@ -24,7 +24,7 @@ public final class MinecraftNativeImageCapture {
     public static CompletableFuture<GuideImageBitmap> capture(net.minecraft.client.Minecraft client) {
         RenderTarget target = dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client);
         try {
-            return CompletableFuture.completedFuture(Screenshot.takeScreenshot(Objects.requireNonNull(target, "target")));
+            return CompletableFuture.completedFuture(GuideImageBitmaps.wrap(Screenshot.takeScreenshot(Objects.requireNonNull(target, "target"))));
         } catch (Throwable failure) {
             return CompletableFuture.failedFuture(failure);
         }
