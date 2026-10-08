@@ -17,19 +17,19 @@ public final class NeoForgeDevelopmentCommands {
     private NeoForgeDevelopmentCommands() {}
     public static void register(OpenAllayRuntime runtime) {
         DevelopmentCommandHandler handler = new DevelopmentCommandHandler(runtime.developmentTools());
-        var routes = DevelopmentCommandSpec.routes().stream().map(route -> {
+        java.util.List<dev.openallay.neoforge.NeoForgeNativeCommandProjection.Route<dev.openallay.command.DevelopmentCommandSpec.Action>> routes = dev.openallay.util.Java8Collections.toList(DevelopmentCommandSpec.routes().stream().map(route -> {
             List<String> literals = new ArrayList<>();
             literals.add(DevelopmentCommandSpec.GROUP);
             literals.addAll(route.literals());
-            return new NeoForgeNativeCommandProjection.Route<>(List.copyOf(literals), route.argument(), route.action());
-        }).toList();
+            return new NeoForgeNativeCommandProjection.Route<>(dev.openallay.util.Java8Collections.listCopyOf(literals), route.argument(), route.action());
+        }));
         NeoForgeNativeCommandRegistration.server(new NeoForgeNativeCommandProjection<>(
                 DevelopmentCommandSpec.ROOT, routes,
                 (sender, invocation) -> DevelopmentCommandSpec.dispatch(handler, invocation.action(),
                         invocation.value(), new Source(runtime, sender)),
                 (server, sender) -> sender.canUseCommand(2, DevelopmentCommandSpec.ROOT),
                 (sender, argument) -> argument == CommandArgument.TRACE_WORD
-                        ? DevelopmentCommandSpec.traceSuggestions(new Source(runtime, sender)) : List.of()));
+                        ? DevelopmentCommandSpec.traceSuggestions(new Source(runtime, sender)) : dev.openallay.util.Java8Collections.listOf()));
     }
     @dev.openallay.value.ValueType(Source.ValueSchemaProvider.class)
 private static final class Source implements DevelopmentCommandSpec.Source {

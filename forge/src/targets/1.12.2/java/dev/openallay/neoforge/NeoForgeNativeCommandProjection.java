@@ -87,7 +87,7 @@ static final class Invocation<A> {
             BiConsumer<ICommandSender, Invocation<A>> dispatch,
             BiPredicate<MinecraftServer, ICommandSender> permission,
             BiFunction<ICommandSender, CommandArgument, List<String>> arguments) {
-        this.root = root; this.routes = List.copyOf(routes); this.dispatch = dispatch;
+        this.root = root; this.routes = dev.openallay.util.Java8Collections.listCopyOf(routes); this.dispatch = dispatch;
         this.permission = permission; this.arguments = arguments;
     }
     @Override public String getName() { return root; }
@@ -127,7 +127,7 @@ static final class Invocation<A> {
     }
     @Override public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender,
             String[] tokens, BlockPos position) {
-        if (!checkPermission(server, sender) || tokens.length == 0) return List.of();
+        if (!checkPermission(server, sender) || tokens.length == 0) return dev.openallay.util.Java8Collections.listOf();
         int cursor = tokens.length - 1;
         List<String> choices = new ArrayList<>();
         for (Route<A> route : routes) {
@@ -141,6 +141,6 @@ static final class Invocation<A> {
             else if (cursor == fixed && route.argument().kind() != CommandArgument.Kind.NONE
                     && literalFirst(tokens, route)) choices.addAll(arguments.apply(sender, route.argument()));
         }
-        return getListOfStringsMatchingLastWord(tokens, choices.stream().distinct().toList());
+        return getListOfStringsMatchingLastWord(tokens, dev.openallay.util.Java8Collections.toList(choices.stream().distinct()));
     }
 }

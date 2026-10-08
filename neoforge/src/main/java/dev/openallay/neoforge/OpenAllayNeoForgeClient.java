@@ -22,7 +22,7 @@ import dev.openallay.guide.ui.GuideDisplayRuntime;
 import dev.openallay.settings.ClientSettingsHistoryBinding;
 import dev.openallay.tool.ToolResult;
 import dev.openallay.recipe.config.RecipeClientRuntime;
-import net.minecraft.client.Minecraft;
+
 import dev.openallay.neoforge.network.NeoForgeClientBridge;
 
 public final class OpenAllayNeoForgeClient {
@@ -42,7 +42,7 @@ public final class OpenAllayNeoForgeClient {
         NeoForgeClientBridge bridge = new NeoForgeClientBridge();
         bridge.register();
         NeoForgeNativeClientEvents.registerKeys();
-        var resourceReloadRegistration = NeoForgeNativeResourceReloadRegistration.install();
+        java.util.function.Function<java.lang.Runnable, java.lang.Runnable> resourceReloadRegistration = NeoForgeNativeResourceReloadRegistration.install();
         NeoForgeNativeHudRegistration.register(graphics -> {
             GuideClientUiCoordinator current = ui;
             if (current != null) current.extractRenderState(graphics);
@@ -53,12 +53,12 @@ public final class OpenAllayNeoForgeClient {
     private static void start(
             OpenAllayRuntime runtime,
             NeoForgeClientBridge bridge,
-            Minecraft client,
+            net.minecraft.client.Minecraft client,
             java.util.function.Function<Runnable, Runnable> resourceReloadRegistration) {
         if (!STARTED.compareAndSet(false, true)) return;
         Gson gson = dev.openallay.json.EngineJson.create();
         java.time.Clock clock = java.time.Clock.systemUTC();
-        var dispatcher = (dev.openallay.client.ClientEventDispatcher)
+        dev.openallay.client.ClientEventDispatcher dispatcher = (dev.openallay.client.ClientEventDispatcher)
                 event -> dev.openallay.client.gui.MinecraftClientWindow.execute(client, event);
         java.nio.file.Path configDirectory = NeoForgeNativeLoaderFacts.configDir().resolve("openallay");
         GuideDisplayRuntime display = new GuideDisplayRuntime(
@@ -79,9 +79,11 @@ public final class OpenAllayNeoForgeClient {
                 clock,
                 display,
                 historySettings);
-        ClientSettingsRuntime settings =
-                settingsResult instanceof ToolResult.Success<ClientSettingsRuntime> success
-                        ? success.value()
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsRuntime> value; ToolResult.Success<ClientSettingsRuntime> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+ClientSettingsRuntime settings =
+                (($oaPattern0_holder.value = settingsResult) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ClientSettingsRuntime>) $oaPattern0_holder.value) != null))
+                        ? $oaPattern0_holder.bound.value()
                         : null;
         ClientModelRuntimeRegistry modelRegistry =
                 settings == null ? null : settings.models();
@@ -116,9 +118,12 @@ public final class OpenAllayNeoForgeClient {
                                 bridge.clientToolInputObservation(correlation));
                         ToolResult<dev.openallay.context.ToolInvocationContext> result =
                                 contexts.captureServerToolContext(required, correlation);
-                        if (result instanceof ToolResult.Success<
-                                dev.openallay.context.ToolInvocationContext> success) {
-                            captured.complete(success.value());
+                        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.context.ToolInvocationContext> value; ToolResult.Success<
+                                dev.openallay.context.ToolInvocationContext> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<
+                                dev.openallay.context.ToolInvocationContext>) $oaPattern1_holder.value) != null))) {
+                            captured.complete($oaPattern1_holder.bound.value());
                         } else {
                             ToolResult.Failure<dev.openallay.context.ToolInvocationContext> failure =
                                     (ToolResult.Failure<
@@ -174,7 +179,7 @@ public final class OpenAllayNeoForgeClient {
         GuideClientUiCoordinator coordinator = new GuideClientUiCoordinator(client, services,
                 recipeClient, display, settings == null ? null : settings.settings(),
                 configDirectory, dispatcher, clock, resourceReloadRegistration);
-        var observationInput = dev.openallay.client.observation.ObservationUiBindings.bind(
+        dev.openallay.client.observation.MinecraftObservationInputActions observationInput = dev.openallay.client.observation.ObservationUiBindings.bind(
                 client, runtime.platform(), runtime.worldObservations(), coordinator, services);
         ui = coordinator;
         bridge.onDisconnect(() -> {
@@ -199,7 +204,7 @@ public final class OpenAllayNeoForgeClient {
             if (settings != null) {
                 settings.settings().replaceServerModel(bridge.capabilities());
             }
-            var current = services.current();
+            dev.openallay.guide.GuideService current = services.current();
             if (current != null) current.refreshCapabilities();
         });
         if (settings != null) {

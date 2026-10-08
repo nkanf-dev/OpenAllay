@@ -10,7 +10,7 @@ public final class NeoForgeClientBridge extends ClientBridgeSession {
         super(new ClientBridgeSession.NativeHost() {
             @Override public Optional<Connection> captureConnection() {
                 Minecraft client = Minecraft.getMinecraft();
-                var original = client.getConnection();
+                net.minecraft.client.network.NetHandlerPlayClient original = client.getConnection();
                 if (client.player == null || original == null) return Optional.empty();
                 return Optional.of(new Connection(client.player.getUniqueID(),
                         () -> Minecraft.getMinecraft().getConnection() == original));
@@ -23,7 +23,7 @@ public final class NeoForgeClientBridge extends ClientBridgeSession {
     }
     public void register() {
         NeoForgeNativeClientPayloads.register(packet -> {
-            var original = Minecraft.getMinecraft().getConnection();
+            net.minecraft.client.network.NetHandlerPlayClient original = Minecraft.getMinecraft().getConnection();
             return inboundCallback(packet.kind(), packet.json(),
                     () -> Minecraft.getMinecraft().getConnection() == original);
         });

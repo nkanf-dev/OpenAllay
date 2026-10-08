@@ -28,10 +28,14 @@ public final class NeoForgeNativeServerLifecycle {
             this.joined = joined; this.disconnected = disconnected;
         }
         @SubscribeEvent public void joined(PlayerEvent.PlayerLoggedInEvent event) {
-            if (event.player instanceof EntityPlayerMP player) joined.accept(player);
+            final class $oaPattern0_Holder { net.minecraft.entity.player.EntityPlayer value; EntityPlayerMP bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = event.player) instanceof net.minecraft.entity.player.EntityPlayerMP && (($oaPattern0_holder.bound = (EntityPlayerMP) $oaPattern0_holder.value) != null))) joined.accept($oaPattern0_holder.bound);
         }
         @SubscribeEvent public void left(PlayerEvent.PlayerLoggedOutEvent event) {
-            if (event.player instanceof EntityPlayerMP player) disconnected.accept(player);
+            final class $oaPattern1_Holder { net.minecraft.entity.player.EntityPlayer value; EntityPlayerMP bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = event.player) instanceof net.minecraft.entity.player.EntityPlayerMP && (($oaPattern1_holder.bound = (EntityPlayerMP) $oaPattern1_holder.value) != null))) disconnected.accept($oaPattern1_holder.bound);
         }
     }
     public static void started() {

@@ -18,19 +18,19 @@ final class NeoForgeNativeModMetadata {
     }
     static boolean isModLoaded(String id) { return Loader.isModLoaded(id); }
     static List<InstalledModMetadata> installedMods() {
-        return Loader.instance().getModList().stream().map(NeoForgeNativeModMetadata::metadata)
-                .sorted(Comparator.comparing(InstalledModMetadata::id)).toList();
+        return dev.openallay.util.Java8Collections.toList(Loader.instance().getModList().stream().map(NeoForgeNativeModMetadata::metadata)
+                .sorted(Comparator.comparing(InstalledModMetadata::id)));
     }
     private static InstalledModMetadata metadata(ModContainer mod) {
         ModMetadata facts = mod.getMetadata();
         Map<String, String> contacts = new TreeMap<>();
-        if (facts.url != null && !facts.url.isBlank()) contacts.put("homepage", facts.url);
-        List<String> dependencies = mod.getRequirements().stream()
+        if (facts.url != null && !dev.openallay.util.Java8Strings.isBlank(facts.url)) contacts.put("homepage", facts.url);
+        List<String> dependencies = dev.openallay.util.Java8Collections.toList(mod.getRequirements().stream()
                 .map(dependency -> "required:" + dependency.getLabel() + ":" + dependency.getRangeString())
-                .sorted().toList();
+                .sorted());
         return new InstalledModMetadata(mod.getModId(), mod.getName(), mod.getVersion(),
                 facts.description == null ? "" : facts.description,
-                facts.authorList == null ? List.of() : List.copyOf(facts.authorList),
-                List.of(), contacts, "both", dependencies);
+                facts.authorList == null ? dev.openallay.util.Java8Collections.listOf() : dev.openallay.util.Java8Collections.listCopyOf(facts.authorList),
+                dev.openallay.util.Java8Collections.listOf(), contacts, "both", dependencies);
     }
 }

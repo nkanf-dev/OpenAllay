@@ -50,10 +50,12 @@ final class NeoForgeNativePayloadRegistration {
             throw new IllegalStateException("Bridge send requires native server owner");
         }
         Packet<?> packet = CHANNEL.getPacketFrom(message);
-        if (!(packet instanceof FMLProxyPacket proxy)) {
+        final class $oaPattern0_Holder { net.minecraft.network.Packet<?> value; FMLProxyPacket bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = packet) instanceof net.minecraftforge.fml.common.network.internal.FMLProxyPacket && (($oaPattern0_holder.bound = (FMLProxyPacket) $oaPattern0_holder.value) != null)))) {
             throw new IllegalStateException("FML bridge did not produce its native proxy packet");
         }
-        player.connection.sendPacket(proxy);
+        player.connection.sendPacket($oaPattern0_holder.bound);
     }
     static void sendToServer(NeoForgeBridgePayloads.Packet packet) { CHANNEL.sendToServer(packet); }
 }

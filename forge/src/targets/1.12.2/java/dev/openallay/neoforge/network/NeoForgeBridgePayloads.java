@@ -19,7 +19,7 @@ public final class NeoForgeBridgePayloads {
         public Packet() {}
         public Packet(String kind, String json) { install(kind, json); }
         private void install(String kind, String json) {
-            if (kind == null || kind.isBlank() || json == null || json.isBlank()) {
+            if (kind == null || dev.openallay.util.Java8Strings.isBlank(kind) || json == null || dev.openallay.util.Java8Strings.isBlank(json)) {
                 throw new IllegalArgumentException("Bridge packet kind and JSON are required");
             }
             this.kind = kind;

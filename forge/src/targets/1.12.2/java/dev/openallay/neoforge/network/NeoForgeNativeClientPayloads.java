@@ -32,7 +32,7 @@ public final class NeoForgeNativeClientPayloads {
         @SubscribeEvent public void disconnected(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
             Minecraft client = Minecraft.getMinecraft();
             client.addScheduledTask(() -> {
-                var current = client.getConnection();
+                net.minecraft.client.network.NetHandlerPlayClient current = client.getConnection();
                 if (current == null || current.getNetworkManager() == event.getManager()) disconnected.run();
             });
         }
