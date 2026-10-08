@@ -62,14 +62,17 @@ def main():
     audit_spec=importlib.util.spec_from_file_location('runtime_preflight',ROOT/'scripts/audit-stock8-runtime-closure.py')
     audit=importlib.util.module_from_spec(audit_spec);audit_spec.loader.exec_module(audit)
     audit.audit(request,a.receipt.with_name('whole-runtime-physical-preflight.json'))
-    contents={};owners={};services={};licenses={};inputs=[];role_projections=[]
+    contents={};owners={};services={};licenses={};inputs=[];role_projections=[];class_inputs={}
     def merge(entries,role):
         for name,data in entries.items():
             if name.startswith(FORBIDDEN):raise ValueError('Stock game/host/ASM alias forbidden: '+role+'!'+name)
             if name.upper()=='META-INF/MANIFEST.MF' or re.search(r'(?i)^META-INF/[^/]+\.(SF|RSA|DSA)$',name):continue
             if name.startswith('META-INF/services/'):
                 services.setdefault(name,set()).update(line.split('#',1)[0].strip() for line in data.decode().splitlines() if line.split('#',1)[0].strip());continue
-            if 'LICENSE' in name.upper() or 'NOTICE' in name.upper():
+            if name.endswith('.class'):
+                legacy.require(name not in class_inputs,'Duplicate input runtime class owner '+name)
+                class_inputs[name]={'role':role,'sha256':legacy.sha(data)}
+            elif re.fullmatch(r'(?i)(?:LICENSE|NOTICE)(?:[._-][A-Za-z0-9_-]+)*',Path(name).name):
                 name='META-INF/licenses/'+role+'/'+name
             if name in contents:
                 legacy.require(contents[name]==data,'Conflicting physical source owner '+name)
@@ -133,6 +136,11 @@ def main():
     for name,lines in services.items():
         for provider in lines:legacy.require(provider.replace('.','/')+'.class' in contents,'Service class absent '+provider)
         contents[name]=('\n'.join(sorted(lines))+'\n').encode()
+    for name,proof in class_inputs.items():
+        legacy.require(name in contents and legacy.sha(contents[name])==proof['sha256'],
+            'Runtime class path/byte ownership changed during packaging: '+name)
+    legacy.require(not any(name.startswith('META-INF/licenses/') and name.endswith('.class') for name in contents),
+        'Runtime classes cannot be relocated as legal documents')
     legacy.require('org/spongepowered/asm/launch/MixinTweaker.class' in contents,'Genuine normal MixinTweaker payload required')
     legacy.require('dev/openallay/neoforge/OpenAllayForge1122LoadingPlugin.class' not in contents,'Unreleased duplicate coreplugin registration owner refused')
     contents['META-INF/MANIFEST.MF']=(
@@ -150,7 +158,7 @@ def main():
     legacy.write_new(a.output,raw)
     result={'target':'forge1122','version':request['version'],'sourceRevision':source,'outputSha256':legacy.sha(raw),
         'entries':legacy.inventory(raw),'owners':owners,'inputs':inputs,'engineReceiptSha256':request['engineReceipt']['sha256'],
-        'nativeReceiptSha256':request['nativeReceipt']['sha256'],'builderSha256':legacy.sha(builder),
+        'nativeReceiptSha256':request['nativeReceipt']['sha256'],'builderSha256':legacy.sha(builder),'runtimeClassPathOwnership':class_inputs,
         'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'exact fixed SQLite JVM-runtime role projection; other physical entries preserved and Java8 scanned','runtimeRoleProjections':role_projections,'nativeMetadataExpansion':metadata_expansion,'engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
     legacy.write_new(a.receipt,legacy.encoded(result))
 
