@@ -208,6 +208,27 @@ def validate_family(family, target, root):
     return identity
 
 
+FORGE16_ENGINE_LEGAL_INPUTS = frozenset(('META-INF/licenses/jtokkit-MIT.txt', 'META-INF/licenses/maven-artifact/DEPENDENCIES', 'META-INF/licenses/maven-artifact/LICENSE', 'META-INF/licenses/maven-artifact/NOTICE', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-eigen-src-LICENSE.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-json-src-LICENSE.MIT.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-kaldi_decoder-src-LICENSE.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-kaldi_native_fbank-src-LICENSE.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-kaldifst-src-LICENSE.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-kissfft-Unlicense.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-onnxruntime-src-LICENSE.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-onnxruntime-src-ThirdPartyNotices.txt.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-sherpa-onnx-LICENSE.txt.txt', 'assets/openallay/native-runtime-notices/ASR-DEPENDENCY-simple-sentencepiece-src-LICENSE.txt', 'assets/openallay/native-runtime-notices/CORRESPONDING-SOURCE.txt', 'assets/openallay/native-runtime-notices/GPL3.txt', 'assets/openallay/native-runtime-notices/ONNXRUNTIME-MIT.txt', 'assets/openallay/native-runtime-notices/ONNXRUNTIME-ThirdPartyNotices.txt', 'assets/openallay/native-runtime-notices/PIPER-MIT.txt', 'assets/openallay/native-runtime-notices/README-SOURCE.txt', 'assets/openallay/native-runtime-notices/SHERPA-APACHE-2.0.txt', 'assets/openallay/native-runtime-notices/SOURCES.json', 'assets/openallay/native-runtime-notices/THIRD_PARTY_NOTICES.txt', 'assets/openallay/native-runtime-notices/UPSTREAM-DEPENDENCY-SOURCE-DECLARATIONS.json', 'data/openallay/models/LICENSE.models.dev'))
+
+
+def engine_legal_owner(path, source):
+    """Resolve only the actual finite non-executable engine legal custody ledger."""
+    require(source in FORGE16_ENGINE_LEGAL_INPUTS and not source.endswith(('.class','.jar')),
+            'Unknown engine entry cannot use the Forge16 legal projection')
+    receipt=load(str(path)+'.packaging.json')
+    proof=receipt['provider'];engine=proof['provenance']['engine']
+    rows=[row for row in proof['provenance']['custody']['engineCustody']['replaced']
+          if row.get('role')=='engine' and row.get('input')==source]
+    require(len(rows)==1, 'One actual engine legal owner required')
+    owner=rows[0];target='META-INF/licenses/engine/'+source
+    require(set(owner)=={'role','input','output','sha256'} and owner['output']==target and
+            owner['sha256']==engine['engineEntries'][source], 'Actual engine legal source/output/hash differs')
+    entry=proof['components']['product']['entries'][target]
+    require(entry['major'] is None and entry['sha256']==owner['sha256'] and entry['bytes']>0 and
+            receipt['entries'][target]==entry, 'Final complete package legal entry custody differs')
+    return target,owner['sha256']
+
+
 def verify_release(path, family, release_version, root, *, approved_package_source=None):
     """Offline strict custody check; canonical engine/Builder parity belongs to caller."""
     path=Path(path);raw=path.read_bytes();receipt=load(str(path)+'.packaging.json')

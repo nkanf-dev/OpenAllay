@@ -308,6 +308,14 @@ def engine_entry(archive, family, name, path=None):
         require(hashlib.sha256(content).hexdigest() == owner_sha,
                 "Stock8 engine legal resource differs from retained complete ownership proof")
         return content
+    if family["packagingRecipe"] == "forge-flat":
+        forge16 = module("forge16_legal_owner", "package-legacy-forge-release.py")
+        if name in forge16.FORGE16_ENGINE_LEGAL_INPUTS:
+            target, owner_sha = forge16.engine_legal_owner(path, name)
+            require(name not in archive.namelist() and target in archive.namelist(), "Forge16 legal resource needs one exact relocated owner")
+            content = archive.read(target)
+            require(hashlib.sha256(content).hexdigest() == owner_sha, "Forge16 actual legal resource bytes differ")
+            return content
     return archive.read(name)
 
 
@@ -449,6 +457,7 @@ REUSE_ORCHESTRATION_PATHS = {
     "scripts/capture-commonmark-provider-nested.py", "scripts/test_commonmark_provider_custody.py",
     "scripts/test_release_publication.py",
     "scripts/verify-native-target-package.py", "scripts/test_early_neoforge_recipe.py",
+    "scripts/test_forge16_engine_legal_custody.py",
     COMMENT_POLICY_PATH, "scripts/release_comment_custody.py", "scripts/test_release_comment_custody.py",
 }
 REUSE_NATIVE_PATHS = {
