@@ -13,7 +13,6 @@ import java.util.function.BooleanSupplier;
 
 /** Only Java-owned actions reach game executors. No JavaScript callback crosses this boundary. */
 final class OwnerThreadBridge implements AutoCloseable {
-    @dev.openallay.value.ValueType(Owner.ValueSchemaProvider.class)
 static final class Owner {
     private final Executor executor;
     private final BooleanSupplier isOwnerThread;
@@ -40,12 +39,6 @@ static final class Owner {
         return hash;
     }
     @Override public String toString() { return "Owner[executor=" + executor + ", isOwnerThread=" + isOwnerThread + ", validate=" + validate + "]"; }
-    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
-        public ValueSchemaProvider() {}
-        @Override public dev.openallay.value.ValueSchema<Owner> schema() {
-            return new dev.openallay.value.ValueSchema<>(Owner.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Owner>>asList(new dev.openallay.value.ValueSchema.Component<>(Owner.class, "executor", Owner::executor), new dev.openallay.value.ValueSchema.Component<>(Owner.class, "isOwnerThread", Owner::isOwnerThread), new dev.openallay.value.ValueSchema.Component<>(Owner.class, "validate", Owner::validate)), arguments -> new Owner((Executor) arguments[0], (BooleanSupplier) arguments[1], (Runnable) arguments[2]));
-        }
-    }
 }
     private final Thread worker = Thread.currentThread();
     private final Runnable requireActive;
@@ -53,7 +46,6 @@ static final class Owner {
     private volatile BooleanSupplier anyOwnerThread;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Set<Pending<?>> pending = ConcurrentHashMap.newKeySet();
-    @dev.openallay.value.ValueType(Pending.ValueSchemaProvider.class)
 private static final class Pending<T> {
     private final CompletableFuture<T> future;
     private final AtomicBoolean claimed;
@@ -76,12 +68,6 @@ private static final class Pending<T> {
         return hash;
     }
     @Override public String toString() { return "Pending[future=" + future + ", claimed=" + claimed + "]"; }
-    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
-        public ValueSchemaProvider() {}
-        @Override public dev.openallay.value.ValueSchema<Pending> schema() {
-            return new dev.openallay.value.ValueSchema<>(Pending.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Pending>>asList(new dev.openallay.value.ValueSchema.Component<>(Pending.class, "future", Pending::future), new dev.openallay.value.ValueSchema.Component<>(Pending.class, "claimed", Pending::claimed)), arguments -> new Pending((CompletableFuture) arguments[0], (AtomicBoolean) arguments[1]));
-        }
-    }
 }
 
     OwnerThreadBridge(Runnable requireActive, BooleanSupplier anyOwnerThread) {

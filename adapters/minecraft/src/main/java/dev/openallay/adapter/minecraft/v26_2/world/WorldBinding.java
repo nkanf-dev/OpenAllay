@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.util.Optional;
 /** Native handles stay in the typed target leaf; this contract carries only detached values. */
 interface WorldBinding {
-    @dev.openallay.value.ValueType(Image.ValueSchemaProvider.class)
 public static final class Image {
     private final String actual;
     private final boolean changed;
@@ -29,12 +28,6 @@ public static final class Image {
         return hash;
     }
     @Override public String toString() { return "Image[actual=" + actual + ", changed=" + changed + "]"; }
-    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
-        public ValueSchemaProvider() {}
-        @Override public dev.openallay.value.ValueSchema<Image> schema() {
-            return new dev.openallay.value.ValueSchema<>(Image.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Image>>asList(new dev.openallay.value.ValueSchema.Component<>(Image.class, "actual", Image::actual), new dev.openallay.value.ValueSchema.Component<>(Image.class, "changed", Image::changed)), arguments -> new Image((String) arguments[0], (Boolean) arguments[1]));
-        }
-    }
 }
     OwnerThreadBridge.Owner clientOwner();
     OwnerThreadBridge.Owner serverOwner();
