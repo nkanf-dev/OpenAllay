@@ -38,8 +38,10 @@ def main():
     requested=a.families.split(",")
     families=[family for family in catalog["acceptedFamilies"] if family["id"] in requested]
     if len(families)!=len(requested) or any(family["buildTarget"]!=a.target for family in families):raise ValueError("Unknown capture family selection")
-    products={family["loader"]:project/family["loader"]/"build/libs"/family["filenameTemplate"].replace("{version}",properties["version"]) for family in families}
-    if set(products)!={"fabric","neoforge"}:raise ValueError("Capture requires exact Fabric+NeoForge selected family")
+    nested_families=[family for family in families if family["packagingRecipe"]=="nested-mod"]
+    products={family["loader"]:project/family["loader"]/"build/libs"/family["filenameTemplate"].replace("{version}",properties["version"]) for family in nested_families}
+    if not products: return
+    if not set(products).issubset({"fabric","forge","neoforge"}):raise ValueError("Unknown capture loader")
     provider_path=project/"runtime-commonmark/build/libs"/("openallay-commonmark-"+properties["commonmark_version"]+".jar")
     report = {"scope":"capture-only actualCommonMark provider/nestedbytecustody beforeconsumerdecision","acceptedRawProviderSha256":EXPECTED,"guardChangeAdmitted":False,"inputs":[],"errors":[]}
     provider = None
@@ -49,7 +51,8 @@ def main():
         (a.output / "provider.jar").write_bytes(blob); provider = inventory(blob)
         report["provider"] = {"path":str(provider_path),"bytes":len(blob),"sha256":digest(blob),"matchesAccepted":digest(blob)==EXPECTED,**provider}
     else: report["errors"].append("Missing actual raw provider: " + str(provider_path))
-    for loader,path,directory in [("fabric",products["fabric"],"META-INF/jars/"),("neoforge",products["neoforge"],"META-INF/jarjar/")]:
+    for loader,path in sorted(products.items()):
+        directory="META-INF/jars/" if loader=="fabric" else "META-INF/jarjar/"
         row = {"loader":loader,"productPath":str(path)}
         if not path.is_file(): row["error"]="Missing actual compiled product"; report["inputs"].append(row); continue
         # Product bytes remain in normal output; only tiny nested library evidence is copied.
