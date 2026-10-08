@@ -202,7 +202,8 @@ class ModrinthBoundaryTest(unittest.TestCase):
         normal = (ROOT / ".github/workflows/minecraft-native.yml").read_text()
         self.assertIn("group: release-packages-${{ github.ref }}", normal)
         self.assertIn("cancel-in-progress: false", normal)
-        self.assertIn("  stage:\n    permissions:\n      contents: read\n      actions: read", normal)
+        self.assertIn("    permissions:\n      contents: read\n      actions: read", normal)
+        self.assertIn("inputs.stage_only || needs.build-packages.result == 'success'", normal)
 
 
 if __name__ == "__main__":
