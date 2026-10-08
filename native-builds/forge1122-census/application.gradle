@@ -159,9 +159,11 @@ if (project.hasProperty('nativeLanguageCandidates')) {
         dependsOn prepareNativeApplication
         doLast {
             def request=new groovy.json.JsonSlurper().parse(project.file(project.property('nativeBuildRequest')))
-            project.exec { commandLine 'python3','-B',new File(request.canonicalSourceRoot,'scripts/materialize-native-language-cohort.py'),
+            def command=['python3','-B',new File(request.canonicalSourceRoot,'scripts/materialize-native-language-cohort.py'),
                 '--project',request.canonicalSourceRoot,'--native-output',request.output,
-                '--javac',request.javac17,'--java',request.java17,'--output',request.output+'-language-candidate' }
+                '--javac',request.javac17,'--java',request.java17,'--output',request.output+'-language-candidate']
+            if (project.hasProperty('nativeCandidateOwners')) command.addAll(['--selected-owners',project.file(project.property('nativeCandidateOwners'))])
+            project.exec { commandLine command }
         }
     }
 }

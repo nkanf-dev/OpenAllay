@@ -19,6 +19,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--closure-pin',type=Path)
     parser.add_argument('--language-candidates',action='store_true')
+    parser.add_argument('--selected-owners',type=Path)
     a=parser.parse_args()
     spec=importlib.util.spec_from_file_location('native_transport',ROOT/'scripts/build-forge1122-native.py')
     transport=importlib.util.module_from_spec(spec);spec.loader.exec_module(transport)
@@ -110,6 +111,9 @@ def main():
     command=['python3','-B',str(ROOT/'scripts/run-forge1122-native-census.py'),
         '--workspace',str(work/'tool'),'--output',str(Path(os.environ['RUNNER_TEMP'])/'forge1122-java8-tooling'),
         '--javap',tool+'/bin/javap','--native-build-request',str(work/'request.json'),('--language-candidates' if a.language_candidates else '--java8-diagnostic')]
+    if a.selected_owners:
+        if not a.language_candidates:raise ValueError('Selected owner subset applies only to source language candidates')
+        command.extend(['--selected-owners',str(a.selected_owners.resolve())])
     env=dict(os.environ);env['JAVA_HOME']=env['JAVA_HOME_8_X64'];env['PATH']=env['JAVA_HOME']+'/bin:'+env['PATH']
     with (reports/'driver.log').open('w') as log:result=subprocess.run(command,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=3300)
     transport.write(reports/'RESULT.json',{'command':command,'exitCode':result.returncode,

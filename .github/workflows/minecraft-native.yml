@@ -2,6 +2,10 @@ name: Build release packages
 on:
   workflow_dispatch:
     inputs:
+      native_held_candidates:
+        type: boolean
+        default: false
+        description: Produce only the five exact held native language owners, preserve all251 attribution
       native_language_candidates:
         type: boolean
         default: false
@@ -25,7 +29,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates }}
+    if: ${{ !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -203,7 +207,7 @@ jobs:
           path: ${{ runner.temp }}/native-record-candidate/
 
   forge1122-native-language-source-candidates:
-    if: ${{ inputs.native_language_candidates }}
+    if: ${{ inputs.native_language_candidates || inputs.native_held_candidates }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -221,7 +225,7 @@ jobs:
         with: {cache-provider: basic, cache-read-only: false}
       - name: One real normalized whole native source language cohort candidate
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: python3 -B scripts/diagnose-forge1122-native-java8.py --language-candidates
+        run: python3 -B scripts/diagnose-forge1122-native-java8.py --language-candidates ${{ inputs.native_held_candidates && '--selected-owners native-builds/forge1122-census/held-language-owners.txt' || '' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

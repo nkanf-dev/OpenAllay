@@ -26,6 +26,7 @@ def apply_var(raw,sites):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for flag in ['project','native-output','javac','java','output']:p.add_argument('--'+flag,type=Path,required=True)
+    p.add_argument('--selected-owners',type=Path)
     a=p.parse_args();project=a.project.resolve();native=a.native_output.resolve();out=a.output.resolve()
     if out.exists() or out==project or project in out.parents:raise ValueError('Fresh external whole-source candidate directory required')
     out.mkdir(parents=True);cp=(native/'classpath.txt').read_text().splitlines();classpath=os.pathsep.join(cp)
@@ -35,6 +36,8 @@ def main():
     sources=native/'generated-java';working=out/'whole-normalized';shutil.copytree(sources,working)
     expected=set(originals)
     if {p.relative_to(working).as_posix() for p in working.rglob('*.java')}!=expected:raise ValueError('Whole exact native source universe required')
+    eligible=set(a.selected_owners.read_text().splitlines()) if a.selected_owners else set(expected)
+    if not eligible or not eligible.issubset(expected):raise ValueError('Explicit selected logical native owners must be an exact nonempty subset')
     commands=[]
     def run(command,label,fail=True):
         commands.append([str(c) for c in command]);write(out/'commands.json',commands)
@@ -73,7 +76,7 @@ def main():
     write(fixture/'proof.json',{'realNativeIdentity':'net.minecraft.item.ItemStack','canonicalIdentity':'net.minecraft.world.item.ItemStack',
         'actualSha256':sha(actual_text.encode()),'canonicalSha256':sha(canonical_text.encode()),
         'classOnlyProjection':True,'trustedForwardRoundtripByteExact':True,'literalCommentDeclarationPreserved':True,'originalUntypedLambdaParameterPreserved':True,'explicitWrittenNativeGenericTypesProjected':True,'reviewedOriginalHeldTypes':['HitResult','PlayerInfo','WorldBorder','Toast.Visibility']})
-    selected=out/'all-native-owners.txt';selected.write_text('\n'.join(sorted(expected))+'\n')
+    selected=out/'all-native-owners.txt';selected.write_text('\n'.join(sorted(eligible))+'\n')
     run([a.java,'-cp',toolclasses,'dev.openallay.build.CanonicalVarTypePort',working,classpath,selected,out/'var-sites.tsv',out/'var-report.json'],'whole-var-public-attribution')
     normalized_baseline={name:(working/name).read_bytes() for name in expected}
     held={}
@@ -84,7 +87,7 @@ def main():
     for name,edits in sites.items():path=working/name;path.write_bytes(apply_var(path.read_bytes(),edits))
     stages=[]
     for kind,tool in [('pattern','CanonicalPatternPort'),('switch','CanonicalSwitchPort'),('api','CanonicalJava8ApiPort')]:
-        active=expected-set(held)
+        active=eligible-set(held)
         selected.write_text('\n'.join(sorted(active))+'\n')
         stage_pre={name:(working/name).read_bytes() for name in expected}
         write(out/(kind+'-stage-pre.json'),[{'path':name,'sha256':sha(blob),'selected':name in active} for name,blob in sorted(stage_pre.items())])
@@ -123,6 +126,10 @@ def main():
         (working/name).write_bytes(normalized_baseline[name])
         target=projection/'post'/name;target.parent.mkdir(parents=True,exist_ok=True)
         target.write_bytes(originals[name])
+    for name in expected-eligible:
+        (working/name).write_bytes(normalized_baseline[name])
+        target=projection/'post'/name;target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(originals[name])
     # Every held owner keeps its original physical source and authenticated forward-normalized baseline.
     for name in held:
         (working/name).write_bytes(normalized_baseline[name])
@@ -144,6 +151,7 @@ def main():
     packet=out/'source-packet';packet.mkdir();patch='';files=[]
     for row in unitrows:
         name=row[1]
+        if name not in eligible:continue
         if name in held:
             if (projection/'post'/name).read_bytes()!=originals[name]:raise ValueError('Held owner physical bytes changed')
             continue
@@ -155,7 +163,7 @@ def main():
         patch+=''.join(difflib.unified_diff(original.decode().splitlines(True),candidate.decode().splitlines(True),fromfile='a/'+origin,tofile='b/'+origin))
         files.append({'path':origin,'preSha256':sha(original),'postSha256':sha(candidate),'mode':row[2]})
     (packet/'source.patch').write_text(patch)
-    write(packet/'manifest.json',{'sourceOwners':len(unitrows),'heldUnchangedOwners':held,'admittedOwnerCount':len(expected)-len(held),'files':files,'patchSha256':sha(patch.encode()),
+    write(packet/'manifest.json',{'sourceOwners':len(unitrows),'selectedCandidateOwners':sorted(eligible),'heldUnchangedOwners':held,'admittedOwnerCount':len(eligible-set(held)),'files':files,'patchSha256':sha(patch.encode()),
         'toolPins':[{'path':p.relative_to(project).as_posix(),'sha256':sha(p.read_bytes())} for p in tools],
         'wholeNormalizedModern17BeforeAfterPassed':True,'trustedClassNamespaceRoundTripByteExact':True,
         'gameLaunch':False,'nativeJava8Acceptance':False,'sourceWrites':False,'featureAlgorithmsCopied':False})

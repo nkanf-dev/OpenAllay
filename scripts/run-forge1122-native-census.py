@@ -52,6 +52,7 @@ def main():
     p.add_argument('--native-build-request', type=Path)
     p.add_argument('--java8-diagnostic',action='store_true')
     p.add_argument('--language-candidates',action='store_true')
+    p.add_argument('--selected-owners',type=Path)
     args = p.parse_args()
     repo = Path(__file__).resolve().parents[1]
     island = repo / 'native-builds/forge1122-census'
@@ -75,6 +76,7 @@ def main():
     if args.language_candidates:
         if args.java8_diagnostic or not args.native_build_request: raise ValueError('Distinct exact language candidate request required')
         cmd.append('-PnativeLanguageCandidates=true')
+        if args.selected_owners:cmd.append('-PnativeCandidateOwners='+str(args.selected_owners.resolve()))
     if args.java8_diagnostic:
         if not args.native_build_request: raise ValueError('Diagnostic requires exact source/closure request')
         cmd.append('-PnativeJava8Diagnostic=true')
