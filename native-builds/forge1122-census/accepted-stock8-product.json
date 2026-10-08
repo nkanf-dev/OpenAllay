@@ -1,11 +1,11 @@
 {
   "provider": {
-    "artifactId": 11537456494,
-    "runId": 37749666349,
-    "sourceRevision": "655b42213590ba48767435343794ed2e63037904",
-    "sha256": "794cb8990a7e578c83521b7ead54954dfb9d036d59093710e4d3de92e9cad932"
+    "artifactId": 11538795718,
+    "runId": 37751288521,
+    "sourceRevision": "4bbdfe5835541e2e86f9cfc48000f4a5d847b3bc",
+    "sha256": "5fe1638dd99fe72ff4017e4fe3f60733710f01efaab3d3adf62a6f5c3105e086"
   },
-  "jarSha256": "a4c51aca3d026acc95e1024be5657c2fbbcd9419b86d1c5cc3797a3472c41085",
+  "jarSha256": "9f698fdafeed4a2ea7ec709ad05559e67372979e14d092f501db4f6e00efa301",
   "jarName": "openallay-forge-1.12.2-0.4.4.jar",
-  "productSource": "655b42213590ba48767435343794ed2e63037904"
+  "productSource": "4bbdfe5835541e2e86f9cfc48000f4a5d847b3bc"
 }
