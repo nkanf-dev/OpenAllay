@@ -25,6 +25,59 @@ def identity(path):
         "sha256": digest(file.read_bytes())} for file in sorted(path.rglob("*")) if file.is_file()]
     return {"files": rows, "sha256": digest(json.dumps(rows, sort_keys=True).encode())}
 
+
+def source_identity(blob):
+    """Class-file public SourceFile/package identity; no loading or reflection."""
+    position = 0
+    def take(count):
+        nonlocal position
+        if count < 0 or position + count > len(blob): raise ValueError("Truncated class metadata")
+        value = blob[position:position + count]; position += count; return value
+    def u1(): return take(1)[0]
+    def u2(): return struct.unpack(">H", take(2))[0]
+    def u4(): return struct.unpack(">I", take(4))[0]
+    if take(4) != b"\xca\xfe\xba\xbe": raise ValueError("Invalid class metadata")
+    u2(); u2(); pool = [None] * u2(); index = 1
+    while index < len(pool):
+        tag = u1()
+        if tag == 1:
+            # Source/class/attribute identifiers use ordinary UTF8; modified-NUL cannot identify a source.
+            pool[index] = (tag, take(u2()))
+        elif tag in (3, 4): take(4)
+        elif tag in (5, 6):
+            take(8); index += 1
+            if index >= len(pool): raise ValueError("Invalid double-slot constant")
+        elif tag in (7, 8, 16, 19, 20): pool[index] = (tag, u2())
+        elif tag in (9, 10, 11, 12, 17, 18): take(4)
+        elif tag == 15: take(3)
+        else: raise ValueError("Unknown class constant tag: " + str(tag))
+        index += 1
+    def utf(index):
+        if not 0 < index < len(pool) or pool[index] is None or pool[index][0] != 1:
+            raise ValueError("Invalid UTF8 metadata reference")
+        try: return pool[index][1].decode("utf-8")
+        except UnicodeDecodeError as failure: raise ValueError("Noncanonical source identity UTF8") from failure
+    u2(); this_class = u2(); u2()
+    if not 0 < this_class < len(pool) or pool[this_class] is None or pool[this_class][0] != 7:
+        raise ValueError("Invalid class identity reference")
+    binary = utf(pool[this_class][1]); take(2 * u2())
+    def skip_attributes():
+        for unused in range(u2()): u2(); take(u4())
+    for unused in range(u2()): take(6); skip_attributes()
+    for unused in range(u2()): take(6); skip_attributes()
+    source_file = None
+    for unused in range(u2()):
+        name = utf(u2()); length = u4()
+        if name == "SourceFile":
+            if length != 2 or source_file is not None: raise ValueError("Ambiguous SourceFile metadata")
+            source_file = utf(u2())
+        else: take(length)
+    if position != len(blob): raise ValueError("Trailing class metadata")
+    if source_file is not None and ("/" in source_file or "\\" in source_file or source_file in ("", ".", "..")):
+        raise ValueError("Invalid source filename metadata")
+    package = binary.rsplit("/", 1)[0] if "/" in binary else ""
+    return binary, source_file, package
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, required=True)
@@ -41,28 +94,39 @@ def main():
     if Path(metadata["sourceRoot"]).resolve() != root or sorted(metadata["sources"]) != paths or metadata["producer"] != ":engine-core:compileJava":
         raise ValueError("Require exact normal current complete engine source/classpath export")
     if len(sources) != args.expected_sources: raise ValueError("Source count differs: " + str(len(sources)))
-    rows = []; covered = set()
+    rows = []; covered = set(); source_files = {}
     for path in sources:
         blob = path.read_bytes(); match = re.search(rb"\bpackage\s+([A-Za-z_$][A-Za-z0-9_$.]*)\s*;", blob)
         if not match: raise ValueError("Missing production package")
-        covered.add(match.group(1).decode().replace(".", "/") + "/" + path.stem)
+        package = match.group(1).decode().replace(".", "/")
+        covered.add(package + "/" + path.stem)
+        source_key = (package, path.name)
+        if source_key in source_files: raise ValueError("Ambiguous canonical package/source filename: " + str(source_key))
+        source_files[source_key] = str(path.relative_to(project))
         rows.append({"path": str(path.relative_to(project)), "bytes": len(blob), "sha256": digest(blob)})
     compile_items = [Path(item).resolve() for item in metadata["compileClasspath"]]
     runtime_items = [Path(item).resolve() for item in metadata["runtimeClasspath"]]
     records = []; replacements = set(); blockers = []
     for path in sorted(set(compile_items + runtime_items)):
-        entries = class_entries(path); base = {}; mr = {}; overlap = []
+        entries = class_entries(path); base = {}; mr = {}; overlap = []; owner_proofs = []
         for name, blob in entries:
             if blob[:4] != b"\xca\xfe\xba\xbe": raise ValueError("Bad class: " + name)
             major = struct.unpack(">H", blob[6:8])[0]
             multi = name.startswith("META-INF/versions/"); counts = mr if multi else base
             counts[str(major)] = counts.get(str(major), 0) + 1
-            if not multi and name.endswith(".class") and name[:-6].split("$", 1)[0] in covered: overlap.append(name)
+            if not multi:
+                binary, source_file, package = source_identity(blob)
+                if binary + ".class" != name: raise ValueError("Class entry/name identity differs: " + name)
+                source_owner = source_files.get((package, source_file)) if source_file is not None else None
+                if source_owner is not None:
+                    overlap.append(name)
+                    owner_proofs.append({"class": name, "sourceFile": source_file, "package": package,
+                        "canonicalSource": source_owner, "classSha256": digest(blob)})
         owned_output = path == project / "engine-core/build/classes/java/main" or project / "engine-core/build/classes" in path.parents
         replace = bool(overlap) or owned_output
         if replace:
             # Replace only fully source-covered output, never discard unique runtime JSON/Maven support.
-            extras = [name for name, blob in entries if not name.startswith("META-INF/versions/") and name[:-6].split("$", 1)[0] not in covered]
+            extras = [name for name, blob in entries if not name.startswith("META-INF/versions/") and name not in overlap]
             if extras: raise ValueError("Mixed engine artifact cannot be silently removed: " + str(path) + ": " + str(extras[:8]))
             replacements.add(path)
         high = [{"class": name, "major": struct.unpack(">H", blob[6:8])[0]} for name, blob in entries
@@ -70,7 +134,7 @@ def main():
         if high and not replace: blockers.append({"path": str(path), "baseClassesAbove52": high})
         records.append({"path": str(path), "identity": identity(path), "baseClassMajors": base, "multiReleaseClassMajors": mr,
             "java8MultiReleaseHandling": "Physical MR entries are retained and ignored by the Java8 VM",
-            "replaceWithCompleteFreshEngineOutput": replace, "sourceCoveredClasses": overlap,
+            "replaceWithCompleteFreshEngineOutput": replace, "sourceCoveredClasses": overlap, "sourceFileOwnershipProofs": owner_proofs,
             "compileDependency": path in compile_items, "runtimeDependency": path in runtime_items})
     (output / "source-receipt.json").write_text(json.dumps(rows, indent=2) + "\n")
     (output / "classpath-receipt.json").write_text(json.dumps({"artifacts": records, "externalBaseBlockers": blockers}, indent=2) + "\n")
