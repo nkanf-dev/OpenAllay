@@ -44,4 +44,15 @@ public final class Java8Futures {
         }
         return source;
     }
+    /** Same future identity. Completes normally at the deadline without replacing a terminal outcome. */
+    public static <T> CompletableFuture<T> completeOnTimeout(CompletableFuture<T> source, T value,
+            long timeout, java.util.concurrent.TimeUnit unit) {
+        Objects.requireNonNull(source); Objects.requireNonNull(unit);
+        if (!source.isDone()) {
+            java.util.concurrent.ScheduledFuture<?> deadline = Deadlines.TIMER.schedule(
+                    () -> source.complete(value), timeout, unit);
+            source.whenComplete((completed, failure) -> deadline.cancel(false));
+        }
+        return source;
+    }
 }

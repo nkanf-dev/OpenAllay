@@ -268,7 +268,9 @@ jobs:
         with: {cache-provider: basic, cache-read-only: false}
       - name: Normal native Java8 AP/reobf then same-job ordinary flat package
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: python3 -B scripts/diagnose-forge1122-native-java8.py --native-package-probe
+        run: |
+          python3 -B engine-core/src/futureTimeoutJava8Test/verify.py --source-root "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --output "$RUNNER_TEMP/native-complete-on-timeout-java8"
+          python3 -B scripts/diagnose-forge1122-native-java8.py --native-package-probe
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -278,6 +280,8 @@ jobs:
           path: |
             build/forge1122-java8-diagnostic/
             build/forge1122-stock8-product/
+            ${{ runner.temp }}/native-complete-on-timeout-java8/receipt.json
+            ${{ runner.temp }}/native-complete-on-timeout-java8/*.log
             ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/source-bound-current-engine-classpath.json
             ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/source-bound-current-engine8-receipt.json
             ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/ordinary-stock8-package-inputs.json

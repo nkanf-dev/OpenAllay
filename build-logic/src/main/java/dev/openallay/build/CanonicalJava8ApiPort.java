@@ -30,7 +30,7 @@ public final class CanonicalJava8ApiPort {
         case "java.lang.CharSequence","java.lang.StringBuilder" -> method.equals("isEmpty");
         case "java.time.Duration" -> method.equals("toSeconds");
         case "java.nio.file.Path" -> method.equals("of");
-        case "java.util.concurrent.CompletableFuture" -> method.equals("failedFuture")||method.equals("orTimeout");
+        case "java.util.concurrent.CompletableFuture" -> method.equals("failedFuture")||method.equals("orTimeout")||method.equals("completeOnTimeout");
         case "java.util.HexFormat" -> method.equals("formatHex");
         default -> false;
     };}

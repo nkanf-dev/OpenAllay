@@ -2640,9 +2640,9 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
                 .thenRunAsync(this::restoreDisplayFile);
         // Do not block a native render tick waiting for GPU readback or disk IO. If the GPU cannot
         // finish after a failure, keep the actual finished receipts and identify unfinished frames.
-        CompletableFuture<Void> framePublication = CompletableFuture.allOf(
-                dev.openallay.util.Java8ApiSupport.toArray(frames.values(), CompletableFuture[]::new)).handle((ignored, frameFailure) -> (Void) null)
-                .completeOnTimeout(null, 15, java.util.concurrent.TimeUnit.SECONDS);
+        CompletableFuture<Void> framePublication = dev.openallay.util.Java8Futures.completeOnTimeout(
+                CompletableFuture.allOf(dev.openallay.util.Java8ApiSupport.toArray(frames.values(), CompletableFuture[]::new))
+                        .handle((ignored, frameFailure) -> (Void) null), null, 15, java.util.concurrent.TimeUnit.SECONDS);
         cleanup.handle((ignored, cleanupFailure) -> cleanupFailure)
                 .thenCombine(framePublication, (cleanupFailure, ignored) -> cleanupFailure)
                 .whenComplete((cleanupFailure, publicationFailure) -> dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {

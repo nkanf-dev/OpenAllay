@@ -24,7 +24,7 @@
   "pins": [
     {
       "path": "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java",
-      "sha256": "01802b368e5fa577952df25551d157dd34474396feda92e9fe34aea5859794a0"
+      "sha256": "728bbb323b67950463ff65cb0e63ed648e5be98293d99806ac7439f1bee10333"
     },
     {
       "path": "scripts/api-language-port/CanonicalNativeResidualApiFixture.java",
@@ -52,7 +52,7 @@
     },
     {
       "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
-      "sha256": "495b317b97157951ef6a4eab7c6c53883d1387ceddf4334f388bfb2c26b58643"
+      "sha256": "7d220f420132ce518442b7b150e38db5d2b679c3a8df4d35c24fcbe7e7a5d3d4"
     },
     {
       "path": "scripts/materialize-native-language-cohort.py",
