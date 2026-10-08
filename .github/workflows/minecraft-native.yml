@@ -2,6 +2,10 @@ name: Build release packages
 on:
   workflow_dispatch:
     inputs:
+      build_targets:
+        type: string
+        default: ''
+        description: Exact comma-separated accepted build targets; empty builds all
       stage_only:
         type: boolean
         default: false
@@ -60,7 +64,9 @@ jobs:
         with:
           persist-credentials: false
       - id: groups
-        run: python3 -B scripts/build-minecraft-artifacts.py groups --github-output "$GITHUB_OUTPUT"
+        env:
+          RELEASE_BUILD_TARGETS: ${{ inputs.build_targets }}
+        run: python3 -B scripts/build-minecraft-artifacts.py groups --targets "$RELEASE_BUILD_TARGETS" --github-output "$GITHUB_OUTPUT"
   build-packages:
     permissions:
       contents: read
@@ -125,7 +131,7 @@ jobs:
             build/release-build-logs/
             build/reports/problems/
   stage:
-    if: ${{ always() && !cancelled() && (inputs.stage_only || needs.build-packages.result == 'success') }}
+    if: ${{ always() && !cancelled() && (inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')) }}
     permissions:
       contents: read
       actions: read

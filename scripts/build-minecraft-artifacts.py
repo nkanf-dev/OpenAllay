@@ -64,6 +64,18 @@ def select(data, target, family_ids=None):
     return families
 
 
+def filter_groups(data, targets=None):
+    planned = groups(data)
+    if targets is None or targets == "":
+        return planned
+    require(type(targets) is str, "Build targets must be an exact comma-separated string")
+    requested = targets.split(",")
+    require(all(requested) and len(requested) == len(set(requested)), "Build targets must be nonempty and distinct")
+    available = {target for target, _ in planned}
+    require(set(requested).issubset(available), "Build targets must name exact accepted catalog build targets")
+    return [(target, families) for target, families in planned if target in requested]
+
+
 def groups(data):
     result = {}
     for family in data["acceptedFamilies"]:
@@ -813,6 +825,7 @@ def main(argv=None):
     build.add_argument("--target")
     build.add_argument("--families")
     grouping = commands.add_parser("groups", help="Exact compile-only build groups for admitted families")
+    grouping.add_argument("--targets", help="Exact comma-separated catalog build targets; empty means all")
     grouping.add_argument("--github-output", type=Path, help="Append the exact compact group list to the workflow output file")
     commands.add_parser("stage-only-selection", help="Require complete exact approved original groups before fetching")
     merging = commands.add_parser("merge-staged", help="Merge retained compile/package stages without rebuilding")
@@ -837,7 +850,7 @@ def main(argv=None):
         elif args.command == "groups":
             reused_targets = set(read_reuse_selection())
             result = [{"target": target, "families": ",".join(family["id"] for family in families)}
-                      for target, families in groups(data) if target not in reused_targets]
+                      for target, families in filter_groups(data, args.targets) if target not in reused_targets]
             if args.github_output is not None:
                 with args.github_output.open("a", encoding="utf-8") as output:
                     output.write("groups=" + json.dumps(result, separators=(",", ":")) + "\n")
