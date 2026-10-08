@@ -23,7 +23,7 @@ public final class MinecraftClientWindow {
     }
 
     public static net.minecraft.client.server.IntegratedServer integratedServer(Minecraft client) { return client.getSingleplayerServer(); }
-    public static String serverAddress(Minecraft client) { return client.getCurrentServerData() == null ? null : client.getCurrentServerData().ip; }
+    public static String serverAddress(Minecraft client) { return client.getCurrentServer() == null ? null : client.getCurrentServer().ip; }
     public static int framebufferWidth(Minecraft client) { return mainRenderTarget(client).width; }
     public static int framebufferHeight(Minecraft client) { return mainRenderTarget(client).height; }
     public static int windowWidth(Minecraft client) { return client.getWindow().getWidth(); }
