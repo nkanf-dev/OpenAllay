@@ -98,7 +98,7 @@ task compileNativeApplication {
         classes.mkdirs()
         def cp=new File(out,'classpath.txt').readLines('UTF-8').join(File.pathSeparator)
         def mapping=tasks.createMcpToSrg.outputs.files.singleFile
-        def command=[javac17.absolutePath,'--release','17','-encoding','UTF-8','-Xmaxerrs','1000',
+        def command=[javac17.absolutePath,'--release','8','-encoding','UTF-8','-Xmaxerrs','1000',
             '-classpath',cp,'-processorpath',configurations.nativeApplicationProcessor.files*.absolutePath.join(File.pathSeparator),
             '-d',classes.absolutePath,'-AreobfSrgFile='+mapping.absolutePath,
             '-AoutSrgFile='+new File(ap,'mixins.srg').absolutePath,
@@ -110,7 +110,7 @@ task compileNativeApplication {
         execute(command+['@'+argsFile.absolutePath])
         fileTree(classes).matching { include '**/*.class' }.files.each { f ->
             byte[] bytes=f.bytes
-            if ((((bytes[6]&255)<<8)|(bytes[7]&255))!=61) throw new GradleException('Native application output must be Java17')
+            if ((((bytes[6]&255)<<8)|(bytes[7]&255))!=52) throw new GradleException('Native application output must be Java8')
         }
     }
 }
@@ -145,7 +145,7 @@ task buildNativeApplication {
         def jar=tasks.jar.archivePath
         new File(out,'native-build-receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
             minecraft:'1.12.2',forge:'14.23.5.2864',forgeGradle:'3.0.197',toolJava:System.getProperty('java.version'),
-            nativeRelease:17,engineSha256:roles.engine.sha256,sdkSha256:roles.sdk.sha256,builderSha256:roles.builder.sha256,
+            nativeRelease:8,engineSha256:roles.engine.sha256,sdkSha256:roles.sdk.sha256,builderSha256:roles.builder.sha256,
             namespaceReceiptSha256:sha(new File(out,'namespace-receipt.json')),curatedClassMapSha256:sha(curated),
             jar:jar.absolutePath,jarSha256:sha(jar),gameLaunch:false]))+'\n','UTF-8')
     }

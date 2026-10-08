@@ -52,8 +52,11 @@ def main():
     p.add_argument('--native-build-request', type=Path)
     p.add_argument('--java8-diagnostic',action='store_true')
     p.add_argument('--language-candidates',action='store_true')
+    p.add_argument('--native-package-probe',action='store_true')
     p.add_argument('--selected-owners',type=Path)
     args = p.parse_args()
+    if args.native_package_probe and (args.java8_diagnostic or args.language_candidates):
+        raise ValueError('Native package probe must use normal compile/AP/reobf task alone')
     repo = Path(__file__).resolve().parents[1]
     island = repo / 'native-builds/forge1122-census'
     pins = json.loads((island/'public-input-lock.json').read_text())
