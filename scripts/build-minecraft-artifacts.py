@@ -296,6 +296,53 @@ def sqlite_package(path, loader):
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
 
 
+def verify_sqlite_archive_identity(path, family, sqlite):
+    """Authenticate raw SQLite or its one exact Loom wrapper without changing receipts."""
+    raw_sha="a3f53a2aa15ae9425a9e793bbe9c8e5288febeb4b65ef5c1a4e80d4c2045cf08"
+    loom_sha="0bc822a176492a4d3e2547b13a54bdf8540ea4e3a8ede8edc2d02f9a94c3c12a"
+    if family["loader"] != "fabric":
+        require(sqlite["artifactSha256"] == raw_sha, "SQLite raw upstream provider archive differs")
+        return
+    require(family["packagingRecipe"] == "nested-mod" and sqlite["artifactSha256"] == loom_sha,
+            "Fabric SQLite must use the exact actual Loom wrapper")
+    with zipfile.ZipFile(path) as product:
+        matches=[name for name in product.namelist() if name=="META-INF/jars/sqlite-jdbc-3.50.3.0.jar"]
+        require(len(matches)==1, "One exact Fabric SQLite registered archive required")
+        raw=product.read(matches[0])
+    require(hashlib.sha256(raw).hexdigest()==loom_sha, "Fabric SQLite wrapper bytes differ")
+    with zipfile.ZipFile(BytesIO(raw)) as nested:
+        names=[name for name in nested.namelist() if not name.endswith("/")]
+        require(len(names)==163 and len(names)==len(set(names)) and nested.testzip() is None,
+                "Fabric SQLite complete original closure differs")
+        require(nested.read("fabric.mod.json")==b'{\n  "schemaVersion": 1,\n  "id": "org_xerial_sqlite-jdbc",\n  "version": "3.50.3.0",\n  "name": "sqlite-jdbc",\n  "custom": {\n    "fabric-loom:generated": true\n  }\n}',
+                "Fabric SQLite generated metadata differs from exact Loom output")
+        payload={name:hashlib.sha256(nested.read(name)).hexdigest() for name in sorted(names) if name!="fabric.mod.json"}
+    require(len(payload)==162 and hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode()).hexdigest()=="a8c3d6cd0c5d83b829693a80c1b0ddb347a995155998afc8109fe32b62f69e5f",
+            "Fabric SQLite original 162-entry class/native/service/legal closure changed")
+
+
+def sqlite_cross_family_payload(path, family):
+    """Compare exact 149 provider/native entries and only two known JDBC service encodings."""
+    with zipfile.ZipFile(path) as outer:
+        if family["packagingRecipe"] == "nested-mod":
+            matches=[name for name in outer.namelist() if name.endswith("/sqlite-jdbc-3.50.3.0.jar")]
+            require(len(matches)==1, "One exact SQLite archive required for cross-family parity")
+            content=outer.read(matches[0])
+            with zipfile.ZipFile(BytesIO(content)) as nested:
+                entries={name:nested.read(name) for name in nested.namelist()
+                         if not name.endswith("/") and (name.startswith("org/sqlite/") or name=="META-INF/services/java.sql.Driver")}
+        else:
+            entries={name:outer.read(name) for name in outer.namelist()
+                     if not name.endswith("/") and (name.startswith("org/sqlite/") or name=="META-INF/services/java.sql.Driver")}
+    service=entries.pop("META-INF/services/java.sql.Driver")
+    require(service in (b"org.sqlite.JDBC", b"org.sqlite.JDBC\n"),
+            "SQLite JDBC registration must use an exact original service encoding")
+    require(len(entries)==149 and all(name.startswith("org/sqlite/") for name in entries),
+            "Exact 149 SQLite provider/native entry paths required")
+    payload={name:hashlib.sha256(content).hexdigest() for name,content in sorted(entries.items())}
+    return hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode()).hexdigest()
+
+
 def engine_entry(archive, family, name, path=None):
     """Keep executable/resource parity; three stock8 legal resources have exact flat owners."""
     if family["packagingRecipe"] == "forge-stock8" and name in ("META-INF/licenses/maven-artifact/LICENSE",
@@ -371,9 +418,16 @@ def verify(families, directory=None, engine_manifest=None, approved_package_sour
         if not legacy:
             tokenizer.verify(path, family["loader"])
         sqlite = proof["sqlite"] if legacy else sqlite_package(path, family["loader"])
-        require(sqlite_payload is None or sqlite["payloadSha256"] == sqlite_payload,
-                "All accepted families must bundle identical SQLite provider/native payloads")
-        sqlite_payload = sqlite["payloadSha256"]
+        verify_sqlite_archive_identity(path,family,sqlite)
+        require(sqlite["payloadSha256"] in ("dbecc49b0d53558892cf78877c8d727a886a19e70d8b665b9595921f7a7759f6",
+                                           "73a3c5413e82e8d3ffceea4b78690e9539b8e64d82764696dff52b8efbd81839"),
+                "SQLite final-byte receipt differs from known full/flat service custody")
+        cross_payload=sqlite_cross_family_payload(path,family)
+        require(cross_payload == "b01426098b42da7b43ce237349492b58d58da1b66dfd126b333ba10ec7fda29c",
+                "SQLite exact 149-entry provider/native byte ledger changed")
+        require(sqlite_payload is None or cross_payload == sqlite_payload,
+                "All accepted families must bundle identical SQLite provider/native entry bytes")
+        sqlite_payload = cross_payload
         if not legacy:
             interval = module("accepted_package_guard", "verify-minecraft-binary-intervals.py")
             interval.package_guard(path, family, release_version, ROOT)
@@ -458,6 +512,7 @@ REUSE_ORCHESTRATION_PATHS = {
     "scripts/test_release_publication.py",
     "scripts/verify-native-target-package.py", "scripts/test_early_neoforge_recipe.py",
     "scripts/test_forge16_engine_legal_custody.py",
+    "scripts/test_sqlite_cross_family_service.py", "scripts/test_sqlite_fabric_wrapper_identity.py",
     COMMENT_POLICY_PATH, "scripts/release_comment_custody.py", "scripts/test_release_comment_custody.py",
 }
 REUSE_NATIVE_PATHS = {
