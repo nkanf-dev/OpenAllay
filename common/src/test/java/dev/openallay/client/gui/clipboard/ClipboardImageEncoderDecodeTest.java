@@ -65,7 +65,12 @@ final class ClipboardImageEncoderDecodeTest {
     @Test
     void observationTextureSourceUsesSharedPublicDelegateWithNoSecondOwningImageStream() throws IOException {
         String textures = source("common", "client/observation/ObservationImageTextures.java");
-        assertTrue(textures.contains("ClipboardImageEncoder.decode(bytes.value())"));
+        assertTrue(textures.contains("service.readImage(reference).whenComplete"));
+        assertTrue(textures.contains("ToolResult.Success<byte[]> bound"));
+        assertTrue(textures.contains(".bound = (ToolResult.Success<byte[]>)"));
+        assertTrue(java.util.regex.Pattern.compile(
+                "ClipboardImageEncoder\\.decode\\([A-Za-z_$][A-Za-z0-9_$]*\\.bound\\.value\\(\\)\\)")
+                .matcher(textures).find(), "Decode the successful managed byte result through the public delegate");
         assertFalse(textures.contains("MemoryCacheImageInputStream"));
         assertFalse(textures.contains("ImageIO.read("));
         String encoder = source("engine-core", "client/gui/clipboard/ClipboardImageEncoder.java");
