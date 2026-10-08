@@ -51,6 +51,8 @@ jobs:
           if-no-files-found: warn
           path: |
             build/e2e/forge1122-stock8/*/*.json
+            build/e2e/forge1122-stock8/*/sqlite-proof/*.json
+            build/e2e/forge1122-stock8/*/sqlite-proof/*.log
             build/e2e/forge1122-stock8/*/scenario/*.json
             build/e2e/forge1122-stock8/*/scenario/*.log
             build/e2e/forge1122-stock8/*/scenario/frames/
