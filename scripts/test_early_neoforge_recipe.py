@@ -193,7 +193,7 @@ class SourceReuseContractTest(unittest.TestCase):
         self.assertEqual(commands[1][1], "java21")
         self.assertIn("native-builds/early-neoforge", compiler)
         native = self.text("scripts/verify-native-target-package.py")
-        self.assertIn("verify_shared_runtime_jars", native)
+        self.assertIn("verify_forge_shared_runtimes", native)
 
 
 class InputClosureModel:
