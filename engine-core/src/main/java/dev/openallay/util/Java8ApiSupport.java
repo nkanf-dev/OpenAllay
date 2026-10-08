@@ -5,6 +5,12 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Collection;
+import java.util.function.IntFunction;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -14,11 +20,34 @@ public final class Java8ApiSupport {
     public static <T> T orElseThrow(Optional<T> optional) {
         return Objects.requireNonNull(optional).orElseThrow(() -> new NoSuchElementException("No value present"));
     }
+    public static boolean isEmpty(Optional<?> optional) { return !Objects.requireNonNull(optional).isPresent(); }
+    public static <T> Stream<T> stream(Optional<T> optional) {
+        Objects.requireNonNull(optional);
+        return optional.isPresent() ? Stream.of(optional.get()) : Stream.empty();
+    }
+    public static <T> Optional<T> or(Optional<T> optional, Supplier<? extends Optional<? extends T>> supplier) {
+        Objects.requireNonNull(optional); Objects.requireNonNull(supplier);
+        if (optional.isPresent()) return optional;
+        @SuppressWarnings("unchecked") Optional<T> replacement = (Optional<T>) Objects.requireNonNull(supplier.get());
+        return replacement;
+    }
+    public static <T> T[] toArray(Collection<T> collection, IntFunction<T[]> generator) {
+        Objects.requireNonNull(collection); Objects.requireNonNull(generator);
+        return collection.toArray(generator.apply(0));
+    }
+    public static String toString(ByteArrayOutputStream output, Charset charset) {
+        Objects.requireNonNull(output); Objects.requireNonNull(charset);
+        return new String(output.toByteArray(), charset);
+    }
     public static <T> Collector<T, ?, List<T>> toUnmodifiableList() {
         return Collectors.collectingAndThen(Collectors.toList(), Java8Collections::listCopyOf);
     }
     public static <T> Collector<T, ?, Set<T>> toUnmodifiableSet() {
         return Collectors.collectingAndThen(Collectors.toSet(), Java8Collections::setCopyOf);
+    }
+    public static String urlEncodeUtf8(String value) {
+        try { return java.net.URLEncoder.encode(value, "UTF-8"); }
+        catch (java.io.UnsupportedEncodingException impossible) { throw new AssertionError(impossible); }
     }
     public static String formatted(String format, Object... arguments) {
         Objects.requireNonNull(format);

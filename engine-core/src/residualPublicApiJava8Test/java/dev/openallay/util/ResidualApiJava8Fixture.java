@@ -20,6 +20,22 @@ public final class ResidualApiJava8Fixture {
         if (!modern && !"1.8".equals(System.getProperty("java.specification.version"))) throw new AssertionError("genuineJava8 required");
         Object identity = new Object();
         check(optional(Optional.of(identity)) == identity, "Optional identity");
+        Optional<Object> present = Optional.of(identity);
+        check(!optionalEmpty(present) && optionalEmpty(Optional.empty()), "Optional isEmpty");
+        check(optionalStream(present).findFirst().get() == identity && optionalStream(Optional.empty()).count() == 0L, "Optional stream");
+        java.util.concurrent.atomic.AtomicInteger suppliers = new java.util.concurrent.atomic.AtomicInteger();
+        check(optionalOr(present, () -> { suppliers.incrementAndGet(); return Optional.empty(); }) == present, "present or identity");
+        Optional<Object> replacement = Optional.of(identity);
+        check(optionalOr(Optional.empty(), () -> { suppliers.incrementAndGet(); return replacement; }) == replacement && suppliers.get() == 1, "empty or supplier identity/once");
+        exception("orNullSupplier", () -> optionalOr(present, null), NullPointerException.class, null);
+        exception("orNullResult", () -> optionalOr(Optional.empty(), () -> null), NullPointerException.class, null);
+        java.util.concurrent.atomic.AtomicInteger generatedLength = new java.util.concurrent.atomic.AtomicInteger(-1);
+        String[] generated = collectionArray(Arrays.asList("a","b"), length -> {generatedLength.set(length);return new String[length];});
+        check(Arrays.equals(generated,new String[]{"a","b"}) && generatedLength.get()==0, "Collection array generator0/values");
+        ByteArrayOutputStream encodedOutput = new ByteArrayOutputStream(); encodedOutput.write(new byte[]{(byte)0xc3,(byte)0xa9});
+        check(outputText(encodedOutput, StandardCharsets.UTF_8).equals("é"), "BAOS Charset decode");
+        check(urlUtf8("a b/Ω").equals("a+b%2F%CE%A9"), "UTF8 URL exact convenience overload");
+        System.out.println("optionalAndArrays=empty/stream/or-identity-supplier1/generator0/baosé/urlUTF8");
         exception("optionalEmpty", () -> optional(Optional.empty()), NoSuchElementException.class, "No value present");
         exception("optionalNull", () -> optional(null), NullPointerException.class, null);
         List<String> list = Arrays.asList("a", "b", "a");
@@ -82,6 +98,12 @@ public final class ResidualApiJava8Fixture {
         exception("formatNull", () -> format(null, "x"), NullPointerException.class, null);
         System.out.println("PASS six public API families original-modern vs canonicalJava8");
     }
+    private static boolean optionalEmpty(Optional<?> value) throws Throwable {return modern ? (Boolean)invoke(Optional.class,"isEmpty",new Class<?>[0],value) : Java8ApiSupport.isEmpty(value);}
+    @SuppressWarnings("unchecked") private static <T> java.util.stream.Stream<T> optionalStream(Optional<T> value) throws Throwable {return modern ? (java.util.stream.Stream<T>)invoke(Optional.class,"stream",new Class<?>[0],value) : Java8ApiSupport.stream(value);}
+    @SuppressWarnings("unchecked") private static <T> Optional<T> optionalOr(Optional<T> value,java.util.function.Supplier<? extends Optional<? extends T>> supplier) throws Throwable {return modern ? (Optional<T>)invoke(Optional.class,"or",new Class<?>[]{java.util.function.Supplier.class},value,supplier) : Java8ApiSupport.or(value,supplier);}
+    @SuppressWarnings("unchecked") private static <T> T[] collectionArray(java.util.Collection<T> value,java.util.function.IntFunction<T[]> generator) throws Throwable {return modern ? (T[])invoke(java.util.Collection.class,"toArray",new Class<?>[]{java.util.function.IntFunction.class},value,generator) : Java8ApiSupport.toArray(value,generator);}
+    private static String outputText(ByteArrayOutputStream value,Charset charset) throws Throwable {return modern ? (String)invoke(ByteArrayOutputStream.class,"toString",new Class<?>[]{Charset.class},value,charset) : Java8ApiSupport.toString(value,charset);}
+    private static String urlUtf8(String value) throws Throwable {return modern ? (String)invoke(java.net.URLEncoder.class,"encode",new Class<?>[]{String.class,Charset.class},null,value,StandardCharsets.UTF_8) : Java8ApiSupport.urlEncodeUtf8(value);}
     private static Object invoke(Class<?> type, String name, Class<?>[] parameters, Object target, Object... args) throws Throwable {
         try {return type.getMethod(name, parameters).invoke(target, args);} catch(InvocationTargetException failure){throw failure.getCause();}
     }
