@@ -13,7 +13,7 @@ public final class MinecraftClientWindow {
     private MinecraftClientWindow() {}
     /** Read-only native screen facts for bounded lifecycle diagnostics. Never closes or creates a screen. */
     public static java.util.Map<String, Object> screenFacts(Minecraft client) {
-        var current = screen(client);
+        net.minecraft.client.gui.GuiScreen current = screen(client);
         java.util.Map<String, Object> facts = new java.util.LinkedHashMap<>();
         facts.put("screenClass", current == null ? "none" : current.getClass().getName());
         facts.put("screenPause", current != null && current.doesGuiPauseGame());
@@ -21,7 +21,7 @@ public final class MinecraftClientWindow {
         facts.put("worldPresent", worldPresent(client));
         facts.put("windowFocused", focused(client));
         facts.put("overlayPresent", overlayPresent(client));
-        return java.util.Map.copyOf(facts);
+        return dev.openallay.util.Java8Collections.mapCopyOf(facts);
     }
 
     public static net.minecraft.server.integrated.IntegratedServer integratedServer(Minecraft client) { return client.getIntegratedServer(); }

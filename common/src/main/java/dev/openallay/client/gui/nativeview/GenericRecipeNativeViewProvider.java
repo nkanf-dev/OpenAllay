@@ -7,11 +7,11 @@ import dev.openallay.guide.ui.GuideRecipeCard;
 import dev.openallay.guide.ui.GuideUiLayout;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.Font;
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
+
+
 
 /** Neutral OpenAllay recipe canvas; it deliberately does not imitate a mod screen. */
 final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider {
@@ -61,13 +61,13 @@ private static final class View implements NativeDomainView {
 @Override
         public void render(RenderContext context) {
             GuideGraphics graphics = context.graphics();
-            Font font = context.font();
+            net.minecraft.client.gui.Font font = context.font();
             GuideUiLayout.Rect bounds = context.bounds();
             graphics.fill(
                     bounds.x(), bounds.y(), bounds.x() + bounds.width(),
                     bounds.y() + bounds.height(), PANEL);
             graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), BORDER);
-            String title = recipe.workstation().isBlank()
+            String title = dev.openallay.util.Java8Strings.isBlank(recipe.workstation())
                     ? recipe.type() : recipe.workstation();
             graphics.text(font, MinecraftComponents.translatable(
                             "screen.openallay.native.recipe.title", title),
@@ -112,7 +112,7 @@ private static final class View implements NativeDomainView {
 
             int factsY = bounds.y() + bounds.height() - 36;
             String facts = processingFacts(recipe.processing());
-            if (!facts.isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(facts)) {
                 graphics.text(font, facts, bounds.x() + 6, factsY, MUTED, false);
             }
             if (!recipe.byproducts().isEmpty()) {
@@ -148,7 +148,7 @@ private static String ingredientItem(GuideRecipeCard.Ingredient ingredient) {
         }
 private static void renderSlot(
                 GuideGraphics graphics,
-                Font font,
+                net.minecraft.client.gui.Font font,
                 String itemId,
                 long count,
                 int x,
@@ -157,12 +157,12 @@ private static void renderSlot(
                 int mouseY) {
             graphics.fill(x, y, x + 18, y + 18, SLOT);
             graphics.outline(x, y, 18, 18, BORDER);
-            var id = MinecraftResourceIds.tryParse(itemId);
+            net.minecraft.resources.ResourceLocation id = MinecraftResourceIds.tryParse(itemId);
             if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
                 graphics.text(font, "?", x + 6, y + 5, MUTED, false);
                 return;
             }
-            ItemStack stack = new ItemStack(
+            net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(
                     dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                     (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
             graphics.item(stack, x + 1, y + 1);

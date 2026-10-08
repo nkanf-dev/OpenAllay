@@ -3,15 +3,15 @@ package dev.openallay.client.gui;
 import dev.openallay.platform.minecraft.MinecraftComponents;
 
 import java.util.function.Consumer;
-import net.minecraft.client.gui.Font;
-import net.minecraft.network.chat.Component;
+
+
 
 /** One product multiline primitive for native families without MultiLineEditBox. */
 public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements GuideMultilineEditor {
     private static final int PADDING = 4;
     private final GuideWidget guideWidget = GuideNativeWidgets.wrap(this);
-    private final Font font;
-    private final Component placeholder;
+    private final net.minecraft.client.gui.Font font;
+    private final net.minecraft.network.chat.Component placeholder;
     private final GuideMultilineTextState text = new GuideMultilineTextState();
     private double scroll;
     private boolean selecting;
@@ -85,8 +85,8 @@ public static final class ProbeReceipt {
     /** Cached actual paint facts; does not advance input or render. */
     public ProbeReceipt e2eReceipt() { return painted; }
 
-    public GuidePrimitiveMultilineEditor(Font font, int x, int y, int width, int height,
-            Component placeholder, Component narration) {
+    public GuidePrimitiveMultilineEditor(net.minecraft.client.gui.Font font, int x, int y, int width, int height,
+            net.minecraft.network.chat.Component placeholder, net.minecraft.network.chat.Component narration) {
         super(x, y, width, height, narration);
         this.font = font;
         this.placeholder = placeholder;
@@ -199,20 +199,69 @@ public static final class ProbeReceipt {
         } else if (control && key == GuideInputCodes.KEY_V) text.insert(GuideNativeInput.getClipboard());
         else if (control && key == GuideInputCodes.KEY_Z) { if (shift) text.redo(); else text.undo(); }
         else if (control && key == GuideInputCodes.KEY_Y) text.redo();
-        else switch (key) {
-            case GuideInputCodes.KEY_RETURN, GuideInputCodes.KEY_NUMPADENTER -> text.insert("\n");
-            case GuideInputCodes.KEY_BACK -> text.delete(-1, control);
-            case GuideInputCodes.KEY_DELETE -> text.delete(1, control);
-            case GuideInputCodes.KEY_LEFT -> text.moveHorizontal(-1, shift, control);
-            case GuideInputCodes.KEY_RIGHT -> text.moveHorizontal(1, shift, control);
-            case GuideInputCodes.KEY_UP -> text.moveVertical(-1, shift);
-            case GuideInputCodes.KEY_DOWN -> text.moveVertical(1, shift);
-            case GuideInputCodes.KEY_HOME -> text.home(shift, control);
-            case GuideInputCodes.KEY_END -> text.end(shift, control);
-            case GuideInputCodes.KEY_PAGEUP -> text.moveVertical(-Math.max(1, viewportHeight() / lineHeight()), shift);
-            case GuideInputCodes.KEY_PAGEDOWN -> text.moveVertical(Math.max(1, viewportHeight() / lineHeight()), shift);
-            default -> { return false; }
-        }
+        else switch ((key)) {
+case GuideInputCodes.KEY_RETURN:
+case GuideInputCodes.KEY_NUMPADENTER:
+{
+text.insert("\n");
+break;
+}
+case GuideInputCodes.KEY_BACK:
+{
+text.delete(-1, control);
+break;
+}
+case GuideInputCodes.KEY_DELETE:
+{
+text.delete(1, control);
+break;
+}
+case GuideInputCodes.KEY_LEFT:
+{
+text.moveHorizontal(-1, shift, control);
+break;
+}
+case GuideInputCodes.KEY_RIGHT:
+{
+text.moveHorizontal(1, shift, control);
+break;
+}
+case GuideInputCodes.KEY_UP:
+{
+text.moveVertical(-1, shift);
+break;
+}
+case GuideInputCodes.KEY_DOWN:
+{
+text.moveVertical(1, shift);
+break;
+}
+case GuideInputCodes.KEY_HOME:
+{
+text.home(shift, control);
+break;
+}
+case GuideInputCodes.KEY_END:
+{
+text.end(shift, control);
+break;
+}
+case GuideInputCodes.KEY_PAGEUP:
+{
+text.moveVertical(-Math.max(1, viewportHeight() / lineHeight()), shift);
+break;
+}
+case GuideInputCodes.KEY_PAGEDOWN:
+{
+text.moveVertical(Math.max(1, viewportHeight() / lineHeight()), shift);
+break;
+}
+default:
+{
+{ return false; }
+}
+}
+
         changed();
         return true;
     }

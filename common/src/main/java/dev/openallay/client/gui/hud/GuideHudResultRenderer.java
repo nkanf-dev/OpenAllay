@@ -26,10 +26,10 @@ import dev.openallay.guide.ui.hud.GuideHudView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.Font;
+
+
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 import dev.openallay.client.gui.GuideTextLine;
 import dev.openallay.client.gui.GuideNativeFont;
 
@@ -92,7 +92,7 @@ public static final class Semantic implements Action {
 public static final class Sources implements Action {
     private final List<GuideSource> sources;
     public Sources(List<GuideSource> sources) {
- sources = List.copyOf(sources);
+ sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
         this.sources = sources;
     }
     public List<GuideSource> sources() { return sources; }
@@ -171,8 +171,8 @@ public static final class Receipt {
     private final String lastRenderedText;
     public Receipt(long extractedFrame, List<String> renderedRowIds, int assistantRows, int toolRows, int toolCards, int semanticNodes, int nativeItemNodes, int recipeNodes, int contentHeight, int viewportHeight, int scroll, int maximumScroll, int cacheEntries, int nativeViews, List<String> renderedNodeIds, String lastRenderedText) {
 
-            renderedRowIds = List.copyOf(renderedRowIds);
-            renderedNodeIds = List.copyOf(renderedNodeIds);
+            renderedRowIds = dev.openallay.util.Java8Collections.listCopyOf(renderedRowIds);
+            renderedNodeIds = dev.openallay.util.Java8Collections.listCopyOf(renderedNodeIds);
             java.util.Objects.requireNonNull(lastRenderedText, "lastRenderedText");
 
         this.extractedFrame = extractedFrame;
@@ -213,7 +213,7 @@ public Receipt(long extractedFrame, List<String> renderedRowIds, int assistantRo
                 int scroll, int maximumScroll, int cacheEntries, int nativeViews) {
             this(extractedFrame, renderedRowIds, assistantRows, toolRows, toolCards, semanticNodes,
                     nativeItemNodes, recipeNodes, contentHeight, viewportHeight, scroll, maximumScroll,
-                    cacheEntries, nativeViews, List.of(), "");
+                    cacheEntries, nativeViews, dev.openallay.util.Java8Collections.listOf(), "");
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -358,9 +358,9 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
         }
     }
 }
-    private List<Row> rows = List.of();
+    private List<Row> rows = dev.openallay.util.Java8Collections.listOf();
     private List<GuideUiRow> sourceRows;
-    private Font cachedFont;
+    private net.minecraft.client.gui.Font cachedFont;
     private Object cachedLanguage;
     private GuideUiConfig.Fullscreen cachedPresentation;
     private String cachedAssistantName;
@@ -368,30 +368,30 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
     private int cachedWidth = -1;
     private int cachedHeight = -1;
     private String selectedTool;
-    private List<GuideSource> selectedSources = List.of();
+    private List<GuideSource> selectedSources = dev.openallay.util.Java8Collections.listOf();
     private String cachedSelection;
-    private List<GuideSource> cachedSources = List.of();
+    private List<GuideSource> cachedSources = dev.openallay.util.Java8Collections.listOf();
     private long extractedFrame;
-    private Receipt receipt = new Receipt(0, List.of(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private Receipt receipt = new Receipt(0, dev.openallay.util.Java8Collections.listOf(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     public GuideHudScrollState scroll() { return scroll; }
     public Receipt receipt() { return receipt; }
     public List<Hit> hits() { return hits(cachedFont, paintedHits == null ? null : paintedHits.viewport()); }
-    public List<Hit> hits(Font font, GuideUiLayout.Rect viewport) {
+    public List<Hit> hits(net.minecraft.client.gui.Font font, GuideUiLayout.Rect viewport) {
         return paintedHits != null && paintedHits.current(hitEpoch, font, GuideNativeFont.languageIdentity(), viewport, scroll.offset())
-                ? List.copyOf(hits) : List.of();
+                ? dev.openallay.util.Java8Collections.listCopyOf(hits) : dev.openallay.util.Java8Collections.listOf();
     }
     public boolean detailOpen() { return selectedTool != null || !selectedSources.isEmpty(); }
-    public void openTool(String id) { selectedTool = id; selectedSources = List.of(); invalidate(); scroll.first(); }
-    public void openSources(List<GuideSource> sources) { selectedSources = List.copyOf(sources); selectedTool = null; invalidate(); scroll.first(); }
-    public void back() { selectedTool = null; selectedSources = List.of(); invalidate(); scroll.first(); }
+    public void openTool(String id) { selectedTool = id; selectedSources = dev.openallay.util.Java8Collections.listOf(); invalidate(); scroll.first(); }
+    public void openSources(List<GuideSource> sources) { selectedSources = dev.openallay.util.Java8Collections.listCopyOf(sources); selectedTool = null; invalidate(); scroll.first(); }
+    public void back() { selectedTool = null; selectedSources = dev.openallay.util.Java8Collections.listOf(); invalidate(); scroll.first(); }
     public void tick() { nativeViews.tick(); }
     public void releaseNativeViews() { invalidateHits(); nativeViews.clear(); }
     public void invalidateHits() { hitEpoch++; paintedHits = null; hits.clear(); }
     public void invalidate() { invalidateHits(); sourceRows = null; layouts.clear(); nativeViews.clear(); }
 
     /** Returns true only when the projected content or measured viewport changed. */
-    public boolean prepare(GuideHudView view, Font font, int width, int height) {
+    public boolean prepare(GuideHudView view, net.minecraft.client.gui.Font font, int width, int height) {
         final int measuredWidth = Math.max(1, width);
         Object language = GuideNativeFont.languageIdentity();
         boolean rowsChanged = sourceRows != view.rows() && !java.util.Objects.equals(sourceRows, view.rows());
@@ -419,18 +419,14 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
             if (!selectedSources.isEmpty()) {
                 List<GuideTextLine> lines = new ArrayList<>();
                 for (GuideSource source : selectedSources) {
-                    var label = GuideEvidencePresentation.from(source);
-                    var evidence = source.evidence();
-                    for (Component component : List.of(MinecraftComponents.translatable(label.sourceKey()),
-                            MinecraftComponents.translatable(label.authorityKey()), MinecraftComponents.translatable(label.coverageKey()),
-                            MinecraftComponents.literal(evidence.sourceId()), MinecraftComponents.literal(evidence.provenance()),
-                            MinecraftComponents.literal(evidence.gameVersion() + " · " + evidence.loader()),
-                            MinecraftComponents.literal(evidence.capturedAt() + " — " + source.lastCapturedAt()))) {
+                    dev.openallay.guide.ui.GuideEvidencePresentation label = GuideEvidencePresentation.from(source);
+                    dev.openallay.context.EvidenceMetadata evidence = source.evidence();
+                    for (net.minecraft.network.chat.Component component : dev.openallay.util.Java8Collections.listOf(MinecraftComponents.translatable(label.sourceKey()), MinecraftComponents.translatable(label.authorityKey()), MinecraftComponents.translatable(label.coverageKey()), MinecraftComponents.literal(evidence.sourceId()), MinecraftComponents.literal(evidence.provenance()), MinecraftComponents.literal(evidence.gameVersion() + " · " + evidence.loader()), MinecraftComponents.literal(evidence.capturedAt() + " — " + source.lastCapturedAt()))) {
                         lines.addAll(GuideNativeFont.split(font, component, measuredWidth));
                     }
                     evidence.details().forEach((key, value) -> lines.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(key + ": " + value), measuredWidth)));
                 }
-                replacement.add(new Row("sources", null, "", List.copyOf(lines), null, Map.of(), List.of(), Math.max(10, lines.size() * 10 + 8)));
+                replacement.add(new Row("sources", null, "", dev.openallay.util.Java8Collections.listCopyOf(lines), null, dev.openallay.util.Java8Collections.mapOf(), dev.openallay.util.Java8Collections.listOf(), Math.max(10, lines.size() * 10 + 8)));
             } else {
                 for (GuideUiRow source : view.rows()) {
                     String id = rowId(source);
@@ -438,70 +434,122 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                     ArrayList<GuideTextLine> header = new ArrayList<>();
                     String narration = "";
                     SemanticDocument document = null;
-                    Map<String, GuideRecipeCard> recipes = Map.of();
-                    List<GuideTextLine> sources = List.of();
+                    Map<String, GuideRecipeCard> recipes = dev.openallay.util.Java8Collections.mapOf();
+                    List<GuideTextLine> sources = dev.openallay.util.Java8Collections.listOf();
                     java.util.Objects.requireNonNull(source);
-                    if (source instanceof GuideUiRow.Assistant assistant) {
+                    final class $oaPattern0_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = source) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern0_holder.bound = (GuideUiRow.Assistant) $oaPattern0_holder.value) != null))) {
                         header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(view.assistantName()), measuredWidth));
-                        document = assistant.semantic();
-                        if (!assistant.sources().isEmpty()) sources = GuideNativeFont.split(font, MinecraftComponents.translatable(
-                                "screen.openallay.evidence.groups", GuideEvidencePresentation.groups(assistant.sources()).size()), measuredWidth);
-                    } else if (source instanceof GuideUiRow.Tool tool) {
-                        var summary = GuideToolSummaryPresenter.project(tool);
-                        Component title = summary.title().isBlank() ? MinecraftComponents.translatable(summary.titleKey())
+                        document = $oaPattern0_holder.bound.semantic();
+                        if (!$oaPattern0_holder.bound.sources().isEmpty()) sources = GuideNativeFont.split(font, MinecraftComponents.translatable(
+                                "screen.openallay.evidence.groups", GuideEvidencePresentation.groups($oaPattern0_holder.bound.sources()).size()), measuredWidth);
+                    } else {
+final class $oaPattern1_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = source) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern1_holder.bound = (GuideUiRow.Tool) $oaPattern1_holder.value) != null))) {
+                        dev.openallay.guide.ui.GuideToolSummaryPresenter.Summary summary = GuideToolSummaryPresenter.project($oaPattern1_holder.bound);
+                        net.minecraft.network.chat.Component title = dev.openallay.util.Java8Strings.isBlank(summary.title()) ? MinecraftComponents.translatable(summary.titleKey())
                                 : MinecraftComponents.literal(summary.title());
                         narration = MinecraftComponents.getString(title);
                         header.addAll(GuideNativeFont.split(font, MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(title), " · "), MinecraftComponents.translatable(summary.status().translationKey())), measuredWidth));
                         if (summary.hasDescription()) header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(summary.description()), measuredWidth));
                         // Keep implementation receipts in explicit detail, not the compact task summary.
-                        tool.detail().narration().stream().filter(message -> selectedTool != null || switch (message.key()) {
-                            case ANALYSIS_EMPTY, RESULT_DETAIL_NOT_STORED, RESULT_VALUE_UNAVAILABLE,
-                                    FAILURE_STALE_REFERENCE, FAILURE_UNAVAILABLE, FAILURE_PLAYER_REQUIRED,
-                                    FAILURE_INVALID_ARGUMENTS, FAILURE_FORBIDDEN, FAILURE_GENERIC -> true;
-                            default -> false;
-                        }).forEach(message -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.translatable(
+                        $oaPattern1_holder.bound.detail().narration().stream().filter(message -> {
+boolean $oaSwitch1_exit_result_or0;
+if (selectedTool != null) {
+$oaSwitch1_exit_result_or0 = true;
+} else {
+boolean $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((message.key())) {
+case ANALYSIS_EMPTY:
+case RESULT_DETAIL_NOT_STORED:
+case RESULT_VALUE_UNAVAILABLE:
+case FAILURE_STALE_REFERENCE:
+case FAILURE_UNAVAILABLE:
+case FAILURE_PLAYER_REQUIRED:
+case FAILURE_INVALID_ARGUMENTS:
+case FAILURE_FORBIDDEN:
+case FAILURE_GENERIC:
+{
+$oaSwitch1_exit_result = true; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = false; break $oaSwitch1_exit;
+}
+}
+}
+$oaSwitch1_exit_result_or0 = $oaSwitch1_exit_result;
+}
+return $oaSwitch1_exit_result_or0;
+}).forEach(message -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.translatable(
                                 message.key().translationKey(), message.arguments().toArray()), measuredWidth)));
-                        tool.detail().failure().ifPresent(failure -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
-                        var cards = GuideHudToolCards.project(tool, key -> MinecraftComponents.getString(MinecraftComponents.translatable(key)));
+                        $oaPattern1_holder.bound.detail().failure().ifPresent(failure -> header.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(failure.message()), Math.max(1, cachedWidth))));
+                        dev.openallay.guide.ui.hud.GuideHudToolCards.Projection cards = GuideHudToolCards.project($oaPattern1_holder.bound, key -> MinecraftComponents.getString(MinecraftComponents.translatable(key)));
                         document = cards.document();
                         recipes = cards.recipes();
-                    } else if (source instanceof GuideUiRow.Status status) {
-                        Component message = status.failure() != null
-                                || !status.text().isBlank() && !status.text().equals(status.status().name())
-                                ? MinecraftComponents.literal(status.text()) : MinecraftComponents.translatable(switch (status.status()) {
-                                    case CANCELLED -> "screen.openallay.hud.request_stopped";
-                                    case INTERRUPTED -> "screen.openallay.history.interrupted";
-                                    default -> "screen.openallay.hud.request_failed";
-                                });
+                    } else {
+final class $oaPattern2_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Status bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = source) instanceof dev.openallay.guide.ui.GuideUiRow.Status && (($oaPattern2_holder.bound = (GuideUiRow.Status) $oaPattern2_holder.value) != null))) {
+                        net.minecraft.network.chat.Component $oaSwitch0_exit_result_conditional0;
+if ($oaPattern2_holder.bound.failure() != null
+                                || !dev.openallay.util.Java8Strings.isBlank($oaPattern2_holder.bound.text()) && !$oaPattern2_holder.bound.text().equals($oaPattern2_holder.bound.status().name())) {
+$oaSwitch0_exit_result_conditional0 = MinecraftComponents.literal($oaPattern2_holder.bound.text());
+} else {
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch (($oaPattern2_holder.bound.status())) {
+case CANCELLED:
+{
+$oaSwitch0_exit_result = "screen.openallay.hud.request_stopped"; break $oaSwitch0_exit;
+}
+case INTERRUPTED:
+{
+$oaSwitch0_exit_result = "screen.openallay.history.interrupted"; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = "screen.openallay.hud.request_failed"; break $oaSwitch0_exit;
+}
+}
+}
+$oaSwitch0_exit_result_conditional0 = MinecraftComponents.translatable($oaSwitch0_exit_result);
+}
+net.minecraft.network.chat.Component message = $oaSwitch0_exit_result_conditional0;
                         header.addAll(GuideNativeFont.split(font, message, measuredWidth));
                     } else {
                         continue;
                     }
+}
+}
                     SemanticLayout layout = document == null ? null : layouts.get(id, document, measuredWidth,
                             "native-language", "native-font", measurer(font, view.presentation().density()));
                     int spacing = view.presentation().density() == GuideUiConfig.Density.COMPACT ? 6 : 10;
                     int heightOfRow = header.size() * 10 + (layout == null ? 0 : layout.height()) + sources.size() * 10 + spacing;
-                    replacement.add(new Row(id, source, narration, List.copyOf(header), layout, recipes, List.copyOf(sources), Math.max(10, heightOfRow)));
+                    replacement.add(new Row(id, source, narration, dev.openallay.util.Java8Collections.listCopyOf(header), layout, recipes, dev.openallay.util.Java8Collections.listCopyOf(sources), Math.max(10, heightOfRow)));
                 }
             }
-            rows = List.copyOf(replacement);
+            rows = dev.openallay.util.Java8Collections.listCopyOf(replacement);
         }
         if (changed || viewportChanged) {
             cachedHeight = height;
-            scroll.update(rows.stream().map(row -> new GuideTranscriptVirtualizer.Row(row.id(), row.height())).toList(), height);
+            scroll.update(dev.openallay.util.Java8Collections.toList(rows.stream().map(row -> new GuideTranscriptVirtualizer.Row(row.id(), row.height()))), height);
         }
         return changed || viewportChanged;
     }
 
-    public void render(GuideGraphics graphics, Font font, GuideHudView view,
+    public void render(GuideGraphics graphics, net.minecraft.client.gui.Font font, GuideHudView view,
             GuideUiLayout.Rect viewport, int offset, int mouseX, int mouseY,
             boolean interactive, long ticks) {
         paintedHits = null;
         hits.clear();
         nativeViews.beginFrame();
         ArrayList<String> rendered = new ArrayList<>();
-        var paintedNodes = new java.util.LinkedHashSet<String>();
-        var paintedRecipes = new java.util.LinkedHashSet<String>();
+        java.util.LinkedHashSet<java.lang.String> paintedNodes = new java.util.LinkedHashSet<String>();
+        java.util.LinkedHashSet<java.lang.String> paintedRecipes = new java.util.LinkedHashSet<String>();
         String lastPaintedText = "";
         int assistants = 0, tools = 0, cards = 0, nodes = 0, items = 0;
         graphics.enableScissor(viewport.x(), viewport.y(), viewport.right(), viewport.bottom());
@@ -528,7 +576,7 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                     int lineY = current;
                     List<SemanticLayout.Line> lines = row.layout().lines();
                     for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
-                        var line = lines.get(lineIndex);
+                        dev.openallay.guide.ui.SemanticLayout.Line line = lines.get(lineIndex);
                         if (lineY + line.height() <= viewport.y()) { prefix += line.height(); first = lineIndex + 1; }
                         else if (lineY < viewport.bottom()) { last = lineIndex + 1; visibleHeight += line.height(); }
                         else break;
@@ -538,7 +586,7 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                         SemanticLayout visible = new SemanticLayout(row.layout().width(), visibleHeight, lines.subList(first, last), row.layout().narration());
                         nodes += last - first;
                         if (row.source() instanceof GuideUiRow.Tool) cards += last - first;
-                        var result = semantic.render(graphics, font, visible, viewport.x() + 3, current + prefix,
+                        dev.openallay.client.gui.MinecraftSemanticRenderer.Result result = semantic.render(graphics, font, visible, viewport.x() + 3, current + prefix,
                                 Math.max(1, viewport.width() - 6), interactive ? mouseX : Integer.MIN_VALUE,
                                 interactive ? mouseY : Integer.MIN_VALUE, view.animationsEnabled(), ticks,
                                 (g, f, component, bounds, mx, my, presentationTicks) -> {
@@ -551,13 +599,15 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                                 });
                         // Only record nodes after the native paint path returns. Never read document fallback/tail.
                         int paintedY = current + prefix;
-                        for (var line : visible.lines()) {
+                        for (dev.openallay.guide.ui.SemanticLayout.Line line : visible.lines()) {
                             if (visibleLine(viewport, paintedY, line.height())) {
                                 if (!(line.component() instanceof RichComponent.RecipeGrid)
                                         || paintedRecipes.contains(line.nodeId())) paintedNodes.add(paintedNodeId(line.nodeId()));
-                                if (line.component() instanceof RichComponent.ItemRow itemRow) {
+                                final class $oaPattern3_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.ItemRow bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = line.component()) instanceof dev.openallay.guide.semantic.RichComponent.ItemRow && (($oaPattern3_holder.bound = (RichComponent.ItemRow) $oaPattern3_holder.value) != null))) {
                                     int itemY = paintedY;
-                                    for (var item : itemRow.items()) {
+                                    for (dev.openallay.guide.semantic.RichComponent.Item item : $oaPattern3_holder.bound.items()) {
                                         if (visibleLine(viewport, itemY, 16)) items++;
                                         itemY += 22;
                                     }
@@ -565,27 +615,29 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                                 if (!line.runs().isEmpty()) {
                                     StringBuilder actual = new StringBuilder();
                                     line.runs().forEach(run -> actual.append(run.text()));
-                                    if (!actual.isEmpty()) lastPaintedText = actual.toString();
+                                    if (!((actual).length() == 0)) lastPaintedText = actual.toString();
                                 }
                             }
                             paintedY += line.height();
                         }
-                        if (interactive) for (var hit : result.hits()) hits.add(new Hit(hit.bounds(), new Action.Semantic(hit.intent()), row.layout().narration()));
+                        if (interactive) for (dev.openallay.client.gui.MinecraftSemanticRenderer.Hit hit : result.hits()) hits.add(new Hit(hit.bounds(), new Action.Semantic(hit.intent()), row.layout().narration()));
                     }
                     current += row.layout().height();
                 }
-                if (row.source() instanceof GuideUiRow.Assistant assistant && !row.sources().isEmpty()) {
+                final class $oaPattern4_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = row.source()) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern4_holder.bound = (GuideUiRow.Assistant) $oaPattern4_holder.value) != null)) && !row.sources().isEmpty()) {
                     int sourceTop = current;
-                    for (var line : row.sources()) { graphics.text(font, line, viewport.x() + 3, current, OpenAllayWidgetTheme.MUTED); current += 10; }
+                    for (dev.openallay.client.gui.GuideTextLine line : row.sources()) { graphics.text(font, line, viewport.x() + 3, current, OpenAllayWidgetTheme.MUTED); current += 10; }
                     if (interactive) hits.add(new Hit(new GuideUiLayout.Rect(viewport.x(), sourceTop, viewport.width(), current - sourceTop),
-                            new Action.Sources(assistant.sources()), MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.evidence.groups", assistant.sources().size()))));
+                            new Action.Sources($oaPattern4_holder.bound.sources()), MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.evidence.groups", $oaPattern4_holder.bound.sources().size()))));
                 }
             }
         } finally { graphics.disableScissor(); nativeViews.endFrame(); }
         if (interactive) paintedHits = new PaintedHits(hitEpoch, font, GuideNativeFont.languageIdentity(), viewport, offset);
         receipt = new Receipt(++extractedFrame, rendered, assistants, tools, cards, nodes, items, paintedRecipes.size(), scroll.totalHeight(), viewport.height(),
                 offset, Math.max(0, scroll.totalHeight() - viewport.height()), layouts.stats().entries(), nativeViews.activeViewCount(),
-                List.copyOf(paintedNodes), lastPaintedText);
+                dev.openallay.util.Java8Collections.listCopyOf(paintedNodes), lastPaintedText);
     }
 
     static String paintedNodeId(String layoutNodeId) {
@@ -603,12 +655,14 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                 && (long) top + height > viewport.y() && top < viewport.bottom();
     }
 
-    private boolean nativeRecipe(GuideHudView view, Row row, GuideGraphics graphics, Font font,
+    private boolean nativeRecipe(GuideHudView view, Row row, GuideGraphics graphics, net.minecraft.client.gui.Font font,
             RichComponent.RecipeGrid component, GuideUiLayout.Rect bounds, int mouseX, int mouseY, long ticks) {
         GuideRecipeCard recipe = row.recipes().get(component.nodeId());
-        if (recipe == null && row.source() instanceof GuideUiRow.Assistant assistant) {
+        final class $oaPattern5_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if (recipe == null && (($oaPattern5_holder.value = row.source()) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern5_holder.bound = (GuideUiRow.Assistant) $oaPattern5_holder.value) != null))) {
             recipe = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance).map(GuideUiRow.Tool.class::cast)
-                    .filter(tool -> tool.requestId().equals(assistant.requestId()) && tool.activity().invocationId().equals(component.originInvocationId()))
+                    .filter(tool -> tool.requestId().equals($oaPattern5_holder.bound.requestId()) && tool.activity().invocationId().equals(component.originInvocationId()))
                     .flatMap(tool -> tool.detail().cards().stream()).filter(dev.openallay.guide.ui.GuideDetailCard.Recipe.class::isInstance)
                     .map(dev.openallay.guide.ui.GuideDetailCard.Recipe.class::cast).map(dev.openallay.guide.ui.GuideDetailCard.Recipe::recipe)
                     .filter(card -> card.references().contains(component.recipe())).findFirst().orElse(null);
@@ -619,29 +673,63 @@ boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
     }
     public static String rowId(GuideUiRow row) {
         java.util.Objects.requireNonNull(row);
-        if (row instanceof GuideUiRow.Assistant value) {
-            return "assistant:" + value.requestId() + ":" + value.ordinal();
-        } else if (row instanceof GuideUiRow.Tool value) {
-            return "tool:" + value.requestId() + ":" + value.activity().invocationId();
-        } else if (row instanceof GuideUiRow.Status value) {
-            return "status:" + value.requestId();
+        final class $oaPattern6_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern6_holder.bound = (GuideUiRow.Assistant) $oaPattern6_holder.value) != null))) {
+            return "assistant:" + $oaPattern6_holder.bound.requestId() + ":" + $oaPattern6_holder.bound.ordinal();
+        } else {
+final class $oaPattern7_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern7_holder.bound = (GuideUiRow.Tool) $oaPattern7_holder.value) != null))) {
+            return "tool:" + $oaPattern7_holder.bound.requestId() + ":" + $oaPattern7_holder.bound.activity().invocationId();
+        } else {
+final class $oaPattern8_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Status bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Status && (($oaPattern8_holder.bound = (GuideUiRow.Status) $oaPattern8_holder.value) != null))) {
+            return "status:" + $oaPattern8_holder.bound.requestId();
         } else {
             throw new IllegalArgumentException("not a HUD task row");
         }
+}
+}
     }
-    private static SemanticLayoutEngine.Measurer measurer(Font font, GuideUiConfig.Density density) {
+    private static SemanticLayoutEngine.Measurer measurer(net.minecraft.client.gui.Font font, GuideUiConfig.Density density) {
         return new SemanticLayoutEngine.Measurer() {
             @Override public int width(String text, SemanticLayout.Style style) {
-                return GuideNativeFont.width(font, MinecraftComponents.style(MinecraftComponents.literal(text), switch (style) {
-                    case EMPHASIS -> ChatFormatting.ITALIC;
-                    case STRONG -> ChatFormatting.BOLD;
-                    case CODE -> ChatFormatting.GRAY;
-                    case REFERENCE -> ChatFormatting.AQUA;
-                    case NORMAL -> ChatFormatting.WHITE;
-                }));
+                {
+final net.minecraft.client.gui.Font $oaSwitch2_exit_result_prior1 = font;
+final net.minecraft.network.chat.Component $oaSwitch2_exit_result_prior0 = MinecraftComponents.literal(text);
+net.minecraft.ChatFormatting $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((style)) {
+case EMPHASIS:
+{
+$oaSwitch2_exit_result = net.minecraft.ChatFormatting.ITALIC; break $oaSwitch2_exit;
+}
+case STRONG:
+{
+$oaSwitch2_exit_result = net.minecraft.ChatFormatting.BOLD; break $oaSwitch2_exit;
+}
+case CODE:
+{
+$oaSwitch2_exit_result = net.minecraft.ChatFormatting.GRAY; break $oaSwitch2_exit;
+}
+case REFERENCE:
+{
+$oaSwitch2_exit_result = net.minecraft.ChatFormatting.AQUA; break $oaSwitch2_exit;
+}
+case NORMAL:
+{
+$oaSwitch2_exit_result = net.minecraft.ChatFormatting.WHITE; break $oaSwitch2_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return GuideNativeFont.width($oaSwitch2_exit_result_prior1, MinecraftComponents.style($oaSwitch2_exit_result_prior0, $oaSwitch2_exit_result));
+}
             }
             @Override public int lineHeight(SemanticLayout.Kind kind) { return kind == SemanticLayout.Kind.HEADING ? 12 : density == GuideUiConfig.Density.COMPACT ? 10 : 11; }
         };
     }
-    @Override public void close() { invalidateHits(); nativeViews.close(); layouts.clear(); rows = List.of(); sourceRows = null; }
+    @Override public void close() { invalidateHits(); nativeViews.close(); layouts.clear(); rows = dev.openallay.util.Java8Collections.listOf(); sourceRows = null; }
 }

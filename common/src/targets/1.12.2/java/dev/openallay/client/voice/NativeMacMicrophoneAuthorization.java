@@ -15,13 +15,34 @@ final class NativeMacMicrophoneAuthorization implements MacMicrophonePermission.
             NativeLong value = (NativeLong) NativeApi.SEND.invoke(NativeLong.class, new Object[] {
                     NativeApi.type("AVCaptureDevice"), NativeApi.selector("authorizationStatusForMediaType:"),
                     NativeApi.string("soun") });
-            return switch (value.intValue()) {
-                case 0 -> Status.NOT_DETERMINED;
-                case 1 -> Status.RESTRICTED;
-                case 2 -> Status.DENIED;
-                case 3 -> Status.AUTHORIZED;
-                default -> Status.UNKNOWN;
-            };
+            {
+dev.openallay.client.voice.MacMicrophonePermission.Status $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((value.intValue())) {
+case 0:
+{
+$oaSwitch0_exit_result = Status.NOT_DETERMINED; break $oaSwitch0_exit;
+}
+case 1:
+{
+$oaSwitch0_exit_result = Status.RESTRICTED; break $oaSwitch0_exit;
+}
+case 2:
+{
+$oaSwitch0_exit_result = Status.DENIED; break $oaSwitch0_exit;
+}
+case 3:
+{
+$oaSwitch0_exit_result = Status.AUTHORIZED; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = Status.UNKNOWN; break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
         } finally { NativeApi.drain(pool); }
     }
     @Override public boolean hasUsageDescription() {
@@ -37,7 +58,7 @@ final class NativeMacMicrophoneAuthorization implements MacMicrophonePermission.
                     NativeApi.selector("isKindOfClass:"), NativeApi.type("NSString") })).byteValue();
             if (isString == 0) return false;
             Pointer bytes = NativeApi.message(description, "UTF8String");
-            return bytes != null && !bytes.getString(0, "UTF-8").isBlank();
+            return bytes != null && !dev.openallay.util.Java8Strings.isBlank(bytes.getString(0, "UTF-8"));
         } finally { NativeApi.drain(pool); }
     }
     private static final class NativeApi {

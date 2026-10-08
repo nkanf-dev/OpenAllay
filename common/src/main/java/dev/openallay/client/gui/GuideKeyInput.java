@@ -22,19 +22,57 @@ public final class GuideKeyInput {
     public boolean control() { return control; }
     public boolean paste() { return paste; }
 public static GuideKeyInput from(GuideInputKey event) {
-        GuideKeyIntent intent = switch (event.key()) {
-            case dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE -> GuideKeyIntent.ESCAPE;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_RETURN, dev.openallay.client.gui.GuideInputCodes.KEY_NUMPADENTER -> GuideKeyIntent.ENTER;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_SPACE -> GuideKeyIntent.SPACE;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_UP -> GuideKeyIntent.UP;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_DOWN -> GuideKeyIntent.DOWN;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_PAGEUP -> GuideKeyIntent.PAGE_UP;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_PAGEDOWN -> GuideKeyIntent.PAGE_DOWN;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_HOME -> GuideKeyIntent.HOME;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_END -> GuideKeyIntent.END;
-            case dev.openallay.client.gui.GuideInputCodes.KEY_F6 -> GuideKeyIntent.NEXT_CONTENT;
-            default -> GuideKeyIntent.OTHER;
-        };
+        dev.openallay.client.gui.GuideKeyIntent $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((event.key())) {
+case dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.ESCAPE; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_RETURN:
+case dev.openallay.client.gui.GuideInputCodes.KEY_NUMPADENTER:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.ENTER; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_SPACE:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.SPACE; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_UP:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.UP; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_DOWN:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.DOWN; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_PAGEUP:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.PAGE_UP; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_PAGEDOWN:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.PAGE_DOWN; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_HOME:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.HOME; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_END:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.END; break $oaSwitch0_exit;
+}
+case dev.openallay.client.gui.GuideInputCodes.KEY_F6:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.NEXT_CONTENT; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = GuideKeyIntent.OTHER; break $oaSwitch0_exit;
+}
+}
+}
+GuideKeyIntent intent = $oaSwitch0_exit_result;
         return new GuideKeyInput(intent, event.isConfirmation(), event.hasShiftDown(),
                 event.controlDown(), event.isPaste());
     }

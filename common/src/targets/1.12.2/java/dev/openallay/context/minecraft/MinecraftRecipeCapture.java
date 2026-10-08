@@ -16,13 +16,13 @@ public final class MinecraftRecipeCapture {
     private MinecraftRecipeCapture() {}
     public static List<MinecraftRecipeInput> serverRecipes(ICommandSender source) {
         Objects.requireNonNull(source, "source");
-        return ForgeRegistries.RECIPES.getValuesCollection().stream()
-                .map(MinecraftRecipeCapture::input).toList();
+        return dev.openallay.util.Java8Collections.toList(ForgeRegistries.RECIPES.getValuesCollection().stream()
+                .map(MinecraftRecipeCapture::input));
     }
     public static List<MinecraftRecipeInput> clientRecipes(EntityPlayerSP player, Minecraft client) {
-        return ForgeRegistries.RECIPES.getValuesCollection().stream()
+        return dev.openallay.util.Java8Collections.toList(ForgeRegistries.RECIPES.getValuesCollection().stream()
                 .filter(recipe -> player.getRecipeBook().isUnlocked(recipe))
-                .map(MinecraftRecipeCapture::input).toList();
+                .map(MinecraftRecipeCapture::input));
     }
     public static int clientCollectionCount(EntityPlayerSP player) {
         // Native RecipeBook 1.12 stores recipe membership, not modern display collections.
@@ -33,7 +33,7 @@ public final class MinecraftRecipeCapture {
         if (recipe == null || !id.equals(recipe.getRegistryName().toString())) {
             throw new IllegalStateException("Exact native recipe is unavailable: " + id);
         }
-        List<MinecraftRecipeInput> inputs = List.of(input(recipe));
+        List<MinecraftRecipeInput> inputs = dev.openallay.util.Java8Collections.listOf(input(recipe));
         return new MinecraftRecipeSeed() {
             public String holderId() { return recipe.getRegistryName().toString(); }
             public String nativeRecipeClass() { return recipe.getClass().getName(); }
@@ -41,7 +41,7 @@ public final class MinecraftRecipeCapture {
             public boolean known() { return player.getRecipeBook().isUnlocked(recipe); }
             public int award() {
                 boolean wasKnown = known();
-                player.unlockRecipes(List.of(recipe));
+                player.unlockRecipes(dev.openallay.util.Java8Collections.listOf(recipe));
                 return !wasKnown && known() ? 1 : 0;
             }
         };
@@ -52,7 +52,7 @@ public final class MinecraftRecipeCapture {
         int height = shaped ? ((IShapedRecipe) recipe).getRecipeHeight() : 0;
         // IRecipe is the native crafting contract; no RecipeType registry exists in 1.12.
         return new MinecraftRecipeInput(Objects.requireNonNull(recipe.getRegistryName()).toString(),
-                "minecraft:crafting", recipe.getIngredients(), List.of(recipe.getRecipeOutput()),
+                "minecraft:crafting", recipe.getIngredients(), dev.openallay.util.Java8Collections.listOf(recipe.getRecipeOutput()),
                 width, height, shaped, true, null);
     }
 }

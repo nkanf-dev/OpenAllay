@@ -9,7 +9,7 @@ public final class MinecraftActiveEffectFacts {
     private MinecraftActiveEffectFacts() {}
     public static Potion effect(PotionEffect instance) { return instance.getPotion(); }
     public static String id(PotionEffect instance) {
-        var id = MinecraftNativeRegistries.MOB_EFFECT.getKey(effect(instance));
+        net.minecraft.util.ResourceLocation id = MinecraftNativeRegistries.MOB_EFFECT.getKey(effect(instance));
         return id == null ? "unknown" : id.toString();
     }
 }

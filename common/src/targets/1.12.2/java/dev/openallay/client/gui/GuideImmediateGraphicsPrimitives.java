@@ -124,7 +124,7 @@ private static final class SavedClip {
         GL11.glScissor(l, b, Math.max(0, r - l), Math.max(0, t - b));
     }
     public static void disableScissor() {
-        var clips = CLIPS.get();
+        java.util.ArrayDeque<dev.openallay.client.gui.GuideImmediateGraphicsPrimitives.SavedClip> clips = CLIPS.get();
         if (clips.isEmpty()) throw new IllegalStateException("Unbalanced native Guide scissor");
         SavedClip saved = clips.pop();
         GL11.glScissor(saved.x(), saved.y(), saved.width(), saved.height());

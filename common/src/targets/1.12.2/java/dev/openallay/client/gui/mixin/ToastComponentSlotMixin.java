@@ -53,7 +53,9 @@ public abstract class ToastComponentSlotMixin implements GuideToastSlotManager {
     }
 
     @Unique private static int openallay$slotCount(IToast toast) {
-        return toast instanceof GuideNativeToastBinding owned ? owned.slotCount() : 1;
+        final class $oaPattern0_Holder { net.minecraft.client.gui.toasts.IToast value; GuideNativeToastBinding bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return (($oaPattern0_holder.value = toast) instanceof dev.openallay.client.gui.hud.GuideNativeToastBinding && (($oaPattern0_holder.bound = (GuideNativeToastBinding) $oaPattern0_holder.value) != null)) ? $oaPattern0_holder.bound.slotCount() : 1;
     }
 
     @Override public void openallay$stageNativeRemoval(IToast toast, int firstSlot) {
@@ -73,7 +75,9 @@ public abstract class ToastComponentSlotMixin implements GuideToastSlotManager {
         openallay$pendingRemoval = null;
         openallay$pendingSlot = -1;
         if (openallay$slots.release(removed, firstSlot)) {
-            if (removed instanceof GuideNativeToastBinding owned) owned.onFinishedRendering();
+            final class $oaPattern1_Holder { net.minecraft.client.gui.toasts.IToast value; GuideNativeToastBinding bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = removed) instanceof dev.openallay.client.gui.hud.GuideNativeToastBinding && (($oaPattern1_holder.bound = (GuideNativeToastBinding) $oaPattern1_holder.value) != null))) $oaPattern1_holder.bound.onFinishedRendering();
         }
     }
 

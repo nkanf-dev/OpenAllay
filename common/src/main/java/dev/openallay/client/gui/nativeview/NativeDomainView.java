@@ -2,7 +2,7 @@ package dev.openallay.client.gui.nativeview;
 
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.guide.ui.GuideUiLayout;
-import net.minecraft.client.gui.Font;
+
 
 /** Visible client-thread object; never persisted or exposed to model context. */
 public interface NativeDomainView extends AutoCloseable {
@@ -20,12 +20,12 @@ public interface NativeDomainView extends AutoCloseable {
     @dev.openallay.value.ValueType(RenderContext.ValueSchemaProvider.class)
 public static final class RenderContext {
     private final GuideGraphics graphics;
-    private final Font font;
+    private final net.minecraft.client.gui.Font font;
     private final GuideUiLayout.Rect bounds;
     private final int mouseX;
     private final int mouseY;
     private final long presentationTicks;
-    public RenderContext(GuideGraphics graphics, Font font, GuideUiLayout.Rect bounds, int mouseX, int mouseY, long presentationTicks) {
+    public RenderContext(GuideGraphics graphics, net.minecraft.client.gui.Font font, GuideUiLayout.Rect bounds, int mouseX, int mouseY, long presentationTicks) {
 
             java.util.Objects.requireNonNull(graphics, "graphics");
             java.util.Objects.requireNonNull(font, "font");
@@ -39,7 +39,7 @@ public static final class RenderContext {
         this.presentationTicks = presentationTicks;
     }
     public GuideGraphics graphics() { return graphics; }
-    public Font font() { return font; }
+    public net.minecraft.client.gui.Font font() { return font; }
     public GuideUiLayout.Rect bounds() { return bounds; }
     public int mouseX() { return mouseX; }
     public int mouseY() { return mouseY; }
@@ -64,7 +64,7 @@ public static final class RenderContext {
     public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
         public ValueSchemaProvider() {}
         @Override public dev.openallay.value.ValueSchema<RenderContext> schema() {
-            return new dev.openallay.value.ValueSchema<>(RenderContext.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RenderContext>>asList(new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "graphics", RenderContext::graphics), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "font", RenderContext::font), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "bounds", RenderContext::bounds), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "mouseX", RenderContext::mouseX), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "mouseY", RenderContext::mouseY), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "presentationTicks", RenderContext::presentationTicks)), arguments -> new RenderContext((GuideGraphics) arguments[0], (Font) arguments[1], (GuideUiLayout.Rect) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Long) arguments[5]));
+            return new dev.openallay.value.ValueSchema<>(RenderContext.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RenderContext>>asList(new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "graphics", RenderContext::graphics), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "font", RenderContext::font), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "bounds", RenderContext::bounds), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "mouseX", RenderContext::mouseX), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "mouseY", RenderContext::mouseY), new dev.openallay.value.ValueSchema.Component<>(RenderContext.class, "presentationTicks", RenderContext::presentationTicks)), arguments -> new RenderContext((GuideGraphics) arguments[0], (net.minecraft.client.gui.Font) arguments[1], (GuideUiLayout.Rect) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Long) arguments[5]));
         }
     }
 }

@@ -36,7 +36,7 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
 
     private <D> CaptureOpenOwner.Prepared acquire(NativePort<D> port, String deviceId) throws CaptureException {
         requireAvailable();
-        if (deviceId == null || deviceId.isBlank() || DEFAULT_DEVICE_ID.equals(deviceId)) {
+        if (deviceId == null || dev.openallay.util.Java8Strings.isBlank(deviceId) || DEFAULT_DEVICE_ID.equals(deviceId)) {
             // null is OpenAL's default-device selector. A translated display name is never an ID.
             return new Session<>(port, null);
         }
@@ -52,7 +52,7 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
         Map<String, AudioCapture.Device> devices = new LinkedHashMap<>();
         devices.put(DEFAULT_DEVICE_ID, new AudioCapture.Device(DEFAULT_DEVICE_ID, "System default microphone"));
         deviceNames().forEach((id, name) -> devices.put(id, new AudioCapture.Device(id, name)));
-        return List.copyOf(devices.values());
+        return dev.openallay.util.Java8Collections.listCopyOf(devices.values());
     }
 
     private void requireAvailable() throws CaptureException {
@@ -75,7 +75,7 @@ public final class OpenAlCapture implements dev.openallay.client.voice.AudioCapt
                     "The game's OpenAL capture device list is unavailable.", failure);
         }
         for (String name : names) {
-            if (name == null || name.isBlank()) continue;
+            if (name == null || dev.openallay.util.Java8Strings.isBlank(name)) continue;
             String id = "openal:" + Base64.getUrlEncoder().withoutPadding()
                     .encodeToString(name.getBytes(StandardCharsets.UTF_8));
             result.putIfAbsent(id, name); // OpenAL selects by name; duplicate names cannot select separate devices.

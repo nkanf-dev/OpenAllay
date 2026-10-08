@@ -10,8 +10,8 @@ import dev.openallay.world.MinecraftServerWorldObservationCoordinator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
+
+
 
 /**
  * Common owning-thread server context adapter shared by Fabric and NeoForge.
@@ -19,21 +19,21 @@ import net.minecraft.server.level.ServerPlayer;
 public final class MinecraftServerGuideContextProvider
         implements dev.openallay.bridge.server.ServerBridgeSession.ContextProvider {
     private final OpenAllayRuntime runtime;
-    private final MinecraftServer server;
+    private final net.minecraft.server.MinecraftServer server;
     private final Gson gson;
     private final java.util.function.Function<UUID, dev.openallay.bridge.server.ServerBridgeSession.Transport> binder;
-    private final ServerPlayer expectedPlayer;
+    private final net.minecraft.server.level.ServerPlayer expectedPlayer;
     private final net.minecraft.server.level.ServerLevel expectedLevel;
     private final java.util.function.BooleanSupplier connectionCurrent;
     private final dev.openallay.bridge.server.ServerBridgeSession.Transport bound;
 
-    public MinecraftServerGuideContextProvider(OpenAllayRuntime runtime, MinecraftServer server, Gson gson,
+    public MinecraftServerGuideContextProvider(OpenAllayRuntime runtime, net.minecraft.server.MinecraftServer server, Gson gson,
             java.util.function.Function<UUID, dev.openallay.bridge.server.ServerBridgeSession.Transport> binder) {
         this(runtime, server, gson, binder, null, null, null, null);
     }
-    private MinecraftServerGuideContextProvider(OpenAllayRuntime runtime, MinecraftServer server, Gson gson,
+    private MinecraftServerGuideContextProvider(OpenAllayRuntime runtime, net.minecraft.server.MinecraftServer server, Gson gson,
             java.util.function.Function<UUID, dev.openallay.bridge.server.ServerBridgeSession.Transport> binder,
-            ServerPlayer player, net.minecraft.server.level.ServerLevel level,
+            net.minecraft.server.level.ServerPlayer player, net.minecraft.server.level.ServerLevel level,
             java.util.function.BooleanSupplier connection, dev.openallay.bridge.server.ServerBridgeSession.Transport bound) {
         this.runtime = runtime; this.server = server; this.gson = gson; this.binder = binder;
         this.expectedPlayer = player; this.expectedLevel = level; this.connectionCurrent = connection; this.bound = bound;
@@ -44,7 +44,7 @@ public final class MinecraftServerGuideContextProvider
             return this;
         }
         if (!NativeServerOwner.isOwner(server)) throw new IllegalStateException("Context bind requires server owner");
-        ServerPlayer player = java.util.Objects.requireNonNull(NativeServerOwner.player(server,actor), "Actor disconnected");
+        net.minecraft.server.level.ServerPlayer player = java.util.Objects.requireNonNull(NativeServerOwner.player(server,actor), "Actor disconnected");
         return new MinecraftServerGuideContextProvider(runtime, server, gson, binder, player,
                 dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player),
                 NativeServerConnectionGuard.capture(player), binder.apply(actor));
@@ -61,7 +61,7 @@ public final class MinecraftServerGuideContextProvider
         bound.dispatch(actorId, () -> {
             try {
                 cancellation.throwIfCancelled();
-                ServerPlayer player = NativeServerOwner.player(server,actorId);
+                net.minecraft.server.level.ServerPlayer player = NativeServerOwner.player(server,actorId);
                 if (player != expectedPlayer || !connectionCurrent.getAsBoolean()
                         || dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player) != expectedLevel) {
                     throw new JavascriptExecutionException(

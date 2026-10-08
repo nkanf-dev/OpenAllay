@@ -2,27 +2,27 @@ package dev.openallay.context.minecraft;
 
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
+
+
 
 /** Owner-thread native recipe facts. Shared code detaches these into immutable engine snapshots. */
 @dev.openallay.value.ValueType(MinecraftRecipeInput.ValueSchemaProvider.class)
 public final class MinecraftRecipeInput {
     private final String id;
     private final String type;
-    private final List<Ingredient> ingredients;
-    private final List<ItemStack> outputs;
+    private final List<net.minecraft.world.item.crafting.Ingredient> ingredients;
+    private final List<net.minecraft.world.item.ItemStack> outputs;
     private final int width;
     private final int height;
     private final boolean shaped;
     private final boolean crafting;
     private final String workstation;
-    public MinecraftRecipeInput(String id, String type, List<Ingredient> ingredients, List<ItemStack> outputs, int width, int height, boolean shaped, boolean crafting, String workstation) {
+    public MinecraftRecipeInput(String id, String type, List<net.minecraft.world.item.crafting.Ingredient> ingredients, List<net.minecraft.world.item.ItemStack> outputs, int width, int height, boolean shaped, boolean crafting, String workstation) {
 
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(type, "type");
-        ingredients = List.copyOf(ingredients);
-        outputs = outputs.stream().map(ItemStack::copy).toList();
+        ingredients = dev.openallay.util.Java8Collections.listCopyOf(ingredients);
+        outputs = dev.openallay.util.Java8Collections.toList(outputs.stream().map(net.minecraft.world.item.ItemStack::copy));
 
         this.id = id;
         this.type = type;
@@ -36,8 +36,8 @@ public final class MinecraftRecipeInput {
     }
     public String id() { return id; }
     public String type() { return type; }
-    public List<Ingredient> ingredients() { return ingredients; }
-    public List<ItemStack> outputs() { return outputs; }
+    public List<net.minecraft.world.item.crafting.Ingredient> ingredients() { return ingredients; }
+    public List<net.minecraft.world.item.ItemStack> outputs() { return outputs; }
     public int width() { return width; }
     public int height() { return height; }
     public boolean shaped() { return shaped; }

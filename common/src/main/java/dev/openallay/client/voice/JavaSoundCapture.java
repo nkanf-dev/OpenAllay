@@ -40,7 +40,7 @@ public final class JavaSoundCapture implements dev.openallay.client.voice.AudioC
     JavaSoundCapture(LineProvider lines, CaptureOpenOwner.PermissionPreflight permission, Duration openTimeout) {
         this.lines = Objects.requireNonNull(lines);
         opening = new CaptureOpenOwner(permission, deviceId -> new Session(Objects.requireNonNull(lines.line(
-                deviceId == null || deviceId.isBlank() ? DEFAULT_DEVICE_ID : deviceId))), openTimeout);
+                deviceId == null || dev.openallay.util.Java8Strings.isBlank(deviceId) ? DEFAULT_DEVICE_ID : deviceId))), openTimeout);
     }
 
     @Override
@@ -51,7 +51,7 @@ public final class JavaSoundCapture implements dev.openallay.client.voice.AudioC
     @Override
     public List<AudioCapture.Device> devices() {
         // No permission preflight or line.open here: listing must never request access.
-        return List.copyOf(lines.devices());
+        return dev.openallay.util.Java8Collections.listCopyOf(lines.devices());
     }
 
     interface LineProvider {

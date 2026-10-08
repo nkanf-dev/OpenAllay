@@ -31,7 +31,7 @@ final class MacImageClipboard {
         boolean imageOffered = false;
         try {
             long offeredTypes = MacClipboardNativeApi.message(board, "types");
-            Set<String> imageTypes = new LinkedHashSet<>(List.of("public.png", "public.jpeg", "public.tiff"));
+            Set<String> imageTypes = new LinkedHashSet<>(dev.openallay.util.Java8Collections.listOf("public.png", "public.jpeg", "public.tiff"));
             long nativeTypes = MacClipboardNativeApi.message(MacClipboardNativeApi.type("NSImage"), "imageTypes");
             for (long i = 0, count = MacClipboardNativeApi.count(nativeTypes); i < count; i++) {
                 long nativeType = MacClipboardNativeApi.at(nativeTypes, i);
@@ -110,7 +110,7 @@ private static final class Representation {
         private final AtomicBoolean consumed = new AtomicBoolean();
 
         private Capture(List<Representation> representations) {
-            this.representations = List.copyOf(representations);
+            this.representations = dev.openallay.util.Java8Collections.listCopyOf(representations);
         }
 
         @Override

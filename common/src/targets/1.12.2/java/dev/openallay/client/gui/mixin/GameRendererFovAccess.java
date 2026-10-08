@@ -31,9 +31,9 @@ public abstract class GameRendererFovAccess implements GuideNativeCameraFov {
     @Inject(method="setupCameraTransform(FI)V", at=@At("RETURN"), require=1)
     private void openallay$sample(float partialTick, int pass, CallbackInfo callback) {
         Minecraft client = Minecraft.getMinecraft();
-        var entity = client.getRenderViewEntity();
+        net.minecraft.entity.Entity entity = client.getRenderViewEntity();
         if (entity == null || client.world == null || openallay$fovFrame != openallay$frame) return;
-        var values = BufferUtils.createFloatBuffer(16);
+        java.nio.FloatBuffer values = BufferUtils.createFloatBuffer(16);
         GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, values);
         // Invert the actual affine modelview, including native third-person collision and camera modifiers.
         double a=values.get(0), b=values.get(4), c=values.get(8);

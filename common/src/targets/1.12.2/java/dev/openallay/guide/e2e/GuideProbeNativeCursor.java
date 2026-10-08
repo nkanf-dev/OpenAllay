@@ -13,20 +13,22 @@ final class GuideProbeNativeCursor {
     static void dispatchMove(Minecraft client, double x, double y) {
         if (!client.isCallingFromMinecraftThread()) throw new IllegalStateException("Cursor callback requires the client owner thread");
         if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED)) throw new IllegalStateException("Development probe is disabled");
-        var owner = java.util.Objects.requireNonNull(client.currentScreen, "Native cursor screen unavailable");
-        var player = client.player;
-        var world = client.world;
-        if (!(owner instanceof GuideProbeMouseCallbacks callback)) throw new IllegalStateException("Native GuiScreen callback binding unavailable");
+        net.minecraft.client.gui.GuiScreen owner = java.util.Objects.requireNonNull(client.currentScreen, "Native cursor screen unavailable");
+        net.minecraft.client.entity.EntityPlayerSP player = client.player;
+        net.minecraft.client.multiplayer.WorldClient world = client.world;
+        final class $oaPattern0_Holder { net.minecraft.client.gui.GuiScreen value; GuideProbeMouseCallbacks bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = owner) instanceof dev.openallay.guide.e2e.GuideProbeMouseCallbacks && (($oaPattern0_holder.bound = (GuideProbeMouseCallbacks) $oaPattern0_holder.value) != null)))) throw new IllegalStateException("Native GuiScreen callback binding unavailable");
         move(client, x, y);
-        int button = callback.openallay$heldButton();
-        long pressedAt = callback.openallay$lastMouseEvent();
+        int button = $oaPattern0_holder.bound.openallay$heldButton();
+        long pressedAt = $oaPattern0_holder.bound.openallay$lastMouseEvent();
         if (button < 0 || pressedAt <= 0 || !Mouse.isButtonDown(button)) return;
         int guiX = Mouse.getX() * owner.width / client.displayWidth;
         int guiY = owner.height - Mouse.getY() * owner.height / client.displayHeight - 1;
         long elapsed = Math.max(0, Minecraft.getSystemTime() - pressedAt);
         if (client.currentScreen != owner || client.player != player || client.world != world)
             throw new IllegalStateException("Native cursor owner changed");
-        callback.openallay$mouseClickMove(guiX, guiY, button, elapsed);
+        $oaPattern0_holder.bound.openallay$mouseClickMove(guiX, guiY, button, elapsed);
     }
     static double[] position(Minecraft client) {
         return new double[] {Mouse.getX(), client.displayHeight - 1 - Mouse.getY()};

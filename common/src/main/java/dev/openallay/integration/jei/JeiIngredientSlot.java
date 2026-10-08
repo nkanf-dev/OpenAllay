@@ -8,7 +8,7 @@ final class JeiIngredientSlot {
     private final Role role;
     private final List<JeiIngredientValue> values;
     JeiIngredientSlot(Role role, List<JeiIngredientValue> values) {
- values = List.copyOf(values);
+ values = dev.openallay.util.Java8Collections.listCopyOf(values);
         this.role = role;
         this.values = values;
     }

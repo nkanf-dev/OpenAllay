@@ -75,7 +75,7 @@ public class GuideNativeGraphics {
     protected final void nativeTooltip(ITextComponent text, int x, int y) { nativeTooltip(Minecraft.getMinecraft().fontRenderer, text, x, y); }
     protected final void nativeTooltip(List<GuideTextLine> lines, int x, int y) { nativeTooltip(Minecraft.getMinecraft().fontRenderer, lines, x, y); }
     protected final void nativeTooltip(FontRenderer font, ITextComponent text, int x, int y) {
-        nativeTooltip(font, List.of(GuideNativeFont.visual(text)), x, y);
+        nativeTooltip(font, dev.openallay.util.Java8Collections.listOf(GuideNativeFont.visual(text)), x, y);
     }
     protected final void nativeTooltip(FontRenderer font, ItemStack stack, int x, int y) {
         // Native protected renderToolTip preserves item font selection and Forge pre/post hooks.
@@ -83,7 +83,7 @@ public class GuideNativeGraphics {
         deferTooltip(() -> screen.item(stack, x, y), false);
     }
     protected final void nativeTooltip(FontRenderer font, List<? extends GuideTextLine> lines, int x, int y) {
-        nativeTooltip(font, List.copyOf(lines), GuideTooltipPlacement.DEFAULT, x, y, false);
+        nativeTooltip(font, dev.openallay.util.Java8Collections.listCopyOf(lines), GuideTooltipPlacement.DEFAULT, x, y, false);
     }
     protected final void nativeTooltip(FontRenderer font, List<GuideTextLine> lines,
             GuideTooltipPlacement positioner, int x, int y, boolean replaceExisting) {

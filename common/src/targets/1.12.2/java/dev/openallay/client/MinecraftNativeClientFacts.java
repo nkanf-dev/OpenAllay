@@ -8,7 +8,7 @@ public final class MinecraftNativeClientFacts {
     public static String selectedLanguage(Minecraft client) { return client.getLanguageManager().getCurrentLanguage().getLanguageCode(); }
     public static int fps(Minecraft client) { return Minecraft.getDebugFPS(); }
     public static long frameTimeNanos(Minecraft client) {
-        var timer = client.getFrameTimer();
+        net.minecraft.util.FrameTimer timer = client.getFrameTimer();
         long[] samples = timer.getFrames();
         return samples[Math.floorMod(timer.getIndex() - 1, samples.length)];
     }

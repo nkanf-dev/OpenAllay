@@ -27,12 +27,12 @@ public final class MinecraftHitFacts {
         return hit.entityHit;
     }
     public static String entityType(Entity entity) {
-        var key = EntityList.getKey(entity);
+        net.minecraft.util.ResourceLocation key = EntityList.getKey(entity);
         if (key == null) throw new IllegalStateException("Native entity has no registered type");
         return key.toString();
     }
     public static String fluid(IBlockState state) {
-        var fluid = FluidRegistry.lookupFluidForBlock(state.getBlock());
+        net.minecraftforge.fluids.Fluid fluid = FluidRegistry.lookupFluidForBlock(state.getBlock());
         return fluid == null ? "" : FluidRegistry.getFluidName(fluid);
     }
     public static String availability() { return "legacy_inside_not_attested;legacy_world_border_hit_provenance_not_attested"; }

@@ -57,16 +57,18 @@ private static final class Line implements GuideTextLine {
     public static int width(FontRenderer font, GuideTextLine line) { return font.getStringWidth(nativeLine(line)); }
     public static GuideTextLine visual(ITextComponent text) { return line(text.getFormattedText()); }
     public static List<GuideTextLine> split(FontRenderer font, ITextComponent text, int width) {
-        return font.listFormattedStringToWidth(text.getFormattedText(), width).stream()
-                .map(GuideNativeFont::line).toList();
+        return dev.openallay.util.Java8Collections.toList(font.listFormattedStringToWidth(text.getFormattedText(), width).stream()
+                .map(GuideNativeFont::line));
     }
     public static String nativeLine(GuideTextLine text) {
-        if (!(text instanceof Line line)) {
+        final class $oaPattern0_Holder { dev.openallay.client.gui.GuideTextLine value; Line bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = text) instanceof dev.openallay.client.gui.GuideNativeFont.Line && (($oaPattern0_holder.bound = (Line) $oaPattern0_holder.value) != null)))) {
             throw new IllegalArgumentException("Text line belongs to a different native binding");
         }
-        return line.nativeLine();
+        return $oaPattern0_holder.bound.nativeLine();
     }
     public static List<String> nativeLines(List<? extends GuideTextLine> lines) {
-        return lines.stream().map(GuideNativeFont::nativeLine).toList();
+        return dev.openallay.util.Java8Collections.toList(lines.stream().map(GuideNativeFont::nativeLine));
     }
 }

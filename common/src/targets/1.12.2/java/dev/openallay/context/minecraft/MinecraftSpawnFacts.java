@@ -6,7 +6,7 @@ import net.minecraft.world.World;
 public final class MinecraftSpawnFacts {
     private MinecraftSpawnFacts() {}
     public static String describe(World level) {
-        var position = level.getSpawnPoint();
+        net.minecraft.util.math.BlockPos position = level.getSpawnPoint();
         return "forge:dimension/" + level.provider.getDimension() + " "
                 + position.getX() + ", " + position.getY() + ", " + position.getZ();
     }

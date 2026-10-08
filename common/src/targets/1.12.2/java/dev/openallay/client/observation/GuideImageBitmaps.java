@@ -25,9 +25,11 @@ public final class GuideImageBitmaps {
     public static GuideImageBitmap wrap(BufferedImage image) { return new Bitmap(image); }
     public static GuideImageBitmap create(int width, int height) { return new Bitmap(width, height); }
     private static Bitmap bitmap(GuideImageBitmap image) {
-        if (!(image instanceof Bitmap bitmap)) throw new IllegalArgumentException("Preview bitmap belongs to another native binding");
-        if (bitmap.image == null) throw new IllegalStateException("Preview bitmap custody was consumed or closed");
-        return bitmap;
+        final class $oaPattern0_Holder { dev.openallay.client.observation.GuideImageBitmap value; Bitmap bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = image) instanceof dev.openallay.client.observation.GuideImageBitmaps.Bitmap && (($oaPattern0_holder.bound = (Bitmap) $oaPattern0_holder.value) != null)))) throw new IllegalArgumentException("Preview bitmap belongs to another native binding");
+        if ($oaPattern0_holder.bound.image == null) throw new IllegalStateException("Preview bitmap custody was consumed or closed");
+        return $oaPattern0_holder.bound;
     }
     public static void setArgb(GuideImageBitmap image, int x, int y, int argb) { bitmap(image).image.setRGB(x, y, argb); }
     public static BufferedImage take(GuideImageBitmap image) {

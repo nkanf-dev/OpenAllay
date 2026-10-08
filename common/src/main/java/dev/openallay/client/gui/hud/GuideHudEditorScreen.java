@@ -18,10 +18,10 @@ import java.util.function.Supplier;
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.GuideNativeSlider;
 import dev.openallay.client.gui.GuideTooltip;
-import net.minecraft.client.gui.screens.Screen;
+
 import dev.openallay.client.gui.GuideInputMouse;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 
 /** Native, non-pausing HUD editor. Changes stay in memory until the player presses Apply. */
 public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -34,7 +34,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
 
     private final Draft draft;
     private final Interaction interaction;
-    private final Screen returnScreen;
+    private final net.minecraft.client.gui.screens.Screen returnScreen;
     private final BooleanSupplier ownerValid;
     private final GuideHudRenderer renderer;
     private final Supplier<GuideHudView> view;
@@ -49,7 +49,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     public GuideHudEditorScreen(
             GuideDisplayConfig draft,
             Consumer<GuideDisplayConfig> applied,
-            Screen returnScreen,
+            net.minecraft.client.gui.screens.Screen returnScreen,
             BooleanSupplier ownerValid,
             GuideHudRenderer renderer,
             Supplier<GuideHudView> view) {
@@ -160,7 +160,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
                 newWidth * hud.scale(), newHeight * hud.scale()));
     }
 
-    private Component enabledLabel() {
+    private net.minecraft.network.chat.Component enabledLabel() {
         return label(draft.hud().enabled() ? "enabled" : "disabled");
     }
 
@@ -305,7 +305,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
                 boundedText(graphics, label("apply_hint"), panelX + 6, panelY + 36, panelWidth - 12, MUTED);
             }
             graphics.enableScissor(panelX + 6, form.bodyTop(), panelX + panelWidth - 6, form.bodyBottom());
-            Component anchor = MinecraftComponents.translatable("screen.openallay.hud.anchor."
+            net.minecraft.network.chat.Component anchor = MinecraftComponents.translatable("screen.openallay.hud.anchor."
                     + hud.anchor().name().toLowerCase(Locale.ROOT));
             if (form.rowVisible(0, formScroll)) {
                 boundedCenteredText(graphics, label("anchor", anchor), form.rowY(0, formScroll) + 4);
@@ -323,17 +323,17 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         renderGuideWidgets(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void boundedCenteredText(GuideGraphics graphics, Component message, int y) {
+    private void boundedCenteredText(GuideGraphics graphics, net.minecraft.network.chat.Component message, int y) {
         int available = Math.max(0, panelWidth - 76);
         String text = GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(message), available);
         graphics.text(font, text, panelX + (panelWidth - GuideNativeFont.width(font, text)) / 2, y, TEXT);
     }
 
-    private void boundedText(GuideGraphics graphics, Component message, int x, int y, int width, int color) {
+    private void boundedText(GuideGraphics graphics, net.minecraft.network.chat.Component message, int x, int y, int width, int color) {
         graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(message), Math.max(0, width)), x, y, color);
     }
 
-    private static Component label(String key, Object... arguments) {
+    private static net.minecraft.network.chat.Component label(String key, Object... arguments) {
         return MinecraftComponents.translatable(PREFIX + key, arguments);
     }
 

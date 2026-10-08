@@ -14,7 +14,7 @@ public final class NativeDomainViewProviderRegistry {
 
     public static synchronized void register(NativeDomainViewProvider provider) {
         java.util.Objects.requireNonNull(provider, "provider");
-        if (provider.providerId().isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(provider.providerId())) {
             throw new IllegalArgumentException("native provider ID is required");
         }
         PROVIDERS.put(provider.providerId(), provider);
@@ -25,6 +25,6 @@ public final class NativeDomainViewProviderRegistry {
         result.sort(Comparator.comparingInt(NativeDomainViewProvider::priority)
                 .reversed()
                 .thenComparing(NativeDomainViewProvider::providerId));
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 }

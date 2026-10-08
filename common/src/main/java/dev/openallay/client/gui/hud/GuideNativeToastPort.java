@@ -4,14 +4,14 @@ import dev.openallay.client.gui.MinecraftClientWindow;
 
 import dev.openallay.client.presentation.GuideNotificationPort;
 import java.util.Objects;
-import net.minecraft.client.Minecraft;
+
 
 /** Adds only OpenAllay-owned native toasts. Never clears the native manager. */
 public final class GuideNativeToastPort implements GuideNotificationPort {
-    private final Minecraft minecraft;
+    private final net.minecraft.client.Minecraft minecraft;
     private GuideNativeToast lastOwnedToast;
 
-    public GuideNativeToastPort(Minecraft minecraft) {
+    public GuideNativeToastPort(net.minecraft.client.Minecraft minecraft) {
         this.minecraft = Objects.requireNonNull(minecraft, "minecraft");
     }
 

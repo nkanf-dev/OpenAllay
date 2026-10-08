@@ -10,7 +10,7 @@ final class MinecraftNativeCommandSubmission {
         if (!client.isCallingFromMinecraftThread()) {
             throw new IllegalStateException("Command submission requires native client owner");
         }
-        var player = java.util.Objects.requireNonNull(client.player, "Player command sender unavailable");
+        net.minecraft.client.entity.EntityPlayerSP player = java.util.Objects.requireNonNull(client.player, "Player command sender unavailable");
         String line = "/" + command;
         if (ClientCommandHandler.instance.executeCommand(player, line) == 0) {
             player.sendChatMessage(line);

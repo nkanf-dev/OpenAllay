@@ -16,10 +16,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
+
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
-import net.minecraft.server.level.ServerLevel;
+
 
 /** Explicit development-only oracle. No Builder classes or model-facing capability. */
 final class GuideBuilderE2EProbe {
@@ -84,7 +84,7 @@ static final class Landmark {
     public String id() { return id; }
     public Map<String, String> properties() { return properties; }
 Landmark(String name, int x, int y, int z, String id) {
-            this(name, x, y, z, "minecraft:" + id, Map.of());
+            this(name, x, y, z, "minecraft:" + id, dev.openallay.util.Java8Collections.mapOf());
         }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -113,30 +113,29 @@ Landmark(String name, int x, int y, int z, String id) {
     private GuideBuilderE2EProbe() {}
 
     static boolean enabled(String scenario) {
-        return List.of("builder-restricted", "builder-acceptance", "builder-reload", "builder-partial",
-                "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo", "builder-legacy-shapes").contains(scenario);
+        return dev.openallay.util.Java8Collections.listOf("builder-restricted", "builder-acceptance", "builder-reload", "builder-partial", "builder-cancel", "builder-undo", "builder-server-denied", "builder-live-copy", "builder-live-undo", "builder-legacy-shapes").contains(scenario);
     }
 
     static void captureAnchor(String scenario, UUID actor, Consumer<Anchor> success, Consumer<String> failure,
             Consumer<String> phase) {
-        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
-        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        net.minecraft.client.Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        net.minecraft.client.server.IntegratedServer server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (server == null) { failure.accept("No authoritative integrated server"); return; }
         phase.accept("anchor_submitted");
         dev.openallay.server.NativeServerOwner.execute(server, () -> {
             phase.accept("anchor_server_entered");
             try {
-                var player = dev.openallay.server.NativeServerOwner.player(server, actor);
+                net.minecraft.server.level.ServerPlayer player = dev.openallay.server.NativeServerOwner.player(server, actor);
                 if (player == null) throw new IllegalStateException("Native player is unavailable");
                 String create = System.getProperty("openallay.e2e.createWorld", "");
                 String resume = System.getProperty("openallay.e2e.resumeWorld", "");
-                boolean resumed = create.isBlank();
+                boolean resumed = dev.openallay.util.Java8Strings.isBlank(create);
                 String world = resumed ? resume : create;
                 if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !enabled(scenario)
                         || !dev.openallay.server.NativeServerOwner.isOwner(server) || server != dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client) || dev.openallay.server.NativeServerOwner.published(server)
                         || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
-                        || (!resumed && !resume.isBlank())
-                        || (resumed && !List.of("builder-reload", "builder-live-undo").contains(scenario))
+                        || (!resumed && !dev.openallay.util.Java8Strings.isBlank(resume))
+                        || (resumed && !dev.openallay.util.Java8Collections.listOf("builder-reload", "builder-live-undo").contains(scenario))
                         || !world.equals(dev.openallay.server.NativeServerOwner.worldName(server))
                         || !dev.openallay.server.NativeServerOwner.survival(server)
                         || GuideProbeWorldSettings.commandsAllowed(server) || !GuideProbeWorldSettings.isFlat(server)
@@ -169,23 +168,7 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     static List<Landmark> landmarks(String scenario) {
-        if (scenario.equals("builder-legacy-shapes")) return List.of(
-            state("legacy-box-shell",0,2,0,"stonebrick","variant","stonebrick"),
-            new Landmark("legacy-box-air",1,1,1,"air"),
-            state("legacy-path-start",0,0,4,"stonebrick","variant","stonebrick"),
-            state("legacy-path-end",4,0,4,"stonebrick","variant","stonebrick"),
-            new Landmark("legacy-path-clearance",2,1,4,"air"),
-            state("legacy-source-stair",0,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"),
-            state("legacy-source-chest",2,1,8,"chest","facing","east"),
-            new Landmark("legacy-source-marker",1,1,9,"gold_block"),
-            state("legacy-rotated-stair",11,1,8,"oak_stairs","facing","east","half","bottom","shape","straight"),
-            state("legacy-rotated-chest",11,1,10,"chest","facing","south"),
-            new Landmark("legacy-rotated-marker",10,1,9,"gold_block"),
-            new Landmark("legacy-rotated-air",10,1,8,"air"),
-            state("legacy-mirrored-stair",18,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"),
-            state("legacy-mirrored-chest",16,1,8,"chest","facing","west"),
-            new Landmark("legacy-mirrored-marker",17,1,9,"gold_block"),
-            new Landmark("legacy-mirrored-air",18,1,9,"air"));
+        if (scenario.equals("builder-legacy-shapes")) return dev.openallay.util.Java8Collections.listOf(state("legacy-box-shell",0,2,0,"stonebrick","variant","stonebrick"), new Landmark("legacy-box-air",1,1,1,"air"), state("legacy-path-start",0,0,4,"stonebrick","variant","stonebrick"), state("legacy-path-end",4,0,4,"stonebrick","variant","stonebrick"), new Landmark("legacy-path-clearance",2,1,4,"air"), state("legacy-source-stair",0,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"), state("legacy-source-chest",2,1,8,"chest","facing","east"), new Landmark("legacy-source-marker",1,1,9,"gold_block"), state("legacy-rotated-stair",11,1,8,"oak_stairs","facing","east","half","bottom","shape","straight"), state("legacy-rotated-chest",11,1,10,"chest","facing","south"), new Landmark("legacy-rotated-marker",10,1,9,"gold_block"), new Landmark("legacy-rotated-air",10,1,8,"air"), state("legacy-mirrored-stair",18,1,8,"oak_stairs","facing","north","half","bottom","shape","straight"), state("legacy-mirrored-chest",16,1,8,"chest","facing","west"), new Landmark("legacy-mirrored-marker",17,1,9,"gold_block"), new Landmark("legacy-mirrored-air",18,1,9,"air"));
         if (scenario.equals("builder-live-copy") || scenario.equals("builder-live-undo")) {
             boolean copy = scenario.equals("builder-live-copy");
             List<Landmark> result = new ArrayList<>();
@@ -205,18 +188,15 @@ Landmark(String name, int x, int y, int z, String id) {
                 result.add(state("live-copy-chest", 10, 1, 2, "chest", "facing", "east", "type", "single"));
                 result.add(state("live-copy-stair", 9, 1, 0, "oak_stairs", "facing", "south", "half", "bottom"));
             } else result.add(new Landmark("live-undo-door-upper", 12, 2, 2, "air"));
-            return List.copyOf(result);
+            return dev.openallay.util.Java8Collections.listCopyOf(result);
         }
         if (scenario.equals("builder-restricted"))
-            return List.of(new Landmark("restricted-write-readback", 0, 1, 0, "gold_block"));
+            return dev.openallay.util.Java8Collections.listOf(new Landmark("restricted-write-readback", 0, 1, 0, "gold_block"));
         if (scenario.equals("builder-server-denied"))
-            return List.of(new Landmark("denied-no-write", 0, 1, 0, "air"));
-        if (scenario.equals("builder-partial")) return List.of(new Landmark("earlier-write-retained", 0, 1, 0, "gold_block"),
-                new Landmark("invalid-followup-did-not-write", 1, 1, 0, "air"));
-        if (scenario.equals("builder-cancel")) return List.of(new Landmark("before-cancel-retained", 0, 1, 0, "diamond_block"),
-                new Landmark("after-cancel-denied", 1, 1, 0, "air"));
-        if (scenario.equals("builder-undo")) return List.of(new Landmark("undo-restored", 0, 1, 0, "air"),
-                new Landmark("undo-conflict-preserved", 1, 1, 0, "diamond_block"));
+            return dev.openallay.util.Java8Collections.listOf(new Landmark("denied-no-write", 0, 1, 0, "air"));
+        if (scenario.equals("builder-partial")) return dev.openallay.util.Java8Collections.listOf(new Landmark("earlier-write-retained", 0, 1, 0, "gold_block"), new Landmark("invalid-followup-did-not-write", 1, 1, 0, "air"));
+        if (scenario.equals("builder-cancel")) return dev.openallay.util.Java8Collections.listOf(new Landmark("before-cancel-retained", 0, 1, 0, "diamond_block"), new Landmark("after-cancel-denied", 1, 1, 0, "air"));
+        if (scenario.equals("builder-undo")) return dev.openallay.util.Java8Collections.listOf(new Landmark("undo-restored", 0, 1, 0, "air"), new Landmark("undo-conflict-preserved", 1, 1, 0, "diamond_block"));
         List<Landmark> result = new ArrayList<>();
         result.add(new Landmark("house-floor", 0, 0, 0, "oak_planks"));
         result.add(state("house-door-lower", 3, 1, 0, "oak_door", "half", "lower", "facing", "north"));
@@ -302,7 +282,7 @@ Landmark(String name, int x, int y, int z, String id) {
         result.add(new Landmark("cancel-next-denied", 45, 1, 34, "air"));
         result.add(new Landmark("undo-restored", 44, 1, 36, "air"));
         result.add(new Landmark("undo-conflict-preserved", 45, 1, 36, "diamond_block"));
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     static List<Landmark> oracleLandmarks(String scenario, Anchor anchor) {
@@ -315,13 +295,13 @@ Landmark(String name, int x, int y, int z, String id) {
         if (scenario.equals("builder-legacy-shapes"))
             expected.add(state("legacy-checkerboard",4,0,0,"planks","variant",
                     Math.floorMod(anchor.x()+anchor.z()+4,2)==0 ? "oak" : "spruce"));
-        return List.copyOf(expected);
+        return dev.openallay.util.Java8Collections.listCopyOf(expected);
     }
 
     private static Landmark state(String name, int x, int y, int z, String id, String... properties) {
-        var map = new java.util.LinkedHashMap<String, String>();
+        java.util.LinkedHashMap<java.lang.String, java.lang.String> map = new java.util.LinkedHashMap<String, String>();
         for (int i = 0; i < properties.length; i += 2) map.put(properties[i], properties[i + 1]);
-        return new Landmark(name, x, y, z, "minecraft:" + id, Map.copyOf(map));
+        return new Landmark(name, x, y, z, "minecraft:" + id, dev.openallay.util.Java8Collections.mapCopyOf(map));
     }
 
     static Anchor retainedOrigin(Anchor currentPlayer, Anchor retained, JsonObject proof, String world) {
@@ -332,7 +312,7 @@ Landmark(String name, int x, int y, int z, String id) {
             throw new IllegalStateException("Reload requires prior independently passed native evidence");
         if (proof.has("worldName") && !world.equals(string(proof, "worldName")))
             throw new IllegalStateException("Reload receipt belongs to another world");
-        var origin = proof.has("nativeAnchor") ? proof.getAsJsonObject("nativeAnchor") : proof.getAsJsonObject("independentAnchor");
+        com.google.gson.JsonObject origin = proof.has("nativeAnchor") ? proof.getAsJsonObject("nativeAnchor") : proof.getAsJsonObject("independentAnchor");
         if (origin == null || origin.get("x").getAsBigDecimal().intValueExact() != retained.x()
                 || origin.get("y").getAsBigDecimal().intValueExact() != retained.y()
                 || origin.get("z").getAsBigDecimal().intValueExact() != retained.z())
@@ -365,8 +345,8 @@ Landmark(String name, int x, int y, int z, String id) {
             GuideRequestSnapshot request, ClientSettingsService settings,
             boolean unrestrictedAtStart,
             Consumer<JsonObject> complete) {
-        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
-        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        net.minecraft.client.Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        net.minecraft.client.server.IntegratedServer server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         JsonObject result = resultSummary(request);
         result.addProperty("oracle", "independent-integrated-server-owner-thread-readback");
         result.addProperty("unrestrictedAtStart", unrestrictedAtStart);
@@ -380,9 +360,9 @@ Landmark(String name, int x, int y, int z, String id) {
         }
         dev.openallay.server.NativeServerOwner.execute(server, () -> {
             try {
-                var player = dev.openallay.server.NativeServerOwner.player(server, actor);
+                net.minecraft.server.level.ServerPlayer player = dev.openallay.server.NativeServerOwner.player(server, actor);
                 if (player == null) throw new IllegalStateException("Native player disappeared");
-                ServerLevel level = dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player);
+                net.minecraft.server.level.ServerLevel level = dev.openallay.context.minecraft.MinecraftServerPlayerLevel.get(player);
                 if (!anchor.dimension().equals(dev.openallay.world.MinecraftWorldObservationFacts.dimension(level)))
                     throw new IllegalStateException("Native dimension changed");
                 result.addProperty("worldName", dev.openallay.server.NativeServerOwner.worldName(server));
@@ -394,7 +374,7 @@ Landmark(String name, int x, int y, int z, String id) {
                 JsonArray checks = new JsonArray(); boolean passed = extensionActive;
                 List<Landmark> expected = oracleLandmarks(scenario, anchor);
                 for (Landmark landmark : expected) {
-                    BlockPos pos = new BlockPos(anchor.x() + landmark.x(), anchor.y() + landmark.y(), anchor.z() + landmark.z());
+                    net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(anchor.x() + landmark.x(), anchor.y() + landmark.y(), anchor.z() + landmark.z());
                     JsonObject check = new JsonObject(); check.addProperty("name", landmark.name());
                     check.addProperty("x", pos.getX()); check.addProperty("y", pos.getY()); check.addProperty("z", pos.getZ());
                     check.addProperty("expectedId", landmark.id());
@@ -402,7 +382,7 @@ Landmark(String name, int x, int y, int z, String id) {
                     boolean observed = !level.isOutsideBuildHeight(pos) && dev.openallay.world.MinecraftWorldObservationFacts.loaded(level, pos);
                     check.addProperty("observed", observed); boolean match = false;
                     if (observed) {
-                        var state = level.getBlockState(pos);
+                        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
                         String id = MinecraftNativeRegistries.BLOCK.getKey(state.getBlock()).toString();
                         Map<String, String> properties = new java.util.LinkedHashMap<>();
                         properties.putAll(dev.openallay.context.minecraft.MinecraftBlockStateProperties.capture(state));
@@ -458,13 +438,7 @@ Landmark(String name, int x, int y, int z, String id) {
         return !(scenario.equals("builder-restricted") || scenario.equals("builder-legacy-shapes")) || !unrestrictedAtStart;
     }
 
-    private static final Map<String, List<String>> LEGACY_PRESET_ROLES = Map.ofEntries(
-            Map.entry("build_cottage", List.of("air","bricks","campfire_lit_north","cobblestone","cobblestone_stairs_south","dark_oak_slab_bottom","dark_oak_stairs_east","dark_oak_stairs_west","glass_pane","lantern_hanging","oak_log_x","oak_log_y","oak_log_z","oak_planks","spruce_planks")),
-            Map.entry("build_dock", List.of("air","lantern_standing","spruce_fence","spruce_log_y","spruce_planks")),
-            Map.entry("build_farm", List.of("air","beetroots_mature","carrots_mature","dirt","farmland_hydrated","oak_fence","oak_fence_gate_north","potatoes_mature","water_source","wheat_mature")),
-            Map.entry("build_simple_house", List.of("air","chest_north_single","cobblestone","furnace_north","glass_pane","lantern_hanging","oak_fence","oak_log_y","oak_planks","oak_pressure_plate_unpowered","stone_brick_slab_bottom","stone_brick_stairs_south")),
-            Map.entry("build_skyscraper", List.of("air","blue_stained_glass","cyan_stained_glass","iron_bars","iron_block","ladder_north","light_blue_stained_glass","lightning_rod_up","polished_andesite","sea_lantern","smooth_stone","smooth_stone_slab_bottom","stone_brick_stairs_south","stone_brick_wall","stone_bricks")),
-            Map.entry("build_windmill", List.of("air","cobblestone","oak_fence","oak_log_z","spruce_planks","stone_brick_stairs_south","stone_bricks","white_concrete","white_wool")));
+    private static final Map<String, List<String>> LEGACY_PRESET_ROLES = dev.openallay.util.Java8Collections.mapOfEntries(dev.openallay.util.Java8Collections.entry("build_cottage", dev.openallay.util.Java8Collections.listOf("air", "bricks", "campfire_lit_north", "cobblestone", "cobblestone_stairs_south", "dark_oak_slab_bottom", "dark_oak_stairs_east", "dark_oak_stairs_west", "glass_pane", "lantern_hanging", "oak_log_x", "oak_log_y", "oak_log_z", "oak_planks", "spruce_planks")), dev.openallay.util.Java8Collections.entry("build_dock", dev.openallay.util.Java8Collections.listOf("air", "lantern_standing", "spruce_fence", "spruce_log_y", "spruce_planks")), dev.openallay.util.Java8Collections.entry("build_farm", dev.openallay.util.Java8Collections.listOf("air", "beetroots_mature", "carrots_mature", "dirt", "farmland_hydrated", "oak_fence", "oak_fence_gate_north", "potatoes_mature", "water_source", "wheat_mature")), dev.openallay.util.Java8Collections.entry("build_simple_house", dev.openallay.util.Java8Collections.listOf("air", "chest_north_single", "cobblestone", "furnace_north", "glass_pane", "lantern_hanging", "oak_fence", "oak_log_y", "oak_planks", "oak_pressure_plate_unpowered", "stone_brick_slab_bottom", "stone_brick_stairs_south")), dev.openallay.util.Java8Collections.entry("build_skyscraper", dev.openallay.util.Java8Collections.listOf("air", "blue_stained_glass", "cyan_stained_glass", "iron_bars", "iron_block", "ladder_north", "light_blue_stained_glass", "lightning_rod_up", "polished_andesite", "sea_lantern", "smooth_stone", "smooth_stone_slab_bottom", "stone_brick_stairs_south", "stone_brick_wall", "stone_bricks")), dev.openallay.util.Java8Collections.entry("build_windmill", dev.openallay.util.Java8Collections.listOf("air", "cobblestone", "oak_fence", "oak_log_z", "spruce_planks", "stone_brick_stairs_south", "stone_bricks", "white_concrete", "white_wool")));
 
     private static JsonArray legacySkipped(JsonObject palette) {
         JsonArray skipped = new JsonArray();
@@ -479,9 +453,9 @@ Landmark(String name, int x, int y, int z, String id) {
         return skipped;
     }
 
-    private static boolean legacyTemplatePersisted(JsonObject receipt, Minecraft client) {
+    private static boolean legacyTemplatePersisted(JsonObject receipt, net.minecraft.client.Minecraft client) {
         try {
-            var file = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client)
+            java.nio.file.Path file = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client)
                     .resolve("config/openallay-builder/templates/openallay_e2e_legacy_shapes.json");
             if (!java.nio.file.Files.isRegularFile(file) || java.nio.file.Files.isSymbolicLink(file)
                     || java.nio.file.Files.size(file) > 65536) return false;
@@ -494,8 +468,7 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static final String JAVASCRIPT_TOOL = "openallay:run_javascript";
-    private static final List<String> BUILD_NAMES = List.of("house", "skyscraper", "cottage", "windmill", "farm", "dock",
-            "geometry_decoration", "terrain", "templates");
+    private static final List<String> BUILD_NAMES = dev.openallay.util.Java8Collections.listOf("house", "skyscraper", "cottage", "windmill", "farm", "dock", "geometry_decoration", "terrain", "templates");
 
     /** Only native registry absence can remove this preset's independent world landmarks. */
     private static boolean skyscraperUnavailable() {
@@ -515,14 +488,14 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static boolean skyscraperSkipped(JsonObject receipt) {
-        var skipped = receipt.getAsJsonArray("skipped");
+        com.google.gson.JsonArray skipped = receipt.getAsJsonArray("skipped");
         if (skipped == null || (!skipped.equals(skippedCases(false)) && !skipped.equals(skippedCases(true))))
             throw new IllegalArgumentException("Builder skipped cases differ from the exact skyscraper palette-role receipt");
         return skipped.size() == 1;
     }
 
     private static List<String> buildNames(JsonObject receipt) {
-        return skyscraperSkipped(receipt) ? BUILD_NAMES.stream().filter(name -> !name.equals("skyscraper")).toList() : BUILD_NAMES;
+        return skyscraperSkipped(receipt) ? dev.openallay.util.Java8Collections.toList(BUILD_NAMES.stream().filter(name -> !name.equals("skyscraper"))) : BUILD_NAMES;
     }
 
     /** Parse only after the complete fixture chronology has been checked. */
@@ -537,22 +510,22 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static JsonObject validatedBuilderReceipt(GuideRequestSnapshot request) {
-        List<GuideToolActivity> javascript = request.tools().stream()
-                .filter(value -> value.toolId().equals(JAVASCRIPT_TOOL)).toList();
+        List<GuideToolActivity> javascript = dev.openallay.util.Java8Collections.toList(request.tools().stream()
+                .filter(value -> value.toolId().equals(JAVASCRIPT_TOOL)));
         if (javascript.isEmpty()) throw new IllegalArgumentException("Builder JavaScript Tool result is missing");
         if (!fixtureOutcomes(request, javascript))
             throw new IllegalArgumentException("Builder ordered Tool outcomes do not match the fixture contract");
-        var receipt = scalarReceipt(javascript.get(javascript.size() - 1));
+        com.google.gson.JsonObject receipt = scalarReceipt(javascript.get(javascript.size() - 1));
         String scenario = string(receipt, "scenario");
         if (!fixtureHistory(scenario, request, javascript, receipt))
             throw new IllegalArgumentException("Builder Tool history or native receipts do not match the fixture contract");
         if ("builder_acceptance".equals(scenario)) {
             // Existing controller persists operations/lifecycle, not the full refreshed list.
             // Keep exact actual public native rows with those receipts for reload comparison.
-            var rows = journalRows(receipt.getAsJsonArray("durableOperations"));
-            for (var value : receipt.getAsJsonArray("operations")) attachJournal(value.getAsJsonObject(), rows);
-            var undo = receipt.getAsJsonObject("lifecycle").getAsJsonObject("undo");
-            for (String key : List.of("originalStatus", "interventionStatus", "status"))
+            java.util.Map<java.lang.String, com.google.gson.JsonObject> rows = journalRows(receipt.getAsJsonArray("durableOperations"));
+            for (com.google.gson.JsonElement value : receipt.getAsJsonArray("operations")) attachJournal(value.getAsJsonObject(), rows);
+            com.google.gson.JsonObject undo = receipt.getAsJsonObject("lifecycle").getAsJsonObject("undo");
+            for (String key : dev.openallay.util.Java8Collections.listOf("originalStatus", "interventionStatus", "status"))
                 attachJournal(undo.getAsJsonObject(key), rows);
         }
         return receipt;
@@ -564,17 +537,17 @@ Landmark(String name, int x, int y, int z, String id) {
 
     /** One complete strict scalar JSON object from one actual successful Tool. */
     private static JsonObject scalarReceipt(GuideToolActivity tool) {
-        var normalized = tool.normalized();
+        com.google.gson.JsonObject normalized = tool.normalized();
         if (!succeeded(tool) || !normalized.has("value") || !normalized.get("value").isJsonObject())
             throw new IllegalArgumentException("Builder JavaScript Tool did not succeed");
-        var value = normalized.getAsJsonObject("value");
+        com.google.gson.JsonObject value = normalized.getAsJsonObject("value");
         if (!"string".equals(string(value, "resultType")) || !booleanValue(value, "complete")
                 || string(value, "preview") == null)
             throw new IllegalArgumentException("Builder result must be a complete string receipt");
         String json = string(value, "preview");
         dev.openallay.bridge.protocol.BridgeJsonCodec.rejectDuplicateFields(json);
-        try (var reader = JsonReaders.strict(new StringReader(json))) {
-            var receipt = JsonReaders.read(reader);
+        try (com.google.gson.stream.JsonReader reader = JsonReaders.strict(new StringReader(json))) {
+            com.google.gson.JsonElement receipt = JsonReaders.read(reader);
             if (reader.peek() != JsonToken.END_DOCUMENT || receipt == null || !receipt.isJsonObject())
                 throw new IllegalArgumentException("Builder receipt must contain exactly one JSON object");
             return receipt.getAsJsonObject();
@@ -598,11 +571,11 @@ Landmark(String name, int x, int y, int z, String id) {
 
     private static boolean fixtureOutcomes(GuideRequestSnapshot request, List<GuideToolActivity> tools) {
         if (request.status() != GuideRequestStatus.COMPLETED) return false;
-        var callIds = new java.util.HashSet<String>();
-        for (var tool : request.tools()) if (!callIds.add(tool.invocationId())) return false;
+        java.util.HashSet<java.lang.String> callIds = new java.util.HashSet<String>();
+        for (dev.openallay.guide.GuideToolActivity tool : request.tools()) if (!callIds.add(tool.invocationId())) return false;
         if (tools.size() == 1) return request.tools().stream().allMatch(GuideBuilderE2EProbe::succeeded);
         if (request.tools().size() != tools.size() + 1) return false;
-        var skill = request.tools().get(0);
+        dev.openallay.guide.GuideToolActivity skill = request.tools().get(0);
         if (!"openallay:load_skill".equals(skill.toolId()) || !succeeded(skill)
                 || !"minecraft-builder".equals(string(skill.invocationArguments(), "name"))) return false;
         for (int index = 1; index < request.tools().size(); index++)
@@ -627,83 +600,82 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static boolean acceptanceHistory(List<GuideToolActivity> tools, JsonObject finalReceipt) {
-        var build = scalarReceipt(tools.get(0));
-        var partial = scalarReceipt(tools.get(2));
-        var cancel = scalarReceipt(tools.get(4));
-        var undo = scalarReceipt(tools.get(5));
+        com.google.gson.JsonObject build = scalarReceipt(tools.get(0));
+        com.google.gson.JsonObject partial = scalarReceipt(tools.get(2));
+        com.google.gson.JsonObject cancel = scalarReceipt(tools.get(4));
+        com.google.gson.JsonObject undo = scalarReceipt(tools.get(5));
         if (!stage(build, "builder_acceptance", "build") || !stage(partial, "builder_acceptance", "partial_observation")
                 || !stage(cancel, "builder_acceptance", "cancel_observation") || !stage(undo, "builder_acceptance", "undo")
                 || !stage(finalReceipt, "builder_acceptance", "final")
                 || !tools.get(0).invocationId().equals(string(build, "probeToken"))) return false;
-        for (var item : List.of(partial, cancel, undo, finalReceipt))
+        for (com.google.gson.JsonObject item : dev.openallay.util.Java8Collections.listOf(partial, cancel, undo, finalReceipt))
             if (!sameBinding(build, item) || !build.get("skipped").equals(item.get("skipped"))) return false;
         if (!completedBuild(build) || !readOnlyStatus(partial.getAsJsonObject("observationStatus"))
                 || !readOnlyStatus(cancel.getAsJsonObject("observationStatus"))
                 || !readOnlyStatus(finalReceipt.getAsJsonObject("observationStatus"))) return false;
-        var before = build.getAsJsonObject("lifecycle");
-        var p = partial.getAsJsonObject("lifecycle").getAsJsonObject("partial");
-        var c = cancel.getAsJsonObject("lifecycle").getAsJsonObject("cancel");
-        var u = undo.getAsJsonObject("lifecycle").getAsJsonObject("undo");
-        if (!dev.openallay.json.JsonTrees.keys(before).equals(java.util.Set.of("partial", "cancel", "undo"))
-                || !dev.openallay.json.JsonTrees.keys(partial.getAsJsonObject("lifecycle")).equals(java.util.Set.of("partial"))
-                || !dev.openallay.json.JsonTrees.keys(cancel.getAsJsonObject("lifecycle")).equals(java.util.Set.of("cancel"))
-                || !dev.openallay.json.JsonTrees.keys(undo.getAsJsonObject("lifecycle")).equals(java.util.Set.of("undo"))
-                || !dev.openallay.json.JsonTrees.keys(u).equals(java.util.Set.of("result", "status", "originalStatus", "interventionStatus", "positions", "beforeImages", "afterImages"))
-                || !before.entrySet().stream().allMatch(entry -> dev.openallay.json.JsonTrees.keys(entry.getValue().getAsJsonObject()).equals(java.util.Set.of("positions", "beforeImages")))
+        com.google.gson.JsonObject before = build.getAsJsonObject("lifecycle");
+        com.google.gson.JsonObject p = partial.getAsJsonObject("lifecycle").getAsJsonObject("partial");
+        com.google.gson.JsonObject c = cancel.getAsJsonObject("lifecycle").getAsJsonObject("cancel");
+        com.google.gson.JsonObject u = undo.getAsJsonObject("lifecycle").getAsJsonObject("undo");
+        if (!dev.openallay.json.JsonTrees.keys(before).equals(dev.openallay.util.Java8Collections.setOf("partial", "cancel", "undo"))
+                || !dev.openallay.json.JsonTrees.keys(partial.getAsJsonObject("lifecycle")).equals(dev.openallay.util.Java8Collections.setOf("partial"))
+                || !dev.openallay.json.JsonTrees.keys(cancel.getAsJsonObject("lifecycle")).equals(dev.openallay.util.Java8Collections.setOf("cancel"))
+                || !dev.openallay.json.JsonTrees.keys(undo.getAsJsonObject("lifecycle")).equals(dev.openallay.util.Java8Collections.setOf("undo"))
+                || !dev.openallay.json.JsonTrees.keys(u).equals(dev.openallay.util.Java8Collections.setOf("result", "status", "originalStatus", "interventionStatus", "positions", "beforeImages", "afterImages"))
+                || !before.entrySet().stream().allMatch(entry -> dev.openallay.json.JsonTrees.keys(entry.getValue().getAsJsonObject()).equals(dev.openallay.util.Java8Collections.setOf("positions", "beforeImages")))
                 || !prerequisite(before.getAsJsonObject("partial"), build, 44, 32)
                 || !prerequisite(before.getAsJsonObject("cancel"), build, 44, 34)
                 || !prerequisite(before.getAsJsonObject("undo"), build, 44, 36)
                 || !durableFailure(p, build, "partial", 44, 32, tools.get(1).normalized())
                 || !durableFailure(c, build, "cancel", 44, 34, tools.get(3).normalized())
                 || !undoReceipt(u, build, 44, 36)) return false;
-        for (var binding : List.of(Map.entry("partial", p), Map.entry("cancel", c), Map.entry("undo", u))) {
-            var prior = before.getAsJsonObject(binding.getKey());
+        for (java.util.Map.Entry<java.lang.String, com.google.gson.JsonObject> binding : dev.openallay.util.Java8Collections.listOf(dev.openallay.util.Java8Collections.entry("partial", p), dev.openallay.util.Java8Collections.entry("cancel", c), dev.openallay.util.Java8Collections.entry("undo", u))) {
+            com.google.gson.JsonObject prior = before.getAsJsonObject(binding.getKey());
             if (!prior.get("positions").equals(binding.getValue().get("positions"))
                     || !prior.get("beforeImages").equals(binding.getValue().get("beforeImages"))) return false;
         }
-        var baseline = journalRows(build.getAsJsonArray("baselineOperations"));
-        var partialRows = journalRows(partial.getAsJsonArray("durableOperations"));
-        var cancelRows = journalRows(cancel.getAsJsonArray("durableOperations"));
-        var undoRows = journalRows(undo.getAsJsonArray("durableOperations"));
-        var finalRows = journalRows(finalReceipt.getAsJsonArray("durableOperations"));
-        if (!journalDelta(baseline, partialRows, List.of(p.getAsJsonObject("journal")))
-                || !journalDelta(partialRows, cancelRows, List.of(c.getAsJsonObject("journal")))) return false;
-        var original = u.getAsJsonObject("originalStatus");
-        var intervention = u.getAsJsonObject("interventionStatus");
-        var restored = u.getAsJsonObject("status");
+        java.util.Map<java.lang.String, com.google.gson.JsonObject> baseline = journalRows(build.getAsJsonArray("baselineOperations"));
+        java.util.Map<java.lang.String, com.google.gson.JsonObject> partialRows = journalRows(partial.getAsJsonArray("durableOperations"));
+        java.util.Map<java.lang.String, com.google.gson.JsonObject> cancelRows = journalRows(cancel.getAsJsonArray("durableOperations"));
+        java.util.Map<java.lang.String, com.google.gson.JsonObject> undoRows = journalRows(undo.getAsJsonArray("durableOperations"));
+        java.util.Map<java.lang.String, com.google.gson.JsonObject> finalRows = journalRows(finalReceipt.getAsJsonArray("durableOperations"));
+        if (!journalDelta(baseline, partialRows, dev.openallay.util.Java8Collections.listOf(p.getAsJsonObject("journal")))
+                || !journalDelta(partialRows, cancelRows, dev.openallay.util.Java8Collections.listOf(c.getAsJsonObject("journal")))) return false;
+        com.google.gson.JsonObject original = u.getAsJsonObject("originalStatus");
+        com.google.gson.JsonObject intervention = u.getAsJsonObject("interventionStatus");
+        com.google.gson.JsonObject restored = u.getAsJsonObject("status");
         String token = string(build, "probeToken");
-        var originals = journalForStatus(original, undoRows, "OpenAllay E2E lifecycle " + token + " undo original", 2);
-        var interventions = journalForStatus(intervention, undoRows, "OpenAllay E2E lifecycle " + token + " undo intervention", 1);
-        var restores = journalForStatus(restored, undoRows, "Undo " + string(original, "operationId"), 1);
+        com.google.gson.JsonObject originals = journalForStatus(original, undoRows, "OpenAllay E2E lifecycle " + token + " undo original", 2);
+        com.google.gson.JsonObject interventions = journalForStatus(intervention, undoRows, "OpenAllay E2E lifecycle " + token + " undo intervention", 1);
+        com.google.gson.JsonObject restores = journalForStatus(restored, undoRows, "Undo " + string(original, "operationId"), 1);
         if (originals == null || interventions == null || restores == null
-                || !journalDelta(cancelRows, undoRows, List.of(originals, interventions, restores)) || !undoRows.equals(finalRows)) return false;
-        for (String key : List.of("anchor", "context", "probeToken", "operations", "status", "actions", "templates",
-                "sites", "terrain", "baselineOperations", "seed", "provider", "skipped")) if (!build.get(key).equals(finalReceipt.get(key))) return false;
-        var lifecycle = finalReceipt.getAsJsonObject("lifecycle");
-        return dev.openallay.json.JsonTrees.keys(lifecycle).equals(java.util.Set.of("partial", "cancel", "undo"))
+                || !journalDelta(cancelRows, undoRows, dev.openallay.util.Java8Collections.listOf(originals, interventions, restores)) || !undoRows.equals(finalRows)) return false;
+        for (String key : dev.openallay.util.Java8Collections.listOf("anchor", "context", "probeToken", "operations", "status", "actions", "templates", "sites", "terrain", "baselineOperations", "seed", "provider", "skipped")) if (!build.get(key).equals(finalReceipt.get(key))) return false;
+        com.google.gson.JsonObject lifecycle = finalReceipt.getAsJsonObject("lifecycle");
+        return dev.openallay.json.JsonTrees.keys(lifecycle).equals(dev.openallay.util.Java8Collections.setOf("partial", "cancel", "undo"))
                 && p.equals(lifecycle.get("partial")) && c.equals(lifecycle.get("cancel")) && u.equals(lifecycle.get("undo"))
                 && compositeLifecycle(finalReceipt);
     }
 
     private static boolean standaloneHistory(String scenario, List<GuideToolActivity> tools, JsonObject receipt) {
-        var baseline = scalarReceipt(tools.get(0));
+        com.google.gson.JsonObject baseline = scalarReceipt(tools.get(0));
         String kind = "builder_partial".equals(scenario) ? "partial" : "cancel";
         if (!stage(baseline, scenario, "baseline") || !stage(receipt, scenario, "final")
                 || !tools.get(0).invocationId().equals(string(baseline, "probeToken")) || !sameBinding(baseline, receipt)
                 || !readOnlyStatus(baseline.getAsJsonObject("status")) || !readOnlyStatus(receipt.getAsJsonObject("status"))
                 || !receipt.get("status").equals(receipt.get("observationStatus"))) return false;
-        if (!dev.openallay.json.JsonTrees.keys(baseline.getAsJsonObject("lifecycle")).equals(java.util.Set.of(kind))
-                || !dev.openallay.json.JsonTrees.keys(receipt.getAsJsonObject("lifecycle")).equals(java.util.Set.of(kind))) return false;
-        var prerequisite = baseline.getAsJsonObject("lifecycle").getAsJsonObject(kind);
-        var observed = receipt.getAsJsonObject("lifecycle").getAsJsonObject(kind);
+        if (!dev.openallay.json.JsonTrees.keys(baseline.getAsJsonObject("lifecycle")).equals(dev.openallay.util.Java8Collections.setOf(kind))
+                || !dev.openallay.json.JsonTrees.keys(receipt.getAsJsonObject("lifecycle")).equals(dev.openallay.util.Java8Collections.setOf(kind))) return false;
+        com.google.gson.JsonObject prerequisite = baseline.getAsJsonObject("lifecycle").getAsJsonObject(kind);
+        com.google.gson.JsonObject observed = receipt.getAsJsonObject("lifecycle").getAsJsonObject(kind);
         return (baseline.getAsJsonArray("baselineOperations").size() == 0)
                 && baseline.get("baselineOperations").equals(receipt.get("baselineOperations"))
-                && dev.openallay.json.JsonTrees.keys(prerequisite).equals(java.util.Set.of("positions", "beforeImages"))
+                && dev.openallay.json.JsonTrees.keys(prerequisite).equals(dev.openallay.util.Java8Collections.setOf("positions", "beforeImages"))
                 && prerequisite(prerequisite, baseline, 0, 0) && durableFailure(observed, baseline, kind, 0, 0, tools.get(1).normalized())
                 && prerequisite.get("positions").equals(observed.get("positions"))
                 && prerequisite.get("beforeImages").equals(observed.get("beforeImages"))
                 && journalDelta(journalRows(baseline.getAsJsonArray("baselineOperations")),
-                        journalRows(receipt.getAsJsonArray("durableOperations")), List.of(observed.getAsJsonObject("journal")));
+                        journalRows(receipt.getAsJsonArray("durableOperations")), dev.openallay.util.Java8Collections.listOf(observed.getAsJsonObject("journal")));
     }
 
     private static boolean stage(JsonObject receipt, String scenario, String stage) {
@@ -713,16 +685,16 @@ Landmark(String name, int x, int y, int z, String id) {
     static boolean nativeReceiptBinding(JsonObject receipt, Anchor anchor, UUID actor) {
         try {
             long[] pos = position(receipt.getAsJsonObject("anchor"));
-            var context = receipt.getAsJsonObject("context");
-            return dev.openallay.json.JsonTrees.keys(context).equals(java.util.Set.of("dimension", "playerUuid"))
+            com.google.gson.JsonObject context = receipt.getAsJsonObject("context");
+            return dev.openallay.json.JsonTrees.keys(context).equals(dev.openallay.util.Java8Collections.setOf("dimension", "playerUuid"))
                     && pos[0] == anchor.x() && pos[1] == anchor.y() && pos[2] == anchor.z()
                     && anchor.dimension().equals(string(context, "dimension")) && actor.toString().equals(string(context, "playerUuid"));
         } catch (RuntimeException malformed) { return false; }
     }
 
     private static boolean sameBinding(JsonObject baseline, JsonObject receipt) {
-        var context = baseline.getAsJsonObject("context");
-        if (!dev.openallay.json.JsonTrees.keys(context).equals(java.util.Set.of("dimension", "playerUuid"))
+        com.google.gson.JsonObject context = baseline.getAsJsonObject("context");
+        if (!dev.openallay.json.JsonTrees.keys(context).equals(dev.openallay.util.Java8Collections.setOf("dimension", "playerUuid"))
                 || !nonempty(context, "dimension") || !nonempty(context, "playerUuid") || !nonempty(baseline, "probeToken")
                 || string(baseline, "probeToken").length() > 128) return false;
         UUID.fromString(string(context, "playerUuid"));
@@ -733,15 +705,15 @@ Landmark(String name, int x, int y, int z, String id) {
 
     private static boolean completedBuild(JsonObject receipt) {
         if (!"completed".equals(string(receipt.getAsJsonObject("status"), "state"))) return false;
-        var operations = receipt.getAsJsonArray("operations");
-        var names = buildNames(receipt);
+        com.google.gson.JsonArray operations = receipt.getAsJsonArray("operations");
+        java.util.List<java.lang.String> names = buildNames(receipt);
         if (operations.size() != names.size()) return false;
-        var rows = journalRows(receipt.getAsJsonArray("baselineOperations"));
-        var ids = new java.util.HashSet<String>();
+        java.util.Map<java.lang.String, com.google.gson.JsonObject> rows = journalRows(receipt.getAsJsonArray("baselineOperations"));
+        java.util.HashSet<java.lang.String> ids = new java.util.HashSet<String>();
         for (int index = 0; index < names.size(); index++) {
-            var item = operations.get(index).getAsJsonObject();
+            com.google.gson.JsonObject item = operations.get(index).getAsJsonObject();
             String id = string(item, "operationId");
-            var row = rows.get(id);
+            com.google.gson.JsonObject row = rows.get(id);
             if (!names.get(index).equals(string(item, "name")) || !completedStatus(item, ids)
                     || row == null || !"completed".equals(string(row, "status")) || number(row, "entries") <= 0
                     || !"OpenAllay E2E Builder acceptance".equals(string(row, "label"))) return false;
@@ -749,26 +721,26 @@ Landmark(String name, int x, int y, int z, String id) {
         if (!rows.keySet().equals(ids)
                 || !string(operations.get(operations.size() - 1).getAsJsonObject(), "operationId").equals(string(receipt.getAsJsonObject("status"), "operationId"))) return false;
         if (skyscraperSkipped(receipt) && receipt.getAsJsonObject("sites").has("skyscraper")) return false;
-        var paths = new java.util.HashSet<String>();
-        for (var value : receipt.getAsJsonArray("actions")) {
-            var action = value.getAsJsonObject(); String name = string(action, "name");
+        java.util.HashSet<java.lang.String> paths = new java.util.HashSet<String>();
+        for (com.google.gson.JsonElement value : receipt.getAsJsonArray("actions")) {
+            com.google.gson.JsonObject action = value.getAsJsonObject(); String name = string(action, "name");
             if (skyscraperSkipped(receipt) && "skyscraper".equals(name)) return false;
             if ("terrain_path".equals(name) || "terrain_smart_path".equals(name))
                 if (!"built".equals(string(action, "status")) || !paths.add(name)) return false;
         }
-        var templates = receipt.getAsJsonObject("templates");
+        com.google.gson.JsonObject templates = receipt.getAsJsonObject("templates");
         return paths.size() == 2 && booleanValue(templates, "listed") && templateNames(templates.getAsJsonArray("saved"))
                 .contains("openallay_e2e_builder_native");
     }
 
     static boolean toolContract(String scenario, GuideRequestSnapshot request) {
         if (request.status() != GuideRequestStatus.COMPLETED) return false;
-        List<GuideToolActivity> javascript = request.tools().stream().filter(value -> value.toolId().equals(JAVASCRIPT_TOOL)).toList();
+        List<GuideToolActivity> javascript = dev.openallay.util.Java8Collections.toList(request.tools().stream().filter(value -> value.toolId().equals(JAVASCRIPT_TOOL)));
         if (javascript.isEmpty()) return false;
         // Paid provider turns have their own shape; native evidence still owns their verdict.
         if (scenario.equals("builder-live-copy") || scenario.equals("builder-live-undo")) {
             boolean success = javascript.stream().allMatch(GuideBuilderE2EProbe::succeeded);
-            var sources = request.sources().stream().map(value -> value.evidence().sourceId()).collect(java.util.stream.Collectors.toSet());
+            java.util.Set<java.lang.String> sources = request.sources().stream().map(value -> value.evidence().sourceId()).collect(java.util.stream.Collectors.toSet());
             boolean evidence = scenario.equals("builder-live-copy")
                     ? sources.contains("openallay_builder:template-save") && sources.contains("openallay_builder:template-load")
                         && sources.contains("openallay_builder:write-readback")
@@ -777,7 +749,7 @@ Landmark(String name, int x, int y, int z, String id) {
                     && "minecraft-builder".equals(string(value.invocationArguments(), "name")));
         }
         if (scenario.equals("builder-server-denied")) {
-            var tool = javascript.get(javascript.size() - 1);
+            dev.openallay.guide.GuideToolActivity tool = javascript.get(javascript.size() - 1);
             return javascript.size() == 1 && failed(tool, "javascript_error")
                     && string(tool.normalized(), "message").startsWith("ReferenceError: \"Java\" is not defined.");
         }
@@ -790,89 +762,110 @@ Landmark(String name, int x, int y, int z, String id) {
     private static boolean receiptMatchesScenario(String scenario, JsonObject receipt) {
         try {
             if (!scenario.replace('-', '_').equals(string(receipt, "scenario"))) return false;
-            switch (scenario) {
-                case "builder-restricted" -> { return "completed".equals(string(receipt.getAsJsonObject("status"), "state"))
+            switch ((scenario)) {
+case "builder-restricted":
+{
+{ return "completed".equals(string(receipt.getAsJsonObject("status"), "state"))
                         && "minecraft:gold_block".equals(string(receipt, "readback")); }
-                case "builder-legacy-shapes" -> {
-                    var path = receipt.getAsJsonObject("path"); var template = receipt.getAsJsonObject("template");
+}
+case "builder-legacy-shapes":
+{
+{
+                    com.google.gson.JsonObject path = receipt.getAsJsonObject("path"); com.google.gson.JsonObject template = receipt.getAsJsonObject("template");
                     return "completed".equals(string(receipt.getAsJsonObject("status"), "state"))
                             && number(receipt.getAsJsonObject("status"), "writes") > 0
                             && "built".equals(string(path, "status")) && number(path,"length") == 5
                             && "openallay_e2e_legacy_shapes".equals(string(template,"name"))
                             && booleanValue(template,"listed") && booleanValue(template,"persistedExact");
                 }
-                case "builder-acceptance", "builder-partial", "builder-cancel" -> { return true; }
-                case "builder-undo" -> {
-                    var undo = receipt.getAsJsonObject("undo");
+}
+case "builder-acceptance":
+case "builder-partial":
+case "builder-cancel":
+{
+{ return true; }
+}
+case "builder-undo":
+{
+{
+                    com.google.gson.JsonObject undo = receipt.getAsJsonObject("undo");
                     return "completed".equals(string(receipt.getAsJsonObject("status"), "state")) && number(undo, "restored") == 1
                             && undo.getAsJsonArray("conflicts").size() == 1 && (undo.getAsJsonArray("uncertain").size() == 0);
                 }
-                case "builder-reload" -> {
-                    var rows = journalRows(receipt.getAsJsonArray("operations"));
+}
+case "builder-reload":
+{
+{
+                    java.util.Map<java.lang.String, com.google.gson.JsonObject> rows = journalRows(receipt.getAsJsonArray("operations"));
                     return readOnlyStatus(receipt.getAsJsonObject("status")) && number(receipt, "operationCount") == rows.size()
                             && rows.size() == buildNames(receipt).size() + 5 && "openallay_e2e_builder_native".equals(string(receipt.getAsJsonObject("template"), "name"));
                 }
-                default -> { return false; }
-            }
+}
+default:
+{
+{ return false; }
+}
+}
+
         } catch (RuntimeException malformed) { return false; }
     }
 
     static boolean persistedOperationsMatch(JsonObject retained, JsonObject reload) {
         try {
-            var observed = journalRows(reload.getAsJsonArray("operations"));
-            var names = buildNames(retained);
+            java.util.Map<java.lang.String, com.google.gson.JsonObject> observed = journalRows(reload.getAsJsonArray("operations"));
+            java.util.List<java.lang.String> names = buildNames(retained);
             if (!retained.get("skipped").equals(reload.get("skipped")) || buildNames(reload).size() != names.size()
                     || observed.size() != names.size() + 5 || number(reload, "operationCount") != observed.size()) return false;
-            var expectedIds = new java.util.HashSet<String>();
-            var operations = retained.getAsJsonArray("operations");
+            java.util.HashSet<java.lang.String> expectedIds = new java.util.HashSet<String>();
+            com.google.gson.JsonArray operations = retained.getAsJsonArray("operations");
             if (operations.size() != names.size()) return false;
             for (int index = 0; index < names.size(); index++) {
-                var item = operations.get(index).getAsJsonObject();
+                com.google.gson.JsonObject item = operations.get(index).getAsJsonObject();
                 if (!names.get(index).equals(string(item, "name")) || !completedStatus(item, expectedIds)
                         || !persistedRow(item.getAsJsonObject("journal"), string(item, "operationId"), "completed", observed)
                         || number(item.getAsJsonObject("journal"), "entries") <= 0
                         || !"OpenAllay E2E Builder acceptance".equals(string(item.getAsJsonObject("journal"), "label"))) return false;
             }
-            var lifecycle = retained.getAsJsonObject("lifecycle");
-            for (String kind : List.of("partial", "cancel")) {
-                var row = lifecycle.getAsJsonObject(kind).getAsJsonObject("journal");
+            com.google.gson.JsonObject lifecycle = retained.getAsJsonObject("lifecycle");
+            for (String kind : dev.openallay.util.Java8Collections.listOf("partial", "cancel")) {
+                com.google.gson.JsonObject row = lifecycle.getAsJsonObject(kind).getAsJsonObject("journal");
                 String id = string(row, "id");
                 if (!expectedIds.add(id) || !persistedRow(row, id, kind.equals("partial") ? "failed" : "cancelled", observed)
                         || number(row, "entries") != 1) return false;
             }
-            var undo = lifecycle.getAsJsonObject("undo");
-            for (String key : List.of("originalStatus", "interventionStatus", "status")) {
-                var item = undo.getAsJsonObject(key);
+            com.google.gson.JsonObject undo = lifecycle.getAsJsonObject("undo");
+            for (String key : dev.openallay.util.Java8Collections.listOf("originalStatus", "interventionStatus", "status")) {
+                com.google.gson.JsonObject item = undo.getAsJsonObject(key);
                 if (!completedStatus(item, expectedIds)
                         || !persistedRow(item.getAsJsonObject("journal"), string(item, "operationId"), "completed", observed)
                         || number(item.getAsJsonObject("journal"), "entries") != (key.equals("originalStatus") ? 2 : 1)) return false;
             }
-            var listed = templateNames(reload.getAsJsonArray("listed"));
-            var saved = templateNames(retained.getAsJsonObject("templates").getAsJsonArray("saved"));
+            java.util.Set<java.lang.String> listed = templateNames(reload.getAsJsonArray("listed"));
+            java.util.Set<java.lang.String> saved = templateNames(retained.getAsJsonObject("templates").getAsJsonArray("saved"));
             return expectedIds.size() == names.size() + 5 && !saved.isEmpty() && listed.containsAll(saved)
                     && listed.contains("openallay_e2e_builder_native");
         } catch (RuntimeException malformed) { return false; }
     }
 
     private static boolean persistedRow(JsonObject row, String id, String status, Map<String, JsonObject> observed) {
-        return journalRow(row) && id != null && !id.isBlank() && id.equals(string(row, "id"))
+        return journalRow(row) && id != null && !dev.openallay.util.Java8Strings.isBlank(id) && id.equals(string(row, "id"))
                 && status.equals(string(row, "status")) && row.equals(observed.get(id));
     }
 
     static boolean compositeLifecycle(JsonObject receipt) {
         try {
-            var lifecycle = receipt.getAsJsonObject("lifecycle");
-            var partial = lifecycle.getAsJsonObject("partial");
-            var cancel = lifecycle.getAsJsonObject("cancel");
-            var undo = lifecycle.getAsJsonObject("undo");
-            var ids = new java.util.HashSet<String>();
-            for (var value : receipt.getAsJsonArray("operations"))
+            com.google.gson.JsonObject lifecycle = receipt.getAsJsonObject("lifecycle");
+            com.google.gson.JsonObject partial = lifecycle.getAsJsonObject("partial");
+            com.google.gson.JsonObject cancel = lifecycle.getAsJsonObject("cancel");
+            com.google.gson.JsonObject undo = lifecycle.getAsJsonObject("undo");
+            java.util.HashSet<java.lang.String> ids = new java.util.HashSet<String>();
+            for (com.google.gson.JsonElement value : receipt.getAsJsonArray("operations"))
                 if (!completedStatus(value.getAsJsonObject(), ids)) return false;
             if (!durableFailure(partial, receipt, "partial", 44, 32, partial.getAsJsonObject("failure"))
                     || !durableFailure(cancel, receipt, "cancel", 44, 34, cancel.getAsJsonObject("failure"))
                     || !ids.add(string(partial.getAsJsonObject("journal"), "id"))
                     || !ids.add(string(cancel.getAsJsonObject("journal"), "id")) || !undoReceipt(undo, receipt, 44, 36)) return false;
-            for (String key : List.of("originalStatus", "interventionStatus", "status"))
+            for (String key : dev.openallay.util.Java8Collections.listOf("originalStatus", "interventionStatus", "status"))
                 if (!completedStatus(undo.getAsJsonObject(key), ids)) return false;
             return ids.size() == buildNames(receipt).size() + 5;
         } catch (RuntimeException malformed) { return false; }
@@ -893,12 +886,12 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static boolean durableFailure(JsonObject item, JsonObject receipt, String kind, int x, int z, JsonObject failure) {
-        var row = item.getAsJsonObject("journal");
+        com.google.gson.JsonObject row = item.getAsJsonObject("journal");
         String code = kind.equals("partial") ? "invalid_native_input" : "session_closed";
-        return dev.openallay.json.JsonTrees.keys(item).equals(java.util.Set.of("failure", "journal", "positions", "beforeImages", "afterImages")) && journalRow(row)
+        return dev.openallay.json.JsonTrees.keys(item).equals(dev.openallay.util.Java8Collections.setOf("failure", "journal", "positions", "beforeImages", "afterImages")) && journalRow(row)
                 && ("OpenAllay E2E lifecycle " + string(receipt, "probeToken") + " " + kind).equals(string(row, "label"))
                 && (kind.equals("partial") ? "failed" : "cancelled").equals(string(row, "status")) && number(row, "entries") == 1
-                && failure != null && dev.openallay.json.JsonTrees.keys(failure).equals(java.util.Set.of("status", "code", "message"))
+                && failure != null && dev.openallay.json.JsonTrees.keys(failure).equals(dev.openallay.util.Java8Collections.setOf("status", "code", "message"))
                 && "failure".equals(string(failure, "status")) && code.equals(string(failure, "code"))
                 && (kind.equals("partial") ? "Builder native operation failed; inspect the session status" : "Builder session is closed or cancelled")
                     .equals(string(failure, "message"))
@@ -907,10 +900,10 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static boolean undoReceipt(JsonObject item, JsonObject receipt, int x, int z) {
-        var ids = new java.util.HashSet<String>();
-        for (String key : List.of("originalStatus", "interventionStatus", "status"))
+        java.util.HashSet<java.lang.String> ids = new java.util.HashSet<String>();
+        for (String key : dev.openallay.util.Java8Collections.listOf("originalStatus", "interventionStatus", "status"))
             if (!completedStatus(item.getAsJsonObject(key), ids)) return false;
-        var result = item.getAsJsonObject("result");
+        com.google.gson.JsonObject result = item.getAsJsonObject("result");
         return prerequisite(item, receipt, x, z) && images(item.getAsJsonArray("afterImages"), "air", "diamond_block")
                 && string(item.getAsJsonObject("status"), "operationId").equals(string(result, "operationId"))
                 && number(result, "restored") == 1 && (result.getAsJsonArray("uncertain").size() == 0)
@@ -929,7 +922,7 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static long[] position(JsonObject value) {
-        if (!dev.openallay.json.JsonTrees.keys(value).equals(java.util.Set.of("x", "y", "z"))) throw new IllegalArgumentException("Expected exact native position");
+        if (!dev.openallay.json.JsonTrees.keys(value).equals(dev.openallay.util.Java8Collections.setOf("x", "y", "z"))) throw new IllegalArgumentException("Expected exact native position");
         long[] coordinates = {number(value, "x"), number(value, "y"), number(value, "z")};
         for (long coordinate : coordinates) if (coordinate < Integer.MIN_VALUE || coordinate > Integer.MAX_VALUE)
             throw new IllegalArgumentException("Native position is outside the integer domain");
@@ -942,14 +935,14 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static boolean blockImage(JsonObject image, String id) {
-        return dev.openallay.json.JsonTrees.keys(image).equals(java.util.Set.of("id", "properties")) && id.equals(string(image, "id"))
+        return dev.openallay.json.JsonTrees.keys(image).equals(dev.openallay.util.Java8Collections.setOf("id", "properties")) && id.equals(string(image, "id"))
                 && image.getAsJsonObject("properties").size() == 0;
     }
 
     private static Map<String, JsonObject> journalRows(JsonArray values) {
-        var rows = new java.util.LinkedHashMap<String, JsonObject>();
-        for (var value : values) {
-            var row = value.getAsJsonObject();
+        java.util.LinkedHashMap<java.lang.String, com.google.gson.JsonObject> rows = new java.util.LinkedHashMap<String, JsonObject>();
+        for (com.google.gson.JsonElement value : values) {
+            com.google.gson.JsonObject row = value.getAsJsonObject();
             if (!journalRow(row) || rows.put(string(row, "id"), row) != null)
                 throw new IllegalArgumentException("Invalid or duplicate public native journal row");
         }
@@ -957,17 +950,17 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static boolean journalRow(JsonObject row) {
-        return row != null && dev.openallay.json.JsonTrees.keys(row).equals(java.util.Set.of("id", "label", "status", "entries")) && nonempty(row, "id")
-                && nonempty(row, "label") && List.of("running", "completed", "failed", "cancelled", "interrupted").contains(string(row, "status"))
+        return row != null && dev.openallay.json.JsonTrees.keys(row).equals(dev.openallay.util.Java8Collections.setOf("id", "label", "status", "entries")) && nonempty(row, "id")
+                && nonempty(row, "label") && dev.openallay.util.Java8Collections.listOf("running", "completed", "failed", "cancelled", "interrupted").contains(string(row, "status"))
                 && number(row, "entries") >= 0;
     }
 
     private static boolean journalDelta(Map<String, JsonObject> before, Map<String, JsonObject> after, List<JsonObject> added) {
         if (after.size() != before.size() + added.size()) return false;
-        for (var entry : before.entrySet()) if (!entry.getValue().equals(after.get(entry.getKey()))) return false;
-        var ids = new java.util.HashSet<String>();
-        var labels = new java.util.HashSet<String>();
-        for (var row : added) {
+        for (java.util.Map.Entry<java.lang.String, com.google.gson.JsonObject> entry : before.entrySet()) if (!entry.getValue().equals(after.get(entry.getKey()))) return false;
+        java.util.HashSet<java.lang.String> ids = new java.util.HashSet<String>();
+        java.util.HashSet<java.lang.String> labels = new java.util.HashSet<String>();
+        for (com.google.gson.JsonObject row : added) {
             String id = string(row, "id"), label = string(row, "label");
             if (!journalRow(row) || !ids.add(id) || !labels.add(label) || before.containsKey(id) || !row.equals(after.get(id))
                     || before.values().stream().anyMatch(old -> label.equals(string(old, "label")))) return false;
@@ -976,15 +969,15 @@ Landmark(String name, int x, int y, int z, String id) {
     }
 
     private static JsonObject journalForStatus(JsonObject status, Map<String, JsonObject> rows, String label, long entries) {
-        var row = rows.get(string(status, "operationId"));
+        com.google.gson.JsonObject row = rows.get(string(status, "operationId"));
         return journalRow(row) && "completed".equals(string(row, "status")) && label.equals(string(row, "label"))
                 && number(row, "entries") == entries ? row : null;
     }
 
     private static java.util.Set<String> templateNames(JsonArray values) {
-        var names = new java.util.HashSet<String>();
-        for (var value : values) {
-            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString() || value.getAsString().isBlank()
+        java.util.HashSet<java.lang.String> names = new java.util.HashSet<String>();
+        for (com.google.gson.JsonElement value : values) {
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString() || dev.openallay.util.Java8Strings.isBlank(value.getAsString())
                     || !names.add(value.getAsString())) throw new IllegalArgumentException("Invalid template list");
         }
         return names;
@@ -1006,6 +999,6 @@ Landmark(String name, int x, int y, int z, String id) {
                 && value.getAsJsonPrimitive(key).isString() ? value.get(key).getAsString() : null;
     }
     private static boolean nonempty(JsonObject value, String key) {
-        String text = string(value, key); return text != null && !text.isBlank();
+        String text = string(value, key); return text != null && !dev.openallay.util.Java8Strings.isBlank(text);
     }
 }

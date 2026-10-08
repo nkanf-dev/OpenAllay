@@ -10,7 +10,7 @@ public final class MinecraftBlockStateProperties {
     private MinecraftBlockStateProperties() {}
     public static SortedMap<String, String> capture(IBlockState state) {
         TreeMap<String, String> values = new TreeMap<>();
-        for (var property : state.getPropertyKeys()) values.put(property.getName(), name(state, property));
+        for (net.minecraft.block.properties.IProperty<?> property : state.getPropertyKeys()) values.put(property.getName(), name(state, property));
         return values;
     }
     private static <T extends Comparable<T>> String name(IBlockState state, IProperty<T> property) {

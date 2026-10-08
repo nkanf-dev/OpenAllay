@@ -7,8 +7,8 @@ import net.minecraft.entity.player.EntityPlayerMP;
 public final class NativeServerConnectionGuard {
     private NativeServerConnectionGuard() {}
     public static BooleanSupplier capture(EntityPlayerMP player) {
-        var original = player.connection;
-        var manager = original.netManager;
+        net.minecraft.network.NetHandlerPlayServer original = player.connection;
+        net.minecraft.network.NetworkManager manager = original.netManager;
         return () -> player.connection == original && original.player == player
                 && original.netManager == manager && manager.isChannelOpen();
     }

@@ -28,10 +28,12 @@ public abstract class ToastInstanceCompletionMixin {
     @ModifyArgs(method = "render(II)Z", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/GlStateManager;translate(FFF)V"), require = 1)
     private void openallay$ownedCardWidth(Args args) {
-        if (toast instanceof GuideNativeToastBinding owned) {
+        final class $oaPattern0_Holder { net.minecraft.client.gui.toasts.IToast value; GuideNativeToastBinding bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = toast) instanceof dev.openallay.client.gui.hud.GuideNativeToastBinding && (($oaPattern0_holder.bound = (GuideNativeToastBinding) $oaPattern0_holder.value) != null))) {
             float nativeX = args.get(0);
             float visibility = (openallay$guiWidth - nativeX) / 160.0F;
-            args.set(0, openallay$guiWidth - owned.width() * visibility);
+            args.set(0, openallay$guiWidth - $oaPattern0_holder.bound.width() * visibility);
         }
     }
     @Redirect(method = "render(II)Z", at = @At(value = "INVOKE",

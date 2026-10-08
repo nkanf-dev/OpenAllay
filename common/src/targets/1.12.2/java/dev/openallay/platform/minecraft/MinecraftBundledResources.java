@@ -39,23 +39,23 @@ public final class MinecraftBundledResources implements MinecraftResourceAccess.
                 if (published == null) ids = published = discover();
             }
         }
-        return published.stream().filter(id -> id.getResourcePath().startsWith(prefix))
-                .filter(filter).toList();
+        return dev.openallay.util.Java8Collections.toList(published.stream().filter(id -> id.getResourcePath().startsWith(prefix))
+                .filter(filter));
     }
 
     @Override public List<MinecraftResourceAccess.TextLayer> textLayers(ResourceLocation id) throws IOException {
         List<MinecraftResourceAccess.TextLayer> layers = new ArrayList<>();
-        var resources = loader.getResources(path(id));
+        java.util.Enumeration<java.net.URL> resources = loader.getResources(path(id));
         while (resources.hasMoreElements()) {
             URL url = resources.nextElement();
-            try (var input = url.openStream()) {
+            try (java.io.InputStream input = url.openStream()) {
                 layers.add(new MinecraftResourceAccess.TextLayer("classpath:" + url.toExternalForm(),
                         new String(input.readAllBytes(), StandardCharsets.UTF_8)));
             }
         }
         // ClassLoader selects the first match; native client callers select the final layer.
         java.util.Collections.reverse(layers);
-        return List.copyOf(layers);
+        return dev.openallay.util.Java8Collections.listCopyOf(layers);
     }
 
     @Override public Reader openSelectedReader(ResourceLocation id) throws IOException {
@@ -73,24 +73,26 @@ public final class MinecraftBundledResources implements MinecraftResourceAccess.
         Set<Path> locations = new LinkedHashSet<>();
         try {
             for (ClassLoader current = loader; current != null; current = current.getParent()) {
-                if (current instanceof URLClassLoader urls) {
-                    for (URL url : urls.getURLs()) addLocation(locations, url);
+                final class $oaPattern0_Holder { java.lang.ClassLoader value; URLClassLoader bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = current) instanceof java.net.URLClassLoader && (($oaPattern0_holder.bound = (URLClassLoader) $oaPattern0_holder.value) != null))) {
+                    for (URL url : $oaPattern0_holder.bound.getURLs()) addLocation(locations, url);
                 }
             }
             for (String value : System.getProperty("java.class.path", "").split(java.io.File.pathSeparator)) {
-                if (!value.isEmpty()) locations.add(Path.of(value));
+                if (!value.isEmpty()) locations.add(java.nio.file.Paths.get(value));
             }
             URL owner = MinecraftBundledResources.class.getProtectionDomain().getCodeSource() == null ? null
                     : MinecraftBundledResources.class.getProtectionDomain().getCodeSource().getLocation();
             if (owner != null) addLocation(locations, owner);
-            var roots = loader.getResources(root);
+            java.util.Enumeration<java.net.URL> roots = loader.getResources(root);
             while (roots.hasMoreElements()) {
                 URL url = roots.nextElement();
                 if (url.getProtocol().equals("file")) {
-                    Path resourceRoot = Path.of(url.toURI());
+                    Path resourceRoot = java.nio.file.Paths.get(url.toURI());
                     scanDirectory(resourceRoot, names);
                 } else if (url.getProtocol().equals("jar")) {
-                    var connection = (java.net.JarURLConnection) url.openConnection();
+                    java.net.JarURLConnection connection = (java.net.JarURLConnection) url.openConnection();
                     addLocation(locations, connection.getJarFileURL());
                 }
             }
@@ -98,9 +100,9 @@ public final class MinecraftBundledResources implements MinecraftResourceAccess.
                 if (Files.isDirectory(location)) scanDirectory(location.resolve(root), names);
                 else if (Files.isRegularFile(location) && location.toString().endsWith(".jar")) {
                     try (ZipFile zip = new ZipFile(location.toFile())) {
-                        var entries = zip.entries();
+                        java.util.Enumeration<? extends java.util.zip.ZipEntry> entries = zip.entries();
                         while (entries.hasMoreElements()) {
-                            var entry = entries.nextElement();
+                            java.util.zip.ZipEntry entry = entries.nextElement();
                             if (!entry.isDirectory() && entry.getName().startsWith(root + "/")) {
                                 names.add(entry.getName().substring(root.length() + 1));
                             }
@@ -119,7 +121,7 @@ public final class MinecraftBundledResources implements MinecraftResourceAccess.
                 // Only publish locations actually visible to this loader.
                 if (loader.getResource(path(id)) != null) found.add(id);
             }
-            return List.copyOf(found);
+            return dev.openallay.util.Java8Collections.listCopyOf(found);
         } catch (IOException failure) {
             throw new UncheckedIOException("Cannot enumerate bundled " + root + " resources", failure);
         } catch (java.net.URISyntaxException failure) {
@@ -128,12 +130,12 @@ public final class MinecraftBundledResources implements MinecraftResourceAccess.
     }
 
     private static void addLocation(Set<Path> locations, URL url) throws java.net.URISyntaxException {
-        if (url.getProtocol().equals("file")) locations.add(Path.of(url.toURI()));
+        if (url.getProtocol().equals("file")) locations.add(java.nio.file.Paths.get(url.toURI()));
     }
 
     private static void scanDirectory(Path directory, Set<String> names) throws IOException {
         if (!Files.isDirectory(directory)) return;
-        try (var files = Files.walk(directory)) {
+        try (java.util.stream.Stream<java.nio.file.Path> files = Files.walk(directory)) {
             files.filter(Files::isRegularFile).forEach(file -> names.add(
                     directory.relativize(file).toString().replace(java.io.File.separatorChar, '/')));
         }

@@ -36,7 +36,7 @@ public final class MinecraftImageTextures {
             ownerThread();
             Objects.requireNonNull(label, "label");
             ResourceLocation key = new ResourceLocation(texture);
-            var entries = OWNERS.get(manager);
+            java.util.Map<net.minecraft.util.ResourceLocation, dev.openallay.client.observation.MinecraftImageTextures.OwnedTexture> entries = OWNERS.get(manager);
             if (entries != null && entries.containsKey(key)) throw new IllegalStateException("View texture is already registered: " + texture);
             owned = new OwnedTexture(Objects.requireNonNull(image, "image"));
             if (!manager.loadTexture(key, owned)) {
@@ -49,7 +49,9 @@ public final class MinecraftImageTextures {
             if (failure != nativeFailure) failure.addSuppressed(nativeFailure);
             try { if (owned != null) owned.close(); else image.flush(); }
             catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
-            if (failure instanceof Error fatal) throw fatal;
+            final class $oaPattern0_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = failure) instanceof java.lang.Error && (($oaPattern0_holder.bound = (Error) $oaPattern0_holder.value) != null))) throw $oaPattern0_holder.bound;
             throw new GuideImageRegistrationException(failure);
         }
     }
@@ -108,7 +110,9 @@ public final class MinecraftImageTextures {
             catch (RuntimeException | Error rejected) { if (failure == null) failure = rejected; else if (failure != rejected) failure.addSuppressed(rejected); }
             if (failure != null) {
                 releaseFailure = failure;
-                if (failure instanceof Error fatal) throw fatal;
+                final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = failure) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
                 throw (RuntimeException) failure;
             }
             released = true;

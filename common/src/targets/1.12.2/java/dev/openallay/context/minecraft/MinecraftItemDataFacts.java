@@ -19,7 +19,7 @@ public static final class Defaults {
     private final Set<String> componentIds;
     private final Map<String, JsonElement> properties;
     public Defaults(Set<String> componentIds, Map<String, JsonElement> properties) {
- componentIds = Set.copyOf(componentIds); properties = Map.copyOf(properties);
+ componentIds = dev.openallay.util.Java8Collections.setCopyOf(componentIds); properties = dev.openallay.util.Java8Collections.mapCopyOf(properties);
         this.componentIds = componentIds;
         this.properties = properties;
     }
@@ -65,7 +65,7 @@ public static final class Defaults {
             variants.add(variant);
         }
         facts.add("creative_variants", variants);
-        return new Defaults(Set.of(), Map.of("minecraft:item", facts));
+        return new Defaults(dev.openallay.util.Java8Collections.setOf(), dev.openallay.util.Java8Collections.mapOf("minecraft:item", facts));
     }
     public static boolean hasCustomData(ItemStack stack) {
         return stack.getMetadata() != 0 || stack.hasTagCompound();

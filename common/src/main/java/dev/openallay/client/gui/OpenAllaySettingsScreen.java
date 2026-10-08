@@ -55,9 +55,9 @@ import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideNativeEditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
-import net.minecraft.client.gui.screens.Screen;
+
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 
 /** Native settings shell and model-profile editor backed only by ClientSettingsService. */
 public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -125,7 +125,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private GuideNativeEditBox requestTimeout;
     private GuideNativeEditBox assistantName;
     private String assistantNameDraft;
-    private List<String> catalogModelIds = List.of();
+    private List<String> catalogModelIds = dev.openallay.util.Java8Collections.listOf();
     private boolean modelCatalogOpen;
     private int modelCatalogPage;
     private long modelCatalogGeneration;
@@ -712,8 +712,10 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         GuideUiConfig.Fullscreen full = uiDraft.ui().fullscreen();
         GuideUiConfig.Hud hud = uiDraft.ui().hud();
         GuideUiConfig.Notifications notifications = uiDraft.ui().notifications();
-        switch (uiGroup) {
-            case FULLSCREEN -> {
+        switch ((uiGroup)) {
+case FULLSCREEN:
+{
+{
                 uiButton("density", enumLabel("density", full.density()), x, y, w, () ->
                         changeFull(new GuideUiConfig.Fullscreen(full.density() == GuideUiConfig.Density.COMPACT
                                 ? GuideUiConfig.Density.COMFORTABLE : GuideUiConfig.Density.COMPACT,
@@ -734,7 +736,11 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 });
                 y += 26;
             }
-            case HUD -> {
+break;
+}
+case HUD:
+{
+{
                 y = area.y() + uiControlsInset() - uiScroll;
                 uiToggle("hud_enabled", hud.enabled(), x, y, w, () -> changeHud(uiDraft.ui().hud().withEnabled(!uiDraft.ui().hud().enabled())));
                 y += 26;
@@ -802,7 +808,11 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         "screen.openallay.settings.ui.actions_unavailable")));
                 y += 26;
             }
-            case NOTIFICATIONS -> {
+break;
+}
+case NOTIFICATIONS:
+{
+{
                 uiToggle("notifications_enabled", notifications.enabled(), x, y, w,
                         () -> changeNotifications(uiDraft.ui().notifications().withEnabled(!uiDraft.ui().notifications().enabled())));
                 y += 26;
@@ -838,13 +848,16 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         "screen.openallay.settings.ui.actions_unavailable")));
                 y += 26;
             }
-        }
+break;
+}
+}
+
         uiContentHeight = y + uiScroll - (area.y() + uiControlsInset());
     }
 
-    private GuideNativeButton uiButton(String key, Component value, int x, int y, int w, Runnable action) {
-        Component label = MinecraftComponents.translatable("screen.openallay.settings.ui." + key);
-        if (!MinecraftComponents.getString(value).isBlank()) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "), value);
+    private GuideNativeButton uiButton(String key, net.minecraft.network.chat.Component value, int x, int y, int w, Runnable action) {
+        net.minecraft.network.chat.Component label = MinecraftComponents.translatable("screen.openallay.settings.ui." + key);
+        if (!dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(value))) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "), value);
         GuideNativeButton button = addGuideWidget(OpenAllayButton.create(label, ignored -> action.run())
                 .bounds(x, y, w, 20).build());
         button.visible = uiWidgetVisible(y, 20);
@@ -856,7 +869,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 x, y, w, action);
     }
 
-    private Component enumLabel(String kind, Enum<?> value) {
+    private net.minecraft.network.chat.Component enumLabel(String kind, Enum<?> value) {
         return MinecraftComponents.translatable("screen.openallay.settings.ui." + kind + "."
                 + value.name().toLowerCase(java.util.Locale.ROOT));
     }
@@ -917,10 +930,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private void updateUiApplyButton() {
-        for (var child : children()) {
-            if (child instanceof GuideNativeButton button && MinecraftComponents.getString(button.getMessage()).equals(
+        for (dev.openallay.client.gui.GuideWidget child : children()) {
+            final class $oaPattern0_Holder { dev.openallay.client.gui.GuideWidget value; GuideNativeButton bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = child) instanceof dev.openallay.client.gui.GuideNativeButton && (($oaPattern0_holder.bound = (GuideNativeButton) $oaPattern0_holder.value) != null)) && MinecraftComponents.getString($oaPattern0_holder.bound.getMessage()).equals(
                     MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.ui.apply")))) {
-                button.active = !editorSave.busy() && (uiDraft.dirty() || !uiIntegerDrafts.isEmpty())
+                $oaPattern0_holder.bound.active = !editorSave.busy() && (uiDraft.dirty() || !uiIntegerDrafts.isEmpty())
                         && snapshot.operation().kind() == SettingsOperation.Kind.IDLE;
             }
         }
@@ -1126,11 +1141,27 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         voiceButton("refresh_devices", MinecraftComponents.empty(), x, y, w, () -> acceptVoice(voiceActions.refreshDevices(), false));
         y += 26;
         voiceButton("language", MinecraftComponents.literal(voiceDraft.language()), x, y, w, () -> {
-            voiceDraft = voiceDraft.withLanguage(switch (voiceDraft.language()) {
-                case "auto" -> "zh";
-                case "zh" -> "en";
-                default -> "auto";
-            });
+            {
+final dev.openallay.client.voice.VoiceConfig $oaSwitch0_exit_result_prior0 = voiceDraft;
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((voiceDraft.language())) {
+case "auto":
+{
+$oaSwitch0_exit_result = "zh"; break $oaSwitch0_exit;
+}
+case "zh":
+{
+$oaSwitch0_exit_result = "en"; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = "auto"; break $oaSwitch0_exit;
+}
+}
+}
+voiceDraft = $oaSwitch0_exit_result_prior0.withLanguage($oaSwitch0_exit_result);
+}
             guideRebuildWidgets();
         });
         y += 26;
@@ -1147,8 +1178,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             y += 26;
             voiceButton("import_model", MinecraftComponents.empty(), x, y, w, () -> {
                 try {
-                    if (voiceModelPath.isBlank()) throw new IllegalArgumentException("empty model directory");
-                    acceptVoice(voiceActions.importModel(Path.of(voiceModelPath)), true);
+                    if (dev.openallay.util.Java8Strings.isBlank(voiceModelPath)) throw new IllegalArgumentException("empty model directory");
+                    acceptVoice(voiceActions.importModel(java.nio.file.Paths.get(voiceModelPath)), true);
                 } catch (IllegalArgumentException invalid) {
                     localNotice = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice.invalid"));
                 }
@@ -1160,8 +1191,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             y += 26;
             voiceButton("import_runtime", MinecraftComponents.empty(), x, y, w, () -> {
                 try {
-                    if (voiceRuntimePath.isBlank()) throw new IllegalArgumentException("empty runtime directory");
-                    acceptVoice(voiceActions.importRuntime(Path.of(voiceRuntimePath)), false);
+                    if (dev.openallay.util.Java8Strings.isBlank(voiceRuntimePath)) throw new IllegalArgumentException("empty runtime directory");
+                    acceptVoice(voiceActions.importRuntime(java.nio.file.Paths.get(voiceRuntimePath)), false);
                 } catch (IllegalArgumentException invalid) {
                     localNotice = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice.invalid"));
                 }
@@ -1203,9 +1234,9 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         voiceContentHeight = y + voiceScroll - area.y() + copyLines * 10 + 18;
     }
 
-    private GuideNativeButton voiceButton(String key, Component value, int x, int y, int w, Runnable action) {
-        Component label = MinecraftComponents.translatable("screen.openallay.settings.voice." + key);
-        if (!MinecraftComponents.getString(value).isBlank()) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "), value);
+    private GuideNativeButton voiceButton(String key, net.minecraft.network.chat.Component value, int x, int y, int w, Runnable action) {
+        net.minecraft.network.chat.Component label = MinecraftComponents.translatable("screen.openallay.settings.voice." + key);
+        if (!dev.openallay.util.Java8Strings.isBlank(MinecraftComponents.getString(value))) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "), value);
         GuideNativeButton button = addGuideWidget(OpenAllayButton.create(label, ignored -> action.run())
                 .bounds(x, y, w, 20).build());
         button.visible = layout.pageWidgetVisible(y, 20);
@@ -1244,7 +1275,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     if (MinecraftClientWindow.screen(minecraft) != this) return;
                     if (failure != null) {
                         localNotice = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice.chooser_unavailable"));
-                    } else if (selected != null && !selected.isBlank()) {
+                    } else if (selected != null && !dev.openallay.util.Java8Strings.isBlank(selected)) {
                         if (runtime) voiceRuntimePath = selected;
                         else voiceModelPath = selected;
                         guideRebuildWidgets();
@@ -1262,17 +1293,17 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         captureDraft();
         try {
             VoiceConfig candidate = voiceDraft.withHttp(java.net.URI.create(voiceHttpUrl), voiceHttpModel);
-            String modelDirectory = voiceModelPath.isBlank() ? ""
-                    : Path.of(voiceModelPath).toAbsolutePath().normalize().toString();
+            String modelDirectory = dev.openallay.util.Java8Strings.isBlank(voiceModelPath) ? ""
+                    : java.nio.file.Paths.get(voiceModelPath).toAbsolutePath().normalize().toString();
             candidate = new VoiceConfig(candidate.enabled(), candidate.backend(), candidate.deviceId(),
                     candidate.maxClipSeconds(), candidate.language(), candidate.cpuThreads(), modelDirectory,
                     candidate.httpBaseUrl(), candidate.httpModel(), candidate.credential(), candidate.gameplayAction());
-            if (candidate.equals(voiceActions.view().config()) && voiceApiKeyDraft.isBlank()) {
+            if (candidate.equals(voiceActions.view().config()) && dev.openallay.util.Java8Strings.isBlank(voiceApiKeyDraft)) {
                 if (closeOnSuccess) closeAfterSave();
                 return;
             }
             VoiceConfig submitted = candidate;
-            saveEditor(() -> voiceActions.update(submitted, voiceApiKeyDraft.isBlank()
+            saveEditor(() -> voiceActions.update(submitted, dev.openallay.util.Java8Strings.isBlank(voiceApiKeyDraft)
                             ? null : voiceApiKeyDraft.toCharArray()), closeOnSuccess,
                     result -> resetVoiceDraft());
         } catch (IllegalArgumentException invalid) {
@@ -1290,7 +1321,9 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         localNotice = "";
         future.whenComplete((result, failure) -> MinecraftClientWindow.execute(minecraft, () -> {
             if (failure != null || result instanceof ToolResult.Failure<?>) {
-                localNotice = result instanceof ToolResult.Failure<?> rejected ? rejected.message()
+                final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+localNotice = (($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<?>) $oaPattern1_holder.value) != null)) ? $oaPattern1_holder.bound.message()
                         : MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.voice.failed"));
             } else if (resetOnSuccess) {
                 // Import/download/credential storage may change config; preserve other unsaved fields.
@@ -1309,19 +1342,57 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         }));
     }
 
-    private Component voiceSettingsStatus(String code) {
-        String known = switch (code) {
-            case "model_downloading" -> "downloading";
-            case "model_download_cancelled" -> "download_cancelled";
-            case "model_download_failed" -> "download_failed";
-            case "voice_settings_failed", "voice_save_failed", "invalid_voice_config" -> "voice_failed";
-            case "runtime_imported", "runtime_invalid", "model_imported", "model_invalid", "voice_saved",
-                    "voice_reloaded", "downloading", "download_cancelled", "download_failed", "voice_disabled",
-                    "microphone_denied", "microphone_launcher_unprepared", "microphone_permission_unavailable",
-                    "microphone_device_unavailable", "microphone_format_unsupported", "microphone_open_failed",
-                    "device_broken", "empty_audio", "voice_failed" -> code;
-            default -> "status";
-        };
+    private net.minecraft.network.chat.Component voiceSettingsStatus(String code) {
+        java.lang.String $oaSwitch7_exit_result;
+$oaSwitch7_exit: {
+switch ((code)) {
+case "model_downloading":
+{
+$oaSwitch7_exit_result = "downloading"; break $oaSwitch7_exit;
+}
+case "model_download_cancelled":
+{
+$oaSwitch7_exit_result = "download_cancelled"; break $oaSwitch7_exit;
+}
+case "model_download_failed":
+{
+$oaSwitch7_exit_result = "download_failed"; break $oaSwitch7_exit;
+}
+case "voice_settings_failed":
+case "voice_save_failed":
+case "invalid_voice_config":
+{
+$oaSwitch7_exit_result = "voice_failed"; break $oaSwitch7_exit;
+}
+case "runtime_imported":
+case "runtime_invalid":
+case "model_imported":
+case "model_invalid":
+case "voice_saved":
+case "voice_reloaded":
+case "downloading":
+case "download_cancelled":
+case "download_failed":
+case "voice_disabled":
+case "microphone_denied":
+case "microphone_launcher_unprepared":
+case "microphone_permission_unavailable":
+case "microphone_device_unavailable":
+case "microphone_format_unsupported":
+case "microphone_open_failed":
+case "device_broken":
+case "empty_audio":
+case "voice_failed":
+{
+$oaSwitch7_exit_result = code; break $oaSwitch7_exit;
+}
+default:
+{
+$oaSwitch7_exit_result = "status"; break $oaSwitch7_exit;
+}
+}
+}
+String known = $oaSwitch7_exit_result;
         return MinecraftComponents.translatable("screen.openallay.settings.voice.status." + known);
     }
 
@@ -1349,7 +1420,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 for (int index = 0; index < 3; index++) {
                     int fieldY = fieldsY + index * 42;
                     if (layout.pageWidgetVisible(fieldY, 34)) graphics.text(font, MinecraftComponents.translatable(
-                                    "screen.openallay.settings.voice." + List.of("http_url", "http_model", "api_key").get(index)),
+                                    "screen.openallay.settings.voice." + dev.openallay.util.Java8Collections.listOf("http_url", "http_model", "api_key").get(index)),
                             x, fieldY, MUTED, false);
                 }
             }
@@ -1518,7 +1589,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         int y = layout.list().y() + 26;
         int buttonWidth = layout.list().width() - 12;
         for (ModelSettingsProjection.ModelCard card : project(snapshot).models()) {
-            Component label = MinecraftComponents.literal(
+            net.minecraft.network.chat.Component label = MinecraftComponents.literal(
                     (card.defaultProfile() ? "★ " : "")
                             + (card.origin() == ModelSettingsProjection.Origin.SERVER
                                     ? "☁ "
@@ -1580,7 +1651,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         : projection.community();
         if (showList) {
             for (ExtensionSettingsProjection.ExtensionCard extension : cards) {
-                Component label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(extension.name())), " · "), MinecraftComponents.translatable(extensionStateKey(extension)));
+                net.minecraft.network.chat.Component label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(extension.name())), " · "), MinecraftComponents.translatable(extensionStateKey(extension)));
                 GuideNativeButton button = addGuideWidget(OpenAllayButton.create(label, ignored -> {
                             selectedExtensionId = extension.id();
                             narrowExtensionDetail = true;
@@ -1645,26 +1716,20 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 + wrappedHeight(MinecraftComponents.literal(extension.name()), width, 11)
                 + wrappedHeight(MinecraftComponents.literal(extension.summary()), width, 10)
                 + 7 * 12;
-        var contributions = extension.contributions();
-        for (List<String> values : List.of(
-                contributions.roots(),
-                contributions.dataModules(),
-                contributions.javascriptModules(),
-                contributions.skills(),
-                contributions.resultViews(),
-                contributions.hostBindings())) {
+        dev.openallay.settings.extension.ExtensionSettingsView.Contributions contributions = extension.contributions();
+        for (List<String> values : dev.openallay.util.Java8Collections.listOf(contributions.roots(), contributions.dataModules(), contributions.javascriptModules(), contributions.skills(), contributions.resultViews(), contributions.hostBindings())) {
             if (!values.isEmpty()) {
                 height += wrappedHeight(
                         MinecraftComponents.literal(String.join(", ", values)), width, 10) + 2;
             }
         }
-        if (!extension.diagnostic().isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(extension.diagnostic())) {
             height += wrappedHeight(MinecraftComponents.literal(extension.diagnostic()), width, 10) + 7;
         }
-        if (debugMode && !extension.artifact().isBlank()) {
+        if (debugMode && !dev.openallay.util.Java8Strings.isBlank(extension.artifact())) {
             height += wrappedHeight(MinecraftComponents.literal(extension.artifact()), width, 10) + 12;
         }
-        if (debugMode && !extension.sha256().isBlank()) {
+        if (debugMode && !dev.openallay.util.Java8Strings.isBlank(extension.sha256())) {
             height += wrappedHeight(MinecraftComponents.literal(extension.sha256()), width, 10) + 12;
         }
         return height + 82;
@@ -1810,7 +1875,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
         if (showList && skillTab == SkillTab.INSTALLED) {
             for (SkillSettingsProjection.Skill skill : projection.skills()) {
-                Component label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(skill.name())), " · "), MinecraftComponents.translatable(skill.localOverride()
+                net.minecraft.network.chat.Component label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(skill.name())), " · "), MinecraftComponents.translatable(skill.localOverride()
                                 ? "screen.openallay.settings.skills.local"
                                 : "screen.openallay.settings.skills.bundled"));
                 GuideNativeButton button = addGuideWidget(OpenAllayButton.create(label, ignored -> {
@@ -1832,7 +1897,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         }
         if (showList && skillTab == SkillTab.COMMUNITY) {
             for (SkillSettingsProjection.Package skill : projection.community().packages()) {
-                Component label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(skill.displayName())), " · "), MinecraftComponents.translatable(skillStateKey(skill.state())));
+                net.minecraft.network.chat.Component label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(skill.displayName())), " · "), MinecraftComponents.translatable(skillStateKey(skill.state())));
                 GuideNativeButton button = addGuideWidget(OpenAllayButton.create(label, ignored -> {
                             selectedCommunitySkillId = skill.id();
                             skillDetailScroll = 0;
@@ -1972,7 +2037,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 .bounds(x + width - importWidth, area.bottom() - 27, importWidth, 20)
                 .build());
         importButton.active = snapshot.operation().kind() == SettingsOperation.Kind.IDLE
-                && !skillImportPathDraft.isBlank();
+                && !dev.openallay.util.Java8Strings.isBlank(skillImportPathDraft);
     }
 
     private void addEditor() {
@@ -2175,47 +2240,56 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private List<Action> footerActions() {
-        return switch (section) {
-            case MODELS -> selectedServerModel
-                    ? List.of(new Action("screen.openallay.settings.done", this::done))
-                    : modelCatalogOpen ? List.of(
-                    new Action("screen.openallay.settings.models.catalog_close", () -> {
+        {
+java.util.List<dev.openallay.client.gui.OpenAllaySettingsScreen.Action> $oaSwitch8_exit_result;
+$oaSwitch8_exit: {
+switch ((section)) {
+case MODELS:
+{
+$oaSwitch8_exit_result = selectedServerModel
+                    ? dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.done", this::done))
+                    : modelCatalogOpen ? dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.models.catalog_close", () -> {
                         modelCatalogOpen = false;
                         guideRebuildWidgets();
-                    }),
-                    new Action("screen.openallay.settings.done", this::done)) : List.of(
-                    new Action("screen.openallay.settings.save", this::saveCurrent),
-                    new Action(reloadKey(), this::reloadCurrent),
-                    new Action(deleteKey(), this::delete),
-                    new Action("screen.openallay.settings.models.default", this::makeDefault),
-                    new Action(testKey(), this::testConnection),
-                    new Action("screen.openallay.settings.cancel", this::cancel),
-                    new Action("screen.openallay.settings.models.refresh", this::refreshMetadata),
-                    new Action("screen.openallay.settings.done", this::done));
-            case EXTENSIONS -> List.of(
-                    new Action("screen.openallay.settings.done", this::done));
-            case SKILLS -> List.of(
-                    new Action(
+                    }), new Action("screen.openallay.settings.done", this::done)) : dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.save", this::saveCurrent), new Action(reloadKey(), this::reloadCurrent), new Action(deleteKey(), this::delete), new Action("screen.openallay.settings.models.default", this::makeDefault), new Action(testKey(), this::testConnection), new Action("screen.openallay.settings.cancel", this::cancel), new Action("screen.openallay.settings.models.refresh", this::refreshMetadata), new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+case EXTENSIONS:
+{
+$oaSwitch8_exit_result = dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+case SKILLS:
+{
+$oaSwitch8_exit_result = dev.openallay.util.Java8Collections.listOf(new Action(
                             "screen.openallay.settings.reload",
-                            () -> accept(service.reloadSkills(true))),
-                    new Action("screen.openallay.settings.done", this::done));
-            case UI -> List.of(
-                    new Action("screen.openallay.settings.ui.apply", this::applyUi),
-                    new Action("screen.openallay.settings.ui.reset", this::resetUiGroup),
-                    new Action("screen.openallay.settings.done", this::done));
-            case VOICE -> voiceActions == null
-                    ? List.of(new Action("screen.openallay.settings.done", this::done))
-                    : List.of(new Action("screen.openallay.settings.voice.apply", this::applyVoice),
-                            new Action("screen.openallay.settings.voice.reset", this::resetVoiceDefaults),
-                            new Action("screen.openallay.settings.done", this::done));
-            case GENERAL -> List.of(
-                    new Action(
+                            () -> accept(service.reloadSkills(true))), new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+case UI:
+{
+$oaSwitch8_exit_result = dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.ui.apply", this::applyUi), new Action("screen.openallay.settings.ui.reset", this::resetUiGroup), new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+case VOICE:
+{
+$oaSwitch8_exit_result = voiceActions == null
+                    ? dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.done", this::done))
+                    : dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.voice.apply", this::applyVoice), new Action("screen.openallay.settings.voice.reset", this::resetVoiceDefaults), new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+case GENERAL:
+{
+$oaSwitch8_exit_result = dev.openallay.util.Java8Collections.listOf(new Action(
                             "screen.openallay.settings.reload",
-                            () -> accept(service.reloadDisplay())),
-                    new Action("screen.openallay.settings.done", this::done));
-            case HISTORY, DIAGNOSTICS, ABOUT ->
-                    List.of(new Action("screen.openallay.settings.done", this::done));
-        };
+                            () -> accept(service.reloadDisplay())), new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+case HISTORY:
+case DIAGNOSTICS:
+case ABOUT:
+{
+$oaSwitch8_exit_result = dev.openallay.util.Java8Collections.listOf(new Action("screen.openallay.settings.done", this::done)); break $oaSwitch8_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch8_exit_result;
+}
     }
 
     private boolean actionEnabled(String key) {
@@ -2294,10 +2368,10 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         graphics.enableScissor(area.x(), area.y() + 30, area.right(), area.bottom());
         selectedView().ifPresent(profile -> {
             int color = profile.available() ? 0xFF7FC8A9 : 0xFFFFD479;
-            Component status = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable(
+            net.minecraft.network.chat.Component status = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable(
                             profile.available()
                                     ? "screen.openallay.settings.models.available"
-                                    : "screen.openallay.settings.models.unavailable")), " · "), MinecraftComponents.translatable(pendingApiKey.isBlank()
+                                    : "screen.openallay.settings.models.unavailable")), " · "), MinecraftComponents.translatable(dev.openallay.util.Java8Strings.isBlank(pendingApiKey)
                             ? (profile.credentialStoredLocally()
                                     ? "screen.openallay.settings.models.api_key_saved"
                                     : profile.credentialFromEnvironment()
@@ -2307,15 +2381,15 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             graphics.text(font, status, x, statusY, color, false);
         });
         int estimateY = statusY + 18;
-        for (var wrapped : GuideNativeFont.split(font, reasoningExplanation(reasoningSettings()),
+        for (dev.openallay.client.gui.GuideTextLine wrapped : GuideNativeFont.split(font, reasoningExplanation(reasoningSettings()),
                 Math.max(20, area.width() - 16))) {
             graphics.text(font, wrapped, x, estimateY, MUTED, false);
             estimateY += 11;
         }
         estimateY += 3;
         for (BuiltinModelSettingsProjection.Line line : modelEstimates().lines()) {
-            Component text = MinecraftComponents.translatable(line.key(), line.arguments().toArray());
-            for (var wrapped : GuideNativeFont.split(font, text, Math.max(20, area.width() - 16))) {
+            net.minecraft.network.chat.Component text = MinecraftComponents.translatable(line.key(), line.arguments().toArray());
+            for (dev.openallay.client.gui.GuideTextLine wrapped : GuideNativeFont.split(font, text, Math.max(20, area.width() - 16))) {
                 graphics.text(font, wrapped, x, estimateY, MUTED, false);
                 estimateY += 11;
             }
@@ -2327,7 +2401,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void renderServerModel(
             GuideGraphics graphics, SettingsLayout.Rect area) {
-        var server = snapshot.serverModel();
+        dev.openallay.settings.model.ServerModelSettingsView server = snapshot.serverModel();
         int x = area.x() + 10;
         int y = area.y() + 12;
         graphics.text(
@@ -2368,7 +2442,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 MUTED,
                 false);
         y += 26;
-        for (var line : GuideNativeFont.split(font,
+        for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font,
                 MinecraftComponents.translatable(
                         "screen.openallay.settings.models.server_read_only"),
                 Math.max(80, area.width() - 20))) {
@@ -2390,8 +2464,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     area.x() + 10, origin + 31, MUTED, false);
         }
         int y = origin + 136;
-        for (String key : List.of(general.assistantNameDescriptionKey(),
-                general.debugDescriptionKey(), general.animationsDescriptionKey())) {
+        for (String key : dev.openallay.util.Java8Collections.listOf(general.assistantNameDescriptionKey(), general.debugDescriptionKey(), general.animationsDescriptionKey())) {
             for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font,
                     MinecraftComponents.translatable(key), Math.max(80, area.width() - 20))) {
                 graphics.text(font, line, area.x() + 10, y, MUTED, false);
@@ -2448,7 +2521,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 area.y() + 12,
                 ACCENT,
                 false);
-        Component status = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable(history.scopeLabelKey())), " · "), MinecraftComponents.translatable(history.statusKey()));
+        net.minecraft.network.chat.Component status = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable(history.scopeLabelKey())), " · "), MinecraftComponents.translatable(history.statusKey()));
         graphics.text(font, status, area.x() + 10, area.y() + 31, MUTED, false);
         int actionsBottom = area.y() + 64 - pageScroll + history.actions().size() * 30;
         pageContentHeight = Math.max(0, actionsBottom + pageScroll - area.y());
@@ -2612,7 +2685,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private int settingsHeading(
             GuideGraphics graphics,
-            Component text,
+            net.minecraft.network.chat.Component text,
             int x,
             int y,
             int width,
@@ -2631,7 +2704,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int width,
             String labelKey,
             String value) {
-        Component line = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable(labelKey)), ": "), value);
+        net.minecraft.network.chat.Component line = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable(labelKey)), ": "), value);
         for (dev.openallay.client.gui.GuideTextLine wrapped : GuideNativeFont.split(font, line, width - 8)) {
             graphics.text(font, wrapped, x + 4, y, MUTED, false);
             y += 10;
@@ -2681,7 +2754,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         ExtensionSettingsProjection.ExtensionCard extension =
                 selectedExtension().orElse(null);
         if (extension == null) {
-            Component empty = extensionTab == ExtensionTab.COMMUNITY
+            net.minecraft.network.chat.Component empty = extensionTab == ExtensionTab.COMMUNITY
                             && !projection.catalog().available()
                     ? MinecraftComponents.translatable(
                             "screen.openallay.settings.extensions.community.unavailable")
@@ -2793,7 +2866,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         y += 8;
         y = renderExtensionContributions(
                 graphics, extension.contributions(), x, y, width);
-        if (!extension.diagnostic().isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(extension.diagnostic())) {
             y += 7;
             y = renderWrapped(
                     graphics,
@@ -2810,7 +2883,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                             : ERROR,
                     10);
         }
-        if (projection.debugMode() && !extension.artifact().isBlank()) {
+        if (projection.debugMode() && !dev.openallay.util.Java8Strings.isBlank(extension.artifact())) {
             y += 7;
             y = extensionDetailLine(
                     graphics,
@@ -2820,7 +2893,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     y,
                     width);
         }
-        if (projection.debugMode() && !extension.sha256().isBlank()) {
+        if (projection.debugMode() && !dev.openallay.util.Java8Strings.isBlank(extension.sha256())) {
             y += 7;
             y = extensionDetailLine(
                     graphics,
@@ -2831,7 +2904,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     width);
         }
         String catalogNotice = projection.catalog().noticeMessage();
-        if (!catalogNotice.isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(catalogNotice)) {
             renderWrapped(
                     graphics,
                     MinecraftComponents.literal(catalogNotice),
@@ -2869,23 +2942,17 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             int x,
             int y,
             int width) {
-        List<ContributionLine> lines = List.of(
-                new ContributionLine(
+        List<ContributionLine> lines = dev.openallay.util.Java8Collections.listOf(new ContributionLine(
                         "screen.openallay.settings.extensions.detail.roots",
-                        contributions.roots()),
-                new ContributionLine(
+                        contributions.roots()), new ContributionLine(
                         "screen.openallay.settings.extensions.detail.data_modules",
-                        contributions.dataModules()),
-                new ContributionLine(
+                        contributions.dataModules()), new ContributionLine(
                         "screen.openallay.settings.extensions.detail.javascript_modules",
-                        contributions.javascriptModules()),
-                new ContributionLine(
+                        contributions.javascriptModules()), new ContributionLine(
                         "screen.openallay.settings.extensions.detail.skills",
-                        contributions.skills()),
-                new ContributionLine(
+                        contributions.skills()), new ContributionLine(
                         "screen.openallay.settings.extensions.detail.result_views",
-                        contributions.resultViews()),
-                new ContributionLine(
+                        contributions.resultViews()), new ContributionLine(
                         "screen.openallay.settings.extensions.detail.host_bindings",
                         contributions.hostBindings()));
         boolean any = false;
@@ -3005,7 +3072,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             y = renderExtensionEmpty(graphics, x, y);
         } else {
             for (ExtensionSettingsProjection.AdapterCard adapter : projection.adapters()) {
-                Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(adapter.summary())), "\n"), MinecraftComponents.translatable(
+                net.minecraft.network.chat.Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(adapter.summary())), "\n"), MinecraftComponents.translatable(
                                 "screen.openallay.settings.extensions.provider",
                                 adapter.provider()));
                 String schema = schemaPreview(adapter.schema(), projection.debugMode());
@@ -3013,7 +3080,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         graphics,
                         MinecraftComponents.literal(adapter.id()),
                         detail,
-                        schema.isBlank() ? null : MinecraftComponents.literal(schema),
+                        dev.openallay.util.Java8Strings.isBlank(schema) ? null : MinecraftComponents.literal(schema),
                         x,
                         y,
                         width);
@@ -3027,7 +3094,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 x,
                 y + 4);
         for (ExtensionSettingsProjection.RootCard root : projection.roots()) {
-            Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(root.summary())), "\n"), MinecraftComponents.translatable(
+            net.minecraft.network.chat.Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(root.summary())), "\n"), MinecraftComponents.translatable(
                             root.availability().equals("REQUEST_SCOPED")
                                     ? "screen.openallay.settings.extensions.request_scoped"
                                     : "screen.openallay.settings.extensions.provider",
@@ -3076,9 +3143,9 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private int renderExtensionCard(
             GuideGraphics graphics,
-            Component title,
-            Component detail,
-            Component schema,
+            net.minecraft.network.chat.Component title,
+            net.minecraft.network.chat.Component detail,
+            net.minecraft.network.chat.Component schema,
             int x,
             int y,
             int width) {
@@ -3122,21 +3189,21 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             height += 16;
         } else {
             for (ExtensionSettingsProjection.AdapterCard adapter : projection.adapters()) {
-                Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(adapter.summary())), "\n"), MinecraftComponents.translatable(
+                net.minecraft.network.chat.Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(adapter.summary())), "\n"), MinecraftComponents.translatable(
                                 "screen.openallay.settings.extensions.provider",
                                 adapter.provider()));
                 String schema = schemaPreview(adapter.schema(), projection.debugMode());
                 height += extensionCardHeight(
                                 MinecraftComponents.literal(adapter.id()),
                                 detail,
-                                schema.isBlank() ? null : MinecraftComponents.literal(schema),
+                                dev.openallay.util.Java8Strings.isBlank(schema) ? null : MinecraftComponents.literal(schema),
                                 width)
                         + 5;
             }
         }
         height += 18;
         for (ExtensionSettingsProjection.RootCard root : projection.roots()) {
-            Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(root.summary())), "\n"), MinecraftComponents.translatable(
+            net.minecraft.network.chat.Component detail = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.literal(root.summary())), "\n"), MinecraftComponents.translatable(
                             root.availability().equals("REQUEST_SCOPED")
                                     ? "screen.openallay.settings.extensions.request_scoped"
                                     : "screen.openallay.settings.extensions.provider",
@@ -3156,7 +3223,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private int extensionCardHeight(
-            Component title, Component detail, Component schema, int width) {
+            net.minecraft.network.chat.Component title, net.minecraft.network.chat.Component detail, net.minecraft.network.chat.Component schema, int width) {
         int inner = Math.max(20, width - 14);
         int height = 12
                 + wrappedHeight(title, inner, 10)
@@ -3189,7 +3256,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
     private static String schemaPreview(String schema, boolean debugMode) {
-        if (schema == null || schema.isBlank()) {
+        if (schema == null || dev.openallay.util.Java8Strings.isBlank(schema)) {
             return "";
         }
         int maximum = debugMode ? 2_000 : 260;
@@ -3200,7 +3267,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private int renderWrapped(
             GuideGraphics graphics,
-            Component text,
+            net.minecraft.network.chat.Component text,
             int x,
             int y,
             int width,
@@ -3213,7 +3280,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         return y;
     }
 
-    private int wrappedHeight(Component text, int width, int lineHeight) {
+    private int wrappedHeight(net.minecraft.network.chat.Component text, int width, int lineHeight) {
         return Math.max(1, GuideNativeFont.split(font, text, Math.max(20, width)).size()) * lineHeight;
     }
 
@@ -3292,7 +3359,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         for (RequirementSettingsProjection.Row row : requirements.rows()) {
             y = renderWrapped(graphics, RequirementReviewScreen.rowLabel(row),
                     x, y + 4, width, TEXT, 10);
-            if (!row.detail().isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(row.detail())) {
                 y = renderWrapped(graphics, MinecraftComponents.literal(row.detail()),
                         x, y + 2, width, MUTED, 10);
             }
@@ -3376,7 +3443,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 y,
                 skill.installable() ? ACCENT : MUTED,
                 false);
-        y = renderRequirements(graphics, new RequirementSettingsProjection(List.of()),
+        y = renderRequirements(graphics, new RequirementSettingsProjection(dev.openallay.util.Java8Collections.listOf()),
                 x, y + 12, width, true);
         y += 18;
         y = renderWrapped(
@@ -3433,11 +3500,11 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         String message = localNotice;
         int color = ERROR;
         SettingsNotice serviceNotice = snapshot.notice();
-        if (message.isBlank() && serviceNotice != null) {
+        if (dev.openallay.util.Java8Strings.isBlank(message) && serviceNotice != null) {
             message = serviceNotice.message();
             color = serviceNotice.level() == SettingsNotice.Level.SUCCESS ? 0xFF7FC8A9 : ERROR;
         }
-        if (message.isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(message)) {
             return;
         }
         boolean localPage = section == SettingsSection.UI || section == SettingsSection.VOICE;
@@ -3466,17 +3533,41 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 || section == SettingsSection.VOICE && voiceView != null && voiceView.busy()) return;
         captureDraft();
         confirmation = Confirmation.NONE;
-        switch (section) {
-            case GENERAL -> saveGeneral(true);
-            case MODELS -> {
+        switch ((section)) {
+case GENERAL:
+{
+saveGeneral(true);
+break;
+}
+case MODELS:
+{
+{
                 if (selectedServerModel) closeAfterSave();
                 else saveModel(true);
             }
-            case UI -> saveUi(true);
-            case VOICE -> saveVoice(true);
-            // These pages persist each toggle explicitly; Done is not an install or world action.
-            case EXTENSIONS, SKILLS, HISTORY, DIAGNOSTICS, ABOUT -> closeAfterSave();
-        }
+break;
+}
+case UI:
+{
+saveUi(true);
+break;
+}
+case VOICE:
+{
+saveVoice(true);
+break;
+}
+case EXTENSIONS:
+case SKILLS:
+case HISTORY:
+case DIAGNOSTICS:
+case ABOUT:
+{
+closeAfterSave();
+break;
+}
+}
+
     }
 
     private void saveEditor(
@@ -3487,8 +3578,10 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             updateEditorSaveControls();
         }, result -> {
             snapshot = service.snapshot();
-            if (result instanceof ToolResult.Failure<?> failure) {
-                localNotice = failure.message();
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<?>) $oaPattern2_holder.value) != null))) {
+                localNotice = $oaPattern2_holder.bound.message();
             } else {
                 localNotice = "";
                 committed.accept(result);
@@ -3547,7 +3640,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         done();
     }
 
-    private Component historyActionLabel(HistorySettingsProjection.ActionRow row) {
+    private net.minecraft.network.chat.Component historyActionLabel(HistorySettingsProjection.ActionRow row) {
         if (historyConfirmation == null
                 || historyConfirmation.action() != serviceHistoryAction(row.action())) {
             return MinecraftComponents.translatable(row.labelKey());
@@ -3568,9 +3661,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 || historyConfirmation.generation() != snapshot.generation()) {
             ToolResult<ClientSettingsService.HistoryConfirmationToken> requested =
                     service.requestHistoryConfirmation(serviceAction);
-            if (requested instanceof ToolResult.Success<
-                    ClientSettingsService.HistoryConfirmationToken> success) {
-                historyConfirmation = success.value();
+            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsService.HistoryConfirmationToken> value; ToolResult.Success<
+                    ClientSettingsService.HistoryConfirmationToken> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = requested) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern3_holder.bound = (ToolResult.Success<
+                    ClientSettingsService.HistoryConfirmationToken>) $oaPattern3_holder.value) != null))) {
+                historyConfirmation = $oaPattern3_holder.bound.value();
                 localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                         action == HistorySettingsProjection.Action.RESET_DATABASE
                                 ? "screen.openallay.settings.history.confirm_reset"
@@ -3588,9 +3684,12 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                         == ClientSettingsService.ConfirmationStage.FIRST) {
             ToolResult<ClientSettingsService.HistoryConfirmationToken> second =
                     service.confirmHistoryReset(historyConfirmation);
-            if (second instanceof ToolResult.Success<
-                    ClientSettingsService.HistoryConfirmationToken> success) {
-                historyConfirmation = success.value();
+            final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsService.HistoryConfirmationToken> value; ToolResult.Success<
+                    ClientSettingsService.HistoryConfirmationToken> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = second) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern4_holder.bound = (ToolResult.Success<
+                    ClientSettingsService.HistoryConfirmationToken>) $oaPattern4_holder.value) != null))) {
+                historyConfirmation = $oaPattern4_holder.bound.value();
                 localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.settings.history.confirm_reset_again_notice"));
                 guideRebuildWidgets();
@@ -3605,20 +3704,52 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         ClientSettingsService.HistoryConfirmationToken confirmed = historyConfirmation;
         historyConfirmation = null;
         confirmation = Confirmation.NONE;
-        accept(switch (action) {
-            case DELETE_CURRENT -> service.deleteCurrentHistory(confirmed);
-            case DELETE_ACTOR -> service.deleteActorHistory(confirmed);
-            case RESET_DATABASE -> service.resetHistoryDatabase(confirmed);
-        });
+        {
+java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<java.lang.Boolean>> $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch1_exit_result = service.deleteCurrentHistory(confirmed); break $oaSwitch1_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch1_exit_result = service.deleteActorHistory(confirmed); break $oaSwitch1_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch1_exit_result = service.resetHistoryDatabase(confirmed); break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+accept($oaSwitch1_exit_result);
+}
     }
 
     private static ClientSettingsService.HistoryAction serviceHistoryAction(
             HistorySettingsProjection.Action action) {
-        return switch (action) {
-            case DELETE_CURRENT -> ClientSettingsService.HistoryAction.DELETE_CURRENT;
-            case DELETE_ACTOR -> ClientSettingsService.HistoryAction.DELETE_ACTOR;
-            case RESET_DATABASE -> ClientSettingsService.HistoryAction.RESET_DATABASE;
-        };
+        {
+dev.openallay.settings.ClientSettingsService.HistoryAction $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch2_exit_result = ClientSettingsService.HistoryAction.DELETE_CURRENT; break $oaSwitch2_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch2_exit_result = ClientSettingsService.HistoryAction.DELETE_ACTOR; break $oaSwitch2_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch2_exit_result = ClientSettingsService.HistoryAction.RESET_DATABASE; break $oaSwitch2_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch2_exit_result;
+}
     }
 
     private ExtensionSettingsProjection extensionProjection() {
@@ -3665,39 +3796,98 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         if (extension.updateAvailable()) {
             return "screen.openallay.settings.extensions.state.update_available";
         }
-        return switch (extension.state()) {
-            case ACTIVE -> "screen.openallay.settings.extensions.state.active";
-            case RESTART_REQUIRED ->
-                    "screen.openallay.settings.extensions.state.restart_required";
-            case INCOMPATIBLE ->
-                    "screen.openallay.settings.extensions.state.incompatible";
-            case UNAVAILABLE -> "screen.openallay.settings.extensions.state.unavailable";
-            case COMMUNITY -> "screen.openallay.settings.extensions.state.available";
-        };
+        {
+java.lang.String $oaSwitch5_exit_result;
+$oaSwitch5_exit: {
+switch ((extension.state())) {
+case ACTIVE:
+{
+$oaSwitch5_exit_result = "screen.openallay.settings.extensions.state.active"; break $oaSwitch5_exit;
+}
+case RESTART_REQUIRED:
+{
+$oaSwitch5_exit_result = "screen.openallay.settings.extensions.state.restart_required"; break $oaSwitch5_exit;
+}
+case INCOMPATIBLE:
+{
+$oaSwitch5_exit_result = "screen.openallay.settings.extensions.state.incompatible"; break $oaSwitch5_exit;
+}
+case UNAVAILABLE:
+{
+$oaSwitch5_exit_result = "screen.openallay.settings.extensions.state.unavailable"; break $oaSwitch5_exit;
+}
+case COMMUNITY:
+{
+$oaSwitch5_exit_result = "screen.openallay.settings.extensions.state.available"; break $oaSwitch5_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch5_exit_result;
+}
     }
 
     private static String extensionDiagnostic(String diagnostic) {
-        return switch (diagnostic) {
-            case "restart_required" -> MinecraftComponents.getString(MinecraftComponents.translatable(
-                            "screen.openallay.settings.extensions.diagnostic.restart_required"));
-            case "incompatible_loader" -> MinecraftComponents.getString(MinecraftComponents.translatable(
-                            "screen.openallay.settings.extensions.diagnostic.loader"));
-            case "incompatible_game_version" -> MinecraftComponents.getString(MinecraftComponents.translatable(
-                            "screen.openallay.settings.extensions.diagnostic.game"));
-            case "incompatible_openallay_api" -> MinecraftComponents.getString(MinecraftComponents.translatable(
-                            "screen.openallay.settings.extensions.diagnostic.api"));
-            default -> diagnostic;
-        };
+        {
+java.lang.String $oaSwitch6_exit_result;
+$oaSwitch6_exit: {
+switch ((diagnostic)) {
+case "restart_required":
+{
+$oaSwitch6_exit_result = MinecraftComponents.getString(MinecraftComponents.translatable(
+                            "screen.openallay.settings.extensions.diagnostic.restart_required")); break $oaSwitch6_exit;
+}
+case "incompatible_loader":
+{
+$oaSwitch6_exit_result = MinecraftComponents.getString(MinecraftComponents.translatable(
+                            "screen.openallay.settings.extensions.diagnostic.loader")); break $oaSwitch6_exit;
+}
+case "incompatible_game_version":
+{
+$oaSwitch6_exit_result = MinecraftComponents.getString(MinecraftComponents.translatable(
+                            "screen.openallay.settings.extensions.diagnostic.game")); break $oaSwitch6_exit;
+}
+case "incompatible_openallay_api":
+{
+$oaSwitch6_exit_result = MinecraftComponents.getString(MinecraftComponents.translatable(
+                            "screen.openallay.settings.extensions.diagnostic.api")); break $oaSwitch6_exit;
+}
+default:
+{
+$oaSwitch6_exit_result = diagnostic; break $oaSwitch6_exit;
+}
+}
+}
+return $oaSwitch6_exit_result;
+}
     }
 
     private static String skillStateKey(SkillSettingsProjection.PackageState state) {
-        return switch (state) {
-            case AVAILABLE -> "screen.openallay.settings.skills.community.available";
-            case INSTALLED -> "screen.openallay.settings.skills.community.installed";
-            case UPDATE_AVAILABLE ->
-                    "screen.openallay.settings.skills.community.update_available";
-            case INCOMPATIBLE -> "screen.openallay.settings.skills.community.incompatible";
-        };
+        {
+java.lang.String $oaSwitch3_exit_result;
+$oaSwitch3_exit: {
+switch ((state)) {
+case AVAILABLE:
+{
+$oaSwitch3_exit_result = "screen.openallay.settings.skills.community.available"; break $oaSwitch3_exit;
+}
+case INSTALLED:
+{
+$oaSwitch3_exit_result = "screen.openallay.settings.skills.community.installed"; break $oaSwitch3_exit;
+}
+case UPDATE_AVAILABLE:
+{
+$oaSwitch3_exit_result = "screen.openallay.settings.skills.community.update_available"; break $oaSwitch3_exit;
+}
+case INCOMPATIBLE:
+{
+$oaSwitch3_exit_result = "screen.openallay.settings.skills.community.incompatible"; break $oaSwitch3_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch3_exit_result;
+}
     }
 
     private void selectSkillTab(SkillTab replacement) {
@@ -3762,18 +3952,18 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     static boolean shouldRefreshExtensionCommunity(
             ExtensionSettingsProjection.CatalogCard catalog, boolean attempted) {
         Objects.requireNonNull(catalog, "catalog");
-        return !attempted && catalog.configured() && catalog.noticeCode().isBlank();
+        return !attempted && catalog.configured() && dev.openallay.util.Java8Strings.isBlank(catalog.noticeCode());
     }
 
     private void importLocalExtension() {
         captureDraft();
-        if (extensionImportPathDraft.isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(extensionImportPathDraft)) {
             localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                             "screen.openallay.settings.extensions.community.import_required"));
             return;
         }
         try {
-            accept(service.importLocalExtensionPackage(Path.of(extensionImportPathDraft)));
+            accept(service.importLocalExtensionPackage(java.nio.file.Paths.get(extensionImportPathDraft)));
         } catch (InvalidPathException failure) {
             localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                             "screen.openallay.settings.extensions.community.import_invalid"));
@@ -3782,13 +3972,13 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void importLocalSkill() {
         captureDraft();
-        if (skillImportPathDraft.isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(skillImportPathDraft)) {
             localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                     "screen.openallay.settings.skills.community.import_required"));
             return;
         }
         try {
-            accept(service.importLocalSkillPackage(Path.of(skillImportPathDraft)));
+            accept(service.importLocalSkillPackage(java.nio.file.Paths.get(skillImportPathDraft)));
         } catch (InvalidPathException failure) {
             localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                     "screen.openallay.settings.skills.community.import_invalid"));
@@ -3797,7 +3987,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void saveSkillOverride() {
         SkillSettingsProjection.Skill selected = selectedSkill().orElse(null);
-        if (selected == null || skillDraftMarkdown.isBlank()) {
+        if (selected == null || dev.openallay.util.Java8Strings.isBlank(skillDraftMarkdown)) {
             return;
         }
         skillEditing = false;
@@ -3810,8 +4000,10 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void saveModel(boolean closeOnSuccess) {
         captureDraft();
         ToolResult<ModelProfileDefinition> validated = draft.validate();
-        if (validated instanceof ToolResult.Failure<ModelProfileDefinition> failure) {
-            localNotice = failure.message();
+        final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfileDefinition> value; ToolResult.Failure<ModelProfileDefinition> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = validated) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern5_holder.bound = (ToolResult.Failure<ModelProfileDefinition>) $oaPattern5_holder.value) != null))) {
+            localNotice = $oaPattern5_holder.bound.message();
             return;
         }
         ModelProfileDefinition definition =
@@ -3824,11 +4016,11 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                     "screen.openallay.settings.models.invalid"));
             return;
         }
-        if (candidate.equals(snapshot.models().config()) && pendingApiKey.isBlank()) {
+        if (candidate.equals(snapshot.models().config()) && dev.openallay.util.Java8Strings.isBlank(pendingApiKey)) {
             if (closeOnSuccess) closeAfterSave();
             return;
         }
-        SecretValue replacement = pendingApiKey.isBlank() ? null : SecretValue.of(pendingApiKey);
+        SecretValue replacement = dev.openallay.util.Java8Strings.isBlank(pendingApiKey) ? null : SecretValue.of(pendingApiKey);
         saveEditor(() -> service.saveModels(candidate, definition.id(), replacement), closeOnSuccess,
                 result -> select(definition.id()));
     }
@@ -3851,9 +4043,8 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             guideRebuildWidgets();
             return;
         }
-        List<ModelProfileDefinition> retained = snapshot.models().config().profiles().stream()
-                .filter(profile -> !profile.id().equals(selectedProfileId))
-                .toList();
+        List<ModelProfileDefinition> retained = dev.openallay.util.Java8Collections.toList(snapshot.models().config().profiles().stream()
+                .filter(profile -> !profile.id().equals(selectedProfileId)));
         String defaultId = snapshot.models().config().defaultProfileId().equals(selectedProfileId)
                 ? retained.get(0).id()
                 : snapshot.models().config().defaultProfileId();
@@ -3877,8 +4068,10 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void testConnection() {
         captureDraft();
         ToolResult<ModelProfileDefinition> validated = draft.validate();
-        if (validated instanceof ToolResult.Failure<ModelProfileDefinition> failure) {
-            localNotice = failure.message();
+        final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfileDefinition> value; ToolResult.Failure<ModelProfileDefinition> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = validated) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern6_holder.bound = (ToolResult.Failure<ModelProfileDefinition>) $oaPattern6_holder.value) != null))) {
+            localNotice = $oaPattern6_holder.bound.message();
             return;
         }
         if (confirmation != Confirmation.TEST_CONNECTION) {
@@ -3891,12 +4084,14 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         confirmation = Confirmation.NONE;
         ModelProfileDefinition definition =
                 ((ToolResult.Success<ModelProfileDefinition>) validated).value();
-        SecretValue replacement = pendingApiKey.isBlank()
+        SecretValue replacement = dev.openallay.util.Java8Strings.isBlank(pendingApiKey)
                 ? null
                 : SecretValue.of(pendingApiKey);
         service.testConnection(definition, replacement).thenAccept(result -> {
-            if (result instanceof ModelConnectionResult.Failure failure) {
-                localNotice = failure.message();
+            final class $oaPattern7_Holder { dev.openallay.settings.model.ModelConnectionResult value; ModelConnectionResult.Failure bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = result) instanceof dev.openallay.settings.model.ModelConnectionResult.Failure && (($oaPattern7_holder.bound = (ModelConnectionResult.Failure) $oaPattern7_holder.value) != null))) {
+                localNotice = $oaPattern7_holder.bound.message();
             } else {
                 localNotice = "";
             }
@@ -3918,14 +4113,16 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private void fetchModelCatalog() {
         captureDraft();
         ToolResult<ModelCatalogRequest> validated = draft.catalogRequest();
-        if (validated instanceof ToolResult.Failure<ModelCatalogRequest> failure) {
+        final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.catalog.ModelCatalogRequest> value; ToolResult.Failure<ModelCatalogRequest> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = validated) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern8_holder.bound = (ToolResult.Failure<ModelCatalogRequest>) $oaPattern8_holder.value) != null))) {
             localNotice = MinecraftComponents.getString(MinecraftComponents.translatable(
                     "screen.openallay.settings.models.catalog_invalid"));
             return;
         }
         ModelCatalogRequest request =
                 ((ToolResult.Success<ModelCatalogRequest>) validated).value();
-        SecretValue replacement = pendingApiKey.isBlank()
+        SecretValue replacement = dev.openallay.util.Java8Strings.isBlank(pendingApiKey)
                 ? null
                 : SecretValue.of(pendingApiKey);
         long generation = ++modelCatalogGeneration;
@@ -3933,8 +4130,10 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             if (generation != modelCatalogGeneration) {
                 return;
             }
-            if (result instanceof ToolResult.Success<ModelCatalog> success) {
-                catalogModelIds = success.value().modelIds();
+            final class $oaPattern9_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.catalog.ModelCatalog> value; ToolResult.Success<ModelCatalog> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern9_holder.bound = (ToolResult.Success<ModelCatalog>) $oaPattern9_holder.value) != null))) {
+                catalogModelIds = $oaPattern9_holder.bound.value().modelIds();
                 modelCatalogPage = 0;
                 modelCatalogOpen = true;
                 localNotice = catalogModelIds.isEmpty()
@@ -4011,18 +4210,20 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void invalidateModelCatalog() {
         modelCatalogGeneration++;
-        catalogModelIds = List.of();
+        catalogModelIds = dev.openallay.util.Java8Collections.listOf();
         modelCatalogOpen = false;
         modelCatalogPage = 0;
     }
 
     private void accept(java.util.concurrent.CompletableFuture<ToolResult<Boolean>> future) {
         future.thenAccept(result -> {
-            if (result instanceof ToolResult.Failure<Boolean> failure) {
-                localNotice = failure.code().equals("capability_dependency_conflict")
+            final class $oaPattern10_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern10_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern10_holder.value) != null))) {
+                localNotice = $oaPattern10_holder.bound.code().equals("capability_dependency_conflict")
                         ? MinecraftComponents.getString(MinecraftComponents.translatable(
                                 "screen.openallay.settings.capability.dependency_conflict"))
-                        : failure.message();
+                        : $oaPattern10_holder.bound.message();
             } else {
                 localNotice = "";
             }
@@ -4123,7 +4324,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private dev.openallay.model.metadata.ModelContextResolution draftContextResolution() {
         try {
             Integer manual = draft.automaticContextWindowTokens() != null
-                    || draft.contextWindowTokens() == null || draft.contextWindowTokens().isBlank()
+                    || draft.contextWindowTokens() == null || dev.openallay.util.Java8Strings.isBlank(draft.contextWindowTokens())
                     ? null : Integer.valueOf(draft.contextWindowTokens().trim());
             return service.modelContext(java.net.URI.create(draft.baseUrl()), draft.model(), manual);
         } catch (RuntimeException invalidDraft) {
@@ -4135,7 +4336,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     private dev.openallay.model.metadata.ModelOutputResolution draftOutputResolution() {
         try {
             Integer manual = draft.automaticMaxOutputTokens() != null
-                    || draft.maxOutputTokens() == null || draft.maxOutputTokens().isBlank()
+                    || draft.maxOutputTokens() == null || dev.openallay.util.Java8Strings.isBlank(draft.maxOutputTokens())
                     ? null : Integer.valueOf(draft.maxOutputTokens().trim());
             return service.modelOutput(java.net.URI.create(draft.baseUrl()), draft.model(), manual);
         } catch (RuntimeException invalidDraft) {
@@ -4237,7 +4438,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
         return ModelReasoningSettingsProjection.from(draftProtocol, draft.reasoningEffort());
     }
 
-    private Component reasoningExplanation(ModelReasoningSettingsProjection reasoning) {
+    private net.minecraft.network.chat.Component reasoningExplanation(ModelReasoningSettingsProjection reasoning) {
         return MinecraftComponents.translatable(reasoning.explanationKey(),
                 reasoning.wireField(), reasoning.selected().encoded());
     }
@@ -4260,14 +4461,14 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
     }
 
 
-    private Component protocolLabel() {
+    private net.minecraft.network.chat.Component protocolLabel() {
         return MinecraftComponents.translatable(
                 draftProtocol == ModelProtocol.OPENAI_CHAT
                         ? "screen.openallay.settings.models.protocol_openai"
                         : "screen.openallay.settings.models.protocol_anthropic");
     }
 
-    private Component enabledLabel() {
+    private net.minecraft.network.chat.Component enabledLabel() {
         return MinecraftComponents.translatable(
                 draftEnabled
                         ? "screen.openallay.settings.models.enabled"
@@ -4344,11 +4545,13 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
 
     private void e2ePressButton(String translationKey) {
         String label = MinecraftComponents.getString(MinecraftComponents.translatable(translationKey));
-        for (var child : children()) {
-            if (child instanceof GuideNativeButton button && button.visible && button.active
-                    && (MinecraftComponents.getString(button.getMessage()).equals(label)
-                            || MinecraftComponents.getString(button.getMessage()).startsWith(label + " · "))) {
-                GuideNativeInput.press(button, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_RETURN, 0));
+        for (dev.openallay.client.gui.GuideWidget child : children()) {
+            final class $oaPattern11_Holder { dev.openallay.client.gui.GuideWidget value; GuideNativeButton bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = child) instanceof dev.openallay.client.gui.GuideNativeButton && (($oaPattern11_holder.bound = (GuideNativeButton) $oaPattern11_holder.value) != null)) && $oaPattern11_holder.bound.visible && $oaPattern11_holder.bound.active
+                    && (MinecraftComponents.getString($oaPattern11_holder.bound.getMessage()).equals(label)
+                            || MinecraftComponents.getString($oaPattern11_holder.bound.getMessage()).startsWith(label + " · "))) {
+                GuideNativeInput.press($oaPattern11_holder.bound, GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_RETURN, 0));
                 return;
             }
         }
@@ -4550,8 +4753,8 @@ static final class Projection {
     private final SettingsNotice notice;
     Projection(List<SettingsSection> sections, List<ModelSettingsProjection.ModelCard> models, GeneralSettingsProjection general, UiSettingsProjection ui, RecipeSettingsProjection recipes, SkillSettingsProjection skills, ExtensionSettingsProjection extensions, HistorySettingsProjection history, DiagnosticsSettingsProjection diagnostics, SettingsOperation operation, SettingsNotice notice) {
 
-            sections = List.copyOf(sections);
-            models = List.copyOf(models);
+            sections = dev.openallay.util.Java8Collections.listCopyOf(sections);
+            models = dev.openallay.util.Java8Collections.listCopyOf(models);
             Objects.requireNonNull(general, "general");
             Objects.requireNonNull(ui, "ui");
             Objects.requireNonNull(recipes, "recipes");
@@ -4650,7 +4853,7 @@ private static final class ContributionLine {
     private final List<String> values;
     private ContributionLine(String labelKey, List<String> values) {
 
-            values = List.copyOf(values);
+            values = dev.openallay.util.Java8Collections.listCopyOf(values);
 
         this.labelKey = labelKey;
         this.values = values;
@@ -4696,7 +4899,7 @@ private static final class ContributionLine {
     }
 
     private static final class PasswordEditBox extends GuideNativeEditBox {
-        private final Component narration;
+        private final net.minecraft.network.chat.Component narration;
 
         private PasswordEditBox(
                 net.minecraft.client.gui.Font font,
@@ -4704,10 +4907,10 @@ private static final class ContributionLine {
                 int y,
                 int width,
                 int height,
-                Component narration) {
+                net.minecraft.network.chat.Component narration) {
             super(font, x, y, width, height, narration);
             this.narration = narration;
-            formatGuideText((text, offset) -> GuideNativeFont.plain("•".repeat(text.length())));
+            formatGuideText((text, offset) -> GuideNativeFont.plain(dev.openallay.util.Java8Strings.repeat("•", text.length())));
         }
 
         @Override
@@ -4719,7 +4922,7 @@ private static final class ContributionLine {
         }
 
         @Override
-        protected Component guideNarrationMessage() {
+        protected net.minecraft.network.chat.Component guideNarrationMessage() {
             return MinecraftComponents.copy(narration);
         }
     }

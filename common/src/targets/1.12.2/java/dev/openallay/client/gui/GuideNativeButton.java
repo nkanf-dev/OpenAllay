@@ -65,7 +65,7 @@ public abstract class GuideNativeButton extends GuiButton implements GuideWidget
     @Override public final boolean guideIsFocused() { return guideFocused; }
     protected abstract void paintGuideButton(GuideGraphics graphics, int mouseX, int mouseY, float delta);
     protected final void paintGuideButtonLabel(GuideGraphics graphics, ITextComponent label, int padding) {
-        var font = Minecraft.getMinecraft().fontRenderer;
+        net.minecraft.client.gui.FontRenderer font = Minecraft.getMinecraft().fontRenderer;
         String text = font.trimStringToWidth(label.getFormattedText(), Math.max(1, width - padding * 2));
         graphics.text(font, text, x + (width - font.getStringWidth(text)) / 2,
                 y + (height - font.FONT_HEIGHT) / 2, 0xFFFFFFFF, false);

@@ -20,8 +20,8 @@ public final class MinecraftCommandCapture {
         if (!client.isCallingFromMinecraftThread()) {
             throw new IllegalStateException("Command capability must be captured on the client thread");
         }
-        var player = client.player;
-        var connection = client.getConnection();
+        net.minecraft.client.entity.EntityPlayerSP player = client.player;
+        net.minecraft.client.network.NetHandlerPlayClient connection = client.getConnection();
         if (player == null || connection == null) return;
         UUID actor = player.getUniqueID();
         List<CommandCatalogSnapshot.CommandNodeSnapshot> nodes = new ArrayList<>();
@@ -33,7 +33,7 @@ public final class MinecraftCommandCapture {
                     String redirect = name.equals(command.getName()) ? "" : command.getName();
                     nodes.add(new CommandCatalogSnapshot.CommandNodeSnapshot(
                             name, name, "native_client_command_partial", "", true, redirect,
-                            List.of(command.getUsage(player)), List.of()));
+                            dev.openallay.util.Java8Collections.listOf(command.getUsage(player)), dev.openallay.util.Java8Collections.listOf()));
                 });
         runtime.capture(correlationId, actor, new CommandCatalogSnapshot(capturedAt, nodes),
                 (expectedActor, command, cancellation) -> submit(client, player, connection,

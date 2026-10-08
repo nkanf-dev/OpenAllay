@@ -45,15 +45,15 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
+
+
 import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideNativeSlider;
 import dev.openallay.client.gui.GuideNativeEditBox;
 import dev.openallay.client.gui.GuideMultilineEditor;
-import net.minecraft.client.gui.screens.Screen;
+
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 import dev.openallay.client.gui.GuideNativeInput;
 import dev.openallay.client.gui.GuideInputMouse;
 
@@ -74,7 +74,7 @@ final class GuideGraphicalRegressionProbe {
     private final Supplier<VoiceSettingsActions> voiceSettings;
     private final BiFunction<String, UUID, java.util.Optional<String>> traceLookup;
     private final Consumer<Map<String, Object>> completed;
-    private final Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+    private final net.minecraft.client.Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
     private final GuideNativeEditorE2EProbe nativePrimitiveProbe;
     private final Instant started = Instant.now();
     private final Map<String, Object> report = new LinkedHashMap<>();
@@ -102,7 +102,7 @@ final class GuideGraphicalRegressionProbe {
     private OpenAllayScreen liveHeaderOwner;
     private Object liveHeaderWidget;
     private long liveHeaderFrame;
-    private NativeScreenTransition<Screen> liveGuideReopen;
+    private NativeScreenTransition<net.minecraft.client.gui.screens.Screen> liveGuideReopen;
     private LiveGuideReopenOwner liveGuideReopenOwner;
     @dev.openallay.value.ValueType(LiveGuideReopenOwner.ValueSchemaProvider.class)
 private static final class LiveGuideReopenOwner {
@@ -209,12 +209,12 @@ private static final class LiveGuideReopenOwner {
         this.traceLookup = traceLookup;
         this.completed = completed;
         String root = System.getProperty("openallay.e2e.screenshotRoot", "");
-        if (root.isBlank()) throw new IllegalStateException("Native frame output is required");
-        frameRoot = Path.of(root);
+        if (dev.openallay.util.Java8Strings.isBlank(root)) throw new IllegalStateException("Native frame output is required");
+        frameRoot = java.nio.file.Paths.get(root);
         originalWindowWidth = dev.openallay.client.gui.MinecraftClientWindow.framebufferWidth(client);
         originalWindowHeight = dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client);
         originalGuiScale = dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client));
-        report.put("windowBefore", Map.of("width", originalWindowWidth, "height", originalWindowHeight, "guiScale", originalGuiScale));
+        report.put("windowBefore", dev.openallay.util.Java8Collections.mapOf("width", originalWindowWidth, "height", originalWindowHeight, "guiScale", originalGuiScale));
         originalPttBinding = GuideProbeKeyBindings.description(OpenAllayKeyMappings.VOICE_PTT);
         restorePttKey = GuideProbeKeyBindings.restoration(OpenAllayKeyMappings.VOICE_PTT);
         originalInteractBinding = GuideProbeKeyBindings.description(OpenAllayKeyMappings.INTERACT_HUD);
@@ -229,15 +229,14 @@ private static final class LiveGuideReopenOwner {
         report.put("checkpoints", checkpoints);
         report.put("actions", actions);
         report.put("interactKeyBefore", originalInteractBinding);
-        report.put("sourceIdentity", Map.of("revision", System.getProperty("openallay.e2e.sourceRevision", "UNRECORDED"),
-                "manifestSha256", System.getProperty("openallay.e2e.sourceManifestSha256", "UNRECORDED")));
+        report.put("sourceIdentity", dev.openallay.util.Java8Collections.mapOf("revision", System.getProperty("openallay.e2e.sourceRevision", "UNRECORDED"), "manifestSha256", System.getProperty("openallay.e2e.sourceManifestSha256", "UNRECORDED")));
         report.put("voiceProof", "NOT TESTED: no capture/STT device; synthetic external companion is separate from hardware proof");
     }
 
     void tick() {
         if (done) return;
         try {
-            if (Duration.between(started, Instant.now()).toSeconds()
+            if ((Duration.between(started, Instant.now())).getSeconds()
                     > Long.getLong("openallay.e2e.timeoutSeconds", 300L)) {
                 throw new IllegalStateException("Native graphical scenario exceeded its timeout at stage " + stage);
             }
@@ -252,8 +251,10 @@ private static final class LiveGuideReopenOwner {
     }
 
     private void runStage() {
-        switch (stage) {
-            case 0 -> {
+        switch ((stage)) {
+case 0:
+{
+{
                 requireLoopbackFixture();
                 require("zh_cn".equals(dev.openallay.platform.minecraft.MinecraftOptions.language(dev.openallay.client.context.MinecraftClientContextFacts.options(client))), "Chinese language must be prepared before launch");
                 MinecraftClientWindow.setWindowed(client, 850, 480);
@@ -266,14 +267,26 @@ private static final class LiveGuideReopenOwner {
                 openGuide.accept(service);
                 advance();
             }
-            case 1 -> {
+break;
+}
+case 1:
+{
+{
                 guide();
                 GuideMultilineEditor composer = composer();
                 dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer, config.question(), true);
                 advance();
             }
-            case 2 -> { press("screen.openallay.action.send"); advance(); }
-            case 3 -> {
+break;
+}
+case 2:
+{
+{ press("screen.openallay.action.send"); advance(); }
+break;
+}
+case 3:
+{
+{
                 request = service.snapshot().sessions().stream()
                         .filter(value -> value.sessionId().equals(config.sessionId()))
                         .flatMap(value -> value.requests().stream())
@@ -283,21 +296,24 @@ private static final class LiveGuideReopenOwner {
                 require(request.tools().size() == 2 && request.tools().stream().allMatch(value ->
                         value.toolId().equals("openallay:run_javascript") && value.status() == GuideToolStatus.SUCCEEDED
                                 && value.normalized() != null), "Actual two native read-only recipe Tools did not complete");
-                var firstNative = request.tools().get(0).normalized().getAsJsonObject("value");
+                com.google.gson.JsonObject firstNative = request.tools().get(0).normalized().getAsJsonObject("value");
                 require("RECIPE".equals(firstNative.get("viewKind").getAsString()),
                         "First Tool did not return an actual trusted native recipe card");
                 require(request.assistantText().contains("全文末尾：原生图形长回复验收完成"), "The full local test response was not retained");
                 report.put("requestId", request.requestId().toString());
                 report.put("requestOutcome", request.status().name());
-                report.put("actualTools", request.tools().stream().map(value -> Map.of(
-                        "toolId", value.toolId(), "status", value.status().name())).toList());
+                report.put("actualTools", dev.openallay.util.Java8Collections.toList(request.tools().stream().map(value -> dev.openallay.util.Java8Collections.mapOf("toolId", value.toolId(), "status", value.status().name()))));
                 report.put("assistantTextSha256", sha256(request.assistantText()));
                 guide().clearGuideWidgetFocus();
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_HOME, 0));
                 stage = 41;
                 stageWait = 0;
             }
-            case 41 -> {
+break;
+}
+case 41:
+{
+{
                 if (!nativeRecipePainted()) return;
                 checkpoint("01-fullscreen-original", true);
                 validateGuideReceipts();
@@ -305,12 +321,20 @@ private static final class LiveGuideReopenOwner {
                 stage = 4;
                 stageWait = 0;
             }
-            case 4 -> {
+break;
+}
+case 4:
+{
+{
                 settingsScreen();
                 navigate("screen.openallay.settings.general");
                 advance();
             }
-            case 5 -> {
+break;
+}
+case 5:
+{
+{
                 expectedName = "小羽 · 原生图形回归";
                 String label = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.general.assistant_name.label"));
                 GuideNativeEditBox name = ((dev.openallay.client.gui.GuideNativeScreen) MinecraftClientWindow.screen(client)).guideWidgetChildren().stream().filter(GuideNativeEditBox.class::isInstance)
@@ -320,48 +344,96 @@ private static final class LiveGuideReopenOwner {
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 6 -> {
+break;
+}
+case 6:
+{
+{
                 if (!doneReturned()) return;
                 require(expectedName.equals(settings.snapshot().display().assistantName()), "Done lost the name draft");
                 checkpoint("02-name-done-ack", true);
-                exits.add(Map.of("entry", "Done", "savedName", expectedName, "ackBeforeClose", true));
+                exits.add(dev.openallay.util.Java8Collections.mapOf("entry", "Done", "savedName", expectedName, "ackBeforeClose", true));
                 report.put("exitReceipts", exits);
                 press("screen.openallay.settings.short");
                 stage = 42;
                 stageWait = 0;
             }
-            case 7 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 8 -> { press("screen.openallay.settings.ui.fullscreen"); advance(); }
-            case 9 -> { press("screen.openallay.settings.ui.reset"); advance(); }
-            case 10 -> {
+break;
+}
+case 7:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 8:
+{
+{ press("screen.openallay.settings.ui.fullscreen"); advance(); }
+break;
+}
+case 9:
+{
+{ press("screen.openallay.settings.ui.reset"); advance(); }
+break;
+}
+case 10:
+{
+{
                 expectedTheme = "CHARCOAL";
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 11 -> {
+break;
+}
+case 11:
+{
+{
                 if (!doneReturned()) return;
                 require(expectedTheme.equals(theme()), "Done did not acknowledge Reset");
                 checkpoint("03-reset-compact-tools", true);
                 validateGuideReceipts();
                 advance();
             }
-            case 12 -> {
+break;
+}
+case 12:
+{
+{
                 press("screen.openallay.settings.short");
                 advance();
             }
-            case 13 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 14 -> { press("screen.openallay.settings.ui.fullscreen"); advance(); }
-            case 15 -> {
+break;
+}
+case 13:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 14:
+{
+{ press("screen.openallay.settings.ui.fullscreen"); advance(); }
+break;
+}
+case 15:
+{
+{
                 expectedTheme = "MINT".equals(theme()) ? "CHARCOAL" : "MINT";
                 press("screen.openallay.settings.ui.theme");
                 advance();
             }
-            case 16 -> {
+break;
+}
+case 16:
+{
+{
                 checkpoint(String.format("theme-%02d-settings-draft", themeChanges + 1), false);
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 17 -> {
+break;
+}
+case 17:
+{
+{
                 if (!doneReturned()) return;
                 require(expectedTheme.equals(theme()), "Done did not acknowledge theme draft");
                 themeChanges++;
@@ -370,22 +442,50 @@ private static final class LiveGuideReopenOwner {
                 if (themeChanges < 4) { stage = 12; stageWait = 0; }
                 else advance();
             }
-            case 18 -> { press("screen.openallay.settings.short"); advance(); }
-            case 19 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 20 -> { press("screen.openallay.settings.ui.hud"); advance(); }
-            case 21 -> { press("screen.openallay.settings.ui.reset"); advance(); }
-            case 22 -> {
+break;
+}
+case 18:
+{
+{ press("screen.openallay.settings.short"); advance(); }
+break;
+}
+case 19:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 20:
+{
+{ press("screen.openallay.settings.ui.hud"); advance(); }
+break;
+}
+case 21:
+{
+{ press("screen.openallay.settings.ui.reset"); advance(); }
+break;
+}
+case 22:
+{
+{
                 press("screen.openallay.settings.ui.hud_enabled");
                 sliderChoice = 0;
                 stage = 60;
                 stageWait = 0;
             }
-            case 23 -> {
+break;
+}
+case 23:
+{
+{
                 hudFrameBeforeDone = number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame");
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 24 -> {
+break;
+}
+case 24:
+{
+{
                 if (!doneReturned()) return;
                 require(settings.snapshot().display().ui().hud().enabled(), "HUD Done lost its enabled draft");
                 int lines = settings.snapshot().display().ui().hud().maxReplyLines();
@@ -394,7 +494,11 @@ private static final class LiveGuideReopenOwner {
                 guide().onClose();
                 advance();
             }
-            case 25 -> {
+break;
+}
+case 25:
+{
+{
                 require(MinecraftClientWindow.screen(client) == null, "Passive HUD captured the gameplay screen");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 require(number(receipt, "extractedFrame") > hudFrameBeforeDone, "HUD receipt is stale after Done");
@@ -405,27 +509,33 @@ private static final class LiveGuideReopenOwner {
                 stage = 65;
                 stageWait = 0;
             }
-            case 26 -> {
-                Screen lite = MinecraftClientWindow.screen(client);
+break;
+}
+case 26:
+{
+{
+                net.minecraft.client.gui.screens.Screen lite = MinecraftClientWindow.screen(client);
                 require(lite != null && lite.getClass().getSimpleName().equals("GuideChatLiteScreen"), "Native HUD interaction key did not open HUD");
                 checkpoint("06-interactive-hud-top", false);
                 JsonObject before = gson.toJsonTree(readReceipt(lite, "resultReceipt")).getAsJsonObject();
                 require(number(before, "maximumScroll") > 0, "Long HUD result has no scrollable full content");
                 interactiveBeforeWheelFrame = number(before, "extractedFrame");
-                var card = GuideChatLiteScreen.Card.calculate(lite.width, lite.height);
-                var results = GuideHudReadingLayout.calculate(card.x(), card.y(), card.width(), card.height()).results();
+                dev.openallay.client.gui.hud.GuideChatLiteScreen.Card card = GuideChatLiteScreen.Card.calculate(lite.width, lite.height);
+                dev.openallay.guide.ui.GuideUiLayout.Rect results = GuideHudReadingLayout.calculate(card.x(), card.y(), card.width(), card.height()).results();
                 require(results.width() > 0 && results.height() > 0, "Interactive HUD has no native result viewport");
                 double wheelX = results.x() + results.width() / 2.0;
                 double wheelY = results.y() + results.height() / 2.0;
                 boolean handled = ((GuideChatLiteScreen) lite).guideMouseScrolled(wheelX, wheelY, 0, -10000);
-                actions.add(Map.of("type", "native-wheel", "target", "interactive-hud-bottom", "stage", stage,
-                        "at", Instant.now().toString(), "x", wheelX, "y", wheelY,
-                        "scrollX", 0, "scrollY", -10000, "handled", handled, "resultViewport", results));
+                actions.add(dev.openallay.util.Java8Collections.mapOf("type", "native-wheel", "target", "interactive-hud-bottom", "stage", stage, "at", Instant.now().toString(), "x", wheelX, "y", wheelY, "scrollX", 0, "scrollY", -10000, "handled", handled, "resultViewport", results));
                 require(handled, "Native HUD result viewport did not consume the actual wheel callback");
                 advance();
             }
-            case 27 -> {
-                Screen lite = MinecraftClientWindow.screen(client);
+break;
+}
+case 27:
+{
+{
+                net.minecraft.client.gui.screens.Screen lite = MinecraftClientWindow.screen(client);
                 JsonObject receipt = gson.toJsonTree(readReceipt(lite, "resultReceipt")).getAsJsonObject();
                 require(number(receipt, "extractedFrame") > interactiveBeforeWheelFrame,
                         "HUD wheel receipt was not freshly extracted");
@@ -434,7 +544,7 @@ private static final class LiveGuideReopenOwner {
                         "HUD wheel did not expose全文 bottom");
                 require(receipt.has("renderedNodeIds") && !(receipt.getAsJsonArray("renderedNodeIds").size() == 0),
                         "HUD bottom has no actually extracted semantic text-node identity");
-                var finalAssistant = request.timeline().stream()
+                dev.openallay.guide.GuideTimelineEntry.Assistant finalAssistant = request.timeline().stream()
                         .filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
                         .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
                         .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
@@ -442,7 +552,7 @@ private static final class LiveGuideReopenOwner {
                 require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedNodeIds")).stream()
                                 .anyMatch(value -> tailNode.equals(value.getAsString())),
                         "Actual HUD extracted nodes do not include the full response's final text block");
-                String paintedTail = receipt.has("lastRenderedText") ? receipt.get("lastRenderedText").getAsString().strip() : "";
+                String paintedTail = receipt.has("lastRenderedText") ? dev.openallay.util.Java8Strings.strip(receipt.get("lastRenderedText").getAsString()) : "";
                 require(!paintedTail.isEmpty() && "全文末尾：原生图形长回复验收完成。".endsWith(paintedTail),
                         "HUD full response tail was not actually painted after wheel scrolling");
                 checkpoint("07-interactive-hud-bottom", false);
@@ -450,22 +560,50 @@ private static final class LiveGuideReopenOwner {
                 recordAction("native-key", "ESC/HUD-to-game");
                 advance();
             }
-            case 28 -> {
+break;
+}
+case 28:
+{
+{
                 require(MinecraftClientWindow.screen(client) == null, "HUD ESC left a Screen or focus behind");
                 checkpoint("08-passive-hud-after-esc", false);
                 openGuide.accept(service);
                 advance();
             }
-            case 29 -> { press("screen.openallay.settings.short"); advance(); }
-            case 30 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 31 -> { press("screen.openallay.settings.ui.fullscreen"); advance(); }
-            case 32 -> {
+break;
+}
+case 29:
+{
+{ press("screen.openallay.settings.short"); advance(); }
+break;
+}
+case 30:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 31:
+{
+{ press("screen.openallay.settings.ui.fullscreen"); advance(); }
+break;
+}
+case 32:
+{
+{
                 expectedTheme = "MINT".equals(theme()) ? "CHARCOAL" : "MINT";
                 press("screen.openallay.settings.ui.theme");
                 advance();
             }
-            case 33 -> { press("screen.openallay.settings.done"); advance(); }
-            case 34 -> {
+break;
+}
+case 33:
+{
+{ press("screen.openallay.settings.done"); advance(); }
+break;
+}
+case 34:
+{
+{
                 if (!doneReturned()) return;
                 require(expectedTheme.equals(theme()), "Cached-caption Done failed its theme acknowledgement");
                 checkpoint("09-cached-caption-done-return", true);
@@ -473,7 +611,11 @@ private static final class LiveGuideReopenOwner {
                 guide().onClose();
                 advance();
             }
-            case 35 -> {
+break;
+}
+case 35:
+{
+{
                 require(MinecraftClientWindow.screen(client) == null, "Cached HUD failed to return to gameplay");
                 require(number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame") > hudFrameBeforeDone,
                         "Cached-caption HUD did not perform a fresh extraction after settings returned");
@@ -484,16 +626,24 @@ private static final class LiveGuideReopenOwner {
                 stage = 70;
                 stageWait = 0;
             }
-            case 36 -> {
+break;
+}
+case 36:
+{
+{
                 invoke(guide(), "e2eExportSelectedSession");
                 recordAction("actual-export-callback", "selected-session");
                 advance();
             }
-            case 37 -> {
+break;
+}
+case 37:
+{
+{
                 JsonObject receipt = gson.toJsonTree(readReceipt(guide(), "e2eExportReceipt")).getAsJsonObject();
                 if (receipt.get("running").getAsBoolean()) { waitFor("actual session export"); return; }
                 require(receipt.has("lastFilename") && !receipt.get("lastFilename").isJsonNull()
-                        && !receipt.get("lastFilename").getAsString().isBlank()
+                        && !dev.openallay.util.Java8Strings.isBlank(receipt.get("lastFilename").getAsString())
                         && "SUCCESS".equals(receipt.get("noticeSeverity").getAsString()),
                         "Actual export callback did not publish a successful file");
                 String name = receipt.get("lastFilename").getAsString();
@@ -503,32 +653,38 @@ private static final class LiveGuideReopenOwner {
                 try {
                     String text = Files.readString(exported, StandardCharsets.UTF_8);
                     require(text.contains(config.question()) && text.contains("原生图形长回复验收"), "Actual export lost current conversation text");
-                    report.put("export", Map.of("filename", name, "bytes", Files.size(exported), "sha256", sha256(text),
-                            "actualCallbackReceipt", receipt, "containsCurrentQuestionAndAnswer", true));
+                    report.put("export", dev.openallay.util.Java8Collections.mapOf("filename", name, "bytes", Files.size(exported), "sha256", sha256(text), "actualCallbackReceipt", receipt, "containsCurrentQuestionAndAnswer", true));
                 } catch (IOException failure) { throw new IllegalStateException("Actual export readback failed", failure); }
                 checkpoint("11-actual-export-success", true);
                 microphoneMetadata = voiceSettings.get().refreshDevices();
                 recordAction("metadata-only-device-refresh", "no-capture-open-start-or-read");
                 advance();
             }
-            case 38 -> {
+break;
+}
+case 38:
+{
+{
                 if (!microphoneMetadata.isDone()) { waitFor("metadata-only microphone enumeration"); return; }
                 ToolResult<List<AudioCapture.Device>> devices = microphoneMetadata.join();
-                if (devices instanceof ToolResult.Success<List<AudioCapture.Device>> success) {
-                    List<AudioCapture.Device> list = success.value();
-                    report.put("microphoneMetadata", Map.of("outcome", "SUCCEEDED", "deviceCount", list.size(),
-                            "hasDefault", list.stream().anyMatch(value -> value.id().equals("default")),
-                            "explicitDeviceCount", list.stream().filter(value -> !value.id().equals("default")).count(),
-                            "captureAttempted", false));
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.util.List<dev.openallay.client.voice.AudioCapture.Device>> value; ToolResult.Success<List<AudioCapture.Device>> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = devices) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<List<AudioCapture.Device>>) $oaPattern0_holder.value) != null))) {
+                    List<AudioCapture.Device> list = $oaPattern0_holder.bound.value();
+                    report.put("microphoneMetadata", dev.openallay.util.Java8Collections.mapOf("outcome", "SUCCEEDED", "deviceCount", list.size(), "hasDefault", list.stream().anyMatch(value -> value.id().equals("default")), "explicitDeviceCount", list.stream().filter(value -> !value.id().equals("default")).count(), "captureAttempted", false));
                 } else {
                     ToolResult.Failure<List<AudioCapture.Device>> failure = (ToolResult.Failure<List<AudioCapture.Device>>) devices;
-                    report.put("microphoneMetadata", Map.of("outcome", "UNAVAILABLE", "code", failure.code(), "captureAttempted", false));
+                    report.put("microphoneMetadata", dev.openallay.util.Java8Collections.mapOf("outcome", "UNAVAILABLE", "code", failure.code(), "captureAttempted", false));
                 }
                 advance();
             }
-            case 39 -> {
+break;
+}
+case 39:
+{
+{
                 require(traceLookup != null, "Actual client trace lookup is unavailable");
-                var trace = traceLookup.apply(request.modelSelection().profileId(), request.requestId());
+                java.util.Optional<java.lang.String> trace = traceLookup.apply(request.modelSelection().profileId(), request.requestId());
                 if (trace.isEmpty()) { waitFor("actual request trace publication"); return; }
                 try {
                     Files.createDirectories(config.tracePath().toAbsolutePath().getParent());
@@ -536,9 +692,13 @@ private static final class LiveGuideReopenOwner {
                 } catch (IOException failure) { throw new IllegalStateException("Actual trace retention failed", failure); }
                 advance();
             }
-            case 40 -> {
+break;
+}
+case 40:
+{
+{
                 if (frames.values().stream().anyMatch(value -> !value.isDone())) { waitFor("native GPU frame publication"); return; }
-                report.put("nativeFrames", frames.values().stream().map(CompletableFuture::join).toList());
+                report.put("nativeFrames", dev.openallay.util.Java8Collections.toList(frames.values().stream().map(CompletableFuture::join)));
                 report.put("themeChangeCount", themeChanges + 1);
                 report.put("elapsedMillis", Duration.between(started, Instant.now()).toMillis());
                 report.put("outcome", "COMPLETED");
@@ -546,88 +706,143 @@ private static final class LiveGuideReopenOwner {
                 done = true;
                 completed.accept(report);
             }
-            case 42 -> { navigate("screen.openallay.settings.general"); advance(); }
-            case 43 -> {
+break;
+}
+case 42:
+{
+{ navigate("screen.openallay.settings.general"); advance(); }
+break;
+}
+case 43:
+{
+{
                 expectedName = "小羽 · Escape 保存";
                 nameEditor().setValue(expectedName);
                 GuideNativeInput.keyPressed(settingsScreen(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
                 recordAction("native-key", "ESC/dirty-settings");
                 advance();
             }
-            case 44 -> {
+break;
+}
+case 44:
+{
+{
                 if (!doneReturned()) return;
                 require(expectedName.equals(settings.snapshot().display().assistantName()), "ESC lost the dirty name");
-                exits.add(Map.of("entry", "nativeEscape", "savedName", expectedName, "ackBeforeClose", true));
+                exits.add(dev.openallay.util.Java8Collections.mapOf("entry", "nativeEscape", "savedName", expectedName, "ackBeforeClose", true));
                 checkpoint("exit-escape-saved", true);
                 MinecraftClientWindow.setWindowed(client, 320, 480);
                 press("screen.openallay.settings.short");
                 advance();
             }
-            case 45 -> { navigate("screen.openallay.settings.general"); advance(); }
-            case 46 -> {
+break;
+}
+case 45:
+{
+{ navigate("screen.openallay.settings.general"); advance(); }
+break;
+}
+case 46:
+{
+{
                 expectedName = "小羽 · 返回保存";
                 nameEditor().setValue(expectedName);
                 GuideNativeButton back = findButton("screen.openallay.settings.back", false);
                 require(back != null, "Native narrow Back button is not visible");
-                report.put("narrowBack", Map.of("visible", true, "guiWidth", settingsScreen().width,
-                        "guiHeight", settingsScreen().height, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client))));
+                report.put("narrowBack", dev.openallay.util.Java8Collections.mapOf("visible", true, "guiWidth", settingsScreen().width, "guiHeight", settingsScreen().height, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client))));
                 checkpoint("exit-back-dirty-narrow", false);
                 press("screen.openallay.settings.back");
                 advance();
             }
-            case 47 -> {
+break;
+}
+case 47:
+{
+{
                 if (!doneReturned()) return;
                 require(expectedName.equals(settings.snapshot().display().assistantName()), "Native Back lost the dirty name");
-                exits.add(Map.of("entry", "nativeBackButton", "savedName", expectedName, "ackBeforeClose", true));
+                exits.add(dev.openallay.util.Java8Collections.mapOf("entry", "nativeBackButton", "savedName", expectedName, "ackBeforeClose", true));
                 checkpoint("exit-back-saved", true);
                 MinecraftClientWindow.setWindowed(client, 850, 480);
                 press("screen.openallay.settings.short");
                 advance();
             }
-            case 48 -> { navigate("screen.openallay.settings.general"); advance(); }
-            case 49 -> {
+break;
+}
+case 48:
+{
+{ navigate("screen.openallay.settings.general"); advance(); }
+break;
+}
+case 49:
+{
+{
                 validNameBeforeFailure = settings.snapshot().display().assistantName();
                 generationBeforeFailure = settings.snapshot().generation();
                 nameEditor().setValue("   ");
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 50 -> {
+break;
+}
+case 50:
+{
+{
                 settingsScreen();
                 require("   ".equals(nameEditor().getValue()), "Invalid Done lost the edited field");
                 require(validNameBeforeFailure.equals(settings.snapshot().display().assistantName()), "Invalid Done changed the published name");
                 checkpoint("failure-invalid-name-retained", false);
-                report.put("invalidDone", Map.of("stayedOnSettings", true, "draftRetained", true, "lastValidUnchanged", true));
+                report.put("invalidDone", dev.openallay.util.Java8Collections.mapOf("stayedOnSettings", true, "draftRetained", true, "lastValidUnchanged", true));
                 displayFault = CompletableFuture.runAsync(this::installDisplayFault);
                 advance();
             }
-            case 51 -> {
+break;
+}
+case 51:
+{
+{
                 if (!displayFault.isDone()) { waitFor("isolated display write-failure preparation"); return; }
                 displayFault.join();
                 nameEditor().setValue("小羽 · 写入失败草稿");
                 press("screen.openallay.settings.general.assistant_name.save");
                 advance();
             }
-            case 52 -> {
+break;
+}
+case 52:
+{
+{
                 if (!writeFailureRetained()) return;
                 checkpoint("failure-apply-write-retained", false);
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 53 -> {
+break;
+}
+case 53:
+{
+{
                 if (!writeFailureRetained()) return;
                 checkpoint("failure-done-write-retained", false);
                 displayFault = CompletableFuture.runAsync(this::restoreDisplayFile);
                 advance();
             }
-            case 54 -> {
+break;
+}
+case 54:
+{
+{
                 if (!displayFault.isDone()) { waitFor("isolated display file restoration"); return; }
                 displayFault.join();
                 nameEditor().setValue(validNameBeforeFailure);
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 55 -> {
+break;
+}
+case 55:
+{
+{
                 if (!doneReturned()) return;
                 require(validNameBeforeFailure.equals(settings.snapshot().display().assistantName()), "Write-failure cleanup did not retain the last valid name");
                 checkpoint("failure-recovery-done", true);
@@ -635,30 +850,54 @@ private static final class LiveGuideReopenOwner {
                 stage = 7;
                 stageWait = 0;
             }
-            case 60 -> {
+break;
+}
+case 60:
+{
+{
                 int selected = new int[]{0, 18, 80}[sliderChoice];
                 if (!selectReplySlider(selected)) return;
                 advance();
             }
-            case 61 -> {
+break;
+}
+case 61:
+{
+{
                 checkpoint("hud-slider-" + new int[]{0, 18, 80}[sliderChoice] + "-draft", false);
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 62 -> {
+break;
+}
+case 62:
+{
+{
                 if (!doneReturned()) return;
                 int selected = new int[]{0, 18, 80}[sliderChoice];
                 require(settings.snapshot().display().ui().hud().maxReplyLines() == selected, "Actual HUD slider selection was not saved");
-                report.put("hudSlider" + selected, Map.of("nativeControl", true, "savedValue", selected, "doneAcknowledged", true));
+                report.put("hudSlider" + selected, dev.openallay.util.Java8Collections.mapOf("nativeControl", true, "savedValue", selected, "doneAcknowledged", true));
                 checkpoint("hud-slider-" + selected + "-saved", true);
                 sliderChoice++;
                 if (sliderChoice == 3) { stage = 24; stageWait = 0; return; }
                 press("screen.openallay.settings.short");
                 advance();
             }
-            case 63 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 64 -> { press("screen.openallay.settings.ui.hud"); stage = 60; stageWait = 0; }
-            case 65 -> {
+break;
+}
+case 63:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 64:
+{
+{ press("screen.openallay.settings.ui.hud"); stage = 60; stageWait = 0; }
+break;
+}
+case 65:
+{
+{
                 require(MinecraftClientWindow.screen(client) == null, "Passive latest tail captured gameplay");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 if (number(receipt, "extractedFrame") <= passiveRecipeFrame) {
@@ -670,10 +909,26 @@ private static final class LiveGuideReopenOwner {
                 recordAction("native-keymapping-click", "INTERACT_HUD/F8");
                 stage = 26; stageWait = 0;
             }
-            case 70 -> { press("screen.openallay.settings.short"); advance(); }
-            case 71 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 72 -> { press("screen.openallay.settings.ui.hud"); advance(); }
-            case 73 -> {
+break;
+}
+case 70:
+{
+{ press("screen.openallay.settings.short"); advance(); }
+break;
+}
+case 71:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 72:
+{
+{ press("screen.openallay.settings.ui.hud"); advance(); }
+break;
+}
+case 73:
+{
+{
                 if (hudDisplayBeforeDrag == null) {
                     JsonObject state = gson.toJsonTree(readReceipt(settingsScreen(), "e2eSettingsState")).getAsJsonObject();
                     require(!state.get("saving").getAsBoolean() && !state.get("uiDirty").getAsBoolean()
@@ -683,16 +938,14 @@ private static final class LiveGuideReopenOwner {
                     require(displayBackup == null || !Files.exists(displayBackup),
                             "Display fault backup was not restored before HUD editing");
                     hudDisplayBeforeDrag = settings.snapshot().display();
-                    var hud = hudDisplayBeforeDrag.ui().hud();
+                    dev.openallay.guide.ui.GuideUiConfig.Hud hud = hudDisplayBeforeDrag.ui().hud();
                     require(hud.enabled() && hud.maxReplyLines() == 80, "HUD drag must retain the saved 80-line native candidate");
                     requireHudOffsetFields(hud);
                     report.put("hudLayoutDragApply", hudDrag);
                     hudDrag.put("scope", "normal Apply only; actual native editor callbacks and current saved display");
                     hudDrag.put("beforeDisplay", hudDisplayBeforeDrag);
-                    hudDrag.put("beforePosition", Map.of("anchor", hud.anchor().name(),
-                            "offsetX", hud.offsetX(), "offsetY", hud.offsetY()));
-                    hudDrag.put("beforeOffsetFields", Map.of("offsetX", hudOffsetEditor("offset_x").getValue(),
-                            "offsetY", hudOffsetEditor("offset_y").getValue()));
+                    hudDrag.put("beforePosition", dev.openallay.util.Java8Collections.mapOf("anchor", hud.anchor().name(), "offsetX", hud.offsetX(), "offsetY", hud.offsetY()));
+                    hudDrag.put("beforeOffsetFields", dev.openallay.util.Java8Collections.mapOf("offsetX", hudOffsetEditor("offset_x").getValue(), "offsetY", hudOffsetEditor("offset_y").getValue()));
                     hudDrag.put("pointerEvents", hudPointerEvents);
                     hudDrag.put("visualReview", "REQUIRED: native before/dragged/reopened PNGs; no pixel or cached editor-bounds assertion");
                 }
@@ -701,15 +954,19 @@ private static final class LiveGuideReopenOwner {
                 clickHudCaseButton("screen.openallay.settings.ui.edit_hud");
                 advance();
             }
-            case 74 -> {
+break;
+}
+case 74:
+{
+{
                 GuideHudEditorScreen editor = hudEditor();
                 require(dev.openallay.client.gui.MinecraftClientWindow.focused(client), "HUD editor requires an active native window for dragging");
-                var hud = hudDisplayBeforeDrag.ui().hud();
+                dev.openallay.guide.ui.GuideUiConfig.Hud hud = hudDisplayBeforeDrag.ui().hud();
                 hudBoundsBeforeDrag = GuideHudLayout.calculate(editor.width, editor.height, hud);
                 requireHudInsideWindow(hudBoundsBeforeDrag, editor.width, editor.height);
                 hudDragDx = boundedHudDelta(hudBoundsBeforeDrag.x(), hudBoundsBeforeDrag.width(), editor.width, 48);
                 hudDragDy = boundedHudDelta(hudBoundsBeforeDrag.y(), hudBoundsBeforeDrag.height(), editor.height, 32);
-                var moved = GuideHudLayout.placementAt(editor.width, editor.height, hud,
+                dev.openallay.guide.ui.GuideUiConfig.Hud moved = GuideHudLayout.placementAt(editor.width, editor.height, hud,
                         hudBoundsBeforeDrag.x() + hudDragDx, hudBoundsBeforeDrag.y() + hudDragDy);
                 require(moved.offsetX() != hud.offsetX() && moved.offsetY() != hud.offsetY(),
                         "The bounded HUD drag must change both saved offset fields");
@@ -726,44 +983,59 @@ private static final class LiveGuideReopenOwner {
                                 && hudDragPointerY < hudBoundsBeforeDrag.bottom() - 10,
                         "HUD drag start is not in the native move region");
                 hudDragPreviewBefore = number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame");
-                hudDrag.put("viewport", Map.of("width", editor.width, "height", editor.height,
-                        "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client))));
+                hudDrag.put("viewport", dev.openallay.util.Java8Collections.mapOf("width", editor.width, "height", editor.height, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client))));
                 hudDrag.put("plannedBeforeBounds", hudBoundsBeforeDrag);
                 hudDrag.put("plannedAfterBounds", hudBoundsAfterDrag);
-                hudDrag.put("plannedDelta", Map.of("x", hudDragDx, "y", hudDragDy));
+                hudDrag.put("plannedDelta", dev.openallay.util.Java8Collections.mapOf("x", hudDragDx, "y", hudDragDy));
                 hudDrag.put("expectedAfterDisplay", hudDisplayAfterDrag);
                 hudDrag.put("geometrySource", "read-only GuideHudLayout expectations; not a rendered-position receipt");
                 checkpoint("hud-layout-editor-before-drag", false);
                 advance();
             }
-            case 75 -> {
+break;
+}
+case 75:
+{
+{
                 GuideHudEditorScreen editor = hudEditor();
-                var event = GuideNativeInput.mouseEvent(hudDragPointerX, hudDragPointerY, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
+                dev.openallay.client.gui.GuideInputMouse event = GuideNativeInput.mouseEvent(hudDragPointerX, hudDragPointerY, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
                 boolean handled = GuideNativeInput.mouseClicked(editor, event, false);
                 recordHudPointer("mouseClicked", event, 0, 0, handled);
                 require(handled, "Native HUD editor did not consume the real pointer press");
                 advance();
             }
-            case 76 -> {
+break;
+}
+case 76:
+{
+{
                 GuideHudEditorScreen editor = hudEditor();
                 require(dev.openallay.client.gui.MinecraftClientWindow.focused(client), "Native HUD drag lost window focus");
-                var event = GuideNativeInput.mouseEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
+                dev.openallay.client.gui.GuideInputMouse event = GuideNativeInput.mouseEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
                 boolean handled = GuideNativeInput.mouseDragged(editor, event, hudDragDx, hudDragDy);
                 recordHudPointer("mouseDragged", event, hudDragDx, hudDragDy, handled);
                 require(handled, "Native HUD editor did not consume the real drag callback");
                 require(hudDisplayBeforeDrag.equals(settings.snapshot().display()), "Dragging saved settings before Apply");
                 advance();
             }
-            case 77 -> {
+break;
+}
+case 77:
+{
+{
                 GuideHudEditorScreen editor = hudEditor();
-                var event = GuideNativeInput.mouseEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
+                dev.openallay.client.gui.GuideInputMouse event = GuideNativeInput.mouseEvent(hudDragPointerX + hudDragDx, hudDragPointerY + hudDragDy, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
                 boolean handled = GuideNativeInput.mouseReleased(editor, event);
                 recordHudPointer("mouseReleased", event, 0, 0, handled);
                 require(handled, "Native HUD editor did not finish the actual pointer drag");
                 require(hudDisplayBeforeDrag.equals(settings.snapshot().display()), "Pointer release saved settings before Apply");
                 advance();
             }
-            case 78 -> {
+break;
+}
+case 78:
+{
+{
                 hudEditor();
                 JsonObject preview = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 require(number(preview, "extractedFrame") > hudDragPreviewBefore,
@@ -775,7 +1047,11 @@ private static final class LiveGuideReopenOwner {
                 clickHudCaseButton("screen.openallay.hud.editor.apply");
                 advance();
             }
-            case 79 -> {
+break;
+}
+case 79:
+{
+{
                 if (!hudCandidateReturned()) return;
                 require(settings.snapshot().generation() > hudDragGenerationBeforeApply,
                         "HUD Apply has no new settings publication");
@@ -786,25 +1062,29 @@ private static final class LiveGuideReopenOwner {
                 require(hudDisplayAfterDrag.equals(settings.snapshot().display()),
                         "HUD Apply lost dragged offsets or changed another display field");
                 requireHudOffsetFields(hudDisplayAfterDrag.ui().hud());
-                hudDrag.put("applyAcknowledgement", Map.of("generationBefore", hudDragGenerationBeforeApply,
-                        "generationAfter", settings.snapshot().generation(), "operation", settings.snapshot().operation().kind().name(),
-                        "noticeCode", settings.snapshot().notice().code(), "ackBeforeDone", true,
-                        "actualSettingsState", readReceipt(settingsScreen(), "e2eSettingsState")));
+                hudDrag.put("applyAcknowledgement", dev.openallay.util.Java8Collections.mapOf("generationBefore", hudDragGenerationBeforeApply, "generationAfter", settings.snapshot().generation(), "operation", settings.snapshot().operation().kind().name(), "noticeCode", settings.snapshot().notice().code(), "ackBeforeDone", true, "actualSettingsState", readReceipt(settingsScreen(), "e2eSettingsState")));
                 hudDrag.put("savedDisplay", settings.snapshot().display());
-                var savedHud = settings.snapshot().display().ui().hud();
-                hudDrag.put("savedPosition", Map.of("anchor", savedHud.anchor().name(),
-                        "offsetX", savedHud.offsetX(), "offsetY", savedHud.offsetY()));
+                dev.openallay.guide.ui.GuideUiConfig.Hud savedHud = settings.snapshot().display().ui().hud();
+                hudDrag.put("savedPosition", dev.openallay.util.Java8Collections.mapOf("anchor", savedHud.anchor().name(), "offsetX", savedHud.offsetX(), "offsetY", savedHud.offsetY()));
                 checkpoint("hud-layout-apply-acknowledged", false);
                 hudDisplayReadback = CompletableFuture.supplyAsync(() -> readHudDisplay(hudDisplayAfterDrag));
                 advance();
             }
-            case 80 -> {
+break;
+}
+case 80:
+{
+{
                 if (!hudDisplayReadback.isDone()) { waitFor("actual dragged HUD display file readback"); return; }
                 hudDrag.put("displayFileAfterApply", hudDisplayReadback.join());
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 81 -> {
+break;
+}
+case 81:
+{
+{
                 if (!doneReturned()) return;
                 require(hudDisplayAfterDrag.equals(settings.snapshot().display()), "Settings Done replaced the applied HUD position");
                 checkpoint("hud-layout-done-return", true);
@@ -812,7 +1092,11 @@ private static final class LiveGuideReopenOwner {
                 guide().onClose();
                 advance();
             }
-            case 82 -> {
+break;
+}
+case 82:
+{
+{
                 require(MinecraftClientWindow.screen(client) == null, "Applied HUD did not return to actual gameplay");
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 if (number(receipt, "extractedFrame") <= hudDragFrameBeforePassive) {
@@ -827,17 +1111,37 @@ private static final class LiveGuideReopenOwner {
                 openGuide.accept(service);
                 advance();
             }
-            case 83 -> { press("screen.openallay.settings.short"); advance(); }
-            case 84 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 85 -> { press("screen.openallay.settings.ui.hud"); advance(); }
-            case 86 -> {
+break;
+}
+case 83:
+{
+{ press("screen.openallay.settings.short"); advance(); }
+break;
+}
+case 84:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 85:
+{
+{ press("screen.openallay.settings.ui.hud"); advance(); }
+break;
+}
+case 86:
+{
+{
                 require(hudDisplayAfterDrag.equals(settings.snapshot().display()), "Reopened settings lost the dragged position");
                 requireHudOffsetFields(hudDisplayAfterDrag.ui().hud());
                 if (!revealHudEditorButton()) return;
                 clickHudCaseButton("screen.openallay.settings.ui.edit_hud");
                 advance();
             }
-            case 87 -> {
+break;
+}
+case 87:
+{
+{
                 GuideHudEditorScreen editor = hudEditor();
                 require(editor.width == dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client)
                                 && editor.height == dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client),
@@ -849,14 +1153,22 @@ private static final class LiveGuideReopenOwner {
                 checkpoint("hud-layout-editor-reopened", false);
                 advance();
             }
-            case 88 -> {
+break;
+}
+case 88:
+{
+{
                 hudEditor();
                 // A real Apply with no further edits must leave the complete saved candidate unchanged.
                 // This checks transaction retention, not whether the PNG pixels show the expected position.
                 clickHudCaseButton("screen.openallay.hud.editor.apply");
                 advance();
             }
-            case 89 -> {
+break;
+}
+case 89:
+{
+{
                 if (!hudCandidateReturned()) return;
                 require(hudDisplayAfterDrag.equals(settings.snapshot().display()),
                         "Reopened editor Apply did not retain the complete dragged candidate");
@@ -864,7 +1176,11 @@ private static final class LiveGuideReopenOwner {
                 hudDisplayReadback = CompletableFuture.supplyAsync(() -> readHudDisplay(hudDisplayAfterDrag));
                 advance();
             }
-            case 90 -> {
+break;
+}
+case 90:
+{
+{
                 if (!hudDisplayReadback.isDone()) { waitFor("actual reopened HUD candidate display file readback"); return; }
                 hudDrag.put("displayFileAfterReopenedApply", hudDisplayReadback.join());
                 hudDrag.put("reopenedApplyRetainedCandidate", true);
@@ -872,7 +1188,11 @@ private static final class LiveGuideReopenOwner {
                 press("screen.openallay.settings.done");
                 advance();
             }
-            case 91 -> {
+break;
+}
+case 91:
+{
+{
                 if (!doneReturned()) return;
                 require(hudDisplayAfterDrag.equals(settings.snapshot().display()), "Reopened editor Done replaced the dragged position");
                 hudDrag.put("savedPositionVerified", true);
@@ -881,20 +1201,28 @@ private static final class LiveGuideReopenOwner {
                 stage = 36;
                 stageWait = 0;
             }
-            default -> throw new IllegalStateException("Unknown native graphical stage " + stage);
-        }
+break;
+}
+default:
+{
+throw new IllegalStateException("Unknown native graphical stage " + stage);
+}
+}
+
     }
 
     /** Separate bounded native scenario. Unit/source tests do not certify these frames. */
     private void runLiveStage() {
-        switch (stage) {
-            case 0 -> {
+        switch ((stage)) {
+case 0:
+{
+{
                 require(developmentProbeEnabled, "Development opt-in was disabled at construction");
                 requireLoopbackFixture();
                 require(config.question().startsWith(LIVE_PREFIX) && config.question().contains(" hold"),
                         "Live UX scenario requires the explicit held loopback question prefix");
                 require("zh_cn".equals(dev.openallay.platform.minecraft.MinecraftOptions.language(dev.openallay.client.context.MinecraftClientContextFacts.options(client))), "Chinese language must be prepared before launch");
-                var voice = dev.openallay.client.voice.VoiceConfigStore.decode(readCurrentConfig("voice.json"));
+                dev.openallay.client.voice.VoiceConfig voice = dev.openallay.client.voice.VoiceConfigStore.decode(readCurrentConfig("voice.json"));
                 require(!voice.enabled(), "Native GUI scenario must not open a microphone");
                 report.put("voiceConfig", gson.toJsonTree(voice));
                 require(GuideProbeKeyBindings.isKeyboard(OpenAllayKeyMappings.INTERACT_HUD, dev.openallay.client.gui.GuideInputCodes.KEY_F8),
@@ -906,7 +1234,11 @@ private static final class LiveGuideReopenOwner {
                 openGuide.accept(service);
                 advance();
             }
-            case 1 -> {
+break;
+}
+case 1:
+{
+{
                 require(guide().guideWidgetFocused(composer().widget()), "New Guide did not focus its actual native composer");
                 require(GuideNativeInput.charTyped(guide(), GuideNativeInput.characterEvent('x')), "Initial native character was not routed to composer");
                 require("x".equals(composer().getValue()), "Initial character callback did not edit native input");
@@ -916,7 +1248,11 @@ private static final class LiveGuideReopenOwner {
                 MinecraftClientWindow.setWindowed(client, 900, 540);
                 advance();
             }
-            case 2 -> {
+break;
+}
+case 2:
+{
+{
                 if (nativePrimitiveProbe != null && nativePrimitiveProbe.started()) {
                     if (!nativePrimitiveProbe.tick(guide(), composer())) return;
                     dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), config.question(), true);
@@ -934,14 +1270,10 @@ private static final class LiveGuideReopenOwner {
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_V, 0));
                 boolean characterHandled = GuideNativeInput.charTyped(guide(), GuideNativeInput.characterEvent('v'));
                 GuideNativeInput.keyReleased(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_V, 0));
-                report.put("typedPttKeyNativeEdit", Map.of("beforeValue", beforeTypedPttKey,
-                        "afterValue", composer().getValue(), "endKeyHandled", endHandled,
-                        "characterHandled", characterHandled, "composerFocused", guide().guideWidgetFocused(composer().widget())));
+                report.put("typedPttKeyNativeEdit", dev.openallay.util.Java8Collections.mapOf("beforeValue", beforeTypedPttKey, "afterValue", composer().getValue(), "endKeyHandled", endHandled, "characterHandled", characterHandled, "composerFocused", guide().guideWidgetFocused(composer().widget())));
                 require(characterHandled && guide().guideWidgetFocused(composer().widget()) && "xv".equals(composer().getValue()),
                         "Focused PTT-bound typed key did not insert at native composer End");
-                report.put("focusReceipts", Map.of("initialChar", true, "blankBlur", true,
-                        "resizeRemainsBlurred", true, "typedPttKeyEditsText", true,
-                        "voiceDisabledNoCapture", true));
+                report.put("focusReceipts", dev.openallay.util.Java8Collections.mapOf("initialChar", true, "blankBlur", true, "resizeRemainsBlurred", true, "typedPttKeyEditsText", true, "voiceDisabledNoCapture", true));
                 checkpoint("live-02-blur-resize-typed-ptt", true);
                 if (nativePrimitiveProbe != null) {
                     nativePrimitiveProbe.begin(guide(), composer());
@@ -950,8 +1282,16 @@ private static final class LiveGuideReopenOwner {
                 dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), config.question(), true);
                 advance();
             }
-            case 3 -> { press("screen.openallay.action.send"); advance(); }
-            case 4 -> {
+break;
+}
+case 3:
+{
+{ press("screen.openallay.action.send"); advance(); }
+break;
+}
+case 4:
+{
+{
                 request = requestFor(config.question());
                 if (request == null || request.tools().isEmpty()
                         || request.tools().get(0).status() != GuideToolStatus.SUCCEEDED) {
@@ -961,46 +1301,66 @@ private static final class LiveGuideReopenOwner {
                 dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), LIVE_FOLLOW_UP + " queued-native-callback", true);
                 advance();
             }
-            case 5 -> { press("screen.openallay.pending.follow_up"); advance(); }
-            case 6 -> {
-                var pending = session().pendingMessages();
+break;
+}
+case 5:
+{
+{ press("screen.openallay.pending.follow_up"); advance(); }
+break;
+}
+case 6:
+{
+{
+                java.util.List<dev.openallay.guide.GuidePendingMessage> pending = session().pendingMessages();
                 if (pending.isEmpty()) { waitFor("actual Follow-up admission receipt"); return; }
-                var follow = pending.get(0);
+                dev.openallay.guide.GuidePendingMessage follow = pending.get(0);
                 require(follow.kind() == dev.openallay.guide.GuidePendingMessage.Kind.FOLLOW_UP
                         && follow.text().startsWith(LIVE_FOLLOW_UP), "Real Follow-up queue has wrong kind/text");
                 liveFollowUpId = follow.id();
                 report.put("followUpAccepted", gson.toJsonTree(follow));
-                var notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
+                dev.openallay.client.gui.GuideUiNotice notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
                 require(notice.message().equals(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.follow_up"))),
                         "Actual Follow-up callback did not show queued admission feedback");
                 report.put("followUpNotice", notice);
                 checkpoint("live-03-follow-up-accepted-active", true);
-                var extras = (dev.openallay.guide.ui.GuideUiLayout.ComposerExtras) readField(guide(), "composerExtras");
+                dev.openallay.guide.ui.GuideUiLayout.ComposerExtras extras = (dev.openallay.guide.ui.GuideUiLayout.ComposerExtras) readField(guide(), "composerExtras");
                 clickAt(guide(), extras.footer().x() + 4, extras.footer().y() + 4, "composer-mode-steer");
                 dev.openallay.client.gui.GuideNativeMultilineText.setValue(composer(), LIVE_STEER + " admitted-native-callback", true);
                 advance();
             }
-            case 7 -> { press("screen.openallay.pending.steer"); advance(); }
-            case 8 -> {
-                var pending = session().pendingMessages();
+break;
+}
+case 7:
+{
+{ press("screen.openallay.pending.steer"); advance(); }
+break;
+}
+case 8:
+{
+{
+                java.util.List<dev.openallay.guide.GuidePendingMessage> pending = session().pendingMessages();
                 if (pending.size() < 2) { waitFor("actual Steer admission receipt"); return; }
-                var steer = pending.get(1);
+                dev.openallay.guide.GuidePendingMessage steer = pending.get(1);
                 require(pending.get(0).id().equals(liveFollowUpId)
                         && steer.kind() == dev.openallay.guide.GuidePendingMessage.Kind.STEER
                         && steer.text().startsWith(LIVE_STEER) && steer.requestId().equals(request.requestId()),
                         "Actual pending receipt did not preserve Follow-up then Steer order");
                 liveSteerId = steer.id();
                 report.put("steerAccepted", gson.toJsonTree(steer));
-                var notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
+                dev.openallay.client.gui.GuideUiNotice notice = (dev.openallay.client.gui.GuideUiNotice) readField(guide(), "notice");
                 require(notice.message().equals(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.steer"))),
                         "Actual Steer callback did not show pending admission feedback");
                 report.put("steerNotice", notice);
-                report.put("pendingReceiptOrder", pending.stream().map(value -> value.id().toString()).toList());
+                report.put("pendingReceiptOrder", dev.openallay.util.Java8Collections.toList(pending.stream().map(value -> value.id().toString())));
                 checkpoint("live-04-steer-accepted-active", true);
                 liveTransportRelease = releaseLiveTransport();
                 advance();
             }
-            case 9 -> {
+break;
+}
+case 9:
+{
+{
                 if (!liveTransportRelease.isDone()) { waitFor("loopback fixture transport release"); return; }
                 require(liveTransportRelease.join() == 204, "Loopback transport release was rejected");
                 request = requestFor(config.question());
@@ -1012,24 +1372,28 @@ private static final class LiveGuideReopenOwner {
                 validateLiveRequest(request);
                 validateLiveRequest(latestRequest);
                 require(session().pendingMessages().isEmpty(), "Completed real queue retained pending drafts");
-                var admitted = request.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.User.class::isInstance)
-                        .map(dev.openallay.guide.GuideTimelineEntry.User.class::cast).toList();
+                java.util.List<dev.openallay.guide.GuideTimelineEntry.User> admitted = dev.openallay.util.Java8Collections.toList(request.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.User.class::isInstance)
+                        .map(dev.openallay.guide.GuideTimelineEntry.User.class::cast));
                 require(admitted.stream().anyMatch(value -> value.messageId().equals(liveSteerId)
                         && value.text().startsWith(LIVE_STEER)), "Steer was not actually admitted into original timeline");
                 report.put("admittedSteerTimeline", admitted);
                 report.put("followUpRequestId", latestRequest.requestId().toString());
                 require(latestRequest.createdAt().compareTo(request.createdAt()) >= 0, "Follow-up request preceded original request");
-                var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+                dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
                 liveHoverFrame = number(jsonReceipt(guide(), "e2eTelemetryTooltipReceipt"), "requestedNativeFrame");
                 hoverNative(layout.telemetry().x() + 8, layout.telemetry().y() + 8);
                 recordNativeHoverDiagnostic("stage9-after-native-cursor-request");
                 advance();
             }
-            case 10 -> {
+break;
+}
+case 10:
+{
+{
                 recordNativeHoverDiagnostic("stage10-before-reissue");
                 JsonObject tooltip = jsonReceipt(guide(), "e2eTelemetryTooltipReceipt");
                 if (number(tooltip, "requestedNativeFrame") <= liveHoverFrame) {
-                    var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+                    dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
                     // Alternate inside the same native target to request a real OS cursor callback.
                     // Never invoke extraction or write the MouseHandler's coordinates.
                     hoverNative(layout.telemetry().x() + 8 + (++liveHoverAttempts % 2), layout.telemetry().y() + 8);
@@ -1047,7 +1411,11 @@ private static final class LiveGuideReopenOwner {
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_HOME, 0));
                 advance();
             }
-            case 11 -> {
+break;
+}
+case 11:
+{
+{
                 JsonObject summary = revealRecipeSummary(request);
                 if (summary == null) return;
                 liveRecipeToolId = summary.get("id").getAsString();
@@ -1055,7 +1423,7 @@ private static final class LiveGuideReopenOwner {
                 JsonObject second = revealToolSummary(request, 1);
                 if (second == null) return;
                 require(number(second.getAsJsonObject("bounds"), "height") == 28
-                        && second.get("description").getAsString().isBlank(), "Title-only actual native Tool card is not 28 pixels");
+                        && dev.openallay.util.Java8Strings.isBlank(second.get("description").getAsString()), "Title-only actual native Tool card is not 28 pixels");
                 report.put("actualTitleOnly28Summary", second);
                 summary = revealRecipeSummary(request);
                 if (summary == null) return;
@@ -1064,17 +1432,25 @@ private static final class LiveGuideReopenOwner {
                 clickAt(guide(), summary.get("blankClickX").getAsDouble(), summary.get("blankClickY").getAsDouble(), "tool-row-blank-padding");
                 advance();
             }
-            case 12 -> {
+break;
+}
+case 12:
+{
+{
                 if (!detailRecipePainted(liveRecipeToolId)) return;
                 report.put("actualNativeRecipeDetail", jsonReceipt(guide(), "e2eToolsReceipt"));
                 checkpoint("live-07-tool-detail-native-recipe", true);
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE, 0));
                 advance();
             }
-            case 13 -> {
+break;
+}
+case 13:
+{
+{
                 JsonObject summary = revealRecipeSummary(request);
                 if (summary == null) return;
-                var capsules = summary.getAsJsonArray("capsules");
+                com.google.gson.JsonArray capsules = summary.getAsJsonArray("capsules");
                 require(!(capsules.size() == 0), "Actual native recipe summary icon was not painted");
                 JsonObject capsule = capsules.get(0).getAsJsonObject();
                 JsonObject bounds = capsule.getAsJsonObject("bounds");
@@ -1083,7 +1459,11 @@ private static final class LiveGuideReopenOwner {
                 report.put("actualCapsuleClicked", capsule);
                 advance();
             }
-            case 14 -> {
+break;
+}
+case 14:
+{
+{
                 if (MinecraftClientWindow.screen(client) instanceof OpenAllayScreen)
                     require(jsonReceipt(guide(), "e2eToolsReceipt").get("detailToolId").getAsString().isEmpty(),
                             "Native child capsule opened parent Tool drawer");
@@ -1091,17 +1471,37 @@ private static final class LiveGuideReopenOwner {
                 checkpoint("live-08-native-child-priority-no-parent-drawer", true);
                 press("screen.openallay.settings.short"); advance();
             }
-            case 15 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 16 -> { press("screen.openallay.settings.ui.fullscreen"); advance(); }
-            case 17 -> { press("screen.openallay.settings.ui.density"); press("screen.openallay.settings.done"); advance(); }
-            case 18 -> {
+break;
+}
+case 15:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 16:
+{
+{ press("screen.openallay.settings.ui.fullscreen"); advance(); }
+break;
+}
+case 17:
+{
+{ press("screen.openallay.settings.ui.density"); press("screen.openallay.settings.done"); advance(); }
+break;
+}
+case 18:
+{
+{
                 if (!doneReturned()) return;
                 require(settings.snapshot().display().ui().fullscreen().density() == GuideUiConfig.Density.COMPACT,
                         "Actual settings callback did not save Compact density");
                 clickAt(guide(), 1, 1, "blur-before-compact-home");
                 GuideNativeInput.keyPressed(guide(), GuideNativeInput.keyEvent(dev.openallay.client.gui.GuideInputCodes.KEY_HOME, 0)); advance();
             }
-            case 19 -> {
+break;
+}
+case 19:
+{
+{
                 JsonObject summary = revealRecipeSummary(request);
                 if (summary == null) return;
                 require(number(summary.getAsJsonObject("bounds"), "height") == 40,
@@ -1111,16 +1511,36 @@ private static final class LiveGuideReopenOwner {
                 checkpoint("live-09-compact-tool-summary", true);
                 press("screen.openallay.settings.short"); advance();
             }
-            case 20 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 21 -> { press("screen.openallay.settings.ui.hud"); advance(); }
-            case 22 -> { press("screen.openallay.settings.ui.hud_enabled"); press("screen.openallay.settings.done"); advance(); }
-            case 23 -> {
+break;
+}
+case 20:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 21:
+{
+{ press("screen.openallay.settings.ui.hud"); advance(); }
+break;
+}
+case 22:
+{
+{ press("screen.openallay.settings.ui.hud_enabled"); press("screen.openallay.settings.done"); advance(); }
+break;
+}
+case 23:
+{
+{
                 if (!doneReturned()) return;
                 require(settings.snapshot().display().ui().hud().enabled(), "HUD enabled draft was not acknowledged");
                 liveHudFrame = number(gson.toJsonTree(hudReceipt.get()).getAsJsonObject(), "extractedFrame");
                 guide().onClose(); advance();
             }
-            case 24 -> {
+break;
+}
+case 24:
+{
+{
                 JsonObject receipt = gson.toJsonTree(hudReceipt.get()).getAsJsonObject();
                 if (number(receipt, "extractedFrame") <= liveHudFrame) { waitFor("fresh gameplay HUD tail extraction"); return; }
                 requireHudLatest(receipt, latestRequest);
@@ -1130,7 +1550,11 @@ private static final class LiveGuideReopenOwner {
                 GuideProbeKeyBindings.unbind(OpenAllayKeyMappings.INTERACT_HUD);
                 GuideProbeKeyBindings.refresh(); advance();
             }
-            case 25 -> {
+break;
+}
+case 25:
+{
+{
                 report.put("explicitUnboundKeyLabel", MinecraftComponents.getString(dev.openallay.client.gui.GuideNativeKeyMappings.display(OpenAllayKeyMappings.INTERACT_HUD)));
                 require(dev.openallay.client.gui.GuideNativeKeyMappings.unbound(OpenAllayKeyMappings.INTERACT_HUD), "Explicit unbound key was silently reset");
                 checkpoint("live-11-passive-hud-explicit-unbound-hint", false);
@@ -1139,15 +1563,23 @@ private static final class LiveGuideReopenOwner {
                 GuideProbeKeyBindings.click(dev.openallay.client.gui.GuideInputCodes.KEY_F8);
                 recordAction("native-keymapping-click", "INTERACT_HUD/default-F8"); advance();
             }
-            case 26 -> {
-                Screen lite = lite();
+break;
+}
+case 26:
+{
+{
+                net.minecraft.client.gui.screens.Screen lite = lite();
                 JsonObject receipt = jsonReceipt(lite, "resultReceipt");
                 requireHudLatest(receipt, latestRequest);
                 checkpoint("live-12-interactive-hud-opens-at-latest", false);
                 wheelHud(lite, 8);
                 advance();
             }
-            case 27 -> {
+break;
+}
+case 27:
+{
+{
                 JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
                 require(number(receipt, "scroll") < number(receipt, "maximumScroll"), "Native wheel up did not leave latest tail");
                 liveReaderScroll = (int) number(receipt, "scroll");
@@ -1157,7 +1589,11 @@ private static final class LiveGuideReopenOwner {
                 report.put("readerSendPrepared", readerSendDiagnostic());
                 stage = 127; stageWait = 0;
             }
-            case 127 -> {
+break;
+}
+case 127:
+{
+{
                 JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
                 Map<String, Object> diagnostic = readerSendDiagnostic();
                 report.put("readerSendBeforeCallback", diagnostic);
@@ -1173,8 +1609,12 @@ private static final class LiveGuideReopenOwner {
                 press("screen.openallay.action.send");
                 stage = 28; stageWait = 0;
             }
-            case 28 -> {
-                var next = requestFor(LIVE_FOLLOW_UP + " reader-new-content");
+break;
+}
+case 28:
+{
+{
+                dev.openallay.guide.GuideRequestSnapshot next = requestFor(LIVE_FOLLOW_UP + " reader-new-content");
                 if (next == null || !next.terminal()) { waitFor("actual reader new-content request"); return; }
                 validateLiveRequest(next);
                 latestRequest = next;
@@ -1186,12 +1626,20 @@ private static final class LiveGuideReopenOwner {
                 checkpoint("live-13-reader-anchor-with-new-content", false);
                 press("screen.openallay.hud.latest"); advance();
             }
-            case 29 -> {
+break;
+}
+case 29:
+{
+{
                 requireHudLatest(jsonReceipt(lite(), "resultReceipt"), latestRequest);
                 checkpoint("live-14-reader-native-latest-restores", false);
                 wheelHud(lite(), 10000); advance();
             }
-            case 30 -> {
+break;
+}
+case 30:
+{
+{
                 JsonObject receipt = jsonReceipt(lite(), "resultReceipt");
                 require(number(receipt, "scroll") == 0 && number(receipt, "toolRows") > 0,
                         "Full native reader cannot reach prior loaded request Tool cards");
@@ -1203,7 +1651,11 @@ private static final class LiveGuideReopenOwner {
                 beginReaderGuideReopen();
                 stage = 130; stageWait = 0;
             }
-            case 130 -> {
+break;
+}
+case 130:
+{
+{
                 if (!readerGuideReopenReady()) return;
                 requireReaderGuideReopenOwner();
                 liveGuideReopen.consume(() -> MinecraftClientWindow.screen(client), screen -> {
@@ -1218,10 +1670,26 @@ private static final class LiveGuideReopenOwner {
                         "Settings callback opened another settings coordinator");
                 stage = 31; stageWait = 0;
             }
-            case 31 -> { navigate("screen.openallay.settings.ui"); advance(); }
-            case 32 -> { press("screen.openallay.settings.ui.notifications"); advance(); }
-            case 33 -> { press("screen.openallay.settings.ui.notifications_enabled"); press("screen.openallay.settings.done"); advance(); }
-            case 34 -> {
+break;
+}
+case 31:
+{
+{ navigate("screen.openallay.settings.ui"); advance(); }
+break;
+}
+case 32:
+{
+{ press("screen.openallay.settings.ui.notifications"); advance(); }
+break;
+}
+case 33:
+{
+{ press("screen.openallay.settings.ui.notifications_enabled"); press("screen.openallay.settings.done"); advance(); }
+break;
+}
+case 34:
+{
+{
                 if (!doneReturned()) return;
                 require(settings.snapshot().display().ui().notifications().enabled()
                         && settings.snapshot().display().ui().notifications().policy() == GuideUiConfig.NotificationPolicy.WHEN_GUIDE_NOT_VISIBLE,
@@ -1234,13 +1702,17 @@ private static final class LiveGuideReopenOwner {
                 press("screen.openallay.action.send");
                 guide().onClose(); advance();
             }
-            case 35 -> {
+break;
+}
+case 35:
+{
+{
                 toastRequest = requestFor(liveToastQuestion);
                 JsonObject receipt = toastJson();
                 if (toastRequest == null || receipt == null || !receipt.get("visible").getAsBoolean()
                         || number(receipt, "frame") == 0) { waitFor("actual CardProduced owned native toast paint"); return; }
                 require(receipt.get("requestId").getAsString().equals(toastRequest.requestId().toString()), "Native toast has another request identity");
-                require(!receipt.get("title").getAsString().isBlank() && !receipt.get("description").getAsString().isBlank(),
+                require(!dev.openallay.util.Java8Strings.isBlank(receipt.get("title").getAsString()) && !dev.openallay.util.Java8Strings.isBlank(receipt.get("description").getAsString()),
                         "Actual card toast did not retain meaningful title and description");
                 require(number(receipt, "width") <= 240 && number(receipt, "height") == 64 && number(receipt, "slots") == 2
                         && number(receipt, "titleLineCount") == 1 && number(receipt, "descriptionLineCount") <= 2,
@@ -1253,7 +1725,11 @@ private static final class LiveGuideReopenOwner {
                 checkpoint("live-16-actual-card-title-description-native-toast", false);
                 openGuide.accept(service); advance();
             }
-            case 36 -> {
+break;
+}
+case 36:
+{
+{
                 JsonObject receipt = toastJson();
                 require(receipt != null && !receipt.get("visible").getAsBoolean() && receipt.get("ownedHidden").getAsBoolean()
                         && number(receipt, "hideOrder") > number(receipt, "showOrder"),
@@ -1262,7 +1738,11 @@ private static final class LiveGuideReopenOwner {
                 report.put("actualOwnedToastHiddenOnGuide", receipt);
                 checkpoint("live-17-visible-guide-owned-toast-hidden", true); advance();
             }
-            case 37 -> {
+break;
+}
+case 37:
+{
+{
                 if (!liveTransportRelease.isDone()) { waitFor("gameplay toast fixture transport release"); return; }
                 require(liveTransportRelease.join() == 204, "Gameplay toast release was rejected");
                 toastRequest = requestFor(liveToastQuestion);
@@ -1291,15 +1771,26 @@ private static final class LiveGuideReopenOwner {
                 require(header.get("fullVisible").getAsBoolean(), "Live header clipped the existing full title");
                 stage = 39; stageWait = 0;
             }
-            case 39, 40 -> runStage();
-            default -> throw new IllegalStateException("Unknown live native stage " + stage);
-        }
+break;
+}
+case 39:
+case 40:
+{
+runStage();
+break;
+}
+default:
+{
+throw new IllegalStateException("Unknown live native stage " + stage);
+}
+}
+
     }
 
     /** Read-only state at the terminal header assertion, including unpainted-widget waits. */
     private Map<String, Object> liveTerminalHeaderDiagnostic(
             OpenAllayScreen owner, Object title, long frame, JsonObject header) {
-        var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(owner, "layout");
+        dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(owner, "layout");
         Map<String, Object> receipt = new LinkedHashMap<>();
         receipt.put("stage", stage);
         receipt.put("capturedAt", Instant.now().toString());
@@ -1320,13 +1811,13 @@ private static final class LiveGuideReopenOwner {
         receipt.put("framebufferHeight", dev.openallay.client.gui.MinecraftClientWindow.framebufferHeight(client));
         receipt.put("titleBounds", layout.header().title());
         receipt.put("header", header);
-        return Map.copyOf(receipt);
+        return dev.openallay.util.Java8Collections.mapCopyOf(receipt);
     }
 
     /** Reopen once. Observation capture/custody/release can install the owner on later client turns. */
     private void beginReaderGuideReopen() {
         GuideChatLiteScreen reader = (GuideChatLiteScreen) lite();
-        var state = (dev.openallay.client.gui.GuideClientUiState) readField(reader, "state");
+        dev.openallay.client.gui.GuideClientUiState state = (dev.openallay.client.gui.GuideClientUiState) readField(reader, "state");
         require(readField(reader, "service") == service
                 && config.sessionId().equals(readField(reader, "session"))
                 && readField(reader, "attachment") != null,
@@ -1363,7 +1854,7 @@ private static final class LiveGuideReopenOwner {
 
     private boolean readerGuideReopenReady() {
         requireReaderGuideReopenOwner();
-        Screen current = MinecraftClientWindow.screen(client);
+        net.minecraft.client.gui.screens.Screen current = MinecraftClientWindow.screen(client);
         report.put("readerGuideReopenAwaiting", readerGuideReopenDiagnostic(current));
         boolean ready = liveGuideReopen.ready(current, screen -> screen instanceof OpenAllayScreen
                 && readField(screen, "service") == service
@@ -1372,12 +1863,14 @@ private static final class LiveGuideReopenOwner {
                 screen -> {
                     long frame = number(jsonReceipt(screen, "e2eToolsReceipt"), "lastNativeFrame");
                     if (frame == 0) return false;
-                    var state = liveGuideReopenOwner.state();
-                    var custody = state.observationImagesSettled();
+                    dev.openallay.client.gui.GuideClientUiState state = liveGuideReopenOwner.state();
+                    java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<java.lang.Boolean>> custody = state.observationImagesSettled();
                     require(state.observationInitialized(config.sessionId()),
                             "Reopened Guide lost its captured observation producer state");
                     if (!custody.isDone()) return false;
-                    require(custody.join() instanceof ToolResult.Success<Boolean> success && Boolean.TRUE.equals(success.value()),
+                    final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<Boolean>) $oaPattern1_holder.value) != null)) && Boolean.TRUE.equals($oaPattern1_holder.bound.value()),
                             "Reopened Guide observation producer custody failed");
                     require(readField(screen, "attachment") != null && screen.width > 0 && screen.height > 0
                             && ((dev.openallay.client.gui.GuideNativeScreen) screen).guideWidgetRegistered(((GuideMultilineEditor) readField(screen, "composer")).widget())
@@ -1390,7 +1883,7 @@ private static final class LiveGuideReopenOwner {
         return true;
     }
 
-    private Map<String, Object> readerGuideReopenDiagnostic(Screen screen) {
+    private Map<String, Object> readerGuideReopenDiagnostic(net.minecraft.client.gui.screens.Screen screen) {
         LiveGuideReopenOwner owner = liveGuideReopenOwner;
         Map<String, Object> receipt = new LinkedHashMap<>();
         receipt.put("sourceScreenIdentity", System.identityHashCode(owner.reader()));
@@ -1405,7 +1898,7 @@ private static final class LiveGuideReopenOwner {
         receipt.put("sourceAttachmentReleased", readField(owner.reader(), "attachment") == null);
         if (screen instanceof OpenAllayScreen)
             receipt.put("nativeExtractionFrame", number(jsonReceipt(screen, "e2eToolsReceipt"), "lastNativeFrame"));
-        return Map.copyOf(receipt);
+        return dev.openallay.util.Java8Collections.mapCopyOf(receipt);
     }
 
     /** Test-only arrival latch. A callback can destroy its Screen; never search its widgets afterward. */
@@ -1473,9 +1966,7 @@ private static final class LiveGuideReopenOwner {
                 "Actual full provider response lost latest48 marker");
         report.put("requestId", request.requestId().toString());
         report.put("assistantTextSha256", sha256(request.assistantText()));
-        report.put("actualTools", request.tools().stream().map(tool -> Map.of("invocationId", tool.invocationId(),
-                "toolId", tool.toolId(), "status", tool.status().name(), "title", tool.intent().title(),
-                "description", tool.intent().description())).toList());
+        report.put("actualTools", dev.openallay.util.Java8Collections.toList(request.tools().stream().map(tool -> dev.openallay.util.Java8Collections.mapOf("invocationId", tool.invocationId(), "toolId", tool.toolId(), "status", tool.status().name(), "title", tool.intent().title(), "description", tool.intent().description()))));
     }
 
     private JsonObject revealRecipeSummary(GuideRequestSnapshot value) { return revealToolSummary(value, 0); }
@@ -1486,13 +1977,13 @@ private static final class LiveGuideReopenOwner {
         JsonObject found = dev.openallay.json.JsonReaders.elements(tools.getAsJsonArray("toolSummaries")).stream().map(element -> element.getAsJsonObject())
                 .filter(summary -> expected.equals(summary.get("id").getAsString())).findFirst().orElse(null);
         if (found == null) {
-            var virtualizer = (dev.openallay.guide.ui.GuideTranscriptVirtualizer) readField(guide(), "virtualizer");
-            var rows = virtualizer.rows();
+            dev.openallay.guide.ui.GuideTranscriptVirtualizer virtualizer = (dev.openallay.guide.ui.GuideTranscriptVirtualizer) readField(guide(), "virtualizer");
+            java.util.List<dev.openallay.guide.ui.GuideTranscriptVirtualizer.Row> rows = virtualizer.rows();
             int rowIndex = java.util.stream.IntStream.range(0, rows.size())
                     .filter(row -> rows.get(row).id().equals(expected)).findFirst().orElseThrow();
             int currentScroll = (Integer) readField(guide(), "scroll");
             double direction = virtualizer.offset(rowIndex) < currentScroll ? 2 : -2;
-            var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+            dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
             guide().guideMouseScrolled(layout.transcript().x() + layout.transcript().width() / 2.0,
                     layout.transcript().y() + layout.transcript().height() / 2.0, 0, direction);
             recordAction("native-wheel", "reveal-real-compact-tool-summary");
@@ -1503,18 +1994,18 @@ private static final class LiveGuideReopenOwner {
 
     private void validateCompactSummaries(JsonObject tools) {
         int spacing = settings.snapshot().display().ui().fullscreen().density() == GuideUiConfig.Density.COMPACT ? 4 : 8;
-        for (var element : tools.getAsJsonArray("toolSummaries")) {
+        for (com.google.gson.JsonElement element : tools.getAsJsonArray("toolSummaries")) {
             JsonObject summary = element.getAsJsonObject();
-            int cardHeight = summary.get("description").getAsString().isBlank() ? 28 : 40;
+            int cardHeight = dev.openallay.util.Java8Strings.isBlank(summary.get("description").getAsString()) ? 28 : 40;
             require(number(summary.getAsJsonObject("bounds"), "height") == cardHeight
                     && number(summary, "rowHeight") == cardHeight + spacing,
                     "Actual Tool summary changed 28/40 native card height or row spacing");
-            var actual = session().requests().stream().flatMap(value -> value.tools().stream()
+            dev.openallay.guide.GuideToolActivity actual = session().requests().stream().flatMap(value -> value.tools().stream()
                     .filter(tool -> ("tool:" + value.requestId() + ":" + tool.invocationId()).equals(summary.get("id").getAsString())))
                     .findFirst().orElseThrow(() -> new IllegalStateException("Native summary has no actual service Tool identity"));
             require(summary.get("title").getAsString().equals(actual.intent().title())
                     && summary.get("description").getAsString().equals(actual.intent().description())
-                    && !summary.get("status").getAsString().isBlank(), "Native summary lost actual title/description/status");
+                    && !dev.openallay.util.Java8Strings.isBlank(summary.get("status").getAsString()), "Native summary lost actual title/description/status");
         }
         require(!tools.has("expandedToolCount") && !tools.has("toolsCollapsedDefault"), "Removed fold state remains in receipt");
     }
@@ -1523,7 +2014,7 @@ private static final class LiveGuideReopenOwner {
         JsonObject tools = jsonReceipt(guide(), "e2eToolsReceipt");
         require(toolId.equals(tools.get("detailToolId").getAsString()), "Blank row click opened a different Tool detail");
         if ((tools.getAsJsonArray("detailNativeRecipeIds").size() == 0) || (tools.getAsJsonArray("detailCardIds").size() == 0)) {
-            var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+            dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
             guide().guideMouseScrolled(layout.detail().x() + layout.detail().width() / 2.0,
                     layout.detail().y() + layout.detail().height() / 2.0, 0, -1);
             recordAction("native-wheel", "reveal-full-native-recipe-in-tool-detail");
@@ -1539,7 +2030,7 @@ private static final class LiveGuideReopenOwner {
     private void requireHudLatest(JsonObject receipt, GuideRequestSnapshot source) {
         require(number(receipt, "maximumScroll") > 0 && number(receipt, "scroll") == number(receipt, "maximumScroll"),
                 "Actual native HUD did not render measured latest-tail offset");
-        var finalAssistant = source.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
+        dev.openallay.guide.GuideTimelineEntry.Assistant finalAssistant = source.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
                 .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
                 .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
         String nodeId = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
@@ -1548,17 +2039,17 @@ private static final class LiveGuideReopenOwner {
                 "Native HUD tail has another request source identity");
         require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedNodeIds")).stream().anyMatch(value -> value.getAsString().equals(nodeId)),
                 "Native latest tail does not include source final semantic node");
-        String painted = receipt.get("lastRenderedText").getAsString().strip();
+        String painted = dev.openallay.util.Java8Strings.strip(receipt.get("lastRenderedText").getAsString());
         String expectedTail = "ui-live-ux-regressions".equals(config.scenario()) ? LIVE_TAIL : "全文末尾：原生图形长回复验收完成。";
         require(!painted.isEmpty() && expectedTail.endsWith(painted), "Native latest text tail was not actually painted");
     }
 
     /** Actual draft/button projection after native ticks, never an active override or direct submit. */
     private Map<String, Object> readerSendDiagnostic() {
-        Screen screen = lite();
-        var state = (dev.openallay.client.gui.GuideClientUiState) readField(screen, "state");
+        net.minecraft.client.gui.screens.Screen screen = lite();
+        dev.openallay.client.gui.GuideClientUiState state = (dev.openallay.client.gui.GuideClientUiState) readField(screen, "state");
         String sessionId = (String) readField(screen, "session");
-        var intent = state.intent(sessionId);
+        dev.openallay.client.gui.GuideClientUiState.DraftIntent intent = state.intent(sessionId);
         GuideNativeButton actualSend = (GuideNativeButton) readField(screen, "send");
         Map<String, Object> diagnostic = new LinkedHashMap<>();
         diagnostic.put("sessionId", sessionId);
@@ -1573,40 +2064,37 @@ private static final class LiveGuideReopenOwner {
         diagnostic.put("intentEditing", intent.editing());
         diagnostic.put("intentInvalid", intent.editInvalid());
         diagnostic.put("nativeResultFrame", number(jsonReceipt(screen, "resultReceipt"), "extractedFrame"));
-        return Map.copyOf(diagnostic);
+        return dev.openallay.util.Java8Collections.mapCopyOf(diagnostic);
     }
 
-    private Screen lite() {
+    private net.minecraft.client.gui.screens.Screen lite() {
         require(MinecraftClientWindow.screen(client) instanceof GuideChatLiteScreen, "Native F8 callback did not open full HUD reader");
         return MinecraftClientWindow.screen(client);
     }
 
-    private void wheelHud(Screen screen, double scrollY) {
-        var card = GuideChatLiteScreen.Card.calculate(screen.width, screen.height);
-        var results = GuideHudReadingLayout.calculate(card.x(), card.y(), card.width(), card.height()).results();
+    private void wheelHud(net.minecraft.client.gui.screens.Screen screen, double scrollY) {
+        dev.openallay.client.gui.hud.GuideChatLiteScreen.Card card = GuideChatLiteScreen.Card.calculate(screen.width, screen.height);
+        dev.openallay.guide.ui.GuideUiLayout.Rect results = GuideHudReadingLayout.calculate(card.x(), card.y(), card.width(), card.height()).results();
         double x = results.x() + results.width() / 2.0;
         double y = results.y() + results.height() / 2.0;
         require(screen instanceof GuideChatLiteScreen, "Native wheel target is not the owned HUD reader");
         require(((GuideChatLiteScreen) screen).guideMouseScrolled(x, y, 0, scrollY),
                 "Actual HUD result viewport did not consume native wheel");
-        actions.add(Map.of("type", "native-wheel", "stage", stage, "x", x, "y", y, "scrollY", scrollY));
+        actions.add(dev.openallay.util.Java8Collections.mapOf("type", "native-wheel", "stage", stage, "x", x, "y", y, "scrollY", scrollY));
     }
 
-    private void clickAt(Screen screen, double x, double y, String target) {
-        var event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
+    private void clickAt(net.minecraft.client.gui.screens.Screen screen, double x, double y, String target) {
+        dev.openallay.client.gui.GuideInputMouse event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
         boolean clicked = dev.openallay.client.gui.GuideWidgetInputs.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
         boolean released = dev.openallay.client.gui.GuideWidgetInputs.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
-        actions.add(Map.of("type", "native-mouse-callback", "target", target, "stage", stage,
-                "x", x, "y", y, "clickedHandled", clicked, "releasedHandled", released));
+        actions.add(dev.openallay.util.Java8Collections.mapOf("type", "native-mouse-callback", "target", target, "stage", stage, "x", x, "y", y, "clickedHandled", clicked, "releasedHandled", released));
     }
 
     private void hoverNative(double guiX, double guiY) {
         double nativeX = guiX * dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client) / dev.openallay.client.gui.MinecraftClientWindow.guiWidth(client);
         double nativeY = guiY * dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client) / dev.openallay.client.gui.MinecraftClientWindow.guiHeight(client);
         GuideProbeNativeCursor.move(client, nativeX, nativeY);
-        actions.add(Map.of("type", "native-" + GuideProbeNativeCursor.backend() + "-cursor", "stage", stage, "guiX", guiX, "guiY", guiY,
-                "windowX", nativeX, "windowY", nativeY, "screenWidth", dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client),
-                "screenHeight", dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client), "source", "OS-programmatic-cursor-request"));
+        actions.add(dev.openallay.util.Java8Collections.mapOf("type", "native-" + GuideProbeNativeCursor.backend() + "-cursor", "stage", stage, "guiX", guiX, "guiY", guiY, "windowX", nativeX, "windowY", nativeY, "screenWidth", dev.openallay.client.gui.MinecraftClientWindow.windowWidth(client), "screenHeight", dev.openallay.client.gui.MinecraftClientWindow.windowHeight(client), "source", "OS-programmatic-cursor-request"));
         if (Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.x(client) - guiX) > 1
                 || Math.abs(dev.openallay.client.context.MinecraftMouseCoordinates.y(client) - guiY) > 1)
             dispatchNativeCursorMove(nativeX, nativeY);
@@ -1618,11 +2106,7 @@ private static final class LiveGuideReopenOwner {
         dev.openallay.client.gui.MinecraftClientWindow.execute(client, () -> {
             try {
                 GuideProbeNativeCursor.dispatchMove(client, nativeX, nativeY);
-                actions.add(Map.of("type", "controlled-native-cursor-callback", "stage", stage,
-                        "source", "selected-native-cursor-callback/" + GuideProbeNativeCursor.backend(), "physicalInput", false,
-                        "windowX", nativeX, "windowY", nativeY,
-                        "scaledXAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.x(client),
-                        "scaledYAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.y(client)));
+                actions.add(dev.openallay.util.Java8Collections.mapOf("type", "controlled-native-cursor-callback", "stage", stage, "source", "selected-native-cursor-callback/" + GuideProbeNativeCursor.backend(), "physicalInput", false, "windowX", nativeX, "windowY", nativeY, "scaledXAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.x(client), "scaledYAfterCallback", dev.openallay.client.context.MinecraftMouseCoordinates.y(client)));
             } catch (RuntimeException failure) {
                 fail(new IllegalStateException("Controlled native mouse callback failed", failure));
             }
@@ -1633,7 +2117,7 @@ private static final class LiveGuideReopenOwner {
     private void recordNativeHoverDiagnostic(String phase) {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
         double[] nativeCursor = GuideProbeNativeCursor.position(client);
-        var layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
+        dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
         Map<String, Object> diagnostic = new LinkedHashMap<>();
         diagnostic.put("phase", phase);
         diagnostic.put("stage", stage);
@@ -1664,8 +2148,8 @@ private static final class LiveGuideReopenOwner {
         diagnostic.put("overflowOpen", readField(guide(), "overflowOpen"));
         diagnostic.put("toolsNativeFrame", number(jsonReceipt(guide(), "e2eToolsReceipt"), "lastNativeFrame"));
         diagnostic.put("tooltipReceipt", jsonReceipt(guide(), "e2eTelemetryTooltipReceipt"));
-        if (liveHoverDiagnostics.size() < 12) liveHoverDiagnostics.add(Map.copyOf(diagnostic));
-        else liveHoverDiagnostics.set(11, Map.copyOf(diagnostic));
+        if (liveHoverDiagnostics.size() < 12) liveHoverDiagnostics.add(dev.openallay.util.Java8Collections.mapCopyOf(diagnostic));
+        else liveHoverDiagnostics.set(11, dev.openallay.util.Java8Collections.mapCopyOf(diagnostic));
         report.put("nativeHoverDiagnostics", liveHoverDiagnostics);
     }
 
@@ -1673,7 +2157,7 @@ private static final class LiveGuideReopenOwner {
     private Object readField(Object owner, String name) {
         require(developmentProbeEnabled, "Development probe was disabled at construction");
         try {
-            var field = owner.getClass().getDeclaredField(name);
+            java.lang.reflect.Field field = owner.getClass().getDeclaredField(name);
             field.setAccessible(true);
             return field.get(owner);
         } catch (ReflectiveOperationException failure) { throw new IllegalStateException("Native geometry field unavailable: " + name, failure); }
@@ -1685,7 +2169,7 @@ private static final class LiveGuideReopenOwner {
 
     private JsonObject toastJson() {
         require(toastReceipt != null, "Actual native toast owner receipt is unattached");
-        var value = gson.toJsonTree(toastReceipt.get());
+        com.google.gson.JsonElement value = gson.toJsonTree(toastReceipt.get());
         return value.isJsonNull() ? null : value.getAsJsonObject();
     }
 
@@ -1695,9 +2179,9 @@ private static final class LiveGuideReopenOwner {
     }
 
     private CompletableFuture<Integer> releaseLiveTransport() {
-        var profile = settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).findFirst().orElseThrow();
+        dev.openallay.model.config.ModelProfileDefinition profile = settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).findFirst().orElseThrow();
         require("127.0.0.1".equals(profile.baseUri().getHost()) && "http".equals(profile.baseUri().getScheme()), "Fixture release must stay loopback");
-        var uri = profile.baseUri().resolve("/__e2e/live-ux/release");
+        java.net.URI uri = profile.baseUri().resolve("/__e2e/live-ux/release");
         return java.net.http.HttpClient.newHttpClient().sendAsync(java.net.http.HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(10)).POST(java.net.http.HttpRequest.BodyPublishers.noBody()).build(),
                 java.net.http.HttpResponse.BodyHandlers.discarding()).thenApply(java.net.http.HttpResponse::statusCode);
@@ -1724,7 +2208,7 @@ private static final class LiveGuideReopenOwner {
     private boolean revealHudEditorButton() {
         if (findButton("screen.openallay.settings.ui.edit_hud", false) != null) return true;
         OpenAllaySettingsScreen screen = settingsScreen();
-        var area = SettingsLayout.calculate(screen.width, screen.height, SettingsSection.UI).editor();
+        dev.openallay.client.gui.settings.SettingsLayout.Rect area = SettingsLayout.calculate(screen.width, screen.height, SettingsSection.UI).editor();
         double x = area.x() + area.width() / 2.0;
         double y = area.y() + area.height() / 2.0;
         require(screen.guideMouseScrolled(x, y, 0, -2), "Actual UI HUD page did not consume native scrolling");
@@ -1736,14 +2220,14 @@ private static final class LiveGuideReopenOwner {
     private void clickHudCaseButton(String key) {
         GuideNativeButton button = findButton(key, false);
         require(button != null, "Actual visible enabled HUD case button unavailable: " + key);
-        Screen screen = MinecraftClientWindow.screen(client);
+        net.minecraft.client.gui.screens.Screen screen = MinecraftClientWindow.screen(client);
         double x = dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) + button.getWidth() / 2.0;
         double y = dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) + button.getHeight() / 2.0;
         require(dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) >= 0 && dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) >= 0
                         && dev.openallay.client.gui.GuideNativeWidgetGeometry.x(button) + button.getWidth() <= screen.width
                         && dev.openallay.client.gui.GuideNativeWidgetGeometry.y(button) + button.getHeight() <= screen.height,
                 "Actual HUD case button is outside the native viewport");
-        var event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
+        dev.openallay.client.gui.GuideInputMouse event = GuideNativeInput.mouseEvent(x, y, dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT, 0);
         boolean clicked = dev.openallay.client.gui.GuideWidgetInputs.mouseClicked((dev.openallay.client.gui.GuideWidgetInput) screen, event, false);
         boolean released = dev.openallay.client.gui.GuideWidgetInputs.mouseReleased((dev.openallay.client.gui.GuideWidgetInput) screen, event);
         Map<String, Object> action = new LinkedHashMap<>();
@@ -1801,12 +2285,10 @@ private static final class LiveGuideReopenOwner {
         require(Files.isRegularFile(current), "Current display settings file is unavailable after HUD Apply");
         try {
             byte[] bytes = Files.readAllBytes(current);
-            var loaded = new GuideDisplayConfigLoader().load(new StringReader(new String(bytes, StandardCharsets.UTF_8)));
+            dev.openallay.guide.ui.GuideDisplayConfigLoader.Load loaded = new GuideDisplayConfigLoader().load(new StringReader(new String(bytes, StandardCharsets.UTF_8)));
             require(loaded.failure() == null, "Actual HUD display file does not satisfy current exact shape validation");
             require(expected.equals(loaded.config()), "Actual display file lost the dragged HUD or changed another field");
-            return Map.of("path", current.toString(), "bytes", bytes.length, "sha256", bytesSha256(bytes),
-                    "actualDisplay", loaded.config(), "completeCandidateMatches", true,
-                    "source", "current display.json bytes read after actual save acknowledgement");
+            return dev.openallay.util.Java8Collections.mapOf("path", current.toString(), "bytes", bytes.length, "sha256", bytesSha256(bytes), "actualDisplay", loaded.config(), "completeCandidateMatches", true, "source", "current display.json bytes read after actual save acknowledgement");
         } catch (IOException failure) { throw new IllegalStateException("Actual HUD display readback failed", failure); }
     }
 
@@ -1843,10 +2325,7 @@ private static final class LiveGuideReopenOwner {
             return false;
         }
         if (!detailRecipePainted(expected)) return false;
-        report.put("fullscreenNativeRecipePaint", Map.of("expectedToolId", expected,
-                "actuallyPaintedStableIds", tools.getAsJsonArray("detailNativeRecipeIds"),
-                "detailCardIds", tools.getAsJsonArray("detailCardIds"), "nativeExtractedFrame", nativeRecipeFrame,
-                "receiptSource", "actual right-detail native registry render returned painted=true"));
+        report.put("fullscreenNativeRecipePaint", dev.openallay.util.Java8Collections.mapOf("expectedToolId", expected, "actuallyPaintedStableIds", tools.getAsJsonArray("detailNativeRecipeIds"), "detailCardIds", tools.getAsJsonArray("detailCardIds"), "nativeExtractedFrame", nativeRecipeFrame, "receiptSource", "actual right-detail native registry render returned painted=true"));
         return true;
     }
 
@@ -1868,9 +2347,7 @@ private static final class LiveGuideReopenOwner {
         require(settings.snapshot().notice() != null
                 && settings.snapshot().notice().level() == dev.openallay.settings.SettingsNotice.Level.FAILURE,
                 "Actual settings writer did not report a failure");
-        report.put("writeFailure", Map.of("e2eScope", true, "stayedOnSettings", true,
-                "draftRetained", true, "lastValidUnchanged", true,
-                "noticeCode", settings.snapshot().notice().code()));
+        report.put("writeFailure", dev.openallay.util.Java8Collections.mapOf("e2eScope", true, "stayedOnSettings", true, "draftRetained", true, "lastValidUnchanged", true, "noticeCode", settings.snapshot().notice().code()));
         return true;
     }
 
@@ -1887,7 +2364,7 @@ private static final class LiveGuideReopenOwner {
         }
         require(slider.active, "Actual reply-lines slider is not enabled");
         double x = dev.openallay.client.gui.GuideNativeWidgetGeometry.x(slider) + 4 + selected / 80.0 * (slider.getWidth() - 8);
-        var mouse = GuideNativeInput.mouseEvent(x, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(slider) + slider.getHeight() / 2.0, 0, 0);
+        dev.openallay.client.gui.GuideInputMouse mouse = GuideNativeInput.mouseEvent(x, dev.openallay.client.gui.GuideNativeWidgetGeometry.y(slider) + slider.getHeight() / 2.0, 0, 0);
         GuideNativeInput.click(slider, mouse, false);
         GuideNativeInput.release(slider, mouse);
         recordAction("native-slider-click", "reply-lines=" + selected);
@@ -1899,20 +2376,16 @@ private static final class LiveGuideReopenOwner {
         require(Files.isRegularFile(displayPath), "Disposable display settings file is unavailable");
         try {
             displayBefore = Files.readAllBytes(displayPath);
-            var beforeAttributes = Files.readAttributes(displayPath, java.nio.file.attribute.BasicFileAttributes.class);
+            java.nio.file.attribute.BasicFileAttributes beforeAttributes = Files.readAttributes(displayPath, java.nio.file.attribute.BasicFileAttributes.class);
             synchronized (report) {
-                report.put("displayFileMetadataBefore", Map.of("size", beforeAttributes.size(),
-                        "lastModified", beforeAttributes.lastModifiedTime().toString(),
-                        "creationTime", beforeAttributes.creationTime().toString()));
+                report.put("displayFileMetadataBefore", dev.openallay.util.Java8Collections.mapOf("size", beforeAttributes.size(), "lastModified", beforeAttributes.lastModifiedTime().toString(), "creationTime", beforeAttributes.creationTime().toString()));
             }
             displayBackup = displayPath.resolveSibling("display.e2e-preserved-" + UUID.randomUUID());
             Files.move(displayPath, displayBackup);
             Files.createDirectory(displayPath);
             Files.writeString(displayPath.resolve("e2e-nonempty-directory"), "controlled test-only replacement conflict", StandardCharsets.UTF_8);
             synchronized (report) {
-                report.put("displayFileFault", Map.of("e2eScope", true,
-                        "oldSha256", bytesSha256(displayBefore), "originalBytes", displayBefore.length,
-                        "preservedAttributes", "original file moved without rewriting"));
+                report.put("displayFileFault", dev.openallay.util.Java8Collections.mapOf("e2eScope", true, "oldSha256", bytesSha256(displayBefore), "originalBytes", displayBefore.length, "preservedAttributes", "original file moved without rewriting"));
             }
         } catch (IOException failure) { throw new IllegalStateException("Disposable write-failure preparation failed", failure); }
     }
@@ -1924,27 +2397,24 @@ private static final class LiveGuideReopenOwner {
             Files.deleteIfExists(displayPath);
             Files.move(displayBackup, displayPath);
             String restored = bytesSha256(Files.readAllBytes(displayPath));
-            var restoredAttributes = Files.readAttributes(displayPath, java.nio.file.attribute.BasicFileAttributes.class);
+            java.nio.file.attribute.BasicFileAttributes restoredAttributes = Files.readAttributes(displayPath, java.nio.file.attribute.BasicFileAttributes.class);
             synchronized (report) {
-                report.put("displayFileMetadataRestored", Map.of("size", restoredAttributes.size(),
-                        "lastModified", restoredAttributes.lastModifiedTime().toString(),
-                        "creationTime", restoredAttributes.creationTime().toString()));
+                report.put("displayFileMetadataRestored", dev.openallay.util.Java8Collections.mapOf("size", restoredAttributes.size(), "lastModified", restoredAttributes.lastModifiedTime().toString(), "creationTime", restoredAttributes.creationTime().toString()));
             }
             require(restored.equals(bytesSha256(displayBefore)), "Disposable display file restoration changed bytes");
             synchronized (report) {
-                report.put("displayFileRestoration", Map.of("e2eScope", true,
-                        "restoredSha256", restored, "byteExact", true, "originalFileMetadataPreserved", true));
+                report.put("displayFileRestoration", dev.openallay.util.Java8Collections.mapOf("e2eScope", true, "restoredSha256", restored, "byteExact", true, "originalFileMetadataPreserved", true));
             }
         } catch (IOException failure) { throw new IllegalStateException("Disposable display file restoration failed", failure); }
     }
 
     private static String bytesSha256(byte[] value) {
-        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); }
+        try { return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(value)); }
         catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
     private void requireLoopbackFixture() {
-        var profiles = settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).toList();
+        java.util.List<dev.openallay.model.config.ModelProfileDefinition> profiles = dev.openallay.util.Java8Collections.toList(settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()));
         require(!profiles.isEmpty(), "An actual local fixture profile is required");
         require(profiles.stream().allMatch(value -> "http".equals(value.baseUri().getScheme())
                 && "127.0.0.1".equals(value.baseUri().getHost()) && "openallay-e2e-fixture".equals(value.model())),
@@ -1984,7 +2454,7 @@ private static final class LiveGuideReopenOwner {
         return findButton(MinecraftClientWindow.screen(client), key, prefix);
     }
 
-    private GuideNativeButton findButton(Screen screen, String key, boolean prefix) {
+    private GuideNativeButton findButton(net.minecraft.client.gui.screens.Screen screen, String key, boolean prefix) {
         require(screen != null, "Actual native button owner is unavailable: " + key);
         String text = MinecraftComponents.getString(MinecraftComponents.translatable(key));
         return ((dev.openallay.client.gui.GuideNativeScreen) screen).guideWidgetChildren().stream().filter(GuideNativeButton.class::isInstance).map(GuideNativeButton.class::cast)
@@ -2023,7 +2493,7 @@ private static final class LiveGuideReopenOwner {
         receipt.put("guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)));
         receipt.put("settingsGeneration", settings.snapshot().generation());
         receipt.put("settingsOperation", settings.snapshot().operation().kind().name());
-        var memory = java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        java.lang.management.MemoryUsage memory = java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         receipt.put("heapUsedBytes", memory.getUsed());
         receipt.put("heapCommittedBytes", memory.getCommitted());
         receipt.put("elapsedMillis", Duration.between(started, Instant.now()).toMillis());
@@ -2059,9 +2529,7 @@ private static final class LiveGuideReopenOwner {
                         int height = image.height();
                         dev.openallay.client.observation.MinecraftNativeImageCapture.write(image, path);
                         byte[] bytes = Files.readAllBytes(path);
-                        saved.complete(Map.of("name", name, "path", path.toString(), "bytes", bytes.length,
-                                "sha256", HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)),
-                                "width", width, "height", height, "source", "native-mainRenderTarget"));
+                        saved.complete(dev.openallay.util.Java8Collections.mapOf("name", name, "path", path.toString(), "bytes", bytes.length, "sha256", dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)), "width", width, "height", height, "source", "native-mainRenderTarget"));
                     } catch (Exception failure) {
                         saved.completeExceptionally(new IllegalStateException("Native frame write failed", failure));
                     }
@@ -2078,13 +2546,11 @@ private static final class LiveGuideReopenOwner {
         List<Map<String, Object>> unavailable = new ArrayList<>();
         frames.forEach((name, saved) -> {
             if (!saved.isDone()) {
-                unavailable.add(Map.of("name", name, "path", frameRoot.resolve(name + ".png").toString(),
-                        "status", "PENDING", "source", "native-mainRenderTarget"));
+                unavailable.add(dev.openallay.util.Java8Collections.mapOf("name", name, "path", frameRoot.resolve(name + ".png").toString(), "status", "PENDING", "source", "native-mainRenderTarget"));
             } else {
                 try { published.add(saved.join()); }
                 catch (RuntimeException failure) {
-                    unavailable.add(Map.of("name", name, "path", frameRoot.resolve(name + ".png").toString(),
-                            "status", "FAILED", "source", "native-mainRenderTarget", "failure", failure.toString()));
+                    unavailable.add(dev.openallay.util.Java8Collections.mapOf("name", name, "path", frameRoot.resolve(name + ".png").toString(), "status", "FAILED", "source", "native-mainRenderTarget", "failure", failure.toString()));
                 }
             }
         });
@@ -2101,15 +2567,14 @@ private static final class LiveGuideReopenOwner {
     }
 
     private void recordAction(String type, String target) {
-        actions.add(Map.of("type", type, "target", target, "stage", stage, "at", Instant.now().toString()));
+        actions.add(dev.openallay.util.Java8Collections.mapOf("type", type, "target", target, "stage", stage, "at", Instant.now().toString()));
     }
 
     private void restoreKey() {
         if (nativePrimitiveProbe != null) nativePrimitiveProbe.close();
         dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client), originalGuiScale);
         MinecraftClientWindow.setWindowed(client, originalWindowWidth, originalWindowHeight);
-        report.put("windowRestorationRequested", Map.of("width", originalWindowWidth, "height", originalWindowHeight,
-                "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)), "originalGuiScaleRestored", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)) == originalGuiScale));
+        report.put("windowRestorationRequested", dev.openallay.util.Java8Collections.mapOf("width", originalWindowWidth, "height", originalWindowHeight, "guiScale", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)), "originalGuiScaleRestored", dev.openallay.platform.minecraft.MinecraftOptions.guiScale(dev.openallay.client.context.MinecraftClientContextFacts.options(client)) == originalGuiScale));
         restorePttKey.run();
         report.put("pttKeyRestored", originalPttBinding.equals(GuideProbeKeyBindings.description(OpenAllayKeyMappings.VOICE_PTT)));
         restoreInteractKey.run();
@@ -2121,22 +2586,22 @@ private static final class LiveGuideReopenOwner {
     /** Retain nested native causes within fixed report-size bounds. */
     private static List<Map<String, Object>> nativeFailureCauseChain(Throwable failure) {
         List<Map<String, Object>> causes = new ArrayList<>();
-        var seen = new java.util.IdentityHashMap<Throwable, Boolean>();
+        java.util.IdentityHashMap<java.lang.Throwable, java.lang.Boolean> seen = new java.util.IdentityHashMap<Throwable, Boolean>();
         Throwable cause = failure;
         while (cause != null && causes.size() < 16 && seen.put(cause, Boolean.TRUE) == null) {
             Map<String, Object> entry = new LinkedHashMap<>();
             String description = cause.toString();
             entry.put("exception", description.length() <= 4096 ? description : description.substring(0, 4096));
             entry.put("exceptionTruncated", description.length() > 4096);
-            var stack = cause.getStackTrace();
-            entry.put("stack", java.util.Arrays.stream(stack).limit(64).map(Object::toString).toList());
+            java.lang.StackTraceElement[] stack = cause.getStackTrace();
+            entry.put("stack", dev.openallay.util.Java8Collections.toList(java.util.Arrays.stream(stack).limit(64).map(Object::toString)));
             entry.put("stackTruncated", stack.length > 64);
             Throwable next = cause.getCause();
             entry.put("causeChainTruncated", next != null && (causes.size() == 15 || seen.containsKey(next)));
-            causes.add(Map.copyOf(entry));
+            causes.add(dev.openallay.util.Java8Collections.mapCopyOf(entry));
             cause = next;
         }
-        return List.copyOf(causes);
+        return dev.openallay.util.Java8Collections.listCopyOf(causes);
     }
 
     private void fail(RuntimeException failure) {
@@ -2146,7 +2611,7 @@ private static final class LiveGuideReopenOwner {
         report.put("failureStage", stage);
         report.put("failureMessage", failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage());
         report.put("failureException", failure.toString());
-        report.put("failureStack", java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
+        report.put("failureStack", dev.openallay.util.Java8Collections.toList(java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString)));
         if (failure.getCause() != null) report.put("failureCause", failure.getCause().toString());
         report.put("failureCauseChain", nativeFailureCauseChain(failure));
         report.put("elapsedMillis", Duration.between(started, Instant.now()).toMillis());
@@ -2187,7 +2652,7 @@ private static final class LiveGuideReopenOwner {
     private static long number(JsonObject value, String key) { return value.get(key).getAsLong(); }
     private static void require(boolean condition, String message) { if (!condition) throw new IllegalStateException(message); }
     private static String sha256(String value) {
-        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
+        try { return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
         catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 }

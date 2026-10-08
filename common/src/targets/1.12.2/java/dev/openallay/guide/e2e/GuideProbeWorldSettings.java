@@ -15,7 +15,7 @@ final class GuideProbeWorldSettings {
     }
     static void prepareBuilderFixture(MinecraftServer server, boolean resumed) {
         if (!server.isCallingFromMinecraftThread()) throw new IllegalStateException("Fixture setup requires the server owner thread");
-        var rules = server.getWorld(0).getGameRules();
+        net.minecraft.world.GameRules rules = server.getWorld(0).getGameRules();
         if (!resumed) rules.setOrCreateGameRule("randomTickSpeed", "0");
         if (rules.getInt("randomTickSpeed") != 0) throw new IllegalStateException("Disposable Builder fixture requires random tick speed zero");
     }
@@ -30,7 +30,7 @@ final class GuideProbeWorldSettings {
     }
     static void createFresh(Minecraft client, String name) {
         client.launchIntegratedServer(name, name, create(name));
-        var server = java.util.Objects.requireNonNull(client.getIntegratedServer(), "Fixture server unavailable");
+        net.minecraft.server.integrated.IntegratedServer server = java.util.Objects.requireNonNull(client.getIntegratedServer(), "Fixture server unavailable");
         server.addScheduledTask(() -> server.setDifficultyForAllWorlds(EnumDifficulty.PEACEFUL));
     }
 }

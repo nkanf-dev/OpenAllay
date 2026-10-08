@@ -78,7 +78,7 @@ public static final class TextLayer {
                         new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8)));
             }
         }
-        return List.copyOf(layers);
+        return dev.openallay.util.Java8Collections.listCopyOf(layers);
     }
     public static Reader openSelectedReader(IResourceManager resources, ResourceLocation id) throws IOException {
         IResource resource = resources.getResource(id);

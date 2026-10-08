@@ -7,8 +7,8 @@ import net.minecraft.world.biome.Biome;
 public final class MinecraftClientBiomeFacts {
     private MinecraftClientBiomeFacts() {}
     public static Optional<String> id(Minecraft client,EntityPlayerSP player) {
-        var biome=client.world.getBiome(player.getPosition());
-        var key=Biome.REGISTRY.getNameForObject(biome);
+        net.minecraft.world.biome.Biome biome=client.world.getBiome(player.getPosition());
+        net.minecraft.util.ResourceLocation key=Biome.REGISTRY.getNameForObject(biome);
         if (key==null || !Biome.REGISTRY.containsKey(key) || Biome.REGISTRY.getObject(key)!=biome) return Optional.empty();
         return Optional.of(key.toString());
     }

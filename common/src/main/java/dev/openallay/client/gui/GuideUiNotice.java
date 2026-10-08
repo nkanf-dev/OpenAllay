@@ -6,7 +6,7 @@ import dev.openallay.tool.ToolResult;
 import java.util.Objects;
 import java.util.UUID;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 
 /** Local presentation feedback. Input rejection stays next to the composer, not the model status. */
 @dev.openallay.value.ValueType(GuideUiNotice.ValueSchemaProvider.class)
@@ -36,16 +36,22 @@ public static GuideUiNotice acceptedSubmission(GuideClientUiState.SubmissionRout
         Objects.requireNonNull(route, "route");
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(sessionId, "sessionId");
-        if (result instanceof ToolResult.Failure<?> failure) return error(failure.code() + ": " + failure.message());
-        if (!(result instanceof ToolResult.Success<?> success)) return error(
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<?>) $oaPattern0_holder.value) != null))) return error($oaPattern0_holder.bound.code() + ": " + $oaPattern0_holder.bound.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<?>) $oaPattern1_holder.value) != null)))) return error(
                 MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.submit_failed")));
         boolean editing = route == GuideClientUiState.SubmissionRoute.EDIT_PENDING;
-        if (editing && !Boolean.TRUE.equals(success.value())) return warning(
+        if (editing && !Boolean.TRUE.equals($oaPattern1_holder.bound.value())) return warning(
                 MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.pending.already_consumed")));
-        UUID receiptId = editing ? pendingId : success.value() instanceof UUID id ? id : null;
+        final class $oaPattern2_Holder { java.lang.Object value; UUID bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+UUID receiptId = editing ? pendingId : (($oaPattern2_holder.value = $oaPattern1_holder.bound.value()) instanceof java.util.UUID && (($oaPattern2_holder.bound = (UUID) $oaPattern2_holder.value) != null)) ? $oaPattern2_holder.bound : null;
         if (receiptId == null || route == GuideClientUiState.SubmissionRoute.EDIT_INVALID) return error(
                 MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.submit_failed")));
-        var session = snapshot.sessions().stream().filter(value -> value.sessionId().equals(sessionId)).findFirst().orElse(null);
+        dev.openallay.guide.GuideSessionSnapshot session = snapshot.sessions().stream().filter(value -> value.sessionId().equals(sessionId)).findFirst().orElse(null);
         if (session != null) {
             GuidePendingMessage pending = session.pendingMessages().stream()
                     .filter(value -> value.id().equals(receiptId)).findFirst().orElse(null);
@@ -61,13 +67,32 @@ public static GuideUiNotice acceptedSubmission(GuideClientUiState.SubmissionRout
         // A drained Follow-up has a fresh request ID; absence alone cannot prove execution.
         return info(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.accepted.message")));
     }
-public boolean empty() { return message.isBlank(); }
-public int color() { return switch (severity) {
-        case SUCCESS -> OpenAllayWidgetTheme.SUCCESS;
-        case INFO -> OpenAllayWidgetTheme.INFO;
-        case WARNING -> OpenAllayWidgetTheme.WARNING;
-        case ERROR -> OpenAllayWidgetTheme.ERROR;
-    }; }
+public boolean empty() { return dev.openallay.util.Java8Strings.isBlank(message); }
+public int color() { {
+int $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((severity)) {
+case SUCCESS:
+{
+$oaSwitch0_exit_result = OpenAllayWidgetTheme.SUCCESS; break $oaSwitch0_exit;
+}
+case INFO:
+{
+$oaSwitch0_exit_result = OpenAllayWidgetTheme.INFO; break $oaSwitch0_exit;
+}
+case WARNING:
+{
+$oaSwitch0_exit_result = OpenAllayWidgetTheme.WARNING; break $oaSwitch0_exit;
+}
+case ERROR:
+{
+$oaSwitch0_exit_result = OpenAllayWidgetTheme.ERROR; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+} }
 public enum Severity { INFO, SUCCESS, WARNING, ERROR }
 public enum Placement { HEADER, COMPOSER }
     @Override public boolean equals(Object other) {

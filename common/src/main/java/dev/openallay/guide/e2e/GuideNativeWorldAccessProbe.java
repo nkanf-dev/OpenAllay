@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
-import net.minecraft.client.Minecraft;
+
 
 /** Explicit disposable-world SDK acceptance. No model, permission bypass or Builder admission. */
 final class GuideNativeWorldAccessProbe {
@@ -23,8 +23,8 @@ final class GuideNativeWorldAccessProbe {
     static void run(UUID actor, String world, Consumer<Map<String, Object>> finished) {
         String phase = System.getProperty("openallay.e2e.worldPhase", "");
         if (phase.equals("persist") || phase.equals("reload")) { persistence(actor, world, finished); return; }
-        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
-        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        net.minecraft.client.Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        net.minecraft.client.server.IntegratedServer server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || dev.openallay.server.NativeServerOwner.published(server)
                 || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
                 || !world.equals(System.getProperty("openallay.e2e.createWorld", ""))
@@ -37,7 +37,7 @@ final class GuideNativeWorldAccessProbe {
         int x = (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(client.player)) + 6;
         int z = (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(client.player)) + 6;
         int y = Math.max(5, Math.min(250, (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(client.player)) + 3));
-        var access = OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
+        dev.openallay.api.extension.MinecraftWorldAccess access = OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
         Thread worker = new Thread(() -> {
             Map<String,Object> report = new LinkedHashMap<>();
             List<Map<String,Object>> checks = new ArrayList<>();
@@ -48,12 +48,12 @@ final class GuideNativeWorldAccessProbe {
                 JsonObject context = JsonTrees.parse(session.context()).getAsJsonObject();
                 require(context.get("minY").getAsInt()==0 && context.get("maxY").getAsInt()==256, "actual vertical bounds");
                 require(!context.getAsJsonObject("materialPalette").has("lightning_rod_up"), "honest unavailable role");
-                checks.add(Map.of("check","context","status","PASS","native",context));
+                checks.add(dev.openallay.util.Java8Collections.mapOf("check", "context", "status", "PASS", "native", context));
                 require(session.existingWorldId().isEmpty(), "fresh identity read must not create");
                 String worldId = session.worldId(); UUID.fromString(worldId);
                 require(session.existingWorldId().orElseThrow().equals(worldId), "identity readback");
                 report.put("worldId", worldId);
-                checks.add(Map.of("check","native-world-identity","status","PASS"));
+                checks.add(dev.openallay.util.Java8Collections.mapOf("check", "native-world-identity", "status", "PASS"));
                 String[] before = session.call(() -> new String[]{session.read(x,y,z),session.read(x+1,y,z)});
                 try {
                     session.call(() -> {
@@ -66,7 +66,7 @@ final class GuideNativeWorldAccessProbe {
                         require(write.failure()==null && write.changed() && preview.equals(write.actual()), "actual stone write/readback");
                         WorldSession.WriteOutcome unchanged=session.write(x,y,z,preview);
                         require(unchanged.failure()==null && !unchanged.changed(), "native no-op accounting");
-                        checks.add(Map.of("check","preview-write-readback","status","PASS"));
+                        checks.add(dev.openallay.util.Java8Collections.mapOf("check", "preview-write-readback", "status", "PASS"));
                         String chest=GuideProbeNativeWorldState.chestWithDiamonds();
                         String intended=session.preview(x+1,y,z,chest);
                         require(session.read(x+1,y,z).equals(before[1]), "detached chest preview did not place");
@@ -75,13 +75,13 @@ final class GuideNativeWorldAccessProbe {
                         require(installed.actual().contains("minecraft:diamond"), "native container Items retained");
                         String rotated=session.transform(installed.actual(),90,"none");
                         require(JsonTrees.parse(rotated).getAsJsonObject().getAsJsonObject("properties").get("facing").getAsString().equals("east"), "native rotate");
-                        checks.add(Map.of("check","detached-container-install-transform","status","PASS","actual",installed.actual()));
+                        checks.add(dev.openallay.util.Java8Collections.mapOf("check", "detached-container-install-transform", "status", "PASS", "actual", installed.actual()));
                         try { session.preview(x,y,z,"{\"id\":\"minecraft:does_not_exist\"}"); throw new IllegalStateException("unknown ID accepted"); }
                         catch (IllegalArgumentException | ExtensionException expected) {}
                         require(session.read(x,y,z).equals(preview), "failed preview preserved world");
                         try { session.validatePosition(x,256,z); throw new IllegalStateException("outside height accepted"); }
                         catch (ExtensionException expected) { require(expected.code().equals("invalid_bounds"), "height error classification"); }
-                        checks.add(Map.of("check","strict-ID-and-bounds","status","PASS"));
+                        checks.add(dev.openallay.util.Java8Collections.mapOf("check", "strict-ID-and-bounds", "status", "PASS"));
                         session.notifyNeighbours(x+1,y,z);
                         return null;
                     });
@@ -94,14 +94,14 @@ final class GuideNativeWorldAccessProbe {
                         return null;
                     });
                 }
-                checks.add(Map.of("check","original-native-images-restored","status","PASS"));
+                checks.add(dev.openallay.util.Java8Collections.mapOf("check", "original-native-images-restored", "status", "PASS"));
                 invocation.cancel();
                 try { session.context(); throw new IllegalStateException("revoked session accepted"); }
-                catch (ExtensionException expected) { checks.add(Map.of("check","revocation","status","PASS","code",expected.code())); }
+                catch (ExtensionException expected) { checks.add(dev.openallay.util.Java8Collections.mapOf("check", "revocation", "status", "PASS", "code", expected.code())); }
                 report.put("outcome","COMPLETED");
             } catch (RuntimeException | Error failure) {
                 report.put("outcome","HARNESS_FAILED"); report.put("failure",failure.toString());
-                report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
+                report.put("stack",dev.openallay.util.Java8Collections.toList(java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString)));
                 if (failure.getCause()!=null) report.put("cause",failure.getCause().toString());
                 report.put("causes", causes(failure));
             }
@@ -110,10 +110,10 @@ final class GuideNativeWorldAccessProbe {
         worker.setDaemon(true); worker.start();
     }
     private static void persistence(UUID actor, String world, Consumer<Map<String,Object>> finished) {
-        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        net.minecraft.client.Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         String phase = System.getProperty("openallay.e2e.worldPhase", "");
         boolean reload = phase.equals("reload");
-        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        net.minecraft.client.server.IntegratedServer server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         String requested = System.getProperty(reload ? "openallay.e2e.resumeWorld" : "openallay.e2e.createWorld", "");
         if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || server == null || dev.openallay.server.NativeServerOwner.published(server)
                 || !world.equals(requested) || !world.matches("openallay-builder-[a-zA-Z0-9_.-]+")
@@ -123,7 +123,7 @@ final class GuideNativeWorldAccessProbe {
         }
         String dimension = dev.openallay.world.MinecraftWorldObservationFacts.dimension(dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player));
         int freshX=(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(client.player))+5, freshY=Math.max(5,Math.min(250,(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(client.player))+3)), freshZ=(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(client.player))+5;
-        var access=OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
+        dev.openallay.api.extension.MinecraftWorldAccess access=OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
         java.nio.file.Path retained=dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e/native-world-persistence.json");
         Thread worker=new Thread(() -> {
             Map<String,Object> report=new LinkedHashMap<>();
@@ -166,7 +166,7 @@ final class GuideNativeWorldAccessProbe {
                 report.put("outcome","COMPLETED");
             } catch (Exception | Error failure) {
                 report.put("outcome","HARNESS_FAILED");report.put("failure",failure.toString());
-                report.put("stack",java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString).toList());
+                report.put("stack",dev.openallay.util.Java8Collections.toList(java.util.Arrays.stream(failure.getStackTrace()).map(Object::toString)));
                 if(failure.getCause()!=null)report.put("cause",failure.getCause().toString());
                 report.put("causes", causes(failure));
             }
@@ -179,7 +179,7 @@ final class GuideNativeWorldAccessProbe {
         java.util.Set<Throwable> seen=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         for(Throwable cause=failure;cause!=null && result.size()<16 && seen.add(cause);cause=cause.getCause())
             result.add(cause.toString());
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
     private static void require(boolean value, String check) { if (!value) throw new IllegalStateException(check); }
     private static final class Invocation implements ExtensionInvocation {

@@ -16,12 +16,12 @@ import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
+
+
 
 /** Native facts, key draining, and view assembly. Draft and delivery decisions live in the engine. */
 public final class NativeGuidePresentationHost implements GuidePresentationHost {
-    private final Minecraft minecraft;
+    private final net.minecraft.client.Minecraft minecraft;
     private final RecipeClientRuntime recipes;
     private final GuideDisplayRuntime display;
     private final ClientSettingsService settings;
@@ -30,7 +30,7 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
     private Object connectionWorld;
     private UUID worldConnection;
 
-    public NativeGuidePresentationHost(Minecraft minecraft, RecipeClientRuntime recipes,
+    public NativeGuidePresentationHost(net.minecraft.client.Minecraft minecraft, RecipeClientRuntime recipes,
             GuideDisplayRuntime display, ClientSettingsService settings, GuideHudRenderer renderer) {
         this.minecraft = Objects.requireNonNull(minecraft, "minecraft");
         this.recipes = Objects.requireNonNull(recipes, "recipes");
@@ -49,7 +49,7 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
             connectionWorld = level;
             worldConnection = level == null ? null : UUID.randomUUID();
         }
-        Screen screen = MinecraftClientWindow.screen(minecraft);
+        net.minecraft.client.gui.screens.Screen screen = MinecraftClientWindow.screen(minecraft);
         Surface surface = screen == null ? Surface.GAMEPLAY
                 : screen instanceof OpenAllayScreen ? Surface.GUIDE
                 : screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT : Surface.OTHER;
@@ -70,7 +70,7 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
     @Override public BooleanSupplier captureFence(FenceScope scope) {
         Object level = MinecraftClientWindow.world(minecraft);
         UUID actor = minecraft.player == null ? null : MinecraftClientWindow.actor(minecraft);
-        Screen sourceScreen = MinecraftClientWindow.screen(minecraft);
+        net.minecraft.client.gui.screens.Screen sourceScreen = MinecraftClientWindow.screen(minecraft);
         return scope == FenceScope.VIEW
                 ? () -> MinecraftClientWindow.world(minecraft) == level && MinecraftClientWindow.screen(minecraft) == sourceScreen
                 : () -> MinecraftClientWindow.world(minecraft) == level && minecraft.player != null
@@ -117,6 +117,8 @@ public final class NativeGuidePresentationHost implements GuidePresentationHost 
     }
 
     @Override public void focusComposerAfterVoiceDraft() {
-        if (MinecraftClientWindow.screen(minecraft) instanceof OpenAllayScreen screen) screen.focusComposerAfterVoiceDraft();
+        final class $oaPattern0_Holder { net.minecraft.client.gui.screens.Screen value; OpenAllayScreen bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = MinecraftClientWindow.screen(minecraft)) instanceof dev.openallay.client.gui.OpenAllayScreen && (($oaPattern0_holder.bound = (OpenAllayScreen) $oaPattern0_holder.value) != null))) $oaPattern0_holder.bound.focusComposerAfterVoiceDraft();
     }
 }

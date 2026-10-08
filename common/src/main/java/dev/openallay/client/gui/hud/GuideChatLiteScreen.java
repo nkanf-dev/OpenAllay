@@ -38,11 +38,11 @@ import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
-import net.minecraft.client.gui.screens.Screen;
+
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.GuideInputMouse;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 
 /** Explicit compact native input surface. Gameplay keys/mouse are not forwarded while it is open. */
 public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -162,11 +162,11 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
 
     private void renderObservationStrip(GuideGraphics graphics, int mouseX, int mouseY) {
         if (observationBounds == null || observationBounds.height() == 0 || !readingLayout.footerFits()) return;
-        Component label = MinecraftComponents.translatable("screen.openallay.observation.add_focus");
-        var anchor = state.observation(session);
+        net.minecraft.network.chat.Component label = MinecraftComponents.translatable("screen.openallay.observation.add_focus");
+        java.util.Optional<dev.openallay.world.ClientObservationAnchor> anchor = state.observation(session);
         if (anchor.isPresent()) {
             label = MinecraftComponents.empty();
-            for (var chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
+            for (dev.openallay.client.observation.ObservationAnchorPresentation.Chip chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
                 if (!MinecraftComponents.getString(label).isEmpty()) label = MinecraftComponents.append(MinecraftComponents.copy(label), " · ");
                 label = MinecraftComponents.append(MinecraftComponents.copy(label), MinecraftComponents.translatable(chip.key(), chip.value()));
             }
@@ -204,13 +204,13 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         scrollbar = readingLayout.scrollbar();
         draggingScrollbar = false;
         results.invalidate();
-        var strip = readingLayout.composer();
+        dev.openallay.guide.ui.GuideUiLayout.Rect strip = readingLayout.composer();
         initObservationControls(strip);
         int observationHeight = hasObservationStrip() ? 14 : 0;
         strip = new GuideUiLayout.Rect(strip.x(), strip.y() + observationHeight,
                 strip.width(), Math.max(1, strip.height() - observationHeight));
         // Hidden tiny layouts still need a readable native text-field width for later reflow.
-        var input = new GuideUiLayout.Rect(strip.x(), strip.y(),
+        dev.openallay.guide.ui.GuideUiLayout.Rect input = new GuideUiLayout.Rect(strip.x(), strip.y(),
                 Math.max(dev.openallay.client.gui.GuideNativeMultilineText.defaultTotalPadding() + 1, strip.width()), Math.max(1, strip.height()));
         if (composer == null) {
             composer = dev.openallay.client.gui.GuideNativeMultilineText.create(
@@ -325,7 +325,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                 dev.openallay.client.gui.GuideNativeWidgetGeometry.x(latest, readingLayout.navigation().right() - latestWidth);
             }
         }
-        var selected = snapshot.sessions().stream().filter(value -> value.sessionId().equals(session)).findFirst().orElse(null);
+        dev.openallay.guide.GuideSessionSnapshot selected = snapshot.sessions().stream().filter(value -> value.sessionId().equals(session)).findFirst().orElse(null);
         boolean active = selected != null && (selected.workingRequestId() != null
                 || selected.requests().stream().anyMatch(request -> !request.terminal()));
         GuideClientUiState.DraftIntent intent = state.intent(session);
@@ -338,7 +338,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         }
         if (send != null) {
             send.active = !submitting && !state.intentSubmissionInFlight(session)
-                    && (!composer.getValue().isBlank() || intent.editing() && !state.images().empty()
+                    && (!dev.openallay.util.Java8Strings.isBlank(composer.getValue()) || intent.editing() && !state.images().empty()
                             || state.observation(session).flatMap(value -> value.image()).isPresent())
                     && !intent.editInvalid() && !state.images().pending();
             send.setMessage(MinecraftComponents.translatable(intent.editing() ? "screen.openallay.pending.save"
@@ -366,9 +366,9 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         GuideClientUiState.IntentCapture intentCapture = state.captureIntent(session);
         GuideClientUiState.DraftIntent intent = intentCapture.intent();
         GuideClientUiState.ObservationCapture observation = state.captureObservation(session);
-        List<dev.openallay.model.image.ImageReference> observedImages = observation.anchor().stream()
-                .flatMap(value -> value.image().stream()).map(value -> value.image()).toList();
-        if (text.isBlank() && observedImages.isEmpty() && (!intent.editing() || state.images().empty())) return;
+        List<dev.openallay.model.image.ImageReference> observedImages = dev.openallay.util.Java8Collections.toList(observation.anchor().stream()
+                .flatMap(value -> value.image().stream()).map(value -> value.image()));
+        if (dev.openallay.util.Java8Strings.isBlank(text) && observedImages.isEmpty() && (!intent.editing() || state.images().empty())) return;
         GuideClientUiState.Insertion captured = state.captureInsertion(session);
         SlashCommandDispatcher.Dispatch dispatch = dispatchDraft(text, intent,
                 ordinaryText -> SlashCommandDispatcher.dispatch(ordinaryText, service, completion -> MinecraftClientWindow.execute(minecraft, () -> {
@@ -379,7 +379,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                     notice = completion.successful() ? GuideUiNotice.success(feedback) : GuideUiNotice.error(feedback);
                 })));
         if (dispatch.handled()) return;
-        var selected = service.snapshot().sessions().stream().filter(value -> value.sessionId().equals(session)).findFirst().orElse(null);
+        dev.openallay.guide.GuideSessionSnapshot selected = service.snapshot().sessions().stream().filter(value -> value.sessionId().equals(session)).findFirst().orElse(null);
         boolean active = selected != null && (selected.workingRequestId() != null
                 || selected.requests().stream().anyMatch(request -> !request.terminal()));
         boolean targetPresent = selected != null && selected.pendingMessages().stream()
@@ -393,15 +393,15 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             return;
         }
         // Observation refs are visible here; explicit fullscreen paste drafts stay retained unless editing.
-        var images = state.images().captureSubmission();
-        var inputImages = intent.editing() ? state.inputImageReferences(session, observation) : observedImages;
-        var inputView = dev.openallay.guide.ui.GuideUiView.from(service.snapshot(), display.config());
+        dev.openallay.client.gui.ComposerImageDraft.Submission images = state.images().captureSubmission();
+        java.util.List<dev.openallay.model.image.ImageReference> inputImages = intent.editing() ? state.inputImageReferences(session, observation) : observedImages;
+        dev.openallay.guide.ui.GuideUiView inputView = dev.openallay.guide.ui.GuideUiView.from(service.snapshot(), display.config());
         if (!inputImages.isEmpty() && inputView.selectedImageInputCapability() != ImageInputCapability.SUPPORTED) {
             notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.image.model_unsupported")));
             return;
         }
-        var message = dev.openallay.model.ModelMessage.userInput(dispatch.normalizedText(),
-                intent.editing() ? state.images().references() : List.of(), observation.anchor());
+        dev.openallay.model.ModelMessage message = dev.openallay.model.ModelMessage.userInput(dispatch.normalizedText(),
+                intent.editing() ? state.images().references() : dev.openallay.util.Java8Collections.listOf(), observation.anchor());
         boolean attachmentsRetained = !state.images().empty() && !intent.editing();
         if (attachmentsRetained) notice = GuideUiNotice.info(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.hud.attachments_retained")));
         if (!state.beginIntentSubmission(intentCapture)) return;
@@ -439,11 +439,15 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                             service.snapshot(), captured.session());
                 } else if (intent.editing() && result instanceof ToolResult.Success<?>) {
                     notice = GuideUiNotice.warning(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.hud.edit_invalid")));
-                } else if (result instanceof ToolResult.Failure<?> rejected) {
-                    notice = GuideUiNotice.error(rejected.code() + ": " + rejected.message());
+                } else {
+final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<?>) $oaPattern0_holder.value) != null))) {
+                    notice = GuideUiNotice.error($oaPattern0_holder.bound.code() + ": " + $oaPattern0_holder.bound.message());
                 } else {
                     notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.submit_failed")));
                 }
+}
                 if (attachmentsRetained) notice = new GuideUiNotice(notice.severity(), notice.placement(), notice.message()
                         + " · " + MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.hud.attachments_retained")));
             } finally {
@@ -471,17 +475,41 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         return !active ? Route.ASK : intent.steer() ? Route.STEER : Route.FOLLOW_UP;
     }
     static GuideClientUiState.SubmissionRoute submissionRoute(Route route) {
-        return switch (route) {
-            case ASK -> GuideClientUiState.SubmissionRoute.ASK;
-            case FOLLOW_UP -> GuideClientUiState.SubmissionRoute.FOLLOW_UP;
-            case STEER -> GuideClientUiState.SubmissionRoute.STEER;
-            case EDIT_PENDING -> GuideClientUiState.SubmissionRoute.EDIT_PENDING;
-            case BLOCKED -> GuideClientUiState.SubmissionRoute.EDIT_INVALID;
-        };
+        {
+dev.openallay.client.gui.GuideClientUiState.SubmissionRoute $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((route)) {
+case ASK:
+{
+$oaSwitch1_exit_result = GuideClientUiState.SubmissionRoute.ASK; break $oaSwitch1_exit;
+}
+case FOLLOW_UP:
+{
+$oaSwitch1_exit_result = GuideClientUiState.SubmissionRoute.FOLLOW_UP; break $oaSwitch1_exit;
+}
+case STEER:
+{
+$oaSwitch1_exit_result = GuideClientUiState.SubmissionRoute.STEER; break $oaSwitch1_exit;
+}
+case EDIT_PENDING:
+{
+$oaSwitch1_exit_result = GuideClientUiState.SubmissionRoute.EDIT_PENDING; break $oaSwitch1_exit;
+}
+case BLOCKED:
+{
+$oaSwitch1_exit_result = GuideClientUiState.SubmissionRoute.EDIT_INVALID; break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
     static boolean submissionAccepted(boolean editing, ToolResult<?> result) {
-        return result instanceof ToolResult.Success<?> success
-                && (editing ? Boolean.TRUE.equals(success.value()) : success.value() instanceof java.util.UUID);
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+return (($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<?>) $oaPattern1_holder.value) != null))
+                && (editing ? Boolean.TRUE.equals($oaPattern1_holder.bound.value()) : $oaPattern1_holder.bound.value() instanceof java.util.UUID);
     }
 
     @Override public boolean guideKeyPressed(GuideInputKey event) {
@@ -497,12 +525,27 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
             return true;
         }
         if (composer == null || !guideWidgetFocused(composer.widget())) {
-            switch (input.intent()) {
-                case PAGE_UP -> { scrollResults(() -> results.scroll().page(-1)); return true; }
-                case PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1)); return true; }
-                case HOME -> { scrollResults(() -> results.scroll().first()); return true; }
-                case END -> { scrollResults(() -> results.scroll().latest()); return true; }
-                case UP, DOWN -> {
+            switch ((input.intent())) {
+case PAGE_UP:
+{
+{ scrollResults(() -> results.scroll().page(-1)); return true; }
+}
+case PAGE_DOWN:
+{
+{ scrollResults(() -> results.scroll().page(1)); return true; }
+}
+case HOME:
+{
+{ scrollResults(() -> results.scroll().first()); return true; }
+}
+case END:
+{
+{ scrollResults(() -> results.scroll().latest()); return true; }
+}
+case UP:
+case DOWN:
+{
+{
                     List<GuideHudResultRenderer.Hit> hits = visibleResultHits();
                     if (!hits.isEmpty()) {
                         focusedResult = Math.floorMod(focusedResult + (input.intent() == GuideKeyIntent.DOWN ? 1 : -1), hits.size());
@@ -510,18 +553,26 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
                         return true;
                     }
                 }
-                case ENTER, SPACE -> {
+break;
+}
+case ENTER:
+case SPACE:
+{
+{
                     List<GuideHudResultRenderer.Hit> hits = visibleResultHits();
                     if (focusedResult >= 0 && focusedResult < hits.size()) { resultAction(hits.get(focusedResult).action()); return true; }
                 }
-            }
+break;
+}
+}
+
         }
         return super.guideKeyPressed(event);
     }
 
     private List<GuideHudResultRenderer.Hit> visibleResultHits() {
-        return results.hits(font, resultBounds).stream().filter(hit -> hit.bounds().bottom() > resultBounds.y()
-                && hit.bounds().y() < resultBounds.bottom()).toList();
+        return dev.openallay.util.Java8Collections.toList(results.hits(font, resultBounds).stream().filter(hit -> hit.bounds().bottom() > resultBounds.y()
+                && hit.bounds().y() < resultBounds.bottom()));
     }
     private void scrollResults(Runnable navigation) {
         int previousOffset = results.scroll().offset();
@@ -550,7 +601,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         }
         if (GuideNativeInput.isLeftClick(event) && resultBounds.contains(event.x(), event.y())) {
             GuideNativeFocus.clear(this);
-            for (var hit : visibleResultHits()) if (hit.bounds().contains(event.x(), event.y())) {
+            for (dev.openallay.client.gui.hud.GuideHudResultRenderer.Hit hit : visibleResultHits()) if (hit.bounds().contains(event.x(), event.y())) {
                 resultAction(hit.action()); return true;
             }
             return true;
@@ -578,43 +629,96 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
     private void resultAction(GuideHudResultRenderer.Action action) {
         focusedResult = -1;
         Objects.requireNonNull(action);
-        if (action instanceof GuideHudResultRenderer.Action.Tool tool) {
-            results.openTool(tool.rowId());
-        } else if (action instanceof GuideHudResultRenderer.Action.Sources sources) {
-            results.openSources(sources.sources());
-        } else if (action instanceof GuideHudResultRenderer.Action.Semantic semantic) {
-            var intent = Objects.requireNonNull(semantic.intent());
-            if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes value) {
-                navigate(recipes.openRecipes(value.itemId()));
-            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages value) {
-                navigate(recipes.openUsages(value.itemId()));
-            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe value) {
-                navigate(recipes.openExact(value.reference()));
-            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source value) {
-                openSources(value.originInvocationId());
-            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence value) {
-                openSources(value.originInvocationId());
-            } else if (intent instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice value) {
+        final class $oaPattern2_Holder { dev.openallay.client.gui.hud.GuideHudResultRenderer.Action value; GuideHudResultRenderer.Action.Tool bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = action) instanceof dev.openallay.client.gui.hud.GuideHudResultRenderer.Action.Tool && (($oaPattern2_holder.bound = (GuideHudResultRenderer.Action.Tool) $oaPattern2_holder.value) != null))) {
+            results.openTool($oaPattern2_holder.bound.rowId());
+        } else {
+final class $oaPattern3_Holder { dev.openallay.client.gui.hud.GuideHudResultRenderer.Action value; GuideHudResultRenderer.Action.Sources bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = action) instanceof dev.openallay.client.gui.hud.GuideHudResultRenderer.Action.Sources && (($oaPattern3_holder.bound = (GuideHudResultRenderer.Action.Sources) $oaPattern3_holder.value) != null))) {
+            results.openSources($oaPattern3_holder.bound.sources());
+        } else {
+final class $oaPattern4_Holder { dev.openallay.client.gui.hud.GuideHudResultRenderer.Action value; GuideHudResultRenderer.Action.Semantic bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = action) instanceof dev.openallay.client.gui.hud.GuideHudResultRenderer.Action.Semantic && (($oaPattern4_holder.bound = (GuideHudResultRenderer.Action.Semantic) $oaPattern4_holder.value) != null))) {
+            dev.openallay.client.gui.MinecraftSemanticRenderer.Intent intent = Objects.requireNonNull($oaPattern4_holder.bound.intent());
+            final class $oaPattern5_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes && (($oaPattern5_holder.bound = (dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes) $oaPattern5_holder.value) != null))) {
+                navigate(recipes.openRecipes($oaPattern5_holder.bound.itemId()));
+            } else {
+final class $oaPattern6_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages && (($oaPattern6_holder.bound = (dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages) $oaPattern6_holder.value) != null))) {
+                navigate(recipes.openUsages($oaPattern6_holder.bound.itemId()));
+            } else {
+final class $oaPattern7_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe && (($oaPattern7_holder.bound = (dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe) $oaPattern7_holder.value) != null))) {
+                navigate(recipes.openExact($oaPattern7_holder.bound.reference()));
+            } else {
+final class $oaPattern8_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source && (($oaPattern8_holder.bound = (dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source) $oaPattern8_holder.value) != null))) {
+                openSources($oaPattern8_holder.bound.originInvocationId());
+            } else {
+final class $oaPattern9_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence && (($oaPattern9_holder.bound = (dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence) $oaPattern9_holder.value) != null))) {
+                openSources($oaPattern9_holder.bound.originInvocationId());
+            } else {
+final class $oaPattern10_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice && (($oaPattern10_holder.bound = (dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice) $oaPattern10_holder.value) != null))) {
                 notice = GuideUiNotice.warning(
-                        MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.choice.unavailable", value.choiceId())));
+                        MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.choice.unavailable", $oaPattern10_holder.bound.choiceId())));
             }
+}
+}
+}
+}
+}
         }
+}
+}
         project();
     }
     private void openSources(String invocation) {
-        List<dev.openallay.guide.GuideSource> sources = view.rows().stream()
+        List<dev.openallay.guide.GuideSource> sources = dev.openallay.util.Java8Collections.toList(view.rows().stream()
                 .filter(dev.openallay.guide.ui.GuideUiRow.Tool.class::isInstance)
                 .map(dev.openallay.guide.ui.GuideUiRow.Tool.class::cast)
                 .filter(tool -> tool.activity().invocationId().equals(invocation))
-                .flatMap(tool -> tool.activity().sources().stream()).toList();
+                .flatMap(tool -> tool.activity().sources().stream()));
         if (!sources.isEmpty()) results.openSources(sources);
     }
     private void navigate(RecipeNavigationResult result) {
-        String feedback = MinecraftComponents.getString(MinecraftComponents.translatable(result.opened() ? "screen.openallay.recipe.viewer_opened"
-                : "screen.openallay.recipe." + switch (result.code()) {
-                    case "exact_unsupported", "preferred_viewer_unavailable", "viewer_unavailable", "unknown_item", "wrong_thread", "viewer_failure" -> result.code();
-                    default -> "viewer_failure";
-                }));
+        java.lang.String $oaSwitch0_exit_result_conditional1;
+if (result.opened()) {
+$oaSwitch0_exit_result_conditional1 = "screen.openallay.recipe.viewer_opened";
+} else {
+final java.lang.String $oaSwitch0_exit_result_prior0 = "screen.openallay.recipe.";
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((result.code())) {
+case "exact_unsupported":
+case "preferred_viewer_unavailable":
+case "viewer_unavailable":
+case "unknown_item":
+case "wrong_thread":
+case "viewer_failure":
+{
+$oaSwitch0_exit_result = result.code(); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = "viewer_failure"; break $oaSwitch0_exit;
+}
+}
+}
+$oaSwitch0_exit_result_conditional1 = $oaSwitch0_exit_result_prior0 + $oaSwitch0_exit_result;
+}
+String feedback = MinecraftComponents.getString(MinecraftComponents.translatable($oaSwitch0_exit_result_conditional1));
         notice = result.opened() ? GuideUiNotice.info(feedback) : GuideUiNotice.warning(feedback);
     }
 
@@ -638,7 +742,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         graphics.outline(card.x(), card.y(), card.width(), card.height(), OpenAllayWidgetTheme.SLATE_BORDER);
         graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, view.assistantName() + " · " + session, Math.max(1, card.width() - 138)),
                 card.x() + 8, card.y() + 8, OpenAllayWidgetTheme.WHITE);
-        Component status = view.progress() == null ? MinecraftComponents.translatable("screen.openallay.hud.idle")
+        net.minecraft.network.chat.Component status = view.progress() == null ? MinecraftComponents.translatable("screen.openallay.hud.idle")
                 : MinecraftComponents.translatable(view.progress().activityTranslationKey());
         graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(status), card.width() - 16),
                 card.x() + 8, card.y() + 22, OpenAllayWidgetTheme.MINT);
@@ -655,7 +759,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         }
         List<GuideHudResultRenderer.Hit> resultHits = visibleResultHits();
         if (focusedResult >= 0 && focusedResult < resultHits.size()) {
-            var bounds = resultHits.get(focusedResult).bounds();
+            dev.openallay.guide.ui.GuideUiLayout.Rect bounds = resultHits.get(focusedResult).bounds();
             graphics.outline(bounds.x(), Math.max(resultBounds.y(), bounds.y()), bounds.width(),
                     Math.min(bounds.bottom(), resultBounds.bottom()) - Math.max(resultBounds.y(), bounds.y()), OpenAllayWidgetTheme.MINT);
         }
@@ -663,7 +767,7 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         String message = invalidEdit ? MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.hud.edit_invalid"))
                 : notice.empty() ? MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.hud.input_controls")) : notice.message();
         if (readingLayout.footerFits() && readingLayout.notice().width() > 0 && readingLayout.notice().height() >= 10) {
-            var strip = readingLayout.notice();
+            dev.openallay.guide.ui.GuideUiLayout.Rect strip = readingLayout.notice();
             graphics.enableScissor(strip.x(), strip.y(), strip.right(), strip.bottom());
             try {
                 graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, message, strip.width()), strip.x(), strip.y(),

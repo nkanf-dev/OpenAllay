@@ -15,8 +15,10 @@ public final class MinecraftWorldObservationFacts {
     private MinecraftWorldObservationFacts() {}
     public static World clientLevel(Minecraft client) { return client.world; }
     public static boolean loaded(World level,BlockPos pos) {
-        if(level instanceof WorldServer server) {
-            var chunk=server.getChunkProvider().getLoadedChunk(Math.floorDiv(pos.getX(),16),Math.floorDiv(pos.getZ(),16));
+        final class $oaPattern0_Holder { net.minecraft.world.World value; WorldServer bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if((($oaPattern0_holder.value = level) instanceof net.minecraft.world.WorldServer && (($oaPattern0_holder.bound = (WorldServer) $oaPattern0_holder.value) != null))) {
+            net.minecraft.world.chunk.Chunk chunk=$oaPattern0_holder.bound.getChunkProvider().getLoadedChunk(Math.floorDiv(pos.getX(),16),Math.floorDiv(pos.getZ(),16));
             return chunk!=null && chunk.isLoaded();
         }
         return level.isBlockLoaded(pos);

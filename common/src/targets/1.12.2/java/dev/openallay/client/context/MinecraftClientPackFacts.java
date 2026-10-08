@@ -51,11 +51,11 @@ public static final class Pack {
     }
 }
     public static List<String> selectedIds(Minecraft client) {
-        return client.getResourcePackRepository().getRepositoryEntries().stream().map(entry -> entry.toString()).toList();
+        return dev.openallay.util.Java8Collections.toList(client.getResourcePackRepository().getRepositoryEntries().stream().map(entry -> entry.toString()));
     }
     public static List<Pack> available(Minecraft client) {
-        return client.getResourcePackRepository().getRepositoryEntriesAll().stream()
+        return dev.openallay.util.Java8Collections.toList(client.getResourcePackRepository().getRepositoryEntriesAll().stream()
                 .map(entry -> new Pack(entry.toString(), entry.getResourcePackName(), entry.getTexturePackDescription(),
-                        false, "native_pack_format:" + entry.getPackFormat(), "native_resource_pack_repository_entry")).toList();
+                        false, "native_pack_format:" + entry.getPackFormat(), "native_resource_pack_repository_entry")));
     }
 }

@@ -9,23 +9,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
+
+
 
 /** Small native send/task custody owner shared by loader transports; no request registry. */
 public final class NativeServerActorHandoffs {
     // Native task custody budget, not a wire format or player permission gate.
     private static final int MAX_PENDING_HANDOFFS = 1024;
-    private final MinecraftServer server;
+    private final net.minecraft.server.MinecraftServer server;
     private final Object lock = new Object();
     private final Map<UUID, Admission> actors = new HashMap<>();
     private final Set<Handoff> pending = new HashSet<>();
     private boolean stopped;
-    public NativeServerActorHandoffs(MinecraftServer server) { this.server = server; }
+    public NativeServerActorHandoffs(net.minecraft.server.MinecraftServer server) { this.server = server; }
     private void owner() {
         if (!NativeServerOwner.isOwner(server)) throw new IllegalStateException("Native handoff requires server owner");
     }
-    public void admit(ServerPlayer player) {
+    public void admit(net.minecraft.server.level.ServerPlayer player) {
         owner();
         UUID actor = NativeServerOwner.actor(player);
         Admission value = new Admission(player, NativeServerConnectionGuard.capture(player));
@@ -35,7 +35,7 @@ public final class NativeServerActorHandoffs {
         }
     }
     /** Revoke before callbacks. Returned retirement action is invoked outside all native locks. */
-    public Runnable revoke(ServerPlayer player) {
+    public Runnable revoke(net.minecraft.server.level.ServerPlayer player) {
         owner();
         UUID actor = NativeServerOwner.actor(player);
         List<Handoff> detached = new ArrayList<>();
@@ -53,14 +53,14 @@ public final class NativeServerActorHandoffs {
         synchronized (lock) {
             stopped = true;
             actors.clear();
-            for (Handoff value : List.copyOf(pending)) {
+            for (Handoff value : dev.openallay.util.Java8Collections.listCopyOf(pending)) {
                 if (value.state == State.PENDING) { value.state = State.RETIRED; pending.remove(value); detached.add(value); }
             }
         }
         return () -> retireAll(detached);
     }
     private void detach(Admission token, List<Handoff> detached) {
-        for (Handoff value : List.copyOf(pending)) {
+        for (Handoff value : dev.openallay.util.Java8Collections.listCopyOf(pending)) {
             if (value.token == token && value.state == State.PENDING) {
                 value.state = State.RETIRED; pending.remove(value); detached.add(value);
             }
@@ -123,7 +123,9 @@ public final class NativeServerActorHandoffs {
         catch (RuntimeException failure) {
             Runnable cleanup = retirePending(value);
             Throwable retained = attempt(failure, cleanup);
-            if (retained instanceof Error fatal) throw fatal;
+            final class $oaPattern0_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = retained) instanceof java.lang.Error && (($oaPattern0_holder.bound = (Error) $oaPattern0_holder.value) != null))) throw $oaPattern0_holder.bound;
             dev.openallay.OpenAllayConstants.LOGGER.error("Native server handoff queue rejected", retained);
             return false;
         } catch (Error failure) {
@@ -177,18 +179,22 @@ public final class NativeServerActorHandoffs {
         }
     }
     private static void rethrow(Throwable failure) {
-        if (failure instanceof Error fatal) throw fatal;
-        if (failure instanceof RuntimeException runtime) throw runtime;
+        final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = failure) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
+        final class $oaPattern2_Holder { java.lang.Throwable value; RuntimeException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = failure) instanceof java.lang.RuntimeException && (($oaPattern2_holder.bound = (RuntimeException) $oaPattern2_holder.value) != null))) throw $oaPattern2_holder.bound;
     }
     @dev.openallay.value.ValueType(Admission.ValueSchemaProvider.class)
 private static final class Admission {
-    private final ServerPlayer player;
+    private final net.minecraft.server.level.ServerPlayer player;
     private final BooleanSupplier connection;
-    private Admission(ServerPlayer player, BooleanSupplier connection) {
+    private Admission(net.minecraft.server.level.ServerPlayer player, BooleanSupplier connection) {
         this.player = player;
         this.connection = connection;
     }
-    public ServerPlayer player() { return player; }
+    public net.minecraft.server.level.ServerPlayer player() { return player; }
     public BooleanSupplier connection() { return connection; }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -206,7 +212,7 @@ private static final class Admission {
     public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
         public ValueSchemaProvider() {}
         @Override public dev.openallay.value.ValueSchema<Admission> schema() {
-            return new dev.openallay.value.ValueSchema<>(Admission.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Admission>>asList(new dev.openallay.value.ValueSchema.Component<>(Admission.class, "player", Admission::player), new dev.openallay.value.ValueSchema.Component<>(Admission.class, "connection", Admission::connection)), arguments -> new Admission((ServerPlayer) arguments[0], (BooleanSupplier) arguments[1]));
+            return new dev.openallay.value.ValueSchema<>(Admission.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Admission>>asList(new dev.openallay.value.ValueSchema.Component<>(Admission.class, "player", Admission::player), new dev.openallay.value.ValueSchema.Component<>(Admission.class, "connection", Admission::connection)), arguments -> new Admission((net.minecraft.server.level.ServerPlayer) arguments[0], (BooleanSupplier) arguments[1]));
         }
     }
 }

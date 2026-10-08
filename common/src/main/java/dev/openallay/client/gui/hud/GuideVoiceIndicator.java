@@ -7,21 +7,21 @@ import dev.openallay.client.gui.OpenAllayWidgetTheme;
 import dev.openallay.client.voice.VoiceRuntime;
 import dev.openallay.client.voice.VoiceStatusPresentation;
 import java.util.List;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
+
+
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 import dev.openallay.client.gui.GuideTextLine;
 import dev.openallay.client.gui.GuideNativeFont;
 
 /** Recording and actionable failure feedback are independent of HUD and notification settings. */
 public final class GuideVoiceIndicator {
     private static CacheKey cached;
-    private static List<GuideTextLine> message = List.of();
-    private static List<GuideTextLine> action = List.of();
+    private static List<GuideTextLine> message = dev.openallay.util.Java8Collections.listOf();
+    private static List<GuideTextLine> action = dev.openallay.util.Java8Collections.listOf();
     private GuideVoiceIndicator() {}
 
-    public static void extract(GuideGraphics graphics, Minecraft minecraft, VoiceRuntime voice) {
+    public static void extract(GuideGraphics graphics, net.minecraft.client.Minecraft minecraft, VoiceRuntime voice) {
         if (voice == null) return;
         VoiceRuntime.Status status = voice.status();
         if (!status.indicatorVisible()) return;
@@ -47,16 +47,16 @@ public final class GuideVoiceIndicator {
                 x + panelWidth - 28, 11, OpenAllayWidgetTheme.AMBER);
     }
 
-    private static List<GuideTextLine> wrap(Font font, String key, int width) {
-        return key.isEmpty() ? List.of() : GuideNativeFont.split(font, MinecraftComponents.translatable(key), Math.max(1, width));
+    private static List<GuideTextLine> wrap(net.minecraft.client.gui.Font font, String key, int width) {
+        return key.isEmpty() ? dev.openallay.util.Java8Collections.listOf() : GuideNativeFont.split(font, MinecraftComponents.translatable(key), Math.max(1, width));
     }
     @dev.openallay.value.ValueType(CacheKey.ValueSchemaProvider.class)
 private static final class CacheKey {
     private final VoiceStatusPresentation.Notice feedback;
     private final int width;
-    private final Font font;
+    private final net.minecraft.client.gui.Font font;
     private final Object language;
-    private CacheKey(VoiceStatusPresentation.Notice feedback, int width, Font font, Object language) {
+    private CacheKey(VoiceStatusPresentation.Notice feedback, int width, net.minecraft.client.gui.Font font, Object language) {
         this.feedback = feedback;
         this.width = width;
         this.font = font;
@@ -64,7 +64,7 @@ private static final class CacheKey {
     }
     public VoiceStatusPresentation.Notice feedback() { return feedback; }
     public int width() { return width; }
-    public Font font() { return font; }
+    public net.minecraft.client.gui.Font font() { return font; }
     public Object language() { return language; }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
@@ -84,7 +84,7 @@ private static final class CacheKey {
     public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
         public ValueSchemaProvider() {}
         @Override public dev.openallay.value.ValueSchema<CacheKey> schema() {
-            return new dev.openallay.value.ValueSchema<>(CacheKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CacheKey>>asList(new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "feedback", CacheKey::feedback), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "width", CacheKey::width), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "font", CacheKey::font), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "language", CacheKey::language)), arguments -> new CacheKey((VoiceStatusPresentation.Notice) arguments[0], (Integer) arguments[1], (Font) arguments[2], (Object) arguments[3]));
+            return new dev.openallay.value.ValueSchema<>(CacheKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CacheKey>>asList(new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "feedback", CacheKey::feedback), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "width", CacheKey::width), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "font", CacheKey::font), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "language", CacheKey::language)), arguments -> new CacheKey((VoiceStatusPresentation.Notice) arguments[0], (Integer) arguments[1], (net.minecraft.client.gui.Font) arguments[2], (Object) arguments[3]));
         }
     }
 }

@@ -81,7 +81,7 @@ private static final class Snapshot {
     private Consumer<String> listener = ignored -> {};
     private final ArrayDeque<Snapshot> undo = new ArrayDeque<>();
     private final ArrayDeque<Snapshot> redo = new ArrayDeque<>();
-    private List<Line> lines = List.of(new Line(0, 0));
+    private List<Line> lines = dev.openallay.util.Java8Collections.listOf(new Line(0, 0));
     private ToIntFunction<String> measure = String::length;
     private int wrapWidth = Integer.MAX_VALUE;
 
@@ -207,7 +207,7 @@ private static final class Snapshot {
             if (newline < 0) break;
             start = newline + 1;
         }
-        lines = List.copyOf(result);
+        lines = dev.openallay.util.Java8Collections.listCopyOf(result);
     }
     private int wordPosition(int direction) {
         int index = cursor;

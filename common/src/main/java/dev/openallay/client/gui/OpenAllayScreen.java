@@ -73,7 +73,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import net.minecraft.ChatFormatting;
+
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.GuideWidget;
 import dev.openallay.client.gui.GuideNativeButton;
@@ -81,16 +81,16 @@ import dev.openallay.client.gui.GuideMultilineEditor;
 import dev.openallay.client.gui.GuideTooltip;
 import dev.openallay.guide.ui.GuideEvidencePresentation;
 import dev.openallay.guide.ui.GuideToolDisplayStatus;
-import net.minecraft.client.gui.screens.Screen;
+
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.client.gui.GuideInputMouse;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
-import net.minecraft.world.item.ItemStack;
+
 import dev.openallay.client.gui.GuideTextLine;
 import dev.openallay.client.gui.GuideNativeFont;
-import net.minecraft.util.Mth;
+
 
 /** Full-screen, non-pausing projection and intent sender for GuideService. */
 public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -229,14 +229,14 @@ private static final class ToolFlowOwner {
     private GuideDisplayConfig projectedDisplay;
     private long presentationTicks;
     private dev.openallay.guide.GuideTelemetrySnapshot telemetry;
-    private Component telemetryContext = MinecraftComponents.empty();
-    private Component telemetryInput = MinecraftComponents.empty();
-    private Component telemetryOutput = MinecraftComponents.empty();
-    private Component telemetryCost = MinecraftComponents.empty();
-    private Component telemetryCompact = MinecraftComponents.empty();
-    private List<Component> telemetryTooltip = List.of();
-    private List<GuideTextLine> telemetryTooltipWrapped = List.of();
-    private List<String> telemetryTooltipTexts = List.of();
+    private net.minecraft.network.chat.Component telemetryContext = MinecraftComponents.empty();
+    private net.minecraft.network.chat.Component telemetryInput = MinecraftComponents.empty();
+    private net.minecraft.network.chat.Component telemetryOutput = MinecraftComponents.empty();
+    private net.minecraft.network.chat.Component telemetryCost = MinecraftComponents.empty();
+    private net.minecraft.network.chat.Component telemetryCompact = MinecraftComponents.empty();
+    private List<net.minecraft.network.chat.Component> telemetryTooltip = dev.openallay.util.Java8Collections.listOf();
+    private List<GuideTextLine> telemetryTooltipWrapped = dev.openallay.util.Java8Collections.listOf();
+    private List<String> telemetryTooltipTexts = dev.openallay.util.Java8Collections.listOf();
     private net.minecraft.client.gui.Font telemetryTooltipFont;
     private Object telemetryTooltipLanguage;
     private int telemetryTooltipWidth;
@@ -358,7 +358,7 @@ private static final class ToolFlowOwner {
 
     @Override
     protected void initGuideScreen() {
-        Component title = headerTitle();
+        net.minecraft.network.chat.Component title = headerTitle();
         layout = GuideUiLayout.calculate(width, height, detailOpen(),
                 GuideNativeFont.width(font, GuideNativeFont.visual(title)),
                 GuideNativeFont.width(font, MinecraftComponents.translatable("screen.openallay.action.sessions")) + 12,
@@ -372,8 +372,8 @@ private static final class ToolFlowOwner {
         renderedTelemetryBounds = null;
         renderedTelemetryRows = 0;
         clearToolPaintReceipts();
-        Component sessionsLabel = MinecraftComponents.translatable("screen.openallay.action.sessions");
-        Component sessionsText = GuideNativeFont.width(font, sessionsLabel) + 8 <= header.sessions().width()
+        net.minecraft.network.chat.Component sessionsLabel = MinecraftComponents.translatable("screen.openallay.action.sessions");
+        net.minecraft.network.chat.Component sessionsText = GuideNativeFont.width(font, sessionsLabel) + 8 <= header.sessions().width()
                 ? sessionsLabel : MinecraftComponents.literal("≡");
         addGuideWidget(OpenAllayButton.create(sessionsText, button -> toggleSessions())
                 .bounds(header.sessions().x(), header.sessions().y(), header.sessions().width(), 20)
@@ -564,7 +564,7 @@ private static final class ToolFlowOwner {
             if (choices == 0) {
                 modelSelectorOpen = false;
             } else {
-                modelSelectorCursor = Mth.clamp(modelSelectorCursor, 0, choices - 1);
+                modelSelectorCursor = net.minecraft.util.Mth.clamp(modelSelectorCursor, 0, choices - 1);
                 selectModel(view.modelChoices().get(modelSelectorCursor));
             }
             return true;
@@ -595,13 +595,12 @@ private static final class ToolFlowOwner {
             return super.guideKeyPressed(event);
         }
         if (input.intent() == GuideKeyIntent.NEXT_CONTENT) {
-            List<Hit> focusable = hits.stream()
+            List<Hit> focusable = dev.openallay.util.Java8Collections.toList(hits.stream()
                     .filter(hit -> (sessionOverlay ? hit.kind() == HitKind.SESSION
                             : overflowOpen ? hit.kind() == HitKind.MENU
                             : isContentFocusTarget(detailOpen(), hit.kind() == HitKind.DETAIL,
                                     hit.kind() == HitKind.CONTENT || hit.kind() == HitKind.COMPOSER || hit.kind() == HitKind.SESSION))
-                            && hit.focusId() != null)
-                    .toList();
+                            && hit.focusId() != null));
             if (!focusable.isEmpty()) {
                 int current = -1;
                 for (int index = 0; index < focusable.size(); index++) {
@@ -646,11 +645,26 @@ private static final class ToolFlowOwner {
 
     static void activateVoice(dev.openallay.client.voice.VoiceInputActions actions) {
         if (actions == null || !actions.enabled()) return;
-        switch (actions.status().state()) {
-            case STARTING, RECORDING -> actions.release();
-            case TRANSCRIBING, DELIVERING -> actions.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.USER);
-            default -> actions.press();
-        }
+        switch ((actions.status().state())) {
+case STARTING:
+case RECORDING:
+{
+actions.release();
+break;
+}
+case TRANSCRIBING:
+case DELIVERING:
+{
+actions.cancel(dev.openallay.client.voice.VoiceRuntime.CancelReason.USER);
+break;
+}
+default:
+{
+actions.press();
+break;
+}
+}
+
     }
 
     static boolean closesDetailFirst(boolean detailOpen, boolean escape) {
@@ -664,18 +678,43 @@ private static final class ToolFlowOwner {
     private boolean scrollDetailKey(GuideKeyIntent key) {
         int maximum = maximumDetailScroll();
         int page = Math.max(24, layout.detail().height() - 30);
-        int target = switch (key) {
-            case UP -> detailScroll - 24;
-            case DOWN -> detailScroll + 24;
-            case PAGE_UP -> detailScroll - page;
-            case PAGE_DOWN -> detailScroll + page;
-            case HOME -> 0;
-            case END -> maximum;
-            default -> Integer.MIN_VALUE;
-        };
+        int $oaSwitch8_exit_result;
+$oaSwitch8_exit: {
+switch ((key)) {
+case UP:
+{
+$oaSwitch8_exit_result = detailScroll - 24; break $oaSwitch8_exit;
+}
+case DOWN:
+{
+$oaSwitch8_exit_result = detailScroll + 24; break $oaSwitch8_exit;
+}
+case PAGE_UP:
+{
+$oaSwitch8_exit_result = detailScroll - page; break $oaSwitch8_exit;
+}
+case PAGE_DOWN:
+{
+$oaSwitch8_exit_result = detailScroll + page; break $oaSwitch8_exit;
+}
+case HOME:
+{
+$oaSwitch8_exit_result = 0; break $oaSwitch8_exit;
+}
+case END:
+{
+$oaSwitch8_exit_result = maximum; break $oaSwitch8_exit;
+}
+default:
+{
+$oaSwitch8_exit_result = Integer.MIN_VALUE; break $oaSwitch8_exit;
+}
+}
+}
+int target = $oaSwitch8_exit_result;
         if (target == Integer.MIN_VALUE) return false;
         invalidateContentHits();
-        detailScroll = Mth.clamp(target, 0, maximum);
+        detailScroll = net.minecraft.util.Mth.clamp(target, 0, maximum);
         return true;
     }
 
@@ -687,7 +726,7 @@ private static final class ToolFlowOwner {
     public boolean guideMouseScrolled(double x, double y, double scrollX, double scrollY) {
         if (scrollX != 0 || scrollY != 0) invalidateContentHits();
         if (sessionOverlay && sessionBounds().contains(x, y) || layout.sessionRail().contains(x, y)) {
-            sessionScroll = Mth.clamp(sessionScroll - (int) Math.signum(scrollY), 0, maximumSessionScroll());
+            sessionScroll = net.minecraft.util.Mth.clamp(sessionScroll - (int) Math.signum(scrollY), 0, maximumSessionScroll());
             return true;
         }
         if (sessionOverlay || overflowOpen) return true;
@@ -696,15 +735,15 @@ private static final class ToolFlowOwner {
             return true;
         }
         if (composerExtras != null && composerExtras.footer().contains(x, y) && !pendingMessages().isEmpty()) {
-            pendingCursor = Mth.clamp(pendingCursor - (int) Math.signum(scrollY), 0, pendingMessages().size() - 1);
+            pendingCursor = net.minecraft.util.Mth.clamp(pendingCursor - (int) Math.signum(scrollY), 0, pendingMessages().size() - 1);
             return true;
         }
         GuideUiLayout.Rect modelMenu = modelSelectorBounds();
         if (modelSelectorOpen && modelMenu != null && modelMenu.contains(x, y)) {
             int maximum = Math.max(0, view.modelChoices().size() - visibleModelChoiceCount());
-            modelSelectorScroll = Mth.clamp(
+            modelSelectorScroll = net.minecraft.util.Mth.clamp(
                     modelSelectorScroll - (int) Math.signum(scrollY), 0, maximum);
-            modelSelectorCursor = Mth.clamp(
+            modelSelectorCursor = net.minecraft.util.Mth.clamp(
                     modelSelectorCursor,
                     modelSelectorScroll,
                     Math.min(view.modelChoices().size() - 1,
@@ -712,13 +751,13 @@ private static final class ToolFlowOwner {
             return true;
         }
         if (detailOpen() && layout.detail().contains(x, y)) {
-            detailScroll = Mth.clamp(detailScroll - (int) Math.round(scrollY * 24), 0, maximumDetailScroll());
+            detailScroll = net.minecraft.util.Mth.clamp(detailScroll - (int) Math.round(scrollY * 24), 0, maximumDetailScroll());
             return true;
         }
         if (detailOpen() && layout.detailOverlay()) return true;
         if (layout.transcript().contains(x, y)) {
             int maximum = virtualizer.maximumScroll(Math.max(0, layout.transcript().height() - 14));
-            scroll = Mth.clamp(scroll - (int) Math.round(scrollY * 24), 0, maximum);
+            scroll = net.minecraft.util.Mth.clamp(scroll - (int) Math.round(scrollY * 24), 0, maximum);
             followBottom = virtualizer.atBottom(
                     scroll, Math.max(0, layout.transcript().height() - 14));
             return true;
@@ -733,7 +772,7 @@ private static final class ToolFlowOwner {
             if (!composerContains(event.x(), event.y())) GuideNativeFocus.clear(this);
             if (sessionOverlay || overflowOpen) {
                 HitKind topKind = sessionOverlay ? HitKind.SESSION : HitKind.MENU;
-                for (Hit hit : List.copyOf(hits)) {
+                for (Hit hit : dev.openallay.util.Java8Collections.listCopyOf(hits)) {
                     if (hit.kind() == topKind && hit.rect().contains(event.x(), event.y())) {
                         focusedContentId = hit.focusId();
                         GuideNativeFocus.clear(this);
@@ -753,7 +792,7 @@ private static final class ToolFlowOwner {
                 modelSelectorOpen = false;
             }
             if (modelSelectorOpen) {
-                for (Hit hit : List.copyOf(hits)) {
+                for (Hit hit : dev.openallay.util.Java8Collections.listCopyOf(hits)) {
                     if (hit.kind() == HitKind.MODEL
                             && hit.rect().contains(event.x(), event.y())) {
                         focusedContentId = hit.focusId();
@@ -764,13 +803,12 @@ private static final class ToolFlowOwner {
                 }
             }
             if (detailOpen()) {
-                List<Hit> detailHits = hits.stream()
-                        .filter(hit -> hit.kind() == HitKind.DETAIL)
-                        .toList();
+                List<Hit> detailHits = dev.openallay.util.Java8Collections.toList(hits.stream()
+                        .filter(hit -> hit.kind() == HitKind.DETAIL));
                 GuideUiClickRoute route = GuideUiClickRoute.resolveDetail(
                         layout.detail(),
                         detailCloseBounds(),
-                        detailHits.stream().map(Hit::rect).toList(),
+                        dev.openallay.util.Java8Collections.toList(detailHits.stream().map(Hit::rect)),
                         event.x(),
                         event.y());
                 if (route.kind() == GuideUiClickRoute.Kind.ACTION) {
@@ -788,7 +826,7 @@ private static final class ToolFlowOwner {
                 if (layout.detailOverlay() && !layout.composer().contains(event.x(), event.y())) return true;
             }
             if (sessionOverlay) {
-                for (Hit hit : List.copyOf(hits)) {
+                for (Hit hit : dev.openallay.util.Java8Collections.listCopyOf(hits)) {
                     if (hit.kind() == HitKind.SESSION && hit.rect().contains(event.x(), event.y())) {
                         GuideNativeFocus.clear(this);
                         hit.action().run();
@@ -796,7 +834,7 @@ private static final class ToolFlowOwner {
                     }
                 }
             }
-            for (Hit hit : List.copyOf(hits)) {
+            for (Hit hit : dev.openallay.util.Java8Collections.listCopyOf(hits)) {
                 if (hit.rect().contains(event.x(), event.y())) {
                     focusedContentId = hit.focusId();
                     GuideNativeFocus.clear(this);
@@ -859,7 +897,7 @@ private static final class ToolFlowOwner {
         graphics.fill(top.x(), top.y(), top.x() + 3, top.y() + top.height(), ACCENT);
         graphics.fill(top.x() + 3, top.y(), top.x() + 34, top.y() + 2, ACCENT);
         if (layout.header().status().height() > 0) {
-            Component status = modelStatus();
+            net.minecraft.network.chat.Component status = modelStatus();
             boundedHeaderText(graphics, status, layout.header().status(), MUTED);
             if (layout.header().status().contains(mouseX, mouseY)) {
                 graphics.setTooltipForNextFrame(font, status, mouseX, mouseY);
@@ -867,15 +905,15 @@ private static final class ToolFlowOwner {
         }
     }
 
-    static Component headerTitle() {
-        return MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.guide"), ChatFormatting.BOLD);
+    static net.minecraft.network.chat.Component headerTitle() {
+        return MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.guide"), net.minecraft.ChatFormatting.BOLD);
     }
 
     /** A passive native label: Tab reveals and narrates its own complete name, not another button's. */
     private final class HeaderTitle extends GuideNativeWidget {
-        private Component paintedTitle;
+        private net.minecraft.network.chat.Component paintedTitle;
 
-        private HeaderTitle(Component title, GuideUiLayout.Rect bounds) {
+        private HeaderTitle(net.minecraft.network.chat.Component title, GuideUiLayout.Rect bounds) {
             super(bounds.x(), bounds.y(), bounds.width(), bounds.height(), title);
             setTooltip(GuideTooltip.create(title));
         }
@@ -883,8 +921,8 @@ private static final class ToolFlowOwner {
         @Override
         protected void paintGuideWidget(
                 GuideGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            Component full = getMessage();
-            Component visible = full;
+            net.minecraft.network.chat.Component full = getMessage();
+            net.minecraft.network.chat.Component visible = full;
             if (GuideNativeFont.width(font, GuideNativeFont.visual(full)) > getWidth()) {
                 String prefix = GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(full),
                         Math.max(0, getWidth() - GuideNativeFont.width(font, MinecraftComponents.style(MinecraftComponents.literal("…"), full.getStyle()))),
@@ -909,14 +947,9 @@ private static final class ToolFlowOwner {
     public Map<String, Object> e2eHeaderReceipt() {
         requireDevelopmentProbe();
         if (layout == null || headerTitleWidget == null) throw new IllegalStateException("header is not initialized");
-        Component full = headerTitleWidget.getMessage();
+        net.minecraft.network.chat.Component full = headerTitleWidget.getMessage();
         int styledWidth = GuideNativeFont.width(font, GuideNativeFont.visual(full));
-        return Map.of("fullName", MinecraftComponents.getString(full),
-                "plainWidth", GuideNativeFont.width(font, GuideNativeFont.visual(MinecraftComponents.style(MinecraftComponents.copy(full), style -> GuideNativeTextStyle.bold(style, false)))),
-                "styleWidth", styledWidth,
-                "titleWidth", headerTitleWidget.getWidth(),
-                "headerHeight", layout.topBar().height(),
-                "fullVisible", headerTitleWidget.paintedTitle != null
+        return dev.openallay.util.Java8Collections.mapOf("fullName", MinecraftComponents.getString(full), "plainWidth", GuideNativeFont.width(font, GuideNativeFont.visual(MinecraftComponents.style(MinecraftComponents.copy(full), style -> GuideNativeTextStyle.bold(style, false)))), "styleWidth", styledWidth, "titleWidth", headerTitleWidget.getWidth(), "headerHeight", layout.topBar().height(), "fullVisible", headerTitleWidget.paintedTitle != null
                         && MinecraftComponents.getString(headerTitleWidget.paintedTitle).equals(MinecraftComponents.getString(full))
                         && styledWidth <= headerTitleWidget.getWidth());
     }
@@ -926,29 +959,19 @@ private static final class ToolFlowOwner {
         requireDevelopmentProbe();
         if (layout == null) throw new IllegalStateException("telemetry is not initialized");
         GuideUiLayout.Rect area = layout.telemetry();
-        return Map.of("card", layout.telemetryCard(),
-                "rowCount", area.equals(renderedTelemetryBounds) ? renderedTelemetryRows : 0,
-                "width", area.width(), "height", area.height(),
-                "contextText", MinecraftComponents.getString(telemetryContext), "cacheText", MinecraftComponents.getString(telemetryInput),
-                "costText", MinecraftComponents.getString(telemetryCost), "imageBarEligible", telemetryImageBarEligible());
+        return dev.openallay.util.Java8Collections.mapOf("card", layout.telemetryCard(), "rowCount", area.equals(renderedTelemetryBounds) ? renderedTelemetryRows : 0, "width", area.width(), "height", area.height(), "contextText", MinecraftComponents.getString(telemetryContext), "cacheText", MinecraftComponents.getString(telemetryInput), "costText", MinecraftComponents.getString(telemetryCost), "imageBarEligible", telemetryImageBarEligible());
     }
 
     /** Cached aggregate telemetry only. A tooltip request is not a screenshot or visual acceptance. */
     public Map<String, Object> e2eTelemetryTooltipReceipt() {
         requireDevelopmentProbe();
-        return Map.of("logicalLineCount", telemetryTooltip.size(),
-                "wrappedLineCount", telemetryTooltipWrapped.size(), "wrapWidth", telemetryTooltipWidth,
-                "logicalTexts", telemetryTooltipTexts,
-                "requestedWidth", requestedTelemetryTooltipWidth, "requestedLineCount", requestedTelemetryTooltipLines,
-                "requestedNativeFrame", requestedTelemetryTooltipFrame);
+        return dev.openallay.util.Java8Collections.mapOf("logicalLineCount", telemetryTooltip.size(), "wrappedLineCount", telemetryTooltipWrapped.size(), "wrapWidth", telemetryTooltipWidth, "logicalTexts", telemetryTooltipTexts, "requestedWidth", requestedTelemetryTooltipWidth, "requestedLineCount", requestedTelemetryTooltipLines, "requestedNativeFrame", requestedTelemetryTooltipFrame);
     }
 
     /** Cached outcomes from the real export handler. Reading this receipt never captures or exports data. */
     public Map<String, Object> e2eExportReceipt() {
         requireDevelopmentProbe();
-        return Map.of("running", exportRunning, "noticeSeverity", notice.severity().name(),
-                "noticeMessage", notice.message(), "noticeKey", notice == exportNotice ? exportNoticeKey : "",
-                "lastFilename", lastExportFilename, "lastRequestCount", lastExportRequestCount);
+        return dev.openallay.util.Java8Collections.mapOf("running", exportRunning, "noticeSeverity", notice.severity().name(), "noticeMessage", notice.message(), "noticeKey", notice == exportNotice ? exportNoticeKey : "", "lastFilename", lastExportFilename, "lastRequestCount", lastExportRequestCount);
     }
 
     /** Explicit development intent uses the same handler as the player's Export menu action. */
@@ -962,20 +985,20 @@ private static final class ToolFlowOwner {
         requireDevelopmentProbe();
         Map<String, Object> receipt = new LinkedHashMap<>();
         receipt.put("lastNativeFrame", renderedNativeFrame);
-        receipt.put("visibleToolIds", List.copyOf(renderedToolIds));
+        receipt.put("visibleToolIds", dev.openallay.util.Java8Collections.listCopyOf(renderedToolIds));
         receipt.put("visibleToolCount", renderedToolIds.size());
-        receipt.put("toolSummaries", List.copyOf(renderedToolSummaries));
-        receipt.put("summaryCapsuleIds", List.copyOf(renderedSummaryCapsuleIds));
+        receipt.put("toolSummaries", dev.openallay.util.Java8Collections.listCopyOf(renderedToolSummaries));
+        receipt.put("summaryCapsuleIds", dev.openallay.util.Java8Collections.listCopyOf(renderedSummaryCapsuleIds));
         receipt.put("summaryCapsuleCount", renderedSummaryCapsuleIds.size());
-        receipt.put("resultCardIds", List.copyOf(renderedResultCardIds));
+        receipt.put("resultCardIds", dev.openallay.util.Java8Collections.listCopyOf(renderedResultCardIds));
         receipt.put("resultCardCount", renderedResultCardIds.size());
         receipt.put("detailToolId", renderedDetailToolId);
-        receipt.put("detailCardIds", List.copyOf(renderedDetailCardIds));
+        receipt.put("detailCardIds", dev.openallay.util.Java8Collections.listCopyOf(renderedDetailCardIds));
         receipt.put("detailCardCount", renderedDetailCardIds.size());
-        receipt.put("detailNativeRecipeIds", List.copyOf(renderedDetailNativeRecipeIds));
+        receipt.put("detailNativeRecipeIds", dev.openallay.util.Java8Collections.listCopyOf(renderedDetailNativeRecipeIds));
         receipt.put("detailNativeRecipeCount", renderedDetailNativeRecipeIds.size());
         receipt.put("totalToolCount", view.rows().stream().filter(GuideUiRow.Tool.class::isInstance).count());
-        return Map.copyOf(receipt);
+        return dev.openallay.util.Java8Collections.mapCopyOf(receipt);
     }
 
     private void clearToolPaintReceipts() {
@@ -989,7 +1012,7 @@ private static final class ToolFlowOwner {
     }
 
     private void boundedHeaderText(
-            GuideGraphics graphics, Component text, GuideUiLayout.Rect bounds, int color) {
+            GuideGraphics graphics, net.minecraft.network.chat.Component text, GuideUiLayout.Rect bounds, int color) {
         graphics.enableScissor(bounds.x(), bounds.y(), bounds.right(), bounds.bottom());
         graphics.text(font, text, bounds.x(), bounds.y(), color, false);
         graphics.disableScissor();
@@ -1014,17 +1037,42 @@ private static final class ToolFlowOwner {
     private int visibleSessionCount() { return Math.max(1, (sessionBounds().height() - 30) / 22); }
     private int maximumSessionScroll() { return Math.max(0, view.sessions().size() - visibleSessionCount()); }
     private boolean scrollSessionsKey(GuideKeyIntent key) {
-        int target = switch (key) {
-            case UP -> sessionScroll - 1;
-            case DOWN -> sessionScroll + 1;
-            case PAGE_UP -> sessionScroll - visibleSessionCount();
-            case PAGE_DOWN -> sessionScroll + visibleSessionCount();
-            case HOME -> 0;
-            case END -> maximumSessionScroll();
-            default -> Integer.MIN_VALUE;
-        };
+        int $oaSwitch9_exit_result;
+$oaSwitch9_exit: {
+switch ((key)) {
+case UP:
+{
+$oaSwitch9_exit_result = sessionScroll - 1; break $oaSwitch9_exit;
+}
+case DOWN:
+{
+$oaSwitch9_exit_result = sessionScroll + 1; break $oaSwitch9_exit;
+}
+case PAGE_UP:
+{
+$oaSwitch9_exit_result = sessionScroll - visibleSessionCount(); break $oaSwitch9_exit;
+}
+case PAGE_DOWN:
+{
+$oaSwitch9_exit_result = sessionScroll + visibleSessionCount(); break $oaSwitch9_exit;
+}
+case HOME:
+{
+$oaSwitch9_exit_result = 0; break $oaSwitch9_exit;
+}
+case END:
+{
+$oaSwitch9_exit_result = maximumSessionScroll(); break $oaSwitch9_exit;
+}
+default:
+{
+$oaSwitch9_exit_result = Integer.MIN_VALUE; break $oaSwitch9_exit;
+}
+}
+}
+int target = $oaSwitch9_exit_result;
         if (target == Integer.MIN_VALUE) return false;
-        sessionScroll = Mth.clamp(target, 0, maximumSessionScroll());
+        sessionScroll = net.minecraft.util.Mth.clamp(target, 0, maximumSessionScroll());
         return true;
     }
 
@@ -1042,7 +1090,7 @@ private static final class ToolFlowOwner {
                     "session:close", MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.detail.close"))));
         }
         int y = rail.y() + 24;
-        sessionScroll = Mth.clamp(sessionScroll, 0, maximumSessionScroll());
+        sessionScroll = net.minecraft.util.Mth.clamp(sessionScroll, 0, maximumSessionScroll());
         graphics.enableScissor(rail.x(), y, rail.right(), rail.bottom());
         for (int index = sessionScroll; index < Math.min(view.sessions().size(), sessionScroll + visibleSessionCount()); index++) {
             GuideUiSession session = view.sessions().get(index);
@@ -1069,16 +1117,35 @@ private static final class ToolFlowOwner {
     private boolean scrollTranscriptKey(GuideKeyIntent key) {
         int maximum = virtualizer.maximumScroll(transcriptViewportHeight());
         int page = Math.max(20, transcriptViewportHeight() - 10);
-        int next = switch (key) {
-            case PAGE_UP -> scroll - page;
-            case PAGE_DOWN -> scroll + page;
-            case HOME -> 0;
-            case END -> maximum;
-            default -> Integer.MIN_VALUE;
-        };
+        int $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((key)) {
+case PAGE_UP:
+{
+$oaSwitch2_exit_result = scroll - page; break $oaSwitch2_exit;
+}
+case PAGE_DOWN:
+{
+$oaSwitch2_exit_result = scroll + page; break $oaSwitch2_exit;
+}
+case HOME:
+{
+$oaSwitch2_exit_result = 0; break $oaSwitch2_exit;
+}
+case END:
+{
+$oaSwitch2_exit_result = maximum; break $oaSwitch2_exit;
+}
+default:
+{
+$oaSwitch2_exit_result = Integer.MIN_VALUE; break $oaSwitch2_exit;
+}
+}
+}
+int next = $oaSwitch2_exit_result;
         if (next == Integer.MIN_VALUE) return false;
         invalidateContentHits();
-        scroll = Mth.clamp(next, 0, maximum);
+        scroll = net.minecraft.util.Mth.clamp(next, 0, maximum);
         followBottom = scroll == maximum;
         return true;
     }
@@ -1108,7 +1175,7 @@ private static final class ToolFlowOwner {
             if (y + 20 > menu.bottom()) break;
             GuideUiLayout.Rect row = new GuideUiLayout.Rect(menu.x() + 4, y, menu.width() - 8, 20);
             if (row.contains(mouseX, mouseY)) graphics.fill(row.x(), row.y(), row.right(), row.bottom(), OpenAllayWidgetTheme.CHARCOAL_HOVERED);
-            Component label = MinecraftComponents.translatable(labels[index]);
+            net.minecraft.network.chat.Component label = MinecraftComponents.translatable(labels[index]);
             boundedHeaderText(graphics, label, new GuideUiLayout.Rect(row.x() + 4, row.y() + 5, row.width() - 8, 12), TEXT);
             Runnable action = actions[index];
             hits.add(new Hit(row, HitKind.MENU, () -> { overflowOpen = false; action.run(); }, "menu:" + index, MinecraftComponents.getString(label)));
@@ -1118,10 +1185,10 @@ private static final class ToolFlowOwner {
         activateVoice(voice);
     }
 
-    private Component voiceFeedback() {
-        var feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
-        Component text = MinecraftComponents.copy(MinecraftComponents.translatable(feedback.translationKey()));
-        if (!feedback.actionTranslationKey().isBlank()) MinecraftComponents.append(MinecraftComponents.append(text, " · "), MinecraftComponents.translatable(feedback.actionTranslationKey()));
+    private net.minecraft.network.chat.Component voiceFeedback() {
+        dev.openallay.client.voice.VoiceStatusPresentation.Notice feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
+        net.minecraft.network.chat.Component text = MinecraftComponents.copy(MinecraftComponents.translatable(feedback.translationKey()));
+        if (!dev.openallay.util.Java8Strings.isBlank(feedback.actionTranslationKey())) MinecraftComponents.append(MinecraftComponents.append(text, " · "), MinecraftComponents.translatable(feedback.actionTranslationKey()));
         return text;
     }
 
@@ -1131,7 +1198,7 @@ private static final class ToolFlowOwner {
             int micWidth = voice.status().active() ? Math.min(70, bounds.width() / 2) : 30;
             GuideUiLayout.Rect mic = new GuideUiLayout.Rect(bounds.right() - micWidth, bounds.y(), micWidth, bounds.height());
             graphics.fill(mic.x(), mic.y(), mic.right(), mic.bottom(), panelAltColor());
-            Component micLabel = voice.status().active()
+            net.minecraft.network.chat.Component micLabel = voice.status().active()
                     ? MinecraftComponents.translatable("screen.openallay.voice.short." + voice.status().state().name().toLowerCase(java.util.Locale.ROOT), voice.status().elapsedMillis() / 1000)
                     : MinecraftComponents.translatable("screen.openallay.voice.mic_short");
             boundedHeaderText(graphics, micLabel, mic, voice.status().active() ? OpenAllayWidgetTheme.WARNING : ACCENT);
@@ -1143,8 +1210,8 @@ private static final class ToolFlowOwner {
             boundedHeaderText(graphics, MinecraftComponents.literal(notice.message()), bounds, notice.color());
             if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, MinecraftComponents.literal(notice.message()), mouseX, mouseY);
         } else if (voice != null && voice.status().indicatorVisible()) {
-            Component status = voiceFeedback();
-            var feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
+            net.minecraft.network.chat.Component status = voiceFeedback();
+            dev.openallay.client.voice.VoiceStatusPresentation.Notice feedback = dev.openallay.client.voice.VoiceStatusPresentation.describe(voice.status());
             boundedHeaderText(graphics, status, bounds, feedback.error() ? ERROR : voice.status().active() ? OpenAllayWidgetTheme.WARNING : MUTED);
             if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, status, mouseX, mouseY);
         }
@@ -1176,12 +1243,12 @@ private static final class ToolFlowOwner {
         if (uncovered) {
             GuideUiLayout.Rect panel = layout.transcript();
             GuideUiLayout.Rect viewport = new GuideUiLayout.Rect(panel.x(), panel.y() + 7, panel.width(), panel.height() - 14);
-            for (var event : notifications.receipts(service, view.selectedSession())) {
+            for (dev.openallay.guide.GuidePresentationEvent event : notifications.receipts(service, view.selectedSession())) {
                 if (event.content().isEmpty()) continue;
-                List<GuideUiLayout.Rect> content = event.content().stream().map(ref ->
+                List<GuideUiLayout.Rect> content = dev.openallay.util.Java8Collections.toList(event.content().stream().map(ref ->
                         view.rows().stream().filter(row -> receiptMatchesRow(event, ref, row)).findFirst()
                                 .map(row -> renderedRows.get(ref.contentId().startsWith("node:")
-                                        ? rowId(row) + ":" + ref.contentId() : rowId(row))).orElse(null)).toList();
+                                        ? rowId(row) + ":" + ref.contentId() : rowId(row))).orElse(null)));
                 if (content.stream().filter(Objects::nonNull).anyMatch(bounds -> intersects(bounds, viewport))) visible.add(event.key());
                 if (content.stream().allMatch(bounds -> bounds != null && bounds.y() >= viewport.y() && bounds.bottom() <= viewport.bottom())) seen.add(event.key());
             }
@@ -1197,25 +1264,41 @@ private static final class ToolFlowOwner {
         if (ref.contentId().startsWith("tool:")) return false;
         Objects.requireNonNull(row);
         UUID request;
-        if (row instanceof GuideUiRow.Assistant value) {
-            request = value.requestId();
-        } else if (row instanceof GuideUiRow.Tool value) {
-            request = value.requestId();
-        } else if (row instanceof GuideUiRow.Status value) {
-            request = value.requestId();
+        final class $oaPattern0_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern0_holder.bound = (GuideUiRow.Assistant) $oaPattern0_holder.value) != null))) {
+            request = $oaPattern0_holder.bound.requestId();
+        } else {
+final class $oaPattern1_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern1_holder.bound = (GuideUiRow.Tool) $oaPattern1_holder.value) != null))) {
+            request = $oaPattern1_holder.bound.requestId();
+        } else {
+final class $oaPattern2_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Status bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Status && (($oaPattern2_holder.bound = (GuideUiRow.Status) $oaPattern2_holder.value) != null))) {
+            request = $oaPattern2_holder.bound.requestId();
         } else {
             request = null;
         }
+}
+}
         int ordinal;
-        if (row instanceof GuideUiRow.Assistant value) {
-            ordinal = value.ordinal();
-        } else if (row instanceof GuideUiRow.Tool value) {
-            ordinal = value.ordinal();
+        final class $oaPattern3_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern3_holder.bound = (GuideUiRow.Assistant) $oaPattern3_holder.value) != null))) {
+            ordinal = $oaPattern3_holder.bound.ordinal();
+        } else {
+final class $oaPattern4_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern4_holder.bound = (GuideUiRow.Tool) $oaPattern4_holder.value) != null))) {
+            ordinal = $oaPattern4_holder.bound.ordinal();
         } else if (row instanceof GuideUiRow.Status) {
             ordinal = -1;
         } else {
             ordinal = Integer.MIN_VALUE;
         }
+}
         if (ref.contentId().equals("reply") && !(row instanceof GuideUiRow.Assistant)) return false;
         if (ref.contentId().startsWith("node:") && !(row instanceof GuideUiRow.Assistant)) return false;
         if (ref.timelineOrdinal() == -1 && !(row instanceof GuideUiRow.Status)) return false;
@@ -1223,14 +1306,14 @@ private static final class ToolFlowOwner {
     }
 
     private void refreshTelemetry() {
-        var next = service.telemetry();
-        var language = GuideNativeFont.languageIdentity();
+        dev.openallay.guide.GuideTelemetrySnapshot next = service.telemetry();
+        java.lang.Object language = GuideNativeFont.languageIdentity();
         int wrapWidth = nativeTooltipWidth(width);
         if (telemetry == next && telemetryTooltipFont == font
                 && telemetryTooltipLanguage == language && telemetryTooltipWidth == wrapWidth) return;
         telemetry = next;
         String unknown = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.telemetry.unknown"));
-        var context = telemetry.context();
+        dev.openallay.guide.GuideContextEstimate context = telemetry.context();
         boolean contextKnown = context != null && context.budget() != null;
         boolean imageUnknown = contextKnown && context.imageAccounting()
                 == dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN;
@@ -1240,8 +1323,8 @@ private static final class ToolFlowOwner {
         if (imageUnknown) occupancy = MinecraftComponents.getString(MinecraftComponents.translatable(
                 "screen.openallay.telemetry.text_estimate", occupancy));
         telemetryContext = MinecraftComponents.literal(occupancy);
-        var usage = telemetry.sessionUsage();
-        var rate = usage.cacheHitRate();
+        dev.openallay.guide.GuideUsageSnapshot usage = telemetry.sessionUsage();
+        java.math.BigDecimal rate = usage.cacheHitRate();
         String cache = telemetryCacheText(usage, unknown);
         telemetryInput = rate == null ? MinecraftComponents.translatable("screen.openallay.telemetry.cache_compact_unknown")
                 : MinecraftComponents.translatable("screen.openallay.telemetry.cache", cache);
@@ -1250,18 +1333,18 @@ private static final class ToolFlowOwner {
         telemetryCompact = MinecraftComponents.translatable("screen.openallay.telemetry.compact", occupancy, cache, cost);
         telemetryTooltip = telemetryTooltipComponents(telemetry, unknown, cost, cache);
         telemetryTooltipWrapped = wrapNativeTooltip(telemetryTooltip, wrapWidth, (text, width) -> GuideNativeFont.split(font, text, width));
-        telemetryTooltipTexts = telemetryTooltip.stream().map(MinecraftComponents::getString).toList();
+        telemetryTooltipTexts = dev.openallay.util.Java8Collections.toList(telemetryTooltip.stream().map(MinecraftComponents::getString));
         telemetryTooltipFont = font;
         telemetryTooltipLanguage = language;
         telemetryTooltipWidth = wrapWidth;
     }
 
     /** Logical native lines remain separate before the font performs bounded wrapping. */
-    static List<Component> telemetryTooltipComponents(
+    static List<net.minecraft.network.chat.Component> telemetryTooltipComponents(
             dev.openallay.guide.GuideTelemetrySnapshot telemetry, String unknown, String cost, String cache) {
-        List<Component> detail = new ArrayList<>();
-        detail.add(MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.telemetry.latest"), ChatFormatting.BOLD));
-        var context = telemetry.context();
+        List<net.minecraft.network.chat.Component> detail = new ArrayList<>();
+        detail.add(MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.telemetry.latest"), net.minecraft.ChatFormatting.BOLD));
+        dev.openallay.guide.GuideContextEstimate context = telemetry.context();
         boolean contextKnown = context != null && context.budget() != null;
         if (contextKnown) {
             detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.budget.input",
@@ -1276,24 +1359,24 @@ private static final class ToolFlowOwner {
                 == dev.openallay.model.tokenizer.TokenizerMetadata.ImageAccounting.UNKNOWN) {
             detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.image_unknown"));
         }
-        var usage = telemetry.sessionUsage();
+        dev.openallay.guide.GuideUsageSnapshot usage = telemetry.sessionUsage();
         detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.session.calls", usage.actualCalls()));
         detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.session.cost", cost));
         detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.cache_detail",
                 cache, usage.cacheReadTokens(), usage.inputTokens()));
         if (usage.costIncomplete()) detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.partial"));
         if (usage.cacheIncomplete()) detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.cache_unknown"));
-        var inherited = telemetry.inheritedUsage();
+        dev.openallay.guide.GuideUsageSnapshot inherited = telemetry.inheritedUsage();
         if (inherited.actualCalls() > 0) {
             String reference = telemetryCostText(inherited, unknown);
             detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.inherited", reference));
         }
         detail.add(MinecraftComponents.translatable("screen.openallay.telemetry.price_note"));
-        return List.copyOf(detail);
+        return dev.openallay.util.Java8Collections.listCopyOf(detail);
     }
 
     static String telemetryCacheText(dev.openallay.guide.GuideUsageSnapshot usage, String unknown) {
-        var rate = usage.cacheHitRate();
+        java.math.BigDecimal rate = usage.cacheHitRate();
         return rate == null ? unknown : rate.movePointRight(2)
                 .setScale(1, java.math.RoundingMode.HALF_UP).toPlainString() + "%";
     }
@@ -1309,9 +1392,9 @@ private static final class ToolFlowOwner {
         return Math.max(1, Math.min(260, screenWidth - 24));
     }
 
-    static <T> List<T> wrapNativeTooltip(List<Component> logicalLines, int wrapWidth,
-            java.util.function.BiFunction<Component, Integer, List<T>> splitter) {
-        return logicalLines.stream().flatMap(line -> splitter.apply(line, wrapWidth).stream()).toList();
+    static <T> List<T> wrapNativeTooltip(List<net.minecraft.network.chat.Component> logicalLines, int wrapWidth,
+            java.util.function.BiFunction<net.minecraft.network.chat.Component, Integer, List<T>> splitter) {
+        return dev.openallay.util.Java8Collections.toList(logicalLines.stream().flatMap(line -> splitter.apply(line, wrapWidth).stream()));
     }
 
     static String compactTokens(long count) {
@@ -1385,11 +1468,11 @@ private static final class ToolFlowOwner {
         graphics.disableScissor();
     }
 
-    static Component progressMessage(
+    static net.minecraft.network.chat.Component progressMessage(
             GuideUiProgress progress, Instant now, boolean debugMode) {
         Objects.requireNonNull(progress, "progress");
         Objects.requireNonNull(now, "now");
-        Component message = MinecraftComponents.translatable(progress.activityTranslationKey());
+        net.minecraft.network.chat.Component message = MinecraftComponents.translatable(progress.activityTranslationKey());
         MinecraftComponents.append(MinecraftComponents.append(message, " · "), MinecraftComponents.translatable(
                 "screen.openallay.progress.elapsed",
                 formatDuration(Duration.between(progress.requestStartedAt(), now))));
@@ -1487,38 +1570,42 @@ private static final class ToolFlowOwner {
             int width,
             int mouseX,
             int mouseY) {
-        if (row instanceof GuideUiRow.User user) {
+        final class $oaPattern5_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.User bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.User && (($oaPattern5_holder.bound = (GuideUiRow.User) $oaPattern5_holder.value) != null))) {
             graphics.text(font, MinecraftComponents.translatable("screen.openallay.speaker.user"),
                     x, y, ACCENT, false);
-            renderCopyAction(graphics, row, user.text(), x, y, width);
-            renderForkAction(graphics, user.requestId(), user.text(), x, y, width);
+            renderCopyAction(graphics, row, $oaPattern5_holder.bound.text(), x, y, width);
+            renderForkAction(graphics, $oaPattern5_holder.bound.requestId(), $oaPattern5_holder.bound.text(), x, y, width);
             y += 11;
-            y = renderWrapped(graphics, GuideMarkup.paragraphs(user.text()), x + 6, y, width - 6, TEXT);
+            y = renderWrapped(graphics, GuideMarkup.paragraphs($oaPattern5_holder.bound.text()), x + 6, y, width - 6, TEXT);
             return y + rowSpacing();
         }
-        if (row instanceof GuideUiRow.Assistant assistant) {
+        final class $oaPattern6_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern6_holder.bound = (GuideUiRow.Assistant) $oaPattern6_holder.value) != null))) {
             graphics.fill(x, y, x + 2, y + 9, ACCENT);
-            graphics.text(font, assistantLabel(projectedDisplay, assistant.streaming()),
+            graphics.text(font, assistantLabel(projectedDisplay, $oaPattern6_holder.bound.streaming()),
                     x + 6, y, ACCENT, false);
-            renderCopyAction(graphics, row, assistant.text(), x, y, width);
-            if (completedAssistantBoundary(service.snapshot(), view.selectedSession(), assistant)) {
-                renderForkAction(graphics, assistant.requestId(), assistant.text(), x, y, width);
+            renderCopyAction(graphics, row, $oaPattern6_holder.bound.text(), x, y, width);
+            if (completedAssistantBoundary(service.snapshot(), view.selectedSession(), $oaPattern6_holder.bound)) {
+                renderForkAction(graphics, $oaPattern6_holder.bound.requestId(), $oaPattern6_holder.bound.text(), x, y, width);
             }
             y += 11;
-            if (assistant.text().isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank($oaPattern6_holder.bound.text())) {
                 graphics.text(font, MinecraftComponents.translatable(
                                 "screen.openallay.assistant.preparing"),
                         x + 6, y, MUTED, false);
                 y += 10;
             } else {
-                SemanticLayout semantic = semanticLayout(assistant, width - 6);
+                SemanticLayout semantic = semanticLayout($oaPattern6_holder.bound, width - 6);
                 MinecraftSemanticRenderer.Result rendered = semanticRenderer.render(
                         graphics, font, semantic, x + 6, y, width - 6,
                         mouseX, mouseY, projectedDisplay.animationsEnabled(),
                         presentationTicks,
                         (nativeGraphics, nativeFont, component, bounds,
                                 nativeMouseX, nativeMouseY, ticks) -> renderNativeRecipe(
-                                        assistant,
+                                        $oaPattern6_holder.bound,
                                         nativeGraphics,
                                         nativeFont,
                                         component,
@@ -1528,14 +1615,14 @@ private static final class ToolFlowOwner {
                                         ticks));
                 int nodeY = y;
                 for (SemanticLayout.Line line : semantic.lines()) {
-                    String nodeKey = rowId(assistant) + ":node:" + line.nodeId();
+                    String nodeKey = rowId($oaPattern6_holder.bound) + ":node:" + line.nodeId();
                     GuideUiLayout.Rect previous = renderedRows.get(nodeKey);
                     int top = previous == null ? nodeY : previous.y();
                     renderedRows.put(nodeKey, new GuideUiLayout.Rect(x + 6, top, width - 6, nodeY + line.height() - top));
                     nodeY += line.height();
                 }
                 for (MinecraftSemanticRenderer.Hit hit : rendered.hits()) {
-                    String focusId = "semantic:" + rowId(assistant) + ":" + hit.intent();
+                    String focusId = "semantic:" + rowId($oaPattern6_holder.bound) + ":" + hit.intent();
                     hits.add(new Hit(
                             hit.bounds(), HitKind.CONTENT,
                             () -> semanticIntent(hit.intent()), focusId,
@@ -1543,12 +1630,12 @@ private static final class ToolFlowOwner {
                 }
                 y = rendered.bottom();
             }
-            List<GuideEvidencePresentation.Group> sourceGroups = groupedSources(assistant.sources());
+            List<GuideEvidencePresentation.Group> sourceGroups = groupedSources($oaPattern6_holder.bound.sources());
             for (int sourceIndex = 0; sourceIndex < sourceGroups.size(); sourceIndex++) {
                 GuideEvidencePresentation.Group source = sourceGroups.get(sourceIndex);
                 int sourceY = y;
                 String label = sourceLabel(source, projectedDisplay.debugMode());
-                String sourceFocusId = sourceFocusId(assistant, source, sourceIndex);
+                String sourceFocusId = sourceFocusId($oaPattern6_holder.bound, source, sourceIndex);
                 boolean selected = isFocused(selectedSourceFocusId, sourceFocusId);
                 if (selected) {
                     graphics.fill(x + 4, sourceY - 2, x + width - 4, sourceY + 10, 0xFF31453F);
@@ -1561,11 +1648,15 @@ private static final class ToolFlowOwner {
             }
             return y + rowSpacing();
         }
-        if (row instanceof GuideUiRow.Tool tool) {
-            return renderToolSummaryCard(graphics, tool, x, y, width, mouseX, mouseY);
+        final class $oaPattern7_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern7_holder.bound = (GuideUiRow.Tool) $oaPattern7_holder.value) != null))) {
+            return renderToolSummaryCard(graphics, $oaPattern7_holder.bound, x, y, width, mouseX, mouseY);
         }
-        int color = row instanceof GuideUiRow.Persistence persistence
-                ? persistence.state() == dev.openallay.guide.GuidePersistenceSnapshot.State.UNAVAILABLE
+        final class $oaPattern8_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Persistence bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+int color = (($oaPattern8_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Persistence && (($oaPattern8_holder.bound = (GuideUiRow.Persistence) $oaPattern8_holder.value) != null))
+                ? $oaPattern8_holder.bound.state() == dev.openallay.guide.GuidePersistenceSnapshot.State.UNAVAILABLE
                         ? 0xFFFFD479 : MUTED
                 : ((GuideUiRow.Status) row).status() == GuideRequestStatus.RATE_LIMITED
                         ? 0xFFFFD479 : ERROR;
@@ -1574,22 +1665,26 @@ private static final class ToolFlowOwner {
             graphics.text(font, line, x + 6, y, color, false);
             y += 10;
         }
-        if (row instanceof GuideUiRow.Status status && (status.status() == GuideRequestStatus.FAILED
-                || status.status() == GuideRequestStatus.CANCELLED || status.status() == GuideRequestStatus.INTERRUPTED)) {
+        final class $oaPattern9_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Status bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Status && (($oaPattern9_holder.bound = (GuideUiRow.Status) $oaPattern9_holder.value) != null)) && ($oaPattern9_holder.bound.status() == GuideRequestStatus.FAILED
+                || $oaPattern9_holder.bound.status() == GuideRequestStatus.CANCELLED || $oaPattern9_holder.bound.status() == GuideRequestStatus.INTERRUPTED)) {
             GuideUiLayout.Rect retryRow = new GuideUiLayout.Rect(x + 6, y, Math.min(90, width - 12), 14);
             boundedHeaderText(graphics, MinecraftComponents.translatable("screen.openallay.action.retry"), retryRow, ACCENT);
-            hits.add(new Hit(retryRow, HitKind.CONTENT, () -> accept(service.retry(status.requestId()), ignored -> notice = GuideUiNotice.info("")),
-                    "retry:" + status.requestId(), MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.action.retry"))));
+            hits.add(new Hit(retryRow, HitKind.CONTENT, () -> accept(service.retry($oaPattern9_holder.bound.requestId()), ignored -> notice = GuideUiNotice.info("")),
+                    "retry:" + $oaPattern9_holder.bound.requestId(), MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.action.retry"))));
             y += 16;
         }
         return y + rowSpacing();
     }
 
-    static Component factualRowText(GuideUiRow row) {
-        if (row instanceof GuideUiRow.Persistence persistence) {
-            Component message = MinecraftComponents.translatable(persistence.translationKey());
-            return persistence.failure() == null ? message
-                    : MinecraftComponents.append(MinecraftComponents.copy(message), " (" + persistence.failure().code() + ")");
+    static net.minecraft.network.chat.Component factualRowText(GuideUiRow row) {
+        final class $oaPattern10_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Persistence bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Persistence && (($oaPattern10_holder.bound = (GuideUiRow.Persistence) $oaPattern10_holder.value) != null))) {
+            net.minecraft.network.chat.Component message = MinecraftComponents.translatable($oaPattern10_holder.bound.translationKey());
+            return $oaPattern10_holder.bound.failure() == null ? message
+                    : MinecraftComponents.append(MinecraftComponents.copy(message), " (" + $oaPattern10_holder.bound.failure().code() + ")");
         }
         GuideUiRow.Status status = (GuideUiRow.Status) row;
         return status.status() == GuideRequestStatus.INTERRUPTED
@@ -1611,15 +1706,19 @@ private static final class ToolFlowOwner {
         for (GuideUiRow row : view.rows()) {
             String id = rowId(row);
             retainedIds.add(id);
-            if (row instanceof GuideUiRow.Assistant assistant) {
-                int hash = assistant.semantic().hashCode();
+            final class $oaPattern11_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern11_holder.bound = (GuideUiRow.Assistant) $oaPattern11_holder.value) != null))) {
+                int hash = $oaPattern11_holder.bound.semantic().hashCode();
                 nextHashes.put(id, hash);
                 if (!java.util.Objects.equals(semanticHashes.get(id), hash)) {
                     semanticLayouts.invalidateRow(id);
                 }
             }
-            boolean stabilize = row instanceof GuideUiRow.Assistant assistant
-                    && assistant.streaming();
+            final class $oaPattern12_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+boolean stabilize = (($oaPattern12_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern12_holder.bound = (GuideUiRow.Assistant) $oaPattern12_holder.value) != null))
+                    && $oaPattern12_holder.bound.streaming();
             measured.add(new GuideTranscriptVirtualizer.Row(
                     id, stableRowHeights.retain(id, measureRow(row, width), stabilize)));
         }
@@ -1630,27 +1729,35 @@ private static final class ToolFlowOwner {
     }
 
     private int measureRow(GuideUiRow row, int width) {
-        if (row instanceof GuideUiRow.User user) {
-            return 11 + wrappedHeight(GuideMarkup.paragraphs(user.text()), width - 6) + rowSpacing();
+        final class $oaPattern13_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.User bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+if ((($oaPattern13_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.User && (($oaPattern13_holder.bound = (GuideUiRow.User) $oaPattern13_holder.value) != null))) {
+            return 11 + wrappedHeight(GuideMarkup.paragraphs($oaPattern13_holder.bound.text()), width - 6) + rowSpacing();
         }
-        if (row instanceof GuideUiRow.Assistant assistant) {
-            int body = assistant.text().isBlank()
-                    ? 10 : semanticLayout(assistant, width - 6).height();
-            return 11 + body + groupedSources(assistant.sources()).size() * 12 + rowSpacing();
+        final class $oaPattern14_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern14_Holder $oaPattern14_holder = new $oaPattern14_Holder();
+if ((($oaPattern14_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern14_holder.bound = (GuideUiRow.Assistant) $oaPattern14_holder.value) != null))) {
+            int body = dev.openallay.util.Java8Strings.isBlank($oaPattern14_holder.bound.text())
+                    ? 10 : semanticLayout($oaPattern14_holder.bound, width - 6).height();
+            return 11 + body + groupedSources($oaPattern14_holder.bound.sources()).size() * 12 + rowSpacing();
         }
-        if (row instanceof GuideUiRow.Tool tool) {
-            return toolSummaryGeometry(tool, 0, 0, width).rowHeight();
+        final class $oaPattern15_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern15_Holder $oaPattern15_holder = new $oaPattern15_Holder();
+if ((($oaPattern15_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern15_holder.bound = (GuideUiRow.Tool) $oaPattern15_holder.value) != null))) {
+            return toolSummaryGeometry($oaPattern15_holder.bound, 0, 0, width).rowHeight();
         }
-        int retryHeight = row instanceof GuideUiRow.Status status && (status.status() == GuideRequestStatus.FAILED
-                || status.status() == GuideRequestStatus.CANCELLED || status.status() == GuideRequestStatus.INTERRUPTED) ? 16 : 0;
+        final class $oaPattern16_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Status bound; }
+final $oaPattern16_Holder $oaPattern16_holder = new $oaPattern16_Holder();
+int retryHeight = (($oaPattern16_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Status && (($oaPattern16_holder.bound = (GuideUiRow.Status) $oaPattern16_holder.value) != null)) && ($oaPattern16_holder.bound.status() == GuideRequestStatus.FAILED
+                || $oaPattern16_holder.bound.status() == GuideRequestStatus.CANCELLED || $oaPattern16_holder.bound.status() == GuideRequestStatus.INTERRUPTED) ? 16 : 0;
         return GuideNativeFont.split(font, factualRowText(row), Math.max(1, width - 12)).size() * 10 + rowSpacing() + retryHeight;
     }
 
     private dev.openallay.guide.ui.GuideToolSummaryGeometry toolSummaryGeometry(
             GuideUiRow.Tool tool, int x, int y, int width) {
-        var summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
-        List<Integer> capsules = summary.capsules().stream().map(capsule ->
-                Math.max(22, Math.min(110, 22 + GuideNativeFont.width(font, capsuleLabel(capsule))))).toList();
+        dev.openallay.guide.ui.GuideToolSummaryPresenter.Summary summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
+        List<Integer> capsules = dev.openallay.util.Java8Collections.toList(summary.capsules().stream().map(capsule ->
+                Math.max(22, Math.min(110, 22 + GuideNativeFont.width(font, capsuleLabel(capsule))))));
         return dev.openallay.guide.ui.GuideToolSummaryGeometry.measure(x, y, width,
                 GuideNativeFont.width(font, MinecraftComponents.translatable(summary.status().translationKey())),
                 capsules, summary.hasDescription(), rowSpacing());
@@ -1659,27 +1766,61 @@ private static final class ToolFlowOwner {
     private int renderToolSummaryCard(
             GuideGraphics graphics, GuideUiRow.Tool tool, int x, int y,
             int width, int mouseX, int mouseY) {
-        var summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
-        var geometry = toolSummaryGeometry(tool, x, y, width);
+        dev.openallay.guide.ui.GuideToolSummaryPresenter.Summary summary = dev.openallay.guide.ui.GuideToolSummaryPresenter.project(tool);
+        dev.openallay.guide.ui.GuideToolSummaryGeometry geometry = toolSummaryGeometry(tool, x, y, width);
         GuideUiLayout.Rect card = geometry.card();
         boolean selected = selectedTool != null && toolFocusId(selectedTool).equals(summary.id());
         boolean hovered = card.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY);
         renderToolSummaryFrame(graphics, card, panelAltColor(),
                 selected || hovered ? ACCENT : OpenAllayWidgetTheme.SLATE_BORDER);
-        int statusColor = switch (summary.status()) {
-            case FAILED -> ERROR;
-            case SUCCEEDED -> OpenAllayWidgetTheme.SUCCESS;
-            case RUNNING -> ACCENT;
-            case NO_RESULT_RECORDED -> MUTED;
-        };
-        String marker = switch (summary.status()) {
-            case FAILED -> "!";
-            case SUCCEEDED -> "✓";
-            case RUNNING -> projectedDisplay.animationsEnabled() && (presentationTicks / 8) % 2 == 0 ? "◍" : "◌";
-            case NO_RESULT_RECORDED -> "—";
-        };
+        int $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((summary.status())) {
+case FAILED:
+{
+$oaSwitch1_exit_result = ERROR; break $oaSwitch1_exit;
+}
+case SUCCEEDED:
+{
+$oaSwitch1_exit_result = OpenAllayWidgetTheme.SUCCESS; break $oaSwitch1_exit;
+}
+case RUNNING:
+{
+$oaSwitch1_exit_result = ACCENT; break $oaSwitch1_exit;
+}
+case NO_RESULT_RECORDED:
+{
+$oaSwitch1_exit_result = MUTED; break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+int statusColor = $oaSwitch1_exit_result;
+        java.lang.String $oaSwitch4_exit_result;
+$oaSwitch4_exit: {
+switch ((summary.status())) {
+case FAILED:
+{
+$oaSwitch4_exit_result = "!"; break $oaSwitch4_exit;
+}
+case SUCCEEDED:
+{
+$oaSwitch4_exit_result = "✓"; break $oaSwitch4_exit;
+}
+case RUNNING:
+{
+$oaSwitch4_exit_result = projectedDisplay.animationsEnabled() && (presentationTicks / 8) % 2 == 0 ? "◍" : "◌"; break $oaSwitch4_exit;
+}
+case NO_RESULT_RECORDED:
+{
+$oaSwitch4_exit_result = "—"; break $oaSwitch4_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String marker = $oaSwitch4_exit_result;
         graphics.text(font, marker, geometry.icon().x(), geometry.icon().y(), statusColor, false);
-        Component title = intentTitle(tool.detail().intent(), summary.titleKey());
+        net.minecraft.network.chat.Component title = intentTitle(tool.detail().intent(), summary.titleKey());
         renderToolSummaryText(graphics, title, geometry.title(), TEXT, mouseX, mouseY, true);
         renderToolSummaryText(graphics, MinecraftComponents.translatable(summary.status().translationKey()),
                 geometry.status(), statusColor, mouseX, mouseY, false);
@@ -1690,7 +1831,7 @@ private static final class ToolFlowOwner {
         List<String> paintedCapsules = new ArrayList<>();
         List<Map<String, Object>> capsuleReceipts = new ArrayList<>();
         for (int index = 0; index < geometry.capsules().size(); index++) {
-            var capsule = summary.capsules().get(index);
+            dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule = summary.capsules().get(index);
             GuideUiLayout.Rect capsuleBounds = geometry.capsules().get(index);
             if (renderToolSummaryCapsule(graphics, capsule, capsuleBounds, mouseX, mouseY)) {
                 paintedCapsules.add(capsule.id());
@@ -1713,13 +1854,13 @@ private static final class ToolFlowOwner {
             receipt.put("description", summary.description());
             receipt.put("status", summary.status().name());
             receipt.put("rowHeight", geometry.rowHeight());
-            receipt.put("capsuleIds", List.copyOf(paintedCapsules));
-            receipt.put("capsules", List.copyOf(capsuleReceipts));
+            receipt.put("capsuleIds", dev.openallay.util.Java8Collections.listCopyOf(paintedCapsules));
+            receipt.put("capsules", dev.openallay.util.Java8Collections.listCopyOf(capsuleReceipts));
             receipt.put("bounds", toolPaintBounds(card));
             receipt.put("titleBounds", toolPaintBounds(geometry.title()));
             receipt.put("blankClickX", card.x() + 2);
             receipt.put("blankClickY", visibleTop + (visibleBottom - visibleTop) / 2);
-            renderedToolSummaries.add(Map.copyOf(receipt));
+            renderedToolSummaries.add(dev.openallay.util.Java8Collections.mapCopyOf(receipt));
         }
         return y + geometry.rowHeight();
     }
@@ -1730,7 +1871,7 @@ private static final class ToolFlowOwner {
         boolean hovered = bounds.contains(mouseX, mouseY) || isFocused(focusedContentId, capsule.id());
         renderToolSummaryFrame(graphics, bounds, panelColor(), hovered ? ACCENT : OpenAllayWidgetTheme.SLATE_BORDER);
         GuideItemView item = capsule.item();
-        ItemStack stack = itemStack(item.itemId(), item.count());
+        net.minecraft.world.item.ItemStack stack = itemStack(item.itemId(), item.count());
         if (!stack.isEmpty()) {
             graphics.item(stack, bounds.x() + 1, bounds.y());
             graphics.itemDecorations(font, stack, bounds.x() + 1, bounds.y());
@@ -1751,12 +1892,18 @@ private static final class ToolFlowOwner {
     private MinecraftSemanticRenderer.Intent toolSummaryCapsuleIntent(
             dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule) {
         java.util.Objects.requireNonNull(capsule);
-        if (capsule instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Item value) {
-            return new MinecraftSemanticRenderer.Intent.BrowseRecipes(value.item().itemId());
-        } else if (capsule instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe value) {
-            return new MinecraftSemanticRenderer.Intent.ExactRecipe(value.recipe().references().stream()
-                    .filter(recipeClient::supportsExact).findFirst().orElse(value.recipe().reference()));
+        final class $oaPattern17_Holder { dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule value; dev.openallay.guide.ui.GuideToolSummaryPresenter.Item bound; }
+final $oaPattern17_Holder $oaPattern17_holder = new $oaPattern17_Holder();
+if ((($oaPattern17_holder.value = capsule) instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Item && (($oaPattern17_holder.bound = (dev.openallay.guide.ui.GuideToolSummaryPresenter.Item) $oaPattern17_holder.value) != null))) {
+            return new MinecraftSemanticRenderer.Intent.BrowseRecipes($oaPattern17_holder.bound.item().itemId());
+        } else {
+final class $oaPattern18_Holder { dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule value; dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe bound; }
+final $oaPattern18_Holder $oaPattern18_holder = new $oaPattern18_Holder();
+if ((($oaPattern18_holder.value = capsule) instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe && (($oaPattern18_holder.bound = (dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe) $oaPattern18_holder.value) != null))) {
+            return new MinecraftSemanticRenderer.Intent.ExactRecipe($oaPattern18_holder.bound.recipe().references().stream()
+                    .filter(recipeClient::supportsExact).findFirst().orElse($oaPattern18_holder.bound.recipe().reference()));
         }
+}
         throw new IncompatibleClassChangeError();
     }
 
@@ -1768,15 +1915,17 @@ private static final class ToolFlowOwner {
         receipt.put("bounds", toolPaintBounds(bounds));
         receipt.put("itemId", capsule.item().itemId());
         MinecraftSemanticRenderer.Intent intent = toolSummaryCapsuleIntent(capsule);
-        if (intent instanceof MinecraftSemanticRenderer.Intent.ExactRecipe exact) {
+        final class $oaPattern19_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.ExactRecipe bound; }
+final $oaPattern19_Holder $oaPattern19_holder = new $oaPattern19_Holder();
+if ((($oaPattern19_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe && (($oaPattern19_holder.bound = (MinecraftSemanticRenderer.Intent.ExactRecipe) $oaPattern19_holder.value) != null))) {
             receipt.put("action", "ExactRecipe");
-            receipt.put("reference", exact.reference());
+            receipt.put("reference", $oaPattern19_holder.bound.reference());
         } else receipt.put("action", "BrowseRecipes");
-        return Map.copyOf(receipt);
+        return dev.openallay.util.Java8Collections.mapCopyOf(receipt);
     }
 
     private static Map<String, Integer> toolPaintBounds(GuideUiLayout.Rect bounds) {
-        return Map.of("x", bounds.x(), "y", bounds.y(), "width", bounds.width(), "height", bounds.height());
+        return dev.openallay.util.Java8Collections.mapOf("x", bounds.x(), "y", bounds.y(), "width", bounds.width(), "height", bounds.height());
     }
 
     private static String capsuleLabel(dev.openallay.guide.ui.GuideToolSummaryPresenter.Capsule capsule) {
@@ -1797,7 +1946,7 @@ private static final class ToolFlowOwner {
     }
 
     private void renderToolSummaryText(
-            GuideGraphics graphics, Component text, GuideUiLayout.Rect bounds, int color,
+            GuideGraphics graphics, net.minecraft.network.chat.Component text, GuideUiLayout.Rect bounds, int color,
             int mouseX, int mouseY, boolean detailHint) {
         String full = MinecraftComponents.getString(text);
         int available = Math.max(1, bounds.width());
@@ -1806,7 +1955,7 @@ private static final class ToolFlowOwner {
                         + (available >= GuideNativeFont.width(font, "…") ? "…" : "");
         graphics.text(font, visible, bounds.x(), bounds.y(), color, false);
         if (bounds.contains(mouseX, mouseY) && layout.transcript().contains(mouseX, mouseY)) {
-            Component tooltip = detailHint ? MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(text), "\n"), MinecraftComponents.translatable("screen.openallay.tool.view_details")) : text;
+            net.minecraft.network.chat.Component tooltip = detailHint ? MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(text), "\n"), MinecraftComponents.translatable("screen.openallay.tool.view_details")) : text;
             graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);
         }
     }
@@ -1820,19 +1969,19 @@ private static final class ToolFlowOwner {
         graphics.fill(x + 1, y + 2, right - 1, bottom - 2, fill);
     }
 
-    static List<Component> toolFailureComponents(GuideToolDetailView detail, String toolId) {
+    static List<net.minecraft.network.chat.Component> toolFailureComponents(GuideToolDetailView detail, String toolId) {
         if (detail.failure().isPresent()) {
             GuideToolDetailView.Failure failure = detail.failure().orElseThrow();
-            List<Component> lines = new ArrayList<>();
-            if (!failure.code().isBlank()) lines.add(MinecraftComponents.literal(failure.code()));
-            if (!failure.message().isBlank()) lines.add(MinecraftComponents.literal(failure.message()));
-            if (!lines.isEmpty()) return List.copyOf(lines);
+            List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
+            if (!dev.openallay.util.Java8Strings.isBlank(failure.code())) lines.add(MinecraftComponents.literal(failure.code()));
+            if (!dev.openallay.util.Java8Strings.isBlank(failure.message())) lines.add(MinecraftComponents.literal(failure.message()));
+            if (!lines.isEmpty()) return dev.openallay.util.Java8Collections.listCopyOf(lines);
         }
-        if (detail.displayStatus() != GuideToolDisplayStatus.FAILED) return List.of();
-        return detail.narration().stream().map(message -> friendlyToolMessage(toolId, message)).toList();
+        if (detail.displayStatus() != GuideToolDisplayStatus.FAILED) return dev.openallay.util.Java8Collections.listOf();
+        return dev.openallay.util.Java8Collections.toList(detail.narration().stream().map(message -> friendlyToolMessage(toolId, message)));
     }
 
-    private static Component friendlyToolMessage(String toolId, GuideToolMessage message) {
+    private static net.minecraft.network.chat.Component friendlyToolMessage(String toolId, GuideToolMessage message) {
         if ("openallay:run_javascript".equals(toolId)
                 && message.key() == GuideToolMessage.Key.FAILURE_GENERIC) {
             return MinecraftComponents.translatable("screen.openallay.tool.failure.javascript");
@@ -1845,19 +1994,19 @@ private static final class ToolFlowOwner {
         return detail.failure().isPresent()
                 || detail.displayStatus() == GuideToolDisplayStatus.FAILED
                 || detail.displayStatus() == GuideToolDisplayStatus.NO_RESULT_RECORDED
-                ? List.of() : detail.narration();
+                ? dev.openallay.util.Java8Collections.listOf() : detail.narration();
     }
 
-    static Component toolMessage(GuideToolMessage message) {
+    static net.minecraft.network.chat.Component toolMessage(GuideToolMessage message) {
         Object[] arguments = message.arguments().stream()
                 .map(MinecraftComponents::literal)
                 .toArray();
         return MinecraftComponents.translatable(message.key().translationKey(), arguments);
     }
 
-    private int wrappedHeight(List<Component> paragraphs, int width) {
+    private int wrappedHeight(List<net.minecraft.network.chat.Component> paragraphs, int width) {
         int height = 0;
-        for (Component paragraph : paragraphs) {
+        for (net.minecraft.network.chat.Component paragraph : paragraphs) {
             List<GuideTextLine> lines = GuideNativeFont.split(font, paragraph, Math.max(1, width));
             height += Math.max(1, lines.size()) * 10;
         }
@@ -1870,13 +2019,37 @@ private static final class ToolFlowOwner {
                 java.util.Locale.getDefault().toLanguageTag(), font.getClass().getName(),
                 new SemanticLayoutEngine.Measurer() {
                     @Override public int width(String text, SemanticLayout.Style style) {
-                        return GuideNativeFont.width(font, MinecraftComponents.style(MinecraftComponents.literal(text), switch (style) {
-                            case EMPHASIS -> ChatFormatting.ITALIC;
-                            case STRONG -> ChatFormatting.BOLD;
-                            case CODE -> ChatFormatting.GRAY;
-                            case REFERENCE -> ChatFormatting.AQUA;
-                            case NORMAL -> ChatFormatting.WHITE;
-                        }));
+                        {
+final net.minecraft.client.gui.Font $oaSwitch11_exit_result_prior1 = font;
+final net.minecraft.network.chat.Component $oaSwitch11_exit_result_prior0 = MinecraftComponents.literal(text);
+net.minecraft.ChatFormatting $oaSwitch11_exit_result;
+$oaSwitch11_exit: {
+switch ((style)) {
+case EMPHASIS:
+{
+$oaSwitch11_exit_result = net.minecraft.ChatFormatting.ITALIC; break $oaSwitch11_exit;
+}
+case STRONG:
+{
+$oaSwitch11_exit_result = net.minecraft.ChatFormatting.BOLD; break $oaSwitch11_exit;
+}
+case CODE:
+{
+$oaSwitch11_exit_result = net.minecraft.ChatFormatting.GRAY; break $oaSwitch11_exit;
+}
+case REFERENCE:
+{
+$oaSwitch11_exit_result = net.minecraft.ChatFormatting.AQUA; break $oaSwitch11_exit;
+}
+case NORMAL:
+{
+$oaSwitch11_exit_result = net.minecraft.ChatFormatting.WHITE; break $oaSwitch11_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return GuideNativeFont.width($oaSwitch11_exit_result_prior1, MinecraftComponents.style($oaSwitch11_exit_result_prior0, $oaSwitch11_exit_result));
+}
                     }
                     @Override public int lineHeight(SemanticLayout.Kind kind) {
                         return kind == SemanticLayout.Kind.HEADING ? 12 : 10;
@@ -1886,17 +2059,35 @@ private static final class ToolFlowOwner {
 
     private static String rowId(GuideUiRow row) {
         java.util.Objects.requireNonNull(row);
-        if (row instanceof GuideUiRow.Persistence value) {
-            return "persistence:" + value.state();
-        } else if (row instanceof GuideUiRow.User value) {
-            return "user:" + value.requestId();
-        } else if (row instanceof GuideUiRow.Assistant value) {
-            return "assistant:" + value.requestId() + ":" + value.ordinal();
-        } else if (row instanceof GuideUiRow.Tool value) {
-            return "tool:" + value.requestId() + ":" + value.activity().invocationId();
-        } else if (row instanceof GuideUiRow.Status value) {
-            return "status:" + value.requestId();
+        final class $oaPattern20_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Persistence bound; }
+final $oaPattern20_Holder $oaPattern20_holder = new $oaPattern20_Holder();
+if ((($oaPattern20_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Persistence && (($oaPattern20_holder.bound = (GuideUiRow.Persistence) $oaPattern20_holder.value) != null))) {
+            return "persistence:" + $oaPattern20_holder.bound.state();
+        } else {
+final class $oaPattern21_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.User bound; }
+final $oaPattern21_Holder $oaPattern21_holder = new $oaPattern21_Holder();
+if ((($oaPattern21_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.User && (($oaPattern21_holder.bound = (GuideUiRow.User) $oaPattern21_holder.value) != null))) {
+            return "user:" + $oaPattern21_holder.bound.requestId();
+        } else {
+final class $oaPattern22_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern22_Holder $oaPattern22_holder = new $oaPattern22_Holder();
+if ((($oaPattern22_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern22_holder.bound = (GuideUiRow.Assistant) $oaPattern22_holder.value) != null))) {
+            return "assistant:" + $oaPattern22_holder.bound.requestId() + ":" + $oaPattern22_holder.bound.ordinal();
+        } else {
+final class $oaPattern23_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern23_Holder $oaPattern23_holder = new $oaPattern23_Holder();
+if ((($oaPattern23_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern23_holder.bound = (GuideUiRow.Tool) $oaPattern23_holder.value) != null))) {
+            return "tool:" + $oaPattern23_holder.bound.requestId() + ":" + $oaPattern23_holder.bound.activity().invocationId();
+        } else {
+final class $oaPattern24_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Status bound; }
+final $oaPattern24_Holder $oaPattern24_holder = new $oaPattern24_Holder();
+if ((($oaPattern24_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Status && (($oaPattern24_holder.bound = (GuideUiRow.Status) $oaPattern24_holder.value) != null))) {
+            return "status:" + $oaPattern24_holder.bound.requestId();
         }
+}
+}
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
@@ -1941,37 +2132,81 @@ private static final class ToolFlowOwner {
 
     private void semanticIntent(MinecraftSemanticRenderer.Intent intent) {
         java.util.Objects.requireNonNull(intent);
-        if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseRecipes value) {
-            navigate(recipeClient.openRecipes(value.itemId()));
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseUsages value) {
-            navigate(recipeClient.openUsages(value.itemId()));
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.ExactRecipe value) {
-            navigate(recipeClient.openExact(value.reference()));
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Source value) {
-            openSemanticSource(value.sourceId(), value.originInvocationId());
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Evidence value) {
-            openSemanticSource(value.evidenceId(), value.originInvocationId());
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Choice value) {
+        final class $oaPattern25_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.BrowseRecipes bound; }
+final $oaPattern25_Holder $oaPattern25_holder = new $oaPattern25_Holder();
+if ((($oaPattern25_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes && (($oaPattern25_holder.bound = (MinecraftSemanticRenderer.Intent.BrowseRecipes) $oaPattern25_holder.value) != null))) {
+            navigate(recipeClient.openRecipes($oaPattern25_holder.bound.itemId()));
+        } else {
+final class $oaPattern26_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.BrowseUsages bound; }
+final $oaPattern26_Holder $oaPattern26_holder = new $oaPattern26_Holder();
+if ((($oaPattern26_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages && (($oaPattern26_holder.bound = (MinecraftSemanticRenderer.Intent.BrowseUsages) $oaPattern26_holder.value) != null))) {
+            navigate(recipeClient.openUsages($oaPattern26_holder.bound.itemId()));
+        } else {
+final class $oaPattern27_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.ExactRecipe bound; }
+final $oaPattern27_Holder $oaPattern27_holder = new $oaPattern27_Holder();
+if ((($oaPattern27_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe && (($oaPattern27_holder.bound = (MinecraftSemanticRenderer.Intent.ExactRecipe) $oaPattern27_holder.value) != null))) {
+            navigate(recipeClient.openExact($oaPattern27_holder.bound.reference()));
+        } else {
+final class $oaPattern28_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.Source bound; }
+final $oaPattern28_Holder $oaPattern28_holder = new $oaPattern28_Holder();
+if ((($oaPattern28_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source && (($oaPattern28_holder.bound = (MinecraftSemanticRenderer.Intent.Source) $oaPattern28_holder.value) != null))) {
+            openSemanticSource($oaPattern28_holder.bound.sourceId(), $oaPattern28_holder.bound.originInvocationId());
+        } else {
+final class $oaPattern29_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.Evidence bound; }
+final $oaPattern29_Holder $oaPattern29_holder = new $oaPattern29_Holder();
+if ((($oaPattern29_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence && (($oaPattern29_holder.bound = (MinecraftSemanticRenderer.Intent.Evidence) $oaPattern29_holder.value) != null))) {
+            openSemanticSource($oaPattern29_holder.bound.evidenceId(), $oaPattern29_holder.bound.originInvocationId());
+        } else {
+final class $oaPattern30_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.Choice bound; }
+final $oaPattern30_Holder $oaPattern30_holder = new $oaPattern30_Holder();
+if ((($oaPattern30_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice && (($oaPattern30_holder.bound = (MinecraftSemanticRenderer.Intent.Choice) $oaPattern30_holder.value) != null))) {
             notice = GuideUiNotice.info(
-                    MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.choice.unavailable", value.choiceId())));
+                    MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.choice.unavailable", $oaPattern30_holder.bound.choiceId())));
         }
+}
+}
+}
+}
+}
     }
 
     private static String semanticIntentNarration(MinecraftSemanticRenderer.Intent intent) {
         java.util.Objects.requireNonNull(intent);
-        if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseRecipes value) {
-            return "查看 " + value.itemId() + " 的配方";
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.BrowseUsages value) {
-            return "查看 " + value.itemId() + " 的用途";
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.ExactRecipe value) {
-            return "打开配方 " + value.reference().recipeId();
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Source value) {
-            return "查看来源 " + value.sourceId();
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Evidence value) {
-            return "查看证据 " + value.evidenceId();
-        } else if (intent instanceof MinecraftSemanticRenderer.Intent.Choice value) {
-            return "选择 " + value.choiceId();
+        final class $oaPattern31_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.BrowseRecipes bound; }
+final $oaPattern31_Holder $oaPattern31_holder = new $oaPattern31_Holder();
+if ((($oaPattern31_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes && (($oaPattern31_holder.bound = (MinecraftSemanticRenderer.Intent.BrowseRecipes) $oaPattern31_holder.value) != null))) {
+            return "查看 " + $oaPattern31_holder.bound.itemId() + " 的配方";
+        } else {
+final class $oaPattern32_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.BrowseUsages bound; }
+final $oaPattern32_Holder $oaPattern32_holder = new $oaPattern32_Holder();
+if ((($oaPattern32_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseUsages && (($oaPattern32_holder.bound = (MinecraftSemanticRenderer.Intent.BrowseUsages) $oaPattern32_holder.value) != null))) {
+            return "查看 " + $oaPattern32_holder.bound.itemId() + " 的用途";
+        } else {
+final class $oaPattern33_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.ExactRecipe bound; }
+final $oaPattern33_Holder $oaPattern33_holder = new $oaPattern33_Holder();
+if ((($oaPattern33_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe && (($oaPattern33_holder.bound = (MinecraftSemanticRenderer.Intent.ExactRecipe) $oaPattern33_holder.value) != null))) {
+            return "打开配方 " + $oaPattern33_holder.bound.reference().recipeId();
+        } else {
+final class $oaPattern34_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.Source bound; }
+final $oaPattern34_Holder $oaPattern34_holder = new $oaPattern34_Holder();
+if ((($oaPattern34_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Source && (($oaPattern34_holder.bound = (MinecraftSemanticRenderer.Intent.Source) $oaPattern34_holder.value) != null))) {
+            return "查看来源 " + $oaPattern34_holder.bound.sourceId();
+        } else {
+final class $oaPattern35_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.Evidence bound; }
+final $oaPattern35_Holder $oaPattern35_holder = new $oaPattern35_Holder();
+if ((($oaPattern35_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Evidence && (($oaPattern35_holder.bound = (MinecraftSemanticRenderer.Intent.Evidence) $oaPattern35_holder.value) != null))) {
+            return "查看证据 " + $oaPattern35_holder.bound.evidenceId();
+        } else {
+final class $oaPattern36_Holder { dev.openallay.client.gui.MinecraftSemanticRenderer.Intent value; MinecraftSemanticRenderer.Intent.Choice bound; }
+final $oaPattern36_Holder $oaPattern36_holder = new $oaPattern36_Holder();
+if ((($oaPattern36_holder.value = intent) instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.Choice && (($oaPattern36_holder.bound = (MinecraftSemanticRenderer.Intent.Choice) $oaPattern36_holder.value) != null))) {
+            return "选择 " + $oaPattern36_holder.bound.choiceId();
         }
+}
+}
+}
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
@@ -1986,14 +2221,20 @@ private static final class ToolFlowOwner {
         GuideSource source = view.rows().stream()
                 .flatMap(row -> {
                     java.util.Objects.requireNonNull(row);
-                    if (row instanceof GuideUiRow.Assistant assistant) {
-                        return assistant.sources().stream();
-                    } else if (row instanceof GuideUiRow.Tool tool) {
-                        return tool.activity().invocationId().equals(invocationId)
-                                ? tool.activity().sources().stream() : java.util.stream.Stream.empty();
+                    final class $oaPattern37_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern37_Holder $oaPattern37_holder = new $oaPattern37_Holder();
+if ((($oaPattern37_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern37_holder.bound = (GuideUiRow.Assistant) $oaPattern37_holder.value) != null))) {
+                        return $oaPattern37_holder.bound.sources().stream();
+                    } else {
+final class $oaPattern38_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern38_Holder $oaPattern38_holder = new $oaPattern38_Holder();
+if ((($oaPattern38_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern38_holder.bound = (GuideUiRow.Tool) $oaPattern38_holder.value) != null))) {
+                        return $oaPattern38_holder.bound.activity().invocationId().equals(invocationId)
+                                ? $oaPattern38_holder.bound.activity().sources().stream() : java.util.stream.Stream.empty();
                     } else {
                         return java.util.stream.Stream.empty();
                     }
+}
                 })
                 .filter(value -> value.evidence().sourceId().equals(sourceId))
                 .findFirst().orElse(null);
@@ -2001,8 +2242,8 @@ private static final class ToolFlowOwner {
     }
 
     private int renderWrapped(
-            GuideGraphics graphics, List<Component> paragraphs, int x, int y, int width, int color) {
-        for (Component paragraph : paragraphs) {
+            GuideGraphics graphics, List<net.minecraft.network.chat.Component> paragraphs, int x, int y, int width, int color) {
+        for (net.minecraft.network.chat.Component paragraph : paragraphs) {
             List<GuideTextLine> lines = GuideNativeFont.split(font, paragraph, width);
             if (lines.isEmpty()) y += 9;
             for (GuideTextLine line : lines) {
@@ -2016,7 +2257,7 @@ private static final class ToolFlowOwner {
         return y;
     }
 
-    static Component assistantLabel(GuideDisplayConfig display, boolean streaming) {
+    static net.minecraft.network.chat.Component assistantLabel(GuideDisplayConfig display, boolean streaming) {
         Objects.requireNonNull(display, "display");
         return streaming
                 ? MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.literal(display.assistantName()), " · "), MinecraftComponents.translatable(
@@ -2065,10 +2306,12 @@ private static final class ToolFlowOwner {
                             + ": " + MinecraftComponents.getString(MinecraftComponents.translatable(toolDetail.displayStatus().translationKey())),
                     detail, y);
             for (DetailSection section : toolDetailSections(toolDetail)) {
-                switch (section) {
-                    case RESULT -> {
-                        for (Component reason : toolFailureComponents(toolDetail, selectedTool.activity().toolId())) {
-                            y = detailLine(graphics, MinecraftComponents.style(MinecraftComponents.copy(reason), ChatFormatting.RED), detail, y);
+                switch ((section)) {
+case RESULT:
+{
+{
+                        for (net.minecraft.network.chat.Component reason : toolFailureComponents(toolDetail, selectedTool.activity().toolId())) {
+                            y = detailLine(graphics, MinecraftComponents.style(MinecraftComponents.copy(reason), net.minecraft.ChatFormatting.RED), detail, y);
                         }
                         if (toolDetail.failure().isEmpty()) {
                             y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.detail.output"), detail, y + 4);
@@ -2077,7 +2320,7 @@ private static final class ToolFlowOwner {
                             y = detailLine(graphics, toolMessage(message), detail, y);
                         }
                         if (observationImages != null) {
-                            for (ImageReference reference : List.copyOf(observationImages.apply(
+                            for (ImageReference reference : dev.openallay.util.Java8Collections.listCopyOf(observationImages.apply(
                                     selectedTool.requestId(), selectedTool.activity().invocationId()))) {
                                 y = observationImageDetail(graphics, reference, detail, y, mouseX, mouseY, false);
                             }
@@ -2093,23 +2336,39 @@ private static final class ToolFlowOwner {
                             }
                         }
                     }
-                    case PROGRAM -> {
+break;
+}
+case PROGRAM:
+{
+{
                         y = detailDisclosure(graphics, MinecraftComponents.translatable("screen.openallay.detail.program"), detail, y + 4, "program");
                         if (expandedDetails.contains("program")) {
                             y = detailCode(graphics, toolProgram(toolDetail), detail, y, "javascript-source");
                         }
                     }
-                    case INTENT -> {
+break;
+}
+case INTENT:
+{
+{
                         y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.tool.intent.label"), detail, y + 4);
                         y = detailLine(graphics, intentTitle(toolDetail.intent(), toolDetail.titleKey()), detail, y);
-                        if (!toolDetail.intent().description().isBlank()) {
+                        if (!dev.openallay.util.Java8Strings.isBlank(toolDetail.intent().description())) {
                             y = detailLine(graphics, toolDescription(toolDetail.intent()), detail, y);
                         }
                     }
-                    case SOURCES -> {
+break;
+}
+case SOURCES:
+{
+{
                         y = sourceGroups(graphics, selectedTool.activity().sources(), detail, y + 4);
                     }
-                    case DEBUG -> {
+break;
+}
+case DEBUG:
+{
+{
                         y = detailDisclosure(graphics, MinecraftComponents.translatable("screen.openallay.debug.section"),
                                 detail, y + 4, "debug-result");
                         if (expandedDetails.contains("debug-result")) {
@@ -2121,7 +2380,7 @@ private static final class ToolFlowOwner {
                             y = detailLine(graphics, "invocationId: " + debug.invocationId(), detail, y);
                             y = detailLine(graphics, "toolId: " + debug.toolId(), detail, y);
                             y = detailLine(graphics, "recordedToolStatus: " + toolDetail.status(), detail, y);
-                            if (!debug.validationDiagnostic().isBlank()) {
+                            if (!dev.openallay.util.Java8Strings.isBlank(debug.validationDiagnostic())) {
                                 y = detailLine(graphics, "validation: " + debug.validationDiagnostic(), detail, y);
                             }
                             if (debug.invocationArguments() != null) {
@@ -2138,13 +2397,16 @@ private static final class ToolFlowOwner {
                             }
                         }
                     }
-                }
+break;
+}
+}
+
             }
         } else if (selectedSource != null) {
             y = sourceGroup(graphics, selectedSource, detail, y, "selected-source");
         }
         detailContentHeight = Math.max(0, y + detailScroll - detail.y());
-        int clampedScroll = Mth.clamp(detailScroll, 0, maximumDetailScroll());
+        int clampedScroll = net.minecraft.util.Mth.clamp(detailScroll, 0, maximumDetailScroll());
         if (clampedScroll != detailScroll) {
             detailScroll = clampedScroll;
             hits.removeIf(hit -> hit.kind() == HitKind.DETAIL && !"detail:close".equals(hit.focusId()));
@@ -2158,11 +2420,11 @@ private static final class ToolFlowOwner {
     static List<DetailSection> toolDetailSections(GuideToolDetailView detail) {
         List<DetailSection> sections = new ArrayList<>();
         sections.add(DetailSection.RESULT);
-        if (!toolProgram(detail).isBlank()) sections.add(DetailSection.PROGRAM);
+        if (!dev.openallay.util.Java8Strings.isBlank(toolProgram(detail))) sections.add(DetailSection.PROGRAM);
         sections.add(DetailSection.INTENT);
         if (detail.debug().isPresent()) sections.add(DetailSection.DEBUG);
         sections.add(DetailSection.SOURCES);
-        return List.copyOf(sections);
+        return dev.openallay.util.Java8Collections.listCopyOf(sections);
     }
 
     static String toolProgram(GuideToolDetailView detail) {
@@ -2175,8 +2437,8 @@ private static final class ToolFlowOwner {
     }
 
     private int detailDisclosure(
-            GuideGraphics graphics, Component label, GuideUiLayout.Rect detail, int y, String id) {
-        Component text = MinecraftComponents.append(MinecraftComponents.literal(expandedDetails.contains(id) ? "▼ " : "▶ "), label);
+            GuideGraphics graphics, net.minecraft.network.chat.Component label, GuideUiLayout.Rect detail, int y, String id) {
+        net.minecraft.network.chat.Component text = MinecraftComponents.append(MinecraftComponents.literal(expandedDetails.contains(id) ? "▼ " : "▶ "), label);
         int bottom = detailLine(graphics, text, detail, y);
         if (visibleDetail(y, bottom - y, detail)) {
             int top = Math.max(y, detail.y() + 21);
@@ -2204,23 +2466,53 @@ private static final class ToolFlowOwner {
             int mouseX,
             int mouseY) {
         java.util.Objects.requireNonNull(card);
-        if (card instanceof GuideDetailCard.Recipe recipe) {
-            return recipeCard(graphics, recipe.recipe(), cardId, detail, y, mouseX, mouseY);
-        } else if (card instanceof GuideDetailCard.ItemGrid grid) {
-            return itemGridCard(graphics, grid, detail, y, mouseX, mouseY);
-        } else if (card instanceof GuideDetailCard.Requirements requirements) {
-            return requirementsCard(graphics, requirements, detail, y, mouseX, mouseY);
-        } else if (card instanceof GuideDetailCard.Table table) {
-            return tableCard(graphics, table, detail, y);
-        } else if (card instanceof GuideDetailCard.KeyValue keyValue) {
-            return keyValueCard(graphics, keyValue, detail, y);
-        } else if (card instanceof GuideDetailCard.DataPreview preview) {
-            return dataPreviewCard(graphics, preview, detail, y);
-        } else if (card instanceof GuideDetailCard.Text text) {
-            return textCard(graphics, text, detail, y);
-        } else if (card instanceof GuideDetailCard.Error error) {
-            return errorCard(graphics, error, detail, y);
+        final class $oaPattern39_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.Recipe bound; }
+final $oaPattern39_Holder $oaPattern39_holder = new $oaPattern39_Holder();
+if ((($oaPattern39_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Recipe && (($oaPattern39_holder.bound = (GuideDetailCard.Recipe) $oaPattern39_holder.value) != null))) {
+            return recipeCard(graphics, $oaPattern39_holder.bound.recipe(), cardId, detail, y, mouseX, mouseY);
+        } else {
+final class $oaPattern40_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.ItemGrid bound; }
+final $oaPattern40_Holder $oaPattern40_holder = new $oaPattern40_Holder();
+if ((($oaPattern40_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.ItemGrid && (($oaPattern40_holder.bound = (GuideDetailCard.ItemGrid) $oaPattern40_holder.value) != null))) {
+            return itemGridCard(graphics, $oaPattern40_holder.bound, detail, y, mouseX, mouseY);
+        } else {
+final class $oaPattern41_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.Requirements bound; }
+final $oaPattern41_Holder $oaPattern41_holder = new $oaPattern41_Holder();
+if ((($oaPattern41_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Requirements && (($oaPattern41_holder.bound = (GuideDetailCard.Requirements) $oaPattern41_holder.value) != null))) {
+            return requirementsCard(graphics, $oaPattern41_holder.bound, detail, y, mouseX, mouseY);
+        } else {
+final class $oaPattern42_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.Table bound; }
+final $oaPattern42_Holder $oaPattern42_holder = new $oaPattern42_Holder();
+if ((($oaPattern42_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Table && (($oaPattern42_holder.bound = (GuideDetailCard.Table) $oaPattern42_holder.value) != null))) {
+            return tableCard(graphics, $oaPattern42_holder.bound, detail, y);
+        } else {
+final class $oaPattern43_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.KeyValue bound; }
+final $oaPattern43_Holder $oaPattern43_holder = new $oaPattern43_Holder();
+if ((($oaPattern43_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.KeyValue && (($oaPattern43_holder.bound = (GuideDetailCard.KeyValue) $oaPattern43_holder.value) != null))) {
+            return keyValueCard(graphics, $oaPattern43_holder.bound, detail, y);
+        } else {
+final class $oaPattern44_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.DataPreview bound; }
+final $oaPattern44_Holder $oaPattern44_holder = new $oaPattern44_Holder();
+if ((($oaPattern44_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.DataPreview && (($oaPattern44_holder.bound = (GuideDetailCard.DataPreview) $oaPattern44_holder.value) != null))) {
+            return dataPreviewCard(graphics, $oaPattern44_holder.bound, detail, y);
+        } else {
+final class $oaPattern45_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.Text bound; }
+final $oaPattern45_Holder $oaPattern45_holder = new $oaPattern45_Holder();
+if ((($oaPattern45_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Text && (($oaPattern45_holder.bound = (GuideDetailCard.Text) $oaPattern45_holder.value) != null))) {
+            return textCard(graphics, $oaPattern45_holder.bound, detail, y);
+        } else {
+final class $oaPattern46_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.Error bound; }
+final $oaPattern46_Holder $oaPattern46_holder = new $oaPattern46_Holder();
+if ((($oaPattern46_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Error && (($oaPattern46_holder.bound = (GuideDetailCard.Error) $oaPattern46_holder.value) != null))) {
+            return errorCard(graphics, $oaPattern46_holder.bound, detail, y);
         }
+}
+}
+}
+}
+}
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
@@ -2370,7 +2662,7 @@ private static final class ToolFlowOwner {
         int canvasHeight = 126;
         if (visibleDetail(y, canvasHeight, detail)) {
             String label = card.outputs().isEmpty() ? card.id() : card.outputs().get(0).displayName();
-            var component = new dev.openallay.guide.semantic.RichComponent.RecipeGrid(
+            dev.openallay.guide.semantic.RichComponent.RecipeGrid component = new dev.openallay.guide.semantic.RichComponent.RecipeGrid(
                     toolDetailRecipeNodeId(cardId), card.reference(), selectedTool.activity().invocationId(), label, label, label);
             NativeDomainViewBinding.Recipe binding = new NativeDomainViewBinding.Recipe(cardId, component, card);
             boolean painted = detailNativeViews.render(binding, new NativeDomainView.RenderContext(
@@ -2384,7 +2676,7 @@ private static final class ToolFlowOwner {
         }
         y += canvasHeight + 5;
         // The native canvas is bounded. These scrollable lines preserve every stored player fact.
-        for (var line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card)) {
+        for (dev.openallay.guide.ui.GuideRecipeDetailFacts.Line line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card)) {
             Object[] arguments = line.arguments().stream().map(MinecraftComponents::literal).toArray();
             y = detailLine(graphics, MinecraftComponents.translatable(line.key(), arguments), detail, y);
         }
@@ -2397,20 +2689,20 @@ private static final class ToolFlowOwner {
                     actionX + 7, y + 2, recipeClient.canBrowse(), () -> navigate(recipeClient.openUsages(output.itemId())));
             y += 16;
         }
-        var exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
+        java.util.Optional<dev.openallay.context.RecipeReference> exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
         recipeAction(graphics, MinecraftComponents.translatable(exact.isPresent()
                         ? "screen.openallay.recipe.open_exact" : "screen.openallay.recipe.open_exact_unavailable"),
                 left + 7, y + 2, exact.isPresent(), () -> navigate(recipeClient.openExact(exact.orElseThrow())));
         y += 16;
         if (!recipeClient.canBrowse()) {
-            y = detailLine(graphics, MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.recipe.viewer_unavailable"), ChatFormatting.YELLOW), detail, y);
+            y = detailLine(graphics, MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.recipe.viewer_unavailable"), net.minecraft.ChatFormatting.YELLOW), detail, y);
         }
         return y + 5;
     }
 
     private static String toolDetailRecipeNodeId(String cardId) {
         try {
-            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+            return dev.openallay.util.Java8Hex.formatHex(java.security.MessageDigest.getInstance("SHA-256")
                     .digest(cardId.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
@@ -2419,7 +2711,7 @@ private static final class ToolFlowOwner {
 
     private int recipeAction(
             GuideGraphics graphics,
-            Component label,
+            net.minecraft.network.chat.Component label,
             int x,
             int y,
             boolean enabled,
@@ -2440,12 +2732,12 @@ private static final class ToolFlowOwner {
         return x + width;
     }
 
-    private static ItemStack itemStack(String itemId, long count) {
-        var id = MinecraftResourceIds.tryParse(itemId);
+    private static net.minecraft.world.item.ItemStack itemStack(String itemId, long count) {
+        net.minecraft.resources.ResourceLocation id = MinecraftResourceIds.tryParse(itemId);
         if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
-            return ItemStack.EMPTY;
+            return net.minecraft.world.item.ItemStack.EMPTY;
         }
-        return new ItemStack(dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
+        return new net.minecraft.world.item.ItemStack(dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
     }
 
@@ -2456,7 +2748,7 @@ private static final class ToolFlowOwner {
             int y,
             int mouseX,
             int mouseY) {
-        ItemStack stack = itemStack(item.itemId(), item.count());
+        net.minecraft.world.item.ItemStack stack = itemStack(item.itemId(), item.count());
         if (stack.isEmpty()) {
             graphics.text(font, "?", x + 5, y + 4, MUTED, false);
             return;
@@ -2479,16 +2771,40 @@ private static final class ToolFlowOwner {
     }
 
     private static String navigationFailure(RecipeNavigationResult result) {
-        String key = switch (result.code()) {
-            case "exact_unsupported" -> "screen.openallay.recipe.exact_unsupported";
-            case "preferred_viewer_unavailable" ->
-                    "screen.openallay.recipe.preferred_viewer_unavailable";
-            case "viewer_unavailable" -> "screen.openallay.recipe.viewer_unavailable";
-            case "unknown_item" -> "screen.openallay.recipe.unknown_item";
-            case "wrong_thread" -> "screen.openallay.recipe.wrong_thread";
-            case "viewer_failure" -> "screen.openallay.recipe.viewer_failure";
-            default -> null;
-        };
+        java.lang.String $oaSwitch13_exit_result;
+$oaSwitch13_exit: {
+switch ((result.code())) {
+case "exact_unsupported":
+{
+$oaSwitch13_exit_result = "screen.openallay.recipe.exact_unsupported"; break $oaSwitch13_exit;
+}
+case "preferred_viewer_unavailable":
+{
+$oaSwitch13_exit_result = "screen.openallay.recipe.preferred_viewer_unavailable"; break $oaSwitch13_exit;
+}
+case "viewer_unavailable":
+{
+$oaSwitch13_exit_result = "screen.openallay.recipe.viewer_unavailable"; break $oaSwitch13_exit;
+}
+case "unknown_item":
+{
+$oaSwitch13_exit_result = "screen.openallay.recipe.unknown_item"; break $oaSwitch13_exit;
+}
+case "wrong_thread":
+{
+$oaSwitch13_exit_result = "screen.openallay.recipe.wrong_thread"; break $oaSwitch13_exit;
+}
+case "viewer_failure":
+{
+$oaSwitch13_exit_result = "screen.openallay.recipe.viewer_failure"; break $oaSwitch13_exit;
+}
+default:
+{
+$oaSwitch13_exit_result = null; break $oaSwitch13_exit;
+}
+}
+}
+String key = $oaSwitch13_exit_result;
         return key == null
                 ? result.code() + ": " + result.message()
                 : MinecraftComponents.getString(MinecraftComponents.translatable(key));
@@ -2523,7 +2839,7 @@ private static final class ToolFlowOwner {
         SourceDetailLayout cached = sourceDetailLayouts.get(id);
         if (cached == null || !cached.matches(group, width, locale)) {
             List<GuideTextLine> lines = new ArrayList<>();
-            for (Component component : sourceDetailComponents(group)) {
+            for (net.minecraft.network.chat.Component component : sourceDetailComponents(group)) {
                 lines.addAll(GuideNativeFont.split(font, component, width));
             }
             cached = new SourceDetailLayout(group, width, locale, lines);
@@ -2537,21 +2853,21 @@ private static final class ToolFlowOwner {
     }
 
     /** Built only when a retained group, width, or locale changes; never clipped or capped. */
-    static List<Component> sourceDetailComponents(GuideEvidencePresentation.Group group) {
-        List<Component> lines = new ArrayList<>();
+    static List<net.minecraft.network.chat.Component> sourceDetailComponents(GuideEvidencePresentation.Group group) {
+        List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
         GuideEvidencePresentation evidence = group.presentation();
         lines.add(MinecraftComponents.translatable(evidence.authorityKey()));
         lines.add(MinecraftComponents.translatable("screen.openallay.evidence.coverage",
                 MinecraftComponents.translatable(evidence.coverageKey())));
         lines.add(MinecraftComponents.translatable("screen.openallay.evidence.capture_range",
                 group.firstCapturedAt().toString(), group.lastCapturedAt().toString()));
-        var identity = group.identity();
+        dev.openallay.guide.ui.GuideEvidencePresentation.Identity identity = group.identity();
         lines.add(MinecraftComponents.literal("toolId: " + identity.toolId()));
         lines.add(MinecraftComponents.literal("sourceId: " + identity.sourceId()));
         lines.add(MinecraftComponents.literal("provenance: " + identity.provenance()));
         lines.add(MinecraftComponents.literal("gameVersion: " + identity.gameVersion()));
         lines.add(MinecraftComponents.literal("loader: " + identity.loader()));
-        for (var entry : identity.scope().entrySet()) {
+        for (java.util.Map.Entry<java.lang.String, java.lang.String> entry : identity.scope().entrySet()) {
             lines.add(MinecraftComponents.literal(entry.getKey() + ": " + entry.getValue()));
         }
         // Shared scope is already above. Every retained observation-specific value stays available.
@@ -2560,13 +2876,13 @@ private static final class ToolFlowOwner {
                     new dev.openallay.context.SourceObservation(
                             record.evidence(), record.lastCapturedAt()).firstCapturedAt().toString(),
                     record.lastCapturedAt().toString()));
-            for (var entry : record.evidence().details().entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, java.lang.String> entry : record.evidence().details().entrySet()) {
                 if (!identity.scope().containsKey(entry.getKey())) {
                     lines.add(MinecraftComponents.literal(entry.getKey() + ": " + entry.getValue()));
                 }
             }
         }
-        return List.copyOf(lines);
+        return dev.openallay.util.Java8Collections.listCopyOf(lines);
     }
 
     @dev.openallay.value.ValueType(SourceDetailLayout.ValueSchemaProvider.class)
@@ -2576,7 +2892,7 @@ static final class SourceDetailLayout {
     private final String locale;
     private final List<GuideTextLine> lines;
     SourceDetailLayout(GuideEvidencePresentation.Group group, int width, String locale, List<GuideTextLine> lines) {
- lines = List.copyOf(lines);
+ lines = dev.openallay.util.Java8Collections.listCopyOf(lines);
         this.group = group;
         this.width = width;
         this.locale = locale;
@@ -2663,7 +2979,7 @@ static final class VisibleDetailLines {
     }
 
     private int detailLine(
-            GuideGraphics graphics, Component text, GuideUiLayout.Rect detail, int y) {
+            GuideGraphics graphics, net.minecraft.network.chat.Component text, GuideUiLayout.Rect detail, int y) {
         for (GuideTextLine line : GuideNativeFont.split(font, text, detail.width() - 16)) {
             if (y >= detail.y() + 21 && y < detail.y() + detail.height() - 10) {
                 graphics.text(font, line, detail.x() + 8, y, TEXT, false);
@@ -2690,7 +3006,7 @@ static final class VisibleDetailLines {
                 String prefix = String.format("%" + digits + "d │ ", index + 1);
                 wrapped.addAll(GuideNativeFont.split(font, MinecraftComponents.literal(prefix + sourceLines[index]), width));
             }
-            cached = new CodeLayout(source, width, List.copyOf(wrapped));
+            cached = new CodeLayout(source, width, dev.openallay.util.Java8Collections.listCopyOf(wrapped));
             detailCodeLayouts.put(cacheId, cached);
         }
         int first = Math.max(0, (detail.y() + 21 - y) / 10);
@@ -2774,7 +3090,7 @@ static final class VisibleDetailLines {
                 .filter(tool -> tool.activity().sources().contains(source))
                 .flatMap(tool -> groupedSources(tool.activity().sources()).stream())
                 .filter(value -> value.identity().equals(identity)).findFirst()
-                .orElseGet(() -> GuideEvidencePresentation.groups(List.of(source)).get(0));
+                .orElseGet(() -> GuideEvidencePresentation.groups(dev.openallay.util.Java8Collections.listOf(source)).get(0));
         open(group, "source-detail:" + identity);
     }
 
@@ -2871,13 +3187,19 @@ private static final class CodeLayout {
         if (selectedSource != null) {
             boolean retained = next.rows().stream().anyMatch(row -> {
                 java.util.Objects.requireNonNull(row);
-                if (row instanceof GuideUiRow.Assistant assistant) {
-                    return groupedSources(assistant.sources()).contains(selectedSource);
-                } else if (row instanceof GuideUiRow.Tool tool) {
-                    return groupedSources(tool.activity().sources()).contains(selectedSource);
+                final class $oaPattern47_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern47_Holder $oaPattern47_holder = new $oaPattern47_Holder();
+if ((($oaPattern47_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern47_holder.bound = (GuideUiRow.Assistant) $oaPattern47_holder.value) != null))) {
+                    return groupedSources($oaPattern47_holder.bound.sources()).contains(selectedSource);
+                } else {
+final class $oaPattern48_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern48_Holder $oaPattern48_holder = new $oaPattern48_Holder();
+if ((($oaPattern48_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern48_holder.bound = (GuideUiRow.Tool) $oaPattern48_holder.value) != null))) {
+                    return groupedSources($oaPattern48_holder.bound.activity().sources()).contains(selectedSource);
                 } else {
                     return false;
                 }
+}
             });
             if (!retained) {
                 selectedSource = null;
@@ -2911,11 +3233,17 @@ private static final class CodeLayout {
         Map<List<GuideSource>, Boolean> retainedSources = new java.util.IdentityHashMap<>();
         for (GuideUiRow row : next.rows()) {
             java.util.Objects.requireNonNull(row);
-            if (row instanceof GuideUiRow.Assistant assistant) {
-                retainedSources.put(assistant.sources(), true);
-            } else if (row instanceof GuideUiRow.Tool tool) {
-                retainedSources.put(tool.activity().sources(), true);
+            final class $oaPattern49_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern49_Holder $oaPattern49_holder = new $oaPattern49_Holder();
+if ((($oaPattern49_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern49_holder.bound = (GuideUiRow.Assistant) $oaPattern49_holder.value) != null))) {
+                retainedSources.put($oaPattern49_holder.bound.sources(), true);
+            } else {
+final class $oaPattern50_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Tool bound; }
+final $oaPattern50_Holder $oaPattern50_holder = new $oaPattern50_Holder();
+if ((($oaPattern50_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Tool && (($oaPattern50_holder.bound = (GuideUiRow.Tool) $oaPattern50_holder.value) != null))) {
+                retainedSources.put($oaPattern50_holder.bound.activity().sources(), true);
             }
+}
         }
         sourceGroupCache.keySet().removeIf(sources -> !retainedSources.containsKey(sources));
         boolean changedSession = !view.selectedSession().equals(next.selectedSession());
@@ -2942,7 +3270,7 @@ private static final class CodeLayout {
             modelSelectorCursor = 0;
             modelSelectorScroll = 0;
         } else {
-            modelSelectorCursor = Mth.clamp(
+            modelSelectorCursor = net.minecraft.util.Mth.clamp(
                     modelSelectorCursor, 0, view.modelChoices().size() - 1);
         }
         if (changedSession) {
@@ -3056,11 +3384,26 @@ private static final class CodeLayout {
             draft = sharedText;
             if (composer != null && !composer.getValue().equals(sharedText)) composer.setValue(sharedText);
         }
-        switch (view.selectedSession().equals(uiState.imageNoticeSession()) ? uiState.imageNotice() : ComposerImageDraft.Notice.NONE) {
-            case CLIPBOARD_UNAVAILABLE -> notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.image.clipboard_unavailable")));
-            case IMPORT_FAILED -> notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.image.import_failed")));
-            case PROCESSING, READY, NONE -> { }
-        }
+        switch ((view.selectedSession().equals(uiState.imageNoticeSession()) ? uiState.imageNotice() : ComposerImageDraft.Notice.NONE)) {
+case CLIPBOARD_UNAVAILABLE:
+{
+notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.image.clipboard_unavailable")));
+break;
+}
+case IMPORT_FAILED:
+{
+notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.image.import_failed")));
+break;
+}
+case PROCESSING:
+case READY:
+case NONE:
+{
+{ }
+break;
+}
+}
+
         syncComposerTextures();
         refreshComposerLayout();
         updateControls();
@@ -3077,7 +3420,7 @@ private static final class CodeLayout {
         for (ComposerImageDraft.Attachment image : images) {
             if (image.preview() == null || imageTextures.containsKey(image.id())) continue;
             ClipboardImageEncoder.Preview preview = image.preview();
-            var bitmap = MinecraftImageTextures.create(preview.width(), preview.height());
+            dev.openallay.client.observation.GuideImageBitmap bitmap = MinecraftImageTextures.create(preview.width(), preview.height());
             int[] pixels = preview.argb();
             for (int y = 0; y < preview.height(); y++) {
                 for (int x = 0; x < preview.width(); x++) MinecraftImageTextures.setArgb(bitmap, x, y, pixels[y * preview.width() + x]);
@@ -3130,7 +3473,7 @@ private static final class CodeLayout {
     /** Leaves the existing image/pending strips and text cursor in their measured bounds. */
     private GuideUiLayout.Rect renderObservationComposer(GuideGraphics graphics,
             GuideUiLayout.Rect strip, int mouseX, int mouseY) {
-        var anchor = uiState.observation(view.selectedSession());
+        java.util.Optional<dev.openallay.world.ClientObservationAnchor> anchor = uiState.observation(view.selectedSession());
         if (anchor.isEmpty() && observationActions == null) return strip;
         ObservationComposerLayout observationLayout = ObservationComposerLayout.calculate(strip, !composerImages.empty());
         GuideUiLayout.Rect row = observationLayout.row();
@@ -3142,9 +3485,9 @@ private static final class CodeLayout {
         int imageControls = anchor.flatMap(value -> value.image()).isPresent() ? 48 : 0;
         GuideUiLayout.Rect label = new GuideUiLayout.Rect(row.x() + 2, row.y(),
                 Math.max(0, row.width() - controls - imageControls - 2), rowHeight);
-        Component text = MinecraftComponents.empty();
+        net.minecraft.network.chat.Component text = MinecraftComponents.empty();
         if (anchor.isPresent()) {
-            for (var chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
+            for (dev.openallay.client.observation.ObservationAnchorPresentation.Chip chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
                 if (!MinecraftComponents.getString(text).isEmpty()) text = MinecraftComponents.append(MinecraftComponents.copy(text), " · ");
                 text = MinecraftComponents.append(MinecraftComponents.copy(text), MinecraftComponents.translatable(chip.key(), chip.value()));
             }
@@ -3178,20 +3521,39 @@ private static final class CodeLayout {
     }
 
     private void observationComposerAction(GuideGraphics graphics, GuideUiLayout.Rect bounds,
-            Component label, Runnable action, String id, int mouseX, int mouseY) {
+            net.minecraft.network.chat.Component label, Runnable action, String id, int mouseX, int mouseY) {
         int left = Math.max(bounds.x(), observationComposerBounds.x());
         int right = Math.min(bounds.right(), observationComposerBounds.right());
         if (right <= left || bounds.height() <= 0) return;
         bounds = new GuideUiLayout.Rect(left, bounds.y(), right - left, bounds.height());
         boundedHeaderText(graphics, label, bounds, observationCapturing ? MUTED : ACCENT);
-        String key = switch (id) {
-            case "observation:refresh" -> "screen.openallay.observation.refresh";
-            case "observation:attach" -> "screen.openallay.observation.attach_frame";
-            case "observation:remove-frame" -> "screen.openallay.observation.remove_frame";
-            case "observation:frame" -> "screen.openallay.observation.open_frame";
-            default -> "screen.openallay.observation.remove";
-        };
-        Component description = MinecraftComponents.translatable(key);
+        java.lang.String $oaSwitch10_exit_result;
+$oaSwitch10_exit: {
+switch ((id)) {
+case "observation:refresh":
+{
+$oaSwitch10_exit_result = "screen.openallay.observation.refresh"; break $oaSwitch10_exit;
+}
+case "observation:attach":
+{
+$oaSwitch10_exit_result = "screen.openallay.observation.attach_frame"; break $oaSwitch10_exit;
+}
+case "observation:remove-frame":
+{
+$oaSwitch10_exit_result = "screen.openallay.observation.remove_frame"; break $oaSwitch10_exit;
+}
+case "observation:frame":
+{
+$oaSwitch10_exit_result = "screen.openallay.observation.open_frame"; break $oaSwitch10_exit;
+}
+default:
+{
+$oaSwitch10_exit_result = "screen.openallay.observation.remove"; break $oaSwitch10_exit;
+}
+}
+}
+String key = $oaSwitch10_exit_result;
+        net.minecraft.network.chat.Component description = MinecraftComponents.translatable(key);
         hits.add(new Hit(bounds, HitKind.COMPOSER, action, id, MinecraftComponents.getString(description)));
         if (bounds.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, description, mouseX, mouseY);
     }
@@ -3246,7 +3608,7 @@ private static final class CodeLayout {
             List<ComposerImageDraft.Attachment> images = composerImages.attachments();
             int cell = Math.min(46, strip.height());
             int visible = Math.max(1, strip.width() / (cell + 4));
-            imageScroll = Mth.clamp(imageScroll, 0, Math.max(0, images.size() - visible));
+            imageScroll = net.minecraft.util.Mth.clamp(imageScroll, 0, Math.max(0, images.size() - visible));
             graphics.enableScissor(strip.x(), strip.y(), strip.right(), strip.bottom());
             for (int index = imageScroll; index < Math.min(images.size(), imageScroll + visible); index++) {
                 ComposerImageDraft.Attachment image = images.get(index);
@@ -3269,7 +3631,7 @@ private static final class CodeLayout {
                 if (remove.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font,
                         MinecraftComponents.translatable("screen.openallay.image.remove"), mouseX, mouseY);
                 else if (new GuideUiLayout.Rect(x, strip.y(), cell, cell).contains(mouseX, mouseY)) {
-                    Component tooltip = image.pending() ? MinecraftComponents.translatable("screen.openallay.image.processing")
+                    net.minecraft.network.chat.Component tooltip = image.pending() ? MinecraftComponents.translatable("screen.openallay.image.processing")
                             : MinecraftComponents.translatable("screen.openallay.image.attached", image.reference().width(), image.reference().height());
                     if (!image.pending()) tooltip = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(tooltip), " · "), MinecraftComponents.translatable("screen.openallay.image.cost_unknown"));
                     graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);
@@ -3296,7 +3658,7 @@ private static final class CodeLayout {
                     MinecraftComponents.translatable(steerMode() ? "screen.openallay.pending.steer_description" : "screen.openallay.pending.follow_up_description"), mouseX, mouseY);
         }
         if (pending.isEmpty()) return;
-        pendingCursor = Mth.clamp(pendingCursor, 0, pending.size() - 1);
+        pendingCursor = net.minecraft.util.Mth.clamp(pendingCursor, 0, pending.size() - 1);
         GuideUiLayout.Rect first = new GuideUiLayout.Rect(footer.x() + modeWidth, footer.y(), footer.width() - modeWidth, footer.height());
         renderPendingRow(graphics, pending.get(pendingCursor), first, true, pending.size(), mouseX, mouseY);
         GuideUiLayout.Rect extra = composerExtras.pending();
@@ -3313,7 +3675,7 @@ private static final class CodeLayout {
         graphics.fill(area.x(), area.y(), area.right(), area.bottom(), panelAltColor());
         int textWidth = Math.max(0, area.width() - 42);
         GuideUiLayout.Rect text = new GuideUiLayout.Rect(area.x() + 2, area.y() + 3, textWidth, 12);
-        Component label = MinecraftComponents.literal((navigator ? (pendingCursor + 1) + "/" + count + " " : "")
+        net.minecraft.network.chat.Component label = MinecraftComponents.literal((navigator ? (pendingCursor + 1) + "/" + count + " " : "")
                 + (pending.kind() == GuidePendingMessage.Kind.STEER ? "↪ " : "↳ ") + pending.text());
         boundedHeaderText(graphics, label, text, pending.failure() == null ? MUTED : ERROR);
         if (navigator) hits.add(new Hit(text, HitKind.COMPOSER, () -> pendingCursor = (pendingCursor + 1) % count,
@@ -3329,7 +3691,7 @@ private static final class CodeLayout {
             refreshComposerLayout();
         }), "pending-cancel:" + pending.id(), MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.pending.cancel"))));
         if (area.contains(mouseX, mouseY)) {
-            Component tooltip = MinecraftComponents.translatable(cancel.contains(mouseX, mouseY) ? "screen.openallay.pending.cancel"
+            net.minecraft.network.chat.Component tooltip = MinecraftComponents.translatable(cancel.contains(mouseX, mouseY) ? "screen.openallay.pending.cancel"
                     : edit.contains(mouseX, mouseY) ? "screen.openallay.pending.edit" : "screen.openallay.pending.waiting", pending.text());
             if (pending.failure() != null) tooltip = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(tooltip), " · "), pending.failure().code() + ": " + pending.failure().message());
             graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY);
@@ -3350,7 +3712,7 @@ private static final class CodeLayout {
             notice = GuideUiNotice.warning(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.pending.already_consumed")));
             return;
         }
-        if (!draft.isBlank() || !composerImages.empty()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(draft) || !composerImages.empty()) {
             notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.pending.draft_not_empty")));
             return;
         }
@@ -3361,8 +3723,8 @@ private static final class CodeLayout {
                 .collect(java.util.stream.Collectors.joining("\n"));
         composer.setValue(draft);
         uiState.setText(view.selectedSession(), draft);
-        composerImages.restore(pending.message().content().stream().filter(ModelContent.Image.class::isInstance)
-                .map(ModelContent.Image.class::cast).map(ModelContent.Image::reference).toList());
+        composerImages.restore(dev.openallay.util.Java8Collections.toList(pending.message().content().stream().filter(ModelContent.Image.class::isInstance)
+                .map(ModelContent.Image.class::cast).map(ModelContent.Image::reference)));
         loadRestoredImagePreviews();
         setFocused(composer.widget());
         updateControls();
@@ -3374,10 +3736,12 @@ private static final class CodeLayout {
         for (ComposerImageDraft.Attachment image : composerImages.attachments()) {
             if (image.reference() == null || image.preview() != null) continue;
             service.readImage(image.reference()).whenComplete((result, failure) -> {
-                if (failure != null || !(result instanceof ToolResult.Success<byte[]> bytes)) return;
+                final class $oaPattern51_Holder { dev.openallay.tool.ToolResult<byte[]> value; ToolResult.Success<byte[]> bound; }
+final $oaPattern51_Holder $oaPattern51_holder = new $oaPattern51_Holder();
+if (failure != null || !((($oaPattern51_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern51_holder.bound = (ToolResult.Success<byte[]>) $oaPattern51_holder.value) != null)))) return;
                 IMAGE_EXECUTOR.execute(() -> {
-                    try (var input = new javax.imageio.stream.MemoryCacheImageInputStream(new java.io.ByteArrayInputStream(bytes.value()))) {
-                        var bitmap = javax.imageio.ImageIO.read(input);
+                    try (javax.imageio.stream.MemoryCacheImageInputStream input = new javax.imageio.stream.MemoryCacheImageInputStream(new java.io.ByteArrayInputStream($oaPattern51_holder.bound.value()))) {
+                        java.awt.image.BufferedImage bitmap = javax.imageio.ImageIO.read(input);
                         if (bitmap == null) return;
                         ClipboardImageEncoder.Preview preview = ClipboardImageEncoder.encode(bitmap).preview();
                         MinecraftClientWindow.execute(minecraft, () -> {
@@ -3399,7 +3763,7 @@ private static final class CodeLayout {
         String commandText = composer.getValue();
         GuideClientUiState.Insertion commandRevision = uiState.captureInsertion(view.selectedSession());
         ComposerImageDraft.Submission commandScope = composerImages.captureSubmission();
-        var dispatch = draftIntent().editing()
+        dev.openallay.guide.composer.SlashCommandDispatcher.Dispatch dispatch = draftIntent().editing()
                 ? new dev.openallay.guide.composer.SlashCommandDispatcher.Dispatch(false, true, commandText)
                 : dev.openallay.guide.composer.SlashCommandDispatcher.dispatch(commandText, service,
                 completion -> MinecraftClientWindow.execute(minecraft, () -> {
@@ -3472,11 +3836,15 @@ private static final class CodeLayout {
                             service.snapshot(), images.session());
                 } else if (pendingId != null && result instanceof ToolResult.Success<?>) {
                     notice = GuideUiNotice.warning(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.pending.already_consumed")));
-                } else if (result instanceof ToolResult.Failure<?> rejected) {
-                    notice = GuideUiNotice.error(rejected.code() + ": " + rejected.message());
+                } else {
+final class $oaPattern52_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern52_Holder $oaPattern52_holder = new $oaPattern52_Holder();
+if ((($oaPattern52_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern52_holder.bound = (ToolResult.Failure<?>) $oaPattern52_holder.value) != null))) {
+                    notice = GuideUiNotice.error($oaPattern52_holder.bound.code() + ": " + $oaPattern52_holder.bound.message());
                 } else {
                     notice = GuideUiNotice.error(MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.composer.submit_failed")));
                 }
+}
                 sharedDraftChanged();
                 refreshComposerLayout();
                 updateControls();
@@ -3490,7 +3858,7 @@ private static final class CodeLayout {
         updateControls();
     }
 
-    static Component slashCompletionNotice(dev.openallay.guide.composer.SlashCommandDispatcher.Completion completion) {
+    static net.minecraft.network.chat.Component slashCompletionNotice(dev.openallay.guide.composer.SlashCommandDispatcher.Completion completion) {
         return completion.successful() && "compact_completed".equals(completion.code()) && completion.result() != null
                 ? MinecraftComponents.translatable("openallay.guide.slash.compact_completed", completion.result().beforeTokens(),
                         completion.result().afterTokens(), completion.result().inputBudget())
@@ -3537,8 +3905,8 @@ private static final class CodeLayout {
     private void renderForkAction(GuideGraphics graphics, UUID requestId, String text,
             int x, int y, int width) {
         if (!forkableRequest(service.snapshot(), view.selectedSession(), requestId)) return;
-        Component label = MinecraftComponents.translatable("screen.openallay.action.fork");
-        int copyWidth = text == null || text.isBlank() ? 0
+        net.minecraft.network.chat.Component label = MinecraftComponents.translatable("screen.openallay.action.fork");
+        int copyWidth = text == null || dev.openallay.util.Java8Strings.isBlank(text) ? 0
                 : GuideNativeFont.width(font, MinecraftComponents.translatable("screen.openallay.action.copy")) + 14;
         int actionWidth = GuideNativeFont.width(font, label) + 8;
         int actionX = x + width - copyWidth - actionWidth;
@@ -3558,9 +3926,13 @@ private static final class CodeLayout {
         return snapshot.sessions().stream().filter(session -> session.sessionId().equals(sessionId))
                 .flatMap(session -> session.requests().stream())
                 .filter(request -> request.requestId().equals(row.requestId()) && request.terminal())
-                .anyMatch(request -> !request.timeline().isEmpty()
-                        && request.timeline().get(request.timeline().size() - 1) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant assistant
-                        && assistant.ordinal() == row.ordinal());
+                .anyMatch(request -> {
+final class $oaPattern53_Holder { dev.openallay.guide.GuideTimelineEntry value; dev.openallay.guide.GuideTimelineEntry.Assistant bound; }
+final $oaPattern53_Holder $oaPattern53_holder = new $oaPattern53_Holder();
+return !request.timeline().isEmpty()
+                        && (($oaPattern53_holder.value = request.timeline().get(request.timeline().size() - 1)) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern53_holder.bound = (dev.openallay.guide.GuideTimelineEntry.Assistant) $oaPattern53_holder.value) != null))
+                        && $oaPattern53_holder.bound.ordinal() == row.ordinal();
+});
     }
 
     /** A selected user row denotes its whole terminal request, not a partial assistant/tool row. */
@@ -3637,11 +4009,13 @@ private static final class CodeLayout {
                 completeExportFailure();
                 return;
             }
-            if (captured instanceof ToolResult.Failure<?> failure) {
+            final class $oaPattern54_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.export.GuideSessionExportSnapshot> value; ToolResult.Failure<?> bound; }
+final $oaPattern54_Holder $oaPattern54_holder = new $oaPattern54_Holder();
+if ((($oaPattern54_holder.value = captured) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern54_holder.bound = (ToolResult.Failure<?>) $oaPattern54_holder.value) != null))) {
                 completeExportFailure();
                 return;
             }
-            var snapshot = ((ToolResult.Success<
+            dev.openallay.guide.export.GuideSessionExportSnapshot snapshot = ((ToolResult.Success<
                     dev.openallay.guide.export.GuideSessionExportSnapshot>) captured).value();
             CompletableFuture.supplyAsync(
                             () -> new GuideSessionExporter(gameDirectory).export(snapshot),
@@ -3685,8 +4059,8 @@ private static final class CodeLayout {
             int x,
             int y,
             int width) {
-        if (text == null || text.isBlank()) return;
-        Component label = MinecraftComponents.translatable("screen.openallay.action.copy");
+        if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) return;
+        net.minecraft.network.chat.Component label = MinecraftComponents.translatable("screen.openallay.action.copy");
         int actionWidth = GuideNativeFont.width(font, label) + 8;
         int actionX = x + width - actionWidth;
         String focusId = "copy:" + rowId(row);
@@ -3713,16 +4087,22 @@ private static final class CodeLayout {
 
     static String copyableText(GuideUiRow row) {
         java.util.Objects.requireNonNull(row);
-        if (row instanceof GuideUiRow.User value) {
-            return value.text();
-        } else if (row instanceof GuideUiRow.Assistant value) {
-            return value.text();
+        final class $oaPattern55_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.User bound; }
+final $oaPattern55_Holder $oaPattern55_holder = new $oaPattern55_Holder();
+if ((($oaPattern55_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.User && (($oaPattern55_holder.bound = (GuideUiRow.User) $oaPattern55_holder.value) != null))) {
+            return $oaPattern55_holder.bound.text();
+        } else {
+final class $oaPattern56_Holder { dev.openallay.guide.ui.GuideUiRow value; GuideUiRow.Assistant bound; }
+final $oaPattern56_Holder $oaPattern56_holder = new $oaPattern56_Holder();
+if ((($oaPattern56_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiRow.Assistant && (($oaPattern56_holder.bound = (GuideUiRow.Assistant) $oaPattern56_holder.value) != null))) {
+            return $oaPattern56_holder.bound.text();
         } else {
             return null;
         }
+}
     }
 
-    static Component deleteConfirmationMessage(String sessionId, boolean finalConfirmation) {
+    static net.minecraft.network.chat.Component deleteConfirmationMessage(String sessionId, boolean finalConfirmation) {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             throw new IllegalArgumentException("invalid session deletion target");
         }
@@ -3747,7 +4127,9 @@ private static final class CodeLayout {
         future.thenAccept(result -> {
             if (uiState.closed() || capturedGeneration != uiState.generation() || attachment == null
                     || !capturedSession.equals(view.selectedSession())) return;
-            if (result instanceof ToolResult.Success<T> value) success.accept(value.value());
+            final class $oaPattern57_Holder { dev.openallay.tool.ToolResult<T> value; ToolResult.Success<T> bound; }
+final $oaPattern57_Holder $oaPattern57_holder = new $oaPattern57_Holder();
+if ((($oaPattern57_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern57_holder.bound = (ToolResult.Success<T>) $oaPattern57_holder.value) != null))) success.accept($oaPattern57_holder.bound.value());
             else {
                 ToolResult.Failure<T> failure = (ToolResult.Failure<T>) result;
                 notice = GuideUiNotice.error(failure.code() + ": " + failure.message());
@@ -3804,8 +4186,8 @@ private static final class CodeLayout {
                 .reduce((first, last) -> last).map(GuideRequestSnapshot::userMessage).orElse("");
     }
 
-    private Component modelButtonLabel() {
-        Component full = view.modelSwitchPending()
+    private net.minecraft.network.chat.Component modelButtonLabel() {
+        net.minecraft.network.chat.Component full = view.modelSwitchPending()
                 ? MinecraftComponents.translatable("screen.openallay.model.next_short", view.selectedModel().displayName()) : modelLabel();
         int available = layout.header().model().width() - 12;
         if (available < 24) return MinecraftComponents.literal("▾");
@@ -3818,14 +4200,14 @@ private static final class CodeLayout {
         return MinecraftComponents.literal(text + "…");
     }
 
-    private Component modelButtonDescription() {
+    private net.minecraft.network.chat.Component modelButtonDescription() {
         return MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.translatable("screen.openallay.action.models"), " · "), modelStatus()), " · "), modelLabel());
     }
 
-    private Component modelLabel() {
+    private net.minecraft.network.chat.Component modelLabel() {
         GuideUiModelChoice selected = view.selectedModel();
-        Component label = choiceLabel(selected);
-        Component value = selected.available()
+        net.minecraft.network.chat.Component label = choiceLabel(selected);
+        net.minecraft.network.chat.Component value = selected.available()
                 ? label
                 : MinecraftComponents.translatable("screen.openallay.model.unavailable_short", label);
         return MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.literal("▾ "), value), " · "), imageInputLabel(selected));
@@ -3835,7 +4217,7 @@ private static final class CodeLayout {
         int selected = Math.max(0, view.modelChoices().indexOf(view.selectedModel()));
         modelSelectorCursor = selected;
         int visible = visibleModelChoiceCount();
-        modelSelectorScroll = Mth.clamp(
+        modelSelectorScroll = net.minecraft.util.Mth.clamp(
                 selected - Math.max(0, visible - 1),
                 0,
                 Math.max(0, view.modelChoices().size() - visible));
@@ -3844,7 +4226,7 @@ private static final class CodeLayout {
     private void moveModelSelectorCursor(int delta) {
         int last = view.modelChoices().size() - 1;
         if (last < 0) return;
-        modelSelectorCursor = Mth.clamp(modelSelectorCursor + delta, 0, last);
+        modelSelectorCursor = net.minecraft.util.Mth.clamp(modelSelectorCursor + delta, 0, last);
         int visible = visibleModelChoiceCount();
         if (modelSelectorCursor < modelSelectorScroll) {
             modelSelectorScroll = modelSelectorCursor;
@@ -3884,7 +4266,7 @@ private static final class CodeLayout {
         if (menu == null) return;
         int visible = Math.min(visibleModelChoiceCount(), view.modelChoices().size());
         int maximum = Math.max(0, view.modelChoices().size() - visible);
-        modelSelectorScroll = Mth.clamp(modelSelectorScroll, 0, maximum);
+        modelSelectorScroll = net.minecraft.util.Mth.clamp(modelSelectorScroll, 0, maximum);
         graphics.fill(menu.x(), menu.y(), menu.x() + menu.width(), menu.y() + menu.height(), 0xFF181B22);
         graphics.outline(menu.x(), menu.y(), menu.width(), menu.height(), ACCENT);
         graphics.enableScissor(menu.x() + 1, menu.y() + 1,
@@ -3899,7 +4281,7 @@ private static final class CodeLayout {
             if (choiceIndex == modelSelectorCursor) {
                 graphics.outline(menu.x() + 2, y + 2, menu.width() - 4, 16, 0xFFFFFFFF);
             }
-            Component label = MinecraftComponents.append(MinecraftComponents.literal(choice.selected() ? "✓ " : "  "), choiceLabel(choice));
+            net.minecraft.network.chat.Component label = MinecraftComponents.append(MinecraftComponents.literal(choice.selected() ? "✓ " : "  "), choiceLabel(choice));
             if (!choice.available()) {
                 label = MinecraftComponents.append(MinecraftComponents.copy(label), MinecraftComponents.translatable(
                         "screen.openallay.model.choice_unavailable"));
@@ -3968,9 +4350,9 @@ private static final class CodeLayout {
         return focusedId != null && focusedId.equals(candidateId);
     }
 
-    private Component modelStatus() {
+    private net.minecraft.network.chat.Component modelStatus() {
         GuideUiModelChoice selected = view.selectedModel();
-        Component selectedLabel = choiceLabel(selected);
+        net.minecraft.network.chat.Component selectedLabel = choiceLabel(selected);
         if (!selected.available()) {
             return MinecraftComponents.translatable(
                     "screen.openallay.model.selected_unavailable", selectedLabel);
@@ -3984,12 +4366,12 @@ private static final class CodeLayout {
         return MinecraftComponents.translatable("screen.openallay.model.using", selectedLabel);
     }
 
-    static Component imageInputLabel(GuideUiModelChoice choice) {
+    static net.minecraft.network.chat.Component imageInputLabel(GuideUiModelChoice choice) {
         return MinecraftComponents.translatable("screen.openallay.settings.models.builtin.image_input."
                 + choice.imageInput().encoded());
     }
 
-    private static Component choiceLabel(GuideUiModelChoice choice) {
+    private static net.minecraft.network.chat.Component choiceLabel(GuideUiModelChoice choice) {
         return choice.selection().kind() == GuideModelSelection.Kind.SERVER
                 ? MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(MinecraftComponents.translatable("screen.openallay.model.server")), " · "), choice.displayName())
                 : MinecraftComponents.translatable(
@@ -4012,72 +4394,165 @@ private static final class CodeLayout {
     }
 
     static String readableSource(String sourceId) {
-        String translationKey = switch (sourceId) {
-            case "minecraft:client_player" -> "screen.openallay.detail.tool.source.minecraft.client_player";
-            case "minecraft:client_registry", "minecraft:registry" -> "screen.openallay.detail.tool.source.minecraft.client_registry";
-            case "minecraft:recipe_manager" -> "screen.openallay.detail.tool.source.minecraft.recipe_manager";
-            case "minecraft:client_recipe_book" -> "screen.openallay.detail.tool.source.minecraft.client_recipe_book";
-            case "viewer:jei" -> "screen.openallay.detail.tool.source.viewer.jei";
-            case "viewer:rei" -> "screen.openallay.detail.tool.source.viewer.rei";
-            case "patchouli:resources" -> "screen.openallay.detail.tool.source.patchouli.resources";
-            default -> null;
-        };
+        java.lang.String $oaSwitch14_exit_result;
+$oaSwitch14_exit: {
+switch ((sourceId)) {
+case "minecraft:client_player":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.minecraft.client_player"; break $oaSwitch14_exit;
+}
+case "minecraft:client_registry":
+case "minecraft:registry":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.minecraft.client_registry"; break $oaSwitch14_exit;
+}
+case "minecraft:recipe_manager":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.minecraft.recipe_manager"; break $oaSwitch14_exit;
+}
+case "minecraft:client_recipe_book":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.minecraft.client_recipe_book"; break $oaSwitch14_exit;
+}
+case "viewer:jei":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.viewer.jei"; break $oaSwitch14_exit;
+}
+case "viewer:rei":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.viewer.rei"; break $oaSwitch14_exit;
+}
+case "patchouli:resources":
+{
+$oaSwitch14_exit_result = "screen.openallay.detail.tool.source.patchouli.resources"; break $oaSwitch14_exit;
+}
+default:
+{
+$oaSwitch14_exit_result = null; break $oaSwitch14_exit;
+}
+}
+}
+String translationKey = $oaSwitch14_exit_result;
         return translationKey == null ? sourceId : MinecraftComponents.getString(MinecraftComponents.translatable(translationKey));
     }
 
     private static String coverageKey(dev.openallay.context.DataCompleteness completeness) {
-        return switch (completeness) {
-            case COMPLETE -> "screen.openallay.detail.tool.coverage.complete";
-            case PARTIAL -> "screen.openallay.detail.tool.coverage.partial";
-            case UNKNOWN -> "screen.openallay.detail.tool.coverage.unknown";
-        };
+        {
+java.lang.String $oaSwitch6_exit_result;
+$oaSwitch6_exit: {
+switch ((completeness)) {
+case COMPLETE:
+{
+$oaSwitch6_exit_result = "screen.openallay.detail.tool.coverage.complete"; break $oaSwitch6_exit;
+}
+case PARTIAL:
+{
+$oaSwitch6_exit_result = "screen.openallay.detail.tool.coverage.partial"; break $oaSwitch6_exit;
+}
+case UNKNOWN:
+{
+$oaSwitch6_exit_result = "screen.openallay.detail.tool.coverage.unknown"; break $oaSwitch6_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch6_exit_result;
+}
     }
 
     static String toolStatusName(GuideToolStatus status) {
         return MinecraftComponents.getString(toolStatus(status));
     }
 
-    static Component toolStatus(GuideToolStatus status) {
-        return MinecraftComponents.translatable(switch (status) {
-            case RUNNING -> "screen.openallay.detail.tool.status.running";
-            case SUCCEEDED -> "screen.openallay.detail.tool.status.succeeded";
-            case FAILED -> "screen.openallay.detail.tool.status.failed";
-        });
+    static net.minecraft.network.chat.Component toolStatus(GuideToolStatus status) {
+        {
+java.lang.String $oaSwitch3_exit_result;
+$oaSwitch3_exit: {
+switch ((status)) {
+case RUNNING:
+{
+$oaSwitch3_exit_result = "screen.openallay.detail.tool.status.running"; break $oaSwitch3_exit;
+}
+case SUCCEEDED:
+{
+$oaSwitch3_exit_result = "screen.openallay.detail.tool.status.succeeded"; break $oaSwitch3_exit;
+}
+case FAILED:
+{
+$oaSwitch3_exit_result = "screen.openallay.detail.tool.status.failed"; break $oaSwitch3_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return MinecraftComponents.translatable($oaSwitch3_exit_result);
+}
     }
 
-    static Component toolTitle(GuideToolActivity activity) {
+    static net.minecraft.network.chat.Component toolTitle(GuideToolActivity activity) {
         return activity.intent().title().isEmpty()
                 ? friendlyTool(activity.toolId())
                 : MinecraftComponents.literal(activity.intent().title());
     }
 
-    private static Component intentTitle(dev.openallay.guide.GuideToolIntent intent, String titleKey) {
+    private static net.minecraft.network.chat.Component intentTitle(dev.openallay.guide.GuideToolIntent intent, String titleKey) {
         return intent.title().isEmpty()
                 ? MinecraftComponents.translatable(titleKey) : MinecraftComponents.literal(intent.title());
     }
 
-    static Component toolDescription(dev.openallay.guide.GuideToolIntent intent) {
+    static net.minecraft.network.chat.Component toolDescription(dev.openallay.guide.GuideToolIntent intent) {
         return intent.description().isEmpty() ? MinecraftComponents.empty() : MinecraftComponents.literal(intent.description());
     }
 
-    static Component toolCardStatus(GuideToolDisplayStatus status) {
-        String icon = switch (status) {
-            case RUNNING -> "◌";
-            case SUCCEEDED -> "✓";
-            case FAILED -> "!";
-            case NO_RESULT_RECORDED -> "—";
-        };
+    static net.minecraft.network.chat.Component toolCardStatus(GuideToolDisplayStatus status) {
+        java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((status)) {
+case RUNNING:
+{
+$oaSwitch0_exit_result = "◌"; break $oaSwitch0_exit;
+}
+case SUCCEEDED:
+{
+$oaSwitch0_exit_result = "✓"; break $oaSwitch0_exit;
+}
+case FAILED:
+{
+$oaSwitch0_exit_result = "!"; break $oaSwitch0_exit;
+}
+case NO_RESULT_RECORDED:
+{
+$oaSwitch0_exit_result = "—"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String icon = $oaSwitch0_exit_result;
         return MinecraftComponents.append(MinecraftComponents.literal(icon + " "), MinecraftComponents.translatable(status.translationKey()));
     }
 
-    private static Component friendlyTool(String id) {
+    private static net.minecraft.network.chat.Component friendlyTool(String id) {
         int separator = id.indexOf(':');
         String name = separator >= 0 ? id.substring(separator + 1) : id;
-        return switch (name) {
-            case "load_skill" -> MinecraftComponents.translatable("screen.openallay.tool.load_skill");
-            case "run_javascript" -> MinecraftComponents.translatable("screen.openallay.tool.run_javascript");
-            default -> MinecraftComponents.literal(name);
-        };
+        {
+net.minecraft.network.chat.Component $oaSwitch7_exit_result;
+$oaSwitch7_exit: {
+switch ((name)) {
+case "load_skill":
+{
+$oaSwitch7_exit_result = MinecraftComponents.translatable("screen.openallay.tool.load_skill"); break $oaSwitch7_exit;
+}
+case "run_javascript":
+{
+$oaSwitch7_exit_result = MinecraftComponents.translatable("screen.openallay.tool.run_javascript"); break $oaSwitch7_exit;
+}
+default:
+{
+$oaSwitch7_exit_result = MinecraftComponents.literal(name); break $oaSwitch7_exit;
+}
+}
+}
+return $oaSwitch7_exit_result;
+}
     }
 
     enum ComposerKeyAction { SUBMIT, NEWLINE, DELEGATE }
@@ -4123,10 +4598,9 @@ private static final class CodeLayout {
         if (!Boolean.getBoolean("openallay.e2e.enabled")) {
             throw new IllegalStateException("development probe is disabled");
         }
-        List<GuideUiRow.Tool> tools = view.rows().stream()
+        List<GuideUiRow.Tool> tools = dev.openallay.util.Java8Collections.toList(view.rows().stream()
                 .filter(GuideUiRow.Tool.class::isInstance)
-                .map(GuideUiRow.Tool.class::cast)
-                .toList();
+                .map(GuideUiRow.Tool.class::cast));
         if (index < 0 || index >= tools.size()) {
             throw new IllegalArgumentException("tool index is unavailable");
         }
@@ -4136,9 +4610,9 @@ private static final class CodeLayout {
     /** Opens the latest actual JavaScript activity, including real failure or interruption. */
     public boolean selectLatestJavascriptForDevelopmentProbe() {
         requireDevelopmentProbe();
-        List<GuideUiRow.Tool> tools = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
+        List<GuideUiRow.Tool> tools = dev.openallay.util.Java8Collections.toList(view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
                 .map(GuideUiRow.Tool.class::cast)
-                .filter(value -> value.activity().toolId().endsWith(":run_javascript")).toList();
+                .filter(value -> value.activity().toolId().endsWith(":run_javascript")));
         if (tools.isEmpty()) return false;
         open(tools.get(tools.size() - 1));
         return true;
@@ -4147,10 +4621,10 @@ private static final class CodeLayout {
     /** Opens only an actually retained source from the latest evidenced JavaScript call. */
     public boolean selectLatestSourceForDevelopmentProbe() {
         requireDevelopmentProbe();
-        List<GuideUiRow.Tool> tools = view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
+        List<GuideUiRow.Tool> tools = dev.openallay.util.Java8Collections.toList(view.rows().stream().filter(GuideUiRow.Tool.class::isInstance)
                 .map(GuideUiRow.Tool.class::cast)
                 .filter(value -> value.activity().toolId().endsWith(":run_javascript")
-                        && !value.activity().sources().isEmpty()).toList();
+                        && !value.activity().sources().isEmpty()));
         if (tools.isEmpty()) return false;
         open(tools.get(tools.size() - 1).activity().sources().get(0));
         return true;
@@ -4210,7 +4684,7 @@ private static final class CodeLayout {
         }
 
         int retain(String rowId, int measuredHeight, boolean stabilize) {
-            if (rowId == null || rowId.isBlank() || measuredHeight <= 0) {
+            if (rowId == null || dev.openallay.util.Java8Strings.isBlank(rowId) || measuredHeight <= 0) {
                 throw new IllegalArgumentException("stable row measurement is invalid");
             }
             if (!stabilize) {

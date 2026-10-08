@@ -21,7 +21,9 @@ public final class MinecraftFocusNativeFacts {
     public static String screenTitle(Object screen) { return ""; }
     public static boolean pauses(Object screen) { return ((GuiScreen)screen).doesGuiPauseGame(); }
     public static boolean inGame(Minecraft client,Object screen) { return client.world!=null; }
-    public static Container menu(Minecraft client,Object screen) { return screen instanceof GuiContainer container ? container.inventorySlots : client.player.openContainer; }
+    public static Container menu(Minecraft client,Object screen) { final class $oaPattern0_Holder { java.lang.Object value; GuiContainer bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return (($oaPattern0_holder.value = screen) instanceof net.minecraft.client.gui.inventory.GuiContainer && (($oaPattern0_holder.bound = (GuiContainer) $oaPattern0_holder.value) != null)) ? $oaPattern0_holder.bound.inventorySlots : client.player.openContainer; }
     public static String menuType(Container menu) { throw new UnsupportedOperationException("Legacy container has no MenuType registry identity"); }
     public static int menuId(Container menu) { return menu.windowId; }
     public static int slotCount(Container menu) { return menu.inventorySlots.size(); }

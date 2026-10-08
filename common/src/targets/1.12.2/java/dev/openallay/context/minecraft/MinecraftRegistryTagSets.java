@@ -9,6 +9,6 @@ final class MinecraftRegistryTagSets {
     private MinecraftRegistryTagSets() {}
     static <T extends net.minecraftforge.registries.IForgeRegistryEntry<T>> Map<String, Set<String>> values(
             IForgeRegistry<T> registry) {
-        return Map.of();
+        return dev.openallay.util.Java8Collections.mapOf();
     }
 }

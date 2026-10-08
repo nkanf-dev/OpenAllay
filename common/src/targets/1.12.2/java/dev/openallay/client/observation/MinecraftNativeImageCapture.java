@@ -26,6 +26,6 @@ public final class MinecraftNativeImageCapture {
                 GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, pack);
                 GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, unpack);
             }
-        } catch (Throwable failure) { return CompletableFuture.failedFuture(failure); }
+        } catch (Throwable failure) { return dev.openallay.util.Java8Futures.failedFuture(failure); }
     }
 }

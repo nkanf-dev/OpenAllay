@@ -25,12 +25,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
-import net.minecraft.client.Minecraft;
+
 
 /** Next native frame capture. It never replaces a Screen or changes game input state. */
 public final class MinecraftClientViewCapture implements AutoCloseable {
     private static final List<MinecraftClientViewCapture> ACTIVE = new CopyOnWriteArrayList<>();
-    private final Minecraft client;
+    private final net.minecraft.client.Minecraft client;
     private final PlatformService platform;
     private final WorldObservationRuntime observations;
     private final String correlationId;
@@ -40,7 +40,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
     private final Set<Pending> pending = ConcurrentHashMap.newKeySet();
     private volatile boolean closed;
 
-    public MinecraftClientViewCapture(Minecraft client, PlatformService platform,
+    public MinecraftClientViewCapture(net.minecraft.client.Minecraft client, PlatformService platform,
             WorldObservationRuntime observations, String correlationId, UUID actor, String dimension) {
         this.client = java.util.Objects.requireNonNull(client, "client");
         this.platform = java.util.Objects.requireNonNull(platform, "platform");
@@ -84,7 +84,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
     }
 
     /** Exact native pre-GUI frame hook. One readback serves each target group. */
-    public static void beforeGui(Minecraft client, boolean advanceGameTime) {
+    public static void beforeGui(net.minecraft.client.Minecraft client, boolean advanceGameTime) {
         if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || dev.openallay.client.context.MinecraftClientContextFacts.world(client) == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
             if (capture.client == client) capture.frame(WorldViewRequest.Target.WORLD);
@@ -92,7 +92,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
     }
 
     /** Exact native post-final-GUI frame hook. Native game UI only, never Guide pixels. */
-    public static void afterGui(Minecraft client, boolean advanceGameTime) {
+    public static void afterGui(net.minecraft.client.Minecraft client, boolean advanceGameTime) {
         if (!dev.openallay.client.gui.GuideNativeWindowState.frameReady(client) || !advanceGameTime || dev.openallay.client.context.MinecraftClientContextFacts.world(client) == null) return;
         for (MinecraftClientViewCapture capture : ACTIVE) {
             if (capture.client == client) capture.frame(WorldViewRequest.Target.GAME_UI);
@@ -105,15 +105,15 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
 
     private void frame(WorldViewRequest.Target target) {
         if (closed) return;
-        List<Pending> selected = pending.stream().filter(value -> !value.submitted && !value.result.isDone()
-                && value.request.target() == target).toList();
+        List<Pending> selected = dev.openallay.util.Java8Collections.toList(pending.stream().filter(value -> !value.submitted && !value.result.isDone()
+                && value.request.target() == target));
         if (selected.isEmpty()) return;
         try {
             for (Pending capture : selected) verify(capture);
             if (target == WorldViewRequest.Target.GAME_UI && owns(MinecraftClientWindow.screen(client))) {
                 throw unavailable("OpenAllay is foreground; no native game UI is currently displayed");
             }
-            var limits = observations.imageLimits(actor);
+            dev.openallay.model.image.ImageInputLimits limits = observations.imageLimits(actor);
             if (MinecraftNativeImageCapture.width(client) <= 0 || MinecraftNativeImageCapture.height(client) <= 0
                     || MinecraftNativeImageCapture.width(client) > limits.maxDimension() || MinecraftNativeImageCapture.height(client) > limits.maxDimension()
                     || (long) MinecraftNativeImageCapture.width(client) * MinecraftNativeImageCapture.height(client) > limits.maxPixels()) {
@@ -121,7 +121,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             }
             Instant capturedAt = Instant.now();
             WorldFocusObservation focus = ClientFocusCapture.capture(client, platform, capturedAt);
-            var camera = MinecraftCameraFacts.rendered(client, focus.camera());
+            dev.openallay.world.WorldFocusObservation.Camera camera = MinecraftCameraFacts.rendered(client, focus.camera());
             Frame frame = new Frame(UUID.randomUUID().toString(), capturedAt, target, MinecraftNativeImageCapture.width(client),
                     MinecraftNativeImageCapture.height(client), MinecraftCameraFacts.guiScale(client),
                     camera, focus.screen(), target == WorldViewRequest.Target.GAME_UI && !MinecraftClientWindow.hudHidden(client),
@@ -177,9 +177,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
                     }
                     EvidenceMetadata evidence = new EvidenceMetadata(DataAuthority.CLIENT_VISIBLE, DataCompleteness.PARTIAL,
                             frame.capturedAt, "minecraft:client_view", "minecraft:native_render_target",
-                            platform.gameVersion(), platform.platformName(), Map.of("minecraft:dimension", dimension,
-                                    "openallay:target", frame.target.name(), "openallay:capture", frame.id,
-                                    "openallay:layers", frame.target == WorldViewRequest.Target.WORLD
+                            platform.gameVersion(), platform.platformName(), dev.openallay.util.Java8Collections.mapOf("minecraft:dimension", dimension, "openallay:target", frame.target.name(), "openallay:capture", frame.id, "openallay:layers", frame.target == WorldViewRequest.Target.WORLD
                                             ? "native_world_before_2d_gui" : "actual_visible_game_ui_hud_toasts"));
                     WorldViewCapture result = new WorldViewCapture(frame.id, frame.capturedAt, actor, dimension,
                             frame.target, frame.hud, frame.gameUi, frame.width, frame.height, frame.guiScale,

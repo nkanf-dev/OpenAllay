@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import net.minecraft.client.Minecraft;
+
 
 /** Separate development-only warmup; never injects feedback or executes server commands. */
 final class GuideNativeCommandE2EProbe {
@@ -22,7 +22,7 @@ final class GuideNativeCommandE2EProbe {
 
     static CancellationSignal start(OpenAllayRuntime runtime,
             MinecraftGuideContextProvider contexts, UUID actor, Consumer<JsonObject> complete) {
-        Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
+        net.minecraft.client.Minecraft client = dev.openallay.client.gui.MinecraftClientWindow.instance();
         CancellationSignal cancellation = new CancellationSignal();
         String token = "openallay_native_command_" + UUID.randomUUID().toString().replace("-", "");
         String correlation = "e2e-native-command-" + token;
@@ -42,15 +42,19 @@ final class GuideNativeCommandE2EProbe {
             if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !dev.openallay.client.gui.MinecraftClientWindow.ownerThread(client)
                     || client.player == null || !actor.equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client)))
                 throw new IllegalStateException("Native command warmup requires the development client owner and actor");
-            var registered = runtime.tools().find(RunJavascriptTool.ID).orElseThrow();
-            if (!(registered instanceof RunJavascriptTool javascript))
+            dev.openallay.tool.Tool<?, ?> registered = runtime.tools().find(RunJavascriptTool.ID).orElseThrow();
+            final class $oaPattern0_Holder { dev.openallay.tool.Tool<?, ?> value; RunJavascriptTool bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = registered) instanceof dev.openallay.tool.builtin.RunJavascriptTool && (($oaPattern0_holder.bound = (RunJavascriptTool) $oaPattern0_holder.value) != null))))
                 throw new IllegalStateException("Actual registered JavaScript Tool is unavailable");
-            tool = javascript;
+            tool = $oaPattern0_holder.bound;
             contexts.freezeRequest(correlation, true);
-            var captured = contexts.capture(tool.descriptor().requiredContext(), correlation);
-            if (!(captured instanceof ToolResult.Success<ToolInvocationContext> success))
+            dev.openallay.tool.ToolResult<dev.openallay.context.ToolInvocationContext> captured = contexts.capture(tool.descriptor().requiredContext(), correlation);
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.context.ToolInvocationContext> value; ToolResult.Success<ToolInvocationContext> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = captured) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<ToolInvocationContext>) $oaPattern1_holder.value) != null))))
                 throw new IllegalStateException("Actual player context capture failed: " + captured);
-            context = success.value();
+            context = $oaPattern1_holder.bound.value();
             if (!context.unrestrictedJavascript() || !runtime.commands().availableFor(correlation)
                     || !actor.equals(context.player().orElseThrow().uuid()))
                 throw new IllegalStateException("Native command warmup requires captured client-local full access");
@@ -65,7 +69,7 @@ final class GuideNativeCommandE2EProbe {
             complete.accept(receipt);
             return cancellation;
         }
-        var server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        net.minecraft.client.server.IntegratedServer server = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         if (server == null) {
             cancellation.cancel();
             contexts.closeRequest(correlation);
@@ -91,16 +95,18 @@ final class GuideNativeCommandE2EProbe {
                 """.formatted(token, token);
         // The real Tool owns its bounded command waits and its existing daemon worker.
         // Neither the client nor server owner thread waits on this future.
-        tool.invokeAsync(context, new RunJavascriptTool.Input(source, List.of()), cancellation)
+        tool.invokeAsync(context, new RunJavascriptTool.Input(source, dev.openallay.util.Java8Collections.listOf()), cancellation)
                 .orTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                 .thenCompose(result -> {
-                    if (!(result instanceof ToolResult.Success<RunJavascriptTool.Output> success))
+                    final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.tool.builtin.RunJavascriptTool.Output> value; ToolResult.Success<RunJavascriptTool.Output> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if (!((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<RunJavascriptTool.Output>) $oaPattern2_holder.value) != null))))
                         throw new IllegalStateException("Actual command Tool failed: " + result);
-                    var output = success.value();
+                    dev.openallay.tool.builtin.RunJavascriptTool.Output output = $oaPattern2_holder.bound.value();
                     if (!output.complete() || !"string".equals(output.resultType())
                             || output.preview() == null || !output.preview().isJsonPrimitive())
                         throw new IllegalStateException("Command warmup needs a complete scalar receipt");
-                    var commands = dev.openallay.json.JsonTrees.parse(output.preview().getAsString()).getAsJsonObject();
+                    com.google.gson.JsonObject commands = dev.openallay.json.JsonTrees.parse(output.preview().getAsString()).getAsJsonObject();
                     receipt.add("commands", commands);
                     receipt.addProperty("nativeErrorOracle", "invalid-help-path/nonempty-feedback/differs-from-help-success");
                     requireResults(commands, actor, token);
@@ -120,13 +126,15 @@ final class GuideNativeCommandE2EProbe {
                     receipt.addProperty("closedCapabilityRemoved", !runtime.commands().availableFor(correlation));
                     receipt.addProperty("closedBridgeRemoved", runtime.commands().bridge(correlation, cancellation).isEmpty());
                     return tool.invokeAsync(context,
-                            new RunJavascriptTool.Input("return commands.run('/me " + token + "_cancelled');", List.of()),
+                            new RunJavascriptTool.Input("return commands.run('/me " + token + "_cancelled');", dev.openallay.util.Java8Collections.listOf()),
                             cancellation).handle((ignored, failure) -> {
                                 Throwable cause = failure;
                                 while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null)
                                     cause = cause.getCause();
-                                receipt.addProperty("cancelledReuseRejected", cause instanceof ModelClientException cancelled
-                                        && "agent_cancelled".equals(cancelled.failure().code()));
+                                final class $oaPattern3_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+receipt.addProperty("cancelledReuseRejected", (($oaPattern3_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern3_holder.bound = (ModelClientException) $oaPattern3_holder.value) != null))
+                                        && "agent_cancelled".equals($oaPattern3_holder.bound.failure().code()));
                                 if (!receipt.get("closedCapabilityRemoved").getAsBoolean()
                                         || !receipt.get("closedBridgeRemoved").getAsBoolean()
                                         || !receipt.get("cancelledReuseRejected").getAsBoolean())
@@ -143,7 +151,7 @@ final class GuideNativeCommandE2EProbe {
                     }
                     dev.openallay.server.NativeServerOwner.execute(server, () -> {
                         try {
-                            var player = dev.openallay.server.NativeServerOwner.player(server, actor);
+                            net.minecraft.server.level.ServerPlayer player = dev.openallay.server.NativeServerOwner.player(server, actor);
                             if (!dev.openallay.server.NativeServerOwner.isOwner(server) || server != dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client) || dev.openallay.server.NativeServerOwner.published(server)
                                     || player == null || GuideProbeWorldSettings.commandsAllowed(server)
                                     || !dev.openallay.server.NativeServerOwner.survival(server))
@@ -166,7 +174,7 @@ final class GuideNativeCommandE2EProbe {
         if (!"help".equals(commands.get("helpNode").getAsString())
                 || !"me <action>".equals(commands.get("messageNode").getAsString()))
             throw new IllegalStateException("Expected non-op help and message command paths are missing");
-        for (String name : List.of("help", "signed", "error")) {
+        for (String name : dev.openallay.util.Java8Collections.listOf("help", "signed", "error")) {
             JsonObject result = commands.getAsJsonObject(name);
             if (!actor.toString().equals(result.get("actorId").getAsString())
                     || !"feedback".equals(result.get("state").getAsString())
@@ -174,9 +182,9 @@ final class GuideNativeCommandE2EProbe {
                     || (result.getAsJsonArray("messages").size() == 0))
                 throw new IllegalStateException("Actual native command feedback missing for " + name);
         }
-        var help = commands.getAsJsonObject("help");
-        var signed = commands.getAsJsonObject("signed");
-        var error = commands.getAsJsonObject("error");
+        com.google.gson.JsonObject help = commands.getAsJsonObject("help");
+        com.google.gson.JsonObject signed = commands.getAsJsonObject("signed");
+        com.google.gson.JsonObject error = commands.getAsJsonObject("error");
         if (!"help me".equals(help.get("command").getAsString())
                 || !anyMessage(help.getAsJsonArray("messages"), "/me ")
                 || !("me " + token).equals(signed.get("command").getAsString())
@@ -190,7 +198,7 @@ final class GuideNativeCommandE2EProbe {
     }
 
     private static boolean anyMessage(JsonArray messages, String text) {
-        for (var value : messages) if (value.getAsString().contains(text)) return true;
+        for (com.google.gson.JsonElement value : messages) if (value.getAsString().contains(text)) return true;
         return false;
     }
 }

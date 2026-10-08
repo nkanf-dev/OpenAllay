@@ -2,18 +2,18 @@ package dev.openallay.integration.jei;
 
 import java.util.Objects;
 import java.util.OptionalLong;
-import net.minecraft.world.item.ItemStack;
+
 
 /** Detached publication projection. Native item custody remains inside optional JEI code. */
 sealed interface JeiIngredientValue {
     @dev.openallay.value.ValueType(Item.ValueSchemaProvider.class)
 public static final class Item implements JeiIngredientValue {
-    private final ItemStack stack;
-    public Item(ItemStack stack) {
+    private final net.minecraft.world.item.ItemStack stack;
+    public Item(net.minecraft.world.item.ItemStack stack) {
  Objects.requireNonNull(stack, "stack");
         this.stack = stack;
     }
-    public ItemStack stack() { return stack; }
+    public net.minecraft.world.item.ItemStack stack() { return stack; }
     @Override public boolean equals(Object other) {
         if (this == other) return true;
         if (!(other instanceof Item)) return false;
@@ -29,7 +29,7 @@ public static final class Item implements JeiIngredientValue {
     public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
         public ValueSchemaProvider() {}
         @Override public dev.openallay.value.ValueSchema<Item> schema() {
-            return new dev.openallay.value.ValueSchema<>(Item.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Item>>asList(new dev.openallay.value.ValueSchema.Component<>(Item.class, "stack", Item::stack)), arguments -> new Item((ItemStack) arguments[0]));
+            return new dev.openallay.value.ValueSchema<>(Item.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Item>>asList(new dev.openallay.value.ValueSchema.Component<>(Item.class, "stack", Item::stack)), arguments -> new Item((net.minecraft.world.item.ItemStack) arguments[0]));
         }
     }
 }

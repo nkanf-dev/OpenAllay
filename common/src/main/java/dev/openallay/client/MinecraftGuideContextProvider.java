@@ -20,11 +20,11 @@ import dev.openallay.world.MinecraftClientWorldObservationCoordinator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import net.minecraft.client.Minecraft;
+
 
 public final class MinecraftGuideContextProvider implements GuideContextProvider {
     private final OpenAllayRuntime runtime;
-    private final Minecraft client;
+    private final net.minecraft.client.Minecraft client;
     private final Gson gson;
     private final ClassLoader integrationLoader;
     private final RecipeClientRuntime recipeClient;
@@ -37,7 +37,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
 
     public MinecraftGuideContextProvider(
             OpenAllayRuntime runtime,
-            Minecraft client,
+            net.minecraft.client.Minecraft client,
             Gson gson,
             ClassLoader integrationLoader) {
         this(runtime, client, gson, integrationLoader, RecipeClientRuntime.defaults());
@@ -45,7 +45,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
 
     public MinecraftGuideContextProvider(
             OpenAllayRuntime runtime,
-            Minecraft client,
+            net.minecraft.client.Minecraft client,
             Gson gson,
             ClassLoader integrationLoader,
             RecipeClientRuntime recipeClient) {
@@ -75,7 +75,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     }
 
     private boolean freezeJavascriptAndCommands(String correlationId, boolean clientLocalModel) {
-        var javascript = unrestrictedJavascript;
+        dev.openallay.script.UnrestrictedJavascriptRuntime javascript = unrestrictedJavascript;
         if (javascript != null && !clientLocalModel) javascript.freezeDisabled(correlationId);
         boolean unrestricted = clientLocalModel && javascript != null
                 && javascript.freeze(correlationId);
@@ -88,7 +88,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
         inputObservations.remove(correlationId);
         runtime.commands().closeRequest(correlationId);
         runtime.extensions().closeJavascriptRequest(correlationId);
-        var javascript = unrestrictedJavascript;
+        dev.openallay.script.UnrestrictedJavascriptRuntime javascript = unrestrictedJavascript;
         if (javascript != null) javascript.close(correlationId);
         runtime.worldObservations().closeObservations(correlationId);
     }
@@ -129,8 +129,10 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
         }
         try {
             ToolResult<Integer> refreshed = refreshKnowledge();
-            if (refreshed instanceof ToolResult.Failure<Integer> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.lang.Integer> value; ToolResult.Failure<Integer> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = refreshed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<Integer>) $oaPattern0_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
             }
             ToolInvocationContext context =
                     new ClientContextCapture(gson, runtime.platform(), recipeClient)
@@ -146,7 +148,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
                             player.dimension(),
                             runtime.worldObservations(),
                             correlationId)));
-            var observation = inputObservations.get(correlationId);
+            dev.openallay.world.ClientObservationAnchor observation = inputObservations.get(correlationId);
             if (observation != null && context.player().isPresent()) {
                 if (!observation.focus().actorId().equals(context.player().orElseThrow().uuid())) {
                     throw new IllegalArgumentException("Input reference belongs to another player");
@@ -177,12 +179,12 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
     public java.util.concurrent.CompletableFuture<Void> detachConnectionState(
             java.util.concurrent.CompletableFuture<Void> custody) {
         runtime.knowledge().clearConnectionState();
-        var references = runtime.worldObservations().producerReferenceSnapshot();
+        java.util.Map<java.lang.String, java.util.List<dev.openallay.model.image.ImageReference>> references = runtime.worldObservations().producerReferenceSnapshot();
         java.util.Map<String, List<dev.openallay.model.image.ImageReference>> installed = new java.util.LinkedHashMap<>();
         references.forEach((correlation, images) -> installed.put(correlation,
                 detachedObservationImages.compute(correlation, (key, previous) -> {
                     List<dev.openallay.model.image.ImageReference> union = new ArrayList<>(
-                            previous == null ? List.of() : previous);
+                            previous == null ? dev.openallay.util.Java8Collections.listOf() : previous);
                     union.addAll(images);
                     return dev.openallay.model.image.ModelImages.unique(union);
                 })));

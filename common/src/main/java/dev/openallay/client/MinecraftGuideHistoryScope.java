@@ -6,14 +6,14 @@ import dev.openallay.guide.history.GuideHistoryScopeProvider;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.UUID;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.server.IntegratedServer;
+
+
 
 /** Captures and detaches the active connection identity on the client thread. */
 public final class MinecraftGuideHistoryScope implements GuideHistoryScopeProvider {
-    private final Minecraft client;
+    private final net.minecraft.client.Minecraft client;
 
-    public MinecraftGuideHistoryScope(Minecraft client) {
+    public MinecraftGuideHistoryScope(net.minecraft.client.Minecraft client) {
         this.client = Objects.requireNonNull(client, "client");
     }
 
@@ -27,7 +27,7 @@ public final class MinecraftGuideHistoryScope implements GuideHistoryScopeProvid
         if (client.player == null || !dev.openallay.client.gui.MinecraftClientWindow.actor(client).equals(actor)) {
             throw unavailable();
         }
-        IntegratedServer integrated = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
+        net.minecraft.client.server.IntegratedServer integrated = dev.openallay.client.gui.MinecraftClientWindow.integratedServer(client);
         Path worldPath = integrated == null
                 ? null
                 : dev.openallay.platform.minecraft.MinecraftWorldSavePath.root(integrated);
@@ -37,7 +37,7 @@ public final class MinecraftGuideHistoryScope implements GuideHistoryScopeProvid
     static GuideHistoryScope detached(UUID actor, Path worldPath, String serverAddress) {
         Objects.requireNonNull(actor, "actor");
         boolean hasWorld = worldPath != null;
-        boolean hasServer = serverAddress != null && !serverAddress.isBlank();
+        boolean hasServer = serverAddress != null && !dev.openallay.util.Java8Strings.isBlank(serverAddress);
         if (hasWorld == hasServer) {
             throw unavailable();
         }

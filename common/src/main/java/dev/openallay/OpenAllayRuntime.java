@@ -184,11 +184,11 @@ private static OpenAllayExtensionRegistry defaultExtensions(
                         platform.platformName(),
                         platform.gameVersion(),
                         OpenAllayConstants.EXTENSION_API_VERSION,
-                        java.util.Set.of(OpenAllayConstants.EXTENSION_API_VERSION, "0.4.0")),
+                        dev.openallay.util.Java8Collections.setOf(OpenAllayConstants.EXTENSION_API_VERSION, "0.4.0")),
                 modules,
                 JavascriptModuleCatalog.bundled(),
                 skills,
-                java.util.Set.of());
+                dev.openallay.util.Java8Collections.setOf());
     }
 private static Defaults defaults(PlatformService platform, SkillRepository skills) {
         JavascriptDataModuleRegistry modules = new JavascriptDataModuleRegistry();

@@ -19,15 +19,44 @@ public final class MinecraftComponents {
     public static ITextComponent style(ITextComponent target, TextFormatting formatting) {
         Style style = target.getStyle().createShallowCopy();
         if (formatting.isColor()) style.setColor(formatting);
-        else switch (formatting) {
-            case OBFUSCATED -> style.setObfuscated(true);
-            case BOLD -> style.setBold(true);
-            case STRIKETHROUGH -> style.setStrikethrough(true);
-            case UNDERLINE -> style.setUnderlined(true);
-            case ITALIC -> style.setItalic(true);
-            case RESET -> style = new Style();
-            default -> { }
-        }
+        else switch ((formatting)) {
+case OBFUSCATED:
+{
+style.setObfuscated(true);
+break;
+}
+case BOLD:
+{
+style.setBold(true);
+break;
+}
+case STRIKETHROUGH:
+{
+style.setStrikethrough(true);
+break;
+}
+case UNDERLINE:
+{
+style.setUnderlined(true);
+break;
+}
+case ITALIC:
+{
+style.setItalic(true);
+break;
+}
+case RESET:
+{
+style = new Style();
+break;
+}
+default:
+{
+{ }
+break;
+}
+}
+
         return target.setStyle(style);
     }
     public static ITextComponent style(ITextComponent target, TextFormatting... formatting) {

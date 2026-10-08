@@ -11,7 +11,7 @@ import dev.openallay.trace.replay.ReplayReport;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import net.minecraft.commands.CommandSourceStack;
+
 
 public final class TraceReplayService {
     private final TraceRepository repository;
@@ -27,21 +27,25 @@ public final class TraceReplayService {
         this.replayer = Objects.requireNonNull(replayer, "replayer");
     }
 
-    public ToolResult<List<String>> traceIds(CommandSourceStack source) {
+    public ToolResult<List<String>> traceIds(net.minecraft.commands.CommandSourceStack source) {
         requireServerThread(source);
         ToolResult<TraceRepository.LoadedTraces> loaded = load(source);
-        if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.trace.minecraft.TraceRepository.LoadedTraces> value; ToolResult.Failure<TraceRepository.LoadedTraces> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<TraceRepository.LoadedTraces>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         return new ToolResult.Success<>(
                 ((ToolResult.Success<TraceRepository.LoadedTraces>) loaded).value().ids());
     }
 
-    public ToolResult<ReplayReport> replay(CommandSourceStack source, String traceId) {
+    public ToolResult<ReplayReport> replay(net.minecraft.commands.CommandSourceStack source, String traceId) {
         requireServerThread(source);
         ToolResult<TraceRepository.LoadedTraces> loaded = load(source);
-        if (loaded instanceof ToolResult.Failure<TraceRepository.LoadedTraces> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.trace.minecraft.TraceRepository.LoadedTraces> value; ToolResult.Failure<TraceRepository.LoadedTraces> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<TraceRepository.LoadedTraces>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         AgentTrace trace = ((ToolResult.Success<TraceRepository.LoadedTraces>) loaded)
                 .value()
@@ -63,19 +67,18 @@ public final class TraceReplayService {
         return new ToolResult.Success<>(replayer.replay(trace, context));
     }
 
-    private ToolResult<TraceRepository.LoadedTraces> load(CommandSourceStack source) {
-        var resources = dev.openallay.platform.minecraft.MinecraftServerResources.resources(
+    private ToolResult<TraceRepository.LoadedTraces> load(net.minecraft.commands.CommandSourceStack source) {
+        dev.openallay.platform.minecraft.MinecraftResourceAccess.Source resources = dev.openallay.platform.minecraft.MinecraftServerResources.resources(
                 dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source));
-        List<TraceRepository.TraceSource> sources = MinecraftResourceAccess
+        List<TraceRepository.TraceSource> sources = dev.openallay.util.Java8Collections.toList(MinecraftResourceAccess
                 .listIds(resources, "agent_traces", id -> dev.openallay.platform.minecraft.MinecraftResourceId.from(id.toString()).path().endsWith(".json"))
                 .stream()
                 .map(id -> new TraceRepository.TraceSource(
-                        id.toString(), () -> MinecraftResourceAccess.openSelectedReader(resources, id)))
-                .toList();
+                        id.toString(), () -> MinecraftResourceAccess.openSelectedReader(resources, id))));
         return repository.load(sources);
     }
 
-    private static void requireServerThread(CommandSourceStack source) {
+    private static void requireServerThread(net.minecraft.commands.CommandSourceStack source) {
         Objects.requireNonNull(source, "source");
         if (!dev.openallay.server.NativeServerOwner.isOwner(dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source))) {
             throw new IllegalStateException("Trace replay must run on the Minecraft server thread");

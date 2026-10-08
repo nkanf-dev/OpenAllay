@@ -68,16 +68,18 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
                     binding.stableId(), view.providerId(), "native_view_failed"));
             close(view);
             NativeDomainViewProvider.Attempt attempt = fallback.create(binding);
-            if (!(attempt instanceof NativeDomainViewProvider.Attempt.Ready ready)) {
+            final class $oaPattern0_Holder { dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt value; NativeDomainViewProvider.Attempt.Ready bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = attempt) instanceof dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt.Ready && (($oaPattern0_holder.bound = (NativeDomainViewProvider.Attempt.Ready) $oaPattern0_holder.value) != null)))) {
                 active.remove(binding.stableId());
                 return false;
             }
-            active.put(binding.stableId(), new Entry(binding, ready.view()));
+            active.put(binding.stableId(), new Entry(binding, $oaPattern0_holder.bound.view()));
             try {
-                ready.view().render(context);
+                $oaPattern0_holder.bound.view().render(context);
                 return true;
             } catch (RuntimeException fallbackFailure) {
-                close(ready.view());
+                close($oaPattern0_holder.bound.view());
                 active.remove(binding.stableId());
                 return false;
             }
@@ -86,15 +88,14 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
 
     public void endFrame() {
         requireClientThread();
-        List<String> released = active.keySet().stream()
-                .filter(id -> !visible.contains(id))
-                .toList();
+        List<String> released = dev.openallay.util.Java8Collections.toList(active.keySet().stream()
+                .filter(id -> !visible.contains(id)));
         released.forEach(id -> close(active.remove(id).view()));
     }
 
     public void tick() {
         requireClientThread();
-        List.copyOf(active.values()).forEach(entry -> {
+        dev.openallay.util.Java8Collections.listCopyOf(active.values()).forEach(entry -> {
             try {
                 entry.view().tick();
             } catch (RuntimeException failure) {
@@ -107,7 +108,7 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
     }
 
     public List<NativeDomainViewDiagnostic> diagnostics() {
-        return List.copyOf(diagnostics);
+        return dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
     }
 
     public int activeViewCount() {
@@ -133,14 +134,16 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
             if (!provider.supports(binding)) continue;
             try {
                 NativeDomainViewProvider.Attempt attempt = provider.create(binding);
-                if (attempt instanceof NativeDomainViewProvider.Attempt.Ready ready) {
-                    if (ready.view().family() != binding.family()) {
-                        close(ready.view());
+                final class $oaPattern1_Holder { dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt value; NativeDomainViewProvider.Attempt.Ready bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = attempt) instanceof dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt.Ready && (($oaPattern1_holder.bound = (NativeDomainViewProvider.Attempt.Ready) $oaPattern1_holder.value) != null))) {
+                    if ($oaPattern1_holder.bound.view().family() != binding.family()) {
+                        close($oaPattern1_holder.bound.view());
                         diagnostics.add(new NativeDomainViewDiagnostic(
                                 binding.stableId(), provider.providerId(), "native_view_failed"));
                         continue;
                     }
-                    return ready.view();
+                    return $oaPattern1_holder.bound.view();
                 }
                 NativeDomainViewProvider.Attempt.Unsupported unsupported =
                         (NativeDomainViewProvider.Attempt.Unsupported) attempt;
