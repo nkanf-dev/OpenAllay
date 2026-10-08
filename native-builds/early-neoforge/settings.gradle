@@ -8,4 +8,4 @@ pluginManagement {
 
 rootProject.name = 'OpenAllay-early-neoforge-native'
 // Source-free artifacts retain the real root project identities for official JarJar.
-include('extension-api', 'runtime-rhino')
+include('extension-api', 'runtime-rhino', 'runtime-commonmark')
