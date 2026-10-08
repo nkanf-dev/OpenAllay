@@ -131,13 +131,13 @@ task compileNativeApplication {
         def receipts=[]
         ['dev.openallay.client.gui.nativeview.NativeClosedFamilyIngressFixture',
          'dev.openallay.integration.jei.NativeJeiClosedValueIngressFixture'].each { main ->
-            def command=[java8.absolutePath,'-cp',fixtureClasses.absolutePath+File.pathSeparator+fixtureCp,main]
+            def fixtureCommand=[java8.absolutePath,'-cp',fixtureClasses.absolutePath+File.pathSeparator+fixtureCp,main]
             def log=new File(out,'native-union-fixture/'+main.substring(main.lastIndexOf('.')+1)+'.log')
             def result
             log.withOutputStream { stream ->
-                result=project.exec { commandLine command; standardOutput=stream;errorOutput=stream;ignoreExitValue=true }
+                result=project.exec { commandLine fixtureCommand; standardOutput=stream;errorOutput=stream;ignoreExitValue=true }
             }
-            receipts.add([main:main,exitCode:result.exitValue,command:command,logSha256:sha(log)])
+            receipts.add([main:main,exitCode:result.exitValue,command:fixtureCommand,logSha256:sha(log)])
         }
         new File(out,'native-union-fixture/receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
             scope:'actual compiled native source closed-family constructor/aggregate Java8 fixtures',
