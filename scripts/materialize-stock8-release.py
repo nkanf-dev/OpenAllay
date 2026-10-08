@@ -95,6 +95,16 @@ def source_custody(root, packing_source, native_custody, release_source):
     original_tree=set(git(root,"ls-tree","-r","--name-only","-z",packing_source).decode().split("\0"))
     early_paths=early_producer_paths(root)
     for path in filter(None, changed):
+        if path == "gradle/distribution.gradle":
+            original=git(root,"show",packing_source+":"+path)
+            current=(root/path).read_bytes()
+            require(digest(original)=="16a36d6850fba208eac6624c778cfde885887ab8ab268c95e4d40047a8341325" and digest(current) in ("244be7b1c15fcd48e4b075a827b8247c3cb10b758a1e9650190a9cdcdc95dda0", "3eeac6b0ac183aa92e3bed5a8a238ffde1828e8159a47472e356b7fe701e0a86"),
+                    "Only the reviewed canonical Builder release-producer branch may differ")
+            continue
+        if path == "distribution/builder-package-originals.json":
+            from package_canonical_builder import originals
+            originals(root)
+            continue
         if path in early_paths:
             original=git(root,"show",packing_source+":"+path) if path in original_tree else None
             value=native_delta_policy(root)

@@ -2,6 +2,10 @@ name: Build release packages
 on:
   workflow_dispatch:
     inputs:
+      package_only:
+        type: boolean
+        default: false
+        description: Package only the33 nested products with the exact approved raw Builder; no compilation
       build_targets:
         type: string
         default: ''
@@ -54,7 +58,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    if: ${{ !inputs.stage_only && !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates && !inputs.native_java8_package_only && (inputs.stock8_acceptance == 'none' || inputs.stock8_acceptance == '') }}
+    if: ${{ !inputs.package_only && !inputs.stage_only && !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates && !inputs.native_java8_package_only && (inputs.stock8_acceptance == 'none' || inputs.stock8_acceptance == '') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -161,8 +165,45 @@ jobs:
             build/legacy-release-inputs/*/compiler-lock.json
             build/legacy-release-inputs/*/provider-receipt.json
             build/legacy-release-inputs/*/REQUEST.json
+  package-only-plan:
+    if: ${{ inputs.package_only && !inputs.stage_only && !inputs.metadata_only && inputs.build_targets == '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.groups.outputs.groups }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - id: groups
+        env: {RELEASE_DISPATCH_INPUTS: '${{ toJson(inputs) }}'}
+        run: python3 -B scripts/build-minecraft-artifacts.py builder-package-groups --github-output "$GITHUB_OUTPUT"
+  package-only-products:
+    needs: package-only-plan
+    permissions: {contents: read, actions: read}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include: ${{ fromJson(needs.package-only-plan.outputs.groups) }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - name: Authenticate the exact original compiled group
+        env: {GH_TOKEN: '${{ github.token }}', TARGET: '${{ matrix.target }}'}
+        run: python3 -B scripts/fetch-release-build-groups.py --selection "$PWD/distribution/builder-package-originals.json" --targets "$TARGET" --output build/builder-package-original-cache
+      - name: Package only canonical Builder resources
+        env: {GH_TOKEN: '${{ github.token }}', TARGET: '${{ matrix.target }}'}
+        run: python3 -B scripts/run-builder-package-only-group.py --target "$TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-packages-${{ matrix.target }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: release-group/
   stage:
-    if: ${{ always() && !cancelled() && (inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')) }}
+    if: ${{ always() && !cancelled() && !inputs.package_only && (inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')) }}
     permissions:
       contents: read
       actions: read
@@ -188,7 +229,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/fetch-release-build-groups.py --output build/release-groups
-      - name: Bind all current packages to compile-package evidence
+      - name: Authenticate immutable original compile inputs for derived package verification
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/fetch-release-build-groups.py --selection "$PWD/distribution/builder-package-originals.json" --targets "1.18.2,1.19.2,1.20.1,1.20.2,1.20.3,1.20.4,1.20.5,1.21,1.21.2,1.21.4,1.21.5,1.21.6,1.21.7,1.21.9,1.21.11,26.1,26.2,26.3" --output build/builder-package-original-cache
+      - name: Bind all current packages to exact compile or package-only evidence
+        env: {OPENALLAY_ORIGINAL_PACKAGE_DIRECTORY: '${{ github.workspace }}/build/builder-package-original-cache'}
         run: python3 -B scripts/build-minecraft-artifacts.py merge-staged build/release-groups release
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -197,7 +242,7 @@ jobs:
           if-no-files-found: error
           path: release/
   collect-metadata:
-    if: ${{ inputs.metadata_only }}
+    if: ${{ !inputs.package_only && (inputs.metadata_only) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -225,7 +270,7 @@ jobs:
           path: build/release-metadata/
 
   forge1122-java8-source-diagnostic:
-    if: ${{ inputs.native_java8_diagnostic }}
+    if: ${{ !inputs.package_only && (inputs.native_java8_diagnostic) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -257,7 +302,7 @@ jobs:
             ${{ runner.temp }}/forge1122-java8-native/java8-diagnostic/*.log
 
   forge1122-native-record-source-candidates:
-    if: ${{ inputs.native_record_candidates }}
+    if: ${{ !inputs.package_only && (inputs.native_record_candidates) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -276,7 +321,7 @@ jobs:
           path: ${{ runner.temp }}/native-record-candidate/
 
   forge1122-native-language-source-candidates:
-    if: ${{ inputs.native_language_candidates || inputs.native_held_candidates || inputs.native_residual_api_candidates }}
+    if: ${{ !inputs.package_only && (inputs.native_language_candidates || inputs.native_held_candidates || inputs.native_residual_api_candidates) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -311,7 +356,7 @@ jobs:
             ${{ runner.temp }}/forge1122-java8-native-language-candidate/
 
   forge1122-native-java8-package-probe:
-    if: ${{ inputs.native_java8_package_probe }}
+    if: ${{ !inputs.package_only && (inputs.native_java8_package_probe) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -355,7 +400,7 @@ jobs:
             ${{ runner.temp }}/forge1122-java8-native/jar/
 
   forge1122-stock8-package-only:
-    if: ${{ inputs.native_java8_package_only }}
+    if: ${{ !inputs.package_only && (inputs.native_java8_package_only) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -459,4 +504,4 @@ jobs:
           build/e2e/runtime/forge1122-stock8/minecraft/.provision/*.log
 
           '
-    if: ${{ inputs.stock8_acceptance != 'none' && inputs.stock8_acceptance != '' }}
+    if: ${{ !inputs.package_only && (inputs.stock8_acceptance != 'none' && inputs.stock8_acceptance != '') }}

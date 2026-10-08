@@ -513,6 +513,9 @@ REUSE_ORCHESTRATION_PATHS = {
     "scripts/verify-native-target-package.py", "scripts/test_early_neoforge_recipe.py",
     "scripts/test_forge16_engine_legal_custody.py",
     "scripts/test_sqlite_cross_family_service.py", "scripts/test_sqlite_fabric_wrapper_identity.py",
+    "scripts/run-builder-package-only-group.py",
+    "distribution/builder-package-originals.json", "scripts/canonical_builder_provider.py",
+    "scripts/package_canonical_builder.py", "scripts/test_canonical_builder_package_only.py",
     COMMENT_POLICY_PATH, "scripts/release_comment_custody.py", "scripts/test_release_comment_custody.py",
 }
 REUSE_NATIVE_PATHS = {
@@ -609,6 +612,11 @@ def verify_reused_source(old_source, current_source, families):
         if path in COMMENT_PATHS:
             verify_comment_pair(ROOT, path, git_output("show", old_source + ":" + path, binary=True),
                                 git_output("show", current_source + ":" + path, binary=True))
+            continue
+        if path == "gradle/distribution.gradle":
+            old=git_output("show",old_source+":"+path,binary=True);new=git_output("show",current_source+":"+path,binary=True)
+            require(hashlib.sha256(old).hexdigest()=="16a36d6850fba208eac6624c778cfde885887ab8ab268c95e4d40047a8341325" and hashlib.sha256(new).hexdigest()=="244be7b1c15fcd48e4b075a827b8247c3cb10b758a1e9650190a9cdcdc95dda0",
+                    "Expected only the exact canonical-Builder release-producer branch replacement")
             continue
         if path == "fabric/build.gradle":
             verify_1201_refmap_build_scope(old_source, current_source, families)
@@ -716,7 +724,7 @@ def verify_receipt_source(family, receipt, receipt_path, current_source, engine_
         verified_groups.add(group["target"])
 
 
-def verify_build_receipts(families, directory, receipt_directory):
+def verify_build_receipts(families, directory, receipt_directory, original_directory=None):
     """Verify new compiled release bytes. This receipt class carries no game result."""
     require(receipt_directory.is_dir(), "Missing compile/package build receipts")
     require(sorted(path.name for path in receipt_directory.glob("*.json")) ==
@@ -733,6 +741,35 @@ def verify_build_receipts(families, directory, receipt_directory):
     approved_package_sources = {}
     for family in families:
         receipt = artifacts.read_json(receipt_directory / (family["id"] + ".json"))
+        if receipt.get("kind") == "package-only":
+            packer=module("derived_builder_package", "package_canonical_builder.py")
+            resolver=original_directory if original_directory is not None else os.environ.get("OPENALLAY_ORIGINAL_PACKAGE_DIRECTORY")
+            require(resolver is not None, "Package-only verification requires an explicit authenticated original-input directory")
+            group=packer.originals(ROOT)[family["buildTarget"]]
+            if callable(resolver):
+                original_group_directory=Path(resolver(family))
+            elif isinstance(resolver,dict):
+                require(family["buildTarget"] in resolver, "Original-input resolver lacks this exact target")
+                original_group_directory=Path(resolver[family["buildTarget"]])
+            else:
+                original_group_directory=Path(resolver)/group["artifactName"]
+            # Authenticate checked-in frozen compile evidence before any derived-output check.
+            _, original_raw, _, _=packer.authenticate_original(ROOT,family,original_group_directory)
+            original_receipt=json.loads(original_raw)
+            verify_reused_source(original_receipt["sourceSha"],source,[family])
+            if receipt["sourceSha"]!=source:
+                approved=read_reuse_selection().get(family["buildTarget"])
+                require(approved is not None and approved["sourceSha"]==receipt["sourceSha"] and
+                        receipt["sourceRunId"]==str(approved["runId"]) and receipt["sourceRunAttempt"]==str(approved["runAttempt"]) and
+                        receipt["engineManifestSha256"]==approved["engineManifestSha256"], "Derived package source/run/engine lacks exact current approval")
+                row=next(row for row in approved["familyArtifacts"] if row["id"]==family["id"])
+                require(receipt["artifactSha256"]==row["artifactSha256"] and artifacts.file_hash(receipt_directory/(family["id"]+".json"),artifacts.MAX_JSON_BYTES)==row["receiptSha256"], "Derived original receipt/artifact identity differs")
+                verify_reused_source(receipt["sourceSha"],source,[family])
+            old=packer.verify_receipt(ROOT,family,directory/artifacts.describe(family,release_version)["filename"],receipt,original_group_directory,receipt["sourceSha"])
+            require(receipt["engineManifestSha256"]==engine_sha, "Derived package changed canonical engine manifest")
+            approved_package_sources[family["id"]]=receipt["sourceSha"]
+            receipts.append(receipt)
+            continue
         artifacts.shape(receipt, BUILD_RECEIPT_FIELDS, "Compile/package release receipt")
         if family["packagingRecipe"] in LEGACY_RECIPES:
             sidecar = directory / (artifacts.describe(family, release_version)["filename"] + ".packaging.json")
@@ -778,8 +815,12 @@ def verify_build_receipts(families, directory, receipt_directory):
         path = Path(record["artifactPath"])
         require(record["artifactSha256"] == artifacts.hash_text(receipt["artifactSha256"]), "New release artifact changed after build")
         sqlite, runtimes = package_proofs(path, family, approved_package_sources[family["id"]])
-        require(sqlite == receipt["sqlite"], "SQLite bytes changed after package checks")
-        require(runtimes == receipt["sharedRuntimes"],
+        comparison_receipt=receipt
+        if receipt["kind"]=="package-only":
+            import base64
+            comparison_receipt=json.loads(base64.b64decode(receipt["originalReceiptBase64"],validate=True))
+        require(sqlite == comparison_receipt["sqlite"], "SQLite bytes changed after package checks")
+        require(runtimes == comparison_receipt["sharedRuntimes"],
                 "Separately compiled shared runtime bytes changed after build")
     return records
 
@@ -798,6 +839,11 @@ def publication_records(families, directory, receipt_directory=None, build_recei
                            "buildRunAttempt": receipt["sourceRunAttempt"],
                            "verification": receipt["kind"],
                            "receiptSha256": artifacts.file_hash(receipt_path, artifacts.MAX_JSON_BYTES)})
+            if receipt["kind"] == "package-only":
+                import base64
+                compiled=json.loads(base64.b64decode(receipt["originalReceiptBase64"],validate=True))
+                record.update({"verification":"package-only", "originalCompileSourceSha":compiled["sourceSha"],
+                               "originalCompileRunId":compiled["sourceRunId"], "originalCompileReceiptSha256":receipt["originalReceiptSha256"]})
             if family["packagingRecipe"] == "forge-stock8":
                 stock8 = module("stock8_publication", "materialize-stock8-release.py").pin(ROOT)
                 record.update({"artifactSourceSha": stock8["productSource"], "stageSourceSha": source_identity(), "originalPackageSourceSha": receipt["sourceSha"],
@@ -880,7 +926,7 @@ def checksums(directory, records):
                                                for record in records), encoding="utf-8")
 
 
-def merge_staged(groups_directory, directory):
+def merge_staged(groups_directory, directory, original_directory=None):
     """Assemble independently compiled groups without rebuilding or launching Java."""
     require(not directory.exists(), "Preserve any previous release stage")
     directory.mkdir(parents=True)
@@ -895,7 +941,7 @@ def merge_staged(groups_directory, directory):
         families = [family for family in data["acceptedFamilies"] if family["id"] in ids]
         require(ids and len(families) == len(ids) and not observed.intersection(ids), "Unknown or repeated accepted group families")
         require(len({family["buildTarget"] for family in families}) == 1, "A group stage must have one actual build target")
-        verify_build_receipts(families, group, group / "build-receipts")
+        verify_build_receipts(families, group, group / "build-receipts", original_directory=original_directory)
         content = (group / "build-receipts/engine-manifest.json").read_bytes()
         require(engine_bytes is None or content == engine_bytes, "Independent groups changed shared engine bytes")
         engine_bytes = content
@@ -908,9 +954,22 @@ def merge_staged(groups_directory, directory):
         observed.update(ids)
     require(observed == {family["id"] for family in data["acceptedFamilies"]}, "Merged release must contain every accepted family exactly once")
     (receipts / "engine-manifest.json").write_bytes(engine_bytes)
-    records = verify_build_receipts(data["acceptedFamilies"], directory, receipts)
+    records = verify_build_receipts(data["acceptedFamilies"], directory, receipts, original_directory=original_directory)
     checksums(directory, records)
     return records
+
+
+def builder_package_groups():
+    dispatch=os.environ.get("RELEASE_DISPATCH_INPUTS")
+    if dispatch is not None:
+        inputs=json.loads(dispatch)
+        require(inputs.get("package_only") is True and all(value in (False, "none", "")
+                for key,value in inputs.items() if key!="package_only"), "Package-only cannot compete with other dispatch modes")
+    data=catalog()
+    result=[{"target":target,"families":",".join(family["id"] for family in families)} for target,families in groups(data)
+            if all(family["packagingRecipe"]=="nested-mod" for family in families)]
+    require(len(result)==18 and sum(len(row["families"].split(",")) for row in result)==33, "Exact18 nested groups/33 families required")
+    return result
 
 
 def main(argv=None):
@@ -924,6 +983,8 @@ def main(argv=None):
     build.add_argument("directory", type=Path)
     build.add_argument("--target")
     build.add_argument("--families")
+    derived_grouping = commands.add_parser("builder-package-groups", help="Package-only exact original18 nested groups")
+    derived_grouping.add_argument("--github-output", type=Path)
     grouping = commands.add_parser("groups", help="Exact compile-only build groups for admitted families")
     grouping.add_argument("--targets", help="Exact comma-separated catalog build targets; empty means all")
     grouping.add_argument("--github-output", type=Path, help="Append the exact compact group list to the workflow output file")
@@ -947,6 +1008,10 @@ def main(argv=None):
                       for family in select(data, args.target, args.families)}
         elif args.command == "build-and-stage":
             result = build_and_stage(args.directory.resolve(), args.target, args.families)
+        elif args.command == "builder-package-groups":
+            result=builder_package_groups()
+            if args.github_output is not None:
+                with args.github_output.open("a",encoding="utf-8") as stream: stream.write("groups="+json.dumps(result,separators=(",", ":"))+"\n")
         elif args.command == "groups":
             reused_targets = set(read_reuse_selection())
             result = [{"target": target, "families": ",".join(family["id"] for family in families)}
