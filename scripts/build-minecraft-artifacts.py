@@ -172,7 +172,7 @@ def metadata(path, family, release_version):
         for dependency in ("sqlite-jdbc-3.50.3.0.jar",):
             require(any(directory + dependency in entries for directory in ("META-INF/jars/", "META-INF/jarjar/")),
                     "Required product dependency missing: " + dependency)
-        commonmark_package(archive, entries, family["loader"])
+        commonmark_package(archive, entries, family["loader"], family["buildTarget"])
         if family["loader"] == "fabric":
             require(not any(name in entries for name in ("META-INF/mods.toml", "META-INF/neoforge.mods.toml")),
                     "Fabric product cannot declare an FML loader")
@@ -207,10 +207,11 @@ def metadata(path, family, release_version):
 COMMONMARK_RUNTIME_SHA256 = "dff5404332182c794aec52538a9a620b61032041a3b08ddbb972ddf246021a02"
 
 
-def commonmark_package(archive, entries, loader):
+def commonmark_package(archive, entries, loader, build_target=None):
     version = native.read_properties(ROOT / "gradle.properties")["commonmark_version"]
     directory = "META-INF/jars/" if loader == "fabric" else "META-INF/jarjar/"
-    expected = directory + ("" if loader == "fabric" else "dev.openallay.") + "openallay-commonmark-" + version + ".jar"
+    isolated_early = loader == "neoforge" and build_target in ("1.20.2", "1.20.3", "1.20.5")
+    expected = directory + ("" if loader == "fabric" or isolated_early else "dev.openallay.") + "openallay-commonmark-" + version + ".jar"
     matches = [name for name in entries if name.endswith(".jar") and "commonmark" in Path(name).name.lower()]
     require(matches == [expected], "Exactly one canonical CommonMark runtime must be nested; upstream binary JARs are forbidden")
     require(not any(name.startswith("org/commonmark/") and name.endswith(".class") for name in entries),
@@ -404,7 +405,7 @@ def forge_runtime_hashes(path):
                                     "Nested Forge dependency exceeds Java17: " + name + "!" + entry)
         jars = json.loads(archive.read("META-INF/jarjar/metadata.json"))["jars"]
         for artifact, prefix, major in (("extension-api", "dev/openallay/api/", 52),
-                                        ("runtime-rhino", "dev/latvian/mods/rhino/", 61)):
+                                        ("runtime-rhino", "dev/latvian/mods/rhino/", 52)):
             rows = [row for row in jars if row["identifier"] == {"group": "dev.openallay", "artifact": artifact}]
             require(len(rows) == 1, "Shared Forge runtime has competing owners: " + artifact)
             row = rows[0]

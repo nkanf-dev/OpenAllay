@@ -94,6 +94,25 @@ class FmlRegistrationTest(unittest.TestCase):
         with self.assertRaises(ValueError):namespace["commonmark_package"](Archive(),[expected],"forge")
         with self.assertRaises(ValueError):namespace["commonmark_package"](Archive(),["META-INF/jarjar/openallay-commonmark-0.28.0.jar"],"forge")
 
+    def test_isolated_early_neoforge_uses_only_current_canonical_project_owner(self):
+        import types
+        tree=ast.parse((ROOT/"scripts/build-minecraft-artifacts.py").read_text())
+        function=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=="commonmark_package")
+        class ReachedPayload(Exception):pass
+        def require(condition,message):
+            if not condition:raise ValueError(message)
+        namespace={"native":types.SimpleNamespace(read_properties=lambda path:{"commonmark_version":"0.28.0"}),"ROOT":ROOT,"Path":Path,"json":json,"require":require,
+            "commonmark_custody":types.SimpleNamespace(verify_commonmark_payload=lambda *args:(_ for _ in ()).throw(ReachedPayload()))}
+        exec(compile(ast.Module(body=[function],type_ignores=[]),"actual_commonmark_package","exec"),namespace)
+        expected="META-INF/jarjar/openallay-commonmark-0.28.0.jar"
+        metadata={"jars":[{"path":expected,"identifier":{"group":"dev.openallay","artifact":"runtime-commonmark"},"version":{"artifactVersion":"0.28.0","range":"[0.28.0]"}}]}
+        class Archive:
+            def read(self,name):return json.dumps(metadata).encode() if name=="META-INF/jarjar/metadata.json" else b"payload"
+        for target in ("1.20.2","1.20.3","1.20.5"):
+            with self.assertRaises(ReachedPayload):namespace["commonmark_package"](Archive(),[expected],"neoforge",target)
+        metadata["jars"][0]["identifier"]={"group":"org.commonmark","artifact":"commonmark"}
+        with self.assertRaises(ValueError):namespace["commonmark_package"](Archive(),[expected],"neoforge","1.20.3")
+
 def real_capture_probe(directory):
     # No mocked policy/digest in this mode: use normal checked-in 222-entry artifact custody.
     directory=Path(directory)
