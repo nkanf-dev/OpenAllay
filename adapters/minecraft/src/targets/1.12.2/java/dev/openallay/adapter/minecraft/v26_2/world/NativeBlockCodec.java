@@ -50,7 +50,7 @@ final class NativeBlockCodec {
         final Map<IBlockState, String> encoded = boundedPalette();
     }
     private static <K,V> Map<K,V> boundedPalette() {
-        return new java.util.LinkedHashMap<>(64, 0.75f, true) {
+        return new java.util.LinkedHashMap<K,V>(64, 0.75f, true) {
             @Override protected boolean removeEldestEntry(Map.Entry<K,V> entry) { return size() > PALETTE_SIZE; }
         };
     }

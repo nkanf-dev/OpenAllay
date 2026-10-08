@@ -199,7 +199,7 @@ public final class OpenAllayBootstrap {
         return new dev.openallay.api.extension.ExtensionEnvironment(
                 platform.platformName().toLowerCase(java.util.Locale.ROOT),
                 platform.gameVersion(), platform.productVersion(), implementedExtensionApis,
-                Runtime.version().feature(), features);
+                dev.openallay.util.Java8ApiSupport.runtimeVersionFeature(), features);
     }
 
     /** Loader shutdown keeps package classes alive until admitted Extension hooks unwind. */
@@ -389,7 +389,7 @@ public final class OpenAllayBootstrap {
         try {
             return platform.installedMods().stream()
                     .map(dev.openallay.platform.InstalledModMetadata::id)
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                    .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         } catch (UnsupportedOperationException unavailable) {
             return dev.openallay.util.Java8Collections.setOf();
         }

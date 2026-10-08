@@ -35,7 +35,6 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2182,9 +2181,19 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
         dev.openallay.model.config.ModelProfileDefinition profile = settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).findFirst().orElseThrow();
         require("127.0.0.1".equals(profile.baseUri().getHost()) && "http".equals(profile.baseUri().getScheme()), "Fixture release must stay loopback");
         java.net.URI uri = profile.baseUri().resolve("/__e2e/live-ux/release");
-        return java.net.http.HttpClient.newHttpClient().sendAsync(java.net.http.HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofSeconds(10)).POST(java.net.http.HttpRequest.BodyPublishers.noBody()).build(),
-                java.net.http.HttpResponse.BodyHandlers.discarding()).thenApply(java.net.http.HttpResponse::statusCode);
+        dev.openallay.net.HttpExchangeRequest request = dev.openallay.net.HttpExchangeRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(10)).postJson("").build();
+        dev.openallay.net.HttpCancellation cancellation = new dev.openallay.net.HttpCancellation() {
+            @Override public boolean isCancelled() { return false; }
+            @Override public void onCancel(Runnable listener) { java.util.Objects.requireNonNull(listener, "listener"); }
+        };
+        return new dev.openallay.net.JdkHttpTransport(new dev.openallay.net.HttpTransportPolicy(
+                Duration.ofSeconds(10), "openallay-e2e-live-release"))
+                .execute(request, cancellation, (status, headers, body) -> {
+                    byte[] discarded = new byte[4096];
+                    while (body.read(discarded) >= 0) { /* Preserve discarding-body completion before status. */ }
+                    return status;
+                });
     }
 
     private GuideHudEditorScreen hudEditor() {
