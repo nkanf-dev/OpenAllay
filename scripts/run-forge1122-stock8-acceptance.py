@@ -206,7 +206,7 @@ def run_client(args,java,jar,root,assets,vanilla,forge,launch,game,out,phase='')
     return report
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--scenario',choices=['boot','world','persistence','builder-restricted','builder-partial','builder-cancel','builder-undo','builder-legacy-shapes','menus'],required=True);parser.add_argument('--run-id',required=True);args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--product-pin',type=Path,required=True);parser.add_argument('--scenario',choices=['boot','world','persistence','builder-suite','builder-restricted','builder-partial','builder-cancel','builder-undo','builder-legacy-shapes','menus'],required=True);parser.add_argument('--run-id',required=True);args=parser.parse_args()
     if os.environ.get('GITHUB_ACTIONS')!='true':raise ValueError('Remote only; no local game/provision/download')
     if not re.fullmatch('[A-Za-z0-9_-]+',args.run_id):raise ValueError('Fresh safe run ID required')
     sys.path.insert(0,str(ROOT/'scripts'))
@@ -248,7 +248,20 @@ def main():
     audit=guava_method_links(jar,guava,java);write(evidence/'actual-guava21-method-links.json',audit)
     if not audit['accepted']:raise ValueError('Real packaged Guava method references incompatible with stock21; preserve evidence')
     game=evidence/'game'
-    if args.scenario=='persistence':
+    if args.scenario=='builder-suite':
+        results=[]
+        for scenario in ['builder-restricted','builder-partial','builder-cancel','builder-undo','builder-legacy-shapes']:
+            selected=argparse.Namespace(**vars(args));selected.scenario=scenario;selected.run_id=args.run_id+'-'+scenario
+            case=evidence/'suite'/scenario
+            try:
+                run_client(selected,java,jar,root,assets,vanilla,forge,launch,case/'game',case/'scenario')
+                results.append({'scenario':scenario,'accepted':True})
+            except ValueError as failure:
+                results.append({'scenario':scenario,'accepted':False,'failure':str(failure)})
+        write(evidence/'builder-suite-acceptance.json',{'accepted':all(r['accepted'] for r in results),
+            'productSha256':sha(jar),'isolatedProfiles':True,'results':results})
+        if not all(r['accepted'] for r in results):raise ValueError('Actual Builder suite failed; every isolated scenario receipt retained')
+    elif args.scenario=='persistence':
         before=run_client(args,java,jar,root,assets,vanilla,forge,launch,game,evidence/'persist','persist');after=run_client(args,java,jar,root,assets,vanilla,forge,launch,game,evidence/'reload','reload')
         if before['worldId']!=after['worldId'] or before['actual']!=after['persistedActual'] or after.get('originalImageRestored') is not True:raise ValueError('Actual native UUID/full image persistence differs')
         write(evidence/'persistence-acceptance.json',{'accepted':True,'sameWorldId':before['worldId'],'sameNativeImage':after['persistedActual'],'naturalExits0':True,'gameProfileUploaded':False})

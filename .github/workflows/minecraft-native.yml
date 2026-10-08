@@ -5,7 +5,7 @@ on:
       stock8_acceptance:
         type: choice
         default: none
-        options: [none, boot, world, persistence, builder-restricted, builder-partial, builder-cancel, builder-undo, builder-legacy-shapes, menus]
+        options: [none, boot, world, persistence, builder-suite, builder-restricted, builder-partial, builder-cancel, builder-undo, builder-legacy-shapes, menus]
         description: Ordinary stock Forge 1.12.2 Java 8 final-product game acceptance
       native_residual_api_candidates:
         type: boolean
@@ -387,6 +387,12 @@ jobs:
           build/e2e/forge1122-stock8/*/scenario/*.log
 
           build/e2e/forge1122-stock8/*/scenario/frames/
+
+          build/e2e/forge1122-stock8/*/suite/*/scenario/*.json
+
+          build/e2e/forge1122-stock8/*/suite/*/scenario/*.log
+
+          build/e2e/forge1122-stock8/*/suite/*/scenario/frames/
 
           build/e2e/forge1122-stock8/*/persist/*.json
 
