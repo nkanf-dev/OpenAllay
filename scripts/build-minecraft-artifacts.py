@@ -14,6 +14,7 @@ import subprocess
 import sys
 import zipfile
 from minecraft_target_loaders import target_loaders
+from release_comment_custody import PATHS as COMMENT_PATHS, POLICY_PATH as COMMENT_POLICY_PATH, verify_pair as verify_comment_pair
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -414,6 +415,7 @@ REUSE_ORCHESTRATION_PATHS = {
     "docs/releases/0.4.4.md", "docs/forge-runtime-installation.md", "docs/minecraft-support-policy.md",
     "scripts/materialize-stock8-release.py", "scripts/package-legacy-forge-release.py",
     "scripts/test_release_stage_only.py", "scripts/test_stock8_release_admission.py",
+    COMMENT_POLICY_PATH, "scripts/release_comment_custody.py", "scripts/test_release_comment_custody.py",
 }
 REUSE_NATIVE_PATHS = {
     "common/src/targets/1.20.1/java/dev/openallay/integration/jei/MinecraftJeiRecipeApi.java",
@@ -497,6 +499,10 @@ def verify_reused_source(old_source, current_source, families):
     changed = git_output("diff", "--no-renames", "--name-only", "-z", old_source, current_source).split("\0")
     native_units = set()
     for path in filter(None, changed):
+        if path in COMMENT_PATHS:
+            verify_comment_pair(ROOT, path, git_output("show", old_source + ":" + path, binary=True),
+                                git_output("show", current_source + ":" + path, binary=True))
+            continue
         if path == "fabric/build.gradle":
             verify_1201_refmap_build_scope(old_source, current_source, families)
             continue

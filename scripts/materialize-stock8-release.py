@@ -14,6 +14,8 @@ import subprocess
 import tempfile
 import zipfile
 
+from release_comment_custody import PATHS as COMMENT_PATHS, POLICY_PATH as COMMENT_POLICY_PATH, verify_pair as verify_comment_pair
+
 ROOT = Path(__file__).resolve().parents[1]
 PIN_PATH = "native-builds/forge1122-census/accepted-stock8-product.json"
 CUSTODY_PATH = "distribution/stock8-release-custody.json"
@@ -87,8 +89,11 @@ def source_custody(root, packing_source, native_custody, release_source):
     subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor", packing_source, release_source], check=True)
     changed = git(root, "diff", "--no-renames", "--name-only", "-z", packing_source, release_source).decode().split("\0")
     admitted = {"gradle/minecraft-artifacts.json", "gradle/minecraft-target-loaders.json",
-                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH}
+                "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH, COMMENT_POLICY_PATH}
     for path in filter(None, changed):
+        if path in COMMENT_PATHS:
+            verify_comment_pair(root, path, git(root, "show", packing_source + ":" + path), (root / path).read_bytes())
+            continue
         require(path in admitted or path in ("README.md", "README.zh-CN.md", "AGENTS.md") or
                 path.startswith(("scripts/", "docs/", ".github/workflows/")),
                 "Retained stock8 product source changed; produce new accepted bytes: " + path)
