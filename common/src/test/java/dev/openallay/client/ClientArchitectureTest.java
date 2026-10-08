@@ -205,7 +205,11 @@ final class ClientArchitectureTest {
         assertTrue(disconnect.indexOf("closeState()") < disconnect.indexOf("voice.input().cancel("));
         assertTrue(disconnect.contains("pttDown = false"));
         assertTrue(facade.contains("public void disconnect() { presentation.disconnect(); }"));
-        assertTrue(facade.contains("public void close() { presentation.close(); }"));
+        String facadeClose = facade.substring(facade.indexOf("@Override public void close()"));
+        assertTrue(facadeClose.contains("if (releaseResourceReload != null) releaseResourceReload.run()"));
+        assertTrue(facadeClose.contains("presentation.close()"));
+        assertTrue(facadeClose.indexOf("releaseResourceReload.run()") < facadeClose.indexOf("presentation.close()"),
+                "Native reload binding is released before the canonical presentation closes");
 
         String fabricClient = Files.readString(entrypoints.getFirst());
         assertTrue(fabricClient.contains("FabricNativeHudRegistration.register(ui)"));

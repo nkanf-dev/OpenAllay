@@ -48,8 +48,8 @@ class GuideHudNativeContractsTest {
         String nativeCodes = source("common/src/main/java/dev/openallay/client/gui/GuideInputCodes.java");
         assertTrue(nativeCodes.contains("KEY_PAGEUP = GLFW.GLFW_KEY_PAGE_UP"));
         assertTrue(nativeCodes.contains("KEY_PAGEDOWN = GLFW.GLFW_KEY_PAGE_DOWN"));
-        assertTrue(java.util.regex.Pattern.compile("case PAGE_UP:\\s*\\{\\s*scrollResults\\(\\(\\) -> results\\.scroll\\(\\)\\.page\\(-1\\)\\)").matcher(lite).find());
-        assertTrue(java.util.regex.Pattern.compile("case PAGE_DOWN:\\s*\\{\\s*scrollResults\\(\\(\\) -> results\\.scroll\\(\\)\\.page\\(1\\)\\)").matcher(lite).find());
+        assertTrue(java.util.regex.Pattern.compile("case PAGE_UP:\\s*\\{\\s*\\{?\\s*scrollResults\\(\\(\\) -> results\\.scroll\\(\\)\\.page\\(-1\\)\\); return true;").matcher(lite).find());
+        assertTrue(java.util.regex.Pattern.compile("case PAGE_DOWN:\\s*\\{\\s*\\{?\\s*scrollResults\\(\\(\\) -> results\\.scroll\\(\\)\\.page\\(1\\)\\); return true;").matcher(lite).find());
         assertTrue(lite.contains("scrollbarThumbHeight()"));
         assertTrue(lite.contains("instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe"));
         assertTrue(java.util.regex.Pattern.compile("recipes\\.openExact\\(\\$oaPattern[0-9]+_holder\\.bound\\.reference\\(\\)\\)").matcher(lite).find());
