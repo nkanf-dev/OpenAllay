@@ -42,7 +42,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-packages-${{ github.ref }}
+  group: release-packages-${{ github.ref }}-${{ inputs.stock8_acceptance || 'none' }}-${{ inputs.native_java8_package_probe || false }}-${{ inputs.native_java8_package_only || false }}
   cancel-in-progress: false
 jobs:
   plan:
