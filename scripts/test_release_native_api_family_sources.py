@@ -29,7 +29,7 @@ class NativeApiFamilySources(unittest.TestCase):
         self.assertNotIn('setRectangle(',low)
 
     def test_native_named_id_keys_do_not_leak_the_identifier_rename(self):
-        old=source('1.21.11','dev/openallay/platform/minecraft/MinecraftNativeRegistries.java')
+        old=source('1.21.10','dev/openallay/platform/minecraft/MinecraftNativeRegistries.java')
         current=(ROOT/'common/src/main/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java').read_text()
         self.assertIn('Collection<net.minecraft.resources.ResourceLocation> blockKeys()',old)
         self.assertIn('Collection<net.minecraft.resources.Identifier> blockKeys()',current)
@@ -49,8 +49,21 @@ class NativeApiFamilySources(unittest.TestCase):
         self.assertIn('GuideImageBitmaps.wrap(Screenshot.takeScreenshot',image)
         self.assertIn('GuideNativeWidgets.nativeWidget(editor.widget())',editor)
         self.assertIn('GuideNativeWidgets.nativeWidget(current.widget()) == widget',editor)
-        queue=source('1.21.11','dev/openallay/server/NativeServerDeferredHandoff.java')
+        queue=source('1.21.1','dev/openallay/server/NativeServerDeferredHandoff.java')
         self.assertIn('server.tell(new TickTask(server.getTickCount(), action));',queue)
         self.assertNotIn('server.execute(',queue)
+
+    def test_cursor_and_sdl_key_probe_use_the_actual_client_owner(self):
+        for family in ['1.21.8','26.3']:
+            text=source(family,'dev/openallay/guide/e2e/GuideProbeNativeCursor.java')
+            self.assertIn('move(Minecraft client, double x, double y)',text)
+            self.assertIn('position(Minecraft client)',text)
+            self.assertNotIn('move(Window window',text)
+        keys=source('26.3','dev/openallay/guide/e2e/GuideProbeKeyBindings.java')
+        self.assertIn('InputConstants.Type.KEYBOARD.getOrCreate(key)',keys)
+        self.assertNotIn('Type.KEYSYM',keys)
+        modern=source('1.21.11','dev/openallay/server/NativeServerDeferredHandoff.java')
+        self.assertIn('server.schedule(new TickTask(server.getTickCount(), action));',modern)
+        self.assertNotIn('server.execute(',modern)
 
 if __name__=='__main__':unittest.main()
