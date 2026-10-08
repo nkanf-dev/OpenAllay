@@ -56,6 +56,9 @@ def main():
     roles={r['role']:r for r in request['components']}
     legacy.require(REQUIRED.issubset(roles) and set(roles).issubset(REQUIRED|OPTIONAL) and len(roles)==len(request['components']),'Exact current graph classified Java8 component roles required')
     legacy.require(roles['engine']['sha256']==engine_receipt['engineSha256'],'Complete current engine output identity differs')
+    audit_spec=importlib.util.spec_from_file_location('runtime_preflight',ROOT/'scripts/audit-stock8-runtime-closure.py')
+    audit=importlib.util.module_from_spec(audit_spec);audit_spec.loader.exec_module(audit)
+    audit.audit(request,a.receipt.with_name('whole-runtime-physical-preflight.json'))
     contents={};owners={};services={};licenses={};inputs=[];role_projections=[]
     def merge(entries,role):
         for name,data in entries.items():
@@ -78,6 +81,11 @@ def main():
             projection=importlib.util.module_from_spec(projection_spec);projection_spec.loader.exec_module(projection)
             projected,proof=projection.project_sqlite_runtime(path,r['coordinate'])
             projection.audit_projected_entries(projected,proof)
+            merge(projected,role);role_projections.append(proof)
+        elif role=='mixin':
+            projection_spec=importlib.util.spec_from_file_location('mixin_runtime_role',ROOT/'scripts/mixin-launchwrapper-role.py')
+            projection=importlib.util.module_from_spec(projection_spec);projection_spec.loader.exec_module(projection)
+            projected,proof=projection.project_mixin_launchwrapper(path,r['coordinate'])
             merge(projected,role);role_projections.append(proof)
         else:merge(scan8(raw,role),role)
         inputs.append({'role':role,'coordinate':r['coordinate'],'sha256':r['sha256']})
