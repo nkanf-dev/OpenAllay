@@ -22,14 +22,14 @@ public final class BundledSkillLoader {
                     throw new IllegalStateException("Missing bundled Skill " + path);
                 }
                 java.util.LinkedHashMap<String, String> files = new java.util.LinkedHashMap<>();
-                files.put(path, new String(input.readAllBytes(), StandardCharsets.UTF_8));
+                files.put(path, new String(dev.openallay.util.Java8Streams.readAllBytes(input), StandardCharsets.UTF_8));
                 for (String relative : SUPPORT_FILES.getOrDefault(name, dev.openallay.util.Java8Collections.listOf())) {
                     String supportPath = "assets/openallay/openallay_skills/" + name + "/" + relative;
                     try (InputStream support = loader.getResourceAsStream(supportPath)) {
                         if (support == null) {
                             throw new IllegalStateException("Missing bundled Skill support file " + supportPath);
                         }
-                        files.put(supportPath, new String(support.readAllBytes(), StandardCharsets.UTF_8));
+                        files.put(supportPath, new String(dev.openallay.util.Java8Streams.readAllBytes(support), StandardCharsets.UTF_8));
                     }
                 }
                 sources.add(new SkillSource(

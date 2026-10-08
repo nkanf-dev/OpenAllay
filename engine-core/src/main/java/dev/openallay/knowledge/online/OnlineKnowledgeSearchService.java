@@ -28,7 +28,7 @@ public final class OnlineKnowledgeSearchService {
                         .handle((hits, failure) -> failure == null
                                 ? SourceOutcome.success(source, hits)
                                 : SourceOutcome.failure(source, unwrap(failure)))));
-        return CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
+        return CompletableFuture.allOf(pending.toArray(new CompletableFuture<?>[0]))
                 .thenApply(ignored -> combine(pending, context));
     }
 

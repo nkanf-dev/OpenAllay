@@ -35,7 +35,7 @@ public final class ExportedToolPolicy {
     public void closeRequestScope(String correlationId) {
         exported.stream()
                 .map(tools::find)
-                .flatMap(Optional::stream)
+                .flatMap(dev.openallay.util.Java8ApiSupport::stream)
                 .filter(dev.openallay.tool.RequestScopeParticipant.class::isInstance)
                 .map(dev.openallay.tool.RequestScopeParticipant.class::cast)
                 .forEach(participant -> participant.closeRequestScope(correlationId));

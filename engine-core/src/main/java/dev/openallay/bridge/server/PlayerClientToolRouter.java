@@ -122,7 +122,7 @@ public final class PlayerClientToolRouter {
                 .filter(descriptor -> descriptor.access() != ToolAccess.READ_ONLY
                         && descriptor.access() != ToolAccess.EXPERIMENTAL_ACTION)
                 .map(descriptor -> descriptor.id())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         trustedTools = ToolRuntimeCatalog.from(tools.registrations(), nonReadOnly);
         this.gson = EngineJson.withInstant(java.util.Objects.requireNonNull(gson, "gson"));
         this.transport = java.util.Objects.requireNonNull(transport, "transport");
@@ -160,7 +160,7 @@ public final class PlayerClientToolRouter {
         }
         Set<String> accepted = dev.openallay.util.Java8Collections.listCopyOf(advertisedClientToolIds).stream()
                 .filter(toolId -> trustedTools.find(toolId).isPresent())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         // Rebind document guidance only. The trusted Tool IDs and placement policy do not change.
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
                 dev.openallay.util.Java8Collections.toList(trustedTools.registrations().stream()
@@ -379,9 +379,9 @@ if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResu
                 synchronized (value) {
                     if (!current(chunk.invocationId(), value) || value.accepting) return;
                     Optional<String> complete = reassembler.accept(chunk.asRemoteChunk());
-                    if (complete.isEmpty()) return;
+                    if (!complete.isPresent()) return;
                     value.accepting = true;
-                    json = complete.orElseThrow();
+                    json = complete.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
                 }
                 dev.openallay.bridge.protocol.ToolExecutionMessage message = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).decode(
                         json, dev.openallay.bridge.protocol.ToolExecutionMessage.class);

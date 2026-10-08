@@ -14,7 +14,7 @@ public final class RequirementAvailability {
             throw new IllegalArgumentException("Requirement name must not be blank");
         }
         Objects.requireNonNull(status, "status");
-        detail = Objects.requireNonNullElse(detail, "");
+        detail = dev.openallay.util.Java8Objects.requireNonNullElse(detail, "");
 
         this.name = name;
         this.status = status;

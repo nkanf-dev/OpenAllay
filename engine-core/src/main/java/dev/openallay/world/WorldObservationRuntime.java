@@ -219,8 +219,8 @@ public final class WorldObservationRuntime {
         Request request = requests.get(correlationId);
         if (request == null || request.closed) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
         ClientObservationAnchor anchor = request.anchor;
-        if (anchor == null || anchor.image().isEmpty()) return dev.openallay.util.Java8Futures.failedFuture(new JavascriptExecutionException("associated_view_unavailable", "No retained pre-Guide UI frame is associated with this request"));
-        WorldViewCapture source = anchor.image().orElseThrow();
+        if (anchor == null || !anchor.image().isPresent()) return dev.openallay.util.Java8Futures.failedFuture(new JavascriptExecutionException("associated_view_unavailable", "No retained pre-Guide UI frame is associated with this request"));
+        WorldViewCapture source = anchor.image().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         if (!actor.equals(source.actorId())) return dev.openallay.util.Java8Futures.failedFuture(unavailable());
         CompletableFuture<WorldViewCapture> result = new CompletableFuture<>();
         synchronized (request) {

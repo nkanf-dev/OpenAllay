@@ -113,15 +113,15 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
     public RecipeNavigationResult openExact(RecipeReference reference) {
         Objects.requireNonNull(reference, "reference");
         Optional<RecipeViewerNavigator> navigator = navigator(reference.sourceId());
-        if (navigator.isEmpty()) {
+        if (!navigator.isPresent()) {
             return RecipeNavigationResult.failed(
                     "exact_unsupported", "No enabled viewer owns this recipe reference");
         }
-        if (!navigator.orElseThrow().supportsExactRecipe()) {
+        if (!navigator.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).supportsExactRecipe()) {
             return RecipeNavigationResult.failed(
                     "exact_unsupported", "The selected viewer cannot open an exact recipe");
         }
-        return navigator.orElseThrow().openExact(reference);
+        return navigator.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).openExact(reference);
     }
 
     private Optional<RecipeViewerNavigator> preferredNavigator() {

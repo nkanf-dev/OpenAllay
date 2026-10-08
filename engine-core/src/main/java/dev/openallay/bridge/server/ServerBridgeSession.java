@@ -278,7 +278,7 @@ if ((($oaPattern8_holder.value = serverGuide) instanceof dev.openallay.tool.Tool
         Set<String> exported = runtime.tools().descriptors().stream()
                 .filter(ExportedToolPolicy::isRemotelyReadable)
                 .map(descriptor -> descriptor.id())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         remoteTools = new RemoteToolServer(
                 new ExportedToolPolicy(runtime.tools(), exported), contexts,
                 new RemoteToolServer.ResponseSink() {

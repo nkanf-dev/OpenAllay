@@ -191,7 +191,7 @@ public final class MinecraftAgentHostGraph {
                 playerSnapshot.isPresent(),
                 "Current player and inventory snapshot",
                 "player",
-                playerSnapshot::orElseThrow));
+                playerSnapshot::get));
 
         registrySnapshot = context.registries();
         add(declared, descriptor(
@@ -200,14 +200,14 @@ public final class MinecraftAgentHostGraph {
                 registrySnapshot.isPresent(),
                 "Registry catalog metadata",
                 "registries",
-                () -> registryCatalog(registrySnapshot.orElseThrow())));
+                () -> registryCatalog(registrySnapshot.orElseThrow(() -> new java.util.NoSuchElementException("No value present")))));
         add(declared, descriptor(
                 "registryEntries",
                 type("registryEntries"),
                 registrySnapshot.isPresent(),
                 "All captured registry rows across kinds",
                 "registries",
-                () -> registrySnapshot.orElseThrow().entries()));
+                () -> registrySnapshot.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).entries()));
         for (String name : dev.openallay.util.Java8Collections.listOf("items", "blocks", "fluids", "effects", "enchantments", "entities")) {
             add(declared, descriptor(
                     name,
@@ -215,7 +215,7 @@ public final class MinecraftAgentHostGraph {
                     registrySnapshot.isPresent(),
                     "Captured " + name + " registry rows",
                     "registries",
-                    () -> groupedRegistryRows(registrySnapshot.orElseThrow(), name)));
+                    () -> groupedRegistryRows(registrySnapshot.orElseThrow(() -> new java.util.NoSuchElementException("No value present")), name)));
         }
         registrySnapshot.ifPresent(value -> {
             Map<String, List<RegistryEntrySnapshot>> grouped = group(value.entries());
@@ -239,14 +239,14 @@ public final class MinecraftAgentHostGraph {
                 recipeSnapshot.isPresent(),
                 "Recipe providers, semantic groups, diagnostics, and evidence",
                 "recipes",
-                () -> recipeCatalog(recipeSnapshot.orElseThrow())));
+                () -> recipeCatalog(recipeSnapshot.orElseThrow(() -> new java.util.NoSuchElementException("No value present")))));
         add(declared, descriptor(
                 "recipes",
                 type("recipes"),
                 recipeSnapshot.isPresent(),
                 "All captured normalized recipes",
                 "recipes",
-                () -> recipeSnapshot.orElseThrow().recipes()));
+                () -> recipeSnapshot.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).recipes()));
 
         gameSnapshot = context.observableGameState();
         add(declared, descriptor(
@@ -255,7 +255,7 @@ public final class MinecraftAgentHostGraph {
                 gameSnapshot.isPresent(),
                 "Exact player-visible runtime, mod, option, pack, shader, and F3 state",
                 "game",
-                gameSnapshot::orElseThrow));
+                gameSnapshot::get));
 
 
         add(declared, descriptor(
@@ -832,7 +832,7 @@ private static final class DeclaredTypes {
             this.schemaCatalog = schemaCatalog;
             this.evidenceOwners = evidenceOwners;
             this.sources = sources;
-            entries = new AbstractSet<>() {
+            entries = new AbstractSet<Entry<String, Object>>() {
                 @Override
                 public Iterator<Entry<String, Object>> iterator() {
                     return names.stream()

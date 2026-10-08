@@ -17,7 +17,7 @@ public final class RequirementAssessment {
             throw new IllegalArgumentException("Requirement name must not be blank");
         }
         Objects.requireNonNull(status, "status");
-        detail = Objects.requireNonNullElse(detail, "");
+        detail = dev.openallay.util.Java8Objects.requireNonNullElse(detail, "");
 
         this.kind = kind;
         this.id = id;

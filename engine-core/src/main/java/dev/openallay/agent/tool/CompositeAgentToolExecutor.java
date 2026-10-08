@@ -36,7 +36,7 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     @Override
     public Set<ContextCapability> requiredContext() {
         return delegates.stream().flatMap(value -> value.requiredContext().stream())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
     }
 
     @Override
@@ -44,14 +44,14 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
         String resolved = null;
         for (AgentToolExecutor delegate : delegates) {
             Optional<String> candidate = delegate.canonicalToolId(modelToolName);
-            if (candidate.isEmpty()) {
+            if (!candidate.isPresent()) {
                 continue;
             }
-            if (resolved != null && !resolved.equals(candidate.orElseThrow())) {
+            if (resolved != null && !resolved.equals(candidate.orElseThrow(() -> new java.util.NoSuchElementException("No value present")))) {
                 throw new IllegalStateException(
                         "Ambiguous model Tool alias " + modelToolName);
             }
-            resolved = candidate.orElseThrow();
+            resolved = candidate.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         }
         return Optional.ofNullable(resolved);
     }

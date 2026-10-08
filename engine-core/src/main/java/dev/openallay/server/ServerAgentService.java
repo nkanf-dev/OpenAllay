@@ -497,7 +497,7 @@ accepted = (($oaPattern1_holder.value = result) instanceof dev.openallay.tool.To
             }
         }
         sessions.clearActor(sender);
-        CompletableFuture<Void> finished = CompletableFuture.allOf(cleanup.toArray(CompletableFuture[]::new));
+        CompletableFuture<Void> finished = CompletableFuture.allOf(cleanup.toArray(new CompletableFuture<?>[0]));
         if (images != null && scope != null) {
             finished = finished.thenRunAsync(() -> {
                 for (AgentSessionKey key : detached) {

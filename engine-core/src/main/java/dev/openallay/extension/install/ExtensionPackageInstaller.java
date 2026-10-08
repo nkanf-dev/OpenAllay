@@ -17,7 +17,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -113,7 +112,7 @@ if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResul
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(cancellation, "cancellation");
         Optional<ExtensionCatalogArtifact> selected = entry.artifactFor(environment.loader());
-        if (selected.isEmpty()) {
+        if (!selected.isPresent()) {
             return CompletableFuture.completedFuture(preparationFailure("incompatible_loader"));
         }
         String incompatibility = environment.incompatibility(entry.descriptorFor(environment.loader()));
@@ -126,12 +125,12 @@ if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResul
         CompletableFuture<Download> response;
         try {
             response = transport.execute(
-                    HttpExchangeRequest.newBuilder(selected.orElseThrow().artifact())
+                    HttpExchangeRequest.newBuilder(selected.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).artifact())
                             .timeout(java.time.Duration.ofSeconds(60))
                             .header("accept", "application/java-archive, application/octet-stream")
                             .get().build(),
                     cancellation,
-                    (status, headers, body) -> new Download(status, body.readAllBytes()));
+                    (status, headers, body) -> new Download(status, dev.openallay.util.Java8Streams.readAllBytes(body)));
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(preparationFailure("extension_install_failed"));
         }
@@ -161,7 +160,7 @@ if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResul
         String checksum = sha256(bytes);
         ExtensionCatalogArtifact artifact = null;
         if (catalog.isPresent()) {
-            ExtensionCatalogEntry entry = catalog.orElseThrow();
+            ExtensionCatalogEntry entry = catalog.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             artifact = entry.artifactFor(environment.loader()).orElse(null);
             if (artifact == null) {
                 return preparationFailure("incompatible_loader");
@@ -182,7 +181,7 @@ if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResul
         }
         ExtensionPackageManifest manifest = inspected.manifest();
         if (catalog.isPresent()
-                && (!sameIdentity(manifest.descriptor(), catalog.orElseThrow().descriptorFor(environment.loader()))
+                && (!sameIdentity(manifest.descriptor(), catalog.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).descriptorFor(environment.loader()))
                         || !manifest.modIds().equals(artifact.modIds()))) {
             return preparationFailure("extension_manifest_mismatch");
         }
@@ -201,7 +200,7 @@ if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResul
             Files.write(temporary, bytes);
             Path captured = temporary;
             boolean differs = catalog.isPresent()
-                    && !catalog.orElseThrow().requirements().equals(manifest.descriptor().requirements());
+                    && !catalog.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).requirements().equals(manifest.descriptor().requirements());
             PreparedExtensionInstall prepared = new PreparedExtensionInstall(manifest, checksum, differs,
                     () -> commit(manifest, captured, checksum, cancellation), () -> discard(captured));
             temporary = null;
@@ -320,7 +319,7 @@ if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResul
                                 "Extension JAR has duplicate package manifests");
                     }
                     manifest = manifestCodec.decode(new String(
-                            jar.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                            dev.openallay.util.Java8Streams.readAllBytes(jar), java.nio.charset.StandardCharsets.UTF_8));
                 } else if (entry.getName().equals("fabric.mod.json")) {
                     com.google.gson.JsonObject root = dev.openallay.json.JsonTrees.parse(
                                     new java.io.InputStreamReader(
@@ -332,7 +331,7 @@ if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResul
                 } else if (entry.getName().equals("META-INF/neoforge.mods.toml")
                         || entry.getName().equals("META-INF/mods.toml")) {
                     String metadata = new String(
-                            jar.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                            dev.openallay.util.Java8Streams.readAllBytes(jar), java.nio.charset.StandardCharsets.UTF_8);
                     java.util.regex.Matcher matcher = java.util.regex.Pattern
                             .compile("(?m)^\\s*modId\\s*=\\s*[\"']([a-z0-9_.-]+)[\"']")
                             .matcher(metadata);

@@ -64,7 +64,7 @@ public String sectionReference() {
         return documentReference() + "#" + referencePart(sectionId);
     }
 private static String referencePart(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
+        return dev.openallay.util.Java8ApiSupport.urlEncodeUtf8(value).replace("+", "%20");
     }
     @Override public boolean equals(Object other) {
         if (this == other) return true;

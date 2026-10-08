@@ -60,11 +60,11 @@ public static final class Entry {
 
     public synchronized boolean cancel(UUID actorId, UUID correlationId) {
         Optional<Entry> entry = find(actorId, correlationId);
-        if (entry.isEmpty()) {
+        if (!entry.isPresent()) {
             return false;
         }
         entries.remove(correlationId);
-        entry.orElseThrow().cancellation().cancel();
+        entry.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).cancellation().cancel();
         return true;
     }
 

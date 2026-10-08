@@ -116,7 +116,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                 continue;
             }
             // Old registry must also accept the real API range before any class initialization.
-            dev.openallay.api.extension.SupportTarget target = UniversalExtensionSupport.matchingTarget(descriptor.support(), host.environment()).orElseThrow();
+            dev.openallay.api.extension.SupportTarget target = UniversalExtensionSupport.matchingTarget(descriptor.support(), host.environment()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             String legacyIncompatibility = registry.environment().incompatibility(
                     UniversalExtensionSupport.legacyDescriptor(descriptor, target));
             if (!legacyIncompatibility.isEmpty()) {
@@ -161,7 +161,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                         throw new PackageFailure("extension_package_limit_exceeded");
                     }
                     try (java.io.InputStream input = jar.getInputStream(entry)) {
-                        byte[] bytes = input.readNBytes(limits.maximumManifestBytes() + 1);
+                        byte[] bytes = dev.openallay.util.Java8Streams.readNBytes(input, limits.maximumManifestBytes() + 1);
                         if (bytes.length > limits.maximumManifestBytes()) {
                             throw new PackageFailure("extension_package_limit_exceeded");
                         }

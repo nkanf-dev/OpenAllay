@@ -152,7 +152,7 @@ public final class RemoteToolExecutor implements AgentToolExecutor {
                     }
                     value.cancelDeadline();
                     JsonObject normalized =
-                            dev.openallay.json.JsonTrees.parse(complete.orElseThrow()).getAsJsonObject();
+                            dev.openallay.json.JsonTrees.parse(complete.orElseThrow(() -> new java.util.NoSuchElementException("No value present"))).getAsJsonObject();
                     if (!normalized.has("status") || !normalized.get("status").isJsonPrimitive()) {
                         throw new IllegalArgumentException("Remote Tool result has no status");
                     }

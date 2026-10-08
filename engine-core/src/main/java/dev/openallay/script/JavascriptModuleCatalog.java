@@ -95,7 +95,7 @@ public final class JavascriptModuleCatalog {
             if (stream == null) {
                 throw new IllegalStateException("Missing bundled JavaScript module " + path);
             }
-            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            return new String(dev.openallay.util.Java8Streams.readAllBytes(stream), StandardCharsets.UTF_8);
         } catch (IOException failure) {
             throw new IllegalStateException("Unable to load bundled JavaScript module " + path, failure);
         }

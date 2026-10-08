@@ -322,11 +322,11 @@ if (!((($oaPattern0_holder.value = opened) instanceof dev.openallay.tool.ToolRes
         }
         synchronized (serverRequestLock) {
             Optional<Connection> connection = host.captureConnection();
-            if (connection.isEmpty()) {
+            if (!connection.isPresent()) {
                 if (endpoint != null) endpoint.close(request.requestId());
                 return false;
             }
-            Connection captured = connection.orElseThrow();
+            Connection captured = connection.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             serverRequests.put(request.requestId(), new ServerRequest(
                     events, request.sessionId(), captured.actorId(), captured.current(), connectionScope,
                     request.userInput().toModelMessage().inputObservation()));
@@ -458,11 +458,11 @@ break;
                     .add(chunk.eventId());
             try {
                 java.util.Optional<String> json = agentEventChunks.accept(chunk.asRemoteChunk());
-                if (json.isEmpty()) {
+                if (!json.isPresent()) {
                     return;
                 }
                 forgetAgentEventChunkLocked(chunk.requestId(), chunk.eventId());
-                completed = codec.decode(json.orElseThrow(), ServerAgentEventPayload.class);
+                completed = codec.decode(json.orElseThrow(() -> new java.util.NoSuchElementException("No value present")), ServerAgentEventPayload.class);
                 if (!completed.requestId().equals(chunk.requestId())) {
                     throw new IllegalArgumentException(
                             "Server Agent event request correlation changed");

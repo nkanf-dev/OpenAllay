@@ -139,7 +139,7 @@ if ((($oaPattern1_holder.value = committed) instanceof dev.openallay.tool.ToolRe
                             .header("accept", "application/zip, application/octet-stream")
                             .get().build(),
                     cancellation,
-                    (status, headers, body) -> new ArchiveResponse(status, body.readAllBytes()));
+                    (status, headers, body) -> new ArchiveResponse(status, dev.openallay.util.Java8Streams.readAllBytes(body)));
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(installFailure());
         }
@@ -423,7 +423,7 @@ private static final class CapturedTree {
 
     private static void copyDirectory(Path source, Path target) throws IOException {
         Path realSource = source.toRealPath();
-        Files.walkFileTree(source, new SimpleFileVisitor<>() {
+        Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes)
                     throws IOException {

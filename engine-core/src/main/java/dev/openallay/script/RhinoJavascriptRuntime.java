@@ -463,7 +463,7 @@ if (arguments.length != 1 || !((($oaPattern5_holder.value = arguments[0]) instan
                     String moduleSource = modules.source(id);
                     failures.registerModule(id, moduleSource);
                     // Six wrapper lines precede module source; the formatter maps them out.
-                    String program = "(function() {\n  \"use strict\";\n  const module = {exports: {}};\n  const exports = module.exports;\n  (function(module, exports, require) {\n    \"use strict\";\n    %s\n  })(module, exports, require);\n  return module.exports;\n})()\n".formatted(moduleSource);
+                    String program = dev.openallay.util.Java8ApiSupport.formatted("(function() {\n  \"use strict\";\n  const module = {exports: {}};\n  const exports = module.exports;\n  (function(module, exports, require) {\n    \"use strict\";\n    %s\n  })(module, exports, require);\n  return module.exports;\n})()\n", moduleSource);
                     Object exports = callContext.evaluateString(
                             scope, program, JavascriptFailureFormatter.moduleSourceName(id), 1, null);
                     cache.put(id, exports);

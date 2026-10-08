@@ -38,11 +38,11 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
             Object api = root.api().invoke();
             Object file = root.getQuestFile().invoke(api, clientSide);
             Optional<?> team = optional(invoke(file, "getTeamData", player));
-            if (team.isEmpty()) {
+            if (!team.isPresent()) {
                 return FtbQuestSnapshot.Result.unavailable(
                         "ftb_team_data_unavailable", "FTB Quests has no visible team data for this player");
             }
-            Object teamData = team.orElseThrow();
+            Object teamData = team.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             List<Object> chapters = list(invoke(file, "getVisibleChapters", teamData));
             List<RawQuest> raw = new ArrayList<>();
             Set<String> visibleIds = new HashSet<>();

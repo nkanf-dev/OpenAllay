@@ -57,7 +57,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     public Set<ContextCapability> requiredContext() {
         return tools.descriptors().stream()
                 .flatMap(descriptor -> descriptor.requiredContext().stream())
-                .collect(Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
     }
 
     @Override

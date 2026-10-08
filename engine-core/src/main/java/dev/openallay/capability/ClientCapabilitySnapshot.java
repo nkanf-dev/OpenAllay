@@ -22,7 +22,7 @@ public final class ClientCapabilitySnapshot {
         requiredContext = dev.openallay.util.Java8Collections.setCopyOf(requiredContext);
         Set<ContextCapability> derived = localTools.descriptors().stream()
                 .flatMap(descriptor -> descriptor.requiredContext().stream())
-                .collect(Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         if (!requiredContext.equals(derived)) {
             throw new IllegalArgumentException("requiredContext must match the Tool catalog");
         }

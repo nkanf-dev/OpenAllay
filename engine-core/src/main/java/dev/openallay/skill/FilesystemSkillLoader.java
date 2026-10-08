@@ -171,7 +171,7 @@ public static final class LoadResult {
                 if (isExecutable(relative)) {
                     throw new IllegalArgumentException("Executable Skill files are not supported: " + relative);
                 }
-                files.put(name + "/" + relative, Files.readString(path));
+                files.put(name + "/" + relative, dev.openallay.util.Java8Files.readString(path));
             }
         }
         return new SkillSource(

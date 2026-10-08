@@ -32,13 +32,13 @@ public final class ClientPlacedToolExecutor implements AgentToolExecutor {
         List<ModelToolDefinition> result = new ArrayList<>();
         Set<String> canonicalIds = new LinkedHashSet<>();
         for (ModelToolDefinition definition : local.definitions()) {
-            String canonical = local.canonicalToolId(definition.name()).orElseThrow();
+            String canonical = local.canonicalToolId(definition.name()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             if (canonicalIds.add(canonical)) {
                 result.add(definition);
             }
         }
         for (ModelToolDefinition definition : remote.definitions()) {
-            String canonical = remote.canonicalToolId(definition.name()).orElseThrow();
+            String canonical = remote.canonicalToolId(definition.name()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             if (canonicalIds.add(canonical)) {
                 result.add(new ModelToolDefinition(
                         withoutRemotePrefix(definition.name()),

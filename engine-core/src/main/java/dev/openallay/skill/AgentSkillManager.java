@@ -253,7 +253,7 @@ public static final class Result {
                     throw new IllegalArgumentException("Skill file escapes its package");
                 }
                 Files.createDirectories(destination.getParent());
-                Files.writeString(destination, file.getValue(), StandardOpenOption.CREATE_NEW);
+                dev.openallay.util.Java8Files.writeString(destination, file.getValue(), StandardOpenOption.CREATE_NEW);
             }
             if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
                 prior = trustedRoot.resolve(".previous-" + name + "-" + java.util.UUID.randomUUID());

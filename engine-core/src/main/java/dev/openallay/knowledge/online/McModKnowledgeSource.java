@@ -34,7 +34,7 @@ public final class McModKnowledgeSource implements OnlineKnowledgeSource {
     @Override
     public CompletableFuture<List<RawHit>> search(
             String query, int limit, HttpCancellation cancellation) {
-        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String encoded = dev.openallay.util.Java8ApiSupport.urlEncodeUtf8(query);
         URI uri = URI.create("https://search.mcmod.cn/s?mold=1&key=" + encoded);
         HttpExchangeRequest request = HttpExchangeRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(12))
@@ -47,7 +47,7 @@ public final class McModKnowledgeSource implements OnlineKnowledgeSource {
                 throw new OnlineKnowledgeException(
                         "online_http_status", "MC百科 search failed");
             }
-            String html = new String(body.readAllBytes(), StandardCharsets.UTF_8);
+            String html = new String(dev.openallay.util.Java8Streams.readAllBytes(body), StandardCharsets.UTF_8);
             Matcher matcher = RESULT.matcher(html);
             List<RawHit> hits = new ArrayList<>();
             while (matcher.find() && hits.size() < limit) {

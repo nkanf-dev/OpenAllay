@@ -69,7 +69,7 @@ public final class ClientCapabilityResolver {
             ToolRuntimeCatalog localTools = ToolRuntimeCatalog.from(candidate, disabled);
             for (SkillMetadata metadata : eligibleSkills.metadata()) {
                 Set<String> missing = metadata.allowedTools().stream()
-                        .filter(toolId -> localTools.find(toolId).isEmpty())
+                        .filter(toolId -> !localTools.find(toolId).isPresent())
                         .collect(Collectors.toCollection(java.util.TreeSet::new));
                 if (!missing.isEmpty()) {
                     return failed(
@@ -80,7 +80,7 @@ public final class ClientCapabilityResolver {
             }
             Set<ContextCapability> requiredContext = localTools.descriptors().stream()
                     .flatMap(descriptor -> descriptor.requiredContext().stream())
-                    .collect(Collectors.toUnmodifiableSet());
+                    .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
             return new ToolResult.Success<>(new ClientCapabilitySnapshot(
                     policy, localTools, skillSnapshot, requiredContext));
         } catch (RuntimeException failure) {

@@ -13,7 +13,7 @@ public final class ContextSnapshotMetricsJson {
 
     public ContextSnapshotMetricsJson(Gson source) {
         gson = EngineJson.deriveHierarchy(source, Optional.class, (JsonSerializer<Optional<?>>) (value, type, context) ->
-                        value.isPresent() ? context.serialize(value.orElseThrow()) : JsonNull.INSTANCE);
+                        value.isPresent() ? context.serialize(value.orElseThrow(() -> new java.util.NoSuchElementException("No value present"))) : JsonNull.INSTANCE);
     }
 
     public long bytes(Object value) {

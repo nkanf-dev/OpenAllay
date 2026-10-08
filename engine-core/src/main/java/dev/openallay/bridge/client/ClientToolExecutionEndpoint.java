@@ -151,7 +151,7 @@ return (($oaPattern0_holder.value = registration.tool()) instanceof dev.openalla
                 resultImages,
                 exported.stream()
                         .filter(id -> !id.equals(EXPERIMENTAL_COMMANDS_CAPABILITY))
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet()));
+                        .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet()));
         if (requests.putIfAbsent(requestId, state) != null) {
             return new ToolResult.Failure<>(
                     "duplicate_request", "Client Tool request ID is already active");

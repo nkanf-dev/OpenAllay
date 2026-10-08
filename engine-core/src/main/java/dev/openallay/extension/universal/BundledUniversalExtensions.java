@@ -12,7 +12,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -47,7 +46,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
         JsonObject provenance;
         try (InputStream input = resources.open(PROVENANCE)) {
             if (input == null) return new BundledUniversalExtensions(null, dev.openallay.util.Java8Collections.listOf(), "");
-            provenance = object(UniversalExtensionJson.parse(new String(input.readAllBytes(), StandardCharsets.UTF_8)));
+            provenance = object(UniversalExtensionJson.parse(new String(dev.openallay.util.Java8Streams.readAllBytes(input), StandardCharsets.UTF_8)));
         }
         exact(provenance, dev.openallay.util.Java8Collections.setOf("source", "project", "version", "extensionId", "openAllayApiVersion", "artifact"));
         JsonObject source = object(provenance.get("source"));
@@ -73,7 +72,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
         byte[] bytes;
         try (InputStream input = resources.open(path)) {
             if (input == null) throw new IOException("Bundled Extension resource is missing");
-            bytes = input.readAllBytes();
+            bytes = dev.openallay.util.Java8Streams.readAllBytes(input);
         }
         if (!sha256(bytes).equals(digest)) throw new IOException("Bundled Extension checksum mismatch");
         Path root = cacheRoot.toAbsolutePath().normalize();
@@ -105,7 +104,7 @@ public final class BundledUniversalExtensions implements AutoCloseable {
             if (entry == null) throw new IOException("Bundled Extension manifest is missing");
             UniversalExtensionManifest manifest;
             try (InputStream input = jar.getInputStream(entry)) {
-                manifest = UniversalExtensionManifest.decode(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+                manifest = UniversalExtensionManifest.decode(new String(dev.openallay.util.Java8Streams.readAllBytes(input), StandardCharsets.UTF_8));
             }
             if (!manifest.descriptor().id().equals(id) || !manifest.descriptor().version().equals(version)) {
                 throw new IOException("Bundled Extension provenance and declaration differ");

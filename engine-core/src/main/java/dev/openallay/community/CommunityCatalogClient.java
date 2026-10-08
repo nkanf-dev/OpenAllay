@@ -86,7 +86,7 @@ public final class CommunityCatalogClient {
                             .build(),
                     cancellation,
                     (status, headers, body) -> new Response(
-                            status, new String(body.readAllBytes(), StandardCharsets.UTF_8)));
+                            status, new String(dev.openallay.util.Java8Streams.readAllBytes(body), StandardCharsets.UTF_8)));
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(refreshFailure());
         }
@@ -121,7 +121,7 @@ public final class CommunityCatalogClient {
             return;
         }
         try {
-            current = codec.decode(Files.readString(cachePath));
+            current = codec.decode(dev.openallay.util.Java8Files.readString(cachePath));
         } catch (Exception ignored) {
             // An invalid cache is absent state; refresh may establish a valid generation.
         }

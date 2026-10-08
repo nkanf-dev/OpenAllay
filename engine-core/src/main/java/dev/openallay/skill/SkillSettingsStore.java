@@ -49,7 +49,7 @@ public final class SkillSettingsStore {
                     throw new IllegalArgumentException("Bundled Skill path escapes its package root");
                 }
                 Files.createDirectories(destination.getParent());
-                Files.writeString(destination, file.getValue(), StandardOpenOption.CREATE_NEW);
+                dev.openallay.util.Java8Files.writeString(destination, file.getValue(), StandardOpenOption.CREATE_NEW);
             }
             Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
             staging = null;

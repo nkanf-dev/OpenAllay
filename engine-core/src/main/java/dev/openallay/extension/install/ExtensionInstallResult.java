@@ -20,7 +20,7 @@ public final class ExtensionInstallResult {
         manifest = java.util.Objects.requireNonNull(manifest, "manifest");
         sha256 = sha256 == null ? "" : sha256;
         if (state == ExtensionInstallState.RESTART_REQUIRED
-                && (manifest.isEmpty() || dev.openallay.util.Java8Strings.isBlank(sha256))) {
+                && (!manifest.isPresent() || dev.openallay.util.Java8Strings.isBlank(sha256))) {
             throw new IllegalArgumentException(
                     "A staged Extension must retain its validated package metadata");
         }

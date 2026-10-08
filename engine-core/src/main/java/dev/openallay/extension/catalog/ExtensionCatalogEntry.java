@@ -86,7 +86,7 @@ public ExtensionCatalogEntry(
 public Set<String> loaders() {
         return artifacts.stream()
                 .map(ExtensionCatalogArtifact::loader)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
     }
 public Optional<ExtensionCatalogArtifact> artifactFor(String loader) {
         if (loader == null) {
