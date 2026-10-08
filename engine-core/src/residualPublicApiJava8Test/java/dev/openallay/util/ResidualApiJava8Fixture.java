@@ -68,7 +68,7 @@ public final class ResidualApiJava8Fixture {
             Path unmappable = directory.resolve("unmappable.txt");
             exception("writeUnmappable", () -> write(unmappable, "Ω", StandardCharsets.US_ASCII), java.nio.charset.UnmappableCharacterException.class, null);
             check(!Files.exists(unmappable), "encoding fails before opening destination");
-            exception("writeMalformedSurrogate", () -> write(unmappable, "\ud800", StandardCharsets.UTF_8), java.nio.charset.MalformedInputException.class, null);
+            exception("writeMalformedSurrogate", () -> write(unmappable, "\ud800", StandardCharsets.UTF_8), java.nio.charset.UnmappableCharacterException.class, null);
             exception("readNullCharset", () -> read(path, null), NullPointerException.class, null);
             exception("writeNullText", () -> write(path, null, StandardCharsets.UTF_8), NullPointerException.class, null);
             exception("writeNullOptions", () -> write(path, "x", StandardCharsets.UTF_8, (OpenOption[]) null), NullPointerException.class, null);

@@ -27,8 +27,18 @@ public final class Java8Files {
     public static Path writeString(Path path, CharSequence text, Charset charset, OpenOption... options) throws IOException {
         Objects.requireNonNull(path); Objects.requireNonNull(text); Objects.requireNonNull(charset);
         Objects.requireNonNull(options);
-        ByteBuffer encoded = charset.newEncoder().onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT).encode(CharBuffer.wrap(text));
+        ByteBuffer encoded;
+        try {
+            encoded = charset.newEncoder().onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT).encode(CharBuffer.wrap(text));
+        } catch (java.nio.charset.MalformedInputException malformed) {
+            // The original public Files API classifies lone surrogates differently only
+            // for its builtin UTF8 encoder. Custom charset instances retain their own errors.
+            if (charset == StandardCharsets.UTF_8) {
+                throw new java.nio.charset.UnmappableCharacterException(malformed.getInputLength());
+            }
+            throw malformed;
+        }
         byte[] bytes = new byte[encoded.remaining()]; encoded.get(bytes);
         return Files.write(path, bytes, options);
     }

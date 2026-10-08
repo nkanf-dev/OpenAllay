@@ -3,7 +3,7 @@
   "sources": [
     {
       "path": "engine-core/src/main/java/dev/openallay/util/Java8Files.java",
-      "sha256": "fa188d5bb0eb45256b3377ce20b36aa3759d92cdd801e8ca90bbf7d8ff6e4ce6"
+      "sha256": "31bd5053b9555f3ec015c52a816eb1479ee532a7356a2c864ea404eb57055235"
     },
     {
       "path": "engine-core/src/main/java/dev/openallay/util/Java8Streams.java",
@@ -15,7 +15,7 @@
     },
     {
       "path": "engine-core/src/residualPublicApiJava8Test/java/dev/openallay/util/ResidualApiJava8Fixture.java",
-      "sha256": "9f48cb9088b24a5f53b26d2729c6857df78994b3384fcaa9346443409b384ed4"
+      "sha256": "c1af6522becad8c83f10ba358c156ef692f1db33d5bfba4ce74c6fa8ef2340e6"
     },
     {
       "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
@@ -31,5 +31,22 @@
     }
   ],
   "runner_sha256": "496d0225e353c123c441727365308d0bb1afa291c0572301f87510b41e11553e",
-  "semantic_cases": "Identity/NSEE/null/immutability/duplicate/parallelcollector/strictCharsetREPORT/options/fileownership/EOFposition/progress/noClose/exactIOcause/defaultLocale/formaterrors. CustomCharset usesactualinstance encoder/decoder notencoding-namealias; URIencodefamily notincludedwithoutactualerroradmission.; OptionalorPresent rejectsnullsupplierwithoutcalling/getonce nullableemptyresult; collectiongeneratorcalled0; BAOSCharsetdefaultreplacement contract; URLEncoder exactUTF8staticargumentonly noarbitraryCharsetalias"
+  "semantic_cases": "Identity/NSEE/null/immutability/duplicate/parallelcollector/strictCharsetREPORT/options/fileownership/EOFposition/progress/noClose/exactIOcause/defaultLocale/formaterrors. CustomCharset usesactualinstance encoder/decoder notencoding-namealias; URIencodefamily notincludedwithoutactualerroradmission.; OptionalorPresent rejectsnullsupplierwithoutcalling/getonce nullableemptyresult; collectiongeneratorcalled0; BAOSCharsetdefaultreplacement contract; URLEncoder exactUTF8staticargumentonly noarbitraryCharsetalias",
+  "nativeCharsetFacts": {
+    "run": 37724487568,
+    "tableSHA256": "79259ba0a7267dc6874f5f5d36fe7cba930434af0528425f7be0be6e8b7934ca",
+    "policy": "Only identity StandardCharsets.UTF_8 maps malformed encoder input to UnmappableCharacterException with same length; UTF16/ASCII/custom keep actual errors",
+    "knownChangedPins": [
+      {
+        "path": "engine-core/src/main/java/dev/openallay/util/Java8Files.java",
+        "pre": "fa188d5bb0eb45256b3377ce20b36aa3759d92cdd801e8ca90bbf7d8ff6e4ce6",
+        "post": "31bd5053b9555f3ec015c52a816eb1479ee532a7356a2c864ea404eb57055235"
+      },
+      {
+        "path": "engine-core/src/residualPublicApiJava8Test/java/dev/openallay/util/ResidualApiJava8Fixture.java",
+        "pre": "9f48cb9088b24a5f53b26d2729c6857df78994b3384fcaa9346443409b384ed4",
+        "post": "c1af6522becad8c83f10ba358c156ef692f1db33d5bfba4ce74c6fa8ef2340e6"
+      }
+    ]
+  }
 }
