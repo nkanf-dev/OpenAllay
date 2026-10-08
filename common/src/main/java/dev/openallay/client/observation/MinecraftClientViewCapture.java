@@ -152,7 +152,7 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
             int width;
             int height;
             int[] pixels;
-            try (image) {
+            try (dev.openallay.client.observation.GuideImageBitmap openallay$closeImage = image) {
                 width = image.width();
                 height = image.height();
                 pixels = MinecraftImagePixels.argb(image);

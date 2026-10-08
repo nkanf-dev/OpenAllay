@@ -5,7 +5,15 @@ import java.util.OptionalLong;
 
 
 /** Detached publication projection. Native item custody remains inside optional JEI code. */
-sealed interface JeiIngredientValue {
+interface JeiIngredientValue {
+        /** Exact published variant admission at the real aggregate/provider boundary. Null is unchanged. */
+        static JeiIngredientValue requireKnown(JeiIngredientValue value) {
+            if (value == null) return null;
+            Class<?> actual = value.getClass();
+            if (actual == Item.class || actual == Fluid.class || actual == Unsupported.class) return value;
+            throw new IncompatibleClassChangeError("Unknown native JeiIngredientValue subtype");
+        }
+
     @dev.openallay.value.ValueType(Item.ValueSchemaProvider.class)
 public static final class Item implements JeiIngredientValue {
     private final net.minecraft.world.item.ItemStack stack;

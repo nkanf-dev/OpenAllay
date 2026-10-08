@@ -2524,7 +2524,7 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
                     return;
                 }
                 CompletableFuture.runAsync(() -> {
-                    try (image) {
+                    try (dev.openallay.client.observation.GuideImageBitmap openallay$closeImage = image) {
                         int width = image.width();
                         int height = image.height();
                         dev.openallay.client.observation.MinecraftNativeImageCapture.write(image, path);

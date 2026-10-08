@@ -25,8 +25,15 @@ public final class MinecraftSemanticRenderer {
     private static final int SUCCESS = 0xFF7FC8A9;
     private static final int ERROR = 0xFFFF7D7D;
 
-    public sealed interface Intent permits Intent.BrowseRecipes, Intent.BrowseUsages,
-            Intent.ExactRecipe, Intent.Source, Intent.Evidence, Intent.Choice {
+    public interface Intent {
+        /** Exact published variant admission at the real aggregate/provider boundary. Null is unchanged. */
+        static Intent requireKnown(Intent value) {
+            if (value == null) return null;
+            Class<?> actual = value.getClass();
+            if (actual == BrowseRecipes.class || actual == BrowseUsages.class || actual == ExactRecipe.class || actual == Source.class || actual == Evidence.class || actual == Choice.class) return value;
+            throw new IncompatibleClassChangeError("Unknown native Intent subtype");
+        }
+
         @dev.openallay.value.ValueType(BrowseRecipes.ValueSchemaProvider.class)
 public static final class BrowseRecipes implements Intent {
     private final String itemId;
@@ -203,7 +210,7 @@ public static final class Hit {
     private final Intent intent;
     public Hit(GuideUiLayout.Rect bounds, Intent intent) {
         this.bounds = bounds;
-        this.intent = intent;
+        this.intent = Intent.requireKnown(intent);
     }
     public GuideUiLayout.Rect bounds() { return bounds; }
     public Intent intent() { return intent; }

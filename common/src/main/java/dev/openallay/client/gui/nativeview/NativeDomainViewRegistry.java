@@ -67,7 +67,7 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
             diagnostics.add(new NativeDomainViewDiagnostic(
                     binding.stableId(), view.providerId(), "native_view_failed"));
             close(view);
-            NativeDomainViewProvider.Attempt attempt = fallback.create(binding);
+            NativeDomainViewProvider.Attempt attempt = NativeDomainViewProvider.Attempt.requireKnown(fallback.create(binding));
             final class $oaPattern0_Holder { dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt value; NativeDomainViewProvider.Attempt.Ready bound; }
 final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
 if (!((($oaPattern0_holder.value = attempt) instanceof dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt.Ready && (($oaPattern0_holder.bound = (NativeDomainViewProvider.Attempt.Ready) $oaPattern0_holder.value) != null)))) {
@@ -132,8 +132,16 @@ if (!((($oaPattern0_holder.value = attempt) instanceof dev.openallay.client.gui.
         providers.add(fallback);
         for (NativeDomainViewProvider provider : providers) {
             if (!provider.supports(binding)) continue;
+            NativeDomainViewProvider.Attempt attempt;
             try {
-                NativeDomainViewProvider.Attempt attempt = provider.create(binding);
+                attempt = provider.create(binding);
+            } catch (LinkageError | RuntimeException failure) {
+                diagnostics.add(new NativeDomainViewDiagnostic(
+                        binding.stableId(), provider.providerId(), "native_view_failed"));
+                continue;
+            }
+            attempt = NativeDomainViewProvider.Attempt.requireKnown(attempt);
+            try {
                 final class $oaPattern1_Holder { dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt value; NativeDomainViewProvider.Attempt.Ready bound; }
 final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
 if ((($oaPattern1_holder.value = attempt) instanceof dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt.Ready && (($oaPattern1_holder.bound = (NativeDomainViewProvider.Attempt.Ready) $oaPattern1_holder.value) != null))) {

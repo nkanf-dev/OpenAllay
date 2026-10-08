@@ -9,6 +9,7 @@ final class JeiIngredientSlot {
     private final List<JeiIngredientValue> values;
     JeiIngredientSlot(Role role, List<JeiIngredientValue> values) {
  values = dev.openallay.util.Java8Collections.listCopyOf(values);
+        for (JeiIngredientValue value : values) JeiIngredientValue.requireKnown(value);
         this.role = role;
         this.values = values;
     }

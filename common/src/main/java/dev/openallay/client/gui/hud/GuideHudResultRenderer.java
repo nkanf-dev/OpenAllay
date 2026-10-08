@@ -35,7 +35,15 @@ import dev.openallay.client.gui.GuideNativeFont;
 
 /** Shared native result viewport for passive HUD pages and explicit compact interaction. */
 public final class GuideHudResultRenderer implements AutoCloseable {
-    public sealed interface Action permits Action.Tool, Action.Semantic, Action.Sources {
+    public interface Action {
+        /** Exact published variant admission at the real aggregate/provider boundary. Null is unchanged. */
+        static Action requireKnown(Action value) {
+            if (value == null) return null;
+            Class<?> actual = value.getClass();
+            if (actual == Tool.class || actual == Semantic.class || actual == Sources.class) return value;
+            throw new IncompatibleClassChangeError("Unknown native Action subtype");
+        }
+
         @dev.openallay.value.ValueType(Tool.ValueSchemaProvider.class)
 public static final class Tool implements Action {
     private final String rowId;
@@ -66,7 +74,7 @@ public static final class Tool implements Action {
 public static final class Semantic implements Action {
     private final MinecraftSemanticRenderer.Intent intent;
     public Semantic(MinecraftSemanticRenderer.Intent intent) {
-        this.intent = intent;
+        this.intent = MinecraftSemanticRenderer.Intent.requireKnown(intent);
     }
     public MinecraftSemanticRenderer.Intent intent() { return intent; }
     @Override public boolean equals(Object other) {
@@ -123,7 +131,7 @@ public static final class Hit {
     private final String narration;
     public Hit(GuideUiLayout.Rect bounds, Action action, String narration) {
         this.bounds = bounds;
-        this.action = action;
+        this.action = Action.requireKnown(action);
         this.narration = narration;
     }
     public GuideUiLayout.Rect bounds() { return bounds; }

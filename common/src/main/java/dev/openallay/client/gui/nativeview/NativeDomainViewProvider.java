@@ -10,7 +10,15 @@ public interface NativeDomainViewProvider {
 
     Attempt create(NativeDomainViewBinding binding);
 
-    sealed interface Attempt permits Attempt.Ready, Attempt.Unsupported {
+    interface Attempt {
+        /** Exact published variant admission at the real aggregate/provider boundary. Null is unchanged. */
+        static Attempt requireKnown(Attempt value) {
+            if (value == null) return null;
+            Class<?> actual = value.getClass();
+            if (actual == Ready.class || actual == Unsupported.class) return value;
+            throw new IncompatibleClassChangeError("Unknown native Attempt subtype");
+        }
+
         @dev.openallay.value.ValueType(Ready.ValueSchemaProvider.class)
 public static final class Ready implements Attempt {
     private final NativeDomainView view;
