@@ -83,7 +83,7 @@ public static final class TextLayer {
     public static Reader openSelectedReader(IResourceManager resources, ResourceLocation id) throws IOException {
         IResource resource = resources.getResource(id);
         try {
-            var input = new java.io.FilterInputStream(resource.getInputStream()) {
+            java.io.FilterInputStream input = new java.io.FilterInputStream(resource.getInputStream()) {
                 @Override public void close() { /* Native IResource owns its streams. */ }
             };
             return new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8)) {
