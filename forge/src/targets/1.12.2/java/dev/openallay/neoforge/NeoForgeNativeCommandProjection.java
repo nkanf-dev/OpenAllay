@@ -14,8 +14,70 @@ import net.minecraft.util.math.BlockPos;
 
 /** Projects neutral routes onto native ICommand parsing and completion; contains no feature grammar. */
 final class NeoForgeNativeCommandProjection<A> extends CommandBase {
-    record Route<A>(List<String> literals, CommandArgument argument, A action) {}
-    record Invocation<A>(A action, String value) {}
+    @dev.openallay.value.ValueType(Route.ValueSchemaProvider.class)
+static final class Route<A> {
+    private final List<String> literals;
+    private final CommandArgument argument;
+    private final A action;
+    Route(List<String> literals, CommandArgument argument, A action) {
+        this.literals = literals;
+        this.argument = argument;
+        this.action = action;
+    }
+    public List<String> literals() { return literals; }
+    public CommandArgument argument() { return argument; }
+    public A action() { return action; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Route)) return false;
+        Route that = (Route) other;
+        return java.util.Objects.equals(literals, that.literals) && java.util.Objects.equals(argument, that.argument) && java.util.Objects.equals(action, that.action);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(literals);
+        hash = 31 * hash + java.util.Objects.hashCode(argument);
+        hash = 31 * hash + java.util.Objects.hashCode(action);
+        return hash;
+    }
+    @Override public String toString() { return "Route[literals=" + literals + ", argument=" + argument + ", action=" + action + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Route> schema() {
+            return new dev.openallay.value.ValueSchema<>(Route.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Route>>asList(new dev.openallay.value.ValueSchema.Component<>(Route.class, "literals", Route::literals), new dev.openallay.value.ValueSchema.Component<>(Route.class, "argument", Route::argument), new dev.openallay.value.ValueSchema.Component<>(Route.class, "action", Route::action)), arguments -> new Route((List) arguments[0], (CommandArgument) arguments[1], (Object) arguments[2]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Invocation.ValueSchemaProvider.class)
+static final class Invocation<A> {
+    private final A action;
+    private final String value;
+    Invocation(A action, String value) {
+        this.action = action;
+        this.value = value;
+    }
+    public A action() { return action; }
+    public String value() { return value; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Invocation)) return false;
+        Invocation that = (Invocation) other;
+        return java.util.Objects.equals(action, that.action) && java.util.Objects.equals(value, that.value);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(action);
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        return hash;
+    }
+    @Override public String toString() { return "Invocation[action=" + action + ", value=" + value + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Invocation> schema() {
+            return new dev.openallay.value.ValueSchema<>(Invocation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Invocation>>asList(new dev.openallay.value.ValueSchema.Component<>(Invocation.class, "action", Invocation::action), new dev.openallay.value.ValueSchema.Component<>(Invocation.class, "value", Invocation::value)), arguments -> new Invocation((Object) arguments[0], (String) arguments[1]));
+        }
+    }
+}
     private final String root;
     private final List<Route<A>> routes;
     private final BiConsumer<ICommandSender, Invocation<A>> dispatch;
