@@ -316,7 +316,7 @@ public final class MinecraftContextCapture {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        net.minecraft.resources.ResourceLocation id = Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(stack.getItem()));
+        String id = Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(stack.getItem())).toString();
         return new ItemStackSnapshot(id.toString(), stack.getCount(), MinecraftServerCaptureFacts.itemName(stack));
     }
 

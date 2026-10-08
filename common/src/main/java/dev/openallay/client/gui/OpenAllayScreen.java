@@ -2733,11 +2733,10 @@ if ((($oaPattern46_holder.value = card) instanceof dev.openallay.guide.ui.GuideD
     }
 
     private static net.minecraft.world.item.ItemStack itemStack(String itemId, long count) {
-        net.minecraft.resources.ResourceLocation id = MinecraftResourceIds.tryParse(itemId);
-        if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
+        if (!dev.openallay.client.gui.GuideNativeItemLookup.validItemId(itemId)) {
             return net.minecraft.world.item.ItemStack.EMPTY;
         }
-        return new net.minecraft.world.item.ItemStack(dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
+        return new net.minecraft.world.item.ItemStack(dev.openallay.client.gui.GuideNativeItemLookup.item(itemId),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
     }
 

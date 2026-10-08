@@ -930,7 +930,7 @@ break;
     }
 
     private void updateUiApplyButton() {
-        for (dev.openallay.client.gui.GuideWidget child : children()) {
+        for (dev.openallay.client.gui.GuideWidget child : guideWidgetChildren()) {
             final class $oaPattern0_Holder { dev.openallay.client.gui.GuideWidget value; GuideNativeButton bound; }
 final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
 if ((($oaPattern0_holder.value = child) instanceof dev.openallay.client.gui.GuideNativeButton && (($oaPattern0_holder.bound = (GuideNativeButton) $oaPattern0_holder.value) != null)) && MinecraftComponents.getString($oaPattern0_holder.bound.getMessage()).equals(
@@ -4544,7 +4544,7 @@ if ((($oaPattern10_holder.value = result) instanceof dev.openallay.tool.ToolResu
 
     private void e2ePressButton(String translationKey) {
         String label = MinecraftComponents.getString(MinecraftComponents.translatable(translationKey));
-        for (dev.openallay.client.gui.GuideWidget child : children()) {
+        for (dev.openallay.client.gui.GuideWidget child : guideWidgetChildren()) {
             final class $oaPattern11_Holder { dev.openallay.client.gui.GuideWidget value; GuideNativeButton bound; }
 final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
 if ((($oaPattern11_holder.value = child) instanceof dev.openallay.client.gui.GuideNativeButton && (($oaPattern11_holder.bound = (GuideNativeButton) $oaPattern11_holder.value) != null)) && $oaPattern11_holder.bound.visible && $oaPattern11_holder.bound.active

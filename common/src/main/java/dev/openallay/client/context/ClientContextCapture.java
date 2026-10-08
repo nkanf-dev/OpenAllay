@@ -586,7 +586,7 @@ public final class ClientContextCapture {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        net.minecraft.resources.ResourceLocation id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem());
+        String id = MinecraftNativeRegistries.ITEM.getKey(stack.getItem()).toString();
         return new ItemStackSnapshot(id.toString(), stack.getCount(), MinecraftFocusNativeFacts.itemName(stack));
     }
 
