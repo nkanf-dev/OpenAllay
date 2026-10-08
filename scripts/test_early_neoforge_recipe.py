@@ -27,6 +27,11 @@ class CommandSelectionTest(unittest.TestCase):
         targets = [file.stem for file in (PROFILE_ROOT / "gradle/minecraft-targets").glob("*.properties")]
         self.assertGreaterEqual(len(targets), 15)
         for target in targets:
+            if target == "1.12.2":
+                commands = recipe.commands(ROOT, target, loaders=("forge",), artifact_ids="forge-1.12.2")
+                self.assertEqual([runtime for _, runtime in commands], ["root", "retained-stock8"])
+                self.assertIn("materialize-stock8-release.py", " ".join(commands[1][0]))
+                continue
             if target in recipe.EARLY or target in recipe.LEGACY:
                 continue
             with self.subTest(target=target):
@@ -112,7 +117,7 @@ class SourceReuseContractTest(unittest.TestCase):
     def test_standalone_has_no_copied_feature_sources_or_root_plugin_framework(self):
         settings = self.text("native-builds/early-neoforge/settings.gradle")
         source = self.text("native-builds/early-neoforge/build.gradle")
-        self.assertIn("include('extension-api', 'runtime-rhino')", settings)
+        self.assertIn("include('extension-api', 'runtime-rhino', 'runtime-commonmark')", settings)
         for forbidden in ("includeBuild", "build-logic", "engine-core", "net.fabricmc.fabric-loom", "moddev"):
             self.assertNotIn(forbidden, settings)
         self.assertIn("id 'net.neoforged.gradle.userdev' version '7.1.39'", source)
@@ -127,6 +132,24 @@ class SourceReuseContractTest(unittest.TestCase):
         self.assertIn("output.classesDirs.from(directories(nativeInputs.engine) + directories(nativeInputs.adapter))", source)
         self.assertNotIn("net.neoforged:forge", source)
         self.assertNotIn("reflection", source)
+        self.assertIn("jarJar(project(':runtime-commonmark'))", source)
+        self.assertIn("implementation(commonmark)", source)
+        self.assertEqual(self.text("native-builds/early-neoforge/runtime-commonmark/build.gradle"),
+                         "apply from: rootProject.file('artifact-input.gradle')\n")
+        self.assertNotIn('"org.commonmark:commonmark:${props.commonmark_version}"', source)
+        self.assertNotIn('"org.commonmark:commonmark-ext-gfm-tables:${props.commonmark_version}"', source)
+        self.assertIn("commonmark: artifact(project(':runtime-commonmark'), commonmarkJar)", self.text("gradle/early-neoforge-inputs.gradle"))
+
+
+    def test_rhino_guards_require_java8_without_loosening_provider_custody(self):
+        release = self.text("scripts/build-minecraft-artifacts.py")
+        native = self.text("scripts/verify-native-target-package.py")
+        self.assertIn('("runtime-rhino", "dev/latvian/mods/rhino/", 52)', release)
+        self.assertNotIn('("runtime-rhino", "dev/latvian/mods/rhino/", 61)', release)
+        self.assertIn('"dev/latvian/mods/rhino/", 52)', native)
+        self.assertNotIn('"dev/latvian/mods/rhino/", 61)', native)
+        self.assertIn("content == reference.read_bytes()", native)
+        self.assertIn("commonmark_custody.verify_commonmark_payload(content, loader, version)", release)
 
     def test_exact_userdev_profiles_keep_older_abi_and_1205_java21(self):
         for path in ("gradle/early-neoforge-inputs.gradle", "native-builds/early-neoforge/build.gradle"):
@@ -146,10 +169,10 @@ class SourceReuseContractTest(unittest.TestCase):
                          "outputRecords(files(resourceOutput))", "sdk: artifact", "rhino: artifact", "accessTransformer:"):
             self.assertIn(contract, exporter)
         for contract in ("sha256(input) != record.sha256", "nativeInputs.engine + nativeInputs.adapter + nativeInputs.resources",
-                         "[nativeInputs.sdk, nativeInputs.rhino]", "SDK/Rhino JarJar identity or singleton range differs",
+                         "[nativeInputs.sdk, nativeInputs.rhino, nativeInputs.commonmark]", "SDK/Rhino/CommonMark JarJar identity or singleton range differs",
                          "MixinConfigs", "verifyReusedPackage", "neoforge/build/libs"):
             self.assertIn(contract, source)
-        self.assertIn("project.name == 'extension-api' ? 8 : 17", self.text("native-builds/early-neoforge/artifact-input.gradle"))
+        self.assertIn("TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8", self.text("native-builds/early-neoforge/artifact-input.gradle"))
 
     def test_wrapper_isolated_official_checksum_and_root_wrapper_remains_modern(self):
         wrapper = self.text("native-builds/early-neoforge/gradle/wrapper/gradle-wrapper.properties")
@@ -159,12 +182,18 @@ class SourceReuseContractTest(unittest.TestCase):
 
     def test_native_workflow_keeps_package_and_builder_verification(self):
         workflow = self.text(".github/workflows/minecraft-native.yml")
-        self.assertIn('python3 -B scripts/compile-native-target.py --target "$OPENALLAY_MINECRAFT_TARGET"', workflow)
-        self.assertIn("verify-native-target-package.py", workflow)
-        self.assertIn("--bundled-builder", workflow)
-        self.assertIn("stage-ci-client-production.py", workflow)
-        self.assertIn("build/early-neoforge/**/inputs.json", workflow)
-        self.assertIn("native-builds/early-neoforge/build/reports/", workflow)
+        self.assertIn('python3 -B scripts/build-minecraft-artifacts.py build-and-stage release-group --target "$RELEASE_TARGET" --families "$RELEASE_FAMILIES"', workflow)
+        builder = self.text("scripts/build-minecraft-artifacts.py")
+        self.assertIn("compiler.compile_target(ROOT, target", builder)
+        self.assertIn("verify(families)", builder)
+        self.assertIn("builder.verify_package(path, family[\"loader\"], lock)", builder)
+        compiler = self.text("scripts/compile-native-target.py")
+        commands = recipe.commands(ROOT, "1.20.2")
+        self.assertIn(":neoforge:exportEarlyNeoForgeInputs", commands[0][0])
+        self.assertEqual(commands[1][1], "java21")
+        self.assertIn("native-builds/early-neoforge", compiler)
+        native = self.text("scripts/verify-native-target-package.py")
+        self.assertIn("verify_shared_runtime_jars", native)
 
 
 class InputClosureModel:
@@ -180,7 +209,7 @@ class InputClosureModel:
         self.data = json.loads(self.receipt.read_text())
         self.data_hash = self.data_digest()
         if set(self.data) != {"root", "target", "properties", "nativeSources", "engine", "adapter", "resources",
-                              "sdk", "rhino", "accessTransformer"}:
+                              "sdk", "rhino", "commonmark", "accessTransformer"}:
             raise ValueError("model receipt shape")
         if set(self.data["properties"]) != {"version", "archiveName", "group", "mod_id", "mod_name", "mod_author", "java_version",
                 "neoforge_version", "jeiArtifactTarget", "jei_version", "rei_version", "architectury_version",
@@ -188,8 +217,12 @@ class InputClosureModel:
             raise ValueError("model properties shape")
         if Path(self.data["root"]).resolve() != self.root:
             raise ValueError("model receipt root")
+        commonmark = self.data["commonmark"]
+        if (commonmark.get("group") != "dev.openallay" or commonmark.get("name") != "runtime-commonmark"
+                or commonmark.get("version") != self.data["properties"]["commonmark_version"]):
+            raise ValueError("model canonical CommonMark identity")
         self.records, self.roots, paths, entries = [], {}, set(), set()
-        owners = ["nativeSources", "engine", "adapter", "resources", "sdk", "rhino"]
+        owners = ["nativeSources", "engine", "adapter", "resources", "sdk", "rhino", "commonmark"]
         if self.data["accessTransformer"] is not None:
             owners.append("accessTransformer")
         for owner in owners:
@@ -199,7 +232,7 @@ class InputClosureModel:
             for record in records:
                 output = owner in ("engine", "adapter", "resources")
                 expected = {"path", "sha256"} | ({"entry"} if output else set())
-                if owner in ("sdk", "rhino"):
+                if owner in ("sdk", "rhino", "commonmark"):
                     expected |= {"group", "name", "version"}
                 if set(record) != expected or any(not isinstance(value, str) or not value for value in record.values()):
                     raise ValueError("model record shape")
@@ -285,7 +318,7 @@ class InputClosureModelTest(unittest.TestCase):
                    "engine": ["engine/build/classes/example/Engine.class", "engine/build/resources/data/config.json"],
                    "adapter": ["adapter/build/classes/example/Adapter.class"],
                    "resources": ["neoforge/build/resources/META-INF/mods.toml"],
-                   "sdk": ["sdk/build/libs/sdk.jar"], "rhino": ["rhino/build/libs/rhino.jar"]}
+                   "sdk": ["sdk/build/libs/sdk.jar"], "rhino": ["rhino/build/libs/rhino.jar"], "commonmark": ["commonmark/build/libs/commonmark.jar"]}
         for owner, paths in layouts.items():
             records = []
             for relative in paths:
@@ -295,11 +328,11 @@ class InputClosureModelTest(unittest.TestCase):
                 record = {"path": str(path), "sha256": InputClosureModel.digest(path)}
                 if owner in ("engine", "adapter", "resources"):
                     record["entry"] = relative.split("/", 3)[3]
-                if owner in ("sdk", "rhino"):
-                    record.update(group="dev.openallay", name="extension-api" if owner == "sdk" else "runtime-rhino",
+                if owner in ("sdk", "rhino", "commonmark"):
+                    record.update(group="dev.openallay", name={"sdk": "extension-api", "rhino": "runtime-rhino", "commonmark": "runtime-commonmark"}[owner],
                                   version="0.4.0" if owner == "sdk" else "fixture")
                 records.append(record)
-            self.data[owner] = records[0] if owner in ("sdk", "rhino") else records
+            self.data[owner] = records[0] if owner in ("sdk", "rhino", "commonmark") else records
         self.write_receipt()
 
     def write_receipt(self):
@@ -308,6 +341,18 @@ class InputClosureModelTest(unittest.TestCase):
 
     def model(self):
         return InputClosureModel(self.root, self.receipt)
+
+    def test_commonmark_requires_current_canonical_project_identity(self):
+        for key, value in (("group", "org.commonmark"), ("name", "commonmark"), ("version", "upstream")):
+            with self.subTest(field=key):
+                original = dict(self.data["commonmark"])
+                self.data["commonmark"][key] = value
+                self.write_receipt()
+                with self.assertRaisesRegex(ValueError, "canonical CommonMark identity"):
+                    self.model()
+                self.data["commonmark"] = original
+        self.write_receipt()
+        self.model()
 
     def test_exact_records_and_multiple_engine_roots_are_accepted_by_model(self):
         self.model().validate()
