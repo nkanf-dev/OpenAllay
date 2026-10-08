@@ -220,6 +220,29 @@ def main():
     java=Path(os.environ['JAVA_HOME'])/'bin/java';version=subprocess.check_output([str(java),'-version'],stderr=subprocess.STDOUT,text=True)
     if not re.search(r'version "1\.8\.',version):raise ValueError('Ordinary genuine Java8 runtime required')
     write(evidence/'runtime-selection.json',{'java':str(java),'actualVersion':version,'hiddenRuntime':False})
+    # This unshipped pure-JDK fixture checks the verified final product's current native JDBC payload.
+    sqlite_proof=evidence/'sqlite-proof';sqlite_proof.mkdir()
+    fixture_classes=sqlite_proof/'classes';fixture_classes.mkdir()
+    fixture_source=ROOT/'scripts/fixtures/SqliteGameRuntimeJava8Fixture.java'
+    javac=java.with_name('javac')
+    fixture_env={key:value for key,value in os.environ.items() if key not in ('JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','_JAVA_OPTIONS')}
+    javac_version=subprocess.check_output([str(javac),'-version'],stderr=subprocess.STDOUT,text=True,env=fixture_env)
+    if not re.search(r'javac 1\.8\.',javac_version):raise ValueError('Actual sibling Java8 compiler required for isolated JDBC fixture')
+    database=sqlite_proof/'fresh-native.db'
+    with (sqlite_proof/'jdbc-java8.log').open('w') as log:
+        compiled=subprocess.run([str(javac),'-source','8','-target','8','-proc:none','-d',str(fixture_classes),str(fixture_source)],
+            stdout=log,stderr=subprocess.STDOUT,timeout=120,env=fixture_env)
+        if compiled.returncode:
+            write(sqlite_proof/'receipt.json',{'accepted':False,'productSha256':sha(jar),'fixtureSourceSha256':sha(fixture_source),'compileExitCode':compiled.returncode})
+            raise SystemExit(compiled.returncode)
+        checked=subprocess.run([str(java),'-cp',str(fixture_classes)+os.pathsep+str(jar),'SqliteGameRuntimeJava8Fixture',str(database)],
+            stdout=log,stderr=subprocess.STDOUT,timeout=120,env=fixture_env)
+    write(sqlite_proof/'receipt.json',{'accepted':checked.returncode==0,'productSha256':sha(jar),
+        'fixtureSourceSha256':sha(fixture_source),'logSha256':sha(sqlite_proof/'jdbc-java8.log'),
+        'javac':str(javac),'actualJavacVersion':javac_version,'java':str(java),'actualJavaVersion':version,
+        'compileExitCode':compiled.returncode,'runtimeExitCode':checked.returncode,
+        'expectedNativeSqliteVersion':'3.50.3','freshDatabase':True,'fixtureShipped':False,'annotationProcessorDiscovery':False})
+    if checked.returncode:raise SystemExit(checked.returncode)
     root,assets,vanilla,forge=provision(java,runtime,launch)
     guava=root/'libraries/com/google/guava/guava/21.0/guava-21.0.jar'
     audit=guava_method_links(jar,guava,java);write(evidence/'actual-guava21-method-links.json',audit)
