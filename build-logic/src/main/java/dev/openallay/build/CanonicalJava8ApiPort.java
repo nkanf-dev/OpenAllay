@@ -16,24 +16,44 @@ public final class CanonicalJava8ApiPort {
     private static int pos(long value){if(value<0||value>Integer.MAX_VALUE)throw new IllegalArgumentException("Missing API sourceposition");return(int)value;}
     private static String apply(String text,int start,int end,List<Edit> edits){StringBuilder result=new StringBuilder(text.substring(start,end));List<Edit> sorted=new ArrayList<>(edits);sorted.sort(Comparator.comparingInt(Edit::start).reversed());int previous=end;for(Edit edit:sorted){if(edit.start()<start||edit.end()>end||edit.end()>previous)throw new IllegalArgumentException("Overlapping API spans");result.replace(edit.start()-start,edit.end()-start,edit.replacement());previous=edit.start();}return result.toString();}
     private static boolean selectedMethod(String owner,String method){return switch(owner){
-        case "java.util.List","java.util.Set" -> method.equals("of")||method.equals("copyOf");
+        case "java.util.List" -> method.equals("of")||method.equals("copyOf")||method.equals("toArray");
+        case "java.util.Set" -> method.equals("of")||method.equals("copyOf");
         case "java.util.Map" -> method.equals("of")||method.equals("copyOf")||method.equals("entry")||method.equals("ofEntries");
         case "java.util.stream.Stream" -> method.equals("toList");
-        case "java.lang.String" -> Set.of("isBlank","strip","stripLeading","stripTrailing","repeat","lines").contains(method);
+        case "java.lang.String" -> Set.of("isBlank","strip","stripLeading","stripTrailing","repeat","lines","formatted").contains(method);
+        case "java.util.Optional" -> Set.of("isEmpty","stream","orElseThrow").contains(method);
+        case "java.util.OptionalInt","java.util.OptionalLong","java.util.OptionalDouble" -> method.equals("isEmpty")||method.equals("orElseThrow");
+        case "java.util.stream.Collectors" -> method.equals("toUnmodifiableSet")||method.equals("toUnmodifiableList");
+        case "java.nio.file.Files" -> method.equals("readString")||method.equals("writeString");
+        case "java.io.InputStream" -> method.equals("readAllBytes")||method.equals("readNBytes");
+        case "java.util.Collection" -> method.equals("toArray");
         case "java.lang.CharSequence","java.lang.StringBuilder" -> method.equals("isEmpty");
         case "java.time.Duration" -> method.equals("toSeconds");
         case "java.nio.file.Path" -> method.equals("of");
-        case "java.util.concurrent.CompletableFuture" -> method.equals("failedFuture");
+        case "java.util.concurrent.CompletableFuture" -> method.equals("failedFuture")||method.equals("orTimeout");
         case "java.util.HexFormat" -> method.equals("formatHex");
         default -> false;
     };}
+    private static boolean selectedExecutable(String owner,String method,ExecutableElement executable) {
+        if(!selectedMethod(owner,method))return false;
+        List<? extends VariableElement> parameters=executable.getParameters();
+        if(owner.startsWith("java.util.Optional")&&method.equals("orElseThrow"))return parameters.isEmpty();
+        if(owner.equals("java.io.InputStream")&&method.equals("readNBytes"))return parameters.size()==1&&parameters.get(0).asType().getKind()==javax.lang.model.type.TypeKind.INT;
+        if((owner.equals("java.util.Collection")||owner.equals("java.util.List"))&&method.equals("toArray"))return parameters.size()==1&&parameters.get(0).asType().toString().startsWith("java.util.function.IntFunction<");
+        return true;
+    }
     private static String helper(String owner,String method,int arity){return switch(owner){
-        case "java.util.List" -> "dev.openallay.util.Java8Collections."+(method.equals("of")?"listOf":"listCopyOf");
+        case "java.util.List" -> method.equals("toArray")?"dev.openallay.util.Java8ApiSupport.toArray":"dev.openallay.util.Java8Collections."+(method.equals("of")?"listOf":"listCopyOf");
         case "java.util.Set" -> "dev.openallay.util.Java8Collections."+(method.equals("of")?"setOf":"setCopyOf");
         case "java.util.Map" -> switch(method){case "of" -> {if(arity < 0 || arity > 20 || arity % 2 != 0)throw new IllegalArgumentException("Map.of arity has no approved evaluation-preserving helper overload: "+arity);yield "dev.openallay.util.Java8Collections.mapOf";}case "copyOf"->"dev.openallay.util.Java8Collections.mapCopyOf";case "entry"->"dev.openallay.util.Java8Collections.entry";case "ofEntries"->"dev.openallay.util.Java8Collections.mapOfEntries";default->throw new IllegalArgumentException();};
         case "java.util.stream.Stream" -> "dev.openallay.util.Java8Collections.toList";
-        case "java.lang.String" -> "dev.openallay.util.Java8Strings."+method;
-        case "java.util.concurrent.CompletableFuture" -> "dev.openallay.util.Java8Futures.failedFuture";
+        case "java.lang.String" -> method.equals("formatted")?"dev.openallay.util.Java8ApiSupport.formatted":"dev.openallay.util.Java8Strings."+method;
+        case "java.util.Optional" -> "dev.openallay.util.Java8ApiSupport."+method;
+        case "java.util.stream.Collectors" -> "dev.openallay.util.Java8ApiSupport."+method;
+        case "java.nio.file.Files" -> "dev.openallay.util.Java8Files."+method;
+        case "java.io.InputStream" -> "dev.openallay.util.Java8Streams."+method;
+        case "java.util.Collection" -> "dev.openallay.util.Java8ApiSupport.toArray";
+        case "java.util.concurrent.CompletableFuture" -> "dev.openallay.util.Java8Futures."+method;
         case "java.util.HexFormat" -> "dev.openallay.util.Java8Hex.formatHex";
         default -> "";
     };}
@@ -78,11 +98,11 @@ public final class CanonicalJava8ApiPort {
             JavacTask task=(JavacTask)compiler.getTask(null,manager,diagnostics,List.of("--release","17","-proc:none","-encoding","UTF-8","-classpath",args[1]),null,manager.getJavaFileObjectsFromFiles(files));List<CompilationUnitTree> units=new ArrayList<>();task.parse().forEach(units::add);Trees trees=Trees.instance(task);SourcePositions positions=trees.getSourcePositions();task.analyze();for(Diagnostic<?> d:diagnostics.getDiagnostics())if(d.getKind()==Diagnostic.Kind.ERROR)throw new IllegalStateException("Complete genuine source attribution failed: "+d);
             for(CompilationUnitTree unit:units){String name=root.relativize(Paths.get(unit.getSourceFile().toUri())).toString().replace(File.separatorChar,'/');if(!selected.contains(name))continue;byte[] bytes=Files.readAllBytes(root.resolve(name));before.put(name,bytes);String text=new String(bytes,StandardCharsets.UTF_8);Set<CompilationUnitTree> importedPaths=new HashSet<>();List<Site> sites=new ArrayList<>();List<Edit> referenceEdits=new ArrayList<>();List<String> reasons=new ArrayList<>();
                 new TreePathScanner<Void,Void>(){
-                    @Override public Void visitMethodInvocation(MethodInvocationTree invocation,Void unused){Element element=trees.getElement(getCurrentPath());if(element instanceof ExecutableElement executable&&executable.getEnclosingElement() instanceof TypeElement type){String owner=type.getQualifiedName().toString(),method=executable.getSimpleName().toString();if(selectedMethod(owner,method)){String reject=null;
+                    @Override public Void visitMethodInvocation(MethodInvocationTree invocation,Void unused){Element element=trees.getElement(getCurrentPath());if(element instanceof ExecutableElement executable&&executable.getEnclosingElement() instanceof TypeElement type){String owner=type.getQualifiedName().toString(),method=executable.getSimpleName().toString();if(selectedExecutable(owner,method,executable)){String reject=null;
                         if(!(invocation.getMethodSelect() instanceof MemberSelectTree)&&!executable.getModifiers().contains(Modifier.STATIC))reject="Implicit receiver API call needs explicit qualifiedthis scope policy";
                         sites.add(new Site(unit,getCurrentPath(),invocation,owner,method,executable.getModifiers().contains(Modifier.STATIC),reject));}
                     }return super.visitMethodInvocation(invocation,unused);}
-                    @Override public Void visitMemberReference(MemberReferenceTree reference,Void unused){Element element=trees.getElement(getCurrentPath());if(element instanceof ExecutableElement method&&method.getEnclosingElement() instanceof TypeElement type&&selectedMethod(type.getQualifiedName().toString(),method.getSimpleName().toString())){
+                    @Override public Void visitMemberReference(MemberReferenceTree reference,Void unused){Element element=trees.getElement(getCurrentPath());if(element instanceof ExecutableElement method&&method.getEnclosingElement() instanceof TypeElement type&&selectedExecutable(type.getQualifiedName().toString(),method.getSimpleName().toString(),method)){
                         String declared=type.getQualifiedName().toString(),methodName=method.getSimpleName().toString();
                         Element qualifier=trees.getElement(new TreePath(getCurrentPath(),reference.getQualifierExpression()));
                         if(method.getModifiers().contains(Modifier.STATIC)&&qualifier instanceof TypeElement
@@ -123,7 +143,12 @@ public final class CanonicalJava8ApiPort {
                         }else arguments.add(0,receiver);
                     }
                     String replacement;
-                    if((site.owner().equals("java.lang.StringBuilder")||site.owner().equals("java.lang.CharSequence"))){if(!arguments.isEmpty()&&arguments.size()==1)replacement="("+receiver+").length() == 0";else throw new IllegalArgumentException("Unexpected StringBuilder.isEmpty signature");replacement="("+replacement+")";}
+                    if(site.owner().equals("java.util.OptionalInt")||site.owner().equals("java.util.OptionalLong")||site.owner().equals("java.util.OptionalDouble")) {
+                        if(invocation.getArguments().size()!=0||receiver==null)throw new IllegalArgumentException("Primitive Optional overload not admitted");
+                        if(site.method().equals("isEmpty"))replacement="(!("+receiver+").isPresent())";
+                        else replacement="("+receiver+").orElseThrow(() -> new java.util.NoSuchElementException(\"No value present\"))";
+                    }
+                    else if((site.owner().equals("java.lang.StringBuilder")||site.owner().equals("java.lang.CharSequence"))){if(!arguments.isEmpty()&&arguments.size()==1)replacement="("+receiver+").length() == 0";else throw new IllegalArgumentException("Unexpected StringBuilder.isEmpty signature");replacement="("+replacement+")";}
                     else if(site.owner().equals("java.time.Duration")){if(arguments.size()!=1)throw new IllegalArgumentException("Unexpected Duration.toSeconds signature");replacement="("+receiver+").getSeconds()";}
                     else if(site.owner().equals("java.nio.file.Path")){String typeArguments=invocation.getTypeArguments().isEmpty()?"":"<"+String.join(",",invocation.getTypeArguments().stream().map(Object::toString).toList())+">";String qualifier=safePathsQualifier(unit,site.path(),trees,task,importedPaths);replacement=qualifier+"."+typeArguments+"get("+String.join(", ",arguments)+")";}
                     else{String mapped=helper(site.owner(),site.method(),invocation.getArguments().size());unshadowedRoot(mapped,site.path(),trees,task);String typeArguments=invocation.getTypeArguments().isEmpty()?"":"<"+String.join(",",invocation.getTypeArguments().stream().map(Object::toString).toList())+">";int dot=mapped.lastIndexOf('.');mapped=mapped.substring(0,dot+1)+typeArguments+mapped.substring(dot+1);replacement=mapped+"("+String.join(", ",arguments)+")";}
