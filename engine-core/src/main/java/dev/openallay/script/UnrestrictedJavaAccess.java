@@ -13,7 +13,6 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Member;
@@ -88,7 +87,7 @@ final class UnrestrictedJavaAccess {
                     Throwable targetFailure = failure.getCause();
                     JavascriptFailureFormatter.rethrowControlFailure(targetFailure);
                     throw failure("javascript_java_target_error", targetFailure);
-                } catch (IllegalAccessException | InaccessibleObjectException | SecurityException failure) {
+                } catch (IllegalAccessException | SecurityException failure) {
                     throw failure("javascript_java_inaccessible", failure);
                 } catch (ClassNotFoundException failure) {
                     throw failure("javascript_class_unavailable", failure);
@@ -102,7 +101,7 @@ final class UnrestrictedJavaAccess {
                     throw failure("javascript_class_unavailable", failure);
                 } catch (RuntimeException failure) {
                     JavascriptFailureFormatter.rethrowControlFailure(failure);
-                    throw failure("javascript_java_invalid", failure);
+                    throw failure(isModuleAccessFailure(failure) ? "javascript_java_inaccessible" : "javascript_java_invalid", failure);
                 }
             }
 
@@ -235,16 +234,110 @@ return (($oaPattern5_holder.value = value) instanceof dev.latvian.mods.rhino.Wra
     }
 
     private static void accessible(AccessibleObject member) {
-        if (!member.trySetAccessible()) {
+        Method tryAccessible = PublicJdkFacts.TRY_SET_ACCESSIBLE;
+        if (tryAccessible == null) {
+            member.setAccessible(true);
+            return;
+        }
+        if (!Boolean.TRUE.equals(invokePublic(tryAccessible, member))) {
             Class<?> declaration = ((Member) member).getDeclaringClass();
-            Module owner = declaration.getModule();
-            Module bridge = UnrestrictedJavaAccess.class.getModule();
-            throw new InaccessibleObjectException("Module "
-                    + (owner.isNamed() ? owner.getName() : "<unnamed>")
-                    + " does not open package " + declaration.getPackageName()
-                    + " to bridge module " + (bridge.isNamed() ? bridge.getName() : "<unnamed>")
+            Object owner = moduleOf(declaration);
+            Object bridge = moduleOf(UnrestrictedJavaAccess.class);
+            throw moduleAccessFailure("Module "
+                    + (Boolean.TRUE.equals(invokePublic(PublicJdkFacts.MODULE_IS_NAMED, owner))
+                            ? invokePublic(PublicJdkFacts.MODULE_NAME, owner) : "<unnamed>")
+                    + " does not open package " + packageName(declaration)
+                    + " to bridge module "
+                    + (Boolean.TRUE.equals(invokePublic(PublicJdkFacts.MODULE_IS_NAMED, bridge))
+                            ? invokePublic(PublicJdkFacts.MODULE_NAME, bridge) : "<unnamed>")
                     + ": " + member);
         }
+    }
+
+    /** Only public JDK capabilities. No lookup privilege or module opening is introduced. */
+    private static final class PublicJdkFacts {
+        static final Method TRY_SET_ACCESSIBLE = publicMethod(AccessibleObject.class, "trySetAccessible");
+        static final Method CLASS_MODULE = publicMethod(Class.class, "getModule");
+        static final Class<?> MODULE = CLASS_MODULE == null ? null : CLASS_MODULE.getReturnType();
+        static final Method MODULE_NAME = publicMethod(MODULE, "getName");
+        static final Method MODULE_IS_NAMED = publicMethod(MODULE, "isNamed");
+        static final Method MODULE_DESCRIPTOR = publicMethod(MODULE, "getDescriptor");
+        static final Method MODULE_IS_OPEN = MODULE == null ? null : publicMethod(MODULE, "isOpen", String.class, MODULE);
+        static final Method DESCRIPTOR_AUTOMATIC = MODULE_DESCRIPTOR == null ? null
+                : publicMethod(MODULE_DESCRIPTOR.getReturnType(), "isAutomatic");
+        static final Method LOADER_NAME = publicMethod(ClassLoader.class, "getName");
+        static final Constructor<?> INACCESSIBLE_EXCEPTION = inaccessibleExceptionConstructor();
+    }
+
+    private static Method publicMethod(Class<?> owner, String name, Class<?>... arguments) {
+        if (owner == null) return null;
+        try { return owner.getMethod(name, arguments); }
+        catch (NoSuchMethodException absent) { return null; }
+    }
+
+    private static Object invokePublic(Method method, Object receiver, Object... arguments) {
+        if (method == null) throw new IllegalStateException("Required public JDK capability is unavailable");
+        try { return method.invoke(receiver, arguments); }
+        catch (IllegalAccessException failure) { throw new IllegalStateException("Public JDK capability is not accessible", failure); }
+        catch (InvocationTargetException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause;
+            if (cause instanceof Error) throw (Error) cause;
+            throw new IllegalStateException("Public JDK capability invocation failed", cause);
+        }
+    }
+
+    private static Constructor<?> inaccessibleExceptionConstructor() {
+        try {
+            Class<?> type = Class.forName("java.lang.reflect.InaccessibleObjectException", false, UnrestrictedJavaAccess.class.getClassLoader());
+            return type.getConstructor(String.class);
+        } catch (ClassNotFoundException | NoSuchMethodException absent) { return null; }
+    }
+
+    private static RuntimeException moduleAccessFailure(String message) {
+        Constructor<?> constructor = PublicJdkFacts.INACCESSIBLE_EXCEPTION;
+        if (constructor == null) return new SecurityException(message);
+        try { return (RuntimeException) constructor.newInstance(message); }
+        catch (ReflectiveOperationException failure) { return new SecurityException(message, failure); }
+    }
+
+    private static boolean isModuleAccessFailure(RuntimeException failure) {
+        Constructor<?> constructor = PublicJdkFacts.INACCESSIBLE_EXCEPTION;
+        return constructor != null && constructor.getDeclaringClass().isInstance(failure);
+    }
+
+    private static Object moduleOf(Class<?> type) {
+        return PublicJdkFacts.CLASS_MODULE == null ? null : invokePublic(PublicJdkFacts.CLASS_MODULE, type);
+    }
+
+    private static String packageName(Class<?> type) {
+        if (type.isPrimitive() || type.isArray()) return null;
+        String name = type.getName();
+        int separator = name.lastIndexOf('.');
+        return separator < 0 ? "" : name.substring(0, separator);
+    }
+
+    private static Map<String, Object> moduleView(Class<?> type) {
+        String packageName = packageName(type);
+        Object module = moduleOf(type);
+        Map<String, Object> view = new LinkedHashMap<String, Object>();
+        if (module == null) {
+            // Java8 has no module system. Openness is inapplicable, not an access denial.
+            view.put("name", null);
+            view.put("named", false);
+            view.put("automatic", false);
+            view.put("packageName", packageName);
+            view.put("packageOpenToBridge", null);
+            return view;
+        }
+        Object descriptor = invokePublic(PublicJdkFacts.MODULE_DESCRIPTOR, module);
+        view.put("name", invokePublic(PublicJdkFacts.MODULE_NAME, module));
+        view.put("named", invokePublic(PublicJdkFacts.MODULE_IS_NAMED, module));
+        view.put("automatic", descriptor != null && Boolean.TRUE.equals(invokePublic(PublicJdkFacts.DESCRIPTOR_AUTOMATIC, descriptor)));
+        view.put("packageName", packageName);
+        view.put("packageOpenToBridge", packageName != null
+                && Boolean.TRUE.equals(invokePublic(PublicJdkFacts.MODULE_IS_OPEN, module, packageName, moduleOf(UnrestrictedJavaAccess.class))));
+        return view;
     }
 
     @dev.openallay.value.ValueType(Selector.ValueSchemaProvider.class)
@@ -499,7 +592,7 @@ Class<?> primitive = $oaSwitch0_exit_result;
         if (name.endsWith("[]")) {
             Class<?> component = resolveName(name.substring(0, name.length() - 2), loader, false);
             if (component == void.class) throw invalid("void[] is not a Java type");
-            return component.arrayType();
+            return Array.newInstance(component, 0).getClass();
         }
         // Support conventional String[] as well as binary names and JVM [I/[Ljava.lang.String; forms.
         return Class.forName(name.equals("String") ? "java.lang.String" : name, initialize, loader);
@@ -539,21 +632,12 @@ if (!((($oaPattern13_holder.value = value) instanceof java.lang.CharSequence && 
         result.put("componentType", type.isArray() ? type.getComponentType().getTypeName() : null);
         result.put("modifiers", Modifier.toString(type.getModifiers()));
         result.put("modifierBits", type.getModifiers());
-        Module module = type.getModule();
-        String packageName = type.isPrimitive() || type.isArray() ? null : type.getPackageName();
-        Map<String, Object> moduleView = new LinkedHashMap<>();
-        moduleView.put("name", module.getName());
-        moduleView.put("named", module.isNamed());
-        moduleView.put("automatic", module.getDescriptor() != null && module.getDescriptor().isAutomatic());
-        moduleView.put("packageName", packageName);
-        moduleView.put("packageOpenToBridge", packageName != null
-                && module.isOpen(packageName, UnrestrictedJavaAccess.class.getModule()));
-        result.put("module", moduleView);
+        result.put("module", moduleView(type));
         ClassLoader loader = type.getClassLoader();
         if (loader == null) result.put("classLoader", null);
         else {
             Map<String, Object> loaderView = new LinkedHashMap<>();
-            loaderView.put("name", loader.getName());
+            loaderView.put("name", PublicJdkFacts.LOADER_NAME == null ? null : invokePublic(PublicJdkFacts.LOADER_NAME, loader));
             loaderView.put("type", loader.getClass().getName());
             loaderView.put("identity", Integer.toHexString(System.identityHashCode(loader)));
             result.put("classLoader", loaderView);
