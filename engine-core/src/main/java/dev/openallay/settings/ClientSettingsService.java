@@ -1193,7 +1193,7 @@ ToolResult.Failure<PreparedPackageInstall> failure =
                         return;
                     }
                     operation = SettingsOperation.idle();
-                    if (completed instanceof ToolResult.Success<Boolean>) {
+                    if (completed instanceof ToolResult.Success<?>) {
                         try {
                             if (candidate.kind() == RequirementKind.SKILL) {
                                 skillState = Objects.requireNonNull(skillActions.currentView());
@@ -2012,7 +2012,7 @@ notice = SettingsNotice.success($oaSwitch3_exit_result_prior0, $oaSwitch3_exit_r
                 return;
             }
             operation = SettingsOperation.idle();
-            if (thrown == null && completed instanceof ToolResult.Success<SkillCommunityView>) {
+            if (thrown == null && completed instanceof ToolResult.Success<?>) {
                 try {
                     SkillCommunityView updatedCommunity = Objects.requireNonNull(
                             ((ToolResult.Success<SkillCommunityView>) completed).value(),
@@ -2282,7 +2282,7 @@ operationFuture = $oaSwitch5_exit_result;
             }
             operation = SettingsOperation.idle();
             historyState = refreshed;
-            if (thrown == null && completed instanceof ToolResult.Success<Boolean>) {
+            if (thrown == null && completed instanceof ToolResult.Success<?>) {
                 java.lang.String $oaSwitch4_exit_result;
 $oaSwitch4_exit: {
 switch ((action)) {

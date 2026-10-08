@@ -154,7 +154,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                     "catalog_unavailable", "The Skill community catalog is not configured"));
         }
         return communityCatalog.refresh(cancellation).thenApply(result -> {
-            if (result instanceof ToolResult.Success<CommunityCatalogManifest>) {
+            if (result instanceof ToolResult.Success<?>) {
                 community = buildCommunity(Optional.empty());
                 return new ToolResult.Success<>(community);
             }

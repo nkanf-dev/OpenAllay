@@ -69,7 +69,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
         input.setFeedbackVisible(false);
         settingsWorker.execute(() -> {
             ToolResult<VoiceConfig> result = store.reload();
-            if (result instanceof ToolResult.Failure<VoiceConfig>) code = "invalid_voice_config";
+            if (result instanceof ToolResult.Failure<?>) code = "invalid_voice_config";
             refreshModelReady();
         });
     }
@@ -137,7 +137,7 @@ if ((($oaPattern1_holder.value = cause) instanceof java.lang.Error && (($oaPatte
         private ToolResult<VoiceConfig> saved(VoiceConfig candidate) {
             input.cancel(VoiceRuntime.CancelReason.USER);
             ToolResult<VoiceConfig> result = store.save(candidate);
-            code = result instanceof ToolResult.Success<VoiceConfig> ? "voice_saved" : "voice_save_failed";
+            code = result instanceof ToolResult.Success<?> ? "voice_saved" : "voice_save_failed";
             refreshModelReady();
             return result;
         }
@@ -245,7 +245,7 @@ if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResul
             }
             VoiceConfig submitted = inserted == null ? candidate : candidate.withCredential(inserted);
             ToolResult<VoiceConfig> result = save.apply(submitted);
-            committed = result instanceof ToolResult.Success<VoiceConfig>;
+            committed = result instanceof ToolResult.Success<?>;
             if (committed && !Objects.equals(previous.credential(), submitted.credential())
                     && previous.credential() != null) {
                 // This store owns only voice refs. Delete only the replaced ref, never unrelated rows.

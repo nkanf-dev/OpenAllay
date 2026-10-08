@@ -836,7 +836,7 @@ private static final class DeclaredTypes {
                 @Override
                 public Iterator<Entry<String, Object>> iterator() {
                     return names.stream()
-                            .<Entry<String, Object>>map(name -> new Entry<>() {
+                            .<Entry<String, Object>>map(name -> new Entry<String, Object>() {
                                 @Override public String getKey() { return name; }
                                 @Override public Object getValue() { return resolve(name); }
                                 @Override public Object setValue(Object value) {

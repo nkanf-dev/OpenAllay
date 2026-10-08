@@ -260,7 +260,7 @@ if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
         return selected.prepareCompaction(selected.defaultProfileId(), actor, sessionId, controlId,
                         durableSeed, cancellation, images, usage, profile.imageInputCapability())
                 .thenApply(result -> {
-                    if (result instanceof ToolResult.Failure<GuidePreparedCompaction>) return result;
+                    if (result instanceof ToolResult.Failure<?>) return result;
                     GuidePreparedCompaction prepared =
                             ((ToolResult.Success<GuidePreparedCompaction>) result).value();
                     synchronized (this) {

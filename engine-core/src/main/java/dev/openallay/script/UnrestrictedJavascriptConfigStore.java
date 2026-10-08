@@ -18,7 +18,7 @@ public final class UnrestrictedJavascriptConfigStore {
         try {
             String encoded = writer.encode(candidate);
             dev.openallay.tool.ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> decoded = loader.load(new StringReader(encoded));
-            if (decoded instanceof ToolResult.Failure<UnrestrictedJavascriptConfig>) return decoded;
+            if (decoded instanceof ToolResult.Failure<?>) return decoded;
             files.replace(path, encoded);
             return decoded;
         } catch (SettingsWriteException e) { return new ToolResult.Failure<>(e.code(), e.getMessage()); }

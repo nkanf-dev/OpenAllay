@@ -391,7 +391,7 @@ if ((($oaPattern1_holder.value = reservation) instanceof dev.openallay.tool.Tool
                             scope.finishPreparation();
                         }
                     }).thenApply(result -> {
-                        if (result instanceof ToolResult.Failure<GuidePreparedCompaction>) scope.close();
+                        if (result instanceof ToolResult.Failure<?>) scope.close();
                         return result;
                     });
         } catch (Throwable failure) {
