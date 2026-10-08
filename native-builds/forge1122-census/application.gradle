@@ -3,6 +3,8 @@ import groovy.json.JsonOutput
 import java.security.MessageDigest
 
 def req = new JsonSlurper().parse(file(property('nativeBuildRequest')))
+def java8DiagnosticOnly=project.hasProperty('nativeJava8Diagnostic')
+if (java8DiagnosticOnly && project.property('nativeJava8Diagnostic')!='true') throw new GradleException('Explicit diagnostic true required')
 if (req.keySet() != (['canonicalSourceRoot','javac17','java17','closure','actualMcpUnits','output'] as Set))
     throw new GradleException('Exact native request fields required')
 def canonical = file(req.canonicalSourceRoot).canonicalFile
@@ -148,3 +150,5 @@ task buildNativeApplication {
             jar:jar.absolutePath,jarSha256:sha(jar),gameLaunch:false]))+'\n','UTF-8')
     }
 }
+
+if (java8DiagnosticOnly) apply from: project.file('java8-diagnostic.gradle')

@@ -50,6 +50,7 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--javap', type=Path, required=True)
     p.add_argument('--native-build-request', type=Path)
+    p.add_argument('--java8-diagnostic',action='store_true')
     args = p.parse_args()
     repo = Path(__file__).resolve().parents[1]
     island = repo / 'native-builds/forge1122-census'
@@ -69,7 +70,10 @@ def main():
     (work/'gradlew').chmod(0o755)
     cmd=[str(work/'gradlew'),'--no-daemon','--max-workers=2','-p',str(island),
         '-PcanonicalSourceRoot='+str(repo),'-PcensusOutput='+str(output),
-        'buildNativeApplication' if args.native_build_request else 'exportNativeInputs','--full-stacktrace']
+        ('diagnoseNativeJava8' if args.java8_diagnostic else 'buildNativeApplication') if args.native_build_request else 'exportNativeInputs','--full-stacktrace']
+    if args.java8_diagnostic:
+        if not args.native_build_request: raise ValueError('Diagnostic requires exact source/closure request')
+        cmd.append('-PnativeJava8Diagnostic=true')
     if args.native_build_request:
         cmd.append('-PnativeBuildRequest='+str(args.native_build_request.resolve()))
     with (output/'tooling.log').open('w') as log:
