@@ -194,7 +194,7 @@ def run_client(args,java,jar,root,assets,vanilla,forge,launch,game,out,phase='')
         'hostGuava21ClassLoaded':bool(re.search(r'Loaded com\.google\.common\.[^ ]+ from .*guava-21\.0',text)),
         'genuineMixinStarted':'SpongePowered MIXIN Subsystem Version=0.8.5' in text,
         'openallayDiscovered':bool(re.search(r'openallay@0\.4\.4|openallay[^\n]+0\.4\.4',text)),
-        'realLinkageFailure':any(t in text for t in ('NoSuchMethodError','AbstractMethodError','IncompatibleClassChangeError'))}
+        'realLinkageFailure':any(t in line for line in text.splitlines() if not line.startswith('[Loaded ') for t in ('NoSuchMethodError','AbstractMethodError','IncompatibleClassChangeError'))}
     write(out/'ordinary-class-origins.json',origins)
     checks=report.get('checks',[]);worldok=completed and (phase in ('persist','reload') or bool(checks) and all(c.get('status')=='PASS' for c in checks))
     clean=receipt['gameExit']['finalExitCode']==0 and receipt['gameExit']['signals']==[]
