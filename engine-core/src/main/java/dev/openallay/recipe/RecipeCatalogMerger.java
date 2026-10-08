@@ -25,7 +25,7 @@ public final class RecipeCatalogMerger {
             List<RecipeProviderSnapshot> providers) {
         Objects.requireNonNull(evidence, "evidence");
         Objects.requireNonNull(visibility, "visibility");
-        List<RecipeProviderSnapshot> sourceSnapshots = List.copyOf(providers);
+        List<RecipeProviderSnapshot> sourceSnapshots = dev.openallay.util.Java8Collections.listCopyOf(providers);
         HashSet<String> sourceIds = new HashSet<>();
         sourceSnapshots.forEach(provider -> {
             if (!sourceIds.add(provider.sourceId())) {
@@ -33,26 +33,24 @@ public final class RecipeCatalogMerger {
             }
         });
 
-        List<RecipeEntrySnapshot> recipes = sourceSnapshots.stream()
+        List<RecipeEntrySnapshot> recipes = dev.openallay.util.Java8Collections.toList(sourceSnapshots.stream()
                 .filter(provider -> provider.state() == RecipeProviderState.AVAILABLE)
                 .flatMap(provider -> provider.recipes().stream())
                 .filter(recipe -> visibility == RecipeVisibilityPolicy.ALL_KNOWN
                         || recipe.unlockState() == RecipeUnlockState.UNLOCKED)
-                .sorted(RECIPE_ORDER)
-                .toList();
+                .sorted(RECIPE_ORDER));
 
         TreeMap<String, List<RecipeEntrySnapshot>> byFingerprint = new TreeMap<>();
         recipes.forEach(recipe -> byFingerprint
                 .computeIfAbsent(RecipeCanonicalizer.semanticFingerprint(recipe), ignored -> new ArrayList<>())
                 .add(recipe));
-        List<RecipeSemanticGroup> groups = byFingerprint.entrySet().stream()
-                .map(entry -> semanticGroup(entry.getKey(), entry.getValue()))
-                .toList();
+        List<RecipeSemanticGroup> groups = dev.openallay.util.Java8Collections.toList(byFingerprint.entrySet().stream()
+                .map(entry -> semanticGroup(entry.getKey(), entry.getValue())));
 
         TreeMap<String, List<RecipeEntrySnapshot>> byId = new TreeMap<>();
         recipes.forEach(recipe -> byId.computeIfAbsent(recipe.id(), ignored -> new ArrayList<>())
                 .add(recipe));
-        List<RecipeCatalogDiagnostic> diagnostics = byId.entrySet().stream()
+        List<RecipeCatalogDiagnostic> diagnostics = dev.openallay.util.Java8Collections.toList(byId.entrySet().stream()
                 .filter(entry -> entry.getValue().stream()
                         .map(RecipeCanonicalizer::semanticFingerprint)
                         .distinct()
@@ -60,12 +58,10 @@ public final class RecipeCatalogMerger {
                 .map(entry -> new RecipeCatalogDiagnostic(
                         "recipe_id_conflict",
                         entry.getKey(),
-                        entry.getValue().stream()
+                        dev.openallay.util.Java8Collections.toList(entry.getValue().stream()
                                 .sorted(RECIPE_ORDER)
-                                .map(RecipeEntrySnapshot::reference)
-                                .toList(),
-                        "Recipe id resolves to different normalized contents"))
-                .toList();
+                                .map(RecipeEntrySnapshot::reference)),
+                        "Recipe id resolves to different normalized contents")));
 
         return new RecipeSnapshot(
                 withCompleteness(evidence, completeness(sourceSnapshots)),
@@ -77,12 +73,12 @@ public final class RecipeCatalogMerger {
 
     private static RecipeSemanticGroup semanticGroup(
             String fingerprint, List<RecipeEntrySnapshot> variants) {
-        List<RecipeEntrySnapshot> ordered = variants.stream().sorted(RECIPE_ORDER).toList();
+        List<RecipeEntrySnapshot> ordered = dev.openallay.util.Java8Collections.toList(variants.stream().sorted(RECIPE_ORDER));
         return new RecipeSemanticGroup(
                 fingerprint,
                 ordered.get(0),
-                ordered.stream().map(RecipeEntrySnapshot::reference).toList(),
-                ordered.stream().map(RecipeEntrySnapshot::evidence).toList());
+                dev.openallay.util.Java8Collections.toList(ordered.stream().map(RecipeEntrySnapshot::reference)),
+                dev.openallay.util.Java8Collections.toList(ordered.stream().map(RecipeEntrySnapshot::evidence)));
     }
 
     private static DataCompleteness completeness(List<RecipeProviderSnapshot> providers) {
@@ -111,12 +107,34 @@ public final class RecipeCatalogMerger {
     }
 
     private static int authorityRank(DataAuthority authority) {
-        return switch (authority) {
-            case SERVER_AUTHORITATIVE -> 0;
-            case CLIENT_VISIBLE -> 1;
-            case INTEGRATION_API -> 2;
-            case RESOURCE_ASSET -> 3;
-            case DETERMINISTIC_TEST -> 4;
-        };
+        {
+int $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((authority)) {
+case SERVER_AUTHORITATIVE:
+{
+$oaSwitch0_exit_result = 0; break $oaSwitch0_exit;
+}
+case CLIENT_VISIBLE:
+{
+$oaSwitch0_exit_result = 1; break $oaSwitch0_exit;
+}
+case INTEGRATION_API:
+{
+$oaSwitch0_exit_result = 2; break $oaSwitch0_exit;
+}
+case RESOURCE_ASSET:
+{
+$oaSwitch0_exit_result = 3; break $oaSwitch0_exit;
+}
+case DETERMINISTIC_TEST:
+{
+$oaSwitch0_exit_result = 4; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 }

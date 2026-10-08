@@ -8,30 +8,30 @@ import java.util.concurrent.CompletableFuture;
 public interface GuideHistoryAccess {
     default CompletableFuture<java.util.Optional<GuideHistoryMetadata>> metadata(
             GuideHistoryScope scope) {
-        return unsupported();
+        return GuideHistoryAccessDefaults.unsupported();
     }
 
     default CompletableFuture<GuideHistoryPage> page(GuideHistoryPageRequest request) {
-        return unsupported();
+        return GuideHistoryAccessDefaults.unsupported();
     }
 
     default CompletableFuture<GuideHistoryContextSeed> context(GuideHistoryContextRequest request) {
-        return unsupported();
+        return GuideHistoryAccessDefaults.unsupported();
     }
 
     /** Original request transcript; absent snapshots are empty, never reconstructed from display rows. */
     default CompletableFuture<List<ModelMessage>> requestContext(
             GuideHistoryScope scope, UUID requestId) {
-        return unsupported();
+        return GuideHistoryAccessDefaults.unsupported();
     }
 
     default CompletableFuture<Void> commit(GuideHistoryCommit commit) {
-        return unsupported();
+        return GuideHistoryAccessDefaults.unsupported();
     }
 
     /** Ordered atomic clone of full durable history through one completed request. */
     default CompletableFuture<GuideHistoryForkResult> fork(GuideHistoryForkRequest request) {
-        return unsupported();
+        return GuideHistoryAccessDefaults.unsupported();
     }
 
     CompletableFuture<Void> delete(GuideHistoryDeleteScope scope);
@@ -42,8 +42,14 @@ public interface GuideHistoryAccess {
 
     GuideHistoryActivity activity();
 
-    private static <T> CompletableFuture<T> unsupported() {
-        return CompletableFuture.failedFuture(new GuideHistoryException(
+
+}
+
+/** Package-private Java8 implementation of existing interface helper behavior. */
+final class GuideHistoryAccessDefaults {
+    private GuideHistoryAccessDefaults() {}
+static <T> CompletableFuture<T> unsupported() {
+        return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                 "history_operation_unsupported", "History operation is unavailable"));
     }
 }

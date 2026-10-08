@@ -1,0 +1,29 @@
+{
+  "reviewedPatchSha256": "fa62db45c08976472933576dd85bb82120297fba65cee551d3768126e7a7e607",
+  "files": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/benchmark/BenchmarkTraceAudit.java",
+      "beforeSha256": "cb3c4a31fa5ff793d62281ce096af4b72f1cc78777b840d379555fc15ccb5172",
+      "afterSha256": "655edc6f9f02f22409eedbc7b26a8e4169890a53f6722368dad845cc9020e115",
+      "noncommentCharLineColumnSha256": "d69177f1e1817de3c7b171cb8b8a9b2216d356c13e3031cc009f479331929990"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/config/RecipeClientConfig.java",
+      "beforeSha256": "1c2e414380f37801e7c8929a2e6e9c2cdd2ddf80125b0993f2ea380e003682d1",
+      "afterSha256": "9171b812b07807e2a313cdd7cf58ffa8c964f4fc354b4feebbc91b3dc0b07536",
+      "noncommentCharLineColumnSha256": "ceaafffa6faf80cec6a67edf1272fa754be0d537bd44fe336b3752e5f00a9bce"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderReadiness.java",
+      "beforeSha256": "4b1d171549f00ce38c9fd6001f01c2c0f64b3b3bc08e7b9c20b56843a652cb6b",
+      "afterSha256": "9fff31ee3ee47b713560bd37af4733070ca708240881a4df3eb21d2eb74c6fef",
+      "noncommentCharLineColumnSha256": "041a566fc235fdae22143b3acbe608680a51f41006e1d8c1816c49baa8c54b79"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeCatalogStatus.java",
+      "beforeSha256": "04d74dc0fb6b2205623db99f0c4e27dc8ad1ed7e045c2eb326e20adf3f4383b7",
+      "afterSha256": "b8ebe633fafa594cee91a4baae73ced062187db5fd8569a85779584118645dc6",
+      "noncommentCharLineColumnSha256": "da760dc317fbc4274b30acc7dd711d596cc999526f5f5502bbd008f656f327ba"
+    }
+  ]
+}

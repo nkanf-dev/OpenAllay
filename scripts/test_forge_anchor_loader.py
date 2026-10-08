@@ -54,7 +54,8 @@ class ForgeAnchorSourceTest(unittest.TestCase):
 
     def test_old_loaders_and_profiles_keep_their_exact_shape(self):
         for target, selection in read_target_loaders(ROOT).items():
-            if target == "1.19.2":
+            if selection["loaders"] == ["forge"]:
+                self.assertEqual(set(PINS.read_profile(ROOT, target)), PINS.FORGE1122_FIELDS if target == "1.12.2" else PINS.FORGE_FIELDS)
                 continue
             self.assertEqual(selection["loaders"], ["fabric", "neoforge"])
             self.assertEqual(set(PINS.read_profile(ROOT, target)), PINS.MODERN_FIELDS)

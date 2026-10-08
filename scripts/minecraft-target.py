@@ -12,11 +12,14 @@ fabric_resource_loader_version fabric_networking_api_version fabric_message_api_
 fabric_key_mapping_api_version fabric_rendering_version""".split())
 FORGE_FIELDS = set("""java_version minecraft_version minecraft_version_range mcp_version
 forge_version forge_loader_version_range jei_version rei_version architectury_version""".split())
+FORGE1122_FIELDS = FORGE_FIELDS - {"rei_version", "architectury_version"}
 FIELDS = MODERN_FIELDS | FORGE_FIELDS
 
 
 def profile_fields(root, target):
     selection = target_loaders(root, target)
+    if target == "1.12.2":
+        return FORGE1122_FIELDS
     return FORGE_FIELDS if "forge" in selection["loaders"] else MODERN_FIELDS
 
 

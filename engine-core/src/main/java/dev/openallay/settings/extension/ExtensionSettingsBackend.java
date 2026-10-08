@@ -39,7 +39,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                     ExtensionCatalogManifest.SCHEMA_VERSION,
                     "extension",
                     java.time.Instant.EPOCH,
-                    List.of());
+                    dev.openallay.util.Java8Collections.listOf());
     private final Map<String, StagedPackage> staged = new TreeMap<>();
     private Optional<ExtensionSettingsView.Notice> notice = Optional.empty();
 
@@ -83,7 +83,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         this.installer = Objects.requireNonNull(installer, "installer");
         this.catalogClient = catalogClient;
         if (catalogClient != null && catalogClient.current().isPresent()) {
-            catalog = catalogClient.current().orElseThrow();
+            catalog = catalogClient.current().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         }
     }
 
@@ -120,7 +120,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 hasCatalog(),
                 hasCatalog() ? Optional.of(catalog.generatedAt()) : Optional.empty(),
                 notice);
-        return base.withCommunity(List.copyOf(extensions.values()), catalogView);
+        return base.withCommunity(dev.openallay.util.Java8Collections.listCopyOf(extensions.values()), catalogView);
     }
 
     /**
@@ -153,8 +153,10 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         }
         return catalogClient.refresh(cancellation).thenApply(result -> {
             synchronized (this) {
-                if (result instanceof ToolResult.Success<ExtensionCatalogManifest> success) {
-                    catalog = success.value();
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.catalog.ExtensionCatalogManifest> value; ToolResult.Success<ExtensionCatalogManifest> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ExtensionCatalogManifest>) $oaPattern0_holder.value) != null))) {
+                    catalog = $oaPattern0_holder.bound.value();
                     notice = Optional.empty();
                     return new ToolResult.Success<>(currentView());
                 }
@@ -200,12 +202,14 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
 
     private ToolResult<PreparedPackageInstall> refreshing(
             Optional<ExtensionCatalogEntry> entry, ToolResult<PreparedExtensionInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedExtensionInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.install.PreparedExtensionInstall> value; ToolResult.Failure<PreparedExtensionInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<PreparedExtensionInstall>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         PreparedExtensionInstall candidate = ((ToolResult.Success<PreparedExtensionInstall>) result).value();
         return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
-            var descriptor = candidate.manifest().descriptor();
+            dev.openallay.extension.OpenAllayExtensionDescriptor descriptor = candidate.manifest().descriptor();
             staged.put(descriptor.id(), new StagedPackage(descriptor, entry, candidate.sha256()));
             notice = Optional.empty();
         }));
@@ -228,13 +232,17 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
     }
 
     private ToolResult<ExtensionSettingsView> commitPrepared(ToolResult<PreparedPackageInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedPackageInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Failure<PreparedPackageInstall> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<PreparedPackageInstall>) $oaPattern2_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
         }
         try (PreparedPackageInstall candidate = ((ToolResult.Success<PreparedPackageInstall>) result).value()) {
             ToolResult<Boolean> committed = candidate.commit();
-            if (committed instanceof ToolResult.Failure<Boolean> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = committed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern3_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern3_holder.bound.code(), $oaPattern3_holder.bound.message());
             }
             return new ToolResult.Success<>(currentView());
         }
@@ -307,7 +315,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 descriptor.provider(),
                 descriptor.summary(),
                 ExtensionSettingsView.State.RESTART_REQUIRED,
-                descriptor.loaders().stream().toList(),
+                dev.openallay.util.Java8Collections.toList(descriptor.loaders().stream()),
                 descriptor.minecraftVersionRange(),
                 descriptor.openAllayApiVersionRange(),
                 descriptor.source(),
@@ -329,7 +337,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
             boolean updateAvailable,
             ExtensionSettingsView.Contributions contributions) {
         String displayVersion =
-                installedVersion.isBlank() ? entry.version() : installedVersion;
+                dev.openallay.util.Java8Strings.isBlank(installedVersion) ? entry.version() : installedVersion;
         return new ExtensionSettingsView.Extension(
                 entry.id(),
                 entry.name(),
@@ -337,7 +345,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
                 entry.provider(),
                 entry.summary(),
                 state,
-                entry.loaders().stream().toList(),
+                dev.openallay.util.Java8Collections.toList(entry.loaders().stream()),
                 entry.minecraftVersionRange(),
                 entry.openAllayApiVersionRange(),
                 entry.source(),
@@ -363,7 +371,7 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
 
     private static ExtensionSettingsView.Contributions emptyContributions() {
         return new ExtensionSettingsView.Contributions(
-                List.of(), List.of(), List.of(), List.of(), List.of());
+                dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
     }
 
     private boolean hasCatalog() {
@@ -403,17 +411,46 @@ public final class ExtensionSettingsBackend implements ClientSettingsService.Ext
         return 0;
     }
 
-    private record StagedPackage(
-            OpenAllayExtensionDescriptor descriptor,
-            Optional<ExtensionCatalogEntry> catalogEntry,
-            String sha256) {
-        private StagedPackage {
+    @dev.openallay.value.ValueType(StagedPackage.ValueSchemaProvider.class)
+private static final class StagedPackage {
+    private final OpenAllayExtensionDescriptor descriptor;
+    private final Optional<ExtensionCatalogEntry> catalogEntry;
+    private final String sha256;
+    private StagedPackage(OpenAllayExtensionDescriptor descriptor, Optional<ExtensionCatalogEntry> catalogEntry, String sha256) {
+
             Objects.requireNonNull(descriptor, "descriptor");
             catalogEntry = Objects.requireNonNull(catalogEntry, "catalogEntry");
             if (sha256 == null || !sha256.matches("[0-9a-f]{64}")) {
                 throw new IllegalArgumentException(
                         "A staged Extension requires a SHA-256 digest");
             }
+
+        this.descriptor = descriptor;
+        this.catalogEntry = catalogEntry;
+        this.sha256 = sha256;
+    }
+    public OpenAllayExtensionDescriptor descriptor() { return descriptor; }
+    public Optional<ExtensionCatalogEntry> catalogEntry() { return catalogEntry; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof StagedPackage)) return false;
+        StagedPackage that = (StagedPackage) other;
+        return java.util.Objects.equals(descriptor, that.descriptor) && java.util.Objects.equals(catalogEntry, that.catalogEntry) && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(descriptor);
+        hash = 31 * hash + java.util.Objects.hashCode(catalogEntry);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "StagedPackage[descriptor=" + descriptor + ", catalogEntry=" + catalogEntry + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<StagedPackage> schema() {
+            return new dev.openallay.value.ValueSchema<>(StagedPackage.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<StagedPackage>>asList(new dev.openallay.value.ValueSchema.Component<>(StagedPackage.class, "descriptor", StagedPackage::descriptor), new dev.openallay.value.ValueSchema.Component<>(StagedPackage.class, "catalogEntry", StagedPackage::catalogEntry), new dev.openallay.value.ValueSchema.Component<>(StagedPackage.class, "sha256", StagedPackage::sha256)), arguments -> new StagedPackage((OpenAllayExtensionDescriptor) arguments[0], (Optional) arguments[1], (String) arguments[2]));
         }
     }
+}
 }

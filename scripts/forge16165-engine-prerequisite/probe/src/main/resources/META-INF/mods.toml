@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+license="MIT"
+[[mods]]
+modId="openallay_engine_probe"
+version="0.4.3"
+displayName="OpenAllay engine prerequisite probe"
+description="Native loader prerequisite experiment"
+[[dependencies.openallay_engine_probe]]
+modId="forge"
+mandatory=true
+versionRange="[36.2.42]"
+ordering="NONE"
+side="CLIENT"
+[[dependencies.openallay_engine_probe]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.16.5]"
+ordering="NONE"
+side="CLIENT"

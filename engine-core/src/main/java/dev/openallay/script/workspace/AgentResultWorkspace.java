@@ -39,7 +39,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
     }
 
     public synchronized String store(JsonElement value, JavascriptResultShape shape, boolean unrestricted) {
-        return store(value, shape, unrestricted, List.of());
+        return store(value, shape, unrestricted, dev.openallay.util.Java8Collections.listOf());
     }
 
     public synchronized String store(
@@ -49,7 +49,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
             List<SourceObservation> sources) {
         requireOpen();
         java.util.Objects.requireNonNull(shape, "shape");
-        List<SourceObservation> storedSources = List.copyOf(sources);
+        List<SourceObservation> storedSources = dev.openallay.util.Java8Collections.listCopyOf(sources);
         long units = measure(value);
         if (!unrestricted && units > MAX_RESULT_UNITS) {
             throw new WorkspaceException(
@@ -88,9 +88,9 @@ public final class AgentResultWorkspace implements AutoCloseable {
         JsonElement original = values.get(view.handle());
         if (original == null) throw new WorkspaceException(
                 "workspace_handle_unavailable", "Result handle is unavailable in this request");
-        var choice = answer ? new dev.openallay.tool.result.NaturalModelView.Choice(original, true, 0)
+        dev.openallay.tool.result.NaturalModelView.Choice choice = answer ? new dev.openallay.tool.result.NaturalModelView.Choice(original, true, 0)
                 : dev.openallay.tool.result.NaturalModelView.artifact(original);
-        var chosen = new dev.openallay.tool.ModelResultView(view.handle(), view.type(), view.cardinality(),
+        dev.openallay.tool.ModelResultView chosen = new dev.openallay.tool.ModelResultView(view.handle(), view.type(), view.cardinality(),
                 view.canonicalUtf8Bytes(), choice.complete(), "current request only", view.inputCoverage());
         String provenance = suffix + (choice.complete() ? "" : "\nrepresentative sample: "
                 + choice.omittedRows() + " canonical row(s) remain outside this chosen view");
@@ -141,7 +141,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
     public synchronized Map<String, JsonElement> select(Collection<String> handles, boolean unrestricted) {
         requireOpen();
         Collection<String> requested =
-                handles == null ? List.<String>of() : handles;
+                handles == null ? dev.openallay.util.Java8Collections.<String>listOf() : handles;
         if (!unrestricted && requested.size() > MAX_SELECTED_HANDLES) {
             throw new WorkspaceException(
                     "workspace_selection_too_large",
@@ -168,7 +168,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
             // canonical tree without another deep copy or a stringify/parse cycle.
             selected.put(handle, values.get(handle));
         }
-        return Map.copyOf(selected);
+        return dev.openallay.util.Java8Collections.mapCopyOf(selected);
     }
 
     public synchronized List<SourceObservation> sources(String handle) {
@@ -186,7 +186,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
         requireOpen();
         java.util.LinkedHashMap<String, List<SourceObservation>> selected =
                 new java.util.LinkedHashMap<>();
-        for (String handle : handles == null ? List.<String>of() : handles) {
+        for (String handle : handles == null ? dev.openallay.util.Java8Collections.<String>listOf() : handles) {
             List<SourceObservation> value = sources.get(handle);
             if (value == null) {
                 throw new WorkspaceException(
@@ -194,14 +194,14 @@ public final class AgentResultWorkspace implements AutoCloseable {
             }
             selected.put(handle, value);
         }
-        return Map.copyOf(selected);
+        return dev.openallay.util.Java8Collections.mapCopyOf(selected);
     }
 
     public synchronized Map<String, JavascriptResultShape> selectShapes(
             Collection<String> handles) {
         requireOpen();
         Collection<String> requested =
-                handles == null ? List.<String>of() : handles;
+                handles == null ? dev.openallay.util.Java8Collections.<String>listOf() : handles;
         LinkedHashMap<String, JavascriptResultShape> selected = new LinkedHashMap<>();
         for (String handle : requested) {
             JavascriptResultShape shape = shapes.get(handle);
@@ -212,7 +212,7 @@ public final class AgentResultWorkspace implements AutoCloseable {
             }
             selected.put(handle, shape);
         }
-        return Map.copyOf(selected);
+        return dev.openallay.util.Java8Collections.mapCopyOf(selected);
     }
 
     public synchronized int size() {

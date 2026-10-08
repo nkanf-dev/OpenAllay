@@ -1,0 +1,18 @@
+{
+  "dev/latvian/mods/rhino/ConsString.java": 1,
+  "dev/latvian/mods/rhino/Context.java": 15,
+  "dev/latvian/mods/rhino/ContextFactory.java": 5,
+  "dev/latvian/mods/rhino/IRFactory.java": 1,
+  "dev/latvian/mods/rhino/Interpreter.java": 1,
+  "dev/latvian/mods/rhino/JavaAdapter.java": 4,
+  "dev/latvian/mods/rhino/NativeArray.java": 6,
+  "dev/latvian/mods/rhino/NativeMap.java": 1,
+  "dev/latvian/mods/rhino/NativeString.java": 3,
+  "dev/latvian/mods/rhino/ScriptRuntime.java": 4,
+  "dev/latvian/mods/rhino/ScriptableObject.java": 6,
+  "dev/latvian/mods/rhino/Slot.java": 1,
+  "dev/latvian/mods/rhino/type/RecordTypeInfo.java": 30,
+  "dev/latvian/mods/rhino/type/TypeConsolidator.java": 28,
+  "dev/latvian/mods/rhino/type/TypeUtils.java": 3,
+  "dev/latvian/mods/rhino/util/ToStringJS.java": 5
+}

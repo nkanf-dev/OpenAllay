@@ -220,11 +220,11 @@ public final class RegistryCatalogCapture {
 
     private static <T> Map<T, Set<String>> tags(Registry<T> registry) {
         Map<T, Set<String>> result = new HashMap<>();
-        MinecraftRegistryTagSets.sets(registry).forEach(named -> {
-            String tag = named.key().location().toString();
-            named.stream().forEach(holder -> result
-                    .computeIfAbsent(holder.value(), ignored -> new TreeSet<>())
-                    .add(tag));
+        Map<String, Set<String>> detached = MinecraftRegistryTagSets.values(registry);
+        registry.stream().forEach(value -> {
+            String id = Objects.requireNonNull(registry.getKey(value)).toString();
+            Set<String> tags = detached.get(id);
+            if (tags != null) result.put(value, new TreeSet<>(tags));
         });
         return result;
     }

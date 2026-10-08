@@ -30,6 +30,9 @@ public final class NeoForgePlatformService implements PlatformService {
         if (!NeoForgeNativeEnvironment.isClient()) {
             return java.util.Optional.empty();
         }
+        if (Boolean.getBoolean("openallay.e2e.enabled"))
+            dev.openallay.guide.e2e.NativeMaterialPaletteOracle.registerOnce(
+                    dev.openallay.adapter.minecraft.v26_2.world.NativeBuilderPaletteProbe::capture);
         return java.util.Optional.of(new dev.openallay.adapter.minecraft.v26_2.world.Minecraft26WorldAccess());
     }
 

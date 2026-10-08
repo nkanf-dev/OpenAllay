@@ -15,6 +15,7 @@ evaluationDependsOn(':engine-core')
 evaluationDependsOn(':adapters:minecraft')
 evaluationDependsOn(':extension-api')
 evaluationDependsOn(':runtime-rhino')
+evaluationDependsOn(':runtime-commonmark')
 sourceSets.main.resources {
     srcDir 'src/generated/resources'
     exclude userdevProfile.descriptor == 'META-INF/mods.toml' ? 'META-INF/neoforge.mods.toml' : 'META-INF/mods.toml'
@@ -33,6 +34,7 @@ def engineOutput = project(':engine-core').sourceSets.main.output
 def adapterOutput = project(':adapters:minecraft').sourceSets.main.output
 def sdkJar = project(':extension-api').tasks.named('jar', Jar)
 def rhinoJar = project(':runtime-rhino').tasks.named('jar', Jar)
+def commonmarkJar = project(':runtime-commonmark').tasks.named('jar', Jar)
 def resourceOutput = sourceSets.main.output.resourcesDir
 def receipt = rootProject.layout.buildDirectory.file("early-neoforge/${minecraftTarget}/inputs.json")
 def sha256 = { File file -> MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex().toString() }
@@ -56,10 +58,10 @@ tasks.register('exportEarlyNeoForgeInputs') {
     group = 'build'
     description = 'Export verified shared bytes and exact selected raw native paths for the isolated old userdev compiler.'
     dependsOn 'validateMinecraftTargetSources', 'processResources', ':engine-core:classes',
-            ':adapters:minecraft:classes', sdkJar, rhinoJar
+            ':adapters:minecraft:classes', sdkJar, rhinoJar, commonmarkJar
     inputs.property('minecraftTarget', minecraftTarget)
     inputs.files(sourceSets.main.allJava, commonSources.allJava, engineOutput, adapterOutput,
-            sdkJar.flatMap { it.archiveFile }, rhinoJar.flatMap { it.archiveFile })
+            commonmarkJar.flatMap { it.archiveFile }, sdkJar.flatMap { it.archiveFile }, rhinoJar.flatMap { it.archiveFile })
     outputs.file(receipt)
     // Source paths and provenance must be freshly recorded for the separate build.
     outputs.upToDateWhen { false }
@@ -94,6 +96,7 @@ tasks.register('exportEarlyNeoForgeInputs') {
                     nativeSources: nativeSources, engine: engine, adapter: adapter, resources: resources,
                     sdk: artifact(project(':extension-api'), sdkJar),
                     rhino: artifact(project(':runtime-rhino'), rhinoJar),
+                    commonmark: artifact(project(':runtime-commonmark'), commonmarkJar),
                     accessTransformer: at.isFile() ? fileRecord(at) : null]
         def file = receipt.get().asFile
         file.parentFile.mkdirs()

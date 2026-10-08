@@ -6,7 +6,7 @@ public final class GuideModelProfileException extends RuntimeException {
 
     public GuideModelProfileException(String code, String message) {
         super(message);
-        if (code == null || code.isBlank()) {
+        if (code == null || dev.openallay.util.Java8Strings.isBlank(code)) {
             throw new IllegalArgumentException("code must not be blank");
         }
         this.code = code;

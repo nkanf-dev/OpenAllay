@@ -10,10 +10,10 @@ public final class ExtensionCompatibility {
     private ExtensionCompatibility() {}
 
     public static String requireRange(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " must not be blank");
         }
-        String range = value.strip();
+        String range = dev.openallay.util.Java8Strings.strip(value);
         if (range.equals("[]")) throw new IllegalArgumentException("Invalid version range: " + range);
         try {
             VersionRange parsed = VersionRange.createFromVersionSpec(range);
@@ -33,16 +33,16 @@ public final class ExtensionCompatibility {
 
     public static boolean includes(String range, String version) {
         range = requireRange(range, "range");
-        if (version == null || version.isBlank()) {
+        if (version == null || dev.openallay.util.Java8Strings.isBlank(version)) {
             throw new IllegalArgumentException("version must not be blank");
         }
         if (!(range.startsWith("[") || range.startsWith("("))) {
             // A bare version is an exact public declaration, not Maven's recommended-any form.
-            return new ComparableVersion(version.strip()).compareTo(new ComparableVersion(range)) == 0;
+            return new ComparableVersion(dev.openallay.util.Java8Strings.strip(version)).compareTo(new ComparableVersion(range)) == 0;
         }
         try {
             return VersionRange.createFromVersionSpec(range).containsVersion(
-                    new DefaultArtifactVersion(version.strip()));
+                    new DefaultArtifactVersion(dev.openallay.util.Java8Strings.strip(version)));
         } catch (InvalidVersionSpecificationException malformed) {
             throw new IllegalArgumentException("Invalid version range: " + range, malformed);
         }

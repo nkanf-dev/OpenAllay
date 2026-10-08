@@ -15,7 +15,7 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     private final List<AgentToolExecutor> delegates;
 
     public CompositeAgentToolExecutor(List<? extends AgentToolExecutor> delegates) {
-        this.delegates = List.copyOf(delegates);
+        this.delegates = dev.openallay.util.Java8Collections.listCopyOf(delegates);
     }
 
     @Override
@@ -30,13 +30,13 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
                 definitions.add(definition);
             }
         }
-        return List.copyOf(definitions);
+        return dev.openallay.util.Java8Collections.listCopyOf(definitions);
     }
 
     @Override
     public Set<ContextCapability> requiredContext() {
         return delegates.stream().flatMap(value -> value.requiredContext().stream())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
     }
 
     @Override
@@ -44,14 +44,14 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
         String resolved = null;
         for (AgentToolExecutor delegate : delegates) {
             Optional<String> candidate = delegate.canonicalToolId(modelToolName);
-            if (candidate.isEmpty()) {
+            if (!candidate.isPresent()) {
                 continue;
             }
-            if (resolved != null && !resolved.equals(candidate.orElseThrow())) {
+            if (resolved != null && !resolved.equals(candidate.orElseThrow(() -> new java.util.NoSuchElementException("No value present")))) {
                 throw new IllegalStateException(
                         "Ambiguous model Tool alias " + modelToolName);
             }
-            resolved = candidate.orElseThrow();
+            resolved = candidate.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         }
         return Optional.ofNullable(resolved);
     }
@@ -110,7 +110,7 @@ public final class CompositeAgentToolExecutor implements AgentToolExecutor {
     @Override
     public String skillManifest(String correlationId) {
         return delegates.stream().map(delegate -> delegate.skillManifest(correlationId))
-                .filter(text -> !text.isBlank()).collect(java.util.stream.Collectors.joining("\n"));
+                .filter(text -> !dev.openallay.util.Java8Strings.isBlank(text)).collect(java.util.stream.Collectors.joining("\n"));
     }
 
     @Override

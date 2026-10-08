@@ -49,14 +49,18 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
     @Override
     public ToolResult<CapabilitySettingsView> saveCapabilities(CapabilityPolicy candidate) {
         ToolResult<ClientCapabilitySnapshot> resolved = resolve(candidate);
-        if (resolved instanceof ToolResult.Failure<ClientCapabilitySnapshot> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Failure<ClientCapabilitySnapshot> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<ClientCapabilitySnapshot>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         ClientCapabilitySnapshot prepared =
                 ((ToolResult.Success<ClientCapabilitySnapshot>) resolved).value();
         ToolResult<CapabilityPolicy> saved = store.save(candidate);
-        if (saved instanceof ToolResult.Failure<CapabilityPolicy> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.CapabilityPolicy> value; ToolResult.Failure<CapabilityPolicy> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = saved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<CapabilityPolicy>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         publish.accept(prepared);
         current = prepared;
@@ -70,8 +74,10 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
     public ToolResult<CapabilitySettingsView> publishCapabilities(CapabilityPolicy candidate) {
         CapabilityPolicy normalized = toolOwnedPolicy(candidate);
         ToolResult<ClientCapabilitySnapshot> resolved = resolve(normalized);
-        if (resolved instanceof ToolResult.Failure<ClientCapabilitySnapshot> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Failure<ClientCapabilitySnapshot> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<ClientCapabilitySnapshot>) $oaPattern2_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
         }
         ClientCapabilitySnapshot prepared =
                 ((ToolResult.Success<ClientCapabilitySnapshot>) resolved).value();
@@ -84,8 +90,10 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
     public ToolResult<CapabilitySettingsView> refreshCapabilities() {
         CapabilityPolicy policy = current.policy();
         ToolResult<ClientCapabilitySnapshot> resolved = resolve(policy);
-        if (resolved instanceof ToolResult.Failure<ClientCapabilitySnapshot> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Failure<ClientCapabilitySnapshot> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<ClientCapabilitySnapshot>) $oaPattern3_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern3_holder.bound.code(), $oaPattern3_holder.bound.message());
         }
         ClientCapabilitySnapshot prepared =
                 ((ToolResult.Success<ClientCapabilitySnapshot>) resolved).value();
@@ -113,13 +121,17 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
     @Override
     public ToolResult<CapabilitySettingsView> reloadCapabilities() {
         ToolResult<CapabilityPolicy> loaded = store.load();
-        if (loaded instanceof ToolResult.Failure<CapabilityPolicy> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.CapabilityPolicy> value; ToolResult.Failure<CapabilityPolicy> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern4_holder.bound = (ToolResult.Failure<CapabilityPolicy>) $oaPattern4_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern4_holder.bound.code(), $oaPattern4_holder.bound.message());
         }
         CapabilityPolicy policy = ((ToolResult.Success<CapabilityPolicy>) loaded).value();
         ToolResult<ClientCapabilitySnapshot> resolved = resolve(policy);
-        if (resolved instanceof ToolResult.Failure<ClientCapabilitySnapshot> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Failure<ClientCapabilitySnapshot> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern5_holder.bound = (ToolResult.Failure<ClientCapabilitySnapshot>) $oaPattern5_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern5_holder.bound.code(), $oaPattern5_holder.bound.message());
         }
         ClientCapabilitySnapshot prepared =
                 ((ToolResult.Success<ClientCapabilitySnapshot>) resolved).value();
@@ -147,8 +159,8 @@ public final class CapabilitySettingsBackend implements ClientSettingsService.Ca
         Set<String> disabled = new HashSet<>(policy.disabledTools());
         disabled.addAll(policy.disabledSkills());
         Set<String> unavailable = product.platform().isModLoaded("ftbquests")
-                ? Set.of()
-                : Set.of("ftbquests");
+                ? dev.openallay.util.Java8Collections.setOf()
+                : dev.openallay.util.Java8Collections.setOf("ftbquests");
         return new CapabilitySettingsView(
                 policy,
                 product.capabilitySettings().snapshot(

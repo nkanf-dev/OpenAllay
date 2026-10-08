@@ -64,7 +64,7 @@ public final class JsonTrees {
     /** Live, insertion-ordered key view; removal updates the source object. */
     public static Set<String> keys(JsonObject source) {
         Objects.requireNonNull(source, "source");
-        return new AbstractSet<>() {
+        return new AbstractSet<String>() {
             @Override public int size() { return source.entrySet().size(); }
             @Override public boolean contains(Object key) {
                 return key instanceof String && source.has((String) key);
@@ -75,7 +75,7 @@ public final class JsonTrees {
             @Override public void clear() { source.entrySet().clear(); }
             @Override public Iterator<String> iterator() {
                 Iterator<Map.Entry<String, JsonElement>> entries = source.entrySet().iterator();
-                return new Iterator<>() {
+                return new Iterator<String>() {
                     @Override public boolean hasNext() { return entries.hasNext(); }
                     @Override public String next() { return entries.next().getKey(); }
                     @Override public void remove() { entries.remove(); }

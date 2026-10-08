@@ -8,11 +8,27 @@ public enum GuideToolDisplayStatus {
 
     public static GuideToolDisplayStatus from(GuideToolStatus actual, boolean requestTerminal) {
         if (requestTerminal && actual == GuideToolStatus.RUNNING) return NO_RESULT_RECORDED;
-        return switch (actual) {
-            case RUNNING -> RUNNING;
-            case SUCCEEDED -> SUCCEEDED;
-            case FAILED -> FAILED;
-        };
+        {
+dev.openallay.guide.ui.GuideToolDisplayStatus $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((actual)) {
+case RUNNING:
+{
+$oaSwitch0_exit_result = RUNNING; break $oaSwitch0_exit;
+}
+case SUCCEEDED:
+{
+$oaSwitch0_exit_result = SUCCEEDED; break $oaSwitch0_exit;
+}
+case FAILED:
+{
+$oaSwitch0_exit_result = FAILED; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     public String translationKey() {

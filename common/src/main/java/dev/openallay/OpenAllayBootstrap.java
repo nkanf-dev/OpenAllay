@@ -42,8 +42,7 @@ public final class OpenAllayBootstrap {
     private static final List<OpenAllayExtension> pendingExtensions = new ArrayList<>();
     private static dev.openallay.extension.universal.UniversalExtensionDiscovery universalExtensions;
     private static dev.openallay.extension.universal.BundledUniversalExtensions bundledExtensions;
-    private static final Set<String> implementedExtensionApis = Set.of(
-            OpenAllayConstants.EXTENSION_API_VERSION, "0.4.0");
+    private static final Set<String> implementedExtensionApis = dev.openallay.util.Java8Collections.setOf(OpenAllayConstants.EXTENSION_API_VERSION, "0.4.0");
 
     private OpenAllayBootstrap() {}
 
@@ -88,7 +87,7 @@ public final class OpenAllayBootstrap {
         ToolRegistry tools = new ToolRegistry();
         PatchouliMultiblockStore patchouliMultiblocks = new PatchouliMultiblockStore();
         SkillRepository skills = new SkillRepository(
-                new SkillParser(), List.of(RunJavascriptTool.ID));
+                new SkillParser(), dev.openallay.util.Java8Collections.listOf(RunJavascriptTool.ID));
         Set<String> installedMods = installedMods(platform);
         OpenAllayExtensionRegistry extensions = new OpenAllayExtensionRegistry(
                 new OpenAllayExtensionEnvironment(
@@ -119,9 +118,9 @@ public final class OpenAllayBootstrap {
         if (!skills.reload(new BundledSkillLoader().load(), installedSkillMods)) {
             OpenAllayConstants.LOGGER.warn("Bundled Skill validation failed: {}", skills.diagnostics());
         }
-        skills.setRuntimeDisabledSkills(Set.of("run-game-commands"));
-        tools.register("openallay:skills", List.of(new LoadSkillTool(skills)));
-        for (OpenAllayExtension extension : List.copyOf(pendingExtensions)) {
+        skills.setRuntimeDisabledSkills(dev.openallay.util.Java8Collections.setOf("run-game-commands"));
+        tools.register("openallay:skills", dev.openallay.util.Java8Collections.listOf(new LoadSkillTool(skills)));
+        for (OpenAllayExtension extension : dev.openallay.util.Java8Collections.listCopyOf(pendingExtensions)) {
             OpenAllayExtensionRegistry.Registration registration = extensions.register(extension);
             if (registration.state() != dev.openallay.extension.OpenAllayExtensionState.ACTIVE) {
                 OpenAllayConstants.LOGGER.warn(
@@ -131,9 +130,9 @@ public final class OpenAllayBootstrap {
             }
         }
         pendingExtensions.clear();
-        var worldAccess = platform.minecraftWorldAccess();
-        var environment = universalEnvironment(platform, worldAccess.isPresent());
-        var host = dev.openallay.extension.universal.UniversalExtensionBridge.host(environment,
+        java.util.Optional<dev.openallay.api.extension.MinecraftWorldAccess> worldAccess = platform.minecraftWorldAccess();
+        dev.openallay.api.extension.ExtensionEnvironment environment = universalEnvironment(platform, worldAccess.isPresent());
+        dev.openallay.api.extension.ExtensionHost host = dev.openallay.extension.universal.UniversalExtensionBridge.host(environment,
                 worldAccess.orElseGet(() -> invocation -> {
                     invocation.requireActive();
                     throw new dev.openallay.api.extension.ExtensionException(
@@ -142,7 +141,7 @@ public final class OpenAllayBootstrap {
         universalExtensions = new dev.openallay.extension.universal.UniversalExtensionDiscovery(
                 platform.extensionDirectory(), extensions, host,
                 dev.openallay.api.extension.OpenAllayExtension.class.getClassLoader());
-        for (var result : universalExtensions.discover()) {
+        for (dev.openallay.extension.universal.UniversalExtensionDiscovery.DiscoveryResult result : universalExtensions.discover()) {
             if (result.state() != dev.openallay.extension.OpenAllayExtensionState.ACTIVE) {
                 OpenAllayConstants.LOGGER.warn("Universal Extension registration rejected: {} ({})",
                         result.extensionId(), result.diagnostic());
@@ -154,7 +153,7 @@ public final class OpenAllayBootstrap {
                     bundledCache, extensions, host,
                     dev.openallay.api.extension.OpenAllayExtension.class.getClassLoader(),
                     path -> OpenAllayBootstrap.class.getClassLoader().getResourceAsStream(path));
-            for (var result : bundledExtensions.results()) {
+            for (dev.openallay.extension.universal.UniversalExtensionDiscovery.DiscoveryResult result : bundledExtensions.results()) {
                 if (result.state() != dev.openallay.extension.OpenAllayExtensionState.ACTIVE) {
                     OpenAllayConstants.LOGGER.warn("Bundled Extension registration rejected: {} ({})",
                             result.extensionId(), result.diagnostic());
@@ -195,13 +194,12 @@ public final class OpenAllayBootstrap {
 
     private static dev.openallay.api.extension.ExtensionEnvironment universalEnvironment(
             PlatformService platform, boolean nativeWorldAvailable) {
-        Set<String> features = new java.util.HashSet<>(Set.of(
-                "openallay:javascript_host", "openallay:skills", "openallay:semantic_results"));
+        Set<String> features = new java.util.HashSet<>(dev.openallay.util.Java8Collections.setOf("openallay:javascript_host", "openallay:skills", "openallay:semantic_results"));
         if (nativeWorldAvailable) features.add("minecraft:world-access");
         return new dev.openallay.api.extension.ExtensionEnvironment(
                 platform.platformName().toLowerCase(java.util.Locale.ROOT),
                 platform.gameVersion(), platform.productVersion(), implementedExtensionApis,
-                Runtime.version().feature(), features);
+                dev.openallay.util.Java8ApiSupport.runtimeVersionFeature(), features);
     }
 
     /** Loader shutdown keeps package classes alive until admitted Extension hooks unwind. */
@@ -373,7 +371,7 @@ public final class OpenAllayBootstrap {
             WorldObservationRuntime worldObservations,
             JavascriptModuleCatalog javascriptModuleCatalog,
             OpenAllayExtensionRegistry extensions) {
-        return List.of(new RunJavascriptTool(
+        return dev.openallay.util.Java8Collections.listOf(new RunJavascriptTool(
                 new RhinoJavascriptRuntime(
                         RhinoJavascriptRuntime.DEFAULT_TIMEOUT,
                         dev.openallay.script.JavascriptRuntimeLimits.DEFAULT,
@@ -391,9 +389,9 @@ public final class OpenAllayBootstrap {
         try {
             return platform.installedMods().stream()
                     .map(dev.openallay.platform.InstalledModMetadata::id)
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                    .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         } catch (UnsupportedOperationException unavailable) {
-            return Set.of();
+            return dev.openallay.util.Java8Collections.setOf();
         }
     }
 }

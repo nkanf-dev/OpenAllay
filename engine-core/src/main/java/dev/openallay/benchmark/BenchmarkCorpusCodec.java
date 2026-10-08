@@ -10,44 +10,40 @@ import java.util.Set;
 /** Strict benchmark corpus codec. */
 public final class BenchmarkCorpusCodec {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("cases");
+            dev.openallay.util.Java8Collections.setOf("cases");
     private static final Set<String> CASE_FIELDS =
-            Set.of(
-                    "id",
-                    "category",
-                    "prompt",
-                    "fixture",
-                    "requiredCapabilities",
-                    "attempts",
-                    "maxModelTurns",
-                    "verifier");
+            dev.openallay.util.Java8Collections.setOf("id", "category", "prompt", "fixture", "requiredCapabilities", "attempts", "maxModelTurns", "verifier");
     private static final Set<String> VERIFIER_FIELDS =
-            Set.of("kind", "path", "expected", "contains");
+            dev.openallay.util.Java8Collections.setOf("kind", "path", "expected", "contains");
 
     public BenchmarkCorpus decode(Reader reader) {
         JsonElement parsed = dev.openallay.json.JsonTrees.parse(reader);
-        if (!(parsed instanceof JsonObject root)) {
+        final class $oaPattern0_Holder { com.google.gson.JsonElement value; JsonObject bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = parsed) instanceof com.google.gson.JsonObject && (($oaPattern0_holder.bound = (JsonObject) $oaPattern0_holder.value) != null)))) {
             throw invalid("Benchmark corpus root must be an object");
         }
-        exactFields(root, ROOT_FIELDS, "corpus");
-        if (!root.has("cases") || !root.get("cases").isJsonArray()) {
+        exactFields($oaPattern0_holder.bound, ROOT_FIELDS, "corpus");
+        if (!$oaPattern0_holder.bound.has("cases") || !$oaPattern0_holder.bound.get("cases").isJsonArray()) {
             throw invalid("cases must be an array");
         }
         ArrayList<BenchmarkCase> cases = new ArrayList<>();
-        root.getAsJsonArray("cases").forEach(element -> {
-            if (!(element instanceof JsonObject object)) {
+        $oaPattern0_holder.bound.getAsJsonArray("cases").forEach(element -> {
+            final class $oaPattern1_Holder { com.google.gson.JsonElement value; JsonObject bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = element) instanceof com.google.gson.JsonObject && (($oaPattern1_holder.bound = (JsonObject) $oaPattern1_holder.value) != null)))) {
                 throw invalid("case must be an object");
             }
-            exactFields(object, CASE_FIELDS, "case");
+            exactFields($oaPattern1_holder.bound, CASE_FIELDS, "case");
             cases.add(new BenchmarkCase(
-                    string(object, "id"),
-                    string(object, "category"),
-                    string(object, "prompt"),
-                    string(object, "fixture"),
-                    strings(object, "requiredCapabilities"),
-                    integer(object, "attempts"),
-                    integer(object, "maxModelTurns"),
-                    verifier(object.getAsJsonObject("verifier"))));
+                    string($oaPattern1_holder.bound, "id"),
+                    string($oaPattern1_holder.bound, "category"),
+                    string($oaPattern1_holder.bound, "prompt"),
+                    string($oaPattern1_holder.bound, "fixture"),
+                    strings($oaPattern1_holder.bound, "requiredCapabilities"),
+                    integer($oaPattern1_holder.bound, "attempts"),
+                    integer($oaPattern1_holder.bound, "maxModelTurns"),
+                    verifier($oaPattern1_holder.bound.getAsJsonObject("verifier"))));
         });
         return new BenchmarkCorpus(cases);
     }
@@ -113,7 +109,7 @@ public final class BenchmarkCorpusCodec {
             }
             values.add(value.getAsString());
         });
-        return List.copyOf(values);
+        return dev.openallay.util.Java8Collections.listCopyOf(values);
     }
 
     private static IllegalArgumentException invalid(String message) {

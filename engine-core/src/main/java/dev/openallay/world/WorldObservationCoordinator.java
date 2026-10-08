@@ -18,16 +18,14 @@ public interface WorldObservationCoordinator extends AutoCloseable {
 
     default CompletionStage<WorldFocusObservation> focus(CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
-        return java.util.concurrent.CompletableFuture.failedFuture(
-                new dev.openallay.script.JavascriptExecutionException(
+        return dev.openallay.util.Java8Futures.failedFuture(new dev.openallay.script.JavascriptExecutionException(
                         "client_observation_unavailable", "Current focus requires the player's connected client"));
     }
 
     default CompletionStage<WorldViewCapture> capture(
             WorldViewRequest request, CancellationSignal cancellation) {
         cancellation.throwIfCancelled();
-        return java.util.concurrent.CompletableFuture.failedFuture(
-                new dev.openallay.script.JavascriptExecutionException(
+        return dev.openallay.util.Java8Futures.failedFuture(new dev.openallay.script.JavascriptExecutionException(
                         "client_observation_unavailable", "Native view capture requires the player's connected client"));
     }
 

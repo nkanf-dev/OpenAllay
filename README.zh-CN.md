@@ -10,9 +10,10 @@
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — 你的 Minecraft AI 伙伴。探索、建造、创造。">
 
 [GitHub 下载](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[快速上手](#快速上手) · [0.4.3 更新说明](docs/releases/0.4.3.md) ·
+[快速上手](#快速上手) · [0.4.4 更新说明](docs/releases/0.4.4.md) ·
 [社区与开发](#社区与开发) ·
-[成熟 Forge 生态回移验证记录](docs/verification/mature-forge-ecosystems.md)
+[成熟 Forge 生态回移验证记录](docs/verification/mature-forge-ecosystems.md) ·
+[原版 Forge 客户端验收](docs/verification/stock-forge-integrated-clients.md)
 
 | | 让它融入你的玩法 |
 | --- | --- |
@@ -23,22 +24,28 @@
 
 ## 快速上手
 
-OpenAllay **0.4.3** 支持 **25 个 Minecraft 版本**：**1.18.2 和 1.19.2 使用 Forge**，
-**1.20.1 到 26.3 使用 Fabric 或 NeoForge**。请在
-[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.3)
-选择标有你的准确 Minecraft 版本及加载器的 JAR。部分文件可用于多个版本。
-Fabric 还需要安装匹配的 **Fabric API**。
+OpenAllay **0.4.4** 支持 **27 个 Minecraft 版本**：**1.12.2、1.16.5、1.18.2
+和 1.19.2 使用 Forge**，**1.20.1 到 26.3 使用 Fabric 或 NeoForge**。请在
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.4)
+选择对应 Minecraft 版本和加载器的文件。Fabric 还需要匹配的 **Fabric API**。
 
-| Minecraft 版本 | Java 版本 |
-| --- | --- |
-| 1.18.2、1.19.2，以及 1.20.1–1.20.4 | 17 |
-| 1.20.5–1.20.6，以及 1.21–1.21.11 | 21 |
-| 26.1、26.1.1、26.1.2、26.2、26.3 | 25 |
+| Minecraft 版本 | Java 版本 | 安装方式 |
+| --- | --- | --- |
+| 1.12.2 | 8 | Forge 14.23.5.2864 JAR，放入 `mods` |
+| 1.16.5 | 17 | Forge 36.2.42 JAR，放入 `mods` |
+| 1.18.2、1.19.2，以及 1.20.1–1.20.4 | 17 | 对应加载器 JAR |
+| 1.20.5–1.20.6，以及 1.21–1.21.11 | 21 | 对应加载器 JAR |
+| 26.1、26.1.1、26.1.2、26.2、26.3 | 25 | 对应加载器 JAR |
 
-**Minecraft 26.2 / Java 25** 仍是开发主线。各下载文件覆盖的准确版本，见
-[发布兼容表](docs/native-binary-artifacts.md#release-043-files)。
+0.4.4 下载目录包含 **Minecraft 1.12.2 到 26.3 的 35 个 JAR**，覆盖 **50 个版本／加载器组合**。
+GitHub 和 Modrinth 使用同一组 JAR；GitHub 另附 `SHA256SUMS`，共 **36 个发布文件**。部分 JAR 覆盖多个版本。
+准确的文件对应关系见[发布兼容表](docs/native-binary-artifacts.md#release-044-files)，
+旧版 Forge 的启动配置见[Forge 安装指南](docs/forge-runtime-installation.md)。
+**Minecraft 26.2 / Java 25** 仍是开发主线。
+使用 **Minecraft 1.12.2** 时，安装 **Forge 14.23.5.2864**，选择 **Java 8**，
+再将 `openallay-forge-1.12.2-0.4.4.jar` 放入 `mods`。JAR 已包含 Minecraft Builder。
 
-1. 把 JAR 放入游戏实例的 `mods` 文件夹，启动 Minecraft。
+1. 将对应的 JAR 放入实例的 `mods` 文件夹，启动 Minecraft。
 2. 进入世界，按 **K**，或输入 `/guide`。
 3. 点击齿轮按钮 → **模型**，添加模型配置。
 4. 选择 **OpenAI 兼容 Chat Completions** 或 **Anthropic Messages**，
@@ -65,7 +72,7 @@ Fabric 还需要安装匹配的 **Fabric API**。
 - “现在启用了哪些资源包？视频设置是什么？”
 
 回答可以直接展示物品图标、材料槽位、配方布局、表格和可展开详情。
-工具卡片会清晰展示 Agent 执行的操作与结果。数据量较大时会自动提供易读的折叠预览。
+工具卡片展示每项操作的摘要。数据量较大时，打开卡片详情即可查看完整结果。
 
 可选集成包括 **JEI**、**REI**、**Patchouli**，以及
 **Farmer's Delight（农夫乐事）**等配方丰富的模组。能读取哪些数据，取决于当前安装的模组及其集成；
@@ -73,20 +80,25 @@ Fabric 还需要安装匹配的 **Fabric API**。
 
 ## 在你的世界里建造
 
-每个加载器的下载包都包含 **Minecraft Builder** 扩展。
-说出你想建什么，再通过几何体、地形工具、建筑预设和结构模板，
-把想法落到当前单人世界里。模板支持旋转与镜像；方块撤销会检查后续改动，
-遇到冲突时报告，而不是直接覆盖。
+每个 OpenAllay 下载包都包含 **Minecraft Builder** 扩展。
+说出你想建什么，再使用几何体、地形工具、可用建筑预设和结构模板，
+在当前单人世界里建造。模板支持旋转与镜像；方块撤销保留后续改动，并报告冲突。
 
-开始建造只需：
-
-1. 进入**单人世界**，选择在自己客户端配置的模型，而不是服务器提供的共享模型。
+1. 进入**单人世界**，选择在客户端配置的模型。
 2. 在**设置 → 扩展**中启用 **Minecraft Builder**。
 3. 提出建造需求，例如：“在我旁边建一座小石塔。”
 
-启用 Builder 即可使用它的建造和世界写入操作。
-**不需要启用完整访问 JavaScript 或 JVM 访问。** Builder 支持生存与创造世界，
-不向普通远程服务器写入方块。撤销针对记录下来的方块改动，不是整个世界的完整回滚。
+启用 Builder 即可在普通 JavaScript 模式下建造，**启用全权限 JavaScript** 开关可以保持关闭。
+Builder 支持单人生存与创造世界。撤销恢复记录中仍匹配的方块。
+
+建筑预设取决于游戏中的原生材料：
+
+| Minecraft | 可用建造工作流 |
+| --- | --- |
+| 1.12.2 | 几何体、地形、模板、取消与撤销，并读取原生方块状态核对结果 |
+| 1.16.5 | 几何体、装饰、地形、模板，以及房屋、小屋、风车、农场和码头 |
+
+1.16.5 可选择上表中的五种预设；摩天楼预设需要避雷针。
 
 Builder 在
 [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder)
@@ -95,21 +107,21 @@ Builder 在
 ## 打造自己的 Skills
 
 让 OpenAllay 更懂你的玩法。Skills 是可复用的任务指导与参考资料，
-可以围绕一个模组、一类任务或一种玩法编写，而不是再增加一排固定按钮。
+可以围绕一个模组、一类任务或一种玩法编写。
 OpenAllay 会在需要时加载相关指导。
 
 内置 Skills 已覆盖配方、机器、指南书、游戏进度与问题诊断。
-在**设置 → Skills** 中，你可以浏览、安装和更新社区工作流，也可以导入本地
-Skill 安装包。想写自己的整合包指南或专属工作流？欢迎到
+在**设置 → Skills → 社区**中刷新目录，即可浏览适配当前 Minecraft 版本的安装包，
+安装或更新工作流，也可以导入本地 Skill 安装包。你也可以编写整合包指南和工作流，在
 [OpenAllay Skills](https://github.com/nkanf-dev/OpenAllay-Skills)
-创作和分享。
+分享。
 
 ## 用 Extensions 扩展能力
 
 Extensions 可以接入新的游戏数据、可复用 JavaScript 模块、模组集成、
 操作能力与原生结果视图。在**设置 → 扩展**中查看已连接的能力、浏览兼容的
-社区安装包，或导入本地 Extension JAR。Extensions 像普通模组一样安装，
-重启游戏后生效。
+社区安装包，或导入本地 Extension JAR。通用 Extension JAR 安装在
+`config/openallay/extensions/`；旧式加载器模组扩展安装在 `mods/`。安装后重启游戏。
 
 想让自己的模组接入 OpenAllay？请从
 [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions)
@@ -139,7 +151,7 @@ OpenAllay 界面不会暂停游戏。
 - **主动观察：**Agent 可按任务需要读取实时焦点，或获取世界、游戏界面画面。
   图片观察需要支持图片输入的模型；打开工具详情可查看实际捕获的画面。
 - **输入参考：**焦点和关联画面可辅助提问。你可以刷新、移除参考，或附加当前世界画面。
-  这些参考记录本次输入的来源，不代表之后的实时状态。
+  这些参考保存本次输入时的画面和焦点；需要最新状态时可刷新。
 - **图片提问：**使用支持图片输入的模型时，可用 **Ctrl/Cmd+V** 直接粘贴图片。
 - **手动压缩（/compact）：**会话空闲时，输入 `/compact` 可使用客户端配置的模型压缩较早的上下文。
   服务器模型暂不支持此命令；输入 `//` 可发送普通的 `/` 字符。
@@ -162,20 +174,19 @@ OpenAllay 界面不会暂停游戏。
 ## 模型由你选择
 
 连接兼容的在线服务或本地端点，保存多个配置，并在对话中切换。
-“在客户端配置”不代表必须在自己的电脑上运行模型，也可以使用远程服务商。
+客户端配置可以连接远程服务商，也可以连接自己运行的模型。
 
 在**设置 → 模型**中：
 
 - **上下文窗口与最大输出：**自动匹配内置目录或服务商提供的参数，
   也可随时手动调整。清空字段即可恢复默认自动值。
-- **推理强度：**可保持默认，或指定所需的推理思考强度
-  （具体取决于所选模型与服务商支持）。
-- **参考价格：**查看公开的 Token 参考单价与计费档位，方便进行成本对比；
-  服务商的实际扣费可能因套餐或网络环境有所差异。
+- **推理强度：**可保持**自动 · 服务商默认**，或指定强度
+  （可选强度取决于所选模型与服务商）。
+- **参考价格：**比较公开的 Token 参考单价与计费档位。服务商的实际扣费可能有所差异。
 
 对话底部会在数据可用时展示上下文用量估算与预算、会话累计费用和缓存命中率。
 会话累计包含实际模型调用与自动摘要调用，并保留恢复的请求历史费用。
-**估算不是账单。** 用量或价格缺失时会显示未知或部分估算，而不是零。
+估算可用于跟踪会话费用，最终账单由服务商提供。用量或价格缺失时会显示未知或部分估算。
 服务商费率与未报告的额外收费都可能影响实际支出。
 
 OpenAllay 免费且开源，模型服务商可能会收取 API 使用费用。

@@ -43,14 +43,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.BlockPos;
+
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
+
+
 
 public final class MinecraftContextCapture {
-    private static final String CAPTURE_GENERATION_PLACEHOLDER = "0".repeat(64);
+    private static final String CAPTURE_GENERATION_PLACEHOLDER = dev.openallay.util.Java8Strings.repeat("0", 64);
     private static final String REGISTRY_PROVENANCE = "minecraft:registry";
     private static final String RECIPE_PROVENANCE = "minecraft:recipe_manager";
     private final dev.openallay.context.ContextSnapshotMetricsJson metricsJson;
@@ -67,24 +67,24 @@ public final class MinecraftContextCapture {
     }
 
     public ToolInvocationContext capture(
-            CommandSourceStack source,
+            net.minecraft.commands.CommandSourceStack source,
             Set<ContextCapability> capabilities,
             String correlationId) {
         Objects.requireNonNull(source, "source");
-        capabilities = Set.copyOf(capabilities);
-        if (!source.getServer().isSameThread()) {
+        capabilities = dev.openallay.util.Java8Collections.setCopyOf(capabilities);
+        if (!dev.openallay.server.NativeServerOwner.isOwner(MinecraftCommandSourceFacts.server(source))) {
             throw new IllegalStateException("Minecraft context must be captured on server thread");
         }
 
         long started = System.nanoTime();
         java.time.Instant capturedAt = java.time.Instant.now();
-        ServerPlayer serverPlayer = MinecraftCommandCaller.player(source);
+        net.minecraft.server.level.ServerPlayer serverPlayer = MinecraftCommandCaller.player(source);
         CallerSnapshot caller = serverPlayer == null
-                ? new CallerSnapshot(CallerKind.CONSOLE, null, source.getTextName(), true)
+                ? new CallerSnapshot(CallerKind.CONSOLE, null, MinecraftCommandSourceFacts.name(source), true)
                 : new CallerSnapshot(
                         CallerKind.PLAYER,
-                        serverPlayer.getUUID(),
-                        source.getTextName(),
+                        dev.openallay.server.NativeServerOwner.actor(serverPlayer),
+                        MinecraftCommandSourceFacts.name(source),
                         MinecraftCommandPermissions.canReadWorld(source));
 
         Optional<PlayerSnapshot> player = capabilities.contains(ContextCapability.PLAYER)
@@ -123,22 +123,22 @@ public final class MinecraftContextCapture {
     }
 
     private ObservableGameStateSnapshot captureObservableGameState(
-            CommandSourceStack source,
-            ServerPlayer serverPlayer,
+            net.minecraft.commands.CommandSourceStack source,
+            net.minecraft.server.level.ServerPlayer serverPlayer,
             Instant capturedAt,
             PlayerSnapshot player) {
         EvidenceMetadata unavailable = evidence(
                 DataCompleteness.UNKNOWN, capturedAt,
                 "minecraft:server_client_state", "minecraft:server_topology_boundary");
-        List<SectionDiagnostic> clientOnly = List.of(new SectionDiagnostic(
+        List<SectionDiagnostic> clientOnly = dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                 "client_state_not_visible_to_server",
                 "This request has no available player-client observation for client-owned menus or configuration"));
         // Loader metadata on a server is not the player's client-visible mod list. Do not expose
         // server-only contacts, dependencies, licences, or private implementation metadata to an
         // ordinary player merely because their model happens to be server hosted.
-        List<dev.openallay.platform.InstalledModMetadata> mods = List.of();
+        List<dev.openallay.platform.InstalledModMetadata> mods = dev.openallay.util.Java8Collections.listOf();
         DataCompleteness modCompleteness = DataCompleteness.UNKNOWN;
-        List<SectionDiagnostic> modDiagnostics = List.of(new SectionDiagnostic(
+        List<SectionDiagnostic> modDiagnostics = dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                 "client_mod_list_not_visible_to_server",
                 "The server cannot attest the player's installed client mods"));
         EvidenceMetadata playerEvidence = serverPlayer == null
@@ -147,18 +147,13 @@ public final class MinecraftContextCapture {
                         DataCompleteness.COMPLETE, capturedAt,
                         "minecraft:server_player", "minecraft:server_player");
         List<DiagnosticValue> diagnostics = serverPlayer == null
-                ? List.of()
-                : List.of(
-                        new DiagnosticValue("position", "x", Double.toString(serverPlayer.getX())),
-                        new DiagnosticValue("position", "y", Double.toString(serverPlayer.getY())),
-                        new DiagnosticValue("position", "z", Double.toString(serverPlayer.getZ())),
-                        new DiagnosticValue("position", "dimension", player.dimension()),
-                        new DiagnosticValue("player", "game_mode", player.gameMode()));
-        var level = source.getLevel();
-        var border = level.getWorldBorder();
+                ? dev.openallay.util.Java8Collections.listOf()
+                : dev.openallay.util.Java8Collections.listOf(new DiagnosticValue("position", "x", Double.toString(MinecraftServerCaptureFacts.x(serverPlayer))), new DiagnosticValue("position", "y", Double.toString(MinecraftServerCaptureFacts.y(serverPlayer))), new DiagnosticValue("position", "z", Double.toString(MinecraftServerCaptureFacts.z(serverPlayer))), new DiagnosticValue("position", "dimension", player.dimension()), new DiagnosticValue("player", "game_mode", player.gameMode()));
+        net.minecraft.world.level.Level level = MinecraftCommandSourceFacts.level(source);
+        net.minecraft.world.level.border.WorldBorder border = level.getWorldBorder();
         Map<String, ObservableGameStateSnapshot.QueryValue> queries = new LinkedHashMap<>();
         if (authorizedWorldQuery(source, WorldQueryOperation.TIME)) {
-            queries.put("time", serverQuery("time", Long.toString(level.getGameTime())));
+            queries.put("time", serverQuery("time", Long.toString(MinecraftServerCaptureFacts.gameTime(level))));
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.WEATHER)) {
             queries.put("weather", serverQuery("weather",
@@ -171,7 +166,7 @@ public final class MinecraftContextCapture {
         if (authorizedWorldQuery(source, WorldQueryOperation.WORLD_BORDER)) {
             queries.put("world_border", serverQuery("world_border",
                     "center=" + border.getCenterX() + "," + border.getCenterZ()
-                            + ",size=" + border.getSize()));
+                            + ",size=" + MinecraftServerCaptureFacts.borderSize(level)));
         }
         if (authorizedWorldQuery(source, WorldQueryOperation.SPAWN)) {
             queries.put("spawn", serverQuery("spawn",
@@ -185,41 +180,34 @@ public final class MinecraftContextCapture {
                         platform.isDevelopmentEnvironment(), "server",
                         evidence(DataCompleteness.COMPLETE, capturedAt,
                                 "openallay:observable_runtime", "minecraft:server_runtime"),
-                        List.of()),
+                        dev.openallay.util.Java8Collections.listOf()),
                 new ObservableGameStateSnapshot.ModsState(
                         mods,
                         evidence(modCompleteness, capturedAt,
                                 "openallay:installed_mods", "openallay:loader_metadata"),
                         modDiagnostics),
-                new ObservableGameStateSnapshot.OptionsState(List.of(), unavailable, clientOnly),
-                new ObservableGameStateSnapshot.PacksState(List.of(), List.of(), unavailable, clientOnly),
+                new ObservableGameStateSnapshot.OptionsState(dev.openallay.util.Java8Collections.listOf(), unavailable, clientOnly),
+                new ObservableGameStateSnapshot.PacksState(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(), unavailable, clientOnly),
                 new ObservableGameStateSnapshot.ShaderState(
-                        false, "client_only", "", Map.of(), unavailable, clientOnly),
+                        false, "client_only", "", dev.openallay.util.Java8Collections.mapOf(), unavailable, clientOnly),
                 new ObservableGameStateSnapshot.DiagnosticsState(
                         diagnostics, playerEvidence,
                         serverPlayer == null
-                                ? List.of(new SectionDiagnostic(
+                                ? dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                                         "player_required",
                                         "F3-style diagnostics require a player source"))
-                                : List.of(new SectionDiagnostic(
+                                : dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                                         "client_f3_metrics_unavailable",
                                         "Server capture includes authoritative player state but not client renderer metrics"))),
                 new ObservableGameStateSnapshot.PlayerUiState(
                         player,
                         serverPlayer == null
                                 ? "unavailable"
-                                : serverPlayer.containerMenu == serverPlayer.inventoryMenu
-                                ? "gameplay_or_player_inventory"
-                                : "open_synchronized_menu",
-                        serverPlayer == null
-                                || serverPlayer.containerMenu == serverPlayer.inventoryMenu
-                                        || serverPlayer.containerMenu.getType() == null
-                                ? ""
-                                : MinecraftNativeRegistries.MENU.getKey(
-                                        serverPlayer.containerMenu.getType()).toString(),
+                                : MinecraftServerCaptureFacts.uiState(serverPlayer),
+                        serverPlayer == null ? "" : MinecraftServerCaptureFacts.menuId(serverPlayer),
                         playerEvidence,
                         serverPlayer == null
-                                ? List.of(new SectionDiagnostic(
+                                ? dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                                         "player_required",
                                         "No player is associated with this server command source"))
                                 : clientOnly),
@@ -231,14 +219,14 @@ public final class MinecraftContextCapture {
                                 capturedAt,
                                 "minecraft:server_world_queries", "minecraft:server_level_state"),
                         worldQueriesAuthorized
-                                ? List.of()
-                                : List.of(new SectionDiagnostic(
+                                ? dev.openallay.util.Java8Collections.listOf()
+                                : dev.openallay.util.Java8Collections.listOf(new SectionDiagnostic(
                                         "permission_required",
                                         "Read-only server world queries require game-master command permission"))));
     }
 
     private static boolean authorizedWorldQuery(
-            CommandSourceStack source, WorldQueryOperation operation) {
+            net.minecraft.commands.CommandSourceStack source, WorldQueryOperation operation) {
         Objects.requireNonNull(operation, "operation");
         return MinecraftCommandPermissions.canReadWorld(source);
     }
@@ -249,31 +237,31 @@ public final class MinecraftContextCapture {
                 operation, value, true, "server_authoritative");
     }
 
-    private PlayerSnapshot capturePlayer(ServerPlayer player, java.time.Instant capturedAt) {
+    private PlayerSnapshot capturePlayer(net.minecraft.server.level.ServerPlayer player, java.time.Instant capturedAt) {
         List<InventorySlotSnapshot> inventory = new ArrayList<>();
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+        for (int slot = 0; slot < MinecraftServerCaptureFacts.inventorySize(MinecraftPlayerFacts.inventory(player)); slot++) {
             inventory.add(new InventorySlotSnapshot(
-                    slot, captureStack(player.getInventory().getItem(slot))));
+                    slot, captureStack(MinecraftServerCaptureFacts.inventoryStack(MinecraftPlayerFacts.inventory(player), slot))));
         }
-        BlockPos position = player.blockPosition();
+        net.minecraft.core.BlockPos position = MinecraftServerCaptureFacts.position(player);
         EvidenceMetadata evidence = evidence(
                 DataCompleteness.COMPLETE,
                 capturedAt,
                 "minecraft:server_player",
                 "minecraft:server_player");
-        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(player.getInventory());
+        int selected = dev.openallay.context.minecraft.MinecraftPlayerFacts.selectedSlot(MinecraftPlayerFacts.inventory(player));
         InventorySnapshot inventorySnapshot = new InventorySnapshot(
                 inventory,
-                player.getInventory().getContainerSize(),
+                MinecraftServerCaptureFacts.inventorySize(MinecraftPlayerFacts.inventory(player)),
                 selected,
                 selected,
-                captureStack(player.getOffhandItem()),
+                captureStack(MinecraftServerCaptureFacts.offhand(player)),
                 true,
                 evidence);
         return new PlayerSnapshot(
-                player.getUUID(),
-                player.getName().getString(),
-                dev.openallay.platform.minecraft.MinecraftResourceIds.keyId(MinecraftServerPlayerLevel.get(player).dimension()).toString(),
+                dev.openallay.server.NativeServerOwner.actor(player),
+                MinecraftServerCaptureFacts.name(player),
+                MinecraftServerCaptureFacts.dimension(player),
                 new BlockPositionSnapshot(position.getX(), position.getY(), position.getZ()),
                 dev.openallay.context.minecraft.MinecraftPlayerFacts.gameMode(player).getName(),
                 inventorySnapshot,
@@ -281,17 +269,17 @@ public final class MinecraftContextCapture {
     }
 
     private RegistrySnapshot captureRegistries(
-            CommandSourceStack source, java.time.Instant capturedAt) {
+            net.minecraft.commands.CommandSourceStack source, java.time.Instant capturedAt) {
         return new RegistrySnapshot(evidence(
                 DataCompleteness.COMPLETE,
                 capturedAt,
                 "minecraft:registry",
                 REGISTRY_PROVENANCE), RegistryCatalogCapture.capture(
-                        REGISTRY_PROVENANCE, () -> source.getServer().isSameThread()));
+                        REGISTRY_PROVENANCE, () -> dev.openallay.server.NativeServerOwner.isOwner(MinecraftCommandSourceFacts.server(source))));
     }
 
     private RecipeSnapshot captureRecipes(
-            CommandSourceStack source, java.time.Instant capturedAt) {
+            net.minecraft.commands.CommandSourceStack source, java.time.Instant capturedAt) {
         RecipeKnowledgeProvider recipeManager = new RecipeKnowledgeProvider() {
             @Override
             public String sourceId() {
@@ -310,26 +298,26 @@ public final class MinecraftContextCapture {
                         "minecraft:recipe_manager",
                         RECIPE_PROVENANCE),
                 RecipeVisibilityPolicy.ALL_KNOWN,
-                List.of(recipeManager));
+                dev.openallay.util.Java8Collections.listOf(recipeManager));
     }
 
     private RecipeProviderSnapshot captureRecipeManager(
-            CommandSourceStack source, java.time.Instant capturedAt) {
+            net.minecraft.commands.CommandSourceStack source, java.time.Instant capturedAt) {
         List<RecipeEntrySnapshot> recipes = MinecraftRecipeSnapshots.capture(
                 MinecraftRecipeCapture.serverRecipes(source), "minecraft:recipe_manager",
                 dev.openallay.recipe.RecipeUnlockState.UNKNOWN,
                 evidence(DataCompleteness.COMPLETE, capturedAt,
                         "minecraft:recipe_manager", RECIPE_PROVENANCE));
         return RecipeProviderSnapshot.available(
-                "minecraft:recipe_manager", DataCompleteness.COMPLETE, recipes, List.of());
+                "minecraft:recipe_manager", DataCompleteness.COMPLETE, recipes, dev.openallay.util.Java8Collections.listOf());
     }
 
-    private ItemStackSnapshot captureStack(ItemStack stack) {
+    private ItemStackSnapshot captureStack(net.minecraft.world.item.ItemStack stack) {
         if (stack.isEmpty()) {
             return ItemStackSnapshot.empty();
         }
-        var id = Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(stack.getItem()));
-        return new ItemStackSnapshot(id.toString(), stack.getCount(), stack.getHoverName().getString());
+        String id = Objects.requireNonNull(MinecraftNativeRegistries.ITEM.getKey(stack.getItem())).toString();
+        return new ItemStackSnapshot(id.toString(), stack.getCount(), MinecraftServerCaptureFacts.itemName(stack));
     }
 
     private long serializedBytes(Object value) {
@@ -352,6 +340,6 @@ public final class MinecraftContextCapture {
                 provenance,
                 platform.gameVersion(),
                 platform.platformName().toLowerCase(Locale.ROOT),
-                Map.of());
+                dev.openallay.util.Java8Collections.mapOf());
     }
 }

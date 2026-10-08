@@ -28,14 +28,16 @@ public final class AgentBenchmarkRecorder implements Consumer<AgentEvent> {
 
     @Override
     public synchronized void accept(AgentEvent event) {
-        if (event instanceof AgentEvent.ToolCompleted tool) {
-            completed.add(tool);
+        final class $oaPattern0_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ToolCompleted bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ToolCompleted && (($oaPattern0_holder.bound = (AgentEvent.ToolCompleted) $oaPattern0_holder.value) != null))) {
+            completed.add($oaPattern0_holder.bound);
         }
     }
 
     public synchronized void effect(String effect) {
-        if (effect != null && !effect.isBlank()) {
-            effects.add(effect.strip());
+        if (effect != null && !dev.openallay.util.Java8Strings.isBlank(effect)) {
+            effects.add(dev.openallay.util.Java8Strings.strip(effect));
         }
     }
 
@@ -87,7 +89,7 @@ public final class AgentBenchmarkRecorder implements Consumer<AgentEvent> {
                 : result.errorCode() == null ? "failed" : result.errorCode();
         return new BenchmarkOutcome(
                 canonical,
-                List.copyOf(effects),
+                dev.openallay.util.Java8Collections.listCopyOf(effects),
                 new BenchmarkMetrics(
                         result.successful(),
                         modelTurns,

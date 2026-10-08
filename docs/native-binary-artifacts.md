@@ -1,5 +1,53 @@
 # Native binary release artifacts
 
+## Release 0.4.4 files
+
+OpenAllay 0.4.4 includes stock Forge **1.12.2 and 1.16.5**. Its catalog contains **35 JARs**
+for GitHub and Modrinth, covering **27 exact Minecraft versions and 50
+version/loader pairs**, from 1.12.2 through 26.3. GitHub also includes
+`SHA256SUMS`, for **36 release assets**.
+Choose the file for your exact version and loader. Fabric requires matching
+Fabric API.
+
+| Exact Minecraft versions | Loader | Java | Download files |
+| --- | --- | --- | --- |
+| `1.12.2` | Forge 14.23.5.2864 | 8 | `openallay-forge-1.12.2-0.4.4.jar` |
+| `1.16.5` | Forge 36.2.42 | 17 | `openallay-forge-1.16.5-0.4.4.jar` |
+| `1.18.2` | Forge | 17 | `openallay-forge-1.18.2-0.4.4.jar` |
+| `1.19.2` | Forge | 17 | `openallay-forge-1.19.2-0.4.4.jar` |
+| `1.20.1` | Fabric + NeoForge | 17 | `openallay-fabric-1.20.1-0.4.4.jar`<br>`openallay-neoforge-1.20.1-0.4.4.jar` |
+| `1.20.2` | Fabric + NeoForge | 17 | `openallay-fabric-1.20.2-0.4.4.jar`<br>`openallay-neoforge-1.20.2-0.4.4.jar` |
+| `1.20.3`, `1.20.4` | Fabric | 17 | `openallay-fabric-1.20.3-through-1.20.4-0.4.4.jar` |
+| `1.20.3` | NeoForge | 17 | `openallay-neoforge-1.20.3-0.4.4.jar` |
+| `1.20.4` | NeoForge | 17 | `openallay-neoforge-1.20.4-0.4.4.jar` |
+| `1.20.5`, `1.20.6` | Fabric + NeoForge | 21 | `openallay-fabric-1.20.5-through-1.20.6-0.4.4.jar`<br>`openallay-neoforge-1.20.5-through-1.20.6-0.4.4.jar` |
+| `1.21`, `1.21.1` | Fabric + NeoForge | 21 | `openallay-fabric-1.21-through-1.21.1-0.4.4.jar`<br>`openallay-neoforge-1.21-through-1.21.1-0.4.4.jar` |
+| `1.21.2`, `1.21.3` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.2-through-1.21.3-0.4.4.jar`<br>`openallay-neoforge-1.21.2-through-1.21.3-0.4.4.jar` |
+| `1.21.4` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.4-0.4.4.jar`<br>`openallay-neoforge-1.21.4-0.4.4.jar` |
+| `1.21.5` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.5-0.4.4.jar`<br>`openallay-neoforge-1.21.5-0.4.4.jar` |
+| `1.21.6` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.6-0.4.4.jar`<br>`openallay-neoforge-1.21.6-0.4.4.jar` |
+| `1.21.7`, `1.21.8` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.7-through-1.21.8-0.4.4.jar`<br>`openallay-neoforge-1.21.7-through-1.21.8-0.4.4.jar` |
+| `1.21.9`, `1.21.10` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.9-through-1.21.10-0.4.4.jar`<br>`openallay-neoforge-1.21.9-through-1.21.10-0.4.4.jar` |
+| `1.21.11` | Fabric + NeoForge | 21 | `openallay-fabric-1.21.11-0.4.4.jar`<br>`openallay-neoforge-1.21.11-0.4.4.jar` |
+| `26.1`, `26.1.1`, `26.1.2` | Fabric + NeoForge | 25 | `openallay-fabric-26.1-through-26.1.2-0.4.4.jar`<br>`openallay-neoforge-26.1-through-26.1.2-0.4.4.jar` |
+| `26.2` | Fabric + NeoForge | 25 | `openallay-fabric-26.2-0.4.4.jar`<br>`openallay-neoforge-26.2-0.4.4.jar` |
+| `26.3` | Fabric + NeoForge | 25 | `openallay-fabric-26.3-0.4.4.jar`<br>`openallay-neoforge-26.3-0.4.4.jar` |
+
+
+### Install the selected file
+
+- **Forge 1.12.2:** use Forge **14.23.5.2864**, select **Java 8**, and put
+  `openallay-forge-1.12.2-0.4.4.jar` in `mods/`. Minecraft Builder is included.
+- **Forge 1.16.5:** use Forge **36.2.42**, select **Java 17**, and put the matching
+  OpenAllay JAR in `mods/`.
+- **Other JAR downloads:** install the selected JAR in `mods/` and use the Java
+  version listed above. Some files cover multiple exact Minecraft versions.
+
+The [Forge runtime guide](forge-runtime-installation.md) lists the Forge 1.12.2
+and 1.16.5 installation steps. Minecraft **26.2 / Java 25** remains the development mainline.
+Public **Extension API 0.4.0**, bundled **Builder 0.4.0**, and **Skill API 0.2**
+are independent of the product patch version.
+
 ## Release 0.4.3 files
 
 OpenAllay 0.4.3 adds Forge 1.18.2 and 1.19.2 and includes the model setup,
@@ -72,7 +120,7 @@ on every listed version.
 
 `gradle/minecraft-artifacts.json` is the source catalog for these accepted
 families. Each family owns its loader, build target, supported targets and
-filename. `targetOrder` lists every exact supported version. The catalog rejects
+filename. `targetOrder` lists every exact accepted or candidate version. The catalog rejects
 overlapping families, gaps, unsafe names and duplicate identities. Pending
 candidates remain separate from the published families.
 
@@ -87,8 +135,8 @@ For example, resolve a published file from the repository root:
 
 ```bash
 python3 -B scripts/minecraft-artifacts.py validate
-python3 -B scripts/minecraft-artifacts.py resolve --loader fabric --target 1.20.5 --version 0.4.2
-python3 -B scripts/minecraft-artifacts.py resolve --loader neoforge --target 26.2 --version 0.4.2
+python3 -B scripts/minecraft-artifacts.py resolve --loader fabric --target 1.20.5 --version 0.4.4
+python3 -B scripts/minecraft-artifacts.py resolve --loader neoforge --target 26.2 --version 0.4.4
 ```
 
 Resolution prints the exact family and supported versions, the filename and the

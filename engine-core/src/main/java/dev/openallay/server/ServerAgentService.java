@@ -34,6 +34,7 @@ public final class ServerAgentService {
                 Set<ContextCapability> capabilities,
                 String correlationId,
                 dev.openallay.model.CancellationSignal cancellation);
+        default ContextProvider bind(UUID actor) { return this; }
     }
 
     @FunctionalInterface
@@ -130,11 +131,16 @@ public final class ServerAgentService {
     public ToolResult<Accepted> ask(UUID sender, ServerAgentRequestPayload payload) {
         java.util.Objects.requireNonNull(sender, "sender");
         java.util.Objects.requireNonNull(payload, "payload");
-        List<ModelMessage> restored = payload.history().stream()
-                .map(ServerAgentHistoryMessage::toModelMessage).toList();
+        ServerGuideEvents boundEvents = events.bind(sender);
+        ContextProvider boundContexts = contexts.bind(sender);
+        List<ModelMessage> restored = dev.openallay.util.Java8Collections.toList(payload.history().stream()
+                .map(ServerAgentHistoryMessage::toModelMessage));
         ModelMessage userInput = payload.userInput().toModelMessage();
         AgentSessionKey key = new AgentSessionKey(sender, payload.sessionId());
         Owner owner;
+        RequestRuntime[] created = new RequestRuntime[1];
+        Owner[] admitted = new Owner[1];
+        try {
         synchronized (requestAdmissionLock) {
             if (active.containsKey(payload.requestId()) || pendingRelease.containsKey(payload.requestId())) {
                 return new ToolResult.Failure<>("duplicate_request", "Request ID is active or awaiting release");
@@ -143,8 +149,8 @@ public final class ServerAgentService {
                 return new ToolResult.Failure<>("agent_busy", "An Agent request is active or awaiting release in this session");
             }
             List<dev.openallay.model.image.ImageReference> required = imageReferences(
-                    java.util.stream.Stream.of(restored, sessions.history(key), List.of(userInput))
-                            .flatMap(List::stream).toList());
+                    dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.of(restored, sessions.history(key), dev.openallay.util.Java8Collections.listOf(userInput))
+                            .flatMap(List::stream)));
             if (!required.isEmpty()
                     && imageCapability != dev.openallay.model.image.ImageInputCapability.SUPPORTED) {
                 return new ToolResult.Failure<>(
@@ -156,18 +162,37 @@ public final class ServerAgentService {
                 return new ToolResult.Failure<>("image_unavailable", "The server image store is unavailable");
             }
             ToolResult<RequestRuntime> prepared = runtimes.create(sender, payload);
-            if (prepared instanceof ToolResult.Failure<RequestRuntime> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerAgentService.RequestRuntime> value; ToolResult.Failure<RequestRuntime> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<RequestRuntime>) $oaPattern0_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
             }
             RequestRuntime runtime = ((ToolResult.Success<RequestRuntime>) prepared).value();
+            created[0] = runtime;
             UUID scope = imageScopes.computeIfAbsent(sender, ignored -> UUID.randomUUID());
             owner = new Owner(sender, payload.sessionId(), userInput, restored,
-                    new dev.openallay.model.CancellationSignal(), runtime, scope, required);
+                    new dev.openallay.model.CancellationSignal(), runtime, scope, required, boundEvents, boundContexts);
+            admitted[0] = owner;
             active.put(payload.requestId(), owner);
             sessionAdmissions.put(key, payload.requestId());
         }
+        } catch (RuntimeException | Error failure) {
+            synchronized (requestAdmissionLock) {
+                if (admitted[0] != null) active.remove(payload.requestId(), admitted[0]);
+                sessionAdmissions.remove(key, payload.requestId());
+            }
+            if (created[0] != null) {
+                try { created[0].close().run(); }
+                catch (RuntimeException | Error cleanupFailure) {
+                    if (cleanupFailure instanceof Error && !(failure instanceof Error)) { if (cleanupFailure != failure) cleanupFailure.addSuppressed(failure); throw cleanupFailure; }
+                    if (failure != cleanupFailure) failure.addSuppressed(cleanupFailure);
+                }
+            }
+            throw failure;
+        }
         RequestRuntime runtime = owner.runtime();
         CompletableFuture<?> work;
+        Error synchronousFatal = null;
         try {
             CompletableFuture<Void> preparedImages = owner.requiredImages.isEmpty()
                     ? CompletableFuture.completedFuture(null)
@@ -182,7 +207,7 @@ public final class ServerAgentService {
                     if (!owns(payload.requestId(), owner) || owner.cancellation().isCancelled()) {
                         return CompletableFuture.completedFuture(null);
                     }
-                    return contexts.capture(
+                    return owner.contexts.capture(
                             sender,
                             runtime.tools().requiredContext(),
                             sender + "/" + payload.requestId(),
@@ -219,7 +244,10 @@ public final class ServerAgentService {
                 })
                 ;
         } catch (RuntimeException failure) {
-            work = CompletableFuture.failedFuture(failure);
+            work = dev.openallay.util.Java8Futures.failedFuture(failure);
+        } catch (Error failure) {
+            synchronousFatal = failure;
+            work = dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         work.whenComplete((result, failure) -> {
             try {
@@ -231,6 +259,7 @@ public final class ServerAgentService {
                 }
             }
         });
+        if (synchronousFatal != null) throw synchronousFatal;
         return new ToolResult.Success<>(new Accepted(payload.requestId(), payload.sessionId()));
     }
 
@@ -270,7 +299,7 @@ public final class ServerAgentService {
         try {
             message = owner.runtime().prepareSteer().apply(payload);
             ServerAgentSteerPayload.validateMessage(ServerAgentHistoryMessage.from(message));
-            List<dev.openallay.model.image.ImageReference> required = imageReferences(List.of(message));
+            List<dev.openallay.model.image.ImageReference> required = imageReferences(dev.openallay.util.Java8Collections.listOf(message));
             if (!required.isEmpty()) {
                 if (images == null) throw new IllegalArgumentException("Server image store is unavailable");
                 java.util.Set<dev.openallay.model.image.ImageReference> retained;
@@ -282,7 +311,7 @@ public final class ServerAgentService {
                 // Keep store work outside the owner lock. Stop revokes the token immediately;
                 // the tracked image operation keeps all pins alive only until actual cleanup.
                 images.retain(owner.actorId(), requestImageOwner(owner.imageScope, payload.requestId()),
-                        List.copyOf(retained));
+                        dev.openallay.util.Java8Collections.listCopyOf(retained));
                 synchronized (owner) {
                     if (!currentImport(payload, owner, operation)) return false;
                     owner.allowedImages.addAll(required);
@@ -292,7 +321,7 @@ public final class ServerAgentService {
             synchronized (owner) {
                 if (!currentImport(payload, owner, operation)) return false;
                 owner.imports.remove(payload.messageId());
-                rejectSteer(owner.actorId(), payload);
+                rejectSteer(owner.events, owner.actorId(), payload);
                 return false;
             }
         }
@@ -306,9 +335,11 @@ public final class ServerAgentService {
             } else {
                 ToolResult<Boolean> result = sessions.steer(
                         owner.key(), payload.requestId(), payload.messageId(), message);
-                accepted = result instanceof ToolResult.Success<Boolean> success && success.value();
+                final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+accepted = (($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<Boolean>) $oaPattern1_holder.value) != null)) && $oaPattern1_holder.bound.value();
             }
-            if (!accepted) rejectSteer(owner.actorId(), payload);
+            if (!accepted) rejectSteer(owner.events, owner.actorId(), payload);
             return accepted;
         }
     }
@@ -319,8 +350,11 @@ public final class ServerAgentService {
     }
 
     private void rejectSteer(UUID sender, ServerAgentSteerPayload payload) {
+        rejectSteer(events.bind(sender), sender, payload);
+    }
+    private void rejectSteer(ServerGuideEvents bound, UUID sender, ServerAgentSteerPayload payload) {
         if (payload.operation() == ServerAgentSteerPayload.Operation.PUT) {
-            events.send(sender, eventCodec.encode(
+            bound.send(sender, eventCodec.encode(
                     payload.requestId(), new AgentEvent.SteerRejected(payload.messageId())));
         }
     }
@@ -344,13 +378,13 @@ public final class ServerAgentService {
         Owner owner = active.get(requestId);
         if (owner == null || !owner.actorId().equals(actor) || !owner.sessionId().equals(sessionId)
                 || !ownsRequest(actor, requestId) || !invocationCurrent.getAsBoolean()) {
-            return CompletableFuture.failedFuture(new IllegalStateException("Client Tool request scope closed"));
+            return dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Client Tool request scope closed"));
         }
         List<dev.openallay.model.image.ImageReference> required;
         try {
-            required = dev.openallay.model.image.ModelImages.unique(List.copyOf(references));
-            List<dev.openallay.model.image.ImageReference> supplied = attachments.stream()
-                    .map(dev.openallay.bridge.protocol.ServerAgentImageAttachment::reference).toList();
+            required = dev.openallay.model.image.ModelImages.unique(dev.openallay.util.Java8Collections.listCopyOf(references));
+            List<dev.openallay.model.image.ImageReference> supplied = dev.openallay.util.Java8Collections.toList(attachments.stream()
+                    .map(dev.openallay.bridge.protocol.ServerAgentImageAttachment::reference));
             if (dev.openallay.model.image.ModelImages.unique(supplied).size() != supplied.size()
                     || !new java.util.HashSet<>(required).equals(new java.util.HashSet<>(supplied))) {
                 throw new IllegalArgumentException("Client Tool image attachments do not match typed references");
@@ -360,15 +394,15 @@ public final class ServerAgentService {
                 throw new IllegalArgumentException("Server model image input is unavailable");
             }
         } catch (RuntimeException invalid) {
-            return CompletableFuture.failedFuture(invalid);
+            return dev.openallay.util.Java8Futures.failedFuture(invalid);
         }
-        List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> captured = List.copyOf(attachments);
+        List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> captured = dev.openallay.util.Java8Collections.listCopyOf(attachments);
         return imageOperation(requestId, owner, () -> {
             try {
                 requireClientToolImport(requestId, owner, invocationCurrent);
-                for (var attachment : captured) {
+                for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : captured) {
                     requireClientToolImport(requestId, owner, invocationCurrent);
-                    var imported = images.importImage(actor,
+                    dev.openallay.model.image.ImageReference imported = images.importImage(actor,
                             requestImageOwner(owner.imageScope, requestId), attachment.bytes());
                     if (!imported.equals(attachment.reference())) {
                         throw new java.io.IOException("Client Tool image metadata differs from actual image");
@@ -380,7 +414,7 @@ public final class ServerAgentService {
                     retained = new java.util.LinkedHashSet<>(owner.allowedImages);
                     retained.addAll(required);
                 }
-                images.retain(actor, requestImageOwner(owner.imageScope, requestId), List.copyOf(retained));
+                images.retain(actor, requestImageOwner(owner.imageScope, requestId), dev.openallay.util.Java8Collections.listCopyOf(retained));
                 synchronized (owner) {
                     requireClientToolImport(requestId, owner, invocationCurrent);
                     owner.allowedImages.addAll(required);
@@ -407,8 +441,7 @@ public final class ServerAgentService {
             owner.inbox.clear();
             owner.imports.clear();
             if (!owner.engineStarted) {
-                List<ModelMessage> original = List.of(owner.userInput(),
-                        new ModelMessage(ModelRole.ASSISTANT, List.of(new ModelContent.Text(
+                List<ModelMessage> original = dev.openallay.util.Java8Collections.listOf(owner.userInput(), new ModelMessage(ModelRole.ASSISTANT, dev.openallay.util.Java8Collections.listOf(new ModelContent.Text(
                                 "[OpenAllay request ended: agent_cancelled] Agent request was cancelled"))));
                 List<ModelMessage> projected = new java.util.ArrayList<>(owner.history());
                 projected.addAll(original);
@@ -437,15 +470,22 @@ public final class ServerAgentService {
 
     private Disconnect disconnectWork(UUID sender) {
         UUID scope;
-        synchronized (requestAdmissionLock) { scope = imageScopes.remove(sender); }
+        Map<UUID, Owner> retained;
+        synchronized (requestAdmissionLock) {
+            scope = imageScopes.remove(sender);
+            retained = new java.util.HashMap<>(pendingRelease);
+            retained.putAll(active);
+        }
         List<AgentSessionKey> detached = sessions.sessions(sender);
         java.util.List<CompletableFuture<Void>> cleanup = new java.util.ArrayList<>();
         int count = 0;
-        for (var entry : active.entrySet()) {
+        Set<Owner> seen = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for (java.util.Map.Entry<java.util.UUID, dev.openallay.server.ServerAgentService.Owner> entry : retained.entrySet()) {
             Owner owner = entry.getValue();
-            if (!owner.actorId().equals(sender) || !owner.imageScope.equals(scope)) continue;
+            if (!seen.add(owner) || !owner.actorId().equals(sender)
+                    || (scope != null && !owner.imageScope.equals(scope))) continue;
             synchronized (owner) {
-                if (!owns(entry.getKey(), owner)) continue;
+                if (active.get(entry.getKey()) != owner && pendingRelease.get(entry.getKey()) != owner) continue;
                 count++;
                 owner.disconnected = true;
                 owner.inbox.clear();
@@ -457,7 +497,7 @@ public final class ServerAgentService {
             }
         }
         sessions.clearActor(sender);
-        CompletableFuture<Void> finished = CompletableFuture.allOf(cleanup.toArray(CompletableFuture[]::new));
+        CompletableFuture<Void> finished = CompletableFuture.allOf(cleanup.toArray(new CompletableFuture<?>[0]));
         if (images != null && scope != null) {
             finished = finished.thenRunAsync(() -> {
                 for (AgentSessionKey key : detached) {
@@ -471,7 +511,36 @@ public final class ServerAgentService {
         return new Disconnect(count, finished);
     }
 
-    private record Disconnect(int count, CompletableFuture<Void> cleanup) {}
+    @dev.openallay.value.ValueType(Disconnect.ValueSchemaProvider.class)
+private static final class Disconnect {
+    private final int count;
+    private final CompletableFuture<Void> cleanup;
+    private Disconnect(int count, CompletableFuture<Void> cleanup) {
+        this.count = count;
+        this.cleanup = cleanup;
+    }
+    public int count() { return count; }
+    public CompletableFuture<Void> cleanup() { return cleanup; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Disconnect)) return false;
+        Disconnect that = (Disconnect) other;
+        return count == that.count && java.util.Objects.equals(cleanup, that.cleanup);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(count);
+        hash = 31 * hash + java.util.Objects.hashCode(cleanup);
+        return hash;
+    }
+    @Override public String toString() { return "Disconnect[count=" + count + ", cleanup=" + cleanup + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Disconnect> schema() {
+            return new dev.openallay.value.ValueSchema<>(Disconnect.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Disconnect>>asList(new dev.openallay.value.ValueSchema.Component<>(Disconnect.class, "count", Disconnect::count), new dev.openallay.value.ValueSchema.Component<>(Disconnect.class, "cleanup", Disconnect::cleanup)), arguments -> new Disconnect((Integer) arguments[0], (CompletableFuture) arguments[1]));
+        }
+    }
+}
 
     /** Correlation checks never grant another actor authority over this request. */
     public boolean hasRequest(UUID actor, UUID requestId) {
@@ -489,8 +558,10 @@ public final class ServerAgentService {
 
     private void publish(UUID requestId, Owner owner, AgentEvent event) {
         synchronized (owner) {
-            if (!owner.reserved && event instanceof AgentEvent.StateChanged state
-                    && state.state() == dev.openallay.agent.AgentState.PREPARING) {
+            final class $oaPattern2_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.StateChanged bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if (!owner.reserved && (($oaPattern2_holder.value = event) instanceof dev.openallay.agent.AgentEvent.StateChanged && (($oaPattern2_holder.bound = (AgentEvent.StateChanged) $oaPattern2_holder.value) != null))
+                    && $oaPattern2_holder.bound.state() == dev.openallay.agent.AgentState.PREPARING) {
                 owner.reserved = true;
                 if (!owns(requestId, owner) || owner.cancellation().isCancelled() || owner.disconnected) {
                     owner.inbox.clear();
@@ -499,11 +570,13 @@ public final class ServerAgentService {
                 }
                 // Reserve already exists. Flush synchronously, before any model dispatch or
                 // off-thread S2b event/image retention work can consume this first boundary.
-                for (var pending : owner.inbox.entrySet()) {
+                for (java.util.Map.Entry<java.util.UUID, dev.openallay.model.ModelMessage> pending : owner.inbox.entrySet()) {
                     ToolResult<Boolean> result = sessions.steer(
                             owner.key(), requestId, pending.getKey(), pending.getValue());
-                    if (!(result instanceof ToolResult.Success<Boolean> success && success.value())) {
-                        events.send(owner.actorId(), eventCodec.encode(requestId,
+                    final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if (!((($oaPattern3_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern3_holder.bound = (ToolResult.Success<Boolean>) $oaPattern3_holder.value) != null)) && $oaPattern3_holder.bound.value())) {
+                        owner.events.send(owner.actorId(), eventCodec.encode(requestId,
                                 new AgentEvent.SteerRejected(pending.getKey())));
                     }
                 }
@@ -527,7 +600,9 @@ public final class ServerAgentService {
             boolean numeric = event instanceof AgentEvent.ModelUsageStarted
                     || event instanceof AgentEvent.ModelUsageObserved;
             if (owner.terminal && !numeric) return;
-            if (event instanceof AgentEvent.ModelUsageStarted started) owner.pendingCalls.add(started.callId());
+            final class $oaPattern4_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelUsageStarted bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelUsageStarted && (($oaPattern4_holder.bound = (AgentEvent.ModelUsageStarted) $oaPattern4_holder.value) != null))) owner.pendingCalls.add($oaPattern4_holder.bound.callId());
             if (event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed) {
                 owner.terminal = true;
                 owner.inbox.clear();
@@ -543,9 +618,11 @@ public final class ServerAgentService {
                         throw new IllegalArgumentException("Cannot retain server context images", invalid);
                     }
                 }
-                if (!owner.disconnected) events.send(owner.actorId(), eventCodec.encode(requestId, event));
+                if (!owner.disconnected) owner.events.send(owner.actorId(), eventCodec.encode(requestId, event));
             } finally {
-                if (event instanceof AgentEvent.ModelUsageObserved observed) owner.pendingCalls.remove(observed.callId());
+                final class $oaPattern5_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelUsageObserved bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelUsageObserved && (($oaPattern5_holder.bound = (AgentEvent.ModelUsageObserved) $oaPattern5_holder.value) != null))) owner.pendingCalls.remove($oaPattern5_holder.bound.callId());
                 releaseIfFinished(requestId, owner);
             }
         }
@@ -559,36 +636,86 @@ public final class ServerAgentService {
         owner.imports.clear();
         synchronized (requestAdmissionLock) { pendingRelease.put(requestId, owner); }
         Runnable cleanup = () -> {
+            RuntimeException runtimeFailure = null;
+            Error fatalFailure = null;
+            try { owner.runtime().close().run(); }
+            catch (RuntimeException failure) { runtimeFailure = failure; }
+            catch (Error failure) { fatalFailure = failure; }
             try {
-                owner.runtime().close().run();
-            } finally {
-                try {
-                    if (images != null) {
-                        images.release(owner.actorId(), requestImageOwner(owner.imageScope, requestId));
-                        images.collect(owner.actorId());
-                    }
-                } catch (java.io.IOException ignored) {
-                    // Retain bytes rather than damage live or durable context references.
-                } finally {
-                    synchronized (owner) {
-                        owner.released = true;
-                        synchronized (requestAdmissionLock) {
-                            active.remove(requestId, owner);
-                            sessionAdmissions.remove(new AgentSessionKey(owner.actorId(), owner.sessionId()), requestId);
-                        }
-                        try {
-                            if (!owner.disconnected) events.send(owner.actorId(), eventCodec.encode(requestId,
-                                    new AgentEvent.RequestReleased()));
-                        } finally {
-                            synchronized (requestAdmissionLock) { pendingRelease.remove(requestId, owner); }
-                            owner.releaseCompletion.complete(null);
-                        }
-                    }
+                if (images != null) {
+                    images.release(owner.actorId(), requestImageOwner(owner.imageScope, requestId));
+                    images.collect(owner.actorId());
                 }
+            } catch (java.io.IOException failure) {
+                // Preserve bytes on IO cleanup failure; never issue a successful custody receipt.
+                dev.openallay.OpenAllayConstants.LOGGER.warn("Server request image cleanup failed", failure);
+            } catch (RuntimeException | Error failure) {
+                if (fatalFailure != null) { if (fatalFailure != failure) fatalFailure.addSuppressed(failure); }
+                else {
+final class $oaPattern6_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = failure) instanceof java.lang.Error && (($oaPattern6_holder.bound = (Error) $oaPattern6_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern6_holder.bound != runtimeFailure) $oaPattern6_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern6_holder.bound;
+                } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
+                else runtimeFailure = (RuntimeException) failure;
+}
             }
+            synchronized (requestAdmissionLock) { active.remove(requestId, owner); }
+            Runnable retired = () -> retireRelease(requestId, owner);
+            try {
+                if (owner.disconnected) retired.run();
+                else owner.events.send(owner.actorId(), eventCodec.encode(requestId,
+                        new AgentEvent.RequestReleased()), retired);
+            } catch (RuntimeException | Error failure) {
+                Throwable eventFailure = failure;
+                try { retired.run(); } // Setup/encoding failure before dispatch must release custody.
+                catch (RuntimeException | Error retirementFailure) {
+                    if (retirementFailure instanceof Error && !(eventFailure instanceof Error)) {
+                        if (retirementFailure != eventFailure) retirementFailure.addSuppressed(eventFailure); eventFailure = retirementFailure;
+                    } else if (eventFailure != retirementFailure) eventFailure.addSuppressed(retirementFailure);
+                }
+                if (fatalFailure != null) { if (fatalFailure != eventFailure) fatalFailure.addSuppressed(eventFailure); }
+                else {
+final class $oaPattern7_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = eventFailure) instanceof java.lang.Error && (($oaPattern7_holder.bound = (Error) $oaPattern7_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern7_holder.bound != runtimeFailure) $oaPattern7_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern7_holder.bound;
+                } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
+                else runtimeFailure = (RuntimeException) failure;
+}
+            }
+            if (fatalFailure != null) throw fatalFailure;
+            if (runtimeFailure != null) throw runtimeFailure;
         };
         if (images == null) cleanup.run();
-        else IMAGE_WORKER.execute(cleanup);
+        else {
+            try { IMAGE_WORKER.execute(cleanup); }
+            catch (RuntimeException | Error failure) {
+                // Rejected cleanup has not run. Execute it once now, without waiting for an owner.
+                try { cleanup.run(); }
+                catch (RuntimeException | Error secondary) {
+                    if (secondary instanceof Error && !(failure instanceof Error)) { if (secondary != failure) secondary.addSuppressed(failure); throw secondary; }
+                    if (failure != secondary) failure.addSuppressed(secondary);
+                }
+                throw failure;
+            }
+        }
+    }
+
+    private void retireRelease(UUID requestId, Owner owner) {
+        synchronized (owner) {
+            if (owner.released) return;
+            synchronized (requestAdmissionLock) {
+                active.remove(requestId, owner);
+                pendingRelease.remove(requestId, owner);
+                sessionAdmissions.remove(new AgentSessionKey(owner.actorId(), owner.sessionId()), requestId);
+            }
+            owner.released = true;
+        }
+        // Mapping state is terminal before dependents or successor admission can run.
+        owner.releaseCompletion.complete(null);
     }
 
     /** Every byte read/import/retention and its event handoff finish before the release fence. */
@@ -598,38 +725,59 @@ public final class ServerAgentService {
             owner.imageOperations++;
         }
         CompletableFuture<Void> completed = new CompletableFuture<>();
-        try {
-            IMAGE_WORKER.execute(() -> {
-                try { operation.run(); completed.complete(null); }
-                catch (RuntimeException failure) { completed.completeExceptionally(failure); }
-                finally {
-                    synchronized (owner) {
-                        owner.imageOperations--;
-                        releaseIfFinished(requestId, owner);
-                    }
-                }
-            });
-        } catch (RuntimeException failure) {
-            synchronized (owner) {
-                owner.imageOperations--;
-                completed.completeExceptionally(failure);
-                releaseIfFinished(requestId, owner);
+        java.util.concurrent.atomic.AtomicBoolean claimed = new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable work = () -> {
+            if (!claimed.compareAndSet(false, true)) return;
+            RuntimeException runtimeFailure = null;
+            Error fatalFailure = null;
+            try { operation.run(); completed.complete(null); }
+            catch (RuntimeException failure) { completed.completeExceptionally(failure); runtimeFailure = failure; }
+            catch (Error failure) { completed.completeExceptionally(failure); fatalFailure = failure; }
+            try {
+                synchronized (owner) { owner.imageOperations--; releaseIfFinished(requestId, owner); }
+            } catch (RuntimeException | Error cleanupFailure) {
+                if (fatalFailure != null) { if (fatalFailure != cleanupFailure) fatalFailure.addSuppressed(cleanupFailure); }
+                else {
+final class $oaPattern8_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = cleanupFailure) instanceof java.lang.Error && (($oaPattern8_holder.bound = (Error) $oaPattern8_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern8_holder.bound != runtimeFailure) $oaPattern8_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern8_holder.bound;
+                } else if (runtimeFailure != null) { if (runtimeFailure != cleanupFailure) runtimeFailure.addSuppressed(cleanupFailure); }
+                else runtimeFailure = (RuntimeException) cleanupFailure;
+}
             }
+            if (fatalFailure != null) throw fatalFailure;
+            if (runtimeFailure != null && !completed.isCompletedExceptionally()) throw runtimeFailure;
+        };
+        try { IMAGE_WORKER.execute(work); }
+        catch (RuntimeException | Error failure) {
+            if (claimed.compareAndSet(false, true)) {
+                completed.completeExceptionally(failure);
+                try { synchronized (owner) { owner.imageOperations--; releaseIfFinished(requestId, owner); } }
+                catch (RuntimeException | Error secondary) {
+                    if (secondary instanceof Error && !(failure instanceof Error)) { if (secondary != failure) secondary.addSuppressed(failure); throw secondary; }
+                    if (failure != secondary) failure.addSuppressed(secondary);
+                }
+            }
+            final class $oaPattern9_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = failure) instanceof java.lang.Error && (($oaPattern9_holder.bound = (Error) $oaPattern9_holder.value) != null))) throw $oaPattern9_holder.bound;
         }
         return completed;
     }
 
     private void prepareImages(ServerAgentRequestPayload payload, Owner owner) {
         try {
-            for (var attachment : payload.imageAttachments()) {
+            for (dev.openallay.bridge.protocol.ServerAgentImageAttachment attachment : payload.imageAttachments()) {
                 if (!currentImagePreparation(payload.requestId(), owner)) return;
-                var imported = images.importImage(owner.actorId(),
+                dev.openallay.model.image.ImageReference imported = images.importImage(owner.actorId(),
                         requestImageOwner(owner.imageScope, payload.requestId()), attachment.bytes());
                 if (!imported.equals(attachment.reference())) {
                     throw new java.io.IOException("Uploaded metadata does not match the actual image");
                 }
             }
-            for (var reference : owner.requiredImages) {
+            for (dev.openallay.model.image.ImageReference reference : owner.requiredImages) {
                 if (!currentImagePreparation(payload.requestId(), owner)) return;
                 images.read(owner.actorId(), reference);
             }
@@ -696,22 +844,63 @@ public final class ServerAgentService {
         return owner.equals(active.get(requestId));
     }
 
-    public record Accepted(UUID requestId, String sessionId) {}
+    @dev.openallay.value.ValueType(Accepted.ValueSchemaProvider.class)
+public static final class Accepted {
+    private final UUID requestId;
+    private final String sessionId;
+    public Accepted(UUID requestId, String sessionId) {
+        this.requestId = requestId;
+        this.sessionId = sessionId;
+    }
+    public UUID requestId() { return requestId; }
+    public String sessionId() { return sessionId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Accepted)) return false;
+        Accepted that = (Accepted) other;
+        return java.util.Objects.equals(requestId, that.requestId) && java.util.Objects.equals(sessionId, that.sessionId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        return hash;
+    }
+    @Override public String toString() { return "Accepted[requestId=" + requestId + ", sessionId=" + sessionId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Accepted> schema() {
+            return new dev.openallay.value.ValueSchema<>(Accepted.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Accepted>>asList(new dev.openallay.value.ValueSchema.Component<>(Accepted.class, "requestId", Accepted::requestId), new dev.openallay.value.ValueSchema.Component<>(Accepted.class, "sessionId", Accepted::sessionId)), arguments -> new Accepted((UUID) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
-    public record RequestRuntime(
-            GameGuideAgent agent,
-            AgentToolExecutor tools,
-            String systemPrompt,
-            Function<ServerAgentSteerPayload, ModelMessage> prepareSteer,
-            Runnable close) {
-        public RequestRuntime {
+    @dev.openallay.value.ValueType(RequestRuntime.ValueSchemaProvider.class)
+public static final class RequestRuntime {
+    private final GameGuideAgent agent;
+    private final AgentToolExecutor tools;
+    private final String systemPrompt;
+    private final Function<ServerAgentSteerPayload, ModelMessage> prepareSteer;
+    private final Runnable close;
+    public RequestRuntime(GameGuideAgent agent, AgentToolExecutor tools, String systemPrompt, Function<ServerAgentSteerPayload, ModelMessage> prepareSteer, Runnable close) {
+
             java.util.Objects.requireNonNull(agent, "agent");
             java.util.Objects.requireNonNull(tools, "tools");
             java.util.Objects.requireNonNull(prepareSteer, "prepareSteer");
             java.util.Objects.requireNonNull(close, "close");
-        }
 
-        public RequestRuntime(
+        this.agent = agent;
+        this.tools = tools;
+        this.systemPrompt = systemPrompt;
+        this.prepareSteer = prepareSteer;
+        this.close = close;
+    }
+    public GameGuideAgent agent() { return agent; }
+    public AgentToolExecutor tools() { return tools; }
+    public String systemPrompt() { return systemPrompt; }
+    public Function<ServerAgentSteerPayload, ModelMessage> prepareSteer() { return prepareSteer; }
+    public Runnable close() { return close; }
+public RequestRuntime(
                 GameGuideAgent agent, AgentToolExecutor tools, String systemPrompt, Runnable close) {
             this(agent, tools, systemPrompt, payload -> {
                 ModelMessage message = payload.message().toModelMessage();
@@ -722,15 +911,38 @@ public final class ServerAgentService {
                 return message;
             }, close);
         }
-
-        public RequestRuntime(
+public RequestRuntime(
                 GameGuideAgent agent, AgentToolExecutor tools, Runnable close) {
             this(agent, tools, null, close);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RequestRuntime)) return false;
+        RequestRuntime that = (RequestRuntime) other;
+        return java.util.Objects.equals(agent, that.agent) && java.util.Objects.equals(tools, that.tools) && java.util.Objects.equals(systemPrompt, that.systemPrompt) && java.util.Objects.equals(prepareSteer, that.prepareSteer) && java.util.Objects.equals(close, that.close);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(agent);
+        hash = 31 * hash + java.util.Objects.hashCode(tools);
+        hash = 31 * hash + java.util.Objects.hashCode(systemPrompt);
+        hash = 31 * hash + java.util.Objects.hashCode(prepareSteer);
+        hash = 31 * hash + java.util.Objects.hashCode(close);
+        return hash;
+    }
+    @Override public String toString() { return "RequestRuntime[agent=" + agent + ", tools=" + tools + ", systemPrompt=" + systemPrompt + ", prepareSteer=" + prepareSteer + ", close=" + close + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RequestRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(RequestRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RequestRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "agent", RequestRuntime::agent), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "tools", RequestRuntime::tools), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "systemPrompt", RequestRuntime::systemPrompt), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "prepareSteer", RequestRuntime::prepareSteer), new dev.openallay.value.ValueSchema.Component<>(RequestRuntime.class, "close", RequestRuntime::close)), arguments -> new RequestRuntime((GameGuideAgent) arguments[0], (AgentToolExecutor) arguments[1], (String) arguments[2], (Function) arguments[3], (Runnable) arguments[4]));
+        }
+    }
+}
 
     private static final class Owner {
         private final UUID actorId;
+        private final ServerGuideEvents events;
+        private final ContextProvider contexts;
         private final String sessionId;
         private final ModelMessage userInput;
         private final List<ModelMessage> history;
@@ -754,12 +966,15 @@ public final class ServerAgentService {
 
         private Owner(UUID actorId, String sessionId, ModelMessage userInput, List<ModelMessage> history,
                 dev.openallay.model.CancellationSignal cancellation, RequestRuntime runtime,
-                UUID imageScope, List<dev.openallay.model.image.ImageReference> requiredImages) {
+                UUID imageScope, List<dev.openallay.model.image.ImageReference> requiredImages,
+                ServerGuideEvents events, ContextProvider contexts) {
             this.actorId = actorId;
+            this.events = events;
+            this.contexts = contexts;
             this.sessionId = sessionId;
             this.userInput = userInput;
             this.imageScope = imageScope;
-            this.requiredImages = List.copyOf(requiredImages);
+            this.requiredImages = dev.openallay.util.Java8Collections.listCopyOf(requiredImages);
             this.allowedImages.addAll(requiredImages);
             this.history = dev.openallay.agent.context.ModelContextCodec.safe(history);
             this.cancellation = cancellation;

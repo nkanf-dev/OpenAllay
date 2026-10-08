@@ -1,0 +1,2 @@
+rootProject.name = 'openallay-explicit-value-java8-proof'
+dependencyResolutionManagement { repositories { mavenCentral() } }

@@ -47,7 +47,7 @@ public final class ServerAgentRequestChunker {
                     hash,
                     Base64.getEncoder().encodeToString(part)));
         }
-        return List.copyOf(chunks);
+        return dev.openallay.util.Java8Collections.listCopyOf(chunks);
     }
 
     private static long utf8Bytes(String content, int maximum) {
@@ -155,7 +155,8 @@ public final class ServerAgentRequestChunker {
             }
             ByteArrayOutputStream output = new ByteArrayOutputStream(assembly.decodedBytes);
             for (int index = 0; index < assembly.total; index++) {
-                output.writeBytes(assembly.parts.get(index));
+                byte[] part = assembly.parts.get(index);
+                output.write(part, 0, part.length);
             }
             byte[] complete = output.toByteArray();
             remove(key);
@@ -171,9 +172,8 @@ public final class ServerAgentRequestChunker {
         }
 
         public synchronized void clearActor(UUID actorId) {
-            List<Key> owned = assemblies.keySet().stream()
-                    .filter(key -> key.actorId().equals(actorId))
-                    .toList();
+            List<Key> owned = dev.openallay.util.Java8Collections.toList(assemblies.keySet().stream()
+                    .filter(key -> key.actorId().equals(actorId)));
             owned.forEach(this::remove);
         }
 
@@ -191,12 +191,40 @@ public final class ServerAgentRequestChunker {
             return removed != null;
         }
 
-        private record Key(UUID actorId, UUID requestId) {
-            private Key {
+        @dev.openallay.value.ValueType(Key.ValueSchemaProvider.class)
+private static final class Key {
+    private final UUID actorId;
+    private final UUID requestId;
+    private Key(UUID actorId, UUID requestId) {
+
                 java.util.Objects.requireNonNull(actorId, "actorId");
                 java.util.Objects.requireNonNull(requestId, "requestId");
-            }
+
+        this.actorId = actorId;
+        this.requestId = requestId;
+    }
+    public UUID actorId() { return actorId; }
+    public UUID requestId() { return requestId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Key)) return false;
+        Key that = (Key) other;
+        return java.util.Objects.equals(actorId, that.actorId) && java.util.Objects.equals(requestId, that.requestId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actorId);
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        return hash;
+    }
+    @Override public String toString() { return "Key[actorId=" + actorId + ", requestId=" + requestId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Key> schema() {
+            return new dev.openallay.value.ValueSchema<>(Key.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Key>>asList(new dev.openallay.value.ValueSchema.Component<>(Key.class, "actorId", Key::actorId), new dev.openallay.value.ValueSchema.Component<>(Key.class, "requestId", Key::requestId)), arguments -> new Key((UUID) arguments[0], (UUID) arguments[1]));
         }
+    }
+}
 
         private static final class Assembly {
             private final int total;

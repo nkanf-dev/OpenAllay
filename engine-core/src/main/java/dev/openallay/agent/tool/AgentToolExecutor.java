@@ -23,7 +23,7 @@ public interface AgentToolExecutor {
      * existing exact-name executors source-compatible.
      */
     default Optional<String> canonicalToolId(String modelToolName) {
-        if (modelToolName == null || modelToolName.isBlank()) {
+        if (modelToolName == null || dev.openallay.util.Java8Strings.isBlank(modelToolName)) {
             return Optional.empty();
         }
         return definitions().stream()

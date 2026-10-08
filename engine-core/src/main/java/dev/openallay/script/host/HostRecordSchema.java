@@ -1,15 +1,15 @@
 package dev.openallay.script.host;
 
 import dev.latvian.mods.rhino.type.TypeInfo;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.RecordComponent;
+import dev.openallay.value.ValueSchema;
+import dev.openallay.value.ValueSchemas;
+import dev.openallay.value.RecordMetadata;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Cached, component-only view of a Java record. No methods are exposed to scripts. */
+/** Cached, component-only view of a detached value. No Java methods are exposed to scripts. */
 final class HostRecordSchema {
     private static final ConcurrentHashMap<Class<?>, HostRecordSchema> CACHE =
             new ConcurrentHashMap<>();
@@ -18,26 +18,42 @@ final class HostRecordSchema {
     private final Map<String, Component> components;
 
     private HostRecordSchema(Class<?> type) {
-        if (!type.isRecord()) {
-            throw new IllegalArgumentException("Host record schema requires a record type");
-        }
         LinkedHashMap<String, Component> resolved = new LinkedHashMap<>();
-        try {
-            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(type, MethodHandles.lookup());
-            for (RecordComponent component : type.getRecordComponents()) {
-                resolved.put(
-                        component.getName(),
-                        new Component(
-                                lookup.unreflect(component.getAccessor()),
-                                TypeInfo.of(component.getGenericType())));
+        if (ValueSchemas.supports(type)) {
+            addExplicitComponents(type, resolved);
+        } else {
+            if (!RecordMetadata.isRecord(type)) {
+                throw HostAccessException.unsupported(type);
             }
-        } catch (IllegalAccessException failure) {
-            throw new HostAccessException(
-                    "javascript_host_type_unsupported",
-                    "Detached record components are not accessible: " + type.getName());
+            try {
+                for (RecordMetadata.Component component : RecordMetadata.components(type)) {
+                    component.accessorMetadata().setAccessible(true);
+                    resolved.put(component.name(), new Component(
+                            value -> dev.openallay.script.schema.RhinoTypeSchema.readExternalRecordComponent(value, component),
+                            TypeInfo.of(component.genericType())));
+                }
+            } catch (RuntimeException failure) {
+                throw new HostAccessException(
+                        "javascript_host_type_unsupported",
+                        "Detached record components are not accessible: " + type.getName());
+            }
         }
-        names = List.copyOf(resolved.keySet());
-        components = Map.copyOf(resolved);
+        names = dev.openallay.util.Java8Collections.listCopyOf(resolved.keySet());
+        components = dev.openallay.util.Java8Collections.mapCopyOf(resolved);
+    }
+
+    private static <T> void addExplicitComponents(
+            Class<T> type, Map<String, Component> resolved) {
+        try {
+            ValueSchema<T> schema = ValueSchemas.of(type);
+            for (ValueSchema.Component<T> component : schema.components()) {
+                resolved.put(component.name(), new Component(
+                        value -> component.read(type.cast(value)),
+                        TypeInfo.of(component.genericType())));
+            }
+        } catch (RuntimeException failure) {
+            throw HostAccessException.unsupported(type);
+        }
     }
 
     static HostRecordSchema of(Class<?> type) {
@@ -54,7 +70,7 @@ final class HostRecordSchema {
             return Missing.INSTANCE;
         }
         try {
-            return component.accessor().invoke(record);
+            return component.accessor().read(record);
         } catch (Throwable failure) {
             throw new HostAccessException(
                     "javascript_host_access_failed",
@@ -67,7 +83,41 @@ final class HostRecordSchema {
         return component == null ? TypeInfo.NONE : component.type();
     }
 
-    private record Component(MethodHandle accessor, TypeInfo type) {}
+    @FunctionalInterface
+    private interface Accessor {
+        Object read(Object value) throws Throwable;
+    }
+
+    @dev.openallay.value.ValueType(Component.ValueSchemaProvider.class)
+private static final class Component {
+    private final Accessor accessor;
+    private final TypeInfo type;
+    private Component(Accessor accessor, TypeInfo type) {
+        this.accessor = accessor;
+        this.type = type;
+    }
+    public Accessor accessor() { return accessor; }
+    public TypeInfo type() { return type; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Component)) return false;
+        Component that = (Component) other;
+        return java.util.Objects.equals(accessor, that.accessor) && java.util.Objects.equals(type, that.type);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(accessor);
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        return hash;
+    }
+    @Override public String toString() { return "Component[accessor=" + accessor + ", type=" + type + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Component> schema() {
+            return new dev.openallay.value.ValueSchema<>(Component.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Component>>asList(new dev.openallay.value.ValueSchema.Component<>(Component.class, "accessor", Component::accessor), new dev.openallay.value.ValueSchema.Component<>(Component.class, "type", Component::type)), arguments -> new Component((Accessor) arguments[0], (TypeInfo) arguments[1]));
+        }
+    }
+}
 
     enum Missing {
         INSTANCE

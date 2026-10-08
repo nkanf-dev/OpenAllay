@@ -37,12 +37,12 @@ public final class ClientCapabilityResolver {
             // Retain explicitly allowed command guidance even when the current toggle is off.
             // A request may already have frozen the enabled toggle before context loading finishes.
             SkillCatalogSnapshot skillSnapshot = skills.snapshotWithRuntimeEnabled(
-                            policy.disabledSkills(), Set.of(SkillCatalogSnapshot.GAME_COMMANDS))
+                            policy.disabledSkills(), dev.openallay.util.Java8Collections.setOf(SkillCatalogSnapshot.GAME_COMMANDS))
                     .forRequest(false, currentSkills.find(SkillCatalogSnapshot.GAME_COMMANDS).isPresent());
             SkillCatalogSnapshot eligibleSkills = skillSnapshot.forRequest(true, true);
             List<RegisteredTool> candidate = new ArrayList<>();
             RegisteredTool loadSkillRegistration = null;
-            for (RegisteredTool registration : List.copyOf(registrations)) {
+            for (RegisteredTool registration : dev.openallay.util.Java8Collections.listCopyOf(registrations)) {
                 if (registration.tool().descriptor().id().equals(LOAD_SKILL_ID)) {
                     loadSkillRegistration = registration;
                 } else {
@@ -69,7 +69,7 @@ public final class ClientCapabilityResolver {
             ToolRuntimeCatalog localTools = ToolRuntimeCatalog.from(candidate, disabled);
             for (SkillMetadata metadata : eligibleSkills.metadata()) {
                 Set<String> missing = metadata.allowedTools().stream()
-                        .filter(toolId -> localTools.find(toolId).isEmpty())
+                        .filter(toolId -> !localTools.find(toolId).isPresent())
                         .collect(Collectors.toCollection(java.util.TreeSet::new));
                 if (!missing.isEmpty()) {
                     return failed(
@@ -80,7 +80,7 @@ public final class ClientCapabilityResolver {
             }
             Set<ContextCapability> requiredContext = localTools.descriptors().stream()
                     .flatMap(descriptor -> descriptor.requiredContext().stream())
-                    .collect(Collectors.toUnmodifiableSet());
+                    .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
             return new ToolResult.Success<>(new ClientCapabilitySnapshot(
                     policy, localTools, skillSnapshot, requiredContext));
         } catch (RuntimeException failure) {

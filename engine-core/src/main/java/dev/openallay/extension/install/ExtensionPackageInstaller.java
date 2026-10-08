@@ -17,7 +17,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -71,8 +70,10 @@ public final class ExtensionPackageInstaller {
 
     private ExtensionInstallResult commitPrepared(
             String id, ToolResult<PreparedExtensionInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedExtensionInstall> failure) {
-            return failed(id, failure.code());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.install.PreparedExtensionInstall> value; ToolResult.Failure<PreparedExtensionInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<PreparedExtensionInstall>) $oaPattern0_holder.value) != null))) {
+            return failed(id, $oaPattern0_holder.bound.code());
         }
         try (PreparedExtensionInstall prepared =
                 ((ToolResult.Success<PreparedExtensionInstall>) result).value()) {
@@ -111,7 +112,7 @@ public final class ExtensionPackageInstaller {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(cancellation, "cancellation");
         Optional<ExtensionCatalogArtifact> selected = entry.artifactFor(environment.loader());
-        if (selected.isEmpty()) {
+        if (!selected.isPresent()) {
             return CompletableFuture.completedFuture(preparationFailure("incompatible_loader"));
         }
         String incompatibility = environment.incompatibility(entry.descriptorFor(environment.loader()));
@@ -124,12 +125,12 @@ public final class ExtensionPackageInstaller {
         CompletableFuture<Download> response;
         try {
             response = transport.execute(
-                    HttpExchangeRequest.newBuilder(selected.orElseThrow().artifact())
+                    HttpExchangeRequest.newBuilder(selected.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).artifact())
                             .timeout(java.time.Duration.ofSeconds(60))
                             .header("accept", "application/java-archive, application/octet-stream")
                             .get().build(),
                     cancellation,
-                    (status, headers, body) -> new Download(status, body.readAllBytes()));
+                    (status, headers, body) -> new Download(status, dev.openallay.util.Java8Streams.readAllBytes(body)));
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(preparationFailure("extension_install_failed"));
         }
@@ -141,10 +142,12 @@ public final class ExtensionPackageInstaller {
                 return preparationFailure("extension_install_failed");
             }
             ToolResult<PreparedExtensionInstall> result = prepare(Optional.of(entry), download.bytes(), cancellation);
-            if (result instanceof ToolResult.Success<PreparedExtensionInstall> success) {
-                cancellation.onCancel(success.value()::close);
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.extension.install.PreparedExtensionInstall> value; ToolResult.Success<PreparedExtensionInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<PreparedExtensionInstall>) $oaPattern1_holder.value) != null))) {
+                cancellation.onCancel($oaPattern1_holder.bound.value()::close);
                 if (cancellation.isCancelled()) {
-                    success.value().close();
+                    $oaPattern1_holder.bound.value().close();
                     return preparationFailure("extension_install_cancelled");
                 }
             }
@@ -157,7 +160,7 @@ public final class ExtensionPackageInstaller {
         String checksum = sha256(bytes);
         ExtensionCatalogArtifact artifact = null;
         if (catalog.isPresent()) {
-            ExtensionCatalogEntry entry = catalog.orElseThrow();
+            ExtensionCatalogEntry entry = catalog.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             artifact = entry.artifactFor(environment.loader()).orElse(null);
             if (artifact == null) {
                 return preparationFailure("incompatible_loader");
@@ -178,7 +181,7 @@ public final class ExtensionPackageInstaller {
         }
         ExtensionPackageManifest manifest = inspected.manifest();
         if (catalog.isPresent()
-                && (!sameIdentity(manifest.descriptor(), catalog.orElseThrow().descriptorFor(environment.loader()))
+                && (!sameIdentity(manifest.descriptor(), catalog.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).descriptorFor(environment.loader()))
                         || !manifest.modIds().equals(artifact.modIds()))) {
             return preparationFailure("extension_manifest_mismatch");
         }
@@ -197,7 +200,7 @@ public final class ExtensionPackageInstaller {
             Files.write(temporary, bytes);
             Path captured = temporary;
             boolean differs = catalog.isPresent()
-                    && !catalog.orElseThrow().requirements().equals(manifest.descriptor().requirements());
+                    && !catalog.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).requirements().equals(manifest.descriptor().requirements());
             PreparedExtensionInstall prepared = new PreparedExtensionInstall(manifest, checksum, differs,
                     () -> commit(manifest, captured, checksum, cancellation), () -> discard(captured));
             temporary = null;
@@ -306,7 +309,7 @@ public final class ExtensionPackageInstaller {
         Set<String> modIds = new HashSet<>();
         ExtensionPackageManifest manifest = null;
         try (JarInputStream jar = new JarInputStream(new ByteArrayInputStream(bytes))) {
-            for (var entry = jar.getNextJarEntry(); entry != null; entry = jar.getNextJarEntry()) {
+            for (java.util.jar.JarEntry entry = jar.getNextJarEntry(); entry != null; entry = jar.getNextJarEntry()) {
                 if (entry.isDirectory()) {
                     continue;
                 }
@@ -316,9 +319,9 @@ public final class ExtensionPackageInstaller {
                                 "Extension JAR has duplicate package manifests");
                     }
                     manifest = manifestCodec.decode(new String(
-                            jar.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                            dev.openallay.util.Java8Streams.readAllBytes(jar), java.nio.charset.StandardCharsets.UTF_8));
                 } else if (entry.getName().equals("fabric.mod.json")) {
-                    var root = dev.openallay.json.JsonTrees.parse(
+                    com.google.gson.JsonObject root = dev.openallay.json.JsonTrees.parse(
                                     new java.io.InputStreamReader(
                                             jar, java.nio.charset.StandardCharsets.UTF_8))
                             .getAsJsonObject();
@@ -328,7 +331,7 @@ public final class ExtensionPackageInstaller {
                 } else if (entry.getName().equals("META-INF/neoforge.mods.toml")
                         || entry.getName().equals("META-INF/mods.toml")) {
                     String metadata = new String(
-                            jar.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                            dev.openallay.util.Java8Streams.readAllBytes(jar), java.nio.charset.StandardCharsets.UTF_8);
                     java.util.regex.Matcher matcher = java.util.regex.Pattern
                             .compile("(?m)^\\s*modId\\s*=\\s*[\"']([a-z0-9_.-]+)[\"']")
                             .matcher(metadata);
@@ -347,13 +350,12 @@ public final class ExtensionPackageInstaller {
         if (modIds.isEmpty()) {
             throw new IllegalArgumentException("Extension JAR has no loader metadata");
         }
-        return new InspectedPackage(manifest, Set.copyOf(modIds));
+        return new InspectedPackage(manifest, dev.openallay.util.Java8Collections.setCopyOf(modIds));
     }
 
     private static String sha256(byte[] bytes) {
         try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("SHA-256").digest(bytes));
+            return dev.openallay.util.Java8Hex.formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is unavailable", impossible);
         }
@@ -369,12 +371,68 @@ public final class ExtensionPackageInstaller {
                 "");
     }
 
-    private record InspectedPackage(
-            ExtensionPackageManifest manifest, Set<String> declaredModIds) {}
-
-    private record Download(int status, byte[] bytes) {
-        private Download {
-            bytes = bytes.clone();
+    @dev.openallay.value.ValueType(InspectedPackage.ValueSchemaProvider.class)
+private static final class InspectedPackage {
+    private final ExtensionPackageManifest manifest;
+    private final Set<String> declaredModIds;
+    private InspectedPackage(ExtensionPackageManifest manifest, Set<String> declaredModIds) {
+        this.manifest = manifest;
+        this.declaredModIds = declaredModIds;
+    }
+    public ExtensionPackageManifest manifest() { return manifest; }
+    public Set<String> declaredModIds() { return declaredModIds; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof InspectedPackage)) return false;
+        InspectedPackage that = (InspectedPackage) other;
+        return java.util.Objects.equals(manifest, that.manifest) && java.util.Objects.equals(declaredModIds, that.declaredModIds);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(manifest);
+        hash = 31 * hash + java.util.Objects.hashCode(declaredModIds);
+        return hash;
+    }
+    @Override public String toString() { return "InspectedPackage[manifest=" + manifest + ", declaredModIds=" + declaredModIds + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<InspectedPackage> schema() {
+            return new dev.openallay.value.ValueSchema<>(InspectedPackage.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<InspectedPackage>>asList(new dev.openallay.value.ValueSchema.Component<>(InspectedPackage.class, "manifest", InspectedPackage::manifest), new dev.openallay.value.ValueSchema.Component<>(InspectedPackage.class, "declaredModIds", InspectedPackage::declaredModIds)), arguments -> new InspectedPackage((ExtensionPackageManifest) arguments[0], (Set) arguments[1]));
         }
     }
+}
+
+    @dev.openallay.value.ValueType(Download.ValueSchemaProvider.class)
+private static final class Download {
+    private final int status;
+    private final byte[] bytes;
+    private Download(int status, byte[] bytes) {
+
+            bytes = bytes.clone();
+
+        this.status = status;
+        this.bytes = bytes;
+    }
+    public int status() { return status; }
+    public byte[] bytes() { return bytes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Download)) return false;
+        Download that = (Download) other;
+        return status == that.status && java.util.Objects.equals(bytes, that.bytes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(bytes);
+        return hash;
+    }
+    @Override public String toString() { return "Download[status=" + status + ", bytes=" + bytes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Download> schema() {
+            return new dev.openallay.value.ValueSchema<>(Download.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Download>>asList(new dev.openallay.value.ValueSchema.Component<>(Download.class, "status", Download::status), new dev.openallay.value.ValueSchema.Component<>(Download.class, "bytes", Download::bytes)), arguments -> new Download((Integer) arguments[0], (byte[]) arguments[1]));
+        }
+    }
+}
 }

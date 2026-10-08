@@ -65,6 +65,7 @@ public final class Utf8ContextTokenEstimator implements ContextTokenEstimator {
                     + bytes(result.toolUseId())
                     + 1
                     + bytes(result.value().toString());
+            default -> throw new IncompatibleClassChangeError("Unknown model content subtype");
         };
     }
 

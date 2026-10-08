@@ -64,23 +64,23 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
         if (results != null) return results;
         List<DiscoveryResult> discovered = new ArrayList<>();
         if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
-            results = List.of();
+            results = dev.openallay.util.Java8Collections.listOf();
             return results;
         }
         if (Files.isSymbolicLink(directory) || !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
-            results = List.of(rejected("", "", "extension_directory_invalid"));
+            results = dev.openallay.util.Java8Collections.listOf(rejected("", "", "extension_directory_invalid"));
             return results;
         }
         List<Path> jars;
-        try (var files = Files.list(directory)) {
-            jars = files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
-                    .sorted(Comparator.comparing(path -> path.getFileName().toString())).toList();
+        try (java.util.stream.Stream<java.nio.file.Path> files = Files.list(directory)) {
+            jars = dev.openallay.util.Java8Collections.toList(files.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString())));
         } catch (IOException failure) {
-            results = List.of(rejected("", "", "extension_directory_unavailable"));
+            results = dev.openallay.util.Java8Collections.listOf(rejected("", "", "extension_directory_unavailable"));
             return results;
         }
         if (jars.size() > limits.maximumCandidates()) {
-            results = List.of(rejected("", "", "extension_package_limit_exceeded"));
+            results = dev.openallay.util.Java8Collections.listOf(rejected("", "", "extension_package_limit_exceeded"));
             return results;
         }
         List<Candidate> candidates = new ArrayList<>();
@@ -116,7 +116,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                 continue;
             }
             // Old registry must also accept the real API range before any class initialization.
-            var target = UniversalExtensionSupport.matchingTarget(descriptor.support(), host.environment()).orElseThrow();
+            dev.openallay.api.extension.SupportTarget target = UniversalExtensionSupport.matchingTarget(descriptor.support(), host.environment()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             String legacyIncompatibility = registry.environment().incompatibility(
                     UniversalExtensionSupport.legacyDescriptor(descriptor, target));
             if (!legacyIncompatibility.isEmpty()) {
@@ -126,7 +126,7 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
             }
             discovered.add(load(candidate));
         }
-        results = List.copyOf(discovered);
+        results = dev.openallay.util.Java8Collections.listCopyOf(discovered);
         return results;
     }
 
@@ -141,9 +141,9 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
         long expanded = 0;
         int count = 0;
         try (JarFile jar = new JarFile(path.toFile(), false)) {
-            var entries = jar.entries();
+            java.util.Enumeration<java.util.jar.JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
-                var entry = entries.nextElement();
+                java.util.jar.JarEntry entry = entries.nextElement();
                 String name = entry.getName();
                 if (++count > limits.maximumEntries() || entry.getSize() < 0
                         || entry.getSize() > limits.maximumExpandedBytes() - expanded) {
@@ -160,8 +160,8 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                     if (entry.getSize() > limits.maximumManifestBytes()) {
                         throw new PackageFailure("extension_package_limit_exceeded");
                     }
-                    try (var input = jar.getInputStream(entry)) {
-                        byte[] bytes = input.readNBytes(limits.maximumManifestBytes() + 1);
+                    try (java.io.InputStream input = jar.getInputStream(entry)) {
+                        byte[] bytes = dev.openallay.util.Java8Streams.readNBytes(input, limits.maximumManifestBytes() + 1);
                         if (bytes.length > limits.maximumManifestBytes()) {
                             throw new PackageFailure("extension_package_limit_exceeded");
                         }
@@ -169,10 +169,10 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                     }
                 }
             }
-            var attributes = jar.getManifest();
+            java.util.jar.Manifest attributes = jar.getManifest();
             if (attributes != null) {
                 String classPath = attributes.getMainAttributes().getValue(java.util.jar.Attributes.Name.CLASS_PATH);
-                if (classPath != null && !classPath.isBlank()) {
+                if (classPath != null && !dev.openallay.util.Java8Strings.isBlank(classPath)) {
                     throw new PackageFailure("extension_package_external_classpath");
                 }
             }
@@ -198,13 +198,13 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
                     || !OpenAllayExtension.class.isAssignableFrom(type)) {
                 return rejected(filename, id, "extension_entrypoint_invalid");
             }
-            var constructor = type.getConstructor(); // Public no-argument constructor only.
+            java.lang.reflect.Constructor<?> constructor = type.getConstructor(); // Public no-argument constructor only.
             OpenAllayExtension extension = (OpenAllayExtension) constructor.newInstance();
             ExtensionDescriptor declared = Objects.requireNonNull(extension.descriptor(), "descriptor");
             if (!candidate.manifest().descriptor().equals(declared)) {
                 return rejected(filename, id, "extension_descriptor_mismatch");
             }
-            var registration = registry.register(new UniversalExtensionBridge(extension, declared, host));
+            dev.openallay.extension.OpenAllayExtensionRegistry.Registration registration = registry.register(new UniversalExtensionBridge(extension, declared, host));
             if (registration.state() == OpenAllayExtensionState.ACTIVE) {
                 loaders.add(loader);
                 accepted = true;
@@ -260,18 +260,127 @@ public final class UniversalExtensionDiscovery implements AutoCloseable {
         loaders.clear();
     }
 
-    public record Limits(long maximumJarBytes, int maximumEntries, long maximumExpandedBytes,
-            int maximumManifestBytes, int maximumCandidates) {
-        public static final Limits DEFAULT = new Limits(64L * 1024 * 1024, 10_000,
-                128L * 1024 * 1024, 128 * 1024, 256);
-        public Limits {
+    @dev.openallay.value.ValueType(Limits.ValueSchemaProvider.class)
+public static final class Limits {
+    private final long maximumJarBytes;
+    private final int maximumEntries;
+    private final long maximumExpandedBytes;
+    private final int maximumManifestBytes;
+    private final int maximumCandidates;
+    public Limits(long maximumJarBytes, int maximumEntries, long maximumExpandedBytes, int maximumManifestBytes, int maximumCandidates) {
+
             if (maximumJarBytes < 1 || maximumEntries < 1 || maximumExpandedBytes < 1
                     || maximumManifestBytes < 1 || maximumManifestBytes == Integer.MAX_VALUE
                     || maximumCandidates < 1) throw new IllegalArgumentException("Positive package limits are required");
+
+        this.maximumJarBytes = maximumJarBytes;
+        this.maximumEntries = maximumEntries;
+        this.maximumExpandedBytes = maximumExpandedBytes;
+        this.maximumManifestBytes = maximumManifestBytes;
+        this.maximumCandidates = maximumCandidates;
+    }
+    public long maximumJarBytes() { return maximumJarBytes; }
+    public int maximumEntries() { return maximumEntries; }
+    public long maximumExpandedBytes() { return maximumExpandedBytes; }
+    public int maximumManifestBytes() { return maximumManifestBytes; }
+    public int maximumCandidates() { return maximumCandidates; }
+public static final Limits DEFAULT = new Limits(64L * 1024 * 1024, 10_000,
+                128L * 1024 * 1024, 128 * 1024, 256);
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Limits)) return false;
+        Limits that = (Limits) other;
+        return maximumJarBytes == that.maximumJarBytes && maximumEntries == that.maximumEntries && maximumExpandedBytes == that.maximumExpandedBytes && maximumManifestBytes == that.maximumManifestBytes && maximumCandidates == that.maximumCandidates;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(maximumJarBytes);
+        hash = 31 * hash + Integer.hashCode(maximumEntries);
+        hash = 31 * hash + Long.hashCode(maximumExpandedBytes);
+        hash = 31 * hash + Integer.hashCode(maximumManifestBytes);
+        hash = 31 * hash + Integer.hashCode(maximumCandidates);
+        return hash;
+    }
+    @Override public String toString() { return "Limits[maximumJarBytes=" + maximumJarBytes + ", maximumEntries=" + maximumEntries + ", maximumExpandedBytes=" + maximumExpandedBytes + ", maximumManifestBytes=" + maximumManifestBytes + ", maximumCandidates=" + maximumCandidates + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Limits> schema() {
+            return new dev.openallay.value.ValueSchema<>(Limits.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Limits>>asList(new dev.openallay.value.ValueSchema.Component<>(Limits.class, "maximumJarBytes", Limits::maximumJarBytes), new dev.openallay.value.ValueSchema.Component<>(Limits.class, "maximumEntries", Limits::maximumEntries), new dev.openallay.value.ValueSchema.Component<>(Limits.class, "maximumExpandedBytes", Limits::maximumExpandedBytes), new dev.openallay.value.ValueSchema.Component<>(Limits.class, "maximumManifestBytes", Limits::maximumManifestBytes), new dev.openallay.value.ValueSchema.Component<>(Limits.class, "maximumCandidates", Limits::maximumCandidates)), arguments -> new Limits((Long) arguments[0], (Integer) arguments[1], (Long) arguments[2], (Integer) arguments[3], (Integer) arguments[4]));
         }
     }
-    public record DiscoveryResult(String filename, String extensionId, OpenAllayExtensionState state, String diagnostic) {}
-    private record Candidate(Path path, UniversalExtensionManifest manifest, String failure) {}
+}
+    @dev.openallay.value.ValueType(DiscoveryResult.ValueSchemaProvider.class)
+public static final class DiscoveryResult {
+    private final String filename;
+    private final String extensionId;
+    private final OpenAllayExtensionState state;
+    private final String diagnostic;
+    public DiscoveryResult(String filename, String extensionId, OpenAllayExtensionState state, String diagnostic) {
+        this.filename = filename;
+        this.extensionId = extensionId;
+        this.state = state;
+        this.diagnostic = diagnostic;
+    }
+    public String filename() { return filename; }
+    public String extensionId() { return extensionId; }
+    public OpenAllayExtensionState state() { return state; }
+    public String diagnostic() { return diagnostic; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DiscoveryResult)) return false;
+        DiscoveryResult that = (DiscoveryResult) other;
+        return java.util.Objects.equals(filename, that.filename) && java.util.Objects.equals(extensionId, that.extensionId) && java.util.Objects.equals(state, that.state) && java.util.Objects.equals(diagnostic, that.diagnostic);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(filename);
+        hash = 31 * hash + java.util.Objects.hashCode(extensionId);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        return hash;
+    }
+    @Override public String toString() { return "DiscoveryResult[filename=" + filename + ", extensionId=" + extensionId + ", state=" + state + ", diagnostic=" + diagnostic + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DiscoveryResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(DiscoveryResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DiscoveryResult>>asList(new dev.openallay.value.ValueSchema.Component<>(DiscoveryResult.class, "filename", DiscoveryResult::filename), new dev.openallay.value.ValueSchema.Component<>(DiscoveryResult.class, "extensionId", DiscoveryResult::extensionId), new dev.openallay.value.ValueSchema.Component<>(DiscoveryResult.class, "state", DiscoveryResult::state), new dev.openallay.value.ValueSchema.Component<>(DiscoveryResult.class, "diagnostic", DiscoveryResult::diagnostic)), arguments -> new DiscoveryResult((String) arguments[0], (String) arguments[1], (OpenAllayExtensionState) arguments[2], (String) arguments[3]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Candidate.ValueSchemaProvider.class)
+private static final class Candidate {
+    private final Path path;
+    private final UniversalExtensionManifest manifest;
+    private final String failure;
+    private Candidate(Path path, UniversalExtensionManifest manifest, String failure) {
+        this.path = path;
+        this.manifest = manifest;
+        this.failure = failure;
+    }
+    public Path path() { return path; }
+    public UniversalExtensionManifest manifest() { return manifest; }
+    public String failure() { return failure; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Candidate)) return false;
+        Candidate that = (Candidate) other;
+        return java.util.Objects.equals(path, that.path) && java.util.Objects.equals(manifest, that.manifest) && java.util.Objects.equals(failure, that.failure);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(path);
+        hash = 31 * hash + java.util.Objects.hashCode(manifest);
+        hash = 31 * hash + java.util.Objects.hashCode(failure);
+        return hash;
+    }
+    @Override public String toString() { return "Candidate[path=" + path + ", manifest=" + manifest + ", failure=" + failure + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Candidate> schema() {
+            return new dev.openallay.value.ValueSchema<>(Candidate.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Candidate>>asList(new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "path", Candidate::path), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "manifest", Candidate::manifest), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "failure", Candidate::failure)), arguments -> new Candidate((Path) arguments[0], (UniversalExtensionManifest) arguments[1], (String) arguments[2]));
+        }
+    }
+}
     private static final class PackageFailure extends RuntimeException {
         private final String code;
         private PackageFailure(String code) { this.code = code; }

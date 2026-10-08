@@ -124,7 +124,7 @@ final class OpenAlCaptureTest {
     @Test void providerCancellingItselfIsAnOpenFailureAndNextExplicitOpenCanProceed() throws Exception {
         FakePort port = new FakePort() {
             boolean cancelOnce = true;
-            @Override public long open(String name, int rate, int frames) throws AudioCapture.CaptureException {
+            @Override public Long open(String name, int rate, int frames) throws AudioCapture.CaptureException {
                 if (cancelOnce) { cancelOnce = false; throw new CancellationException("Provider cancelled itself"); }
                 return super.open(name, rate, frames);
             }
@@ -267,7 +267,7 @@ final class OpenAlCaptureTest {
         });
         return result;
     }
-    private static class FakePort implements OpenAlCapture.NativePort {
+    private static class FakePort implements OpenAlCapture.NativePort<Long> {
         boolean available = true, connected = true;
         List<String> names = List.of("Fake microphone");
         int availabilityChecks, enumerations, opens, starts, stops, closes, reads, sampleQueries;
@@ -280,25 +280,27 @@ final class OpenAlCaptureTest {
         public List<String> names() {
             enumerations++; if (enumerationFailure != null) throw enumerationFailure; return names;
         }
-        public long open(String name, int rate, int frames) throws AudioCapture.CaptureException {
+        public Long open(String name, int rate, int frames) throws AudioCapture.CaptureException {
             opens++; lastName = name; sampleRate = rate; bufferFrames = frames;
             if (openFailure != null) throw openFailure;
-            return 42;
+            return 42L;
         }
-        public void start(long device) throws AudioCapture.CaptureException { starts++; if (startFailure != null) throw startFailure; }
-        public boolean connected(long device) { return connected; }
-        public int availableFrames(long device) { sampleQueries++; return availableFrames; }
-        public void read(long device, byte[] target, int frames) {
+        public void start(Long device) throws AudioCapture.CaptureException { starts++; if (startFailure != null) throw startFailure; }
+        public OpenAlCapture.Connection connection(Long device) {
+            return connected ? OpenAlCapture.Connection.CONNECTED : OpenAlCapture.Connection.DISCONNECTED;
+        }
+        public int availableFrames(Long device) { sampleQueries++; return availableFrames; }
+        public void read(Long device, byte[] target, int frames) {
             reads++; lastReadFrames = frames; assertTrue(frames <= availableFrames); assertTrue(frames * 2 <= 4096);
             if (readFailure != null) throw readFailure;
             for (int i = 0; i < frames * 2; i++) target[i] = (byte) i;
         }
-        public void stop(long device) { stops++; if (stopFailure != null) throw stopFailure; }
-        public void close(long device) { closes++; if (closeFailure != null) throw closeFailure; }
+        public void stop(Long device) { stops++; if (stopFailure != null) throw stopFailure; }
+        public void close(Long device) { closes++; if (closeFailure != null) throw closeFailure; }
     }
     private static final class BlockingPort extends FakePort {
         final CountDownLatch entered = new CountDownLatch(1), allowReturn = new CountDownLatch(1), closed = new CountDownLatch(1);
-        @Override public long open(String name, int rate, int frames) throws AudioCapture.CaptureException {
+        @Override public Long open(String name, int rate, int frames) throws AudioCapture.CaptureException {
             entered.countDown(); boolean done = false;
             while (!done) {
                 try { done = allowReturn.await(2, TimeUnit.SECONDS); }
@@ -306,6 +308,6 @@ final class OpenAlCaptureTest {
             }
             return super.open(name, rate, frames);
         }
-        @Override public void close(long device) { super.close(device); closed.countDown(); }
+        @Override public void close(Long device) { super.close(device); closed.countDown(); }
     }
 }

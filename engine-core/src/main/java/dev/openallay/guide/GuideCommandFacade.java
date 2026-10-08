@@ -43,7 +43,7 @@ public final class GuideCommandFacade {
             for (GuideToolActivity tool : request.tools()) {
                 if (seenTools.add(tool.invocationId())) {
                     GuideToolIntent intent = tool.intent();
-                    String actionText = (intent != null && !intent.empty() && !intent.title().isBlank())
+                    String actionText = (intent != null && !intent.empty() && !dev.openallay.util.Java8Strings.isBlank(intent.title()))
                             ? "正在执行：" + intent.title()
                             : "正在执行操作……";
                     notices.accept(GuideNotice.info(actionText));
@@ -67,8 +67,10 @@ public final class GuideCommandFacade {
             seenStatus[0] = request.status();
         });
         service.ask(question).thenAccept(result -> {
-            if (result instanceof ToolResult.Success<UUID> success) {
-                requestId[0] = success.value();
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.util.UUID> value; ToolResult.Success<UUID> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<UUID>) $oaPattern0_holder.value) != null))) {
+                requestId[0] = $oaPattern0_holder.bound.value();
                 notices.accept(GuideNotice.info(
                         "思索中… 会话: " + service.snapshot().selectedSession()));
                 service.refreshCapabilities();
@@ -120,8 +122,8 @@ public final class GuideCommandFacade {
 
     public void sessions(UUID actor, Consumer<GuideNotice> notices) {
         GuideSnapshot snapshot = services.forActor(actor).snapshot();
-        notices.accept(GuideNotice.info("会话 " + snapshot.sessions().stream()
-                .map(GuideSessionSnapshot::sessionId).toList()
+        notices.accept(GuideNotice.info("会话 " + dev.openallay.util.Java8Collections.toList(snapshot.sessions().stream()
+                .map(GuideSessionSnapshot::sessionId))
                 + "；当前 " + snapshot.selectedSession()));
     }
 
@@ -176,18 +178,20 @@ public final class GuideCommandFacade {
     }
 
     public void skills(Consumer<GuideNotice> notices) {
-        notices.accept(GuideNotice.info("Skills: " + runtime.skills().metadata().stream()
-                .map(value -> value.name()).toList()));
+        notices.accept(GuideNotice.info("Skills: " + dev.openallay.util.Java8Collections.toList(runtime.skills().metadata().stream()
+                .map(value -> value.name()))));
     }
 
     public void sources(Consumer<GuideNotice> notices) {
         ToolResult<Integer> refreshed = contexts.refreshKnowledge();
-        if (refreshed instanceof ToolResult.Failure<Integer> failure) {
-            failure(failure, notices);
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Integer> value; ToolResult.Failure<Integer> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = refreshed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<Integer>) $oaPattern1_holder.value) != null))) {
+            failure($oaPattern1_holder.bound, notices);
             return;
         }
-        notices.accept(GuideNotice.info("知识来源: " + runtime.knowledge().snapshot().documents().stream()
-                .map(value -> value.sourceId()).distinct().sorted().toList()));
+        notices.accept(GuideNotice.info("知识来源: " + dev.openallay.util.Java8Collections.toList(runtime.knowledge().snapshot().documents().stream()
+                .map(value -> value.sourceId()).distinct().sorted())));
     }
 
     private static GuideRequestSnapshot find(GuideSnapshot snapshot, UUID requestId) {
@@ -202,8 +206,10 @@ public final class GuideCommandFacade {
             ToolResult<T> result,
             Consumer<GuideNotice> notices,
             java.util.function.Function<T, String> success) {
-        if (result instanceof ToolResult.Success<T> value) {
-            notices.accept(GuideNotice.info(success.apply(value.value())));
+        final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<T> value; ToolResult.Success<T> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<T>) $oaPattern2_holder.value) != null))) {
+            notices.accept(GuideNotice.info(success.apply($oaPattern2_holder.bound.value())));
         } else {
             failure((ToolResult.Failure<T>) result, notices);
         }

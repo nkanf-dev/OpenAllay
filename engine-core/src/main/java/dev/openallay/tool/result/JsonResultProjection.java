@@ -29,7 +29,7 @@ public final class JsonResultProjection {
         value = value == null ? JsonNull.INSTANCE : value;
         return project(value, new dev.openallay.tool.ModelResultView(handle == null ? "" : handle,
                 type(value), cardinality(value), serializedBytes(value), true,
-                handle == null || handle.isBlank() ? "original tool result" : "current request only"),
+                handle == null || dev.openallay.util.Java8Strings.isBlank(handle) ? "original tool result" : "current request only"),
                 suffix, maximumUtf8Bytes);
     }
 
@@ -45,14 +45,14 @@ public final class JsonResultProjection {
             throw new IllegalArgumentException("Model result budget is too small for a structural receipt");
         value = value == null ? JsonNull.INSTANCE : value;
         String handle = "current request only".equals(source.lifetime()) ? source.handle() : "";
-        suffix = suffix == null ? "" : suffix.strip();
+        suffix = suffix == null ? "" : dev.openallay.util.Java8Strings.strip(suffix);
         suffix = clipText(suffix, Math.max(128, maximumUtf8Bytes / 8));
         long bytes = source.canonicalUtf8Bytes();
         String type = source.type();
         long cardinality = source.cardinality();
-        String receipt = (handle == null || handle.isBlank() ? "" : "result: " + handle + " (current request only)\n")
+        String receipt = (handle == null || dev.openallay.util.Java8Strings.isBlank(handle) ? "" : "result: " + handle + " (current request only)\n")
                 + "type: " + type + "\ncardinality: " + cardinality + "\nsize: " + bytes + " UTF-8 byte(s)\n";
-        String next = handle == null || handle.isBlank()
+        String next = handle == null || dev.openallay.util.Java8Strings.isBlank(handle)
                 ? "omitted data remains in the original tool result; this view creates no workspace handle"
                 : "use handles: [\"" + handle + "\"] with workspace.open(\"" + handle + "\") in this request to filter, aggregate, or project required data";
         String schema = schema(schemaSource == null ? value : schemaSource,
@@ -83,12 +83,12 @@ public final class JsonResultProjection {
             text = receipt + "scope: preview\npreview: (omitted by model output budget)" + provenance;
         }
         if (encodedBytes(text) > maximumUtf8Bytes) {
-            text = (handle == null || handle.isBlank() ? "" : "result: " + handle + " (current request only)\n")
+            text = (handle == null || dev.openallay.util.Java8Strings.isBlank(handle) ? "" : "result: " + handle + " (current request only)\n")
                     + "scope: preview\ntype: " + type + "\nsize: " + bytes + " UTF-8 byte(s)" + provenance;
         }
         if (encodedBytes(text) > maximumUtf8Bytes)
             throw new IllegalArgumentException("Model result budget is too small for provenance and a structural receipt");
-        return new Projection(type, cardinality, bytes, List.of(), new JsonPrimitive(OMITTED), text,
+        return new Projection(type, cardinality, bytes, dev.openallay.util.Java8Collections.listOf(), new JsonPrimitive(OMITTED), text,
                 false, value.isJsonArray() ? value.getAsJsonArray().size() : 0,
                 value.isJsonObject() ? value.getAsJsonObject().size() : 0);
     }
@@ -200,10 +200,10 @@ public final class JsonResultProjection {
                 appendFieldNames(line, object, budget.remaining);
             }
             if (!budget.take(encodedBytes(line.toString()) + 1)) break;
-            if (!result.isEmpty()) result.append('\n');
+            if (result.length() != 0) result.append('\n');
             result.append(line);
         }
-        return result.isEmpty() ? type(value) : result.toString();
+        return result.length() == 0 ? type(value) : result.toString();
     }
 
     private static void appendFieldNames(StringBuilder line, JsonObject value, int maximumBytes) {
@@ -243,7 +243,40 @@ public final class JsonResultProjection {
                 && Character.isLowSurrogate(value.charAt(end)) ? end - 1 : end;
     }
 
-    private record SchemaNode(String path, JsonElement value, int depth) {}
+    @dev.openallay.value.ValueType(SchemaNode.ValueSchemaProvider.class)
+private static final class SchemaNode {
+    private final String path;
+    private final JsonElement value;
+    private final int depth;
+    private SchemaNode(String path, JsonElement value, int depth) {
+        this.path = path;
+        this.value = value;
+        this.depth = depth;
+    }
+    public String path() { return path; }
+    public JsonElement value() { return value; }
+    public int depth() { return depth; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SchemaNode)) return false;
+        SchemaNode that = (SchemaNode) other;
+        return java.util.Objects.equals(path, that.path) && java.util.Objects.equals(value, that.value) && depth == that.depth;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(path);
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        hash = 31 * hash + Integer.hashCode(depth);
+        return hash;
+    }
+    @Override public String toString() { return "SchemaNode[path=" + path + ", value=" + value + ", depth=" + depth + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SchemaNode> schema() {
+            return new dev.openallay.value.ValueSchema<>(SchemaNode.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SchemaNode>>asList(new dev.openallay.value.ValueSchema.Component<>(SchemaNode.class, "path", SchemaNode::path), new dev.openallay.value.ValueSchema.Component<>(SchemaNode.class, "value", SchemaNode::value), new dev.openallay.value.ValueSchema.Component<>(SchemaNode.class, "depth", SchemaNode::depth)), arguments -> new SchemaNode((String) arguments[0], (JsonElement) arguments[1], (Integer) arguments[2]));
+        }
+    }
+}
 
     public static String render(JsonElement value) {
         StringBuilder result = new StringBuilder();
@@ -252,7 +285,7 @@ public final class JsonResultProjection {
     }
 
     private static void appendValue(StringBuilder output, JsonElement value, int indent, String listPrefix) {
-        String padding = " ".repeat(indent);
+        String padding = dev.openallay.util.Java8Strings.repeat(" ", indent);
         if (value.isJsonNull() || value.isJsonPrimitive()) {
             output.append(padding).append(listPrefix == null ? "" : listPrefix).append(scalar(value));
         } else if (value.isJsonArray()) {
@@ -272,7 +305,7 @@ public final class JsonResultProjection {
             boolean first = true;
             for (Map.Entry<String, JsonElement> field : value.getAsJsonObject().entrySet()) {
                 if (!first) output.append('\n');
-                output.append(first && listPrefix == null ? padding : " ".repeat(indent + (listPrefix == null ? 0 : 2)))
+                output.append(first && listPrefix == null ? padding : dev.openallay.util.Java8Strings.repeat(" ", indent + (listPrefix == null ? 0 : 2)))
                         .append(fieldLabel(field.getKey())).append(':');
                 JsonElement child = field.getValue();
                 if (child.isJsonNull() || child.isJsonPrimitive()) output.append(' ').append(scalar(child));
@@ -356,8 +389,8 @@ public final class JsonResultProjection {
 
     private static long countEncodedJson(JsonElement value) {
         CountingOutputStream counter = new CountingOutputStream();
-        try (var writer = new java.io.OutputStreamWriter(counter, StandardCharsets.UTF_8);
-                var json = new com.google.gson.stream.JsonWriter(writer)) {
+        try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(counter, StandardCharsets.UTF_8);
+                com.google.gson.stream.JsonWriter json = new com.google.gson.stream.JsonWriter(writer)) {
             // JsonElement.toString() uses Gson's normal, non-HTML-safe tree encoding.
             json.setHtmlSafe(false);
             json.setLenient(true);
@@ -396,18 +429,109 @@ public final class JsonResultProjection {
     }
 
     private static List<String> fields(JsonElement preview) {
-        if (preview.isJsonObject()) return List.copyOf(dev.openallay.json.JsonTrees.keys(preview.getAsJsonObject()));
+        if (preview.isJsonObject()) return dev.openallay.util.Java8Collections.listCopyOf(dev.openallay.json.JsonTrees.keys(preview.getAsJsonObject()));
         if (preview.isJsonArray() && !(preview.getAsJsonArray().size() == 0) && preview.getAsJsonArray().get(0).isJsonObject())
-            return List.copyOf(dev.openallay.json.JsonTrees.keys(preview.getAsJsonArray().get(0).getAsJsonObject()));
-        return List.of();
+            return dev.openallay.util.Java8Collections.listCopyOf(dev.openallay.json.JsonTrees.keys(preview.getAsJsonArray().get(0).getAsJsonObject()));
+        return dev.openallay.util.Java8Collections.listOf();
     }
 
-    public record Projection(String type, long cardinality, long serializedBytes, List<String> fields,
-            JsonElement preview, String modelText, boolean complete, int omittedRows, int omittedFields) {
-        public Projection { fields = List.copyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview); }
-        @Override public JsonElement preview() { return dev.openallay.json.JsonTrees.copy(preview); }
+    @dev.openallay.value.ValueType(Projection.ValueSchemaProvider.class)
+public static final class Projection {
+    private final String type;
+    private final long cardinality;
+    private final long serializedBytes;
+    private final List<String> fields;
+    private final JsonElement preview;
+    private final String modelText;
+    private final boolean complete;
+    private final int omittedRows;
+    private final int omittedFields;
+    public Projection(String type, long cardinality, long serializedBytes, List<String> fields, JsonElement preview, String modelText, boolean complete, int omittedRows, int omittedFields) {
+ fields = dev.openallay.util.Java8Collections.listCopyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview);
+        this.type = type;
+        this.cardinality = cardinality;
+        this.serializedBytes = serializedBytes;
+        this.fields = fields;
+        this.preview = preview;
+        this.modelText = modelText;
+        this.complete = complete;
+        this.omittedRows = omittedRows;
+        this.omittedFields = omittedFields;
     }
-    private record Field(String name, JsonElement value, long cost, int ordinal) {}
+    public String type() { return type; }
+    public long cardinality() { return cardinality; }
+    public long serializedBytes() { return serializedBytes; }
+    public List<String> fields() { return fields; }
+    public String modelText() { return modelText; }
+    public boolean complete() { return complete; }
+    public int omittedRows() { return omittedRows; }
+    public int omittedFields() { return omittedFields; }
+ public JsonElement preview() { return dev.openallay.json.JsonTrees.copy(preview); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projection)) return false;
+        Projection that = (Projection) other;
+        return java.util.Objects.equals(type, that.type) && cardinality == that.cardinality && serializedBytes == that.serializedBytes && java.util.Objects.equals(fields, that.fields) && java.util.Objects.equals(preview, that.preview) && java.util.Objects.equals(modelText, that.modelText) && complete == that.complete && omittedRows == that.omittedRows && omittedFields == that.omittedFields;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + Long.hashCode(cardinality);
+        hash = 31 * hash + Long.hashCode(serializedBytes);
+        hash = 31 * hash + java.util.Objects.hashCode(fields);
+        hash = 31 * hash + java.util.Objects.hashCode(preview);
+        hash = 31 * hash + java.util.Objects.hashCode(modelText);
+        hash = 31 * hash + Boolean.hashCode(complete);
+        hash = 31 * hash + Integer.hashCode(omittedRows);
+        hash = 31 * hash + Integer.hashCode(omittedFields);
+        return hash;
+    }
+    @Override public String toString() { return "Projection[type=" + type + ", cardinality=" + cardinality + ", serializedBytes=" + serializedBytes + ", fields=" + fields + ", preview=" + preview + ", modelText=" + modelText + ", complete=" + complete + ", omittedRows=" + omittedRows + ", omittedFields=" + omittedFields + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projection>>asList(new dev.openallay.value.ValueSchema.Component<>(Projection.class, "type", Projection::type), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "cardinality", Projection::cardinality), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "serializedBytes", Projection::serializedBytes), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "fields", Projection::fields), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "preview", Projection::preview), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "modelText", Projection::modelText), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "complete", Projection::complete), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "omittedRows", Projection::omittedRows), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "omittedFields", Projection::omittedFields)), arguments -> new Projection((String) arguments[0], (Long) arguments[1], (Long) arguments[2], (List) arguments[3], (JsonElement) arguments[4], (String) arguments[5], (Boolean) arguments[6], (Integer) arguments[7], (Integer) arguments[8]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Field.ValueSchemaProvider.class)
+private static final class Field {
+    private final String name;
+    private final JsonElement value;
+    private final long cost;
+    private final int ordinal;
+    private Field(String name, JsonElement value, long cost, int ordinal) {
+        this.name = name;
+        this.value = value;
+        this.cost = cost;
+        this.ordinal = ordinal;
+    }
+    public String name() { return name; }
+    public JsonElement value() { return value; }
+    public long cost() { return cost; }
+    public int ordinal() { return ordinal; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Field)) return false;
+        Field that = (Field) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(value, that.value) && cost == that.cost && ordinal == that.ordinal;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        hash = 31 * hash + Long.hashCode(cost);
+        hash = 31 * hash + Integer.hashCode(ordinal);
+        return hash;
+    }
+    @Override public String toString() { return "Field[name=" + name + ", value=" + value + ", cost=" + cost + ", ordinal=" + ordinal + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Field> schema() {
+            return new dev.openallay.value.ValueSchema<>(Field.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Field>>asList(new dev.openallay.value.ValueSchema.Component<>(Field.class, "name", Field::name), new dev.openallay.value.ValueSchema.Component<>(Field.class, "value", Field::value), new dev.openallay.value.ValueSchema.Component<>(Field.class, "cost", Field::cost), new dev.openallay.value.ValueSchema.Component<>(Field.class, "ordinal", Field::ordinal)), arguments -> new Field((String) arguments[0], (JsonElement) arguments[1], (Long) arguments[2], (Integer) arguments[3]));
+        }
+    }
+}
     private static final class PreviewBudget {
         private final int maximum;
         private int remaining;

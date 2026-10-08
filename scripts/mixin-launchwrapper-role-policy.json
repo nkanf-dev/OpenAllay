@@ -1,0 +1,3451 @@
+{
+  "coordinate": "org.spongepowered:mixin:0.8.5",
+  "upstream": {
+    "sha256": "ca15a907e4d1f6b38cefed51d7df96a83347dcfb0bc8ced53111519e991d887d",
+    "bytes": 1089277,
+    "manifestImplementationGit": "155314e6e91465dad727e621a569906a410cd6f4"
+  },
+  "sourceAuthority": [
+    {
+      "path": "src/main/java/org/spongepowered/asm/service/MixinService.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/main/java/org/spongepowered/asm/service/MixinService.java",
+      "bytes": 10585,
+      "sha256": "afb000d2fabcc79ee2f94eb5949c2b20d59e20a3234f1a5983c3ab28e66e0e28"
+    },
+    {
+      "path": "src/main/java/org/spongepowered/asm/launch/platform/MixinPlatformManager.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/main/java/org/spongepowered/asm/launch/platform/MixinPlatformManager.java",
+      "bytes": 10753,
+      "sha256": "f2557a92077225900224522b98ab56e924268657012eff191f2890a968ebc0d9"
+    },
+    {
+      "path": "src/launchwrapper/java/org/spongepowered/asm/service/mojang/MixinServiceLaunchWrapper.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/launchwrapper/java/org/spongepowered/asm/service/mojang/MixinServiceLaunchWrapper.java",
+      "bytes": 24008,
+      "sha256": "8266febe0f9174294b985807b7e9ea7c50e5a7cd5950c4e6d90a255ee8bf9fe1"
+    },
+    {
+      "path": "src/launchwrapper/java/org/spongepowered/asm/service/mojang/MixinServiceLaunchWrapperBootstrap.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/launchwrapper/java/org/spongepowered/asm/service/mojang/MixinServiceLaunchWrapperBootstrap.java",
+      "bytes": 3433,
+      "sha256": "c1cb2948eba8d2700a739f4fa0e21a48f2b316aa557005eda9d4f9fd9b2cb9e9"
+    },
+    {
+      "path": "src/modlauncher/java/org/spongepowered/asm/service/modlauncher/MixinServiceModLauncher.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher/java/org/spongepowered/asm/service/modlauncher/MixinServiceModLauncher.java",
+      "bytes": 10630,
+      "sha256": "5367c4c3db61516983f8629fc76e7fd17329a8bc8b5a7e9ba3094613e1657dc3"
+    },
+    {
+      "path": "src/modlauncher/java/org/spongepowered/asm/service/modlauncher/MixinServiceModLauncherBootstrap.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher/java/org/spongepowered/asm/service/modlauncher/MixinServiceModLauncherBootstrap.java",
+      "bytes": 2074,
+      "sha256": "3d7ef1763356870ca5babb4c9462923d537ccbbd504b8f9d5b0e7200c093c92e"
+    },
+    {
+      "path": "src/modlauncher/java/org/spongepowered/asm/launch/MixinLaunchPluginLegacy.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher/java/org/spongepowered/asm/launch/MixinLaunchPluginLegacy.java",
+      "bytes": 9387,
+      "sha256": "877b0ef7ad03449be83f0281e0757e4561050583a1f3dfd994f5c168fe672196"
+    },
+    {
+      "path": "src/modlauncher/java/org/spongepowered/asm/launch/MixinTransformationServiceAbstract.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher/java/org/spongepowered/asm/launch/MixinTransformationServiceAbstract.java",
+      "bytes": 4479,
+      "sha256": "591b710f89e1d7bc2a5853c844767e9d372125c895e892e315d7ac58138f7bcc"
+    },
+    {
+      "path": "src/modularity/java/module-info.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modularity/java/module-info.java",
+      "bytes": 6603,
+      "sha256": "ba46ccf49d0bfb6ff1ed1a2a61dcc3281c0d611bcbc219defaff30230ca95f2c"
+    },
+    {
+      "path": "build.gradle",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/build.gradle",
+      "bytes": 16100,
+      "sha256": "3c50109f469c187a9f6f710ed5dc1e230e920ed022138ee4fc53c436cee0f5df"
+    },
+    {
+      "path": "src/modlauncher/java/org/spongepowered/asm/launch/platform/MixinPlatformAgentMinecraftForge.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher/java/org/spongepowered/asm/launch/platform/MixinPlatformAgentMinecraftForge.java",
+      "bytes": 4288,
+      "sha256": "ba1cdf57afe75c2d4dc8c62cebb9c2ab8d953f3875caa3490d760f723307037c"
+    },
+    {
+      "path": "src/modlauncher4/java/org/spongepowered/asm/launch/MixinTransformationServiceLegacy.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher4/java/org/spongepowered/asm/launch/MixinTransformationServiceLegacy.java",
+      "bytes": 1510,
+      "sha256": "6218bbe20956a7297b4e093d42f4c6cd19c3cd6f632278e3bc2ca7169c57fc53"
+    },
+    {
+      "path": "src/modlauncher9/java/org/spongepowered/asm/launch/MixinLaunchPlugin.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher9/java/org/spongepowered/asm/launch/MixinLaunchPlugin.java",
+      "bytes": 1590,
+      "sha256": "f08a5656d378a818ee47c85024c30c4186cb8dde43a277b9fabe09aa7db2563b"
+    },
+    {
+      "path": "src/modlauncher9/java/org/spongepowered/asm/launch/MixinTransformationService.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher9/java/org/spongepowered/asm/launch/MixinTransformationService.java",
+      "bytes": 1555,
+      "sha256": "03901b39ed17643ea66a3af81ba4c00d7206c7c1453b77e644d8fe8d9e46cdc8"
+    },
+    {
+      "path": "src/modlauncher9/java/org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx.java",
+      "url": "https://raw.githubusercontent.com/SpongePowered/Mixin/155314e6e91465dad727e621a569906a410cd6f4/src/modlauncher9/java/org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx.java",
+      "bytes": 2524,
+      "sha256": "b271e01bb4733bfa7d507d22c2309b4fc717d83017e99520153b91f5a25244f8"
+    }
+  ],
+  "consumer": "ordinary Forge14 LaunchWrapper Java8 flat game runtime",
+  "allEntries": [
+    {
+      "path": "META-INF/MANIFEST.MF",
+      "bytes": 87167,
+      "sha256": "ff2434b9e57001dd85f3923dc4fa6b581af36cddade1868404c2dac7b8597f63"
+    },
+    {
+      "path": "META-INF/MUMFREY.SF",
+      "bytes": 86958,
+      "sha256": "234acf95be072f6d790a0a8eb47ee989ec437111595390276bbc1f7e06f0f3d9"
+    },
+    {
+      "path": "META-INF/MUMFREY.RSA",
+      "bytes": 9913,
+      "sha256": "20e09b3ad71ddc56a074cdd478212879286494bba6ac79e1c3a33a0dfd879dbe"
+    },
+    {
+      "path": "META-INF/services/javax.annotation.processing.Processor",
+      "bytes": 139,
+      "sha256": "8ec9bc989604c05bc91c1e6a6c3f49e35879cc54db6c1c782dd59c0d5cabd6ce"
+    },
+    {
+      "path": "META-INF/services/org.spongepowered.tools.obfuscation.service.IObfuscationService",
+      "bytes": 123,
+      "sha256": "3b3f897434c805789d5ae9b0de80af102109a0746a62fe5dd442a310f93be851"
+    },
+    {
+      "path": "META-INF/services/org.spongepowered.asm.service.IGlobalPropertyService",
+      "bytes": 100,
+      "sha256": "3322cc62be3a1b359991dc77ecdbcdc73941d1832b492f377973e5d00a6b5329"
+    },
+    {
+      "path": "META-INF/services/org.spongepowered.asm.service.IMixinService",
+      "bytes": 128,
+      "sha256": "8c0f7bb7ed5cdc1f4ecb429737a993927cc55e650367102c196a5fbec5cf3f90"
+    },
+    {
+      "path": "META-INF/services/org.spongepowered.asm.service.IMixinServiceBootstrap",
+      "bytes": 146,
+      "sha256": "77321aaec4a9c935b4259c792ad5909f931b9ffc929db5069344ebed0bdf47eb"
+    },
+    {
+      "path": "META-INF/services/cpw.mods.modlauncher.api.ITransformationService",
+      "bytes": 61,
+      "sha256": "bbc7c354bc5b1b556599e97fa9dbc1d78a2bf6ef71387cb830357c4b923961ec"
+    },
+    {
+      "path": "META-INF/services/cpw.mods.modlauncher.serviceapi.ILaunchPluginService",
+      "bytes": 52,
+      "sha256": "d33c40cb430d99cd1bbef5a4929f76a96ba5e11fd94de87896973706adca3529"
+    },
+    {
+      "path": "org/spongepowered/tools/agent/MixinAgent$Transformer.class",
+      "bytes": 5645,
+      "sha256": "6e2034e75a649551b8e2b88961e1cb84d3f2be7bcc7917fdf1798a58c37ff029"
+    },
+    {
+      "path": "org/spongepowered/tools/agent/MixinAgent.class",
+      "bytes": 3420,
+      "sha256": "cf4ff4a54fb4bb0e1332454e4b72468f4886b2c5c2752e7faa95df4cc4c70aef"
+    },
+    {
+      "path": "org/spongepowered/tools/agent/MixinAgentClassLoader.class",
+      "bytes": 4853,
+      "sha256": "fdeae852f1259299f33c6a6519751058d5cff3d3fec4d3d51f8f59b5ef587c3c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixin.class",
+      "bytes": 23629,
+      "sha256": "03e791c5a6eb2c292db937a35dea1131a143bb2d6cb36821f50b215834ec74d6"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandler$AliasedElementName.class",
+      "bytes": 2465,
+      "sha256": "059242eadcb445d304c232bc6bc3eb11c06508dce1b422dc154253148dcf926b"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandler$AnnotatedElement.class",
+      "bytes": 4409,
+      "sha256": "f90b0c8145e0436b66345fcaeb5191a4a61f175ceaf22f4334034ade84cfa26f"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandler$AnnotatedElementExecutable$1.class",
+      "bytes": 1954,
+      "sha256": "e20e271df3a73420700d5d0c6d57c75a3b91f598c701855c761b33ccc4a00fb5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandler$AnnotatedElementExecutable.class",
+      "bytes": 3111,
+      "sha256": "ab28ce04d2ab55b52c42999b997f0ab467bb24ade916afb25d43df109c1f2408"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandler$ShadowElementName.class",
+      "bytes": 3113,
+      "sha256": "db5997f4b64ff6444bfba4527b152c8ba096a3f5eea576b82d41da65fab37f76"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandler.class",
+      "bytes": 16389,
+      "sha256": "88940c22fd3aa60105b0fc666f1d025ac76ae58ad950bf91042ae7f76f31168e"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerAccessor$1.class",
+      "bytes": 1014,
+      "sha256": "72b9dbb1405cd2912c056c3c99e1b8b675fcd19617fdf42410a650744ead268c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerAccessor$AnnotatedElementAccessor.class",
+      "bytes": 4871,
+      "sha256": "3b7bc2e75892072d13c5cab36c6e6dc964401221823ada35c075be406a7769ba"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerAccessor$AnnotatedElementInvoker.class",
+      "bytes": 3688,
+      "sha256": "53aa997bd2331a5859b1c3f2a7bdf64f1568f448c5e6d925d0cdbb13eef5df83"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerAccessor.class",
+      "bytes": 12570,
+      "sha256": "da11516befc1c227e28ecdd26d215e745d605f673623da35c32454ee85b3c3ab"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerInjector$AnnotatedElementInjectionPoint.class",
+      "bytes": 4130,
+      "sha256": "55266a691050c85e113f94d3cef6d973d112df3ae2358619d559f53c7cc8a206"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerInjector$AnnotatedElementInjector.class",
+      "bytes": 3436,
+      "sha256": "6275d60a788081c36e12b125feafb07ec3ed16fcb5054ef8c99629d01eb50c00"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerInjector$AnnotatedElementSliceInjectionPoint.class",
+      "bytes": 2057,
+      "sha256": "c8f8ffe55cc9955924088a70f5d37704ca0ee852cf240b9bd7eaf999fe1f61a8"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerInjector.class",
+      "bytes": 17711,
+      "sha256": "7cebd8561b6e20fdc5cf6dc764689e0d1d5a18e847753857b3e30d162731ec2c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerOverwrite$AnnotatedElementOverwrite.class",
+      "bytes": 1401,
+      "sha256": "e581f76bb6d08002eb53312508187b41a6fac23dbaebbac7a1d8b17ce4f6d7c9"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerOverwrite.class",
+      "bytes": 8757,
+      "sha256": "1817e28510e8be6ef0cd732a14beab3153a663a82299ce22e2146e7b1d1bc17f"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerShadow$AnnotatedElementShadow.class",
+      "bytes": 5166,
+      "sha256": "595862d2c9c1aa592cc5ed0a217f2a2684305e58a28764014387346c539dbc49"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerShadow$AnnotatedElementShadowField.class",
+      "bytes": 3787,
+      "sha256": "853032ada20096ad8e9cb3f66dd0c6be74c1edf98e24634d31b3fb930ad8d750"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerShadow$AnnotatedElementShadowMethod.class",
+      "bytes": 3770,
+      "sha256": "c61e0622907a5597fb5155298acf21ee70b74cbb0cf5025917645f479f230c00"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerShadow.class",
+      "bytes": 6519,
+      "sha256": "c16eb7b4d29bb4334f39472af2662ac5e39994b70916cf8e790064e7449053c5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixinElementHandlerSoftImplements.class",
+      "bytes": 8506,
+      "sha256": "18b376e2e6753f33e5786120596490c29df193ee592def719240cb071c44786d"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/AnnotatedMixins.class",
+      "bytes": 28718,
+      "sha256": "0306f1cac0b21be901ad167d01124399710f8204fec8acb149fe17a84eca224c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ext/SpecialPackages.class",
+      "bytes": 1579,
+      "sha256": "2b162c38008b4fc73e4cc0ac709949fae2d9a00693d53b3a29789ce77cb70e58"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/fg3/ObfuscationEnvironmentFG3.class",
+      "bytes": 2315,
+      "sha256": "ec80220fa3016b6f9c29c9b8dbf21436740cedd368a8e3de6cf214f841a9cd81"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/fg3/ObfuscationServiceFG3.class",
+      "bytes": 2777,
+      "sha256": "ad7585fa4f26efc1036c24278109361d792840576939fc0e48d5f416dd6c1b8b"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IJavadocProvider.class",
+      "bytes": 238,
+      "sha256": "e2b26af51ea646dd5ca0c3c08f294588f562063fb388d052c3a6e8df3cf4b576"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMessagerEx$MessageType.class",
+      "bytes": 9499,
+      "sha256": "d70d00dcf94fca359f39f49384ae3f08a1e011232b190c2360d33a016e4542de"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMessagerEx.class",
+      "bytes": 1000,
+      "sha256": "4e5411bfa57879a2cbf47ca27b7f47a63fc2d7f3547be91d6233ba3f577c68dd"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMessagerSuppressible.class",
+      "bytes": 1739,
+      "sha256": "88468528d9bef6f315a5e8b602547337586abe0a37736bad09d70cda61efb562"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinAnnotationProcessor$1.class",
+      "bytes": 317,
+      "sha256": "a2edd986b78650f76b9f3271aa0321ffd19350a00ced0194e8796c644a5d03a2"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinAnnotationProcessor$CompilerEnvironment$1.class",
+      "bytes": 1450,
+      "sha256": "557027019013239f09c6b0d958cf8444e274b9f3d40898d06de34cabfc518034"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinAnnotationProcessor$CompilerEnvironment$2.class",
+      "bytes": 1594,
+      "sha256": "0095b6edf726cc4fe57f6112545828c3ebb909b07c9324f16f6c36a2207aed97"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinAnnotationProcessor$CompilerEnvironment.class",
+      "bytes": 3310,
+      "sha256": "ee22be47f3341ef8b1aeef927eb2f0ced27924e781b07ce1b73861637e4c6b3f"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinAnnotationProcessor.class",
+      "bytes": 1164,
+      "sha256": "bf390b1c2dd3631cd8d5ed28ca9cc75908b600b5fe4684d111ad37c18c83e7b5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinValidator$ValidationPass.class",
+      "bytes": 1452,
+      "sha256": "d3401c62328642111f770b48602a0892b45d33b76edfd61de15e9a7c6cbd448d"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IMixinValidator.class",
+      "bytes": 775,
+      "sha256": "ca045b0407f4a863161f30b74600dedd5f130aec0225c53d1e694b36e0de6394"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IObfuscationDataProvider.class",
+      "bytes": 2520,
+      "sha256": "fc5a2dacabeee6c4eca6d7465d1315d27ad30468d523ab9220817d790a45a9d9"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IObfuscationEnvironment.class",
+      "bytes": 1484,
+      "sha256": "89e9fb405e81788e8844b1ab6d52720c98192db6a5ca6f281ad28dfa52f1939a"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IObfuscationManager.class",
+      "bytes": 691,
+      "sha256": "6f962d50d57ad6bd3c639962c2e44ee66c427102c0945daeafbc4c83047226ab"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IOptionProvider.class",
+      "bytes": 458,
+      "sha256": "5d97c496b53f023f62dc3959ac54f749e18d280068e48a55f373e39fc7d44c28"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/IReferenceManager.class",
+      "bytes": 1473,
+      "sha256": "9b30c168a051fbe4677bf18471ea9983876b68e97c22a60798747a90458823d0"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/interfaces/ITypeHandleProvider.class",
+      "bytes": 495,
+      "sha256": "570ae0d8e0fab6a7e6dfa757392d49ef1a2b4c227052a9a14f4cf34490b92295"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/common/MappingProvider.class",
+      "bytes": 2882,
+      "sha256": "29d283735587b6d5b53394127a4fde3f327e694c3c7e35a38f0f5db9a7bf1080"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/common/MappingWriter.class",
+      "bytes": 3252,
+      "sha256": "ea599db1eaed7756cc4b7fd9f6f4f641d8e7463ecda614e00834ed714499acab"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/fg3/MappingMethodLazy.class",
+      "bytes": 2799,
+      "sha256": "51fb01539878ecbc2cd7a2a0e30a9006b59fb02bb336c7b1b769b462cc048599"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/fg3/MappingProviderTSrg.class",
+      "bytes": 5191,
+      "sha256": "b62d44fd0cb629155be4657ecc3a9ebf96537a1b80fc8219e7cd9a37ba1a6db5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/fg3/MappingWriterTSrg.class",
+      "bytes": 4153,
+      "sha256": "c7d1b2e0ed4c0a1fa9d80f98eae61f5d090a4310ebd0d403890d476e94a658aa"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/IMappingConsumer$MappingSet$Pair.class",
+      "bytes": 1945,
+      "sha256": "f176ee63185409c6399dd97a59281858c6983cca88969285ff0415a6597242fd"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/IMappingConsumer$MappingSet.class",
+      "bytes": 1008,
+      "sha256": "620ebf3a9ee9917a355fa049ab17b20c5ab4f3df01cfe78f863e903c8359ee00"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/IMappingConsumer.class",
+      "bytes": 1332,
+      "sha256": "27a2b0074be0f7139cfa13bc1c3cd5bbf0954a3d4aadde0e5522fe8e69bc07c2"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/IMappingProvider.class",
+      "bytes": 698,
+      "sha256": "11e7f826e58151ab3ed6e806c91172ca7a18f90373cfc476e664bf6a7062262f"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/IMappingWriter.class",
+      "bytes": 953,
+      "sha256": "9ddfdf6bf89b530fa535d1fa7c736e75bce4e8bbf8201c2181b2dc21a79ec694"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/mcp/MappingProviderSrg$1.class",
+      "bytes": 3028,
+      "sha256": "c8d79817552ebf26e3a70fac38b7f6dd6ee814d779f54cfacbb750397c80b6ab"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/mcp/MappingProviderSrg.class",
+      "bytes": 2772,
+      "sha256": "08062604aca13ecf74cc4dd747234349ad978b4b6b871e0d64454ef74f296114"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mapping/mcp/MappingWriterSrg.class",
+      "bytes": 6166,
+      "sha256": "9161b9d86fe2fea7e5326c8f6983aa92622b9c29bb2522c627d4b771009d5880"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/Mappings$MappingConflictException.class",
+      "bytes": 1358,
+      "sha256": "f0347e44ea446b5bc9c8af03ff87729e1d8f4c3dd547a66f39bb58f71b6039d6"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/Mappings$UniqueMappings.class",
+      "bytes": 4856,
+      "sha256": "fecd7ba9831091adb3591f4df0116b6a2db5608bc7812b9e2ee575261869f6ad"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/Mappings.class",
+      "bytes": 5008,
+      "sha256": "c36919242135826a924c93ac190fd539b01d867402904d40c8afbaba47ac4e0e"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mcp/ObfuscationEnvironmentMCP.class",
+      "bytes": 1377,
+      "sha256": "efa9053128272727e8d6acfadd54c4c2a173abcdfd8ce2b625fa1d291d59c7fa"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mcp/ObfuscationServiceMCP.class",
+      "bytes": 3039,
+      "sha256": "d3595eb226aec8aa50a26e2392216cc47c04aee83335437d896c67a9ff87ec86"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/AnnotationHandle.class",
+      "bytes": 8929,
+      "sha256": "f3edbc3b7fb3385f1365a293cc52875a1f36ef25cee9be8f5318eabdc1cc01ec"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/FieldHandle.class",
+      "bytes": 4473,
+      "sha256": "39a13a6cf98ff68334733cb549fac79beffae36c07391618d4a27308aa2ee4ff"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/FieldHandleASM.class",
+      "bytes": 1208,
+      "sha256": "9050a744bdcf6aba9efb9dc9f47c145497c00ddc70ea8f0a38fabfbef699c018"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/mapping/MappingMethodResolvable.class",
+      "bytes": 3043,
+      "sha256": "190b855d3f28f940a59382220b335cfe2a0557ccfbab6bfa2334a709cece8c28"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/MemberHandle.class",
+      "bytes": 1376,
+      "sha256": "abe1dcb61085b24cb3bf6a0c8e4321e0b8ea99bc7731ca1694743de3c8499226"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/MethodHandle.class",
+      "bytes": 3703,
+      "sha256": "987abf2b58e10fd606f2a23bab9c36773203ab4239fe3727a3ac528e8ca83a5b"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/MethodHandleASM.class",
+      "bytes": 1435,
+      "sha256": "a853d4ec9957f53ea04932422320c9a7b2bb32f15ef61519a6d27f4c0b73615a"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeHandle.class",
+      "bytes": 12719,
+      "sha256": "3a21f0005ba2c92283936fcc8eddfda231dbead0051d4db818f52b64aeae56c5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeHandleASM.class",
+      "bytes": 10542,
+      "sha256": "3d35b7f73cf5fb6686e206b9416ffa922b64494ed62431459c2c09741a0f138a"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeHandleSimulated.class",
+      "bytes": 5923,
+      "sha256": "e37ecc7ec1e4354e8ea9c98ae8fba1c6f88ddf0923459b15fcb53958d683a476"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeReference.class",
+      "bytes": 2912,
+      "sha256": "2e8bf01f081ab9466d50de25de4a63d586a6d897173cd0035f03b72aa43cebf5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeUtils$1.class",
+      "bytes": 1624,
+      "sha256": "9f28fe363e7104459ccb4bac606634f49c4d7376e952b5d9822a73029552ab4a"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeUtils$Equivalency.class",
+      "bytes": 1445,
+      "sha256": "901def624932e1e8f3af7d969842c02f5861732091e33e9c4dbfc766a1560e44"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeUtils$EquivalencyResult.class",
+      "bytes": 1917,
+      "sha256": "7c397de67430fd4df7cfe6bf4802701cd615f38b7d527137082340223a5caf89"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/mirror/TypeUtils.class",
+      "bytes": 13360,
+      "sha256": "c55f9a3ae79f7dc2c21e024a85f7833fcf4f084070125e5cf9226dae3998266c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/MixinObfuscationProcessor.class",
+      "bytes": 3105,
+      "sha256": "f4d904f0b3f02efa775c2b81659741e80cdde8eac185b1e7fbf0e0db28c2181c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/MixinObfuscationProcessorInjection.class",
+      "bytes": 5415,
+      "sha256": "51143657cd01aac3c275329b5d76ccd7c31cd95e6af9574d1e00490e55629397"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/MixinObfuscationProcessorTargets.class",
+      "bytes": 6939,
+      "sha256": "af8324edf7358eca12a9cbd897161bb4179d764add3b226adf314116acfb03ac"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/MixinValidator.class",
+      "bytes": 3152,
+      "sha256": "5d29ffcd82f6c231d84697613f187399f304c71cc4ff555393ae6353c8dc0465"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ObfuscationData.class",
+      "bytes": 3533,
+      "sha256": "6227c2f9461b583efff850098b5d595fd58a1dd3c08b9b3b3f085cbd12c18175"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ObfuscationDataProvider.class",
+      "bytes": 13910,
+      "sha256": "cf83684a0e5adfb494ac10ca581ef99ccc0ac11a93d832f0018f8c7e4b0a8c8f"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ObfuscationEnvironment$RemapperProxy.class",
+      "bytes": 1319,
+      "sha256": "c5ef19bd62a9b5e42fd8fdcc0f178a6b84bbf9fc2ed7c5834b16d5062b90452d"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ObfuscationEnvironment.class",
+      "bytes": 12426,
+      "sha256": "8024d975790fcb413844b2a74e44a53afe650f38d66d7429f6cbee009d7bd86c"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ObfuscationManager.class",
+      "bytes": 5863,
+      "sha256": "ba9f4633e2bb2aa556d05d7e4280199c2f5c194a6d390ba0292c8f6fb9d163bc"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ObfuscationType.class",
+      "bytes": 6123,
+      "sha256": "369fb691908482a24228eb756afcf891363b1319abc8df51fb719eb927be65c5"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ReferenceManager$ReferenceConflictException.class",
+      "bytes": 925,
+      "sha256": "69a9395b6e89e6d625abef4d6c2b2444dc2ffcf5c065d1c0b5b7c7e9d068a342"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/ReferenceManager.class",
+      "bytes": 9768,
+      "sha256": "e6019fabc385bb96cbb29ad2ae58f05cd933b05aa7917b2ead53f2c5909cd38f"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/service/IObfuscationService.class",
+      "bytes": 586,
+      "sha256": "3ed986fceb4f90a149f8c4d779cc656bd0e4f493ff9a77077f3853617fc63430"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/service/ObfuscationServices.class",
+      "bytes": 7461,
+      "sha256": "1cb537e836790d97a2fd1bc84e07dc6a93b8b23fa7c6b4f3cbaad10752fb4c96"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/service/ObfuscationTypeDescriptor.class",
+      "bytes": 2019,
+      "sha256": "fbb3eca6fd03c6811f480307cff2463cdbe731e50c363fd5de4fed6fab5460ab"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/struct/InjectorRemap.class",
+      "bytes": 1975,
+      "sha256": "52dc86f6e569d60881f283fac448b38e8614d9709f93b7634616898f79423b36"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/struct/Message.class",
+      "bytes": 5922,
+      "sha256": "26fb922568bc9e8af839fafb0aede5ac827c2f45dc0efbb744348042a68a3214"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/SupportedOptions.class",
+      "bytes": 2380,
+      "sha256": "b50163848a1a6eef1a29ed462a1436bd355e7d9623a1a45d3b00f09272b39038"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/SuppressedBy.class",
+      "bytes": 1919,
+      "sha256": "b1b24c784a382b7978f1102293c25ea439d92502413a54e784b7f7ade48b8ea7"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/TargetMap.class",
+      "bytes": 8054,
+      "sha256": "9a5b2c51da858ef72ca91329067c81c8f00e13ff347b6ff2f76b7a4abc54efff"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/validation/ParentValidator.class",
+      "bytes": 2959,
+      "sha256": "f942c590e25953c52890279ae04afe5c9277ff9d029eecbd22d61bbd413c75b7"
+    },
+    {
+      "path": "org/spongepowered/tools/obfuscation/validation/TargetValidator.class",
+      "bytes": 6868,
+      "sha256": "6f4cb261f45ccac833fa387ea0f4809744f80951a5ad774a66ef144efa5bbee8"
+    },
+    {
+      "path": "org/spongepowered/asm/bridge/RemapperAdapter.class",
+      "bytes": 2980,
+      "sha256": "4099cfe874f0271c73896a7d7a9e625abc33a321bfe5aa0370654aaf47cf0f6d"
+    },
+    {
+      "path": "org/spongepowered/asm/bridge/RemapperAdapterFML.class",
+      "bytes": 2954,
+      "sha256": "f472d333ab31037c87c0168588abfd748a0c36b526df989a93121e6f561a8260"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/debug/RuntimeDecompiler$1.class",
+      "bytes": 1261,
+      "sha256": "246d10ade6b90abff08750789024f8a3d31ac95b633f1090db22279f3a2eec04"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/debug/RuntimeDecompiler.class",
+      "bytes": 8503,
+      "sha256": "852a12c25e385b6f63798892c6e59a661ca6af2242419e067bb37b6f4c78585f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/debug/RuntimeDecompilerAsync.class",
+      "bytes": 2766,
+      "sha256": "726e2c2f699e8058e5e54c8c706cecb8b88c31f377304b396331f813e17ec5ee"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTweaker.class",
+      "bytes": 1798,
+      "sha256": "bfae900e2f84372f24e8bcf680844a665a1a8e25d62370224afe888f6170b371"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentFMLLegacy$MixinAppender.class",
+      "bytes": 2312,
+      "sha256": "20f86e8b39242136b15416d7b9ed3f2d435e5d73c8adaa7a6d3905826cf6c2d9"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentFMLLegacy.class",
+      "bytes": 15480,
+      "sha256": "a0b562275fedad03e7e0c8c1331869f5a43788024dd9f7ca02e179e31b66ffad"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentLiteLoaderLegacy.class",
+      "bytes": 2052,
+      "sha256": "7dfabe472bb82a3b3b06cde61ce181a662d96f1729c9a3bf2c3e9c95638b6470"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/EnvironmentStateTweaker.class",
+      "bytes": 1844,
+      "sha256": "4d433f886c7d512ab405f45a59fa20a79247fe84e6f6ac199a49ccda32c028d9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/Proxy.class",
+      "bytes": 2393,
+      "sha256": "c7cb91f8a922ad0a3c41612c47e1b784b23275c406bf18c58217b774ec1e55f2"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/Blackboard$Key.class",
+      "bytes": 807,
+      "sha256": "3d3ebde007cf62f0779c687acdd24f012b88e3f36874136d7984fc6812b2dcb2"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/Blackboard.class",
+      "bytes": 2300,
+      "sha256": "03dd3ee940afdd968f01521652b5c81da84e9b12881dc5f65a9d4a19cd6ab764"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/LaunchClassLoaderUtil.class",
+      "bytes": 4183,
+      "sha256": "163663e685bdc150b1277155dd9c5174edd18ff9630faddb3b6f30595cec679a"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/LegacyTransformerHandle.class",
+      "bytes": 2055,
+      "sha256": "cd8bb7824f833b932567a797a4b6a55586700b0cef1c012ce8c6dd2bac9cf098"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/LoggerAdapterLog4j2.class",
+      "bytes": 3860,
+      "sha256": "9922f6a1122ee4602fc7efed60a5efea1a9c8273979bedad06f40f18a0cc9be6"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/MixinServiceLaunchWrapper.class",
+      "bytes": 19386,
+      "sha256": "bc2b85686a9b4df14702fa3dcd7d46aeee35da27ea6db5f28681cba84c64faaf"
+    },
+    {
+      "path": "org/spongepowered/asm/service/mojang/MixinServiceLaunchWrapperBootstrap.class",
+      "bytes": 2022,
+      "sha256": "14312df7c053098c77508ee81c366de4b3dcf6049c135973805a921f0909143d"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/AnnotationVisitor.class",
+      "bytes": 328,
+      "sha256": "d7e0ae25f2d68940529116e7edd7acb75a7ccbcad1b822ace122eb632ea8e14b"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/Attribute.class",
+      "bytes": 304,
+      "sha256": "e0fc36a9d6722cd56f6358c2be015ab69681c06f62222a96bf25c9a0d6ac2c92"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/ClassVisitor.class",
+      "bytes": 2887,
+      "sha256": "610c4f4f7b4413d0a25b65cef6ab4e845685c775a01799ad2748da9a34d39098"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/FieldVisitor.class",
+      "bytes": 313,
+      "sha256": "c276174281f085333c10fddd03e92488c7b70a85cb5111b28caa49a6f8b56975"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/MethodVisitor.class",
+      "bytes": 316,
+      "sha256": "6bf24f34c5478250975fda89940e4d99e6a62265b3aa0e54ca27464e5809149a"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/tree/ClassNode.class",
+      "bytes": 1614,
+      "sha256": "d9bd21a563b8167b3a810710565f7bc03cf6db4b2dca096a836ec16be7943b4c"
+    },
+    {
+      "path": "org/spongepowered/asm/lib/TypePath.class",
+      "bytes": 301,
+      "sha256": "80072fbbb5d003a2f236eb8c41a967672e0790d3c63d430a002b7f7bf03ffacc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/CompanionPluginError.class",
+      "bytes": 752,
+      "sha256": "eabfc76f86c8d48a6cbd9fa76b7f209cf47d630619f4dda3713c686a51603178"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/GlobalProperties$Keys.class",
+      "bytes": 2337,
+      "sha256": "a2c24e4f81ffcf5549fec21647fe7f6ee24afebd5efc991617c5415018b94f45"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/GlobalProperties.class",
+      "bytes": 2450,
+      "sha256": "f07d1d283d64e06c5046546378ae2a4beb331ae9a56b6970ba9de2667d8cda35"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinBootstrap.class",
+      "bytes": 7092,
+      "sha256": "21b719ba719fd2b83895364aba0d14b5816ecc7ba7c179a35479910419a7655f"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinInitialisationError.class",
+      "bytes": 884,
+      "sha256": "e28060d52e183ebe63350ede0540a129e054aea49188eb6cf9f522af1a57d735"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/CommandLineOptions.class",
+      "bytes": 2404,
+      "sha256": "35aacceb8259a1ce000eea19306743eaa9273affccd8d1f75f324fb1eba71832"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleURI.class",
+      "bytes": 2236,
+      "sha256": "88b1a3e1435cee82f56fc4d39a9785b8fd6bbd2fa0ca8672543ac7f2914d02a1"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleVirtual.class",
+      "bytes": 2774,
+      "sha256": "e3ec0ae3c3e66bb9d29cd3454cec883ecd83572689050da1a71560a551ab5378"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/IContainerHandle.class",
+      "bytes": 397,
+      "sha256": "78aa238c9e9d930cab8d17413cfbd37ab3251544a305a766902adda716bc591c"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/IMixinPlatformAgent$AcceptResult.class",
+      "bytes": 1416,
+      "sha256": "0d6a430a64f8f25226bde9abd5591701419d21ba17fb2ebccf7af29b49d96942"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/IMixinPlatformAgent.class",
+      "bytes": 621,
+      "sha256": "43fce784985095bb63d1235ea529d0aeabab795bf4f0977b4e09ce7040351081"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/IMixinPlatformServiceAgent.class",
+      "bytes": 1006,
+      "sha256": "10feefd357066d6645bbe1ef4de2a6fe69308523034adf3994d4bd8f16408db9"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MainAttributes.class",
+      "bytes": 5618,
+      "sha256": "dbec8f128736566c1b7a7980bce36bcbc8812a74e92fa6e3e2c12e72ab982218"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinConnectorManager.class",
+      "bytes": 4174,
+      "sha256": "8e9a3832bd92cb26cf933e26fd24ad40e5c513010439779b7b34e5669ac6c352"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinContainer.class",
+      "bytes": 5921,
+      "sha256": "7af8def3464ca438823bf9fedb02276cee29a052eb3e37bc4cffb517e67b1724"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentAbstract.class",
+      "bytes": 3958,
+      "sha256": "29a1090c9b4ea4ab6db0fa3fce60872aaa13d70f011b55b96de9d0f18e06f1c7"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentDefault.class",
+      "bytes": 1904,
+      "sha256": "f08307d0c488cfc60e19ab9287287b3e692c1fe9b0e3c0b016403d82f3738d9c"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformManager.class",
+      "bytes": 9050,
+      "sha256": "22547bccc82ad74f12e66798190938fe2fd060ce071133db9065e37fbdf3a975"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/ILogger.class",
+      "bytes": 836,
+      "sha256": "d7919e709f85d93c70ab6a016b68375851bd89a2705fafd2882d5eca1be29588"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/Level.class",
+      "bytes": 1230,
+      "sha256": "089fa3132c869d5469e69ec41c360abcd6e65508296063e4e0bae3c1c9ec2e99"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/LoggerAdapterAbstract$FormattedMessage.class",
+      "bytes": 1819,
+      "sha256": "6de7cc1850941e449c0297d57a0a340e0cd4f176bb5a8edda2b9141b657b7606"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/LoggerAdapterAbstract.class",
+      "bytes": 2549,
+      "sha256": "c6e4adfc8c90e8fdc4c73e4f9824ff5da2f697fe78d10fc06233b3d0e55948ae"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/LoggerAdapterConsole.class",
+      "bytes": 3549,
+      "sha256": "1e1a3efe4ce16a596a34922946fadbe4e7184648388e620b2855cc03d3c65e88"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/LoggerAdapterDefault.class",
+      "bytes": 1408,
+      "sha256": "0117759d34fe1b3e53bc1d9e2de863f0339689f08d257b7092e47e241d6c920e"
+    },
+    {
+      "path": "org/spongepowered/asm/logging/LoggerAdapterJava.class",
+      "bytes": 4908,
+      "sha256": "064f03347db4f8c8bf62e5d4b95b5dff99cc3c6bfad3444817de2731553e18a0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/connect/IMixinConnector.class",
+      "bytes": 171,
+      "sha256": "568d8e87788905745ed90d6155df92308a6959a063793b90575e28e95eda24a7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Debug.class",
+      "bytes": 485,
+      "sha256": "afcb60045a2e0d6956c14bfccc0dd0f7f045738b76582d0b7a3e91c0e7651de3"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Dynamic.class",
+      "bytes": 565,
+      "sha256": "43ca78fc9a2cda0ddadb62b1f0c266303db7ce7fd805c4b9687b3b43aff3ce93"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IActivityContext$IActivity.class",
+      "bytes": 407,
+      "sha256": "b0566007d619a16486c409759a84bc87151b21870c7839747d9ef079794a2112"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IActivityContext.class",
+      "bytes": 583,
+      "sha256": "d09de4957c3d6ad4bace54e122f1e2d9966c3d65a22c5ff6436d09e7c8cf35b8"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IEnvironmentTokenProvider.class",
+      "bytes": 368,
+      "sha256": "310ac583e40ae659449f32a9c18297c274865c642825b58354113789e7e051db"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IMixinConfig.class",
+      "bytes": 880,
+      "sha256": "da680d2eb76efa3394655dd6e5a15a546bbb55eb0645e78d2c0e9e1f4359b7d1"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IMixinConfigPlugin.class",
+      "bytes": 736,
+      "sha256": "746105c2ff27cc99b955aa5eb1cc30405f293dc06a251da889e8704614f7ed76"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IMixinErrorHandler$ErrorAction.class",
+      "bytes": 1716,
+      "sha256": "a8e8bf7c237f5e85ace1c1f5e61173c2563333bc4350ef924db762d666c8ca98"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IMixinErrorHandler.class",
+      "bytes": 860,
+      "sha256": "dce6b2b6fc910a65fe74bb5e266ef68ba8bdfb9072e026c7fd20288f90db8053"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IMixinInfo.class",
+      "bytes": 794,
+      "sha256": "030549b74f1f573d4c283cb305694bc96e4eb29a4b6a83e4c154eef356d3a5b5"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/extensibility/IRemapper.class",
+      "bytes": 374,
+      "sha256": "266eeea477c14538c8b0fbc89122011e2b1cc7dc16570c3da3d972224ac1f3fc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Final.class",
+      "bytes": 404,
+      "sha256": "6bd35049a3c8829a1442d451210947c2c5db574d461b0c46ffbcdf50ca3fa361"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/Accessor.class",
+      "bytes": 500,
+      "sha256": "0804efda73c4ac86aeb4296d1c7952dd8b7df8e1faae571fdd01afd65a6b529e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorGenerator.class",
+      "bytes": 2500,
+      "sha256": "14bfcd4dbde9076aafbe68d4a51e3c9c575723a3c622ac32ad5f2f897f1df770"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorGeneratorField.class",
+      "bytes": 1035,
+      "sha256": "c387ccf03f8b2edf960afeaadd1c5acd052a5e3ac4e12cb9698b2b358483dcde"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorGeneratorFieldGetter.class",
+      "bytes": 1908,
+      "sha256": "16a09545b94124fd30a66b1018eb51722876a5f4d3bdbc0b9ba3b30608f8c56e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorGeneratorFieldSetter.class",
+      "bytes": 3988,
+      "sha256": "faa2c2f5cfc5c7e630575a5c552364d7f6ff0026a49820342bd0c3642e5ce9aa"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorGeneratorMethodProxy.class",
+      "bytes": 2802,
+      "sha256": "c807055a68cc5b12275ad52a2ebada8217053f366fccf5ba32ccd45f85695ea0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorGeneratorObjectFactory.class",
+      "bytes": 2768,
+      "sha256": "c1c27f26e4d34217c4f2b26dfb7c63b1b85cc8fd81a2d0780498e3394ca550d4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$1.class",
+      "bytes": 884,
+      "sha256": "46064badabf6d6af5b1c7a99d3bef05e680542bfc9f8e68d020a19545ed65e88"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$AccessorName.class",
+      "bytes": 3702,
+      "sha256": "87223d7b81646fba20532d7222bc063597f5e7a2b3e02a24960d38fb8a49a472"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$AccessorType$1.class",
+      "bytes": 1218,
+      "sha256": "04d143b5ee45f88b63a646a72589053b2f153256e6f1994be54b3a2392f25cec"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$AccessorType$2.class",
+      "bytes": 1218,
+      "sha256": "378002fb80875958d75eb74b4b1816c1f8a2d270201b3350e9b653d4f2ee0695"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$AccessorType$3.class",
+      "bytes": 1218,
+      "sha256": "8ff70e293d3123a0ca46a1248ae71bf5632306fbf65d659c7dc1a80efb8e6324"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$AccessorType$4.class",
+      "bytes": 1220,
+      "sha256": "1ddb8377d1ab7661ef2df56ceb9eceb2ffc5735cd1c27bad4801314bef8e3cb2"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo$AccessorType.class",
+      "bytes": 3154,
+      "sha256": "3b6dc7dc935b9f9ba51d96e8df1c3b7d77589fef86ac37b798adedeb681efea4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/AccessorInfo.class",
+      "bytes": 12006,
+      "sha256": "91632e97a4d18dc803af24f373c0c0abb626a909aad21938417525c73507be27"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/Invoker.class",
+      "bytes": 498,
+      "sha256": "d24f5d88b86d4f3e700964475821256d4cdfbb75ee83163dae3e53b66f1ef75f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/InvokerInfo.class",
+      "bytes": 6922,
+      "sha256": "3ed5a7d1a54d535c1c50c71c8dbd333f367ea76ab9b9f55d1f10f8a7c7363878"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/gen/throwables/InvalidAccessorException.class",
+      "bytes": 1999,
+      "sha256": "dead537659124bc3d84eeb59f545c54a795483d9a05f420cb6f1eb393a6b6726"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Implements.class",
+      "bytes": 450,
+      "sha256": "61cebfd5a62d5f9b0b5cb099900a205c1f917ca53e5f8857f98084d6e54e09ad"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/At$Shift.class",
+      "bytes": 1272,
+      "sha256": "b7121d67ebad5926d747f9cb2570119382b821cdcb6ff9b27ad9bcbf6ee3d276"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/At.class",
+      "bytes": 1002,
+      "sha256": "a0798d50721ba52c3b3dc098fc6840693c9ec013f6de90cdb39f8af5c08916f6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/CallbackInfo.class",
+      "bytes": 2595,
+      "sha256": "c68c0fd6e5db5897ae72e29834c0cf65ec4fb41e50b90955f4bdc2e2a3ca4fd6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable.class",
+      "bytes": 5050,
+      "sha256": "d986e4249ccdb39f0c63d563847008a32fc04fd05b59ce11d290d66afbcad647"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/CallbackInjector$1.class",
+      "bytes": 924,
+      "sha256": "943b8fae2e234df2bb722a3d784a99ff5858967314c2e66e9c8a645dc8508bc8"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/CallbackInjector$Callback.class",
+      "bytes": 7454,
+      "sha256": "66aaa0c0c3a6e63e36f9704b0bf49fa26263b5c1431974422014bd741b50d811"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/CallbackInjector.class",
+      "bytes": 21393,
+      "sha256": "4d27395ee2d361c20f75000cb3a910b608541a415daa0049f4a499635a572f13"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/Cancellable.class",
+      "bytes": 322,
+      "sha256": "0a936065fd2a88efc1d0ef53f41ad493fe5f7fb59a2845b9bc614fa28b0906ad"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/CancellationException.class",
+      "bytes": 888,
+      "sha256": "2c21f3df01fe57fd33894f45295e2ffdd3824e25e04c0f6619b53c4d8714de58"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/callback/LocalCapture.class",
+      "bytes": 1774,
+      "sha256": "cf36214e5b36dccf762eb5736b5ae789397f645dd64b92413f2cfbeb183635f9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/Injector$InjectorData.class",
+      "bytes": 1306,
+      "sha256": "01cedb143bbf0481e807bcc723b4e8af8fb07526ca266ce96e6035f01041bd22"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/Injector$TargetNode.class",
+      "bytes": 1506,
+      "sha256": "c435819cf604caa2902208f81ae8059d54192c14a5f4439f6d3bc265ff27ffff"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/Injector.class",
+      "bytes": 22645,
+      "sha256": "4a3f52b571bc902a0d8f02d1276d286e9de5da047731b469da96f6a14714d4a9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/InjectorTarget.class",
+      "bytes": 4643,
+      "sha256": "5a777d683fbbf47c9be1b7d0e7820191b9072c69962fb3afda0fcf33645b599a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/InsnListReadOnly.class",
+      "bytes": 3200,
+      "sha256": "b56e6f7562a8df5f046f74a6e7fab82d31c0408c38aa738726c04fa30f280a1f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/ISliceContext.class",
+      "bytes": 316,
+      "sha256": "d3fe0ae69d53dea97500140a151333adad7345bf0dd3756368694c587aeb63fb"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/MethodSlice$InsnListSlice$SliceIterator.class",
+      "bytes": 2861,
+      "sha256": "7bff697e84f14a2ebb53cfcb1f17df1591a07475b75917c02eb9be47931478a8"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/MethodSlice$InsnListSlice.class",
+      "bytes": 2799,
+      "sha256": "1495a2200a79e757c0d28a0aae56e3296920db5badbd9aa30beb340d0e09a587"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/MethodSlice.class",
+      "bytes": 8818,
+      "sha256": "988cb326197b540db74a050fc258137fcd452ec4217759aaa5630f83768ff5e9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/code/MethodSlices.class",
+      "bytes": 3357,
+      "sha256": "3ebb59d9bb10464d00cee395d42ed98b486dfe4bbdf0ff4021acd2cd1ec9a0c1"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Coerce.class",
+      "bytes": 323,
+      "sha256": "bff36bef5826c9555e2eb2e778f1dc3fbfd9d64508264b0d39d052c6ea7f2fdc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Constant$Condition.class",
+      "bytes": 2466,
+      "sha256": "dc12aa329d4de26ef9479571823d14c08907cbd0948df06e3e0eff421f37f135"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Constant.class",
+      "bytes": 1045,
+      "sha256": "7f8613eb22ed9842b4acf88a233c20561d2141e65fea6bd6ed2c071fe6bfa15d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Desc.class",
+      "bytes": 856,
+      "sha256": "c4897dd48526ac228c30af3504993af72a4cbbcf5b15d5596513773c1dcc98c0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Descriptors.class",
+      "bytes": 483,
+      "sha256": "92e360f69063dfa9c0057bd2f122c0896f818947c94901192bdcb64b662e9156"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Group.class",
+      "bytes": 526,
+      "sha256": "40374a6de95944972445e3179848db8139d23a866a93d75f9f1840671617cfe6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/IInjectionPointContext.class",
+      "bytes": 414,
+      "sha256": "908ea28ffac84745b13248424ec51e0d6def2d26ea143fe9f374bfe099a49449"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Inject.class",
+      "bytes": 1097,
+      "sha256": "beca4c01bc828527c4b70afa17ba87d79349da9a714bd774fbcefeafd1412bca"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$AtCode.class",
+      "bytes": 605,
+      "sha256": "d39bc3274919342214a8b4e700a3d08af65bf75ed396bed271343487c8ac349a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$CompositeInjectionPoint.class",
+      "bytes": 1435,
+      "sha256": "cde7a2ca25eee1be860bd443a5240ede34d3a1b28f84f9d8bf78f929fb1a6cdf"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$Intersection.class",
+      "bytes": 2304,
+      "sha256": "54f55a43b0e2c7f4e319fa96c490bf35ec0d5ee33f40c2c0310336b16fa36068"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$RestrictTargetLevel.class",
+      "bytes": 1450,
+      "sha256": "0cadd49fa1819fdac643fd33e5b948e44aaed843f08fac77eb6661f0b7e19ca8"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$Selector.class",
+      "bytes": 1375,
+      "sha256": "898f882e51ee3313df13cb2fdd36d65fce95661d5cacfab9e41eefa21307ba3a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$Shift.class",
+      "bytes": 3487,
+      "sha256": "6de5017b93d87b4e69ae88326f3b19857afad343c6da381dc53e497e489f2f73"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$ShiftByViolationBehaviour.class",
+      "bytes": 1459,
+      "sha256": "bed495b86368326dc9fdde7838b35e448f2e7ec202c46b224872d70f7649e8d9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint$Union.class",
+      "bytes": 1661,
+      "sha256": "600ea099b5142ac5b25d22d116055d0335f7fbc14d7586f24a62c57560fdde39"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/InjectionPoint.class",
+      "bytes": 22681,
+      "sha256": "80daa6afbecd0823910929af83d4d155aa10e78811d4b5adbc43c0a84363a736"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/arg/Args.class",
+      "bytes": 769,
+      "sha256": "0d4c8a179cb5a787af6cde9c27986660ce1f454a51607c36bce93a5af215b9fc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/arg/ArgsClassGenerator$ArgsClassInfo.class",
+      "bytes": 1774,
+      "sha256": "ffeeecd79480f038492db90b51caeb2859a8e9af24b8db1aae22713f79c58cec"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/arg/ArgsClassGenerator.class",
+      "bytes": 11971,
+      "sha256": "bfbcdccd62b2e9b2c4fb7e9cd726fdf4a1926e0db6216a2e77f7d7389a4ed67b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/arg/ArgumentCountException.class",
+      "bytes": 920,
+      "sha256": "133f7e8fb534ad73bdb6ef162a41085b081ad679746b426587dc4d60be0b7e24"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/arg/ArgumentIndexOutOfBoundsException.class",
+      "bytes": 811,
+      "sha256": "1e9fbdae8814ef3d75acb70fc4b6bab1e57b30d800b86595c471a40d0a3c754e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/InvokeInjector.class",
+      "bytes": 2550,
+      "sha256": "684cdbaad2ed72632c2c7f83065b714c5bc71db72adfb76fd141d53ad380ab07"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/ModifyArgInjector.class",
+      "bytes": 7274,
+      "sha256": "17ff4c98e681b81d29ae7cf26e179f04c77f06575974799c779824b8b597b45c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/ModifyArgsInjector.class",
+      "bytes": 7572,
+      "sha256": "09e1fca8385be919f2c93fd14f605f3ebce27ec123af78d48ba57f3221e953e5"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/ModifyConstantInjector.class",
+      "bytes": 11036,
+      "sha256": "4dc6f73d99958e541dd355ff1699389448385063e6c2a851a2cab40aa03dbd16"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/RedirectInjector$ConstructorRedirectData.class",
+      "bytes": 1023,
+      "sha256": "f4c880a26ba6b1d44af1f27d7bbbe3aa498f366dbc53ebc0573896b85571f0bb"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/RedirectInjector$Meta.class",
+      "bytes": 1105,
+      "sha256": "0a2a15d5b29caed26af64cc03761d739eee0e1c5dcd572d487bee1ced1eaad4d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/RedirectInjector$RedirectedFieldData.class",
+      "bytes": 2631,
+      "sha256": "19c8c8f32724a5cd38f25b31146048b473b6ff90e093cac19390de1b16b3891c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/RedirectInjector$RedirectedInvokeData.class",
+      "bytes": 1813,
+      "sha256": "e29a77502f22c49c7b5ac56dfced04a11bf07d70360a88552f782a9258cbc4eb"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/RedirectInjector.class",
+      "bytes": 23247,
+      "sha256": "c86d6303b898002065ceaae8bae8039d745d20039547b2a65c0e7f7dfd07dceb"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/util/InsnFinder$AnalysisResultException.class",
+      "bytes": 870,
+      "sha256": "8c16eb1e5f28b7e3546c24a45b32987ba75904cfc6573d2df7667a5fad348d53"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/util/InsnFinder$AnalyzerState.class",
+      "bytes": 1433,
+      "sha256": "e852efe55dbee2b7b4b755b342002f8c08ed78e2f90ddf5847620578f6dfdb4c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/util/InsnFinder$PopAnalyzer$PopFrame.class",
+      "bytes": 3060,
+      "sha256": "796fe38cdbe11094e96bc94c49c9e3014036e7c5fabb746846cc2e0ea4301844"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/util/InsnFinder$PopAnalyzer.class",
+      "bytes": 1349,
+      "sha256": "27165b9edf99269cb65c1722cc72f305e51af790acb5efe35a6a69f0f1b13aff"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/invoke/util/InsnFinder.class",
+      "bytes": 2334,
+      "sha256": "e6a741c0197c97471ced741c1317b74cb53632c6e105d25fe94439ec1b0d743f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/AfterStoreLocal.class",
+      "bytes": 954,
+      "sha256": "ebf44de16bf4153d84e7163c8310973656690ab31135491f26ee1b564afbaeea"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/BeforeLoadLocal$SearchState.class",
+      "bytes": 4285,
+      "sha256": "cb6d50b2e41b70e8a64463cf2f0186f0523e79b101c76ec08a5ea078c4873d66"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/BeforeLoadLocal.class",
+      "bytes": 5160,
+      "sha256": "f7b63b3158bdb7469e99289d2e494d2d444ded1aca27cb1d1f5d6c58f636b6de"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/InvalidImplicitDiscriminatorException.class",
+      "bytes": 765,
+      "sha256": "d2b60fef3c53dc58155ca919ddca6eb45e7708a63c2a43e42e6a2cb944fb8b4c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/LocalVariableDiscriminator$Context$Local.class",
+      "bytes": 1773,
+      "sha256": "573ddbfa22f4547a4dfea83672185e059ad688aefc4e0501a9f16261c2c13241"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/LocalVariableDiscriminator$Context.class",
+      "bytes": 6171,
+      "sha256": "2aaa928f54b70d86e37196d08423fccf6e1b481276017c32a6167386ea15d0fe"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/LocalVariableDiscriminator.class",
+      "bytes": 5485,
+      "sha256": "a506e74d32bfac94058389a21654936951a5820e1c2071d9fc8dd056f34a8889"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/ModifyVariableInjector$Context.class",
+      "bytes": 1270,
+      "sha256": "d303ac00cf3d659efa5eca1facd496d56e47ab7c6231800726cc404c5e7fbd4c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/ModifyVariableInjector$LocalVariableInjectionPoint.class",
+      "bytes": 2382,
+      "sha256": "1dddf7e4dae09300d5ee0bb36bbac880e70943a815c41cb0ef0032d1ed3b214a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/modify/ModifyVariableInjector.class",
+      "bytes": 13639,
+      "sha256": "6eb25d77a1e1e87aca054dcd89ebb4b580d7b57cbd1263fbc65ee45a7406ec2e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/ModifyArg.class",
+      "bytes": 947,
+      "sha256": "004e98eb6f22e239794a013bcd5f1dfd6e6da08623ddfc5f46a7589d862e9a1f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/ModifyArgs.class",
+      "bytes": 924,
+      "sha256": "21d9e3718be437cd7b00d71496ebfc200cb78840f37d4740d90729c719f7783f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/ModifyConstant.class",
+      "bytes": 905,
+      "sha256": "b989c2279b0a49ccabb183b53064252d76d36def3963d8327b1089d500bc117c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/ModifyVariable.class",
+      "bytes": 1066,
+      "sha256": "8fff08e19520635b0cf30f4b4190a951c9fbb4b4325af7665def610d6f8353b9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/AfterInvoke.class",
+      "bytes": 2211,
+      "sha256": "cd4e93f13c65a4ea58103ed02c1a2bb40742ad778d0a67ffb7160a20f96551dc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeConstant.class",
+      "bytes": 12253,
+      "sha256": "5fec20ddaa84be45356b9dcc5937536c265bc69c9c748d53aa4cb6ad24a87268"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeFieldAccess.class",
+      "bytes": 4895,
+      "sha256": "e64b719f2b6bc0ea0e8444f42f3994a9554d7bc317a51a7e9074a87d6de1e5c4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeFinalReturn.class",
+      "bytes": 3344,
+      "sha256": "8bd1cd9a9a7b613eaac596e96a9886de42070cfb036d1250b1d823dff38e9817"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeInvoke$SearchType.class",
+      "bytes": 1341,
+      "sha256": "0f6031aaa56f64ead2e98fde456306b63886b09ed7ed2c0d08d38b5036046167"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeInvoke.class",
+      "bytes": 9727,
+      "sha256": "b30ffa0d327fe70df8f073fe38bcf5d7c5a1f3fdb7cfd530d643f38f1ef04a1f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeNew.class",
+      "bytes": 5369,
+      "sha256": "7655db5f2717f5dd13eb3f433e992e9901dda819792594b372916e4783848618"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeReturn.class",
+      "bytes": 3085,
+      "sha256": "ae6451bd3a97a0bc1be5a7b49fd764c061453a5db9866455e8bdb3e353f36172"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/BeforeStringInvoke.class",
+      "bytes": 3589,
+      "sha256": "1a16b1e08d82dc64536bc61cba099059836a5ba002400156c5fbaa3e3be91f9a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/JumpInsnPoint.class",
+      "bytes": 2436,
+      "sha256": "11433e362d77cd9f55c872eae0d6669d09c66540cc84ed27c843e18a6fc38be9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/points/MethodHead.class",
+      "bytes": 1621,
+      "sha256": "636280639be6096959d931b5b0ffc2b0f6840052fa127a795a193db5e1401b64"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Redirect.class",
+      "bytes": 920,
+      "sha256": "91ff86c5ccffe02a4adb0ecbdedeafceec048a0b9310cf91b9e9a9df5a161ebf"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DescriptorResolver$Descriptor.class",
+      "bytes": 4674,
+      "sha256": "df9d64f5cdb32a3386174f78a4f6b0072ed0ce9c92046646878423ab600ab16b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DescriptorResolver$IResolverObserver.class",
+      "bytes": 528,
+      "sha256": "787f2522f3d2c5777e991ce1184837625759e7cee3c86e9b95012d38f3f9ef11"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DescriptorResolver$ResolverObserverBasic.class",
+      "bytes": 1369,
+      "sha256": "48968ee05a8b45add3ea78ba164d25035de3f1d981271ac161dfdcd8c83b337a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DescriptorResolver$ResolverObserverDebug.class",
+      "bytes": 2663,
+      "sha256": "348926030d7e0086ffebf467ffb9e2d504474d3a52fdec92e47efd6cb5fbe366"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DescriptorResolver.class",
+      "bytes": 8719,
+      "sha256": "877b1f5b76bc013a0c6cc0dd616c8b61353ae090da54fb0667c0bb14c178037f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DynamicSelectorDesc$1.class",
+      "bytes": 1188,
+      "sha256": "dcd21c54068a6267398fef44d64d19068cd0587f351fb8e1429fb4924230b0a4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DynamicSelectorDesc$Next.class",
+      "bytes": 1747,
+      "sha256": "4fe0177cc88287cecadd23305526ad5002d5507c865151b13d658e1231c7de99"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/DynamicSelectorDesc.class",
+      "bytes": 12374,
+      "sha256": "7b2f9c59b10e86f0b32425e69199ac660b887ed1d3bdc097bb2a5e26bd2940e1"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/dynamic/IResolvedDescriptor.class",
+      "bytes": 683,
+      "sha256": "48ff771f7263c7687ef7c6a8ee8001c83b6ad2ee2e8b4161904c5bd07de42c08"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeField.class",
+      "bytes": 2321,
+      "sha256": "037dd40800b57b380505e709502b1f2aeea1d0563a476d098fc5fdb5d387d90d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeFieldInsn.class",
+      "bytes": 2179,
+      "sha256": "f4cf4e7a8968186080b68ec62ea65006d7ab45dd9a522ae5f7312d290725017b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeInvokeDynamicInsn.class",
+      "bytes": 3279,
+      "sha256": "3f3f0f27949e5075d6c0b71534efcf7f03c417975666c71109d6ae4b25f91f3f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeIterable.class",
+      "bytes": 1473,
+      "sha256": "e8b3519639e63c198ddbecbd1d48da03822b752e4430ddb7a4dab4fd5d82e17d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeIterator.class",
+      "bytes": 1872,
+      "sha256": "8aa28543b3bcc9a4bdffb62467c879fd0f040a68c57b3487af51e02756814945"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeMethod.class",
+      "bytes": 2258,
+      "sha256": "698a22791ce4d16e8478006bf551c9522df01db523a207fb5dc92ef98dd7cdbf"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$ElementNodeMethodInsn.class",
+      "bytes": 2115,
+      "sha256": "8d423f3e9df2ea25fff62bca7ed2263bf018eb907524af4e5c137a221fc1c27f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode$NodeType.class",
+      "bytes": 1816,
+      "sha256": "2f355b48f4ac4186e8edc6f58a1c1c4352b7596c5502656cdf0e9e7d1b2b14d8"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ElementNode.class",
+      "bytes": 8344,
+      "sha256": "c39eb6c94e8db8748f4620b355e65b07f1184eba7915a75c7f61e31858bb67b9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/InvalidSelector.class",
+      "bytes": 3655,
+      "sha256": "d58fb913c24f1edc9a243c82db8da81d33c3d54eb62fe65353a450ca39e5e01e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/InvalidSelectorException.class",
+      "bytes": 845,
+      "sha256": "a953b607a2eaf943169d44257fcbdf266f54fb40b5861e545061aaaa6f13d8d0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ISelectorContext.class",
+      "bytes": 593,
+      "sha256": "0e23f122175d4a4439a349f4f2a8521679a1803e0ef635002622fe4391abe708"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelector$Configure.class",
+      "bytes": 2418,
+      "sha256": "254423037058de47d78051b950834f468efafc022656eac92ffdf82dfaca3a7e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelector.class",
+      "bytes": 1218,
+      "sha256": "2b9498a65c50725fd09d02140c38db21df99d28cd7c69d87b7b2a05d164af8ff"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelectorByName.class",
+      "bytes": 481,
+      "sha256": "28f95e6fbdcda425ccff7bf81507853474784de7a0ae719999fcab4f9890aab0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelectorConstructor.class",
+      "bytes": 323,
+      "sha256": "93103d41d56458eac49ae7203d99d9f774a8eed620c77214c8e7055c7264e6cf"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelectorDynamic$SelectorAnnotation.class",
+      "bytes": 698,
+      "sha256": "434656b70f7852bca1a42f378880fb4fc9f03a5b00fbfe0ca329348076d2bf51"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelectorDynamic$SelectorId.class",
+      "bytes": 657,
+      "sha256": "e2db3cb2822fc6da2fa2c09ed082171e21e3bad404935f0e609836cec3f92a43"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelectorDynamic.class",
+      "bytes": 499,
+      "sha256": "538ed8c1711cf27c366906554949e9c67bd2c9adc42b0efbea2f4a80ce32a703"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/ITargetSelectorRemappable.class",
+      "bytes": 1028,
+      "sha256": "e639d0093c9e1598c59e951e91bd6bcb8038f44cb4c2e3f84af2da7a57c4baa6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/MatchResult.class",
+      "bytes": 1706,
+      "sha256": "54acbccac0ce2eb7e56dac4c7ad9181315db25438b7198d74ff9ad6c1e001664"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/MemberMatcher.class",
+      "bytes": 5641,
+      "sha256": "16ba85658cffae49579636918ef2fadce7e566c7868f273a3e5e63cfff6a115f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/TargetSelector$DynamicSelectorEntry.class",
+      "bytes": 5137,
+      "sha256": "f2d02052f36cb693cd471240126cbba82bfd4219f28fb5165272c125ebd090c0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/TargetSelector$Result.class",
+      "bytes": 2166,
+      "sha256": "341c0d23458d8ad1fb8e91882af7ce5c8b01ca19e426eaabfd2aa971b0513a37"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/TargetSelector.class",
+      "bytes": 15635,
+      "sha256": "8387fcdc88b741d4955514b80be35a7373db4648bec5242019fdb1c7328e9ba7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/throwables/SelectorConstraintException.class",
+      "bytes": 1206,
+      "sha256": "087f6e4eeac8a70a59ffb87fb083bd7a447f748fd4fbbe9ae8f6843bc9ac26fa"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/selectors/throwables/SelectorException.class",
+      "bytes": 1436,
+      "sha256": "2fb2d164ab2abcae37b4591335e38d84ffe926966493d1df450759c2cf1d1f3c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Slice.class",
+      "bytes": 584,
+      "sha256": "8c396d6bb90f2bbf9dbae1a27e3f0b2c91cd31290b54baae2135dc464bded29f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/CallbackInjectionInfo.class",
+      "bytes": 2411,
+      "sha256": "4beac69c59ef853c4b772bd8bce18324492dbf705490921842ff994d86f81cb9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionInfo$AnnotationType.class",
+      "bytes": 657,
+      "sha256": "2626a30405ef5360757715f8b22ecd5039dce1fcc20ae32ddef3b3cfb6cf8ecc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionInfo$HandlerPrefix.class",
+      "bytes": 578,
+      "sha256": "f55e8fccfce98d640f987def03ae0b3e99eace55a72d7713f751a4a9c938f127"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionInfo$InjectorEntry.class",
+      "bytes": 3871,
+      "sha256": "29d39c4023c247cb9a67c647964dc2151c22fd399371a0122457af7d456dd9ac"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionInfo$SelectedTarget.class",
+      "bytes": 1372,
+      "sha256": "7b25d10613837a1f8bb0eed47b454e9dcfac97f27d2a266c573fd67eff5d41bd"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionInfo.class",
+      "bytes": 26540,
+      "sha256": "1de521791edfbf2b8f07c9ed16612583fc05e172752808e0e30c85f27ff4f9a5"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionNodes$InjectionNode.class",
+      "bytes": 3864,
+      "sha256": "d25ff4aee4431834d78da4c9777f9b5f02d87dd842f1a0817e4f38e005bc5c62"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionNodes.class",
+      "bytes": 2133,
+      "sha256": "0821f4ca911896525aea74c36b5ee0cd4d2e9712b946169828a36c2b6588abed"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionPointAnnotationContext.class",
+      "bytes": 2537,
+      "sha256": "d53e44b6702e178fae4a47ac7931e601c6367c177e2d9279203472c7e6367bfb"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectionPointData.class",
+      "bytes": 10377,
+      "sha256": "18e4deae794321aefaf588b275698853153ee51294ebb2e0fecac7ed33d66628"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectorGroupInfo$Map.class",
+      "bytes": 3538,
+      "sha256": "81e86149d6c42e473c0902838c47df3c64c0a68273e24e3b2136c02ae726a53c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InjectorGroupInfo.class",
+      "bytes": 4903,
+      "sha256": "f06a55b48f04b602b15a3a5983d48a1d8668fb1c05e35edd5220deb764d55f76"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/InvalidMemberDescriptorException.class",
+      "bytes": 1165,
+      "sha256": "5809692cf890373a519bc7773dfdbca4b0087f51fb592d93f0d004c4f23ec00d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/MemberInfo$1.class",
+      "bytes": 1289,
+      "sha256": "aea484db37f4b2acc946c342ffbb81f6daffc65acde3cf88419793a4c7fc94ff"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/MemberInfo.class",
+      "bytes": 18376,
+      "sha256": "1080f1f10d60e74fa86f280a6c9eb4bf7bef9e810e10e58f3cb728a67bbf62d6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/ModifyArgInjectionInfo.class",
+      "bytes": 2060,
+      "sha256": "6b8bdb2f1cebe1b71833cfaf9f95d2cf7cbdbd2d461db81209fc0f343407bf0b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/ModifyArgsInjectionInfo.class",
+      "bytes": 1763,
+      "sha256": "c67832797898c4af1045cadf3730be0e248461049169a497f7415d9504ae3c3d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/ModifyConstantInjectionInfo.class",
+      "bytes": 4278,
+      "sha256": "fb1b5bd6a3394233ec2f5accb1c429add025d2ca8c7b2ff0d34b1c0793607243"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/ModifyVariableInjectionInfo.class",
+      "bytes": 2070,
+      "sha256": "c976e5ec6ab923d0080462ca95bfb5c94c2f77ec815cec86f65a536ceb72ff27"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/RedirectInjectionInfo.class",
+      "bytes": 1737,
+      "sha256": "a7f132390ef2aa6563b6de7d29da9b82e7aefe58f5a593a7eff67e91d0eaaf62"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/SelectorAnnotationContext.class",
+      "bytes": 1818,
+      "sha256": "797ad3f8168de86bde41917351e3cb6467301e7c312557b41c52fdb12d5aeefa"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/Target$Extension.class",
+      "bytes": 1661,
+      "sha256": "59743a405daf1fc8062272de90fafdefa3e737228d4d4a46d77b318cbabacaca"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/Target.class",
+      "bytes": 13145,
+      "sha256": "8d6ca1b8e9fd13b597d43b7a320757cb180e996cf64082ebca086aa6e643fd68"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/struct/TargetNotSupportedException.class",
+      "bytes": 867,
+      "sha256": "18bd0ecd5ad1b3787805a456e9d2e0b9e77e7497fff8f0fdac0ca16a9d30e7ca"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/Surrogate.class",
+      "bytes": 409,
+      "sha256": "748ab463b89ca52dea660f913bafa62abebe2e12595e98c15197b3f1ba56d023"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/throwables/InjectionError.class",
+      "bytes": 894,
+      "sha256": "0ddf40b9a80e9df8c11beaf6cddf77e59337b30f51cc850d0c53cbc20c30a710"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/throwables/InjectionValidationException.class",
+      "bytes": 879,
+      "sha256": "470a20bbd4f133c5eefddc37a55f6174d3c125985583a9001ef3c95ff3cce334"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/throwables/InvalidInjectionException.class",
+      "bytes": 3838,
+      "sha256": "ad2a3a77fcab5e5d880980397cfb38bcbc8fdfff569595fab7cc3024348b6c55"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/throwables/InvalidInjectionPointException.class",
+      "bytes": 2046,
+      "sha256": "29eb7169d9c1994578b317d79d6cca16f64533953f4781c2367f1055c3e28620"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/injection/throwables/InvalidSliceException.class",
+      "bytes": 1869,
+      "sha256": "09e33e042dc764dcadcb18f5008aac4b314c4d6b97eaccccc34a90189b622856"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Interface$Remap.class",
+      "bytes": 1511,
+      "sha256": "57f00ef60b8431b64e1d82c9aac7e5aab46921a064667834e1dc72662885c0df"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Interface.class",
+      "bytes": 745,
+      "sha256": "5c20a6f538c3f25d1e535e366e2a73b9c25ad7decc6ef9dace2bee850467ac80"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Intrinsic.class",
+      "bytes": 456,
+      "sha256": "b02b4a179166df677c8fb8359701d909078bbe5d5360fb48d310348da2583439"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Mixin.class",
+      "bytes": 619,
+      "sha256": "8012b9210e51cf30f846a6dafb179eccd8ad61940891408d0eb4985bdefc7bad"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$1.class",
+      "bytes": 252,
+      "sha256": "307e1b303304bf3f14e9a672e61723fdc5f4473e03f3ddc4390451fe5c5883a3"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$1.class",
+      "bytes": 994,
+      "sha256": "dd60239409be9a4b53134389c1537167728eaaa9392109ed7a562ae1555543ae"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$10.class",
+      "bytes": 1080,
+      "sha256": "57a0de9946f47fdc7c3456b0a86bc1f44911724c4e062f0eedc79857a4aef754"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$11.class",
+      "bytes": 1082,
+      "sha256": "143ed32442e12fc5f6caada8c3e28d462ea3533df4cb11a372a95721de1f1e4d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$12.class",
+      "bytes": 1082,
+      "sha256": "da77e40b3f0253d9af92be2948f9d87ad03cc4b9d9a493947c727b5ed426ccb7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$2.class",
+      "bytes": 994,
+      "sha256": "644e38a6b206d7ed46450666f89e9a7ee54d80826ee5ced8fcfe57de7afe95ad"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$3.class",
+      "bytes": 1078,
+      "sha256": "b8ebd6cd7eb9eac4469cc9ec5ae0253613079fa42d9d058ded686461cf449a45"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$4.class",
+      "bytes": 1080,
+      "sha256": "48842c266706606d6908dcb6d6398be451bf436bdf1af19ca79abddd23bdcf2b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$5.class",
+      "bytes": 1078,
+      "sha256": "6b4cf3b96456a42598884aadff54fdaa0fc54944c363e6a498cac542523f0572"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$6.class",
+      "bytes": 1078,
+      "sha256": "2e87f0a4e728337c54636957f3e72a6d94bf3fddea3f0e1d9c74a40f072dc4ad"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$7.class",
+      "bytes": 1078,
+      "sha256": "d28fee58fc52c3b1ff1f7d849e44223299b2a2ad5c11193e6c392552e99b7e0f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$8.class",
+      "bytes": 1078,
+      "sha256": "ca6427281b30ca40bb00204eba5a3ca4debc7fe0ff8aa0544ce3dc0c877d4d34"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel$9.class",
+      "bytes": 1078,
+      "sha256": "2be0c780a12373b6a7af338f121efc6a918e38cb0d24fba03eb009c8dd3452da"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$CompatibilityLevel.class",
+      "bytes": 6183,
+      "sha256": "a0bb1b89dd20bff270e4f145988b26028d7f3d0425c528f4281d1ef087ca4e9c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Option$Inherit.class",
+      "bytes": 1471,
+      "sha256": "75fe797d9a120b03ab87c22ff3b2325f37b3bd09b4160a3b250b0c7fd07310a7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Option.class",
+      "bytes": 10008,
+      "sha256": "a3cd25fa7f0e57be02fab3bb03fca37352a3c0599b3287b494f390b7164ab922"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Phase.class",
+      "bytes": 2185,
+      "sha256": "9d3426ef322bfeaa0f19c95f83f7d4f98479942828eae0199afe1636f7df779d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$PhaseConsumer.class",
+      "bytes": 1029,
+      "sha256": "1bd23b91bc60b82e68d3be4c1d452f15f266497ef6ca457c3aa74056fdd73078"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Side$1.class",
+      "bytes": 728,
+      "sha256": "a9cce65da155ab72a98a7aea15c252de928335439dd5f65adee2225480f6296d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Side$2.class",
+      "bytes": 1124,
+      "sha256": "8a15c0cc586c2c65c081a808a68a7f3137a6417418e382a73351f6241608f23e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Side$3.class",
+      "bytes": 1198,
+      "sha256": "a7b2d4e823dfc624ab4d0fa1d093c05eeb47de3bb8e2dcea3847bd516bd77c70"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$Side.class",
+      "bytes": 1791,
+      "sha256": "dbd499cf0a6c85d092bc7b37b7e97a385bd8b1bfe4426b060e47ef680dd2084e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment$TokenProviderWrapper.class",
+      "bytes": 2004,
+      "sha256": "8c9eb712b2613c52faaaeafbaae02074750e34ea33f9bf6d945313db3034ad5e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/MixinEnvironment.class",
+      "bytes": 19243,
+      "sha256": "b25728fd91720aed78d2d4f167ea004f3352df69d613f8822a8383c94e834ac5"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Mixins.class",
+      "bytes": 5532,
+      "sha256": "a74b3b91d78a12b3cdb745f48e7b53be0d33ea9c6119ce352b67e863291f87f1"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Mutable.class",
+      "bytes": 408,
+      "sha256": "f8e71289de70a738fbcba1c6826f823dc6ef3795688eda262af8ddf30abc2008"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Overwrite.class",
+      "bytes": 563,
+      "sha256": "e27991fd18cf7d119a5958985d565dd2a0dcce77be825756c2071fddbfdad820"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Pseudo.class",
+      "bytes": 389,
+      "sha256": "5712ef9b33070add803f585121e1cba80b51e5eaaebd5bef5d06707b46e60b30"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/refmap/IMixinContext.class",
+      "bytes": 742,
+      "sha256": "9c14095c10f68d0b34e358108ec685491bc6151d4cb5c38ab49be89cb70027cb"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/refmap/IReferenceMapper.class",
+      "bytes": 488,
+      "sha256": "f3aca52ee1b8fdc794d53e0b2796edbc3d5ccbba25d6253d22e782d06c03fc49"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/refmap/ReferenceMapper.class",
+      "bytes": 7285,
+      "sha256": "a1910f051a804c92044914c470a521ae78c2ca71697daa6403bcb85b68ab4244"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/refmap/RemappingReferenceMapper$1.class",
+      "bytes": 1676,
+      "sha256": "27dcd4f44410bdc5bd028596c09f0d8aaae178868eb45f0e52456b5cac4dc9d4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/refmap/RemappingReferenceMapper.class",
+      "bytes": 6364,
+      "sha256": "96f349d397cc6903bc4f7e792b34f7acb283e8c1588c093293e2c89f908af85e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Shadow.class",
+      "bytes": 572,
+      "sha256": "1e912d6ca2809cf9f8779f84265656aaa679a348bce2c5e592b3d43a3a1fb41b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/SoftOverride.class",
+      "bytes": 403,
+      "sha256": "f2fce938f765895f7104a3228606a304b6d745bf82da8966d1e79237a68175aa"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/AnnotatedMethodInfo.class",
+      "bytes": 3874,
+      "sha256": "69d383fc9cf7730631164a17dae9d28ff866ee1ae87c1744e07a2a648f81c5d0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/MemberRef$Field.class",
+      "bytes": 1912,
+      "sha256": "91f23b8e79fb0404d0a6513d4dc8ee810ad0b55eed26989174a1bf0d10dee93b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/MemberRef$Handle.class",
+      "bytes": 2726,
+      "sha256": "2577aa42066d3e8d5e8e569939abbbb5c25d36d256dd80904fe33c8f3c3b9ee4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/MemberRef$Method.class",
+      "bytes": 1919,
+      "sha256": "c9abdeedc5424f0717c626768566789407df11e1a5407e45b36462bbef3271c4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/MemberRef.class",
+      "bytes": 1674,
+      "sha256": "2aa4ce0e19c752d5e442ec5fab78cde1a41b0039cb97b435104379cc8f43d3a2"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/SourceMap$File.class",
+      "bytes": 2707,
+      "sha256": "891f52b167f644481d8fb86851ddc92ef5779bd9a2a2d9a1ef0c7cb1adbcb00b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/SourceMap$Stratum.class",
+      "bytes": 2309,
+      "sha256": "8d158e33bc470d9a8e2aa75cac372f0a03712bad47680db6d666fd94dc0aabba"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/SourceMap.class",
+      "bytes": 3719,
+      "sha256": "ccecca3e3f20b7f967f1880f65cdce9f18293cc94ca51e5c5104d245001d5f36"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/struct/SpecialMethodInfo.class",
+      "bytes": 2179,
+      "sha256": "113b7b5c24679fe56b1ba79148f713007f0ef6444410a0bf4d195a6a73da524b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/ClassAlreadyLoadedException.class",
+      "bytes": 836,
+      "sha256": "d0fb3f32fe05ecce68bad0370c3a710c8016973cda880c8ed6cff17264eadf22"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/ClassMetadataNotFoundException.class",
+      "bytes": 1496,
+      "sha256": "88e8591d3180909455a90de9eaa61a8a95fbcf92aea0251dc02778e2fd564106"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/MixinApplyError.class",
+      "bytes": 796,
+      "sha256": "e9c434b03185e365eb330733609e799aa6a69e9a46974bd8ff1c1f0e865326f3"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/MixinError.class",
+      "bytes": 828,
+      "sha256": "42bc9b66ad05fd4a3e8595b5e90bd21609245a32b34c492238098171a75d44b0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/MixinException.class",
+      "bytes": 2501,
+      "sha256": "d8f871456fa1b88651bc149b3b7df4766fed91a476ff797b7b9da33989efa1e6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/throwables/MixinPrepareError.class",
+      "bytes": 802,
+      "sha256": "241958699ba2b940d6b7ea21d62c52efccf102c2b0a932480cecca5e833466bc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ActivityStack$Activity.class",
+      "bytes": 2135,
+      "sha256": "084430f622dbe97f0bde495ab9b343f07c634b06e0d1eca7a64f65d6488eccfa"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ActivityStack.class",
+      "bytes": 2814,
+      "sha256": "ed9926b50fe7208a547fa4bac2cf33b3da7b060521d5424be61838ad5f2f5b16"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassContext.class",
+      "bytes": 3813,
+      "sha256": "7123a29fa615065334ce6dc4ea6285a7b3679ba55e2c44436ffd6d0a1825dd73"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$Field.class",
+      "bytes": 5282,
+      "sha256": "c9a00fa887c31520130e41fda35fad477d6c326a1b5ad14a2c7bc7fae6339dc7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$FrameData.class",
+      "bytes": 1783,
+      "sha256": "dbf3ed479ae420deacab9333d2e808c1e304ed8e1255d74a1144d5e3d4e00221"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$InterfaceMethod.class",
+      "bytes": 1153,
+      "sha256": "686f2a8df7da01d76568fb1fa9563257625218d2a6e85a455dca2980058a9fc1"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$Member$Type.class",
+      "bytes": 1356,
+      "sha256": "2ea5e7b65e62282b23a53f95e40b0a5256a006c6e6604836d3048d4084d20d4f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$Member.class",
+      "bytes": 4635,
+      "sha256": "146f0f52df4ecc3a95a4066ec2f58c1d7b8561e06288ff302975d7dccc9f68d6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$Method.class",
+      "bytes": 8303,
+      "sha256": "5c37317d26f823febd435d54b183a82de4d269b3de800ec297058938f316aab9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$SearchType.class",
+      "bytes": 1295,
+      "sha256": "b809a3b254e80063ab2876bc1e1998c9bfe943d96fbca63413aa03f374621570"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$Traversal.class",
+      "bytes": 2504,
+      "sha256": "770386b7c208dae8c6b82e395f416b1677ae993d0fd19575a14ce793aa8ce569"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo$TypeLookup.class",
+      "bytes": 1291,
+      "sha256": "a073c72b147a4c198090f4627d040057b2508fceacf942c99ee4b36b2bac98dc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ClassInfo.class",
+      "bytes": 34427,
+      "sha256": "9ae95f1204527d3b87dcd683b877db9f8f3516732848801e20e15f008a41ff39"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/Config.class",
+      "bytes": 4396,
+      "sha256": "917a12e9522711c6675bb5474c3008b622245c7c4459efecb4b0c51c566d712c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/DefaultExtensions$1.class",
+      "bytes": 1548,
+      "sha256": "a08591e5933b459ba1dd9b0106bce1b1c5238f77816bba2e4d006eb6ea4ca993"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/DefaultExtensions.class",
+      "bytes": 2323,
+      "sha256": "724ef57b104eae4cf94bfbedfbedefba48034e6f8c0046a9999631195ff93c9a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/extensions/ExtensionCheckClass$ValidationFailedException.class",
+      "bytes": 1035,
+      "sha256": "2eca1e57402c0e0f696ce104bdd6c94fca41ecadf1f14c41b4c58e656fa30b93"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/extensions/ExtensionCheckClass.class",
+      "bytes": 2389,
+      "sha256": "dbc01ed68de89963fa47a58d92f8eccd15a2bcc3c128a3c7a46f3c6ad7444f94"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/extensions/ExtensionCheckInterfaces.class",
+      "bytes": 9284,
+      "sha256": "207665cef91b88cc054104819415ff1156baa49151f12cb7f74e9ec4fe9c9cb9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/extensions/ExtensionClassExporter.class",
+      "bytes": 8651,
+      "sha256": "71773d9b4bf792707b57d1944c2ba18aaf2bbe9593b09c48ac3a620f13cd8772"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/Extensions.class",
+      "bytes": 7064,
+      "sha256": "2e3e936a493a8852189bf4c0675fe522e43f59831c3be2bca877f9e1dcb701ef"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/IClassGenerator.class",
+      "bytes": 273,
+      "sha256": "2b661adea67a97b4c815736fcd6a3e325c3492233682a91f59795e7886fa9560"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/IDecompiler.class",
+      "bytes": 187,
+      "sha256": "91dfefc64cd92369e606e89cdd686ef4bb861f240f754950643b232fc9ba0b2a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/IExtension.class",
+      "bytes": 451,
+      "sha256": "ccfe400fcb126fbf0be7d4c75988c057e2230c033351bbefad10e7ea084c92e2"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/IExtensionRegistry.class",
+      "bytes": 693,
+      "sha256": "89e0b4f2651626e95846ef022007549ded0fa6f92a6e842aa651a3befce184ac"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/IHotSwap.class",
+      "bytes": 282,
+      "sha256": "74f2c375e29c0e385714d51a122f721d920b184f7c2ae7fe2ad21c083fcdba2d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/ext/ITargetClassContext.class",
+      "bytes": 304,
+      "sha256": "633bbfb789d3bc045d890268f40497f83d013ed200a73a08dd564d4656751b30"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/IMixinTransformer.class",
+      "bytes": 939,
+      "sha256": "5dc53d4fafbc294f1c71fd8303aa9f218fda5713580aa672474cff7400613dbc"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/IMixinTransformerFactory.class",
+      "bytes": 395,
+      "sha256": "458ed093681c1894c5cd99516e8f2f4c0b952d50bce6baaaa600d052fb46fad6"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/InnerClassGenerator$InnerClassAdapter.class",
+      "bytes": 2958,
+      "sha256": "d70af557bb16875288402d7459143b5ff011219db031de5125867c0331fe3edf"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/InnerClassGenerator$InnerClassInfo.class",
+      "bytes": 4364,
+      "sha256": "aa40c650111897282ba3ed2e4010f5256b37d19fc241ffaa6f63105cd6f99202"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/InnerClassGenerator.class",
+      "bytes": 7154,
+      "sha256": "9778898fca03a83955a7ea069c9bc6f0c78052e78058f10fc02a2b344db45920"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/InterfaceInfo.class",
+      "bytes": 6164,
+      "sha256": "17d59bc1a9859797df1ec435de62df55d5634b47f62b4ca0692ab43d15b90a5b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/meta/MixinInner.class",
+      "bytes": 419,
+      "sha256": "bd92f2e3eced246f3e57d309c3c91c474286bd7af6f8cd4c1e3ffa0abe4088e0"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/meta/MixinMerged.class",
+      "bytes": 433,
+      "sha256": "478b7301d729758a381dbe7764b5d6f391f7ecd98a126fc0910ca13c6eab21fd"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/meta/MixinProxy.class",
+      "bytes": 367,
+      "sha256": "a6105984117cddbef84c8434cb219eb67deb6d44ee072c5483b255bca3894200"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/meta/MixinRenamed.class",
+      "bytes": 451,
+      "sha256": "8e8c1a95b39db2379471cbbbe9344e86edc07eda6d328da1dd45141cd0934e8e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MethodMapper.class",
+      "bytes": 6274,
+      "sha256": "52019c9435c931a8fec0e7f3f689a164063c180c14e4ae9e5847745a2e2fc364"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinApplicatorInterface.class",
+      "bytes": 4445,
+      "sha256": "b4b5fb003288afe025b40557391ba2891232890a4052471fa3474d0ec3686c53"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinApplicatorStandard$1.class",
+      "bytes": 1055,
+      "sha256": "ee4a4ef8fca734cb0b14e7a0bedb7b455eb15af2393c782baae46177f00a0ff5"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinApplicatorStandard$ApplicatorPass.class",
+      "bytes": 1472,
+      "sha256": "ca71b2e59358bec50cae858e5b2fcc2a473fb49fc7c2ff86e6c274b5a2fd06ce"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinApplicatorStandard$InitialiserInjectionMode.class",
+      "bytes": 1487,
+      "sha256": "35c039d2ca281f39c1f89cf26b9a2bcc11f7c1ba5cf2c7810eed98ca86de5a4c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinApplicatorStandard$Range.class",
+      "bytes": 1594,
+      "sha256": "b82e6d64a36275a439251bbcdb740df3d4ed49c4560864799441715fd0edd6e7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinApplicatorStandard.class",
+      "bytes": 34410,
+      "sha256": "4612f99fb1c9fafaea759cde8e3f22090aa4432155c8ee527f61e2d540dc6d82"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinClassGenerator.class",
+      "bytes": 3591,
+      "sha256": "49982eb7a1dc00858e6ac172a47eca7c821f0c3a0be02e68e4df95d25430ac38"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinConfig$1.class",
+      "bytes": 943,
+      "sha256": "b78899ad563b0398251ad9d337185104c1909ebd05e8359f9dd63f4367c26288"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinConfig$IListener.class",
+      "bytes": 347,
+      "sha256": "89c0ac0ecc8f96e17271ae43a222875b6c923877d6cf43b17b717f25130b2860"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinConfig$InjectorOptions.class",
+      "bytes": 1394,
+      "sha256": "1181541531eb3067d04f2d1c4aa91f0cead0a5fae9b981f0280aa0deea1c0879"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinConfig$OverwriteOptions.class",
+      "bytes": 930,
+      "sha256": "d4ad172d20491feffe0187478115e6c54758e382931e9618b335afd8ba9da1fe"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinConfig.class",
+      "bytes": 32039,
+      "sha256": "c8e65a2dd439840f831473100adeb2f0420c0a1ae2fb1b7e5e9bea586d725ce3"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessor$ProcessResult.class",
+      "bytes": 2367,
+      "sha256": "0e43c777a6c723b4b70bdf5267d34b401709d98e187bba2f6fb0b6c1df45cd82"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessor.class",
+      "bytes": 1480,
+      "sha256": "52a6dbcc14aab88db124c57ce1fcae1a38cc1095e928b036ed552b0b9fa7afef"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessorAccessor.class",
+      "bytes": 7453,
+      "sha256": "d183090c4ad5372e40803fac0687c4037ed2c82fe7741819d769ab3415c394b3"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessorNestHost.class",
+      "bytes": 3295,
+      "sha256": "70793f60a8fbc110c0c9881b2c47a185de983d34decacf26a7a99d4a899394da"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessorPassthrough.class",
+      "bytes": 1837,
+      "sha256": "90ccd7632d1ee50f1c6fce8f4f12dc9e76745234968a754d3c31d537eb714f86"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessors.class",
+      "bytes": 2517,
+      "sha256": "5356230d2496c9b342fd06cb59879ab1b68a15359b3c9b7019448c32a0805330"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinCoprocessorSyntheticInner.class",
+      "bytes": 2694,
+      "sha256": "52ade9967a205dd4a6ab3823c237b2078f5869d28c9a401a6bb09395562f75ad"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$1.class",
+      "bytes": 928,
+      "sha256": "af8e9a3201846ae9410f0c4f305295e5af5682fa0cd12e5272fb2027035b284d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$DeclaredTarget.class",
+      "bytes": 1310,
+      "sha256": "a09bc77c1b9d5017be5585f132303174a1791f0c68f41cedfdfc538cc8926f8d"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$MixinClassNode.class",
+      "bytes": 2236,
+      "sha256": "ef321e202ff646264bb32b20d1abdfb80d2f22d8ecb382b72324e64e4f1bf40b"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$MixinMethodNode.class",
+      "bytes": 3166,
+      "sha256": "495164df15c1f9166dd64810dd3b5ad68790fb86737c475b7c542a9e99c4a0b9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$Reloaded.class",
+      "bytes": 3118,
+      "sha256": "a3d9fd3990683cc732b28e1faed4edef54fb1f6a1fb11c982c406984459f0273"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$State.class",
+      "bytes": 12225,
+      "sha256": "0a8c2c7b34755be6bd5f1bbb1f7ba30f8d8ccffa6f3da1c30ad981a48cc24d80"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$SubType$Accessor.class",
+      "bytes": 4205,
+      "sha256": "9b0e6e39c4fcf7adf38b7183d7d0c923ee41d11af40ec4873c7431670efb1561"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$SubType$Interface.class",
+      "bytes": 3323,
+      "sha256": "12ad5b72d5ab6b51e08941d80a0e96d155c9aac97dcb4573d30b0f2f10203777"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$SubType$Standard.class",
+      "bytes": 4203,
+      "sha256": "adf4f593d9ab2fb397436bbeaecca1347edbc39ab206e3bd63383aa7c6dd6c9f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$SubType.class",
+      "bytes": 4102,
+      "sha256": "dc105a6dbaa4127e7b779e86abbd2b40d1cd226ff05c14825ab9079473f5cf79"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo$Variant.class",
+      "bytes": 1369,
+      "sha256": "cf77f77f48457af3d75996140302e7a872dc599858441d167559a476694e96b9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinInfo.class",
+      "bytes": 22235,
+      "sha256": "6affb8b0409394aa787ac04133051ec542d2a3bf79f2e455b71a8d6ad107fdf5"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinPreProcessorAccessor.class",
+      "bytes": 889,
+      "sha256": "f4cf369e2efd0bb920b4dd3f1be4495487f65d0e2c8c2d9a76cdebfb1a3eb3ef"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinPreProcessorInterface.class",
+      "bytes": 3563,
+      "sha256": "a172ad69216ad359505d7ba47105ae7e667faff68b08f14b8f2a66e8a95363f9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinPreProcessorStandard$SpecialMethod.class",
+      "bytes": 2692,
+      "sha256": "e1d513c90ffa2833358327284c2c5632e6aed1fc2e93d2dc04246c34376d731f"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinPreProcessorStandard.class",
+      "bytes": 31376,
+      "sha256": "93799dc73c2529924b721b8a78441b40c07bd192d7ea88d1ab8b332ca6772835"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinProcessor$1.class",
+      "bytes": 1567,
+      "sha256": "fa3f1741038934a7a1f8577e68e236b145c05c8d9b64a0b149989bb4a11971d7"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinProcessor$ErrorPhase$1.class",
+      "bytes": 2724,
+      "sha256": "a139dd3c48eb99ea92e821457733ffcc93d1348d307267aa305d7d97b8fe6902"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinProcessor$ErrorPhase$2.class",
+      "bytes": 2479,
+      "sha256": "2d64f7478f80e99f8f2b663b0f1f4ea17d7cbf1f89e7f397e9881ee8940bb9da"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinProcessor$ErrorPhase.class",
+      "bytes": 4137,
+      "sha256": "a46f7c7cf591f39881e0b2f9f20bd83de57c4cf0156154b6c52dcc2188e02155"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinProcessor.class",
+      "bytes": 25664,
+      "sha256": "c354f62d30691abf138619853ece6c8f242250384ab77013fab36a3c2b6b427c"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinTargetContext.class",
+      "bytes": 41431,
+      "sha256": "0288d9e9ccb18eb403247f6052ec531649c94ba7c125c420da7073cc8caa2d20"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinTransformer$Factory.class",
+      "bytes": 779,
+      "sha256": "07d99d7b4092ff0322c11e0514756144994dcabc9f4eab16129720c377f9ec35"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/MixinTransformer.class",
+      "bytes": 7965,
+      "sha256": "85547487bbdbbdab6eebff5d64b77fd2ad0d57021a423d593473d884b4e07931"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/PluginHandle$CompatibilityMode.class",
+      "bytes": 1408,
+      "sha256": "4b7850ae34a4a76ef38fadfd91199a95d5b5e4ad2950ea09d05a8bfef5de9da1"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/PluginHandle.class",
+      "bytes": 7867,
+      "sha256": "25ad68cd6d80182c4621c476e624b309667b70ea7dbde41edf5b2060fd938043"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/SyntheticClassInfo.class",
+      "bytes": 1210,
+      "sha256": "85c4ad25fbde23a7b01d8ef05ad726196b1fab7a456082bd9012c46e5013b85a"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/SyntheticClassRegistry.class",
+      "bytes": 2041,
+      "sha256": "22ef0cc9db2efd017102ff2d9dc74a092d2968e606e72e7857843316d1301282"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/TargetClassContext.class",
+      "bytes": 13766,
+      "sha256": "ca03a30f2a0468cccff228e28bf3682540778d5d5da3cb5a06d618296e8f214e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/IllegalClassLoadError.class",
+      "bytes": 861,
+      "sha256": "c0dc932c6c7b42348b6b8e9333c75b02df3019b2f8c229e4a70ac5b9385dd4ab"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/InvalidInterfaceMixinException.class",
+      "bytes": 1759,
+      "sha256": "3fdaca4616c32cb2c89b60c28512f7a3893ad024034ea58c2588e2a69abb750e"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/InvalidMixinException.class",
+      "bytes": 3989,
+      "sha256": "414a8643ce078f667fea958813124d7c30b10b7a1da5d35c2c1cf02e4fba87f4"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/MixinApplicatorException.class",
+      "bytes": 3381,
+      "sha256": "8eb34ca1e80031fa16c8d9adfd0c41b500b69da158284e1a4be94a73e5f3fd09"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/MixinPreProcessorException.class",
+      "bytes": 959,
+      "sha256": "77e33d79d7da1017d73c6ba222bce16f83891a2230903168a7db57b2ae0d4144"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/MixinReloadException.class",
+      "bytes": 871,
+      "sha256": "0a2746887af9f31d166ff1014113e16adfcc45589e0d0d148e945819ac4dd069"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/MixinTargetAlreadyLoadedException.class",
+      "bytes": 1354,
+      "sha256": "c8106dcdc2fa5504dc2bda03879fc7b30785ab89e835d17464686424cd2fd327"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/MixinTransformerError.class",
+      "bytes": 838,
+      "sha256": "d0e35db6a71d05360ac21e46a236c30c0c7bbeeba4c510361337184e43f88ef9"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/transformer/throwables/ReEntrantTransformerError.class",
+      "bytes": 873,
+      "sha256": "a718a587306ebd8da938d7f0442d2fcb630d72fb419c3da064af2bc37e602f36"
+    },
+    {
+      "path": "org/spongepowered/asm/mixin/Unique.class",
+      "bytes": 475,
+      "sha256": "0f547d7ee73bcc815620b94885335d417f25ef13758ff6029eb98a91feec1d45"
+    },
+    {
+      "path": "org/spongepowered/asm/obfuscation/mapping/common/MappingField.class",
+      "bytes": 3440,
+      "sha256": "dd9ef2553471497ee5244018b6eb7920e346be8b4dbe2ff57f38389f88c03470"
+    },
+    {
+      "path": "org/spongepowered/asm/obfuscation/mapping/common/MappingMethod.class",
+      "bytes": 4651,
+      "sha256": "49fbd1783605c0cd88fe2a8af379368b38fb2cc64edbdd74dd58a14abccf354a"
+    },
+    {
+      "path": "org/spongepowered/asm/obfuscation/mapping/IMapping$Type.class",
+      "bytes": 1347,
+      "sha256": "40e0a37e91f41c953b2a1772ea18fbf36d9bbc9f4bff157f1bfb06a29bfab4b7"
+    },
+    {
+      "path": "org/spongepowered/asm/obfuscation/mapping/IMapping.class",
+      "bytes": 747,
+      "sha256": "cd012bf535d5eb8807bd661a64ecda2a78f46dce93f218c14c75330a489d1fc5"
+    },
+    {
+      "path": "org/spongepowered/asm/obfuscation/mapping/mcp/MappingFieldSrg.class",
+      "bytes": 1611,
+      "sha256": "1abde9c0fb61c23738d673556403e6b4c8bfc732970a741fe2fb85da46ad4755"
+    },
+    {
+      "path": "org/spongepowered/asm/obfuscation/RemapperChain.class",
+      "bytes": 2877,
+      "sha256": "a1e7ed1152da61fb31985f70a1e878da8bf37b1faf1837d7d2b0d8be59121980"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IClassBytecodeProvider.class",
+      "bytes": 401,
+      "sha256": "69476b9bdeb174df3c319cf5d4b84696b4deb89f19a2e5dc20eb7076f4d890b2"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IClassProvider.class",
+      "bytes": 604,
+      "sha256": "4f7554b07d92a5a0003b256bb0aa807379c60000dec242cb5ee1d5640707a9e5"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IClassTracker.class",
+      "bytes": 312,
+      "sha256": "a7d7a80300527bfc92e3228a1c75cc62fa791c2a9de0f1f04c314becd08e8408"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IGlobalPropertyService.class",
+      "bytes": 807,
+      "sha256": "40d38b366d14101bdac3bb88e6452af133c6b5791d1f4d02d574f9ecfd0ebce0"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ILegacyClassTransformer.class",
+      "bytes": 282,
+      "sha256": "4625bc7641b8462544d66a53a133a311b6aba20c0c565d4a143e1d3f811e1a98"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IMixinAuditTrail.class",
+      "bytes": 272,
+      "sha256": "0657fa7cff2bac33a900ca89df884c9027d048265c22575049c1217ce98aef6e"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IMixinInternal.class",
+      "bytes": 139,
+      "sha256": "0abf387646ef363d86b9be245675d661e081a78d1f253b3733f435ea4eedab0b"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IMixinService.class",
+      "bytes": 1858,
+      "sha256": "0627d4d184c74d2d53e979bee1b8c882f3353cea9f50e6e1272d656524d5d605"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IMixinServiceBootstrap.class",
+      "bytes": 252,
+      "sha256": "5d457d03afbb7a94b27b839138a5f07734f8a9110dff3f6c1c55efc0328e5d5f"
+    },
+    {
+      "path": "org/spongepowered/asm/service/IPropertyKey.class",
+      "bytes": 135,
+      "sha256": "2c5a6505e1b7f4dc51a226be9db5b6293fc71de3b84ad86f98624db23ff84c7f"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ISyntheticClassInfo.class",
+      "bytes": 316,
+      "sha256": "6ce4b179b0878bb84695480298427f432677d627b96dc8b8bbbfef45bf5c6395"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ISyntheticClassRegistry.class",
+      "bytes": 260,
+      "sha256": "328f4335a06b6a70ef861af70face65a1ceb94bf426b19ac54c428db66324691"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ITransformer.class",
+      "bytes": 213,
+      "sha256": "481ef1cdd072785e976ac2f932b26d4e264118a27f1c251195920f88f2eb34e2"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ITransformerProvider.class",
+      "bytes": 398,
+      "sha256": "70d431c9c28b4f750d0132b89b1e54d3466f45eb0faec7f5e8cd2ef096c1af74"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ITreeClassTransformer.class",
+      "bytes": 308,
+      "sha256": "31762476d2da846f46395ddf1ca38135247223d37ae6befed57328fbbf419429"
+    },
+    {
+      "path": "org/spongepowered/asm/service/MixinService$LogBuffer$LogEntry.class",
+      "bytes": 796,
+      "sha256": "f5e8b5c530aaad8bb2760ae739dc38ab7aa1dcedf3240bb45f2002a366e22632"
+    },
+    {
+      "path": "org/spongepowered/asm/service/MixinService$LogBuffer.class",
+      "bytes": 2132,
+      "sha256": "189c29fb907a2b261afb1c2e543facba6f1d2e51d9dedfa0872292d733932b9b"
+    },
+    {
+      "path": "org/spongepowered/asm/service/MixinService.class",
+      "bytes": 7246,
+      "sha256": "d0f39d89b46715b9c0c3cb9f31e22e4c7403b923f145284d6a81f171eb215f36"
+    },
+    {
+      "path": "org/spongepowered/asm/service/MixinServiceAbstract.class",
+      "bytes": 9124,
+      "sha256": "8c5c4ed8fb2a79bdb14fd9f5aced0ebf9abaa432c64159fd76261ea76a668cc7"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ServiceInitialisationException.class",
+      "bytes": 881,
+      "sha256": "62e20d8193e6ba8536bd54a977a5320dee9975a7262fda24288d1f64a91abb0d"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ServiceNotAvailableError.class",
+      "bytes": 484,
+      "sha256": "b9979947fe86798b0dcc7f00060971e898f8bbaa43e08d501c97eb04fdb26e72"
+    },
+    {
+      "path": "org/spongepowered/asm/service/ServiceVersionError.class",
+      "bytes": 469,
+      "sha256": "ab32f546579538953bceab661feeff234fe4b4e21a29422f04012f0ebda5502d"
+    },
+    {
+      "path": "org/spongepowered/asm/transformers/MixinClassReader.class",
+      "bytes": 1339,
+      "sha256": "2a2938eaf3da3000d809ffa692c395fecab5726b880efffe4050354f93887436"
+    },
+    {
+      "path": "org/spongepowered/asm/transformers/MixinClassWriter.class",
+      "bytes": 970,
+      "sha256": "e9a7acde7e19c72338c657abd788365fcae0a3b23d86895debed50c2ca78d90e"
+    },
+    {
+      "path": "org/spongepowered/asm/transformers/TreeTransformer.class",
+      "bytes": 1794,
+      "sha256": "3b0585ebdaa07aa8d4a03c551d7c8c04a26d2af83a3cc4c162daa07cdc09e7c2"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Annotations$1.class",
+      "bytes": 1074,
+      "sha256": "591373fa541deeaded4d314860d6aea2717d109febf7b1cb36476a8b5f94a38d"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Annotations$Handle.class",
+      "bytes": 4317,
+      "sha256": "9fc19999b8e6148b0c3d70059414694d7033b80a952122626fd2d743be338757"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Annotations.class",
+      "bytes": 17566,
+      "sha256": "bbd3eb6d92a0dd4fc16f9c5a81b0faa4995d7b86bc38eef4dd58ccce76b5361e"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/ASM.class",
+      "bytes": 5594,
+      "sha256": "dfcbdc02787103f5ff6ddd627e01bec54955689061620eea53f7465c2172e0ac"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/ClassNodeAdapter.class",
+      "bytes": 3249,
+      "sha256": "aad9b81eb2aed240262901d3064e790117ffdd73ad8c624d1c8c1182fac74cac"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/IAnnotatedElement.class",
+      "bytes": 370,
+      "sha256": "ff47412ee61a583cdd614dd0459fe60bd72af0184470b4e81428f894c6420d72"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/IAnnotationHandle.class",
+      "bytes": 1184,
+      "sha256": "3cb369ae2a56fa8da52bda6a8c35c3af1d5c563c38f0ac88a5071365aa3a010b"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/MethodNodeEx.class",
+      "bytes": 1826,
+      "sha256": "8d8935608a7df7065626f04cea3e9b2cb0e6bbf323a47f7952b2c18743f3c900"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/MethodVisitorEx.class",
+      "bytes": 889,
+      "sha256": "009112b9ac66a47792c9063ceeb0c50bc46d182bf4d6672433784a78c43c9361"
+    },
+    {
+      "path": "org/spongepowered/asm/util/asm/MixinVerifier.class",
+      "bytes": 3112,
+      "sha256": "95c7478ddb531d6b4177a59ebff86f4940dea463042eb35a98f032d9585884a5"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Bytecode$DelegateInitialiser.class",
+      "bytes": 1027,
+      "sha256": "4603b52244056486252878d17b775f5117c7035de858c8673eaff4c739bc9e8d"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Bytecode$Visibility.class",
+      "bytes": 1787,
+      "sha256": "0085d02f3b5dfeaae87bf8f56b4b713f322c74920996b9012bc397fef138fa3e"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Bytecode.class",
+      "bytes": 25140,
+      "sha256": "4e1778d03277fd62bde5fce2d65932922f8cb710926a0ecb94393f3a7d2dfb47"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$IToken.class",
+      "bytes": 655,
+      "sha256": "019fb44f6cf6804cb97ba61b24dd4f7ebb28bc951686b2f0dae01ffd9f20d5b6"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$Lazy.class",
+      "bytes": 810,
+      "sha256": "75b18e258ae36603e8924e27e6b7caae0681d3ac32df545dc1036d8ce17e4c98"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$BoundElement.class",
+      "bytes": 2164,
+      "sha256": "00c6635d14816fdb54c45831c6f36b45e1023638ae0cfeccd4cf7ea007884ecf"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$FormalParamElement.class",
+      "bytes": 1519,
+      "sha256": "8180f463e4b57ce3be1c343287675b90c53a70dd96d5444d18a9e0eafbc7e7fe"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$InterfaceElement.class",
+      "bytes": 1190,
+      "sha256": "d78e26129fa26540a428898c66c638324294f77a0c449131828aa2f5b9b34d00"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$SignatureElement.class",
+      "bytes": 850,
+      "sha256": "e3b27e49254be1b0dc3d4f6fdf60cad75fc195bf81a8d3ebf3b4deee4f81e312"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$SuperClassElement.class",
+      "bytes": 1194,
+      "sha256": "fbee40f2a53b379369a566196722e5c64288d372263386af1524258b4f5b1008"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$TokenElement.class",
+      "bytes": 3869,
+      "sha256": "1611e370c57ccdf1bd66a01f013987eeba82623feef1be4c77f60e1c0de21b6a"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser$TypeArgElement.class",
+      "bytes": 2921,
+      "sha256": "90e6960a90f6c325a7fac4d6d74dba1bb4fbd00b3ee32e1a6a9db75fb4e4ea15"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureParser.class",
+      "bytes": 2276,
+      "sha256": "0f9b51abb145686f1d17c0360128972f57140cec85453bef5b138ebd9074fc08"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$SignatureRemapper.class",
+      "bytes": 1506,
+      "sha256": "763946bbe52dd015a3ae3e69907f16e9ded3752fde5e74e48fd83220379100be"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$Token.class",
+      "bytes": 6591,
+      "sha256": "8c92bc5db47adbb41de6482d18716dc5a76d2c47541415d5d50893f8f45b1de9"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$TokenHandle.class",
+      "bytes": 2532,
+      "sha256": "37fb66883669bccd68ee597017160f7b7689f66ace424af8783446adb2dcd8d2"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature$TypeVar.class",
+      "bytes": 1628,
+      "sha256": "7bccff9290880b0be6193feea1e3c18edd4d860cfc2fd20d10f3f6c676a565c8"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ClassSignature.class",
+      "bytes": 10352,
+      "sha256": "cae896c10b098fc2cd523226aedb381e0235af98d5be2982f32291c8d3a7b23e"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Constants$ManifestAttributes.class",
+      "bytes": 866,
+      "sha256": "5978e0472a674f6b5aad0758a4b70a76f075c39a2e0ee44c7acfbf992e0df67e"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Constants.class",
+      "bytes": 1646,
+      "sha256": "1664f06824353d3225d281ab3d0fc9421bc7a112a46fdb679406facf8d881a09"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ConstraintParser$Constraint.class",
+      "bytes": 5571,
+      "sha256": "ad5bb2b84f3c9608cc3c8be3614be8bf83f1782b40e5a28959873868ecabdc41"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ConstraintParser.class",
+      "bytes": 1878,
+      "sha256": "85cb370b86b45ceffc7c13ed0b6a94bddd92e66f85fca68a533a90aa727eae04"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Counter.class",
+      "bytes": 637,
+      "sha256": "fb103a2a15cb2f82ba726fc3521e874916b4b3216a9fd0731d9980e9cc613dc9"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Files.class",
+      "bytes": 1548,
+      "sha256": "3ee40dce759fd2cea3366e58137ee0f6954ca7f3816543bc6cb638649ff536e3"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Handles.class",
+      "bytes": 1465,
+      "sha256": "40294f48c8166610ec1c24f236a229a9eb13120ffa7412dbc4291877810913b1"
+    },
+    {
+      "path": "org/spongepowered/asm/util/IConsumer.class",
+      "bytes": 255,
+      "sha256": "f170e7048fdc305390d178f8a1ac71b3501c2778a8b34d925ab955fc697f668e"
+    },
+    {
+      "path": "org/spongepowered/asm/util/IMessageSink.class",
+      "bytes": 196,
+      "sha256": "6b27fac6363ea5c9db0e93c30d1cd99ca702a77597b6651ff7a81e4395f7f211"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ITokenProvider.class",
+      "bytes": 197,
+      "sha256": "b8b1b2e45dc6d38b4ae0760ea344e5374c8860f895a911a2baff3a1e7bed99d4"
+    },
+    {
+      "path": "org/spongepowered/asm/util/JavaVersion.class",
+      "bytes": 1769,
+      "sha256": "37ae973e46c90d1faf9891a5063ab360e7e0dbb1684ba03e4671592b64970d2b"
+    },
+    {
+      "path": "org/spongepowered/asm/util/LanguageFeatures.class",
+      "bytes": 4457,
+      "sha256": "d0b34987648211ab9923b014d823e9f9676dbc81d8bee91ccfa3c6cbe54eee7d"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Locals$Settings.class",
+      "bytes": 1469,
+      "sha256": "468931cfd130a224135fda74761a0eae3425139eed944d64bdefc137be4083d7"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Locals$SyntheticLocalVariableNode.class",
+      "bytes": 786,
+      "sha256": "1e837837448289e9531ab674ccb4bea037ee6b945c41f7003ff783d3aa19d824"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Locals$ZombieLocalVariableNode.class",
+      "bytes": 2314,
+      "sha256": "4ad9cc6e765aa2c212bafdaf36913de796217085329c2732d6bdd2a2e52db20f"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Locals.class",
+      "bytes": 17285,
+      "sha256": "8485624656a5031a28230eee8fd255a70f77d0df1da293196449560953b2c287"
+    },
+    {
+      "path": "org/spongepowered/asm/util/logging/MessageRouter$1.class",
+      "bytes": 930,
+      "sha256": "5ef93987631113988fadce1cfb0c9e5cf933f2e9d94ca9b2c89f8b42cdac553d"
+    },
+    {
+      "path": "org/spongepowered/asm/util/logging/MessageRouter$DebugInterceptingMessager.class",
+      "bytes": 2050,
+      "sha256": "141fb89577230751e68b7f178e1a7e147aff860b1ca191fbe5dd8d2ff87be9b1"
+    },
+    {
+      "path": "org/spongepowered/asm/util/logging/MessageRouter$LoggingMessager.class",
+      "bytes": 2928,
+      "sha256": "a726b27a61a7106c569a85350b592710d2dff7e8f49ec09312d1344f6197141f"
+    },
+    {
+      "path": "org/spongepowered/asm/util/logging/MessageRouter.class",
+      "bytes": 1020,
+      "sha256": "b6757bf151cc36b7d17fdf55516fbddf521821eb9f39820ada1598f5b95098b1"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ObfuscationUtil$IClassRemapper.class",
+      "bytes": 320,
+      "sha256": "e08d8a1f40ec5674136a77f494ba78d398a427d75bbf0ef3e48b03667f64f258"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ObfuscationUtil.class",
+      "bytes": 2196,
+      "sha256": "9b934824bc15c20f8a6c667857cf06e9ab539286fc8106f5e6bf24169c87eec2"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler$1.class",
+      "bytes": 1406,
+      "sha256": "17ffdcb83c8dbeffe954bd3ecc302e41bc237af475ef62c5a6f2d23c0a32d93a"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler$DisabledSection.class",
+      "bytes": 1161,
+      "sha256": "b932af976c8bcc802aa8b8d10c0acab4fb8c8c76e56670880842ce909ecf4e5e"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler$LiveSection.class",
+      "bytes": 3072,
+      "sha256": "a8d4f564f9de998fbd94e5c846cc07a5cbcbfe023e0b3cc29fbc25888caff39a"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler$ResultSection.class",
+      "bytes": 3453,
+      "sha256": "64e0c0d583df3e9f699ec758c0e7c1c9eb2b0e2a30e4725601bf0d11fd1d9290"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler$Section.class",
+      "bytes": 3037,
+      "sha256": "eba375d4be24f80faa1e9ad4c23896564b91538f5b003b3d79f59f541e7f6a99"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler$SubSection.class",
+      "bytes": 1911,
+      "sha256": "6a78963fc4151e2fab15c69ac8ffec706c54c71cba48de299a95866c95e2f70a"
+    },
+    {
+      "path": "org/spongepowered/asm/util/perf/Profiler.class",
+      "bytes": 17905,
+      "sha256": "b271143a871f35b76a5a55123b3188b3eb1c6aed9edc406dbe71268a41cc58a1"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$Alignment.class",
+      "bytes": 1209,
+      "sha256": "f425c27c2e2d86e6b2a62d7c0439786505b8aac8ee2d5a2c967ea5510ef9a150"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$CentredText.class",
+      "bytes": 1171,
+      "sha256": "f1fe0c3c26090dfa96e4ff2d65e142d4fcc6779151a5dc306b1ebc15d53da27a"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$Column.class",
+      "bytes": 3173,
+      "sha256": "6a083643575cd9f3581962fe8e2eb7047a4087cfe55fcb87f0ce3488618a373d"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$HorizontalRule.class",
+      "bytes": 994,
+      "sha256": "3ed73b2f2e7407e9151dbd78ff461710b8eef29180c53fc5b77df268a0eca30c"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$IPrettyPrintable.class",
+      "bytes": 311,
+      "sha256": "63be2060ec0b141ead05cc789bd7b20406081d71affecf1102b4d776ecfad20b"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$ISpecialEntry.class",
+      "bytes": 241,
+      "sha256": "7b539a0c199e5762c5c7f6af6e9d187624b6cdb65fd261c7f4a06659df0e3399"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$IVariableWidthEntry.class",
+      "bytes": 278,
+      "sha256": "e5ffc97dcce9435c4f426ffd2c75657d80955d22776043dc5d4f3da357da6b7f"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$KeyValue.class",
+      "bytes": 1178,
+      "sha256": "9738fbb3b8ca6e43bd67101014d00e1a9aaac5ca6c5010745a9b3e88fcf9ca17"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$Row.class",
+      "bytes": 2009,
+      "sha256": "9bd9a83ae977d819ae744ba6d182d93baca6e502589a23afb5072b6c453528e4"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter$Table.class",
+      "bytes": 4964,
+      "sha256": "afe5fd763b5c2a94a17aa1443df16b6501035e29c06ab41bdda1e4e9076286d9"
+    },
+    {
+      "path": "org/spongepowered/asm/util/PrettyPrinter.class",
+      "bytes": 18010,
+      "sha256": "22eb93ca45303b87f89129ba080af080681e169c64903628d05e52c833674604"
+    },
+    {
+      "path": "org/spongepowered/asm/util/Quantifier.class",
+      "bytes": 3194,
+      "sha256": "8ccc1868d33adf5fc2708d1ea1a1ae9e4abc40d1a2bd9411530ccb8bb3fabe09"
+    },
+    {
+      "path": "org/spongepowered/asm/util/ReEntranceLock.class",
+      "bytes": 1412,
+      "sha256": "d5645400a0e6f8630ec52d6f04f3d652fcfcb77e0b4389ac758ab7650de9547c"
+    },
+    {
+      "path": "org/spongepowered/asm/util/SignaturePrinter.class",
+      "bytes": 8039,
+      "sha256": "3b440e4fc7fdabf7c28fb0894d7bc5005f82f7b9f36de25c1d9064003adb33b3"
+    },
+    {
+      "path": "org/spongepowered/asm/util/throwables/ConstraintViolationException.class",
+      "bytes": 2751,
+      "sha256": "16820a092f5438ba8de91319722b986f6202131eb359c20405bb802d5f7fb400"
+    },
+    {
+      "path": "org/spongepowered/asm/util/throwables/InvalidConstraintException.class",
+      "bytes": 897,
+      "sha256": "a57c8ae1b2b9a277a035d74d1629caef30f247f8093c0a2e2a1b0047e50db06b"
+    },
+    {
+      "path": "org/spongepowered/asm/util/throwables/LVTGeneratorError.class",
+      "bytes": 687,
+      "sha256": "0a03b593a8aff5625ce3e43e2a4b9af2c4df4fe6b55f751b87b7fe709961cf70"
+    },
+    {
+      "path": "org/spongepowered/asm/util/throwables/SyntheticBridgeException$1.class",
+      "bytes": 1184,
+      "sha256": "931130052136cbdaa5599bc4d6f63cb901c1ed0754ea35adb69c9588d9abf4fe"
+    },
+    {
+      "path": "org/spongepowered/asm/util/throwables/SyntheticBridgeException$Problem.class",
+      "bytes": 3396,
+      "sha256": "13517d557671f74f5526df24055b314441858563748e1427dc11e5d2721edd8b"
+    },
+    {
+      "path": "org/spongepowered/asm/util/throwables/SyntheticBridgeException.class",
+      "bytes": 11150,
+      "sha256": "0a1f6077ec254799a4709c51ebaffd6c5b3ef14eaf0a319a9f9b308224f736ed"
+    },
+    {
+      "path": "org/spongepowered/asm/util/VersionNumber.class",
+      "bytes": 4959,
+      "sha256": "dc4dd461d0a7683a8f1a7220ee486ff242e68641dfa471435d164b0846ac52ba"
+    },
+    {
+      "path": "LICENSE.txt",
+      "bytes": 1065,
+      "sha256": "1969da35a4ec9d24f82280fe693d656d890ad61a8b477144e8184d0969463b08"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/IClassProcessor.class",
+      "bytes": 848,
+      "sha256": "ea01ac03fa6b894af889d07396a9b76a3456b692ec16668498284eeb5e1f6c18"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinLaunchPluginLegacy.class",
+      "bytes": 9739,
+      "sha256": "eebe20b521483335da9fdce6b7a52a46581d6727faa207d5c3e41555badc992e"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationServiceAbstract.class",
+      "bytes": 4576,
+      "sha256": "65b01471c751e64e9e0ac9422d4d457a21d0951543bf8386cbafa43ff90de147"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/Phases.class",
+      "bytes": 1018,
+      "sha256": "c2adbf48ab356f1b71a28a455db34ab82c6ec24f19739f6e6f5f72edc1692681"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncher$Resource.class",
+      "bytes": 1503,
+      "sha256": "c20150628bdab18dbf2001af1ed5288ea6393d2a4264f3b48e6335b2854cadd2"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncher.class",
+      "bytes": 3119,
+      "sha256": "53c13518e2036429863fef0cb473fafe37d82f40520c1281193483198188f65e"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentMinecraftForge.class",
+      "bytes": 3958,
+      "sha256": "7459b4007375a3a6f4543ec7c2f16a57be5f6c9c9b220322b174b0974a8eb16b"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/Blackboard$Key.class",
+      "bytes": 1588,
+      "sha256": "a765104db40ab59c62a977588304f70a9ab38a09cd53a2e9c912146bab174a4a"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/Blackboard.class",
+      "bytes": 3867,
+      "sha256": "a4613eb519f8dbca954f604984ee4d1be8d8ac8f98cb16e86eb4286f389f8537"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/LoggerAdapterLog4j2.class",
+      "bytes": 3868,
+      "sha256": "108d3bd78c813e5eee3a2f7836fde89c686422476389f6fcdab742c522381525"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/MixinServiceModLauncher.class",
+      "bytes": 8366,
+      "sha256": "4855391e3bdc2b637f7d3e2e856fe4fc5de7ae52b6289fe8ef57d94caca3866d"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/MixinServiceModLauncherBootstrap.class",
+      "bytes": 1328,
+      "sha256": "73f85816aaaa5dc5566a831dc1d39168be69982f5701c4ba285e79214c53a636"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/MixinTransformationHandler.class",
+      "bytes": 4199,
+      "sha256": "d7dfa5f9413ffc9e12927590248dff283988b4ad51383ae5bca27edee040c267"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/ModLauncherAuditTrail.class",
+      "bytes": 1864,
+      "sha256": "44d094bc7394a31232925f6087ce59303a35816b775ebdb5251d70be327c9e58"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/ModLauncherClassProvider.class",
+      "bytes": 2343,
+      "sha256": "2ace65bbf426e6841c11fe8cbf5405d9ea3dd37c1716eb929d8d9870eec3d68f"
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/ModLauncherClassTracker.class",
+      "bytes": 3274,
+      "sha256": "d51fb211571ccb83d4dda6cf173d789b58edd03cd0dd7afd407605b91b5340a7"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationServiceLegacy.class",
+      "bytes": 610,
+      "sha256": "7311d16eaebd1c58a018d44d73a3186c74f0f764789165196fa000f14d45823e"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinLaunchPlugin.class",
+      "bytes": 1018,
+      "sha256": "b9ba4d07153113dfdd66736aa7553b1951b286db820fdec1a8349973c7e3c04e"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationService.class",
+      "bytes": 408,
+      "sha256": "6023a5d3b1e6e235c9d251654a592160c71217f8fc83174314518d60c55529ec"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx$SecureJarResource.class",
+      "bytes": 1384,
+      "sha256": "7f31193656002ce0f64d03b8af0f51b774d1f43630eeccd00a5d1e7c0c2b64d6"
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx.class",
+      "bytes": 1158,
+      "sha256": "76688b0b9d4be1cdf3a0a58bc0dabdd9ec449f933b213dfc7b2cd518f9750e2a"
+    },
+    {
+      "path": "module-info.class",
+      "bytes": 4197,
+      "sha256": "d877fc1741542d0d179a4d5519ad15cba926152125562820d7c37c286a3395ad"
+    }
+  ],
+  "excludedEntries": [
+    {
+      "path": "org/spongepowered/asm/launch/IClassProcessor.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "ea01ac03fa6b894af889d07396a9b76a3456b692ec16668498284eeb5e1f6c18",
+      "bytes": 848
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinLaunchPluginLegacy.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "eebe20b521483335da9fdce6b7a52a46581d6727faa207d5c3e41555badc992e",
+      "bytes": 9739
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationServiceAbstract.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "65b01471c751e64e9e0ac9422d4d457a21d0951543bf8386cbafa43ff90de147",
+      "bytes": 4576
+    },
+    {
+      "path": "org/spongepowered/asm/launch/Phases.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "c2adbf48ab356f1b71a28a455db34ab82c6ec24f19739f6e6f5f72edc1692681",
+      "bytes": 1018
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncher$Resource.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "c20150628bdab18dbf2001af1ed5288ea6393d2a4264f3b48e6335b2854cadd2",
+      "bytes": 1503
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncher.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "53c13518e2036429863fef0cb473fafe37d82f40520c1281193483198188f65e",
+      "bytes": 3119
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/MixinPlatformAgentMinecraftForge.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "7459b4007375a3a6f4543ec7c2f16a57be5f6c9c9b220322b174b0974a8eb16b",
+      "bytes": 3958
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/Blackboard$Key.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "a765104db40ab59c62a977588304f70a9ab38a09cd53a2e9c912146bab174a4a",
+      "bytes": 1588
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/Blackboard.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "a4613eb519f8dbca954f604984ee4d1be8d8ac8f98cb16e86eb4286f389f8537",
+      "bytes": 3867
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/LoggerAdapterLog4j2.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "108d3bd78c813e5eee3a2f7836fde89c686422476389f6fcdab742c522381525",
+      "bytes": 3868
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/MixinServiceModLauncher.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "4855391e3bdc2b637f7d3e2e856fe4fc5de7ae52b6289fe8ef57d94caca3866d",
+      "bytes": 8366
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/MixinServiceModLauncherBootstrap.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "73f85816aaaa5dc5566a831dc1d39168be69982f5701c4ba285e79214c53a636",
+      "bytes": 1328
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/MixinTransformationHandler.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "d7dfa5f9413ffc9e12927590248dff283988b4ad51383ae5bca27edee040c267",
+      "bytes": 4199
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/ModLauncherAuditTrail.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "44d094bc7394a31232925f6087ce59303a35816b775ebdb5251d70be327c9e58",
+      "bytes": 1864
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/ModLauncherClassProvider.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "2ace65bbf426e6841c11fe8cbf5405d9ea3dd37c1716eb929d8d9870eec3d68f",
+      "bytes": 2343
+    },
+    {
+      "path": "org/spongepowered/asm/service/modlauncher/ModLauncherClassTracker.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "d51fb211571ccb83d4dda6cf173d789b58edd03cd0dd7afd407605b91b5340a7",
+      "bytes": 3274
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationServiceLegacy.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "7311d16eaebd1c58a018d44d73a3186c74f0f764789165196fa000f14d45823e",
+      "bytes": 610
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinLaunchPlugin.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "b9ba4d07153113dfdd66736aa7553b1951b286db820fdec1a8349973c7e3c04e",
+      "bytes": 1018
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationService.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "6023a5d3b1e6e235c9d251654a592160c71217f8fc83174314518d60c55529ec",
+      "bytes": 408
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx$SecureJarResource.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "7f31193656002ce0f64d03b8af0f51b774d1f43630eeccd00a5d1e7c0c2b64d6",
+      "bytes": 1384
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx.class",
+      "role": "external-ModLauncher-consumer-class",
+      "sha256": "76688b0b9d4be1cdf3a0a58bc0dabdd9ec449f933b213dfc7b2cd518f9750e2a",
+      "bytes": 1158
+    },
+    {
+      "path": "module-info.class",
+      "role": "JPMS-ModLauncher-module-metadata",
+      "sha256": "d877fc1741542d0d179a4d5519ad15cba926152125562820d7c37c286a3395ad",
+      "bytes": 4197
+    },
+    {
+      "path": "META-INF/services/cpw.mods.modlauncher.api.ITransformationService",
+      "role": "external-ModLauncher-service-advertisement",
+      "sha256": "bbc7c354bc5b1b556599e97fa9dbc1d78a2bf6ef71387cb830357c4b923961ec",
+      "bytes": 61
+    },
+    {
+      "path": "META-INF/services/cpw.mods.modlauncher.serviceapi.ILaunchPluginService",
+      "role": "external-ModLauncher-service-advertisement",
+      "sha256": "d33c40cb430d99cd1bbef5a4929f76a96ba5e11fd94de87896973706adca3529",
+      "bytes": 52
+    }
+  ],
+  "serviceRewrites": [
+    {
+      "path": "META-INF/services/org.spongepowered.asm.service.IGlobalPropertyService",
+      "preSha256": "3322cc62be3a1b359991dc77ecdbcdc73941d1832b492f377973e5d00a6b5329",
+      "preBytes": 100,
+      "originalProviders": [
+        "org.spongepowered.asm.service.mojang.Blackboard",
+        "org.spongepowered.asm.service.modlauncher.Blackboard"
+      ],
+      "gameProviders": [
+        "org.spongepowered.asm.service.mojang.Blackboard"
+      ],
+      "postSha256": "42759a2ec0ac8b26f8dbca243b2b9d149246f6ee0ec7839b874fb9848bb121d8",
+      "postBytes": 48
+    },
+    {
+      "path": "META-INF/services/org.spongepowered.asm.service.IMixinService",
+      "preSha256": "8c0f7bb7ed5cdc1f4ecb429737a993927cc55e650367102c196a5fbec5cf3f90",
+      "preBytes": 128,
+      "originalProviders": [
+        "org.spongepowered.asm.service.mojang.MixinServiceLaunchWrapper",
+        "org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher"
+      ],
+      "gameProviders": [
+        "org.spongepowered.asm.service.mojang.MixinServiceLaunchWrapper"
+      ],
+      "postSha256": "7c161224894717d1de06e1bec545ac18994b8e6e52feee9cc79a1681b02ddcad",
+      "postBytes": 63
+    },
+    {
+      "path": "META-INF/services/org.spongepowered.asm.service.IMixinServiceBootstrap",
+      "preSha256": "77321aaec4a9c935b4259c792ad5909f931b9ffc929db5069344ebed0bdf47eb",
+      "preBytes": 146,
+      "originalProviders": [
+        "org.spongepowered.asm.service.mojang.MixinServiceLaunchWrapperBootstrap",
+        "org.spongepowered.asm.service.modlauncher.MixinServiceModLauncherBootstrap"
+      ],
+      "gameProviders": [
+        "org.spongepowered.asm.service.mojang.MixinServiceLaunchWrapperBootstrap"
+      ],
+      "postSha256": "8baf6108cd74ed1ec69e6036bb338635d289d970b384c444783a13bfdf8041ac",
+      "postBytes": 72
+    }
+  ],
+  "expectedPreservedRuntimeClasses": 591,
+  "originalClassMajorCounts": {
+    "50": 576,
+    "52": 32,
+    "60": 5
+  },
+  "hostedHighClasses": [
+    {
+      "path": "org/spongepowered/asm/launch/MixinLaunchPlugin.class",
+      "bytes": 1018,
+      "sha256": "b9ba4d07153113dfdd66736aa7553b1951b286db820fdec1a8349973c7e3c04e",
+      "major": 60
+    },
+    {
+      "path": "org/spongepowered/asm/launch/MixinTransformationService.class",
+      "bytes": 408,
+      "sha256": "6023a5d3b1e6e235c9d251654a592160c71217f8fc83174314518d60c55529ec",
+      "major": 60
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx$SecureJarResource.class",
+      "bytes": 1384,
+      "sha256": "7f31193656002ce0f64d03b8af0f51b774d1f43630eeccd00a5d1e7c0c2b64d6",
+      "major": 60
+    },
+    {
+      "path": "org/spongepowered/asm/launch/platform/container/ContainerHandleModLauncherEx.class",
+      "bytes": 1158,
+      "sha256": "76688b0b9d4be1cdf3a0a58bc0dabdd9ec449f933b213dfc7b2cd518f9750e2a",
+      "major": 60
+    },
+    {
+      "path": "module-info.class",
+      "bytes": 4197,
+      "sha256": "d877fc1741542d0d179a4d5519ad15cba926152125562820d7c37c286a3395ad",
+      "major": 60
+    }
+  ]
+}

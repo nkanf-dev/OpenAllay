@@ -700,7 +700,7 @@ class BuilderFixtureTests(unittest.TestCase):
                                          "beforeImages": [self.image(), self.image()]} for kind in kinds},
                    "status": self.status(), "baselineOperations": []}
         if scenario == "acceptance":
-            receipt.update(operations=[{"name": name, "operationId": "unit-" + name, "state": "completed",
+            receipt.update(skipped=[], operations=[{"name": name, "operationId": "unit-" + name, "state": "completed",
                                         "reads": 2, "writes": 30, "detail": ""} for name in fixture.BUILDER_OPERATION_NAMES],
                            actions=[{"name": name, "status": "built", "writes": 7} for name in ("terrain_path", "terrain_smart_path")],
                            templates={"saved": ["openallay_e2e_builder_native"], "listed": True},
@@ -729,6 +729,7 @@ class BuilderFixtureTests(unittest.TestCase):
             receipt = {key: copy.deepcopy(baseline[key]) for key in ("scenario", "probeToken", "context", "anchor")}
             receipt.update(stage=kind + "_observation" if scenario == "acceptance" else "final",
                            observationStatus=self.status(), durableOperations=copy.deepcopy(rows), lifecycle={kind: copy.deepcopy(item)})
+            if scenario == "acceptance": receipt["skipped"] = copy.deepcopy(baseline["skipped"])
             if scenario != "acceptance": receipt.update(status=self.status(), baselineOperations=[])
             outputs.append(receipt)
         if scenario == "acceptance":
@@ -743,7 +744,7 @@ class BuilderFixtureTests(unittest.TestCase):
                          self.row("unit-intervention", fixture.builder_probe_label(token, "undo intervention")),
                          self.row("unit-undo", "Undo unit-undo-original")])
             receipt = {key: copy.deepcopy(baseline[key]) for key in ("scenario", "probeToken", "context", "anchor")}
-            receipt.update(stage="undo", durableOperations=copy.deepcopy(rows), lifecycle={"undo": undo})
+            receipt.update(stage="undo", skipped=copy.deepcopy(baseline["skipped"]), durableOperations=copy.deepcopy(rows), lifecycle={"undo": undo})
             outputs.append(receipt); lifecycle["undo"] = copy.deepcopy(undo)
             final = copy.deepcopy(baseline)
             final.update(stage="final", lifecycle=lifecycle, durableOperations=copy.deepcopy(rows), observationStatus=self.status())
@@ -848,6 +849,29 @@ class BuilderFixtureTests(unittest.TestCase):
                 if index == at: mutate(value)
                 return value
             with self.subTest(stage=at, mutate=mutate), self.assertRaises(ValueError): self.run_sequence(mutate=alter)
+
+    def test_exact_skyscraper_skip_retains_all_other_operations_and_stages(self):
+        def skipped(index, value):
+            if not isinstance(value, dict): return value
+            value["skipped"] = [dict(fixture.BUILDER_SKYSCRAPER_SKIP)]
+            if index in (0, 6):
+                value["operations"] = [row for row in value["operations"] if row["name"] != "skyscraper"]
+                value["baselineOperations"] = [row for row in value["baselineOperations"] if row["id"] != "unit-skyscraper"]
+            if "durableOperations" in value:
+                value["durableOperations"] = [row for row in value["durableOperations"] if row["id"] != "unit-skyscraper"]
+            return value
+        messages, (call, content) = self.run_sequence(mutate=skipped)
+        self.assertIsNone(call)
+        self.assertIn("independent controller readback", content)
+        for stage, change in ((0, lambda value: value["operations"].pop()),
+                              (2, lambda value: value.update(skipped=[])),
+                              (6, lambda value: value["skipped"][0].update(role="other")),
+                              (0, lambda value: value["skipped"].append(dict(fixture.BUILDER_SKYSCRAPER_SKIP)))):
+            def invalid(index, value):
+                value = skipped(index, value)
+                if index == stage: change(value)
+                return value
+            with self.subTest(stage=stage), self.assertRaises(ValueError): self.run_sequence(mutate=invalid)
 
     def test_build_baseline_requires_nine_distinct_completed_native_receipts(self):
         mutations = (lambda r: r["operations"].pop(), lambda r: r["operations"][0].update(state="running"),

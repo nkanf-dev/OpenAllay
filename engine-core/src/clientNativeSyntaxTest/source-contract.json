@@ -1,0 +1,32 @@
+{
+  "scope": "Actual702diagnostic clientsyntax2completeowners NativeDomainViewBinding seal/privatehelper andNativeModelInstaller2textblocks, no feature rewrite",
+  "actualDiagnosticRun": 37642688187,
+  "actualFrontierSha256": "c2df6ee90c43c8a9de6ce648b1282fa255ceead0843b3e69ec36f6328c67f157",
+  "rawSourceCommit": "0508ec89784593c5f8fb337af7d637ee6e2c75d8",
+  "owners": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/gui/nativeview/NativeDomainViewBinding.java",
+      "sha256": "0b1b688abcf3d8500e2244e6c68891fe3c1cfa0b2b922d42e13a063e7c0761bd"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/voice/NativeModelInstaller.java",
+      "sha256": "24186f2ce553d7b02d520504a9efe7c774be56e6a00c95a9b38f1ad2b161dfe8"
+    }
+  ],
+  "tool": {
+    "path": "build-logic/src/main/java/dev/openallay/build/ClientNativeSyntaxMaterializer.java",
+    "sha256": "1f4a73cdd82dd752f4e772e9dd44f732f2cc32b31bc87b23b5cd2a7772c84207"
+  },
+  "driver_sha256": "55f5cb9b235928615eab240d43d47ff3ce3903481355c18a2a3af118b49caa35",
+  "helper_base64": "ICAgIHByaXZhdGUgc3RhdGljIFN0cmluZyByZXF1aXJlSWQoU3RyaW5nIHZhbHVlKSB7CiAgICAgICAgaWYgKHZhbHVlID09IG51bGwgfHwgZGV2Lm9wZW5hbGxheS51dGlsLkphdmE4U3RyaW5ncy5pc0JsYW5rKHZhbHVlKSkgewogICAgICAgICAgICB0aHJvdyBuZXcgSWxsZWdhbEFyZ3VtZW50RXhjZXB0aW9uKCJuYXRpdmUgdmlldyBzdGFibGUgSUQgaXMgcmVxdWlyZWQiKTsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIHZhbHVlOwogICAgfQ==",
+  "boundaryPolicy": "Publicmarker NativeDomainViewBinding plus oneactualpublicstaticfinalRecipe unchanged. Allactualproductionconsumers are typedRecipe return/constructor; no publicmarker-valued aggregate boundary exists to gate. No fakepolicy/newfeature gate; fullRecipevalidation unchanged. Actualprivate requireId movedintoRecipe private static, soleactualcaller, notmadepublicinterfacehelper.",
+  "literalPolicy": "PublicJavacTask LiteralTree String getValue authoritative exactUTF8/runtimevalue incllicenseunicode/trailingblanklines. EscapedJava8literal concatenation re-parsedpublicAST andvalue equality checked. No license edits/normalization, no replacements outside exact2literal spans.",
+  "residualAPIs": "Installer Files.writeString andother fullclosure post8 symbols remainactual702diagnostic scope; syntaxpacket alone notwhole8 acceptance. No physicaldownloads/import/model data accessed.",
+  "selectedModernTests": [
+    "dev.openallay.client.gui.nativeview.NativeDomainViewBindingsTest",
+    "dev.openallay.client.voice.NativeSpeechToTextTest",
+    "dev.openallay.client.voice.NativeModelInstallerHttpTest"
+  ],
+  "noLocalJava": true,
+  "wholeClientJava8Accepted": false
+}

@@ -23,7 +23,7 @@ public final class ClipboardImageEncoder {
         if (!(image instanceof BufferedImage)) {
             // AWT clipboard images can be lazy ToolkitImages. Load their pixels on the worker.
             // macOS native decoding returns BufferedImage and never enters this Toolkit path.
-            var loaded = new javax.swing.ImageIcon(image);
+            javax.swing.ImageIcon loaded = new javax.swing.ImageIcon(image);
             if (loaded.getImageLoadStatus() != java.awt.MediaTracker.COMPLETE) {
                 throw new IOException("Clipboard image could not be loaded");
             }
@@ -44,7 +44,7 @@ public final class ClipboardImageEncoder {
 
     public static Encoded encode(BufferedImage source) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        try (var output = new MemoryCacheImageOutputStream(bytes)) {
+        try (MemoryCacheImageOutputStream output = new MemoryCacheImageOutputStream(bytes)) {
             if (!ImageIO.write(source, "png", output)) throw new IOException("PNG encoder unavailable");
         }
         double scale = Math.min(1.0, Math.min((double) PREVIEW_SIZE / source.getWidth(),
@@ -64,18 +64,84 @@ public final class ClipboardImageEncoder {
                 new Preview(width, height, preview));
     }
 
-    public record Encoded(byte[] png, int width, int height, Preview preview) {
-        public Encoded { png = png.clone(); java.util.Objects.requireNonNull(preview, "preview"); }
-        @Override public byte[] png() { return png.clone(); }
+    @dev.openallay.value.ValueType(Encoded.ValueSchemaProvider.class)
+public static final class Encoded {
+    private final byte[] png;
+    private final int width;
+    private final int height;
+    private final Preview preview;
+    public Encoded(byte[] png, int width, int height, Preview preview) {
+ png = png.clone(); java.util.Objects.requireNonNull(preview, "preview");
+        this.png = png;
+        this.width = width;
+        this.height = height;
+        this.preview = preview;
     }
+    public int width() { return width; }
+    public int height() { return height; }
+    public Preview preview() { return preview; }
+ public byte[] png() { return png.clone(); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Encoded)) return false;
+        Encoded that = (Encoded) other;
+        return java.util.Objects.equals(png, that.png) && width == that.width && height == that.height && java.util.Objects.equals(preview, that.preview);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(png);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(height);
+        hash = 31 * hash + java.util.Objects.hashCode(preview);
+        return hash;
+    }
+    @Override public String toString() { return "Encoded[png=" + png + ", width=" + width + ", height=" + height + ", preview=" + preview + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Encoded> schema() {
+            return new dev.openallay.value.ValueSchema<>(Encoded.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Encoded>>asList(new dev.openallay.value.ValueSchema.Component<>(Encoded.class, "png", Encoded::png), new dev.openallay.value.ValueSchema.Component<>(Encoded.class, "width", Encoded::width), new dev.openallay.value.ValueSchema.Component<>(Encoded.class, "height", Encoded::height), new dev.openallay.value.ValueSchema.Component<>(Encoded.class, "preview", Encoded::preview)), arguments -> new Encoded((byte[]) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Preview) arguments[3]));
+        }
+    }
+}
 
-    public record Preview(int width, int height, int[] argb) {
-        public Preview {
+    @dev.openallay.value.ValueType(Preview.ValueSchemaProvider.class)
+public static final class Preview {
+    private final int width;
+    private final int height;
+    private final int[] argb;
+    public Preview(int width, int height, int[] argb) {
+
             if (width <= 0 || height <= 0 || (long) width * height != argb.length) {
                 throw new IllegalArgumentException("invalid preview dimensions");
             }
             argb = argb.clone();
-        }
-        @Override public int[] argb() { return argb.clone(); }
+
+        this.width = width;
+        this.height = height;
+        this.argb = argb;
     }
+    public int width() { return width; }
+    public int height() { return height; }
+ public int[] argb() { return argb.clone(); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Preview)) return false;
+        Preview that = (Preview) other;
+        return width == that.width && height == that.height && java.util.Objects.equals(argb, that.argb);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(height);
+        hash = 31 * hash + java.util.Objects.hashCode(argb);
+        return hash;
+    }
+    @Override public String toString() { return "Preview[width=" + width + ", height=" + height + ", argb=" + argb + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Preview> schema() {
+            return new dev.openallay.value.ValueSchema<>(Preview.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Preview>>asList(new dev.openallay.value.ValueSchema.Component<>(Preview.class, "width", Preview::width), new dev.openallay.value.ValueSchema.Component<>(Preview.class, "height", Preview::height), new dev.openallay.value.ValueSchema.Component<>(Preview.class, "argb", Preview::argb)), arguments -> new Preview((Integer) arguments[0], (Integer) arguments[1], (int[]) arguments[2]));
+        }
+    }
+}
 }

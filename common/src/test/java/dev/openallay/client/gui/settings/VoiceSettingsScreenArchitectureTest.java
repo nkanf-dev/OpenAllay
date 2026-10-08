@@ -11,14 +11,14 @@ final class VoiceSettingsScreenArchitectureTest {
         String source = Files.readString(Path.of("src/main/java/dev/openallay/client/gui/OpenAllaySettingsScreen.java"));
         String voice = source.substring(source.indexOf("private void resetVoiceDraft"),
                 source.indexOf("private void addModelsPage"));
-        assertTrue(voice.contains("voiceActions.importModel(Path.of(voiceModelPath))"));
-        assertTrue(voice.contains("voiceActions.importRuntime(Path.of(voiceRuntimePath))"));
+        assertTrue(voice.contains("voiceActions.importModel(java.nio.file.Paths.get(voiceModelPath))"));
+        assertTrue(voice.contains("voiceActions.importRuntime(java.nio.file.Paths.get(voiceRuntimePath))"));
         assertTrue(voice.contains("voiceActions.downloadDefaultModel()"));
         assertTrue(voice.contains("voiceActions::cancelDownload"));
         assertTrue(voice.contains("voiceActions.refreshDevices()"));
-        assertTrue(voice.contains("voiceActions.update(submitted, voiceApiKeyDraft.isBlank()"));
+        assertTrue(voice.contains("voiceActions.update(submitted, dev.openallay.util.Java8Strings.isBlank(voiceApiKeyDraft)"));
         assertTrue(voice.contains("voiceApiKeyDraft.toCharArray()"));
-        assertTrue(voice.contains("voiceButton(\"store_api_key\", Component.empty(), x, y, w, this::applyVoice)"));
+        assertTrue(voice.contains("voiceButton(\"store_api_key\", MinecraftComponents.empty(), x, y, w, this::applyVoice)"));
         assertTrue(voice.contains("GuideNativeDialogs.openDirectory(voiceActions.runtimeNoticesDirectory())"));
         String dialogs = Files.readString(Path.of("src/main/java/dev/openallay/client/gui/GuideNativeDialogs.java"));
         assertTrue(dialogs.contains("public static void openDirectory(Path path)"));
@@ -70,11 +70,11 @@ final class VoiceSettingsScreenArchitectureTest {
         assertTrue(save.contains("saveEditor(() -> voiceActions.update(submitted"));
         assertTrue(save.contains("result -> resetVoiceDraft()"));
         String refresh = source.substring(source.indexOf("private void acceptVoice("),
-                source.indexOf("private Component voiceSettingsStatus("));
+                source.indexOf("private net.minecraft.network.chat.Component voiceSettingsStatus("));
         assertTrue(refresh.contains(".withGameplayAction(previous.gameplayAction())"));
         String receipt = source.substring(source.indexOf("private void saveEditor("),
                 source.indexOf("private void updateEditorSaveControls("));
-        assertTrue(receipt.contains("if (result instanceof ToolResult.Failure<?> failure)"));
+        assertTrue(receipt.contains("= result) instanceof dev.openallay.tool.ToolResult.Failure"));
         assertTrue(receipt.contains("} else {\n                localNotice = \"\";\n                committed.accept(result)"));
         String render = source.substring(source.indexOf("private void renderVoice("),
                 source.indexOf("private void addModelsPage("));

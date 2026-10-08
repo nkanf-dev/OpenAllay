@@ -27,7 +27,7 @@ public final class JeiOpenAllayExtension implements OpenAllayExtension {
                 "0.2.0",
                 "OpenAllay",
                 "JEI recipe catalog, focus navigation, and exact native recipe layouts",
-                Set.of("fabric", "neoforge"),
+                dev.openallay.util.Java8Collections.setOf("fabric", "neoforge"),
                 "[26.2,26.3)",
                 "[0.2,0.3)",
                 "builtin:openallay/jei");
@@ -36,16 +36,16 @@ public final class JeiOpenAllayExtension implements OpenAllayExtension {
     @Override
     public OpenAllayExtensionContribution contribution() {
         return new OpenAllayExtensionContribution(
-                List.of(new RecipeViewerExtensionDataModule(
+                dev.openallay.util.Java8Collections.listOf(new RecipeViewerExtensionDataModule(
                         "openallay:jei",
                         "viewer:jei",
                         "Detached JEI provider, category, recipe, focus, and navigation state",
                         true,
                         true,
                         true)),
-                List.of(),
-                List.of(),
-                List.of(new JavascriptResultViewProvider.Declaration(
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(new JavascriptResultViewProvider.Declaration(
                         "openallay:jei_recipe",
                         JavascriptSemanticKind.RECIPE,
                         "JEI-backed native recipe presentation")));

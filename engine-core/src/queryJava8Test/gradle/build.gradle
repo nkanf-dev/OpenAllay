@@ -1,0 +1,59 @@
+import java.security.MessageDigest
+plugins { id 'java' }
+def repo = file('../../../..')
+def engine = new File(repo, 'engine-core')
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+def actualSources = [
+    'dev/openallay/tool/query/RegistryQueryEngine.java', 'dev/openallay/tool/query/QueryOperation.java',
+    'dev/openallay/context/RegistryEntrySnapshot.java', 'dev/openallay/context/RegistrySnapshot.java',
+    'dev/openallay/context/EvidenceMetadata.java', 'dev/openallay/context/ContextValidation.java',
+    'dev/openallay/context/DataAuthority.java', 'dev/openallay/context/DataCompleteness.java',
+    'dev/openallay/value/ValueType.java', 'dev/openallay/value/ValueSchema.java', 'dev/openallay/value/ValueSchemas.java', 'dev/openallay/value/RecordMetadata.java',
+    'dev/openallay/util/Java8Collections.java', 'dev/openallay/util/Java8Strings.java',
+    'dev/openallay/agent/tool/ToolDescription.java', 'dev/openallay/agent/tool/ToolOptional.java']
+sourceSets.main.java.setSrcDirs([new File(engine, 'src/main/java'), new File(engine, 'src/queryJava8Test/java'), new File(repo, 'runtime-json/src/main/java')])
+sourceSets.main.java.setIncludes(actualSources + ['dev/openallay/tool/query/RegistryQueryJava8Fixture.java', 'dev/openallay/json/JsonTrees.java'])
+dependencies { implementation('com.google.code.gson:gson:2.8.0') }
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+def host = providers.gradleProperty('jsonVerificationGsonVersion').getOrElse('2.8.0')
+configurations.runtimeClasspath.resolutionStrategy.force("com.google.code.gson:gson:${host}")
+tasks.register('java8QueryOwnerTest', JavaExec) {
+    dependsOn('classes'); mainClass = 'dev.openallay.tool.query.RegistryQueryJava8Fixture'; args('java8')
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    inputs.property('jsonVerificationGsonVersion', host)
+    doFirst { standardOutput = new ByteArrayOutputStream() }
+    doLast {
+        def report = layout.buildDirectory.file("query-java8-${host}.txt").get().asFile
+        report.bytes = standardOutput.toByteArray()
+        logger.lifecycle(report.getText('UTF-8'))
+        if (providers.gradleProperty('originalQueryReport').isPresent()) {
+            def original = file(providers.gradleProperty('originalQueryReport').get())
+            if (!java.util.Arrays.equals(original.bytes, report.bytes)) throw new GradleException('Original canonical modern owner vs Java8 owner differs')
+        }
+    }
+}
+// Review-only original canonical owner oracle from a root-specified immutable source checkout.
+// This is compile input custody for tests, never an alternate production feature owner.
+if (providers.gradleProperty('originalQuerySourceRoot').isPresent()) {
+    def originalRepo = file(providers.gradleProperty('originalQuerySourceRoot').get())
+    tasks.register('compileOriginalQuery', JavaCompile) {
+        source = files(actualSources.collect { new File(originalRepo, 'engine-core/src/main/java/' + it) },
+                new File(originalRepo, 'runtime-json/src/main/java/dev/openallay/json/JsonTrees.java'),
+                new File(engine, 'src/queryJava8Test/java/dev/openallay/tool/query/RegistryQueryJava8Fixture.java'))
+        classpath = configurations.compileClasspath
+        destinationDirectory = layout.buildDirectory.dir('original-classes')
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+        options.release = 17; options.encoding = 'UTF-8'
+    }
+    tasks.register('originalQueryOwnerOracle', JavaExec) {
+        dependsOn('compileOriginalQuery'); mainClass = 'dev.openallay.tool.query.RegistryQueryJava8Fixture'
+        classpath = files(tasks.named('compileOriginalQuery').flatMap { it.destinationDirectory }) + configurations.runtimeClasspath
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+        doFirst { standardOutput = new ByteArrayOutputStream() }
+        doLast {
+            def report = layout.buildDirectory.file('query-original-modern.txt').get().asFile
+            report.bytes = standardOutput.toByteArray(); logger.lifecycle(report.getText('UTF-8'))
+        }
+    }
+}

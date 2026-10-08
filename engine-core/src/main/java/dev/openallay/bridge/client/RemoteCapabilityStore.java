@@ -20,6 +20,6 @@ public final class RemoteCapabilityStore {
 
     private static CapabilityPayload empty() {
         return new CapabilityPayload(
-                List.of(), false, 0, 0, 0, "");
+                dev.openallay.util.Java8Collections.listOf(), false, 0, 0, 0, "");
     }
 }

@@ -1,0 +1,97 @@
+{
+  "retainedSourceRevision": "cbcf5e66c81d11e4d219fa6cc8da04ab996c7ce0",
+  "retainedArchive": {
+    "id": 11395936631,
+    "sha256": "baa4f3ef51e19ac6dc8f7a486686cb5023334a7d06ae7126ad67fdec741023bd"
+  },
+  "builderArchive": {
+    "id": 11395574649
+  },
+  "artifacts": [
+    {
+      "role": "sdk",
+      "coordinate": "dev.openallay:openallay-extension-api:0.4.0",
+      "sha256": "53fffa91059247a6f191f6ed77d1e7e74ac78318d0122c9ff503e2fcde18590a"
+    },
+    {
+      "role": "rhino",
+      "coordinate": "dev.openallay:openallay-rhino:2101.2.8-build.91",
+      "sha256": "df13a966d5c007c84a678b4aef34a3fd430a83003df99cb9b34bdbf24027db67"
+    },
+    {
+      "role": "gson",
+      "coordinate": "com.google.code.gson:gson:2.8.0",
+      "sha256": "c6221763bd79c4f1c3dc7f750b5f29a0bb38b367b81314c4f71896e340c40825"
+    },
+    {
+      "role": "tables",
+      "coordinate": "org.commonmark:commonmark-ext-gfm-tables:0.28.0",
+      "sha256": "80439c7c4809daa6c35ccb260f48f8b71cda30e8cc923dbd68bb3be049359ecb"
+    },
+    {
+      "role": "commonmark",
+      "coordinate": "org.commonmark:commonmark:0.28.0",
+      "sha256": "f8b28e00f97c568329ee1b2496cfec5c3ef8664b565ea09cf8988894183b956d"
+    },
+    {
+      "role": "jtokkit",
+      "coordinate": "com.knuddels:jtokkit:1.1.0",
+      "sha256": "1501ce0259ab897c6746ccfafa1d208acd404fb17e1ac62e157172f2678b1183"
+    },
+    {
+      "role": "sqlite",
+      "coordinate": "org.xerial:sqlite-jdbc:3.50.3.0",
+      "sha256": "a3f53a2aa15ae9425a9e793bbe9c8e5288febeb4b65ef5c1a4e80d4c2045cf08"
+    },
+    {
+      "role": "guava",
+      "coordinate": "com.google.guava:guava:31.1-jre",
+      "sha256": "a42edc9cab792e39fe39bb94f3fca655ed157ff87a8af78e1d6ba5b07c4a00ab"
+    },
+    {
+      "role": "failureaccess",
+      "coordinate": "com.google.guava:failureaccess:1.0.1",
+      "sha256": "a171ee4c734dd2da837e4b16be9df4661afab72a41adaf31eb84dfdaf936ca26"
+    },
+    {
+      "role": "listenablefuture",
+      "coordinate": "com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava",
+      "sha256": "b372a037d4230aa57fbeffdef30fd6123f9c0c2db85d0aced00c91b974f33f99"
+    },
+    {
+      "role": "jsr305",
+      "coordinate": "com.google.code.findbugs:jsr305:3.0.2",
+      "sha256": "766ad2a0783f2687962c8ad74ceecc38a28b9f72a2d085ee438b7813e928d0c7"
+    },
+    {
+      "role": "checkerqual",
+      "coordinate": "org.checkerframework:checker-qual:3.12.0",
+      "sha256": "ff10785ac2a357ec5de9c293cb982a2cbb605c0309ea4cc1cb9b9bc6dbe7f3cb"
+    },
+    {
+      "role": "errorprone",
+      "coordinate": "com.google.errorprone:error_prone_annotations:2.11.0",
+      "sha256": "721cb91842b46fa056847d104d5225c8b8e1e8b62263b993051e1e5a0137b7ec"
+    },
+    {
+      "role": "j2objc",
+      "coordinate": "com.google.j2objc:j2objc-annotations:1.3",
+      "sha256": "21af30c92267bd6122c0e0b4d20cccb6641a37eaf956c6540ec471d584e64a7b"
+    },
+    {
+      "role": "json-proof",
+      "coordinate": "dev.openallay:openallay-runtime-json:0.4.3",
+      "sha256": "8b872241c8b73d2bc11382b6a51130cea449c67731e81380c242dc19cc09372a"
+    },
+    {
+      "role": "maven-proof",
+      "coordinate": "dev.openallay:openallay-maven-runtime:0.4.3",
+      "sha256": "71886ad563879e53af565731aa2d578b781c0139f00f1fc0bfe54ee29c91c8ca"
+    },
+    {
+      "role": "builder",
+      "coordinate": "dev.openallay:openallay-builder:0.4.0",
+      "sha256": "21e5456ba30f24afca87ff5d6d3c4e373742f86b8f8c572e33333de047ab490c"
+    }
+  ]
+}

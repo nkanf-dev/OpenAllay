@@ -22,25 +22,23 @@ public final class ToolRuntimeCatalog {
             List<RegisteredTool> registrations,
             Map<String, Tool<?, ?>> byId,
             Map<String, String> knownIdByModelName) {
-        this.registrations = List.copyOf(registrations);
-        this.byId = Map.copyOf(byId);
-        this.knownIdByModelName = Map.copyOf(knownIdByModelName);
+        this.registrations = dev.openallay.util.Java8Collections.listCopyOf(registrations);
+        this.byId = dev.openallay.util.Java8Collections.mapCopyOf(byId);
+        this.knownIdByModelName = dev.openallay.util.Java8Collections.mapCopyOf(knownIdByModelName);
     }
 
     public static ToolRuntimeCatalog empty() {
-        return from(List.of(), Set.of());
+        return from(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.setOf());
     }
 
     public static ToolRuntimeCatalog from(
             Collection<RegisteredTool> registrations, Set<String> disabledToolIds) {
         Objects.requireNonNull(registrations, "registrations");
-        Set<String> disabled = Set.copyOf(disabledToolIds);
-        List<RegisteredTool> ordered = List.copyOf(registrations).stream()
-                .sorted(java.util.Comparator.comparing(value -> value.tool().descriptor().id()))
-                .toList();
-        ToolNameCodec allNames = new ToolNameCodec(ordered.stream()
-                .map(value -> value.tool().descriptor().id())
-                .toList());
+        Set<String> disabled = dev.openallay.util.Java8Collections.setCopyOf(disabledToolIds);
+        List<RegisteredTool> ordered = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(registrations).stream()
+                .sorted(java.util.Comparator.comparing(value -> value.tool().descriptor().id())));
+        ToolNameCodec allNames = new ToolNameCodec(dev.openallay.util.Java8Collections.toList(ordered.stream()
+                .map(value -> value.tool().descriptor().id())));
         Map<String, String> knownNames = new LinkedHashMap<>();
         Map<String, Tool<?, ?>> active = new LinkedHashMap<>();
         java.util.ArrayList<RegisteredTool> filtered = new java.util.ArrayList<>();
@@ -64,9 +62,8 @@ public final class ToolRuntimeCatalog {
     }
 
     public List<ToolDescriptor<?, ?>> descriptors() {
-        return registrations.stream()
-                .<ToolDescriptor<?, ?>>map(value -> value.tool().descriptor())
-                .toList();
+        return dev.openallay.util.Java8Collections.toList(registrations.stream()
+                .<ToolDescriptor<?, ?>>map(value -> value.tool().descriptor()));
     }
 
     public Optional<Tool<?, ?>> find(String toolId) {

@@ -1,4 +1,4 @@
-Rhino current-source Java 17 source port — third-party source notices
+Rhino current-source shared runtime port — third-party source notices
 
 Source module metadata declares MPL-2.0. The source archive lacks a standalone
 full MPL-2.0 text. Preserve MPL source notices and supply a genuine license text

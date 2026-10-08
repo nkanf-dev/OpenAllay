@@ -14,6 +14,11 @@ import org.lwjgl.system.MemoryUtil;
 public final class GuideNativeDialogs {
     private static final Set<SDL_DialogFileCallback> pending = ConcurrentHashMap.newKeySet();
     private GuideNativeDialogs() {}
+    public static net.minecraft.client.gui.screens.Screen confirm(java.util.function.Consumer<Boolean> result,
+            net.minecraft.network.chat.Component title, net.minecraft.network.chat.Component message,
+            net.minecraft.network.chat.Component yes, net.minecraft.network.chat.Component no) {
+        return new net.minecraft.client.gui.screens.ConfirmScreen(result::accept, title, message, yes, no);
+    }
     public static void openDirectory(Path path) {
         if (!SDLMisc.SDL_OpenURL(path.toAbsolutePath().toUri().toASCIIString())) {
             throw new IllegalStateException("Native directory opening failed");

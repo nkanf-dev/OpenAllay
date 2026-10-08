@@ -1,0 +1,777 @@
+{
+  "scope": "ElevencompletecanonicalContextCompactor/resultprojection/tokenizerfact/ObservingModelClientowners; realbudget/summary/source/cancellation nofakeproductionalgorithm; exact92productionfrontier includesacceptedJava8Futures.",
+  "original_custody_commit": "2e553b9f548bd2cd4ffbf64ac91d58fa27f95dfb",
+  "owners": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextCompactor.java",
+      "record": "ContextCompactor.Result",
+      "git_blob": "d3e61b1f37ecc8e0ed80fa91f9dd7fcea54738b4",
+      "pre_sha256": "d6285e93553d1560bad1250d3fe3966eec2e16e25c85877d76876b20e0fb35df",
+      "pre_bytes": 48623,
+      "api_substitutions": [
+        {
+          "old": "List.copyOf(",
+          "new": "dev.openallay.util.Java8Collections.listCopyOf(",
+          "count": 10
+        },
+        {
+          "old": "List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf(",
+          "count": 19
+        },
+        {
+          "old": "Set.copyOf(",
+          "new": "dev.openallay.util.Java8Collections.setCopyOf(",
+          "count": 1
+        },
+        {
+          "old": "CompletableFuture.failedFuture(",
+          "new": "dev.openallay.util.Java8Futures.failedFuture(",
+          "count": 6
+        },
+        {
+          "old": "modelIdentifier.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(modelIdentifier)",
+          "count": 1
+        },
+        {
+          "old": "message.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(message)",
+          "count": 1
+        },
+        {
+          "old": "\"\"\"\n            Return one JSON object with string arrays goals, preferences, completedTopics, currentTasks,\n            decisions, unresolvedQuestions, evidenceReferences. Do not invent facts, treat summaries as\n            evidence, or include hidden reasoning. Remember Skill workflow names, but never claim\n            summarized Skill document text is still present.\n            \"\"\"",
+          "new": "\"Return one JSON object with string arrays goals, preferences, completedTopics, currentTasks,\\n\"\n            + \"decisions, unresolvedQuestions, evidenceReferences. Do not invent facts, treat summaries as\\n\"\n            + \"evidence, or include hidden reasoning. Remember Skill workflow names, but never claim\\n\"\n            + \"summarized Skill document text is still present.\\n\"",
+          "count": 1
+        },
+        {
+          "old": "original instanceof ModelContent.ToolResult result\n                        && values.plannedTokens.containsKey(result.toolUseId())",
+          "new": "original instanceof ModelContent.ToolResult\n                        && values.plannedTokens.containsKey(((ModelContent.ToolResult) original).toolUseId())",
+          "count": 1
+        },
+        {
+          "old": "&& estimator.estimateText(modelText(result.value()))\n                                > values.plannedTokens.get(result.toolUseId())",
+          "new": "&& estimator.estimateText(modelText(((ModelContent.ToolResult) original).value()))\n                                > values.plannedTokens.get(((ModelContent.ToolResult) original).toolUseId())",
+          "count": 1
+        },
+        {
+          "old": "item instanceof ModelContent.ToolResult result && !result.error()\n                        && !values.instructions.contains(result)) count++;",
+          "new": "item instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) item).error()\n                        && !values.instructions.contains((ModelContent.ToolResult) item)) count++;",
+          "count": 1
+        },
+        {
+          "old": "originals.get(item) instanceof ModelContent.ToolResult result && !result.error()\n                        && !values.instructions.contains(result)) {",
+          "new": "originals.get(item) instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) originals.get(item)).error()\n                        && !values.instructions.contains((ModelContent.ToolResult) originals.get(item))) {\n                    ModelContent.ToolResult result = (ModelContent.ToolResult) originals.get(item);",
+          "count": 1
+        },
+        {
+          "old": "item instanceof ModelContent.ToolResult result && values.plannedTokens.containsKey(result.toolUseId())\n                    && estimator.estimateText(modelText(result.value()))\n                            > values.plannedTokens.get(result.toolUseId())) return false;",
+          "new": "item instanceof ModelContent.ToolResult && values.plannedTokens.containsKey(((ModelContent.ToolResult) item).toolUseId())\n                    && estimator.estimateText(modelText(((ModelContent.ToolResult) item).value()))\n                            > values.plannedTokens.get(((ModelContent.ToolResult) item).toolUseId())) return false;",
+          "count": 1
+        },
+        {
+          "old": "cause instanceof ModelClientException modelFailure\n                                ? modelFailure.failure().code()",
+          "new": "cause instanceof ModelClientException\n                                ? ((ModelClientException) cause).failure().code()",
+          "count": 1
+        },
+        {
+          "old": "message.content().get(0) instanceof ModelContent.Text text\n                && text.text().startsWith(DERIVED_PREFIX)",
+          "new": "message.content().get(0) instanceof ModelContent.Text\n                && ((ModelContent.Text) message.content().get(0)).text().startsWith(DERIVED_PREFIX)",
+          "count": 1
+        },
+        {
+          "old": "content instanceof ModelContent.Text text && !text.text().isBlank()",
+          "new": "content instanceof ModelContent.Text && !dev.openallay.util.Java8Strings.isBlank(((ModelContent.Text) content).text())",
+          "count": 1
+        },
+        {
+          "old": "item instanceof ModelContent.ToolResult result && !result.error()) {",
+          "new": "item instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) item).error()) {\n                    ModelContent.ToolResult result = (ModelContent.ToolResult) item;",
+          "count": 2
+        },
+        {
+          "old": "if (item instanceof ModelContent.ToolUse use) names.put(use.id(), use.name());",
+          "new": "if (item instanceof ModelContent.ToolUse) {\n                    ModelContent.ToolUse use = (ModelContent.ToolUse) item;\n                    names.put(use.id(), use.name());\n                }",
+          "count": 1
+        },
+        {
+          "old": "historyUnits.stream().map(unit ->\n                gson.toJson(summarySource(unit.messages()))).toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(historyUnits.stream().map(unit ->\n                gson.toJson(summarySource(unit.messages()))))",
+          "count": 1
+        },
+        {
+          "old": "return ContextStructure.summarySafe(messages).stream().map(message -> {",
+          "new": "return dev.openallay.util.Java8Collections.toList(ContextStructure.summarySafe(messages).stream().map(message -> {",
+          "count": 1
+        },
+        {
+          "old": "        }).toList();",
+          "new": "        }));",
+          "count": 1
+        },
+        {
+          "old": "units.subList(from, to).stream()\n                .flatMap(unit -> unit.messages().stream()).toList()",
+          "new": "dev.openallay.util.Java8Collections.toList(units.subList(from, to).stream()\n                .flatMap(unit -> unit.messages().stream()))",
+          "count": 1
+        },
+        {
+          "old": "message.inputObservation().isEmpty()",
+          "new": "!message.inputObservation().isPresent()",
+          "count": 1
+        },
+        {
+          "old": "message.inputObservation().orElseThrow()",
+          "new": "message.inputObservation().get()",
+          "count": 1
+        },
+        {
+          "old": "fitted.orElseThrow()",
+          "new": "fitted.orElseThrow(() -> new java.util.NoSuchElementException(\"No value present\"))",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextProjection.java",
+      "record": "ContextProjection",
+      "git_blob": "e376c587ec4cb68ee7a4d31c28cfcafac00bc7e3",
+      "pre_sha256": "cc713ad4891d7251240b2deddd7adfb8161681c3d02a5b2bc9bfef5a11aed1b9",
+      "pre_bytes": 712,
+      "api_substitutions": [
+        {
+          "old": "List.copyOf(",
+          "new": "dev.openallay.util.Java8Collections.listCopyOf(",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextTokenEstimator.java",
+      "record": null,
+      "git_blob": "8a59d96801b2dee61c095ead6b8cadf2a60f7ea0",
+      "pre_sha256": "867a3e7ea240fa93abd6e5f3798746d758b091227477e46684db369590532449",
+      "pre_bytes": 1252,
+      "api_substitutions": [
+        {
+          "old": "List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf(",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/tokenizer/TokenizerMetadata.java",
+      "record": "TokenizerMetadata",
+      "git_blob": "58a75a0810d831ac0cce04eb62a905649bfed332",
+      "pre_sha256": "e1f07129be80a73c280c0125557475b097b4b1b7da002f0bced1c0cec4413133",
+      "pre_bytes": 1295,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ObservingModelClient.java",
+      "record": null,
+      "git_blob": "c3e523db9c2aefd0b6d78446c7b552ba4e620ffd",
+      "pre_sha256": "a31d6bcfef0a588c269f7780db2f8ba581ee3694bf4a47d916d9232aa76c6851",
+      "pre_bytes": 4147,
+      "api_substitutions": [
+        {
+          "old": "CompletableFuture.failedFuture(",
+          "new": "dev.openallay.util.Java8Futures.failedFuture(",
+          "count": 2
+        },
+        {
+          "old": "event instanceof ModelEvent.UsageUpdate update && update.usage() != null) {\n                latest = update.usage();",
+          "new": "event instanceof ModelEvent.UsageUpdate && ((ModelEvent.UsageUpdate) event).usage() != null) {\n                latest = ((ModelEvent.UsageUpdate) event).usage();",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/tool/AgentToolResult.java",
+      "record": null,
+      "git_blob": "437079e1b23a340fb62118f12b4f5783b8bb19ae",
+      "pre_sha256": "8ea6766e602907d438eb27e5c4d28a88daef44b41068cc3fc88bd3d45111ff49",
+      "pre_bytes": 3772,
+      "api_substitutions": [
+        {
+          "old": "java.util.List.copyOf(",
+          "new": "dev.openallay.util.Java8Collections.listCopyOf(",
+          "count": 1
+        },
+        {
+          "old": "java.util.List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf(",
+          "count": 1
+        },
+        {
+          "old": "return other instanceof AgentToolResult result && Objects.equals(toolId, result.toolId)\n                && normalized.equals(result.normalized) && failure == result.failure && images.equals(result.images);",
+          "new": "if (!(other instanceof AgentToolResult)) return false;\n        AgentToolResult result = (AgentToolResult) other;\n        return Objects.equals(toolId, result.toolId)\n                && normalized.equals(result.normalized) && failure == result.failure && images.equals(result.images);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/tool/ModelToolResultProjection.java",
+      "record": null,
+      "git_blob": "ddd01915cabf22ac29db5140e6fd0eabe145dd63",
+      "pre_sha256": "45be6fb1f8c006fe713c61b4c14d8856a3a54456fa0bd84023836537a8cab824",
+      "pre_bytes": 8685,
+      "api_substitutions": [
+        {
+          "old": "excerpt.isEmpty()",
+          "new": "excerpt.length() == 0",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/result/JsonResultProjection.java",
+      "record": "JsonResultProjection.SchemaNode,JsonResultProjection.Projection,JsonResultProjection.Field",
+      "git_blob": "5b2d98a7cb7e450dc27eff50174c3d3c468eeff6",
+      "pre_sha256": "297521db56e5b083b0291e6874bf2b7c23437e318f9defa9aa8ff2edb2d5d3b5",
+      "pre_bytes": 22532,
+      "api_substitutions": [
+        {
+          "old": "List.copyOf(",
+          "new": "dev.openallay.util.Java8Collections.listCopyOf(",
+          "count": 3
+        },
+        {
+          "old": "List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf(",
+          "count": 2
+        },
+        {
+          "old": "handle.isBlank()",
+          "new": "dev.openallay.util.Java8Strings.isBlank(handle)",
+          "count": 4
+        },
+        {
+          "old": "suffix.strip()",
+          "new": "dev.openallay.util.Java8Strings.strip(suffix)",
+          "count": 1
+        },
+        {
+          "old": "result.isEmpty()",
+          "new": "result.length() == 0",
+          "count": 2
+        },
+        {
+          "old": "\" \".repeat(indent)",
+          "new": "dev.openallay.util.Java8Strings.repeat(\" \", indent)",
+          "count": 1
+        },
+        {
+          "old": "\" \".repeat(indent + (listPrefix == null ? 0 : 2))",
+          "new": "dev.openallay.util.Java8Strings.repeat(\" \", indent + (listPrefix == null ? 0 : 2))",
+          "count": 1
+        },
+        {
+          "old": "!result.length() == 0",
+          "new": "result.length() != 0",
+          "count": 1
+        },
+        {
+          "old": " fields = dev.openallay.util.Java8Collections.listCopyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview); ",
+          "new": " fields = dev.openallay.util.Java8Collections.listCopyOf(fields); preview = dev.openallay.json.JsonTrees.copy(preview);",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/tool/ModelToolTextRenderer.java",
+      "record": null,
+      "git_blob": "481cf8565af84d5dac67d7e82ecf5ae139cbb6be",
+      "pre_sha256": "54ff27f7f14cba102c756b584d08ffa13d8eb80965a3ba7e3f309adbeb254809",
+      "pre_bytes": 4545,
+      "api_substitutions": [
+        {
+          "old": "\" \".repeat(indent)",
+          "new": "dev.openallay.util.Java8Strings.repeat(\" \", indent)",
+          "count": 2
+        },
+        {
+          "old": "\" \".repeat(first && listPrefix == null ? indent : childIndent)",
+          "new": "dev.openallay.util.Java8Strings.repeat(\" \", first && listPrefix == null ? indent : childIndent)",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ModelResultView.java",
+      "record": "ModelResultView",
+      "git_blob": "dac320c354358fcaca04a5d9fda52672e94608cd",
+      "pre_sha256": "21c757122498634e27cef18ff3a7f40a19dd2afff9bb363738d727c4b82935e0",
+      "pre_bytes": 917,
+      "api_substitutions": []
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/WorkspaceModelFacingToolOutput.java",
+      "record": null,
+      "git_blob": "b1411e607b8595926496c210e5fd9e28a8995092",
+      "pre_sha256": "06425d128c465473bf27dfe9a4085d11be6c5eb70d3810735a0870f62b7a3c16",
+      "pre_bytes": 234,
+      "api_substitutions": []
+    }
+  ],
+  "support": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextBudget.java",
+      "sha256": "45abce2842aedb98bf1acb7c063a020e339d2e67e33064b8955ad3e4158cd66a",
+      "bytes": 2745
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextCheckpoint.java",
+      "sha256": "0ca8d3b36bc99b8d5d3a494566111c6a4d1cab614628c87c01da5cf283728b9f",
+      "bytes": 7920
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextSourceHash.java",
+      "sha256": "e2434d7300f0f9df380a68ed6e797885fdde6cd0ea793bab416d0c20fe24f1de",
+      "bytes": 944
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ContextStructure.java",
+      "sha256": "0550cf760f7184754877f65aaa3c6a39c9b169ed258f13b9a466d29f03b3945b",
+      "bytes": 7744
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/agent/context/ModelContextCodec.java",
+      "sha256": "6192e0b42e4bcad055accc86186c5829e907ec61d1458e88e9c387bf147003b3",
+      "bytes": 10107
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/BlockPositionSnapshot.java",
+      "sha256": "4f86dd7a87e6d5d77dabaecd80dd838a168bf32eabf554500232ceb5275d56c4",
+      "bytes": 2021
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/CallerKind.java",
+      "sha256": "2035e2c2ae5c2c4de4d9708053f0ca0e5f52c8ce41f1225385e1c2730e415622",
+      "bytes": 83
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/CallerSnapshot.java",
+      "sha256": "4f19b36b9b04d19e8dda769ef5be87ffbb6bae61d50260d1b9fd8c770795025a",
+      "bytes": 3157
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextCapability.java",
+      "sha256": "181c11d6a6401d0a6a81e8b32719639ce1940dcc26c8057a8c6b49ea8e2b38b6",
+      "bytes": 133
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextMetrics.java",
+      "sha256": "c351f83cf7e2caedb2aac07b5b92bb7a2bdad106b3fae12cbc5fc6c9ef09a84e",
+      "bytes": 3734
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextValidation.java",
+      "sha256": "413b83e466d050e596533a72b30f323a19d3371aedb0aad15af39d7288deaba1",
+      "bytes": 978
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataAuthority.java",
+      "sha256": "04b4f8024f76c374d00e6a117c847cabd814d17e93b7b9011928c713c48bacf3",
+      "bytes": 172
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataCompleteness.java",
+      "sha256": "fbca30849903e1b47448a760a8689496a48fd57631c8057443392f8abfdc684d",
+      "bytes": 104
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java",
+      "sha256": "95ff0f4885c589039edd39467b85bf008d0b2cf8dca75102e6c8e4de868df65d",
+      "bytes": 5830
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/FluidRequirementSnapshot.java",
+      "sha256": "e9f5f7dc9bd37d21caaa706d18d1015c14cb566979cea24997e258394b8cbb27",
+      "bytes": 2550
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/IngredientAlternativeSnapshot.java",
+      "sha256": "1e071171ebe5d62665768f2c0a2cb5eaa61a2aac5f8d0367bfa734247d85d925",
+      "bytes": 2997
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/IngredientRequirementSnapshot.java",
+      "sha256": "604a1224e7f954754c99d76cacdfa35eb1d1185589f5b3802b8e5061725c2915",
+      "bytes": 3409
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/InventorySlotSnapshot.java",
+      "sha256": "19ce959a1fbcb68cefc6498dd828e99de928f0cff6892c2c1650b267f7ecfc46",
+      "bytes": 2077
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/InventorySnapshot.java",
+      "sha256": "7ca3340084c1da8ef4800fe7d971f010c218354025aed2e96e4417110b32a924",
+      "bytes": 5460
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ItemStackSnapshot.java",
+      "sha256": "096d8e07f68e665ecc0079aeb66fe69e199c0a6b35d8c615c523ecfe88cca3aa",
+      "bytes": 2665
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/PlayerSnapshot.java",
+      "sha256": "266c5118b19112c1aae030682f70e387bc188d1fa86cf7721d7bd1aef9bde473",
+      "bytes": 4670
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeEntrySnapshot.java",
+      "sha256": "dac53862af62218fe0fa119c4dcb8349ffd6431ce03f6b197dc664e3d0b9336d",
+      "bytes": 12588
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeLayoutSnapshot.java",
+      "sha256": "3d4be6c038ba53a8e202d1832f09c5e6416d3d391f643ffae16543797cb6d5dd",
+      "bytes": 2625
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeOutputSnapshot.java",
+      "sha256": "ca3ac5bae653a8b2fdd0a5a9d04caf400fe87708942d8e0c1f0bb985e0aedab2",
+      "bytes": 2266
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeProcessingSnapshot.java",
+      "sha256": "554352d4fcef3e47818bf50f95d52091b75697f8a9f3ce42351c4bd370710444",
+      "bytes": 3108
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeReference.java",
+      "sha256": "e40161fbdfdb989555c07d0c33bca9d494ff3169549b324a498f98e5a8d9c9c4",
+      "bytes": 3009
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RecipeSnapshot.java",
+      "sha256": "7c03f2543491501cc90e75bdf87273c2ba41b49b9d5e26c859d0bc49215d6063",
+      "bytes": 4598
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RegistryEntrySnapshot.java",
+      "sha256": "6ac69f95e29eae76cdb642dbe40cfe7f838e1e95b44df4c31514347ac89288b2",
+      "bytes": 6631
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/RegistrySnapshot.java",
+      "sha256": "47e132c2f7d2b761555ae43cc5da5388462945f6808d07c95f5ed4ba2cd62680",
+      "bytes": 2109
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java",
+      "sha256": "beadf7c641619dddde7d3b4e379d5b3acb75e5c977fb768eb9cff98511bfd1b2",
+      "bytes": 7848
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java",
+      "sha256": "403d43ddb2a95c1020a58f119cdedd7ebeb934da44829a8aa263b442f45b9012",
+      "bytes": 46256
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+      "sha256": "638fe24a01f86e13701ad11073c3630938b76778e4138d34f53592c316b3ac60",
+      "bytes": 12218
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+      "sha256": "ba0183b406daac7f1e97ca0d95f1e42b24bb8b7e8ef571d81f833ebd2e24f9ac",
+      "bytes": 17687
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+      "sha256": "7fa96c324f1eae6a2a86965b202f9bdfd0ae38a2437fba7dad49b620dc4098cb",
+      "bytes": 4878
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/CancellationSignal.java",
+      "sha256": "7f6f10330c371907404798eb8de1a66a60b122fca1dab9cf420697875b3ffcab",
+      "bytes": 3832
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelClient.java",
+      "sha256": "a997f50e8622b08e0b9f3874194c73c59e85cc983b6a264331f1dd125c47e4a8",
+      "bytes": 619
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelClientException.java",
+      "sha256": "1eec916538ffae550d70ba54c86c843436c91503018baa16616589b3b88556a4",
+      "bytes": 353
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelContent.java",
+      "sha256": "27f4d5c31d410ccbaa336ff4918ed73a7417616cd42771e7998d9f38dff2119f",
+      "bytes": 11774
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelEvent.java",
+      "sha256": "8f3a0df11c52f9d9769e4d4c1b46f640078a57d422a3edd483ce609c83e044aa",
+      "bytes": 18665
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelFailure.java",
+      "sha256": "9932d8269059ec3ed3f5647a0fa37433d69206f09445135451902692f3391f9d",
+      "bytes": 2445
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelMessage.java",
+      "sha256": "f482752ac99acef8fa9392991ce97138f7fb779faaaeaf5c0c6d9770c03a351c",
+      "bytes": 7252
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelRequest.java",
+      "sha256": "2f4365b10f9ac2f5bedc41b6404b91c4aaba900d5336b430c33addac60dcb391",
+      "bytes": 6222
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelRole.java",
+      "sha256": "af6ed3a27c9885a89818faa09863c6fef6830be8265d1ddd1f2c35a62a33b9bd",
+      "bytes": 80
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelToolDefinition.java",
+      "sha256": "46beb3e7ce67da115fe6660fab6f24f88865b1f1978804d1683678966b867a4b",
+      "bytes": 2847
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelTurn.java",
+      "sha256": "0f0a8d9056412797eed6a41ac51c5790fc26b0c21e9d35584afd875a7b0860b0",
+      "bytes": 4060
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelUsage.java",
+      "sha256": "95764703006530bdeb8353a89e45c3ec7ff2de33fe6a6f97a39983e62464afde",
+      "bytes": 8162
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImagePayloadResolver.java",
+      "sha256": "a57abeeca074bf8b2e738abbc567b5dcb5ec7a74713720af4b4dc2b0e17ffcb5",
+      "bytes": 859
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImageReference.java",
+      "sha256": "52ffa4fbf3b7d7f50eaccfc073e90a8a125865ff52385570e1e3b4a99996f283",
+      "bytes": 3489
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ModelImages.java",
+      "sha256": "6113286ccf7ed417279009c22c0c39bc968da78f2f9756317c5d56ff46836256",
+      "bytes": 7316
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpCancellation.java",
+      "sha256": "2884bde4c25d3a729629ad993749fa4f3f681208b11cc14d7b7abccf1bc0f9fe",
+      "bytes": 203
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java",
+      "sha256": "780b79a98d57b2533f8821662dad769e0b514b67c60e5e65bb3da2186c846114",
+      "bytes": 5891
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeCanonicalizer.java",
+      "sha256": "287f2e5abff65d200bb89013d552a8db3e6033b20558815c85272933a78c9047",
+      "bytes": 10149
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeCatalogDiagnostic.java",
+      "sha256": "fcb97c49dc04658276f5286774bb06d0a19d31e58f9c191347c71523da09c912",
+      "bytes": 3594
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderDiagnostic.java",
+      "sha256": "f14d664ff745d1354562ee9fca92fb407029cade886422c78240852b85873913",
+      "bytes": 2918
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderSnapshot.java",
+      "sha256": "20a1013b70aa1333c0304b9acd179184b37f65be83299a5b6a67e9e958ad2adf",
+      "bytes": 8602
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderState.java",
+      "sha256": "b59c6a626d56e4a21ef07ac39b954b154077660368926f30e85602e67b5e1108",
+      "bytes": 110
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeSemanticGroup.java",
+      "sha256": "2506d137584c841709edab0909c6ea6a1e38cbfcf52ae2187011f3ae14688876",
+      "bytes": 3999
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/recipe/RecipeUnlockState.java",
+      "sha256": "496ff73b8186079157b9d0a61b150832e791839ff9db8f7479682b8325edc39c",
+      "bytes": 103
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/InstructionModelFacingToolOutput.java",
+      "sha256": "ac0239625606769d2e7a0f4e5f4cf7bb057a60e82df8e5936992846865958141",
+      "bytes": 212
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ModelFacingToolOutput.java",
+      "sha256": "c3c4fbb9597dc35941419ac8d1ecaeb51f5cd0e79ec9465c29eb8b09c34075a3",
+      "bytes": 287
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ModelResultSource.java",
+      "sha256": "acaa07eb2708e4e19fbf9b1217e1c0c6a2b6a036ffc23178792e660e6f319b51",
+      "bytes": 577
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/Tool.java",
+      "sha256": "dc74d71001edab70cd02c32125f6ba75882a1d1bdc585be61f5f10b03c03f96b",
+      "bytes": 851
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ToolAccess.java",
+      "sha256": "47dae836276ee1f921243a8ef328f9b21977f28b101c1a418a86c695ed8d58eb",
+      "bytes": 444
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ToolDescriptor.java",
+      "sha256": "f879d31f46e21ac05f8401895df805c68a3c9515beaa618a998bf4d0c50211b4",
+      "bytes": 4698
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ToolResult.java",
+      "sha256": "6fa63fc6450fabea5af1b008ed1d71a02893f4f1371064489478264e9e31f7dd",
+      "bytes": 4060
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
+      "bytes": 4686
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+      "sha256": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
+      "bytes": 1191
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+      "sha256": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
+      "bytes": 3667
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
+      "sha256": "3cb1573ce1a0773a85b0ff797cfa444b55cb2ef610a503c142743f3683b9d8ab",
+      "bytes": 4235
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+      "sha256": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81",
+      "bytes": 4108
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+      "sha256": "3b1ab1d755049ee829d20c6f8d0a8504def3368f4d4a68a9f61f8fb975040b5c",
+      "bytes": 1521
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+      "sha256": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e",
+      "bytes": 415
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchor.java",
+      "sha256": "c52ea7420c6c34b0b6901f35a4568287cba9ff5d61ea9dea724750d350dc4708",
+      "bytes": 3688
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchorJson.java",
+      "sha256": "b999fcf3d95fb6f03337b66335bea1e54442a40dfdd11e0a79591a7b8188c5d8",
+      "bytes": 8065
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+      "sha256": "0b16b1b7b595a1113a610822dfb7f5487b9207531e9bf4f54be003d7e67aa905",
+      "bytes": 42552
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+      "sha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0",
+      "bytes": 2028
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java",
+      "sha256": "1507b8a04e8dc5ec8b489c07979e81955001e947a9c9868211919ae1f45ed6f5",
+      "bytes": 8386
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java",
+      "sha256": "f23c6533af3fdea4a4a7cad60cf5dda6dbb111463e4390549522e50f3b787047",
+      "bytes": 1694
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+      "sha256": "374c7d12e8d02ed33234c8029c2f2717713f92fec90fdde34971242c0730c4aa",
+      "bytes": 3757
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java",
+      "sha256": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
+      "bytes": 3587
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "b6d8885c726960be323c8d501396a7ebc0d866c35066bf90e11932ad96ed00da",
+      "bytes": 473
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "engine-core/src/contextCompactorJava8Test/java/dev/openallay/agent/context/ContextCompactorJava8Fixture.java",
+      "sha256": "6335d5cb3f66e82e281d99150b8cc7b4478ce73f17df1391cb559c339700cec2"
+    },
+    {
+      "path": "engine-core/src/contextCompactorJava8Test/java/dev/openallay/agent/context/ContextCompactorJava8Test.java",
+      "sha256": "e353d7aaf38ba7def379ac48bea69295fbe769044f78d5718ea1b94b319c7375"
+    }
+  ],
+  "converter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+    "git_blob": "e6a54f8a16270efbe788d74dbc5f7314fa99d6f1",
+    "source_commit": "2e553b9f548bd2cd4ffbf64ac91d58fa27f95dfb",
+    "custody_scope": "ExactacceptedbuildproofASTsourceonlyfromdurableGitblob, notruntimebranch or secondfeatureimplementation. Currentcheckouttoolmaychange independently; original11targetbytes remainexactreplayed."
+  },
+  "dependency_pins": {
+    "gson": [
+      {
+        "name": "gson-2.8.0.jar",
+        "bytes": 231952,
+        "digest_algorithm": "sha1",
+        "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+      },
+      {
+        "name": "gson-2.13.2.jar",
+        "bytes": 289901,
+        "digest_algorithm": "sha256",
+        "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+      }
+    ],
+    "junit_console": [
+      {
+        "name": "junit-platform-console-standalone-1.11.4.jar",
+        "bytes": 2809597,
+        "digest_algorithm": "sha256",
+        "digest": "b016ef6b1c3454d6d7c2c88ce081dabf289699686af6622d6e4e2e1b54b4a2fc",
+        "artifact_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar.sha256"
+      }
+    ]
+  },
+  "runner_sha256": "29416511eeb21aa4e74d83578cb381ee6f7908a2768f8c879e978ed9ebf49f5d",
+  "format_policy": "Onlyblankline trailingwhitespacecleanup afteractualconverter+literalmechanicalops. Summarytextblock exactdedentednewlines retained. No hashinputnormalization.",
+  "authority_policy": "Budget/losslabel/noinventedevidence, immutableoriginalcontext, summary-onlyobservedmodel attemptreceipt andcancellation/latepublication fences remainactualoriginalalgorithms.",
+  "exact_format_correction": "OnlyProjection compactconstructor generatednonblankline trailingoneASCIIspace removed count1 afterrecordedAPIlowering; nobroadnonblanktrimming.",
+  "fixture_error_contract": "Resultoutercontext_compaction_failed plusFAILEDcheckpoint diagnosticsummary_malformed andexactsafeMessage; noncooperativecancel assertsModelClientExceptionagent_cancelled, latecompletionfence. Matchesauthenticbaselineandcurrentexistingtests.",
+  "remaining_api_audit": "All11ownedsourcepostJava8calls reviewed: onlyfittednoargOptional.orElseThrow remains; exactsupplier withoriginalNoValuePresentmessage withinexistingisPresentguard, nootherguard/methodchanges."
+}

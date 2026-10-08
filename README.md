@@ -10,9 +10,10 @@ to work through the task and bring useful answers back into the game.
 <img src="docs/media/openallay-banner.png" alt="OpenAllay — your AI companion in Minecraft. Explore, build, and create.">
 
 [Download on GitHub](https://github.com/nkanf-dev/OpenAllay/releases) ·
-[Quick start](#quick-start) · [0.4.3 release notes](docs/releases/0.4.3.md) ·
+[Quick start](#quick-start) · [0.4.4 release notes](docs/releases/0.4.4.md) ·
 [Community](#community-and-development) ·
-[Mature Forge backport verification](docs/verification/mature-forge-ecosystems.md)
+[Mature Forge backport verification](docs/verification/mature-forge-ecosystems.md) ·
+[Stock Forge integrated-client validation](docs/verification/stock-forge-integrated-clients.md)
 
 | | Make it part of your game |
 | --- | --- |
@@ -23,23 +24,29 @@ to work through the task and bring useful answers back into the game.
 
 ## Quick start
 
-OpenAllay **0.4.3** supports **25 Minecraft versions**: Forge on **1.18.2 and
-1.19.2**, plus Fabric and NeoForge on **1.20.1 through 26.3**. Download the JAR
-that lists your exact Minecraft version and loader from
-[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.3).
-Some files cover multiple versions. Fabric also needs the matching **Fabric API**.
+OpenAllay **0.4.4** supports **27 Minecraft versions**: Forge on **1.12.2, 1.16.5,
+1.18.2, and 1.19.2**, plus Fabric and NeoForge on **1.20.1 through
+26.3**. Choose the file for your exact Minecraft version and loader from
+[GitHub Releases](https://github.com/nkanf-dev/OpenAllay/releases/tag/v0.4.4).
+Fabric also needs the matching **Fabric API**.
 
-| Minecraft version | Java version |
-| --- | --- |
-| 1.18.2, 1.19.2 and 1.20.1–1.20.4 | 17 |
-| 1.20.5–1.20.6 and 1.21–1.21.11 | 21 |
-| 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | 25 |
+| Minecraft version | Java version | Installation |
+| --- | --- | --- |
+| 1.12.2 | 8 | Forge 14.23.5.2864 JAR; install in `mods` |
+| 1.16.5 | 17 | Forge 36.2.42 JAR; install in `mods` |
+| 1.18.2, 1.19.2 and 1.20.1–1.20.4 | 17 | Matching loader JAR |
+| 1.20.5–1.20.6 and 1.21–1.21.11 | 21 | Matching loader JAR |
+| 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | 25 | Matching loader JAR |
 
-Minecraft **26.2 / Java 25** remains the development mainline. See the
-[release compatibility table](docs/native-binary-artifacts.md#release-043-files)
-for the exact versions covered by each download.
+The 0.4.4 download catalog contains **35 JARs** for Minecraft **1.12.2 through 26.3**,
+covering **50 version/loader pairs**. Both GitHub and Modrinth use these same JAR families.
+GitHub also includes `SHA256SUMS`, for **36 release assets** in total. Some JARs cover several versions. See the [release compatibility table](docs/native-binary-artifacts.md#release-044-files)
+and [Forge runtime setup](docs/forge-runtime-installation.md).
+Minecraft **26.2 / Java 25** remains the development mainline.
+For Minecraft **1.12.2**, install **Forge 14.23.5.2864**, select **Java 8**,
+and put `openallay-forge-1.12.2-0.4.4.jar` in `mods`. Minecraft Builder is included.
 
-1. Put the JAR in your instance's `mods` folder and start Minecraft.
+1. Put the matching JAR in your instance's `mods` folder and start Minecraft.
 2. Enter a world and press **K**, or run `/guide`.
 3. Select the gear button, open **Models**, and add a model profile.
 4. Choose **OpenAI-compatible Chat Completions** or **Anthropic Messages**.
@@ -77,23 +84,30 @@ mods and their integrations; none of these mods is required to use OpenAllay.
 
 ## Build in your world
 
-The **Minecraft Builder** Extension comes with every loader download. Describe
-what you want to build, then use geometry, terrain tools, building presets, and
-saved structure templates to bring it into your active single-player world.
-Templates support rotation and mirroring. Block undo checks for later edits and
-reports conflicts instead of overwriting them.
+The **Minecraft Builder** Extension comes with each OpenAllay download. Describe
+what you want to build, then use geometry, terrain tools, available building
+presets, and saved templates in your active single-player world. Templates
+support rotation and mirroring. Block undo preserves later edits and reports
+conflicts.
 
-To start building:
-
-1. Open a **single-player world** and select a model profile configured on your
-   client, rather than a server-provided model.
+1. Open a **single-player world** and select a client-configured model profile.
 2. In **Settings → Extensions**, enable **Minecraft Builder**.
 3. Ask for a build, for example: “Build a small stone tower beside me.”
 
-Enabling Builder enables its building and world-write operations.
-**You do not need full-access JavaScript or JVM access.** Builder works in
-survival and creative worlds; it does not write to ordinary remote servers.
-Undo covers recorded block changes, not every side effect in the world.
+Enabling Builder includes its building operations in ordinary JavaScript mode.
+The **Enable full-access JavaScript** switch can stay off. Builder works in
+survival and creative single-player worlds. Undo restores matching recorded
+block changes.
+
+Preset availability follows the game's native materials:
+
+| Minecraft | Available building workflows |
+| --- | --- |
+| 1.12.2 | Geometry, terrain, templates, cancellation, and undo with native block-state readback |
+| 1.16.5 | Geometry, decoration, terrain, templates, house, cottage, windmill, farm, and dock |
+
+On 1.16.5, choose one of the five presets listed above; the skyscraper preset
+requires a lightning rod.
 
 Builder is developed independently in
 [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions/tree/main/extensions/minecraft-builder).
@@ -101,12 +115,13 @@ Builder is developed independently in
 ## Create your own Skills
 
 Teach OpenAllay how you play. Skills are reusable instructions and reference
-material for a mod, a task, or a play style—not another set of fixed buttons.
+material for a mod, a task, or a play style.
 OpenAllay loads relevant guidance when it needs it.
 
 Bundled Skills cover recipes, machines, guide books, progression, and game
-diagnosis. In **Settings → Skills**, browse, install, and update community
-workflows, or import a local Skill package. You can write and share your own
+diagnosis. In **Settings → Skills → Community**, refresh the catalog and browse
+packages compatible with your Minecraft version. Install or update a
+workflow, or import a local Skill package. You can write and share your own
 modpack guides and workflows through
 [OpenAllay Skills](https://github.com/nkanf-dev/OpenAllay-Skills).
 
@@ -115,7 +130,8 @@ modpack guides and workflows through
 Extensions connect new game data, reusable JavaScript modules, mod integrations,
 actions, and native result views. Open **Settings → Extensions** to see what is
 connected, browse compatible community packages, or import a local Extension JAR.
-Extensions install like normal mods and become active after a restart.
+Universal Extension JARs install under `config/openallay/extensions/`. Legacy
+loader-mod Extensions use `mods/`. Restart Minecraft after installation.
 
 Want to connect your own mod? Start with the examples and authoring guide in
 [OpenAllay Extensions](https://github.com/nkanf-dev/OpenAllay-Extensions).
@@ -145,7 +161,8 @@ copy answers, or export a session. The screen does not pause the game.
 - **World observation:** the Agent can read live focus and request world or game-UI images as needed.
   Image requests need an image-capable model. Open tool details to inspect the actual capture.
 - **Input references:** focus and associated frames support your question. Refresh or remove them,
-  or attach a current world frame. They describe the source of that input, not a live view.
+  or attach a current world frame. These references save the frame and focus at
+  the time of your input; refresh them when you need the latest state.
 - **Image inputs:** paste images with **Ctrl/Cmd+V** when using an image-capable model.
 - **Manual compaction:** when the conversation is idle, enter `/compact` to summarize older context
   with your client-configured model. Server models do not support this command yet. Use `//` to send a literal `/`.
@@ -172,7 +189,7 @@ copy answers, or export a session. The screen does not pause the game.
 
 Use a compatible hosted service or local endpoint. Save several profiles and
 switch between them in the conversation. A client-configured profile can use a
-remote provider—it does not require running a model on your computer.
+remote provider or a model running on your computer.
 
 In **Settings → Models**:
 
@@ -186,9 +203,10 @@ In **Settings → Models**:
 
 The chat footer shows the context estimate and budget, cumulative session cost,
 and cache hit rate when available. Session totals include actual model and automatic
-summary calls, including restored request history. **An estimate is not a bill.**
-Missing usage or pricing stays unknown or partial, not zero. Provider rates and
-unreported extra charges can change the amount you pay.
+summary calls, including restored request history. Use the estimate to track
+session costs; your provider supplies the final bill. Missing usage or pricing
+stays unknown or partial. Provider rates and unreported extra charges can change
+the amount you pay.
 
 OpenAllay is free and open source. Model providers may charge for API use.
 

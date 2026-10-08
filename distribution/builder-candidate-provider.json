@@ -1,0 +1,10 @@
+{
+  "provider": {
+    "artifactId": 11447976342,
+    "runId": 37538595660,
+    "sourceRevision": "89d34cf3b5118a5cc555e4802f094af667ded0d1",
+    "sha256": "6fbbd89f669fef2db5c145f9a994534da1eef7ee6c1d7dddab05d8be95d2b41a"
+  },
+  "jarSha256": "bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345",
+  "extensionSource": "6e977110cbe8e0ca0b39c012f0cdfc10bafffef2"
+}

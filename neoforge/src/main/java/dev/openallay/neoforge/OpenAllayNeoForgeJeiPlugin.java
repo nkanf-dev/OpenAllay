@@ -1,25 +1,8 @@
 package dev.openallay.neoforge;
 
-import dev.openallay.integration.jei.MinecraftJeiPluginUid;
-
-import dev.openallay.integration.jei.OpenAllayJeiBridge;
+import dev.openallay.integration.jei.MinecraftJeiPluginLifecycle;
 import mezz.jei.api.JeiPlugin;
-import mezz.jei.api.runtime.IJeiRuntime;
 
-/** NeoForge-root JEI discovery adapter for the common integration. */
+/** Optional discovery alone resolves JEI publication types. */
 @JeiPlugin
-public final class OpenAllayNeoForgeJeiPlugin extends MinecraftJeiPluginUid {
-    public OpenAllayNeoForgeJeiPlugin() {
-        OpenAllayJeiBridge.registerExtension();
-    }
-
-    @Override
-    public void onRuntimeAvailable(IJeiRuntime runtime) {
-        OpenAllayJeiBridge.runtimeAvailable(runtime);
-    }
-
-    @Override
-    public void onRuntimeUnavailable() {
-        OpenAllayJeiBridge.runtimeUnavailable();
-    }
-}
+public final class OpenAllayNeoForgeJeiPlugin extends MinecraftJeiPluginLifecycle {}

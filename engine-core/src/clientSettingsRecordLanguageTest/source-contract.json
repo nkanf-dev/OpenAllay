@@ -1,0 +1,1113 @@
+{
+  "scope": "Canonical client/settings publicAST124records64completeowners acceptedconverter depthordered language-only lowering; no partial owner/no feature rewrite",
+  "acceptedInventoryRun": 37572819187,
+  "acceptedInventorySha256": "887e12aa1233efed8287d7814dc7ca74c0c74ec3960678810ba837941e8dec19",
+  "rawSourceCommit": "0bb4897bcdd01d821311efa1d1d5efacba755154",
+  "requestedOwnerCount": 64,
+  "parsedRecordCount": 124,
+  "clientParsedRecords": 72,
+  "settingsParsedRecords": 52,
+  "owners": [
+    {
+      "path": "dev/openallay/client/ClientGuideRuntime.java",
+      "raw_sha256": "a20ac0ac2d304540b21d92be3dda547013896ec698272c3641d818bed1cab64f",
+      "raw_bytes": 34652,
+      "recordPaths": [
+        "ClientGuideRuntime.PromptModes",
+        "ClientGuideRuntime.EndpointRuntime"
+      ],
+      "inventory_raw_sha256": "af43d787e4557ff81bc6a71ca00dc21dd27e7579025b4678c123d202410d49c1",
+      "inventory_counts": {
+        "bindingPatterns": 7,
+        "denotableVarSites": 1,
+        "parsedVarSites": 1,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/ClientModelRuntimeRegistry.java",
+      "raw_sha256": "37d20d908a5b5cf42b54714fc58dcbf0111b87a602bb73e6e3cc276656775858",
+      "raw_bytes": 24959,
+      "recordPaths": [
+        "ClientModelRuntimeRegistry.State"
+      ],
+      "inventory_raw_sha256": "37d20d908a5b5cf42b54714fc58dcbf0111b87a602bb73e6e3cc276656775858",
+      "inventory_counts": {
+        "bindingPatterns": 2,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideClientUiState.java",
+      "raw_sha256": "d647884716451757954a9d2c5a3e68c17437470cb60e7b7c29aced79e670d101",
+      "raw_bytes": 24558,
+      "recordPaths": [
+        "GuideClientUiState.DraftIntent",
+        "GuideClientUiState.IntentCapture",
+        "GuideClientUiState.ObservationCapture",
+        "GuideClientUiState.Insertion",
+        "GuideClientUiState.PendingInsertion"
+      ],
+      "inventory_raw_sha256": "5ea24a9de1ab545ad7460369d8dcc53ed12ced9719469d21fcd99100b72d54c8",
+      "inventory_counts": {
+        "bindingPatterns": 1,
+        "denotableVarSites": 4,
+        "parsedVarSites": 4,
+        "records": 5,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideInputCharacter.java",
+      "raw_sha256": "e2c1cbe93b2ac6b0e1aef1068cf1f0b10d9015d4b6e7404f14a2abb46a1c490a",
+      "raw_bytes": 189,
+      "recordPaths": [
+        "GuideInputCharacter"
+      ],
+      "inventory_raw_sha256": "e2c1cbe93b2ac6b0e1aef1068cf1f0b10d9015d4b6e7404f14a2abb46a1c490a",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideInputKey.java",
+      "raw_sha256": "a32e968196b4f7d52761a22f7fc28e325abdde7bb96c9c11734bced76eeb57f7",
+      "raw_bytes": 350,
+      "recordPaths": [
+        "GuideInputKey"
+      ],
+      "inventory_raw_sha256": "a32e968196b4f7d52761a22f7fc28e325abdde7bb96c9c11734bced76eeb57f7",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/GuideInputMouse.java",
+      "raw_sha256": "ec38b5101e89934714967faa4bb61b77463c937a4234adcad0218c84b203c7cb",
+      "raw_bytes": 218,
+      "recordPaths": [
+        "GuideInputMouse"
+      ],
+      "inventory_raw_sha256": "ec38b5101e89934714967faa4bb61b77463c937a4234adcad0218c84b203c7cb",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/OpenAllayWidgetTheme.java",
+      "raw_sha256": "6bffb05d7f29f9fa38f824036bce3b734e8c0428d0a9bc0644811ec315a50ac0",
+      "raw_bytes": 2893,
+      "recordPaths": [
+        "OpenAllayWidgetTheme.ButtonColors"
+      ],
+      "inventory_raw_sha256": "6bffb05d7f29f9fa38f824036bce3b734e8c0428d0a9bc0644811ec315a50ac0",
+      "inventory_counts": {
+        "arrowCases": 5,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/export/GuideSessionExporter.java",
+      "raw_sha256": "54f1f2c4252b0f007c77fb042dd776853108cc89971b4156709c1df93b572a34",
+      "raw_bytes": 18101,
+      "recordPaths": [
+        "GuideSessionExporter.ExportedFile"
+      ],
+      "inventory_raw_sha256": "cb7cdde4c1267e080e2949e4d0391b93ace4a2f8da072994d28478c25b05362f",
+      "inventory_counts": {
+        "bindingPatterns": 8,
+        "denotableVarSites": 3,
+        "parsedVarSites": 3,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/hud/GuideHudLayout.java",
+      "raw_sha256": "5929f3a5995a0cd37f08b1d782428f5adbbd9344ffbc81cdc4d8b5257287bd68",
+      "raw_bytes": 5083,
+      "recordPaths": [
+        "GuideHudLayout.Rect"
+      ],
+      "inventory_raw_sha256": "5929f3a5995a0cd37f08b1d782428f5adbbd9344ffbc81cdc4d8b5257287bd68",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/hud/GuideHudReadingLayout.java",
+      "raw_sha256": "d1be5561c2206be948fb8b30be76647f19fca13eca544c8b0d5f7183714ea163",
+      "raw_bytes": 2372,
+      "recordPaths": [
+        "GuideHudReadingLayout"
+      ],
+      "inventory_raw_sha256": "8e7e1bf2af009526fddc0e4358ef0a587e5aa6e39ab6916fe55be873d5f7e34b",
+      "inventory_counts": {
+        "denotableVarSites": 6,
+        "parsedVarSites": 6,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/nativeview/NativeDomainViewBinding.java",
+      "raw_sha256": "f28c5b5a3bf355076f663be816a42a0ac18570d5ca141c4a21bb526c5de47404",
+      "raw_bytes": 1291,
+      "recordPaths": [
+        "NativeDomainViewBinding.Recipe"
+      ],
+      "inventory_raw_sha256": "f28c5b5a3bf355076f663be816a42a0ac18570d5ca141c4a21bb526c5de47404",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "sealedDeclarations": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/nativeview/NativeDomainViewDiagnostic.java",
+      "raw_sha256": "1fe89412af37edf11a855ac09df5af964d2a1d94ebfdfd4a8b49c7f6b14e68c1",
+      "raw_bytes": 518,
+      "recordPaths": [
+        "NativeDomainViewDiagnostic"
+      ],
+      "inventory_raw_sha256": "1fe89412af37edf11a855ac09df5af964d2a1d94ebfdfd4a8b49c7f6b14e68c1",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/BuiltinModelSettingsProjection.java",
+      "raw_sha256": "ad2dc5ac4d3abe94b8b322e9289714ed1db26f1221efb6378fe8366d6230adef",
+      "raw_bytes": 10871,
+      "recordPaths": [
+        "BuiltinModelSettingsProjection",
+        "BuiltinModelSettingsProjection.Line"
+      ],
+      "inventory_raw_sha256": "426c13bcb6f2ad8b35d63eac40d21d572ae9fec9dad489edd510245dd2c7d1d6",
+      "inventory_counts": {
+        "denotableVarSites": 4,
+        "parsedVarSites": 4,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/CapabilitySettingsProjection.java",
+      "raw_sha256": "ca90316deb271be08bb7deabe677d273d9f9d892f872abb2a9c07198fc1b4caf",
+      "raw_bytes": 4454,
+      "recordPaths": [
+        "CapabilitySettingsProjection",
+        "CapabilitySettingsProjection.Card"
+      ],
+      "inventory_raw_sha256": "ca90316deb271be08bb7deabe677d273d9f9d892f872abb2a9c07198fc1b4caf",
+      "inventory_counts": {
+        "arrowCases": 3,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/DiagnosticsSettingsProjection.java",
+      "raw_sha256": "0a9d0e2d725d7b5c564d2f4064b1ea6524e5f33e6f735da5485069be1e28a978",
+      "raw_bytes": 3405,
+      "recordPaths": [
+        "DiagnosticsSettingsProjection",
+        "DiagnosticsSettingsProjection.CardRow",
+        "DiagnosticsSettingsProjection.DebugSection"
+      ],
+      "inventory_raw_sha256": "0a9d0e2d725d7b5c564d2f4064b1ea6524e5f33e6f735da5485069be1e28a978",
+      "inventory_counts": {
+        "arrowCases": 5,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 3,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ExtensionSettingsProjection.java",
+      "raw_sha256": "ba7e28bd9d90b4aca2bf5a11620db369e8f0a046b06bf99c1564250de96c1821",
+      "raw_bytes": 11376,
+      "recordPaths": [
+        "ExtensionSettingsProjection",
+        "ExtensionSettingsProjection.RuntimeCard",
+        "ExtensionSettingsProjection.RootCard",
+        "ExtensionSettingsProjection.ModuleCard",
+        "ExtensionSettingsProjection.AdapterCard",
+        "ExtensionSettingsProjection.CatalogCard",
+        "ExtensionSettingsProjection.ExtensionCard"
+      ],
+      "inventory_raw_sha256": "ba7e28bd9d90b4aca2bf5a11620db369e8f0a046b06bf99c1564250de96c1821",
+      "inventory_counts": {
+        "bindingPatterns": 8,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 7,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/GeneralSettingsProjection.java",
+      "raw_sha256": "3cb713b8fe2cad631c17f4bde002e11bf72489d7f793e11eb0147d05e7ef5138",
+      "raw_bytes": 2364,
+      "recordPaths": [
+        "GeneralSettingsProjection"
+      ],
+      "inventory_raw_sha256": "3cb713b8fe2cad631c17f4bde002e11bf72489d7f793e11eb0147d05e7ef5138",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/HistorySettingsProjection.java",
+      "raw_sha256": "cce71418a09656bd895d0850bca67ab86acf23f0e5c7491b61c9321010f5c418",
+      "raw_bytes": 3379,
+      "recordPaths": [
+        "HistorySettingsProjection",
+        "HistorySettingsProjection.ActionRow"
+      ],
+      "inventory_raw_sha256": "cce71418a09656bd895d0850bca67ab86acf23f0e5c7491b61c9321010f5c418",
+      "inventory_counts": {
+        "arrowCases": 6,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0,
+        "switchExpressions": 2
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelImageSettingsProjection.java",
+      "raw_sha256": "c6b4f48f42c51a482bacf847365e169b4bad0e2342af9890491e80fab8b4e316",
+      "raw_bytes": 889,
+      "recordPaths": [
+        "ModelImageSettingsProjection"
+      ],
+      "inventory_raw_sha256": "c6b4f48f42c51a482bacf847365e169b4bad0e2342af9890491e80fab8b4e316",
+      "inventory_counts": {
+        "arrowCases": 3,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelProfileDraft.java",
+      "raw_sha256": "b594b3c992326a5138fab04894bb2318673dbba89111c0a28966d5e7c7436333",
+      "raw_bytes": 15801,
+      "recordPaths": [
+        "ModelProfileDraft"
+      ],
+      "inventory_raw_sha256": "24672661213e680c05c79174d783c20138b870184ef6901f26c49fec92fc767a",
+      "inventory_counts": {
+        "bindingPatterns": 1,
+        "denotableVarSites": 1,
+        "parsedVarSites": 1,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelReasoningSettingsProjection.java",
+      "raw_sha256": "c5ae3187436491dfe7d5ddaa6fe977037cebf878b5ac278f8ce54bb3c02a3d35",
+      "raw_bytes": 1861,
+      "recordPaths": [
+        "ModelReasoningSettingsProjection"
+      ],
+      "inventory_raw_sha256": "c5ae3187436491dfe7d5ddaa6fe977037cebf878b5ac278f8ce54bb3c02a3d35",
+      "inventory_counts": {
+        "arrowCases": 2,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/ModelSettingsProjection.java",
+      "raw_sha256": "a55eb6b5d2aa70b4b49f6c84fb431c60eb766416fd15f71c717fcec7da04496d",
+      "raw_bytes": 4442,
+      "recordPaths": [
+        "ModelSettingsProjection",
+        "ModelSettingsProjection.ModelCard"
+      ],
+      "inventory_raw_sha256": "a55eb6b5d2aa70b4b49f6c84fb431c60eb766416fd15f71c717fcec7da04496d",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/RecipeSettingsProjection.java",
+      "raw_sha256": "9fe2836b713e75735ae0af1888aa155bf52705a7ad973ebe884a8985ff97e2af",
+      "raw_bytes": 4317,
+      "recordPaths": [
+        "RecipeSettingsProjection",
+        "RecipeSettingsProjection.SourceRow"
+      ],
+      "inventory_raw_sha256": "9fe2836b713e75735ae0af1888aa155bf52705a7ad973ebe884a8985ff97e2af",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/RequirementSettingsProjection.java",
+      "raw_sha256": "5539bb1dd5243e899ed024eb4f349cf732e78e79c7e16dbedca9cac6bef5dcb0",
+      "raw_bytes": 2925,
+      "recordPaths": [
+        "RequirementSettingsProjection",
+        "RequirementSettingsProjection.Row"
+      ],
+      "inventory_raw_sha256": "5539bb1dd5243e899ed024eb4f349cf732e78e79c7e16dbedca9cac6bef5dcb0",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/SettingsLayout.java",
+      "raw_sha256": "11ef9a926ff871a50d7f4feb0e1a15467ecd79959baf85330101706a4a325a1b",
+      "raw_bytes": 3834,
+      "recordPaths": [
+        "SettingsLayout",
+        "SettingsLayout.Rect"
+      ],
+      "inventory_raw_sha256": "11ef9a926ff871a50d7f4feb0e1a15467ecd79959baf85330101706a4a325a1b",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/SkillSettingsProjection.java",
+      "raw_sha256": "dfe2725382dc225b08dafe357ee29c9658e69c0724fce60e494881837c24bbf0",
+      "raw_bytes": 5494,
+      "recordPaths": [
+        "SkillSettingsProjection",
+        "SkillSettingsProjection.Skill",
+        "SkillSettingsProjection.Community",
+        "SkillSettingsProjection.Package",
+        "SkillSettingsProjection.Notice"
+      ],
+      "inventory_raw_sha256": "dfe2725382dc225b08dafe357ee29c9658e69c0724fce60e494881837c24bbf0",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 5,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/gui/settings/UiSettingsProjection.java",
+      "raw_sha256": "b9c1fc74a6982fc38e4a31f915340624b292738dffba03608aea3f5319e8fd5e",
+      "raw_bytes": 976,
+      "recordPaths": [
+        "UiSettingsProjection"
+      ],
+      "inventory_raw_sha256": "b9c1fc74a6982fc38e4a31f915340624b292738dffba03608aea3f5319e8fd5e",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/observation/ObservationAnchorPresentation.java",
+      "raw_sha256": "13c223b6aa6c7f9386d8e747b306c82336398dd6e50670b784413791026e869d",
+      "raw_bytes": 2070,
+      "recordPaths": [
+        "ObservationAnchorPresentation.Chip"
+      ],
+      "inventory_raw_sha256": "c27c991bf3919bd39f14d2680d986aea62ac697606dfb871c858559d5382a839",
+      "inventory_counts": {
+        "denotableVarSites": 2,
+        "parsedVarSites": 2,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/observation/ObservationComposerLayout.java",
+      "raw_sha256": "4ee1811b2de7c471afa55ab7d061ac07e68529f0f8623c89faf3aa60f6b3b8e0",
+      "raw_bytes": 1310,
+      "recordPaths": [
+        "ObservationComposerLayout"
+      ],
+      "inventory_raw_sha256": "a3cfe7a68a57326a370bd6c43d567aa96e7dbe69018eb737b6a0b2ee273f820c",
+      "inventory_counts": {
+        "denotableVarSites": 2,
+        "parsedVarSites": 2,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuideNotificationController.java",
+      "raw_sha256": "8da94ae3944a4982f914b354adba6ca49fdc1eaa195693cda76cf67466560d38",
+      "raw_bytes": 16769,
+      "recordPaths": [
+        "GuideNotificationController.Task"
+      ],
+      "inventory_raw_sha256": "8da94ae3944a4982f914b354adba6ca49fdc1eaa195693cda76cf67466560d38",
+      "inventory_counts": {
+        "arrowCases": 8,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1,
+        "switchStatements": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuideNotificationPort.java",
+      "raw_sha256": "db59511ec755d73e6399b81e87d7ded42b20ad82181b6a06f9bc44a8e9304949",
+      "raw_bytes": 3047,
+      "recordPaths": [
+        "GuideNotificationPort.Notification"
+      ],
+      "inventory_raw_sha256": "db59511ec755d73e6399b81e87d7ded42b20ad82181b6a06f9bc44a8e9304949",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/presentation/GuidePresentationHost.java",
+      "raw_sha256": "0587bafc6d467d57d5fc5d289e129f6920c257289ded0d1389ee78280bed9303",
+      "raw_bytes": 2230,
+      "recordPaths": [
+        "GuidePresentationHost.Facts",
+        "GuidePresentationHost.Input",
+        "GuidePresentationHost.View"
+      ],
+      "inventory_raw_sha256": "0587bafc6d467d57d5fc5d289e129f6920c257289ded0d1389ee78280bed9303",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 3,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/resource/ClientResource.java",
+      "raw_sha256": "15046056a0e9f9e2cac3221c256200c75a20ae7139a2721d1ac95bba887310c7",
+      "raw_bytes": 1014,
+      "recordPaths": [
+        "ClientResource"
+      ],
+      "inventory_raw_sha256": "15046056a0e9f9e2cac3221c256200c75a20ae7139a2721d1ac95bba887310c7",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/AudioCapture.java",
+      "raw_sha256": "977365590251ad133dd3389bfca2193ee8effa51c1f85d6fdc4d7ab26fd2b8a3",
+      "raw_bytes": 1805,
+      "recordPaths": [
+        "AudioCapture.Device"
+      ],
+      "inventory_raw_sha256": "977365590251ad133dd3389bfca2193ee8effa51c1f85d6fdc4d7ab26fd2b8a3",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeModelFiles.java",
+      "raw_sha256": "5e9b0f38d09414563b7647360252f8ac3294cabb60b4f2898651801fa4915c13",
+      "raw_bytes": 10258,
+      "recordPaths": [
+        "NativeModelFiles.ModelFile",
+        "NativeModelFiles.Model"
+      ],
+      "inventory_raw_sha256": "140fcc010b1872bb13f814de0da8a27e7cae31d789378ff74517d2db62cf20ff",
+      "inventory_counts": {
+        "arrowCases": 9,
+        "denotableVarSites": 1,
+        "parsedVarSites": 1,
+        "records": 2,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1,
+        "switchStatements": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeModelInstaller.java",
+      "raw_sha256": "61c4dd2f8e94009925967f972a50d7c097687697633ab73434665f3534055f06",
+      "raw_bytes": 18465,
+      "recordPaths": [
+        "NativeModelInstaller.Download"
+      ],
+      "inventory_raw_sha256": "7ee68b90c8daa728ea1a3f74080a7293de04ff147bd23ce785c73e8f69f269bc",
+      "inventory_counts": {
+        "denotableVarSites": 4,
+        "parsedVarSites": 4,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeRuntimeCatalog.java",
+      "raw_sha256": "2a289b3a9c6b212626ef67c3a37cd8437cdae5a2e896652146c42c7a09f24078",
+      "raw_bytes": 4045,
+      "recordPaths": [
+        "NativeRuntimeCatalog.Artifact"
+      ],
+      "inventory_raw_sha256": "2a289b3a9c6b212626ef67c3a37cd8437cdae5a2e896652146c42c7a09f24078",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeRuntimeNotices.java",
+      "raw_sha256": "870dfa4b72da9afff569b6ff009a71f1a05b26d5094164c8de862b641ad385eb",
+      "raw_bytes": 5697,
+      "recordPaths": [
+        "NativeRuntimeNotices.Notice"
+      ],
+      "inventory_raw_sha256": "870dfa4b72da9afff569b6ff009a71f1a05b26d5094164c8de862b641ad385eb",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/NativeSpeechToText.java",
+      "raw_sha256": "8ac09c0e5e7d70f45a19bafcb53a11816f11b33652221aa8cb5c0bcfb6dcf1e7",
+      "raw_bytes": 20045,
+      "recordPaths": [
+        "NativeSpeechToText.Call"
+      ],
+      "inventory_raw_sha256": "9eec1891842b850ab486469121fc53062ff8683f5b29ac2800a63fc9803c8196",
+      "inventory_counts": {
+        "arrowCases": 7,
+        "bindingPatterns": 3,
+        "denotableVarSites": 4,
+        "parsedVarSites": 4,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "switchExpressions": 1,
+        "switchStatements": 1
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceConfig.java",
+      "raw_sha256": "c91ddbd4e8d0219fefaa00b4c4455f20e15026f87063701f9b49a8d26842db46",
+      "raw_bytes": 4394,
+      "recordPaths": [
+        "VoiceConfig"
+      ],
+      "inventory_raw_sha256": "c91ddbd4e8d0219fefaa00b4c4455f20e15026f87063701f9b49a8d26842db46",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceRuntime.java",
+      "raw_sha256": "11c5c4eefff51437619b9120c1e38f0c97608d80df53b23676552cfe9130109c",
+      "raw_bytes": 15557,
+      "recordPaths": [
+        "VoiceRuntime.DeliveryReceipt",
+        "VoiceRuntime.DraftTarget",
+        "VoiceRuntime.Status"
+      ],
+      "inventory_raw_sha256": "11c5c4eefff51437619b9120c1e38f0c97608d80df53b23676552cfe9130109c",
+      "inventory_counts": {
+        "arrowCases": 9,
+        "bindingPatterns": 5,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 3,
+        "rejectedVarSites": 0,
+        "switchExpressions": 2
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceSettingsView.java",
+      "raw_sha256": "6efe6208699074c65c2dda6a98c2630c30f7f1e97476c8f23ec9c1b93ec0b13b",
+      "raw_bytes": 335,
+      "recordPaths": [
+        "VoiceSettingsView"
+      ],
+      "inventory_raw_sha256": "6efe6208699074c65c2dda6a98c2630c30f7f1e97476c8f23ec9c1b93ec0b13b",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/client/voice/VoiceStatusPresentation.java",
+      "raw_sha256": "f3d41c6753afcfddf17948cfbf276977d4d226357b19f9452f1fba675e34ae44",
+      "raw_bytes": 5667,
+      "recordPaths": [
+        "VoiceStatusPresentation.Notice"
+      ],
+      "inventory_raw_sha256": "f3d41c6753afcfddf17948cfbf276977d4d226357b19f9452f1fba675e34ae44",
+      "inventory_counts": {
+        "arrowCases": 46,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0,
+        "switchExpressions": 2
+      }
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsRuntime.java",
+      "raw_sha256": "ae91da64557b7a3c9ca7e3ce39219c50be2569d9f0e7c4a922e0bc384c42c172",
+      "raw_bytes": 26764,
+      "recordPaths": [
+        "ClientSettingsRuntime"
+      ],
+      "inventory_raw_sha256": "ae91da64557b7a3c9ca7e3ce39219c50be2569d9f0e7c4a922e0bc384c42c172",
+      "inventory_counts": {
+        "bindingPatterns": 10,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsService.java",
+      "raw_sha256": "23a19651b8d08b30aeeb840e00feb80c7cb79b7d3c60596495cbd51271e4cba1",
+      "raw_bytes": 115606,
+      "recordPaths": [
+        "ClientSettingsService.HistoryRuntimeState",
+        "ClientSettingsService.ModelState",
+        "ClientSettingsService.PreparedModels",
+        "ClientSettingsService.ActivePackagePreparation",
+        "ClientSettingsService.Reservation",
+        "ClientSettingsService.ActiveProbe",
+        "ClientSettingsService.ActiveCatalog"
+      ],
+      "inventory_raw_sha256": "6659f6e874e224fe0bb26de948562af2bd9b55c30c1f7b64f947676c2a1e1c55",
+      "inventory_counts": {
+        "arrowCases": 33,
+        "bindingPatterns": 18,
+        "denotableVarSites": 4,
+        "parsedVarSites": 4,
+        "records": 7,
+        "rejectedVarSites": 0,
+        "switchExpressions": 11
+      }
+    },
+    {
+      "path": "dev/openallay/settings/ClientSettingsSnapshot.java",
+      "raw_sha256": "c68f661bdeb820e9f2d8a9721894b975dec9eb7a35670aa238745fc1c3f1dfbd",
+      "raw_bytes": 6540,
+      "recordPaths": [
+        "ClientSettingsSnapshot"
+      ],
+      "inventory_raw_sha256": "c68f661bdeb820e9f2d8a9721894b975dec9eb7a35670aa238745fc1c3f1dfbd",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/SettingsNotice.java",
+      "raw_sha256": "0a718e6ab1be6ceae7b97f99778a0fd96c4cd1b145bf9665372c4d2d2f3fa019",
+      "raw_bytes": 769,
+      "recordPaths": [
+        "SettingsNotice"
+      ],
+      "inventory_raw_sha256": "0a718e6ab1be6ceae7b97f99778a0fd96c4cd1b145bf9665372c4d2d2f3fa019",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/SettingsOperation.java",
+      "raw_sha256": "c9c1af43c2ecff04f3030d7ba001faa635076bebad7674222038788aecf631e7",
+      "raw_bytes": 2661,
+      "recordPaths": [
+        "SettingsOperation"
+      ],
+      "inventory_raw_sha256": "c9c1af43c2ecff04f3030d7ba001faa635076bebad7674222038788aecf631e7",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/capability/CapabilitySettingsView.java",
+      "raw_sha256": "b050ce3a05a6a36252b4e5f0e1a24f9dd7c0934ae0031a01ecfcab40ebaece8b",
+      "raw_bytes": 1205,
+      "recordPaths": [
+        "CapabilitySettingsView"
+      ],
+      "inventory_raw_sha256": "b050ce3a05a6a36252b4e5f0e1a24f9dd7c0934ae0031a01ecfcab40ebaece8b",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/capability/RecipeSettingsView.java",
+      "raw_sha256": "0c9b84b76db30587cee79bec5208b077492f0f4799ba82bfcd69de5ca57348db",
+      "raw_bytes": 1469,
+      "recordPaths": [
+        "RecipeSettingsView",
+        "RecipeSettingsView.Source"
+      ],
+      "inventory_raw_sha256": "0c9b84b76db30587cee79bec5208b077492f0f4799ba82bfcd69de5ca57348db",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticCard.java",
+      "raw_sha256": "d9809d86c37dc2f73bd1a04344a3b65a5e4f454dc31c233835e7c8e0fddf6e4b",
+      "raw_bytes": 1756,
+      "recordPaths": [
+        "SettingsDiagnosticCard",
+        "SettingsDiagnosticCard.Metric"
+      ],
+      "inventory_raw_sha256": "d9809d86c37dc2f73bd1a04344a3b65a5e4f454dc31c233835e7c8e0fddf6e4b",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticsAggregator.java",
+      "raw_sha256": "f1fbc16f94e89adbe56ba239e6c095ab76e46b39d2a66fde128906c30964dc0c",
+      "raw_bytes": 24869,
+      "recordPaths": [
+        "SettingsDiagnosticsAggregator.SourceStatus",
+        "SettingsDiagnosticsAggregator.DiagnosticsInputs",
+        "SettingsDiagnosticsAggregator.GuideSummary"
+      ],
+      "inventory_raw_sha256": "f1fbc16f94e89adbe56ba239e6c095ab76e46b39d2a66fde128906c30964dc0c",
+      "inventory_counts": {
+        "arrowCases": 7,
+        "bindingPatterns": 1,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 3,
+        "rejectedVarSites": 0,
+        "switchExpressions": 2
+      }
+    },
+    {
+      "path": "dev/openallay/settings/diagnostics/SettingsDiagnosticsSnapshot.java",
+      "raw_sha256": "ccdbd244c3cebc612cf8ffa70d53aa09d8ba44316e14f0bea1499b9b88cd2c49",
+      "raw_bytes": 10786,
+      "recordPaths": [
+        "SettingsDiagnosticsSnapshot",
+        "SettingsDiagnosticsSnapshot.DebugSettingsDiagnostics",
+        "SettingsDiagnosticsSnapshot.DebugModelProfile",
+        "SettingsDiagnosticsSnapshot.DebugCapabilities",
+        "SettingsDiagnosticsSnapshot.DebugGuide",
+        "SettingsDiagnosticsSnapshot.DebugRequest",
+        "SettingsDiagnosticsSnapshot.DebugContext",
+        "SettingsDiagnosticsSnapshot.DebugHistory",
+        "SettingsDiagnosticsSnapshot.DebugSource"
+      ],
+      "inventory_raw_sha256": "ccdbd244c3cebc612cf8ffa70d53aa09d8ba44316e14f0bea1499b9b88cd2c49",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 9,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/extension/ExtensionSettingsBackend.java",
+      "raw_sha256": "92523af3a7a233363282a9b4ef9689b1b981be42ff13e933dabff2b5969a1a0d",
+      "raw_bytes": 18486,
+      "recordPaths": [
+        "ExtensionSettingsBackend.StagedPackage"
+      ],
+      "inventory_raw_sha256": "7a5a5821c19e4bb706f25f6b8ad777e366c9da25cded5120d872d52e76522e38",
+      "inventory_counts": {
+        "bindingPatterns": 4,
+        "denotableVarSites": 1,
+        "parsedVarSites": 1,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/extension/ExtensionSettingsView.java",
+      "raw_sha256": "964ddea54fba003a0acd0cd98db228596a12ddc8953ca566a00329f3e127fe6b",
+      "raw_bytes": 15411,
+      "recordPaths": [
+        "ExtensionSettingsView",
+        "ExtensionSettingsView.Root",
+        "ExtensionSettingsView.Adapter",
+        "ExtensionSettingsView.Notice",
+        "ExtensionSettingsView.Catalog",
+        "ExtensionSettingsView.PackageInfo",
+        "ExtensionSettingsView.Contributions",
+        "ExtensionSettingsView.Extension"
+      ],
+      "inventory_raw_sha256": "796bcf1ca622103587f2aa7ab180d49f286cf3e1b70e25f91e5f847b30a909e8",
+      "inventory_counts": {
+        "denotableVarSites": 1,
+        "parsedVarSites": 1,
+        "records": 8,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/history/HistorySettingsView.java",
+      "raw_sha256": "2898e89c04560ed200b1c600f9b3aa9d85ce37c04b3f1c3a88d27e77a7d7bf3e",
+      "raw_bytes": 2135,
+      "recordPaths": [
+        "HistorySettingsView"
+      ],
+      "inventory_raw_sha256": "2898e89c04560ed200b1c600f9b3aa9d85ce37c04b3f1c3a88d27e77a7d7bf3e",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/model/ModelConnectionResult.java",
+      "raw_sha256": "565c4417ace8f8aa5c01bc75bc8b413c04ce7cf5408edb1d0eabc0f06d11b8ab",
+      "raw_bytes": 1398,
+      "recordPaths": [
+        "ModelConnectionResult.Success",
+        "ModelConnectionResult.Failure"
+      ],
+      "inventory_raw_sha256": "565c4417ace8f8aa5c01bc75bc8b413c04ce7cf5408edb1d0eabc0f06d11b8ab",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0,
+        "sealedDeclarations": 1
+      }
+    },
+    {
+      "path": "dev/openallay/settings/model/ModelProfileSettingsView.java",
+      "raw_sha256": "957b8abe9cdf79cfd2269013947e2f88bacee81d6f6fe79ef84b38e4d370befe",
+      "raw_bytes": 8546,
+      "recordPaths": [
+        "ModelProfileSettingsView",
+        "ModelProfileSettingsView.Resolution",
+        "ModelProfileSettingsView.Profile"
+      ],
+      "inventory_raw_sha256": "957b8abe9cdf79cfd2269013947e2f88bacee81d6f6fe79ef84b38e4d370befe",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 3,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/model/ServerModelSettingsView.java",
+      "raw_sha256": "6403f5f4645931339977701b2111b6a697e7fdebb1cd2c03352bf09345b65af5",
+      "raw_bytes": 3102,
+      "recordPaths": [
+        "ServerModelSettingsView"
+      ],
+      "inventory_raw_sha256": "6403f5f4645931339977701b2111b6a697e7fdebb1cd2c03352bf09345b65af5",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/requirement/RequirementChange.java",
+      "raw_sha256": "b519bd14f5f1ff2ac676b38a8a1b1fe6ee38b8ae302c0e9e38dd31f2c727bb24",
+      "raw_bytes": 439,
+      "recordPaths": [
+        "RequirementChange"
+      ],
+      "inventory_raw_sha256": "b519bd14f5f1ff2ac676b38a8a1b1fe6ee38b8ae302c0e9e38dd31f2c727bb24",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/requirement/RequirementReview.java",
+      "raw_sha256": "90270591113dafa76e239e194e0d8ac7b145d4b3ded0d46a68e95424d142114f",
+      "raw_bytes": 1423,
+      "recordPaths": [
+        "RequirementReview"
+      ],
+      "inventory_raw_sha256": "90270591113dafa76e239e194e0d8ac7b145d4b3ded0d46a68e95424d142114f",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/skill/SkillCommunityView.java",
+      "raw_sha256": "5aeecb17b5659f0afbbe048870182d31a027b8b2d7a559310b3ff2a015fc9cbf",
+      "raw_bytes": 2897,
+      "recordPaths": [
+        "SkillCommunityView",
+        "SkillCommunityView.Package",
+        "SkillCommunityView.Notice"
+      ],
+      "inventory_raw_sha256": "5aeecb17b5659f0afbbe048870182d31a027b8b2d7a559310b3ff2a015fc9cbf",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 3,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/skill/SkillSettingsBackend.java",
+      "raw_sha256": "3a77460c252f43ee763f5af7019dfab42d22b991fa56636c9d0240fcd092d6d9",
+      "raw_bytes": 22733,
+      "recordPaths": [
+        "SkillSettingsBackend.ParsedSource"
+      ],
+      "inventory_raw_sha256": "3a77460c252f43ee763f5af7019dfab42d22b991fa56636c9d0240fcd092d6d9",
+      "inventory_counts": {
+        "bindingPatterns": 3,
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 1,
+        "rejectedVarSites": 0
+      }
+    },
+    {
+      "path": "dev/openallay/settings/skill/SkillSettingsView.java",
+      "raw_sha256": "e99387b29c51a11826640a91198573988e212b09d5e9c48a0135178b74c8065b",
+      "raw_bytes": 2004,
+      "recordPaths": [
+        "SkillSettingsView",
+        "SkillSettingsView.Skill"
+      ],
+      "inventory_raw_sha256": "e99387b29c51a11826640a91198573988e212b09d5e9c48a0135178b74c8065b",
+      "inventory_counts": {
+        "denotableVarSites": 0,
+        "parsedVarSites": 0,
+        "records": 2,
+        "rejectedVarSites": 0
+      }
+    }
+  ],
+  "expectedUnsupportedOwners": [
+    "dev/openallay/settings/diagnostics/SettingsDiagnosticCard.java"
+  ],
+  "expectedUnsupportedReasons": {
+    "dev/openallay/settings/diagnostics/SettingsDiagnosticCard.java": "Metric overload (String labelKey, long value) reuses canonical component parameter names (String labelKey, Long value); accepted converter names-only canonical detection rejects entire owner. Keep both Metric and outer actual record unchanged."
+  },
+  "expectedSupportedRecordCount": 122,
+  "converter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218"
+  },
+  "tool": {
+    "path": "build-logic/src/main/java/dev/openallay/build/CanonicalRecordBatchMaterializer.java",
+    "sha256": "e33cf790f0aaca1951cd20917530b6f8603e0be1e90265dfd91ba6bece9e83c8"
+  },
+  "request": {
+    "path": "engine-core/src/clientSettingsRecordLanguageTest/record-request.tsv",
+    "sha256": "fc36a914e88ab278839d7cc84e028c00a6eabef0dfb41e2d8a94711eeec21908"
+  },
+  "driver": {
+    "path": "scripts/materialize-client-settings-record-language.py",
+    "sha256": "24fc3c827e2276d1066181a4b283f6030ab00f476a57740985828f83be2865cf"
+  },
+  "requiredAcceptance": "Root remote accepted AST materializer whole-owner classification+exact conversion custody; one supported batch then native full engine modern compile/tests. This recordlanguage phase does not assert whole client/settings Java8 compatibility; remaining patterns/APIs/sealing/realport closure separately.",
+  "forbiddenRuntimeAccess": [
+    "systemclipboard",
+    "microphone",
+    "profiles",
+    "credentials",
+    "worlds",
+    "history",
+    "modeldownloads"
+  ],
+  "ownerBoundary": "client/** and settings/** only, no guide/**,agent/**,session/**,Rhino edits",
+  "noLocalJava": true,
+  "noManualRenderer": true,
+  "exactNonblankFormatting": "Existing seven Guide literals retained plus six observed literal client/settings constructor trailing ASCII spaces only; raw converter and normalized output hashes preserved."
+}

@@ -1,0 +1,39 @@
+{
+  "mdk": {
+    "filename": "forge-1.12.2-14.23.5.2864-mdk.zip",
+    "url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864-mdk.zip",
+    "sha256": "bed660e5f8deab6de687d2e894fb489501f00e7a47a9bea260c84a460f8f6733",
+    "bytes": 73609
+  },
+  "mcp_config": {
+    "filename": "mcp_config-1.12.2-20200226.224830.zip",
+    "url": "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_config/1.12.2-20200226.224830/mcp_config-1.12.2-20200226.224830.zip",
+    "sha256": "e2ddd3a7bb65618ad0de1d8fc0334527e5c346180300d94bfc7d3727b1976b42",
+    "bytes": 421086
+  },
+  "snapshot": {
+    "filename": "mcp_snapshot-20171003-1.12.zip",
+    "url": "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_snapshot/20171003-1.12/mcp_snapshot-20171003-1.12.zip",
+    "sha256": "b346508f8d25e7b2bcf7484b3b1d2e549be1b8e1ba477665153ea64fd138f50c",
+    "bytes": 371642
+  },
+  "forgeGradle": {
+    "filename": "ForgeGradle-3.0.197.jar",
+    "url": "https://maven.minecraftforge.net/net/minecraftforge/gradle/ForgeGradle/3.0.197/ForgeGradle-3.0.197.jar",
+    "sha256": "52370df87d9dfa19d3be56a9a7af7b4ac31f811d0cdac1ed2a9ada9de5ae4dfb",
+    "bytes": 425320
+  },
+  "userdev": {
+    "filename": "forge-1.12.2-14.23.5.2864-userdev3.jar",
+    "url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864-userdev3.jar",
+    "sha256": "d4f10b29f9c0602ee9a73c4499675c885dcc7829f612b906a26373852edba833",
+    "bytes": 2146655
+  },
+  "gradle_checksum": {
+    "filename": "gradle-5.6.4-bin.zip.sha256",
+    "url": "https://services.gradle.org/distributions/gradle-5.6.4-bin.zip.sha256",
+    "sha256": "57c468d19bc81bd5ee1368e0e631227032dd232744307f10909f240dcd902b4d",
+    "bytes": 64,
+    "sha256Text": "1f3067073041bc44554d0efe5d402a33bc3d3c93cc39ab684f308586d732a80d"
+  }
+}

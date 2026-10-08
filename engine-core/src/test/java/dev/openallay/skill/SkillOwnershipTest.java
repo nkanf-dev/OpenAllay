@@ -508,8 +508,8 @@ final class SkillOwnershipTest {
         assertTrue(manifest.metadataPrompt().contains(sentinel));
         assertEquals(Set.of("guide", "other", "path-guide", sentinel), manifest.documents().stream()
                 .map(SkillCatalogManifest.Document::name).collect(java.util.stream.Collectors.toSet()));
-        assertFalse(java.util.Arrays.stream(SkillCatalogManifest.Document.class.getRecordComponents())
-                .anyMatch(component -> component.getName().equals("provenance")));
+        assertFalse(dev.openallay.value.ValueSchemas.of(SkillCatalogManifest.Document.class).components().stream()
+                .anyMatch(component -> component.name().equals("provenance")));
         assertEquals("License " + sentinel, originalMetadata.license().orElseThrow());
         assertEquals("Compatibility " + sentinel, originalMetadata.compatibility().orElseThrow());
         assertEquals(Map.of("token", "quest-token", "password", "castle-password"), originalMetadata.attributes());

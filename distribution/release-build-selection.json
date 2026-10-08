@@ -1,372 +1,458 @@
 {
-  "version": "0.4.3",
+  "version": "0.4.4",
   "groups": [
     {
-      "target": "1.18.2",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
+      "target": "1.12.2",
+      "sourceSha": "910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "runId": 37765962724,
       "runAttempt": 1,
-      "jobId": 112107028198,
-      "jobName": "build-packages (1.18.2, forge-1.18.2)",
-      "artifactId": 11390042225,
-      "artifactName": "release-packages-1.18.2-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "a1554129ffb30a34ca2127fabc7a84f06ce1b7ac576859746faacbf6aee4b9ed",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
+      "jobId": 113273653005,
+      "jobName": "build-packages (1.12.2, forge-1.12.2)",
+      "artifactId": 11544033551,
+      "artifactName": "release-packages-1.12.2-910a3fd8fdbf5462cf94185ac49d8f2815b628d3",
+      "archiveSha256": "fa683c3c729984d6ee8fbe96360f6e72749eb7ba3e64976e407ae6733de76fef",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
       "familyArtifacts": [
         {
-          "id": "forge-1.18.2",
-          "artifactSha256": "16bd76937d64b50fcbc9021e78efe32befdeef11f960de13e7fea7450069b9cf",
-          "receiptSha256": "ebcb59f1e5ca658469deb9c481b053229bd056cae5ae1a605ca0245e48936f9a"
-        }
-      ]
-    },
-    {
-      "target": "1.19.2",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
-      "runAttempt": 1,
-      "jobId": 112107028218,
-      "jobName": "build-packages (1.19.2, forge-1.19.2)",
-      "artifactId": 11390641127,
-      "artifactName": "release-packages-1.19.2-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "946160d2cbbfb89df106ccad038560f8e286fde08446b09ca07eb53e39f84fe1",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "forge-1.19.2",
-          "artifactSha256": "553d1c406e5a118bd5f9bb22a09384d0074699f9aa8cb14393ae5b35bbc9be47",
-          "receiptSha256": "57690096f62caa370eb9e2b0458ae86e7f6844184c5b055fc46433c411272ba5"
-        }
-      ]
-    },
-    {
-      "target": "1.20.2",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
-      "runAttempt": 1,
-      "jobId": 112107028256,
-      "jobName": "build-packages (1.20.2, fabric-1.20.2,neoforge-1.20.2)",
-      "artifactId": 11390722150,
-      "artifactName": "release-packages-1.20.2-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "39ac6c3d71ef37c3231d470a320b12b476892e6c5c081c07905e327d3bf0c0e0",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.20.2",
-          "artifactSha256": "db2aa7f56adc9a6224ad97e952190fda69d751a78000305fc7ce2011f07ee0ba",
-          "receiptSha256": "b363a8c63b157f96f3e81ee937c1693528617305f192324b64efcf52bd4042ad"
-        },
-        {
-          "id": "neoforge-1.20.2",
-          "artifactSha256": "8f60e636cfeb1785f566fed962961d46c12fe22deb8754a6722e1d92584d03c0",
-          "receiptSha256": "6823b281f327ef5f2ea499326c99f8071a274d4ab5835810bf8a002b6bcbdea7"
-        }
-      ]
-    },
-    {
-      "target": "1.20.3",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
-      "runAttempt": 1,
-      "jobId": 112107028240,
-      "jobName": "build-packages (1.20.3, fabric-1.20.3-through-1.20.4,neoforge-1.20.3)",
-      "artifactId": 11390572256,
-      "artifactName": "release-packages-1.20.3-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "51aee04bc246a31752e374e76e12c79482b76d00db44e88bd896ee9f7235d1e9",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.20.3-through-1.20.4",
-          "artifactSha256": "2a37250b2825dc4d99040b9e9dd883b7822b9c8aac3d1b374cf5fd13387e5a1f",
-          "receiptSha256": "91bbc794687992794512c0065e8c936a7fe58cb76063a3e29c4255270ba42c02"
-        },
-        {
-          "id": "neoforge-1.20.3",
-          "artifactSha256": "52e7393765e5cc073c94fe36832ee29973a262c7c9ca7ba1273eb026e53ca9d4",
-          "receiptSha256": "f8074d590a3faeaa7eb0a13afd353f03e3661c0538627e242d47aa3552d446d5"
-        }
-      ]
-    },
-    {
-      "target": "1.20.4",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
-      "runAttempt": 1,
-      "jobId": 112107028197,
-      "jobName": "build-packages (1.20.4, neoforge-1.20.4)",
-      "artifactId": 11389867736,
-      "artifactName": "release-packages-1.20.4-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "ee8a8df937f8ddd5ca16a4a8a7915c1b7cb0537806ad2cdf1f10185b4236149b",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "neoforge-1.20.4",
-          "artifactSha256": "4ebb16b8ffcda898f4d284b89bdeccd12e1e3f2aef9a56f2331e2237a54d9afa",
-          "receiptSha256": "04e9a01694b91e30595944704aeb241b9d96c5ffb90f68f28f4e6a060800bc79"
-        }
-      ]
-    },
-    {
-      "target": "1.20.5",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
-      "runAttempt": 1,
-      "jobId": 112107028294,
-      "jobName": "build-packages (1.20.5, fabric-1.20.5-through-1.20.6,neoforge-1.20.5-through-1.20.6)",
-      "artifactId": 11389883520,
-      "artifactName": "release-packages-1.20.5-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "77702d9f7a1b3a37c9efdb088ae5a3dd38ac67bf8e7316ccbd220a08bae8506f",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.20.5-through-1.20.6",
-          "artifactSha256": "dab74794beb18769b7d23e507b28893f08e6dad512b981fba047476c7fe45c5d",
-          "receiptSha256": "85eacbbf0929a3877c78033f8c2463bc7b5605d5b4147ec72a0d135a16bab7ee"
-        },
-        {
-          "id": "neoforge-1.20.5-through-1.20.6",
-          "artifactSha256": "a5b1bddf5a944340f4b625f6d21b75a4fac0da56563ac2b32f04a6ea073da347",
-          "receiptSha256": "4d012f9b9b5e38ae15015979f9b9b3459be629d68a915310a655eb209b67dd9a"
-        }
-      ]
-    },
-    {
-      "target": "1.21",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
-      "runAttempt": 1,
-      "jobId": 112107028187,
-      "jobName": "build-packages (1.21, fabric-1.21-through-1.21.1,neoforge-1.21-through-1.21.1)",
-      "artifactId": 11390881874,
-      "artifactName": "release-packages-1.21-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "56609e26586c60d38413f4bf66f001780039eec023db04a3fefc6fa4265ca5a5",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.21-through-1.21.1",
-          "artifactSha256": "1c8ed8ce99a8aee70e0eb9069f3408c322b822a0dd11bada00720d4118780088",
-          "receiptSha256": "08af63a715e09130b91854bda6c3b704537f791f7fce2edb146b2aa423ed8319"
-        },
-        {
-          "id": "neoforge-1.21-through-1.21.1",
-          "artifactSha256": "c86ac6b9e095dc59bb5045ed823ac8d261a1302d981dc2d81bf9d81e764e3ede",
-          "receiptSha256": "e95b2cc81e0b0cf730e31c8b925a2bc449cbae4f740c86e454b7eeeadc25c610"
+          "id": "forge-1.12.2",
+          "artifactSha256": "c0af998be547c7292f49e7eb70f20c6c33f80b725bea86f6de5e804f10132a69",
+          "receiptSha256": "928fa99e01b785ee545f2c57f68a625b5bb03fe474037cccdfefeccbaac3bac4"
         }
       ]
     },
     {
       "target": "26.1",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
       "runAttempt": 1,
-      "jobId": 112107029400,
-      "jobName": "build-packages (26.1, fabric-26.1-through-26.1.2,neoforge-26.1-through-26.1.2)",
-      "artifactId": 11389879236,
-      "artifactName": "release-packages-26.1-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "8de81943fa99d9ba0e68e55f0160df17c6d9ee83fc717ed1b67b390d7d086275",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
+      "jobId": 113342432535,
+      "jobName": "package-only-products (26.1, fabric-26.1-through-26.1.2,neoforge-26.1-through-26.1.2)",
+      "artifactId": 11553734895,
+      "artifactName": "release-packages-26.1-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "32abae28cbf51dcbcc2edbfa026ea9147f66ed2338e58f9f9a4380b8406ede20",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
       "familyArtifacts": [
         {
           "id": "fabric-26.1-through-26.1.2",
-          "artifactSha256": "2686d4ce91442dce590f4a0edb75c4c3c107c69432e447b0900c2ef856529878",
-          "receiptSha256": "33d1e98b88c91bb60e69075672a5285e2e2154e400433fe146824d785ff107d3"
+          "artifactSha256": "8fcdd76de396cc0d38cfb229ac5c3ddddf386962c2e6e159caa6dbb434a48ab7",
+          "receiptSha256": "2bbab672575b0c0c966878da3ae6e6f48f1d3fc3448e5184c006d05024832367"
         },
         {
           "id": "neoforge-26.1-through-26.1.2",
-          "artifactSha256": "641b0b8b9ddedea3b509ef17a0ce73bc4274635a970ba6a424dc609fb1f48354",
-          "receiptSha256": "c96a440f1a67cf3368d141fc87b5d48d059a3e691188046639f1249ebf09731b"
+          "artifactSha256": "a68f4ddbca042a9f420b2b1e0a3fab1a0519b230b6b2a8a0f8351af68d0f1148",
+          "receiptSha256": "79ca54ec22abd14d9c9b78e966a29f46a148aee32a815b2bd325152e6de22b06"
         }
       ]
     },
     {
       "target": "26.2",
-      "sourceSha": "57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "runId": 37413517085,
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
       "runAttempt": 1,
-      "jobId": 112107029329,
-      "jobName": "build-packages (26.2, fabric-26.2,neoforge-26.2)",
-      "artifactId": 11390564006,
-      "artifactName": "release-packages-26.2-57bf0aa3a47c5999635e0d673fba7e0c20e6f814",
-      "archiveSha256": "f40fd3ec36f0e90eba28864767dc69bfda833fcebecca2c08cd6c8b496999510",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
+      "jobId": 113342432087,
+      "jobName": "package-only-products (26.2, fabric-26.2,neoforge-26.2)",
+      "artifactId": 11554322919,
+      "artifactName": "release-packages-26.2-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "7631828e78d1eb7f53ab3ce8f6b38476f6d7bb450401c336a99c87d43bbda958",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
       "familyArtifacts": [
         {
           "id": "fabric-26.2",
-          "artifactSha256": "b466e63a37d86f3efd0bd10dea66484b5e729a016895db365348cf1ba2b1c953",
-          "receiptSha256": "7a245efa687634996d24fea439cb41bd797be526c023059f29199edfab682322"
+          "artifactSha256": "09955c7c2d38665a89ba20f9b713dd941e804f8f9004f6dc709cb3a7b2f475a3",
+          "receiptSha256": "fa6ac5c2bf80fb984a9248fe2f5855e29e5c87c2e3f9960ccb2b7ba2ca55598b"
         },
         {
           "id": "neoforge-26.2",
-          "artifactSha256": "fa60762e4df6df7423655e3f410a6a3c763338236daea8a46528fb58537aa211",
-          "receiptSha256": "2752abc9f2ed97238f93b4d5ad337a21de1aa426b38d591420e7c508e31ebce3"
+          "artifactSha256": "4d24118f65dc23e71d7ac524c0876b4e39c405689efb4fe6c70aa53e44e69e75",
+          "receiptSha256": "b42aedb10dc9aaafe980e786009db7795a2e0fb24b26d5bf9553937538439a3d"
         }
       ]
     },
     {
-      "target": "1.21.11",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
+      "target": "1.20.4",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
       "runAttempt": 1,
-      "jobId": 112125590769,
-      "jobName": "build-packages (1.21.11, fabric-1.21.11,neoforge-1.21.11)",
-      "artifactId": 11393106287,
-      "artifactName": "release-packages-1.21.11-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "61dbef194826d8c40186872e1a40df65b46728c1c3e5db147432275a72ef0e30",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
+      "jobId": 113342429357,
+      "jobName": "package-only-products (1.20.4, neoforge-1.20.4)",
+      "artifactId": 11554457620,
+      "artifactName": "release-packages-1.20.4-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "495e95be7e2ba287e5109ebec8f2baf5a5b8847f855bf4023d78667527427166",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
       "familyArtifacts": [
         {
-          "id": "fabric-1.21.11",
-          "artifactSha256": "2123e9a27dd4feb35fe0b22aaaf9c50b0905b8866ec7e1c164a219907aec3ea1",
-          "receiptSha256": "fc3918ff5485229c37d1ad8661e9363cd6901d24a382930991518f6356840299"
-        },
-        {
-          "id": "neoforge-1.21.11",
-          "artifactSha256": "bea094d0994a9dd754935fefed065ac81bd29b93246b79dde5315db7485897d1",
-          "receiptSha256": "2a05e857e3a773a1abc007c9add30b068cadf4ca63978c92d8111fbad7988ae6"
-        }
-      ]
-    },
-    {
-      "target": "1.21.2",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
-      "runAttempt": 1,
-      "jobId": 112125590589,
-      "jobName": "build-packages (1.21.2, fabric-1.21.2-through-1.21.3,neoforge-1.21.2-through-1.21.3)",
-      "artifactId": 11392607021,
-      "artifactName": "release-packages-1.21.2-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "346ce6be77d51f43d0a054976d835dad7e3280cbea1de3352b7682e0828c412a",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.21.2-through-1.21.3",
-          "artifactSha256": "d3b3583b8222480cb675de45c3a12b9f7e37809fdd7e7ca9c500c052764cf7d4",
-          "receiptSha256": "4bc67b0e77eb5b1a60a06989ca71c71b0c8ecf68c8a756cb8b0bbf0ad87f4614"
-        },
-        {
-          "id": "neoforge-1.21.2-through-1.21.3",
-          "artifactSha256": "596a2c0997fa97088ea038020e940ac0049bdd25eb630d3ccaf2495bd735846e",
-          "receiptSha256": "781c3487d2effd02c98988750a5b48a265b995658f8302752aea64fa7f4e270a"
-        }
-      ]
-    },
-    {
-      "target": "1.21.4",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
-      "runAttempt": 1,
-      "jobId": 112125590591,
-      "jobName": "build-packages (1.21.4, fabric-1.21.4,neoforge-1.21.4)",
-      "artifactId": 11392657002,
-      "artifactName": "release-packages-1.21.4-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "fa9840009f95aa357258ac6a25edca7faafc0c1f0c3eb3fb40767b5ac391e8e0",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.21.4",
-          "artifactSha256": "e9900037352ab6c3d638151abbc66ec5baa2159794e0d2af87b2fbd4a2a81a02",
-          "receiptSha256": "3587670362636a11f27aae4afd96cf3bc0e07d9bfcf39a718b35e7306f4cce30"
-        },
-        {
-          "id": "neoforge-1.21.4",
-          "artifactSha256": "2f95240acae24ecaea68fcf6da10ceae619990c77a1c1d011b772f4a663b795b",
-          "receiptSha256": "fa39053bdb59593900769e18f58f052c78e63ceb7bc6622dc100ecb70ac66594"
-        }
-      ]
-    },
-    {
-      "target": "1.21.5",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
-      "runAttempt": 1,
-      "jobId": 112125590606,
-      "jobName": "build-packages (1.21.5, fabric-1.21.5,neoforge-1.21.5)",
-      "artifactId": 11393310475,
-      "artifactName": "release-packages-1.21.5-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "c3a5ee0f7a2875d3904e39e1a1076934b75f1fbe6e027eab07e530e559364d32",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.21.5",
-          "artifactSha256": "2ecba173b0c5e490b7cbed2080a3304debdca16499eb5a762e2d03a9aa776fe3",
-          "receiptSha256": "643aac7d7e22bbc8b1835bb0bd278f484b9fd05114c30a3a57decc4298be7b81"
-        },
-        {
-          "id": "neoforge-1.21.5",
-          "artifactSha256": "0aaa468f69cc9cf3d515a230cbaedfc100e01eaa4ee04d4ab75adce8a1e5f7ff",
-          "receiptSha256": "02f5f509252ece486fbdda0d387ce61da03821417b6f1a96cbe01a4a4b72dbc5"
-        }
-      ]
-    },
-    {
-      "target": "1.21.7",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
-      "runAttempt": 1,
-      "jobId": 112125590634,
-      "jobName": "build-packages (1.21.7, fabric-1.21.7-through-1.21.8,neoforge-1.21.7-through-1.21.8)",
-      "artifactId": 11392602671,
-      "artifactName": "release-packages-1.21.7-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "0196d7499fbafb2ae5327d548d56324f63c4aab1a141b3b05f2c964798431077",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.21.7-through-1.21.8",
-          "artifactSha256": "0b66449801e7d8395d61725f10b58a2535378434a7d1d4bfcb6138d818f6021b",
-          "receiptSha256": "fba1bdcf3473239ea089f24ec13441ea1be05988fedded38a88c1d512380ae10"
-        },
-        {
-          "id": "neoforge-1.21.7-through-1.21.8",
-          "artifactSha256": "27e03ecaffa1247f8780884079b5c8e006a78eec9b4dc074b2d36ae9007d7246",
-          "receiptSha256": "680c86de458fb6171ac17387ece32faedaadca936077ecca14a8c1a39847d066"
-        }
-      ]
-    },
-    {
-      "target": "1.21.9",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
-      "runAttempt": 1,
-      "jobId": 112125590673,
-      "jobName": "build-packages (1.21.9, fabric-1.21.9-through-1.21.10,neoforge-1.21.9-through-1.21.10)",
-      "artifactId": 11393370489,
-      "artifactName": "release-packages-1.21.9-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "a57d332a4fdb1f8dcbe017d39746cb3b620773fad55baa0dfedaf970afb32d6c",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
-      "familyArtifacts": [
-        {
-          "id": "fabric-1.21.9-through-1.21.10",
-          "artifactSha256": "83346356b7a2c8552d1233e7435f0460438f931d9be0d8f037dff3b8d420104b",
-          "receiptSha256": "08521ea58793f8f420f0c1b69eb4c4615c01d5462debe753239895b77eb35f5a"
-        },
-        {
-          "id": "neoforge-1.21.9-through-1.21.10",
-          "artifactSha256": "36af4ad965de12ff403636dbd1b292135c48379091c698b3cdc083b9df1a87eb",
-          "receiptSha256": "8afad9e2ce3b56511e58fab062e314c3601e2218bd69c04cf1846129e0ffb456"
+          "id": "neoforge-1.20.4",
+          "artifactSha256": "2aeddf11a6aefa14e308ba5ac416b6674d64da90e48254e79d9a7aa871c1c16e",
+          "receiptSha256": "98e70fa3c94144c900bcad15ece57836c6b602d2660150765f321c85802cf5ef"
         }
       ]
     },
     {
       "target": "26.3",
-      "sourceSha": "29deb369a5684ed144be3373382c558d6238f79f",
-      "runId": 37419529652,
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
       "runAttempt": 1,
-      "jobId": 112125590748,
-      "jobName": "build-packages (26.3, fabric-26.3,neoforge-26.3)",
-      "artifactId": 11392278989,
-      "artifactName": "release-packages-26.3-29deb369a5684ed144be3373382c558d6238f79f",
-      "archiveSha256": "dd80c218d6872c407e70264ea79da1c876affc625af3a6e6b42b278e3fe53f92",
-      "engineManifestSha256": "8f877884d17fb714fa06985536f8e0826bc5a21364bbfc17c58c4102108dad20",
+      "jobId": 113342432259,
+      "jobName": "package-only-products (26.3, fabric-26.3,neoforge-26.3)",
+      "artifactId": 11555135604,
+      "artifactName": "release-packages-26.3-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "97477369ed4057bf61c1093aa50da18c8904582156f230a75d5815659af19958",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
       "familyArtifacts": [
         {
           "id": "fabric-26.3",
-          "artifactSha256": "859aa52f50678932824437557ddaaaced1d73185ae2fced31788ed316c0ed79a",
-          "receiptSha256": "35e18afedca302760910d12dceb72bfe5a43b85cc7c7a9b036b77cc5bd0bdd88"
+          "artifactSha256": "d2c1472f41f9c14bfc1e9585268bed2dad848ebe8bf2cec56090cabe35f762b1",
+          "receiptSha256": "3d35d94b95ffab970951bb8db6605552830fdb9763207195980cdaf9a03d7399"
         },
         {
           "id": "neoforge-26.3",
-          "artifactSha256": "e05fba06a54893d0ea70709e405e03795b6590bf30652b5b76f07a33cc459176",
-          "receiptSha256": "9651a3539c5dc21b09df68b9f9034e5835b63621ef01c947f04e8de74db63164"
+          "artifactSha256": "3bb5d5af8428a5fe64e025dbe10c2db56e3d292ec0165f4e9f22808b48f50718",
+          "receiptSha256": "c90bd900a7905cd90b193d118b8fe8688183e2a5e443d93fb6bcdcf0d7e30eee"
+        }
+      ]
+    },
+    {
+      "target": "1.21.11",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342431975,
+      "jobName": "package-only-products (1.21.11, fabric-1.21.11,neoforge-1.21.11)",
+      "artifactId": 11553639109,
+      "artifactName": "release-packages-1.21.11-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "58f5794f5b013415ea1e164733bddb4079def778392147d4bd4a7d258b132c5b",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.11",
+          "artifactSha256": "171ddddd4b2971c1d8811929cf04e87fbc476f45528fc2fa6071377b663826c4",
+          "receiptSha256": "31a5ca9712302419a5873ce6a1978cc716bf3f9a7db64433aaad52f130e16c77"
+        },
+        {
+          "id": "neoforge-1.21.11",
+          "artifactSha256": "6bef62b6dfa53f4a10be23f033d584e00c2e5be59246ca2117505c715ae11706",
+          "receiptSha256": "a725008bc16f79026e0993b8cee317c92e1d436f2810986a5a9e980e8a1dd424"
+        }
+      ]
+    },
+    {
+      "target": "1.21.6",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429524,
+      "jobName": "package-only-products (1.21.6, fabric-1.21.6,neoforge-1.21.6)",
+      "artifactId": 11554242944,
+      "artifactName": "release-packages-1.21.6-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "50d507e92b7ca4cdae3f5ed00b950d9dce2a8cae84e04b8cb6973f1c7b9eea21",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.6",
+          "artifactSha256": "ef39360ba64e8cf04ae809960da0e2f0797319cbdd4b3afcc91d4f5427e24358",
+          "receiptSha256": "7bb991b6275efe52a5219366d79460f5570720ee2bd1b6511de04fb2f45cc291"
+        },
+        {
+          "id": "neoforge-1.21.6",
+          "artifactSha256": "d2386f8546b28485f315524c66f1abe553f0ddb1fe44f410c988a8b2502b26fc",
+          "receiptSha256": "488ac71e8875967519ea275bd93f2c6ca874e8f30a077cf5dd2c16282be988e3"
+        }
+      ]
+    },
+    {
+      "target": "1.21.7",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429460,
+      "jobName": "package-only-products (1.21.7, fabric-1.21.7-through-1.21.8,neoforge-1.21.7-through-1.21.8)",
+      "artifactId": 11553843544,
+      "artifactName": "release-packages-1.21.7-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "7742ad7f078d2bbd04528e10b27f3f6838549cc0ca1f18154168c930e1dbfdd9",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.7-through-1.21.8",
+          "artifactSha256": "88e61cbc556a62dc2cfaad7371e904778bc10aeb1b05a1ea2c43428e6a19d4ce",
+          "receiptSha256": "9d70e05fe1bd5224f3758bb7ef924519ab8ac1612bdd5f5333e2e3ed6ee6c875"
+        },
+        {
+          "id": "neoforge-1.21.7-through-1.21.8",
+          "artifactSha256": "653c8556f372369d3b9cb01d59130c1bd6c2b65c503f4ef3f9d51447b4a0997c",
+          "receiptSha256": "51ea86b33028af00596bb9a3b0de2ddd702f9c03a3cd1e8fad1238560cb04a96"
+        }
+      ]
+    },
+    {
+      "target": "1.21.9",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342431736,
+      "jobName": "package-only-products (1.21.9, fabric-1.21.9-through-1.21.10,neoforge-1.21.9-through-1.21.10)",
+      "artifactId": 11555125427,
+      "artifactName": "release-packages-1.21.9-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "df9a6812e53a35a2c322173c4a211af1e30eb6976b767b5a7b9b645502e9255e",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.9-through-1.21.10",
+          "artifactSha256": "3a6269648b9d89bde0210ee46a090c07d380bd5b24229a946cb05d441644885a",
+          "receiptSha256": "2335213556a8b57561f43d1dcf3e388620ef2c389d17be75f61e4aa53ce59cc3"
+        },
+        {
+          "id": "neoforge-1.21.9-through-1.21.10",
+          "artifactSha256": "b6aaaa3b17256938e0552612401cd6506cca70e672da2d3a3a01fc102e31bfb2",
+          "receiptSha256": "dd81f3e3f85b33379df8d4ef8b2016e6218eb94dd4b93be93dedf9a094a356f5"
+        }
+      ]
+    },
+    {
+      "target": "1.21.2",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429421,
+      "jobName": "package-only-products (1.21.2, fabric-1.21.2-through-1.21.3,neoforge-1.21.2-through-1.21.3)",
+      "artifactId": 11554247843,
+      "artifactName": "release-packages-1.21.2-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "daa37db8a4d3ef3d97c4c1f70fc71af8c4bead6566fd8774f4d84d211081dd7e",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.2-through-1.21.3",
+          "artifactSha256": "9732faab6a635b9cec0e13d93bf82a814b505eba48beabe96f3c0b4fd1de183c",
+          "receiptSha256": "5b9be537d30a16cd2bf72f1b97e09cdb58c3d59fd669d251e9acd1f3f2d31a31"
+        },
+        {
+          "id": "neoforge-1.21.2-through-1.21.3",
+          "artifactSha256": "1b02e77fa4a6fba88cb9b0d29df6710dbf35a9ddf65e3fe068e80cdb11a2eae5",
+          "receiptSha256": "b4ea3bf42089a595ebcc766bee8794cca3a76c24ab0950bd3e767c16d5d29c00"
+        }
+      ]
+    },
+    {
+      "target": "1.21",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429450,
+      "jobName": "package-only-products (1.21, fabric-1.21-through-1.21.1,neoforge-1.21-through-1.21.1)",
+      "artifactId": 11554267764,
+      "artifactName": "release-packages-1.21-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "07df251ee88c2aa67a6288b6108d06093ab3763782134c2af36c58be6c8494bb",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21-through-1.21.1",
+          "artifactSha256": "04dab4689ba65624426ed0873e6d1b93c06953b84c7c6805846463907b3de7ec",
+          "receiptSha256": "0f48c113522959a86733f68c520d0135c7bd3213050d220f7491c45141e338d3"
+        },
+        {
+          "id": "neoforge-1.21-through-1.21.1",
+          "artifactSha256": "cb0e906fb4f8b305cdb583803f3be43ac23f9f794da1badaa1f231862abe1e58",
+          "receiptSha256": "1c690ca6afca07139c1344003d2054683e426537c8463b630c18966d155f17ce"
+        }
+      ]
+    },
+    {
+      "target": "1.21.4",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429563,
+      "jobName": "package-only-products (1.21.4, fabric-1.21.4,neoforge-1.21.4)",
+      "artifactId": 11553634112,
+      "artifactName": "release-packages-1.21.4-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "5e1a3776bcc444ebaaf8b581802faece904389bb708c99caa802f11c60d2431d",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.4",
+          "artifactSha256": "ac02568643816c143ff10560bbf0b24248aa919435cbfa700b902d135ced694b",
+          "receiptSha256": "ecbb8886f299debcb5d028f9a0aeeba6a6a06b3406b984fe178ead3f10384e2e"
+        },
+        {
+          "id": "neoforge-1.21.4",
+          "artifactSha256": "35f3f5d2e03e438cb49cebaf4be1192a99f2bfdc521cc8723be770fa1da7dcf9",
+          "receiptSha256": "44c2de7429bb7b4b2532cf2038310c3b3af709fd027a759cd702e1e761df82f6"
+        }
+      ]
+    },
+    {
+      "target": "1.20.1",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429347,
+      "jobName": "package-only-products (1.20.1, fabric-1.20.1,neoforge-1.20.1)",
+      "artifactId": 11554855722,
+      "artifactName": "release-packages-1.20.1-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "c21b44077fa8886143a18f7f5ad2ea16dbc6ca7f0b7f24a48f89a93da21fa745",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.20.1",
+          "artifactSha256": "5afbef74325a1e0f83fd360e02fd90ec7a307097e3060900f55cee6f4678e9d7",
+          "receiptSha256": "a9725161f0052376aa7c7caec34ef6898bbecf8f33b990b7ecd4a6e340a8b98e"
+        },
+        {
+          "id": "neoforge-1.20.1",
+          "artifactSha256": "8d57eb7755d0667b3b8f022f63cb8dc3bab0bf8255389678659f975939e8fda9",
+          "receiptSha256": "73c37026ba50d5d9d5e69ad023c731ae73f3d95023f1662bb0fe4ab40dddd785"
+        }
+      ]
+    },
+    {
+      "target": "1.21.5",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429473,
+      "jobName": "package-only-products (1.21.5, fabric-1.21.5,neoforge-1.21.5)",
+      "artifactId": 11554168310,
+      "artifactName": "release-packages-1.21.5-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "12fbc3f1f904cec195ca5074b50c07a3d47df836b6f978882981eeb4f2bca37e",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.21.5",
+          "artifactSha256": "8571eb056ffae5a4a9e49bc3507e0cb5a2869ff2c0db563a4bdbcf6f9e644501",
+          "receiptSha256": "e39e560137ea469aed559dc515c010dae3ea9852f46fb3d2953f4d9f91c2f92e"
+        },
+        {
+          "id": "neoforge-1.21.5",
+          "artifactSha256": "22913a1bf40109871a8b6090cb809cb3fe3ce243b5c8864d28389c1357467caf",
+          "receiptSha256": "a84aa2fba7a7f488d1e18e52856a18ebb027e612f98853169badd8d884f3026d"
+        }
+      ]
+    },
+    {
+      "target": "1.18.2",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429773,
+      "jobName": "package-only-products (1.18.2, forge-1.18.2)",
+      "artifactId": 11554227844,
+      "artifactName": "release-packages-1.18.2-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "c10cb72cc7640c0c99431e142646f70fc4ef2dc96cd00a93e2895ee085f8b5be",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "forge-1.18.2",
+          "artifactSha256": "2f4114f95514f91ef6fcdfd8119647edfdf88acf31d950d0c098613111639d61",
+          "receiptSha256": "d5d1e8cd4bc74d92e6c2f11b61eef52be54abdf8f7fa5d5a32e029899bb9c335"
+        }
+      ]
+    },
+    {
+      "target": "1.19.2",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429559,
+      "jobName": "package-only-products (1.19.2, forge-1.19.2)",
+      "artifactId": 11555075171,
+      "artifactName": "release-packages-1.19.2-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "2a4d273cbb074612b02bc12d56386b20bc4f2b1bcf3aeb11aa6628957ba81b1e",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "forge-1.19.2",
+          "artifactSha256": "d4d3f9754f66a51bd8694c454675c21046cfef488f5a77bfe9d82dab8d996295",
+          "receiptSha256": "b041dddea07b3ecbbc147bd2adfd08cc24835cfb50f6980b08dc2e8fee3e71a7"
+        }
+      ]
+    },
+    {
+      "target": "1.20.5",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429462,
+      "jobName": "package-only-products (1.20.5, fabric-1.20.5-through-1.20.6,neoforge-1.20.5-through-1.20.6)",
+      "artifactId": 11554825961,
+      "artifactName": "release-packages-1.20.5-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "3f9ea3d369babc66bdaeed89d2dbe0cbfd6e4d638ee6512f0514bed82e5f8a90",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.20.5-through-1.20.6",
+          "artifactSha256": "3e08f13374a8f501038f3945413c7c84f7abc77aae59f4d983e6b0c2c7c8daae",
+          "receiptSha256": "c5b5d4bf09947fe50f154a5794b4af4c8fe4b11965d0016a61f9fc6d8e04a980"
+        },
+        {
+          "id": "neoforge-1.20.5-through-1.20.6",
+          "artifactSha256": "48ddbc107e2ed77013afc0104380b01bab22fbc68f4c0fd7a966a161f9800340",
+          "receiptSha256": "d647921bec605c60214963ef2e88ff20d0f22a441a3d8b8b06bb4c79d5e59ca4"
+        }
+      ]
+    },
+    {
+      "target": "1.20.3",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429557,
+      "jobName": "package-only-products (1.20.3, fabric-1.20.3-through-1.20.4,neoforge-1.20.3)",
+      "artifactId": 11554407549,
+      "artifactName": "release-packages-1.20.3-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "f019909b69bc52ce870b135f799d7bed47eb6e790fe9c4ad6d175d89c3a551e7",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.20.3-through-1.20.4",
+          "artifactSha256": "5f085df914e2f3cd489d8fd930ce66630ae3681ee010707af45507b6494b3b2f",
+          "receiptSha256": "ba42292a49c743c889d4479aae1c8adc39598862842721b3f80fe216b3a648f9"
+        },
+        {
+          "id": "neoforge-1.20.3",
+          "artifactSha256": "49353eb68afb6e099fde8d925150006f3fd6482712033441c944586b6b43ec06",
+          "receiptSha256": "f99b6615fba52772848b42d66457908e335657071f797ff144f0e83db217a759"
+        }
+      ]
+    },
+    {
+      "target": "1.20.2",
+      "sourceSha": "6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "runId": 37786460221,
+      "runAttempt": 1,
+      "jobId": 113342429247,
+      "jobName": "package-only-products (1.20.2, fabric-1.20.2,neoforge-1.20.2)",
+      "artifactId": 11554900684,
+      "artifactName": "release-packages-1.20.2-6e90e9c1e8f72e37ee7ed41c90dcda0fe28ed639",
+      "archiveSha256": "1ed1530b2456c9111ce0c8db9371021e1eab8b07170178bffe263a1764975cd2",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "fabric-1.20.2",
+          "artifactSha256": "cd4a23310da7ffa8a580df5ff691e9e74e1afed3ef51a5dd4f2cfc2de3a0b2ce",
+          "receiptSha256": "6dacc3ee1671fab1ec1bee41b056ecbc9ae41d6944e7e5cf2e98c9d3a760d902"
+        },
+        {
+          "id": "neoforge-1.20.2",
+          "artifactSha256": "845bfdfc533266b082129ba17a0dee4f2bcc11ecf209d334ce0a437298965ae9",
+          "receiptSha256": "77421cbe3760735ae224d316e0103425ea1d4079c95dcdbf0dbeb2c6ed2cf050"
+        }
+      ]
+    },
+    {
+      "target": "1.16.5",
+      "sourceSha": "2737373510f48d9204bc5035c720576206359304",
+      "runId": 37778915974,
+      "runAttempt": 1,
+      "jobId": 113316821709,
+      "jobName": "build-packages (1.16.5, forge-1.16.5)",
+      "artifactId": 11550668732,
+      "artifactName": "release-packages-1.16.5-2737373510f48d9204bc5035c720576206359304",
+      "archiveSha256": "d1a22fc39733937a6b747e65679ad6ba58c10b0673efa6215dd55e8e485bf795",
+      "engineManifestSha256": "03e4eb48799d79037dde8591d5a3f01a4b28f7f1cc38da4ae85177c2f141b1de",
+      "familyArtifacts": [
+        {
+          "id": "forge-1.16.5",
+          "artifactSha256": "962bd542a6dddcbaf4153f23d1e896ddf7d09ef789e225a0544df911542c6bd2",
+          "receiptSha256": "1bb58c547752835fbdf63f9b04b5509ee1f5a540a7691310b5c9552134fae39f"
         }
       ]
     }

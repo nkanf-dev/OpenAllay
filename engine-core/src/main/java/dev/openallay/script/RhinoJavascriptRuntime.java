@@ -27,68 +27,7 @@ import java.util.Set;
 public final class RhinoJavascriptRuntime {
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(2);
 
-    private static final String HELPERS = """
-            const __openallayArrayView = value =>
-              Array.isArray(value)
-              || (value !== null
-                && typeof value === "object"
-                && Object.getPrototypeOf(value) === Array.prototype
-                && Number.isSafeInteger(Number(value.length)));
-            const helpers = Object.freeze({
-              groupBy(values, key) {
-                return values.reduce((groups, value) => {
-                  const group = String(key(value));
-                  (groups[group] ??= []).push(value);
-                  return groups;
-                }, {});
-              },
-              sum(values, select = value => value) {
-                return values.reduce((total, value) => total + Number(select(value)), 0);
-              },
-              minBy(values, select) {
-                return values.reduce((best, value) =>
-                  best === undefined || select(value) < select(best) ? value : best, undefined);
-              },
-              maxBy(values, select) {
-                return values.reduce((best, value) =>
-                  best === undefined || select(value) > select(best) ? value : best, undefined);
-              },
-              schema(value, depth) {
-                // Rhino's interpreter reuses lexical bindings in nested/repeated callbacks.
-                // Keep recursive traversal callback-free, with loop state in this call frame.
-                function visit(current, remaining) {
-                  if (current === null) return "null";
-                  if (__openallayArrayView(current)) {
-                    if (remaining <= 0 || current.length === 0) return [];
-                    const selected = current.slice(0, 8);
-                    const samples = [];
-                    const signatures = [];
-                    let sample;
-                    let signature;
-                    for (let index = 0; index < selected.length; index++) {
-                      if (!(index in selected)) continue;
-                      sample = visit(selected[index], remaining - 1);
-                      signature = JSON.stringify(sample);
-                      if (!signatures.includes(signature)) {
-                        samples.push(sample);
-                        signatures.push(signature);
-                      }
-                    }
-                    return samples;
-                  }
-                  if (typeof current !== "object") return typeof current;
-                  if (remaining <= 0) return "object";
-                  const keys = Object.keys(current).sort();
-                  const entries = [];
-                  for (let index = 0; index < keys.length; index++) {
-                    entries.push([keys[index], visit(current[keys[index]], remaining - 1)]);
-                  }
-                  return Object.fromEntries(entries);
-                }
-                return visit(value, depth === undefined ? 3 : Math.max(0, Number(depth) || 0));
-              }
-            });
-            """;
+    private static final String HELPERS = "const __openallayArrayView = value =>\n  Array.isArray(value)\n  || (value !== null\n    && typeof value === \"object\"\n    && Object.getPrototypeOf(value) === Array.prototype\n    && Number.isSafeInteger(Number(value.length)));\nconst helpers = Object.freeze({\n  groupBy(values, key) {\n    return values.reduce((groups, value) => {\n      const group = String(key(value));\n      (groups[group] ??= []).push(value);\n      return groups;\n    }, {});\n  },\n  sum(values, select = value => value) {\n    return values.reduce((total, value) => total + Number(select(value)), 0);\n  },\n  minBy(values, select) {\n    return values.reduce((best, value) =>\n      best === undefined || select(value) < select(best) ? value : best, undefined);\n  },\n  maxBy(values, select) {\n    return values.reduce((best, value) =>\n      best === undefined || select(value) > select(best) ? value : best, undefined);\n  },\n  schema(value, depth) {\n    // Rhino's interpreter reuses lexical bindings in nested/repeated callbacks.\n    // Keep recursive traversal callback-free, with loop state in this call frame.\n    function visit(current, remaining) {\n      if (current === null) return \"null\";\n      if (__openallayArrayView(current)) {\n        if (remaining <= 0 || current.length === 0) return [];\n        const selected = current.slice(0, 8);\n        const samples = [];\n        const signatures = [];\n        let sample;\n        let signature;\n        for (let index = 0; index < selected.length; index++) {\n          if (!(index in selected)) continue;\n          sample = visit(selected[index], remaining - 1);\n          signature = JSON.stringify(sample);\n          if (!signatures.includes(signature)) {\n            samples.push(sample);\n            signatures.push(signature);\n          }\n        }\n        return samples;\n      }\n      if (typeof current !== \"object\") return typeof current;\n      if (remaining <= 0) return \"object\";\n      const keys = Object.keys(current).sort();\n      const entries = [];\n      for (let index = 0; index < keys.length; index++) {\n        entries.push([keys[index], visit(current[keys[index]], remaining - 1)]);\n      }\n      return Object.fromEntries(entries);\n    }\n    return visit(value, depth === undefined ? 3 : Math.max(0, Number(depth) || 0));\n  }\n});\n";
 
     private final Duration timeout;
     private final JavascriptRuntimeLimits limits;
@@ -129,7 +68,7 @@ public final class RhinoJavascriptRuntime {
                 source,
                 minecraftRoots,
                 workspaceValues,
-                Map.of(),
+                dev.openallay.util.Java8Collections.mapOf(),
                 cancellation,
                 null,
                 null);
@@ -145,7 +84,7 @@ public final class RhinoJavascriptRuntime {
                 source,
                 minecraftRoots,
                 workspaceValues,
-                Map.of(),
+                dev.openallay.util.Java8Collections.mapOf(),
                 cancellation,
                 commands,
                 null);
@@ -183,7 +122,7 @@ public final class RhinoJavascriptRuntime {
             String source, Map<String, Object> minecraftRoots, Map<String, JsonElement> workspaceValues,
             Map<String, JavascriptResultShape> workspaceShapes, CancellationSignal cancellation,
             JavascriptCommandBridge commands, JavascriptWorldBridge world, boolean unrestricted) {
-        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, Map.of(),
+        return execute(source, minecraftRoots, workspaceValues, workspaceShapes, dev.openallay.util.Java8Collections.mapOf(),
                 ignored -> {}, cancellation, commands, world, unrestricted);
     }
 
@@ -214,7 +153,7 @@ public final class RhinoJavascriptRuntime {
             JavascriptWorldBridge world,
             boolean unrestricted,
             JavascriptInvocationScope extensionScope) {
-        if (source == null || source.isBlank()) {
+        if (source == null || dev.openallay.util.Java8Strings.isBlank(source)) {
             throw new JavascriptExecutionException(
                     "javascript_invalid", "JavaScript source must not be blank");
         }
@@ -243,7 +182,9 @@ public final class RhinoJavascriptRuntime {
             if (unrestricted) installJavaBridge(context, scope);
             RhinoHostAdapter adapter = new RhinoHostAdapter(context, scope);
             defineGlobal(context, scope, "mc", adapter.adapt(minecraftRoots));
-            defineGlobal(
+            final class $oaPattern0_Holder { java.util.Map<java.lang.String, java.lang.Object> value; DeclaredHostRoots bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+defineGlobal(
                     context,
                     scope,
                     "schema",
@@ -251,9 +192,9 @@ public final class RhinoJavascriptRuntime {
                             context,
                             scope,
                             adapter,
-                            minecraftRoots instanceof DeclaredHostRoots declared
-                                    ? declared.schemaCatalog()
-                                    : new HostSchemaCatalog(List.of())));
+                            (($oaPattern0_holder.value = minecraftRoots) instanceof dev.openallay.script.schema.DeclaredHostRoots && (($oaPattern0_holder.bound = (DeclaredHostRoots) $oaPattern0_holder.value) != null))
+                                    ? $oaPattern0_holder.bound.schemaCatalog()
+                                    : new HostSchemaCatalog(dev.openallay.util.Java8Collections.listOf())));
             defineGlobal(
                     context,
                     scope,
@@ -286,7 +227,7 @@ public final class RhinoJavascriptRuntime {
                     normalized.value(),
                     normalized.shape(),
                     Duration.ofNanos(System.nanoTime() - started),
-                    List.copyOf(usedModules));
+                    dev.openallay.util.Java8Collections.listCopyOf(usedModules));
         } catch (JavascriptExecutionException failure) {
             throw failure;
         } catch (ModelClientException cancellationFailure) {
@@ -357,21 +298,23 @@ public final class RhinoJavascriptRuntime {
                     Scriptable callScope,
                     Scriptable thisObject,
                     Object[] arguments) {
-                if (arguments.length != 1 || !(arguments[0] instanceof CharSequence handle)) {
+                final class $oaPattern1_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (arguments.length != 1 || !((($oaPattern1_holder.value = arguments[0]) instanceof java.lang.CharSequence && (($oaPattern1_holder.bound = (CharSequence) $oaPattern1_holder.value) != null)))) {
                     throw new JavascriptExecutionException(
                             "workspace_handle_unavailable",
                             "workspace.open requires one selected result handle");
                 }
-                JsonElement value = values.get(handle.toString());
+                JsonElement value = values.get($oaPattern1_holder.bound.toString());
                 if (value == null) {
                     throw new JavascriptExecutionException(
                             "workspace_handle_unavailable",
                             "Result handle is unavailable in this execution");
                 }
-                if (opened.add(handle.toString())) {
-                    sources.getOrDefault(handle.toString(), List.of()).forEach(sourceRecorder);
+                if (opened.add($oaPattern1_holder.bound.toString())) {
+                    sources.getOrDefault($oaPattern1_holder.bound.toString(), dev.openallay.util.Java8Collections.listOf()).forEach(sourceRecorder);
                 }
-                JavascriptResultShape shape = shapes.get(handle.toString());
+                JavascriptResultShape shape = shapes.get($oaPattern1_holder.bound.toString());
                 return shape == null
                         ? adapter.adapt(value)
                         : adapter.adaptWorkspace(value, shape);
@@ -391,8 +334,10 @@ public final class RhinoJavascriptRuntime {
                 open,
                 ScriptableObject.READONLY | ScriptableObject.PERMANENT,
                 context);
-        if (workspace instanceof ScriptableObject object) {
-            object.preventExtensions();
+        final class $oaPattern2_Holder { dev.latvian.mods.rhino.Scriptable value; ScriptableObject bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = workspace) instanceof dev.latvian.mods.rhino.ScriptableObject && (($oaPattern2_holder.bound = (ScriptableObject) $oaPattern2_holder.value) != null))) {
+            $oaPattern2_holder.bound.preventExtensions();
         }
         return workspace;
     }
@@ -437,15 +382,17 @@ public final class RhinoJavascriptRuntime {
                     Scriptable callScope,
                     Scriptable thisObject,
                     Object[] arguments) {
-                if (arguments.length != 1 || !(arguments[0] instanceof CharSequence path)) {
+                final class $oaPattern3_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if (arguments.length != 1 || !((($oaPattern3_holder.value = arguments[0]) instanceof java.lang.CharSequence && (($oaPattern3_holder.bound = (CharSequence) $oaPattern3_holder.value) != null)))) {
                     throw new JavascriptExecutionException(
                             "javascript_schema_invalid",
                             "schema.describe requires one exact declared path");
                 }
-                Object described = catalog.describe(path.toString())
+                Object described = catalog.describe($oaPattern3_holder.bound.toString())
                         .orElseThrow(() -> new JavascriptExecutionException(
                                 "javascript_schema_unavailable",
-                                "Declared JavaScript schema path is unavailable: " + path));
+                                "Declared JavaScript schema path is unavailable: " + $oaPattern3_holder.bound));
                 return adapter.adapt(described);
             }
         };
@@ -461,8 +408,10 @@ public final class RhinoJavascriptRuntime {
                 describe,
                 ScriptableObject.READONLY | ScriptableObject.PERMANENT,
                 context);
-        if (api instanceof ScriptableObject object) {
-            object.preventExtensions();
+        final class $oaPattern4_Holder { dev.latvian.mods.rhino.Scriptable value; ScriptableObject bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = api) instanceof dev.latvian.mods.rhino.ScriptableObject && (($oaPattern4_holder.bound = (ScriptableObject) $oaPattern4_holder.value) != null))) {
+            $oaPattern4_holder.bound.preventExtensions();
         }
         return api;
     }
@@ -488,12 +437,14 @@ public final class RhinoJavascriptRuntime {
                     Scriptable callScope,
                     Scriptable thisObject,
                     Object[] arguments) {
-                if (arguments.length != 1 || !(arguments[0] instanceof CharSequence idValue)) {
+                final class $oaPattern5_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if (arguments.length != 1 || !((($oaPattern5_holder.value = arguments[0]) instanceof java.lang.CharSequence && (($oaPattern5_holder.bound = (CharSequence) $oaPattern5_holder.value) != null)))) {
                     throw new JavascriptExecutionException(
                             "javascript_module_unavailable",
                             "require needs one exact bundled module id");
                 }
-                String id = idValue.toString();
+                String id = $oaPattern5_holder.bound.toString();
                 Scriptable binding = extensionBindings.get(id);
                 if (binding != null) {
                     usedModules.add(id);
@@ -512,18 +463,7 @@ public final class RhinoJavascriptRuntime {
                     String moduleSource = modules.source(id);
                     failures.registerModule(id, moduleSource);
                     // Six wrapper lines precede module source; the formatter maps them out.
-                    String program = """
-                            (function() {
-                              "use strict";
-                              const module = {exports: {}};
-                              const exports = module.exports;
-                              (function(module, exports, require) {
-                                "use strict";
-                                %s
-                              })(module, exports, require);
-                              return module.exports;
-                            })()
-                            """.formatted(moduleSource);
+                    String program = dev.openallay.util.Java8ApiSupport.formatted("(function() {\n  \"use strict\";\n  const module = {exports: {}};\n  const exports = module.exports;\n  (function(module, exports, require) {\n    \"use strict\";\n    %s\n  })(module, exports, require);\n  return module.exports;\n})()\n", moduleSource);
                     Object exports = callContext.evaluateString(
                             scope, program, JavascriptFailureFormatter.moduleSourceName(id), 1, null);
                     cache.put(id, exports);

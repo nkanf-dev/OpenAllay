@@ -6,6 +6,7 @@ real-client controller must execute the file through production run_javascript
 and read fixed landmarks from the live integrated server.
 """
 
+import json
 import re
 import shutil
 import subprocess
@@ -151,6 +152,36 @@ class BuilderFixtureSourceTests(unittest.TestCase):
         self.assertIn("anchor.y-3 < c.minY", SOURCE)
         self.assertNotIn("anchor.y-4 < c.minY", SOURCE)
         self.assertIn("bounds:{x1:anchor.x,z1:anchor.z+34,x2:anchor.x+6,z2:anchor.z+35}", SOURCE)
+
+    @unittest.skipUnless(shutil.which("node"), "optional Node contract executor is not installed")
+    def test_actual_palette_branch_skips_only_skyscraper_without_native_calls(self):
+        source = SOURCE[:SOURCE.index('// Eight geometry methods')]
+        source += 'return {skipped:skipped,operations:operations,actions:actions,sites:sites};'
+        program = ("const source=JSON.parse(require('fs').readFileSync(0,'utf8'));"
+                   "for(const present of [false,true]) { let calls=[],n=0;"
+                   "const b={get_player_pos:()=>({x:0,y:64,z:0}),"
+                   "context:()=>({minY:0,maxY:256,materialPalette:present?{lightning_rod_up:{}}:{}}),"
+                   "finish:()=>({operationId:'unit-'+(++n),state:'completed',reads:1,writes:1})};"
+                   "for(const name of ['simple_house','skyscraper','cottage','windmill','farm','dock'])"
+                   "b['build_'+name]=()=>{calls.push(name);return {operation:name,writes:1}};"
+                   "const result=new Function('require',source)(()=>({open:()=>b}));"
+                   "if(calls.length!==(present?6:5)||calls.includes('skyscraper')!==present)throw Error('preset calls');"
+                   "if(result.operations.length!==(present?6:5)||result.skipped.length!==(present?0:1))throw Error('receipt counts');"
+                   "if(Object.hasOwn(result.sites,'skyscraper')!==present)throw Error('skipped site');"
+                   "if(!present&&result.skipped[0].status!=='SKIPPED')throw Error('skip status');"
+                   "} console.log('Palette branch contract: PASS');")
+        result = subprocess.run([shutil.which("node"), "-e", program], input=json.dumps(source),
+                                text=True, capture_output=True, check=False)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_skyscraper_alone_is_guarded_by_actual_native_palette(self):
+        self.assertIn('Object.prototype.hasOwnProperty.call(c.materialPalette,"lightning_rod_up")', SOURCE)
+        branch = SOURCE[SOURCE.index('if (!Object.prototype.hasOwnProperty.call(c.materialPalette'):SOURCE.index('p = site("cottage"')]
+        self.assertIn('status:"SKIPPED"', branch)
+        self.assertIn('reason:"missing_material_palette_role",role:"lightning_rod_up"', branch)
+        self.assertEqual(1, branch.count('b.build_skyscraper('))
+        self.assertNotIn('b.build_cottage(', branch)
+        self.assertIn('operations:operations,skipped:skipped', SOURCE)
 
     def test_build_finishes_all_nine_operations_before_separate_terminal_failure_tools(self):
         tail = SOURCE[SOURCE.index('// Capture prerequisites'):]

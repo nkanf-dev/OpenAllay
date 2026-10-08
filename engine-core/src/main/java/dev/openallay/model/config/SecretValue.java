@@ -1,5 +1,6 @@
 package dev.openallay.model.config;
 
+import dev.openallay.util.Java8Strings;
 import java.util.Objects;
 
 public final class SecretValue {
@@ -11,7 +12,7 @@ public final class SecretValue {
     }
 
     public static SecretValue of(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException("API key must not be blank");
         }
         return new SecretValue(value);
@@ -28,7 +29,7 @@ public final class SecretValue {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof SecretValue secret && value.equals(secret.value);
+        return other instanceof SecretValue && value.equals(((SecretValue) other).value);
     }
 
     @Override

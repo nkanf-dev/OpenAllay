@@ -1,24 +1,24 @@
 # Development
 
-OpenAllay 0.4.2 publishes 31 JARs for 23 Minecraft versions from 1.20.1 through
-26.3, covering Fabric and NeoForge. The exact download families and Java
-requirements are listed in the [published compatibility table](native-binary-artifacts.md#published-042-files).
-Minecraft 26.2 and Java 25 remain the feature-development mainline, not the only
-release target. Public Extension API 0.4.0 and Builder 0.4.0 have independent
-version coordinates. `gradle/minecraft-artifacts.json` records the accepted
-release families.
-The mature-ecosystem task branch adds accepted Forge 1.19.2 and 1.18.2 native
-integrations. Their original artifact proofs and older-anchor decisions are in
-[the backport verification record](verification/mature-forge-ecosystems.md).
-Use the checked-in Gradle wrapper; a system Gradle installation is not needed.
+The OpenAllay **0.4.4** release catalog contains **34 JARs** for GitHub and
+Modrinth, covering **26 exact Minecraft versions** and **49 version/loader pairs**. See the
+[current artifact table](native-binary-artifacts.md#release-044-files) and
+[Forge runtime setup](forge-runtime-installation.md).
+Minecraft **26.2 / Java 25** remains the feature-development mainline.
+The shared feature engine and Rhino run on Java 17 where required; game
+adapters select each target's actual native APIs and JVM pins. Public Extension
+API **0.4.0**, universal Builder **0.4.0**, and Skill API **0.2** keep independent
+version coordinates.
 
-See the [0.4.2 release notes](releases/0.4.2.md) for the current product changes.
-The published [0.4.1 notes](releases/0.4.1.md), tags, and downloads remain unchanged.
+Use the checked-in Gradle wrapper. The
+[0.4.4 release notes](releases/0.4.4.md) describe current player-facing changes.
+Original native run and source facts remain in the
+[Forge backport record](verification/mature-forge-ecosystems.md) and
+[stock Forge client record](verification/stock-forge-integrated-clients.md).
 Earlier Builder performance, request-control and Skill context evidence remains in
 its [verification record](verification/2026-10-01-builder-performance-runtime-controls.md).
 Historical execution/context receipts remain in the [041 verification record](verification/execution-context-simplification.md).
-Those records describe their own source builds. They neither replace published
-0.2.4 artifacts nor establish current in-game latency.
+Each record identifies its source build and measured scenarios.
 
 Before formal 1.0, internal formats are **Latest Only**: keep the current shape
 and exact validation, without internal version numbers, versioned filenames,
@@ -73,12 +73,12 @@ are verified with the same JAR on each target and reviewed before admission.
 
 The development distribution bundles **one universal Builder 0.4.0 JAR** from
 `OpenAllay-Extensions`. The current lock at `distribution/extensions.lock.json`
-pins source `79935e9ce37d74956d1141835869c343491f7d38` and one artifact path.
+pins source `6e977110cbe8e0ca0b39c012f0cdfc10bafffef2` and one artifact path.
 Both loaders contain the same raw resource at
 `META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar`.
 Builder is not registered as a Fabric or NeoForge mod. The host supplies public
 Extension API 0.4.0 and the native game adapter. Enabling Builder includes building
-and world writes; there is no separate Extension-private approval.
+and world writes in ordinary JavaScript mode.
 Builder's domain code, Skills, JavaScript, templates and journals remain one
 Java-8 Extension payload with privately shaded Gson.
 
@@ -89,11 +89,10 @@ stages it under `config/openallay/.bundled-extensions/<sha256>/`, and uses the
 same universal discovery path. It never overwrites a community JAR. Accepted
 classloaders remain open until actual invocation workers finish at shutdown.
 
-The published **v0.4.1** downloads remain unchanged: Builder 0.2.1 and legacy API
-0.2.2. This development switch does not amend that release. Product, Extension
-and API versions are independent. A Java-8 Extension is not proof that the core
-runs on stock Forge 1.12.2. Player automation and Baritone remain research-only;
-installation does not enable Agent JVM authority.
+Product, Extension, and API versions are independent. Forge 1.16.5 uses the
+matching Forge JAR and Java 17 profile. See the Forge runtime guide for exact
+setup. The [Forge 1.12.2 Java8 port](verification/forge1122-java8-port.md) is in progress. Player automation and Baritone remain research work. Agent JVM access
+is controlled by the player's full-access setting.
 
 Prepare the exact source before a full distribution build:
 
@@ -676,11 +675,13 @@ actual checksum, compatibility, loader metadata, and embedded schema-1
 a managed name in `mods`. Local imports need no catalog entry. Status stays
 `restart_required` until startup registers the Extension.
 
-The public authoring repository's `examples/hello-extension` builds both loaders.
-Current product 0.4.2 implements public Extension API 0.4.0. Loader product
+The public authoring repository's `examples/hello-extension` builds separate
+Fabric and NeoForge mods for legacy API 0.2.x. New universal Extensions use the
+[SDK 0.4.0 authoring contract](universal-extensions.md). Current product 0.4.4
+implements public Extension API 0.4.0. Loader product
 ranges and `openAllayApiVersionRange` are separate compatibility contracts:
 `[0.4.0,0.5.0)` accepts API 0.4.0, but a loader product range excluding
-0.4.2 rejects this release. Existing four-list and five-list contribution
+0.4.4 rejects this release. Existing four-list and five-list contribution
 constructors remain supported. Match each independent Extension's declared
 requirements rather than copying the product version into its API range.
 
@@ -816,7 +817,8 @@ reads with the returned opaque cursor, bound to document and fingerprint;
 malformed, foreign, or stale cursors fail closed.
 
 The schema-2 community catalog includes display name, description, and publisher,
-plus validated package/version/source/archive/checksum/compatibility. Catalog
+plus validated package/version/source/archive/checksum/compatibility. Community
+compatibility is checked against the active Minecraft runtime. Catalog
 copy is not Agent instruction authority; the installed validated `SKILL.md` is.
 `openallay/version` is the durable package version. Skill API compatibility remains
 0.2, independent of product patch versions. Cache lives at `config/openallay/catalogs/skills.json`.
@@ -840,9 +842,8 @@ usage-detail fields may be absent/null; invalid non-null shapes and malformed
 Tool arguments remain failures.
 
 The [refactor plan](superpowers/plans/2026-10-01-execution-context-simplification.md)
-tracks common, Extension, both-loader, and pinned-package gates. Earlier hotfix
-results do not verify this refactor or measure its speed. This source task does
-not change product versions, create a tag, or publish a release.
+tracks common, Extension, both-loader, and pinned-package gates. Retain each
+result with the source revision and scenarios it checked.
 
 Authorized releases use a separate annotated strict-SemVer tag workflow matching
 `gradle.properties`, with pinned source/tests/packaging gates and

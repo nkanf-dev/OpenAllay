@@ -21,8 +21,7 @@ public final class RichComponentRegistry {
                 SemanticReferenceIndex references);
     }
 
-    private static final Set<String> ENVELOPE_KEYS = Set.of(
-            "type", "properties", "fallback", "narration");
+    private static final Set<String> ENVELOPE_KEYS = dev.openallay.util.Java8Collections.setOf("type", "properties", "fallback", "narration");
     private final Map<String, Decoder> decoders;
 
     public RichComponentRegistry(Map<String, Decoder> decoders) {
@@ -35,7 +34,7 @@ public final class RichComponentRegistry {
                 throw new IllegalArgumentException("rich component type is duplicated");
             }
         });
-        this.decoders = Map.copyOf(copy);
+        this.decoders = dev.openallay.util.Java8Collections.mapCopyOf(copy);
     }
 
     public static RichComponentRegistry builtins() {
@@ -48,8 +47,8 @@ public final class RichComponentRegistry {
 
     public Decode decode(String encoded, String nodeId, SemanticReferenceIndex references) {
         Objects.requireNonNull(references, "references");
-        String fallback = encoded == null || encoded.isBlank()
-                ? "Unsupported component" : encoded.strip();
+        String fallback = encoded == null || dev.openallay.util.Java8Strings.isBlank(encoded)
+                ? "Unsupported component" : dev.openallay.util.Java8Strings.strip(encoded);
         try {
             JsonElement parsed = dev.openallay.json.JsonTrees.parse(encoded);
             if (!parsed.isJsonObject()) {
@@ -59,7 +58,7 @@ public final class RichComponentRegistry {
             JsonElement fallbackElement = object.get("fallback");
             if (fallbackElement != null && fallbackElement.isJsonPrimitive()
                     && fallbackElement.getAsJsonPrimitive().isString()
-                    && !fallbackElement.getAsString().isBlank()) {
+                    && !dev.openallay.util.Java8Strings.isBlank(fallbackElement.getAsString())) {
                 fallback = fallbackElement.getAsString();
             }
             exact(object, ENVELOPE_KEYS);
@@ -79,7 +78,7 @@ public final class RichComponentRegistry {
     }
 
     static RichComponent.Item item(JsonObject object, SemanticReferenceIndex references) {
-        exact(object, Set.of("itemId", "count", "label"));
+        exact(object, dev.openallay.util.Java8Collections.setOf("itemId", "count", "label"));
         String itemId = string(object, "itemId");
         String origin = requireOrigin(references, SemanticReferenceKind.ITEM, itemId);
         return new RichComponent.Item(
@@ -121,7 +120,7 @@ public final class RichComponentRegistry {
     static String string(JsonObject object, String field) {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be a non-empty string");
         }
         return value.getAsString();
@@ -167,7 +166,7 @@ public final class RichComponentRegistry {
             if (!value.isJsonObject()) throw new IllegalArgumentException("array entry must be object");
             result.add(value.getAsJsonObject());
         }
-        return List.copyOf(result);
+        return dev.openallay.util.Java8Collections.listCopyOf(result);
     }
 
     static String requireOrigin(
@@ -176,29 +175,88 @@ public final class RichComponentRegistry {
                 new IllegalArgumentException("component reference is not authorized"));
     }
 
-    record RecipeBinding(RecipeReference reference, String originInvocationId) {}
+    @dev.openallay.value.ValueType(RecipeBinding.ValueSchemaProvider.class)
+static final class RecipeBinding {
+    private final RecipeReference reference;
+    private final String originInvocationId;
+    RecipeBinding(RecipeReference reference, String originInvocationId) {
+        this.reference = reference;
+        this.originInvocationId = originInvocationId;
+    }
+    public RecipeReference reference() { return reference; }
+    public String originInvocationId() { return originInvocationId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RecipeBinding)) return false;
+        RecipeBinding that = (RecipeBinding) other;
+        return java.util.Objects.equals(reference, that.reference) && java.util.Objects.equals(originInvocationId, that.originInvocationId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(reference);
+        hash = 31 * hash + java.util.Objects.hashCode(originInvocationId);
+        return hash;
+    }
+    @Override public String toString() { return "RecipeBinding[reference=" + reference + ", originInvocationId=" + originInvocationId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RecipeBinding> schema() {
+            return new dev.openallay.value.ValueSchema<>(RecipeBinding.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RecipeBinding>>asList(new dev.openallay.value.ValueSchema.Component<>(RecipeBinding.class, "reference", RecipeBinding::reference), new dev.openallay.value.ValueSchema.Component<>(RecipeBinding.class, "originInvocationId", RecipeBinding::originInvocationId)), arguments -> new RecipeBinding((RecipeReference) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
-    public record Decode(RichComponent component, String fallbackText, String failureCode) {
-        public Decode {
+    @dev.openallay.value.ValueType(Decode.ValueSchemaProvider.class)
+public static final class Decode {
+    private final RichComponent component;
+    private final String fallbackText;
+    private final String failureCode;
+    public Decode(RichComponent component, String fallbackText, String failureCode) {
+
             if ((component == null) == (failureCode == null)) {
                 throw new IllegalArgumentException("component decode must succeed or fail");
             }
-            if (fallbackText == null || fallbackText.isBlank()) {
+            if (fallbackText == null || dev.openallay.util.Java8Strings.isBlank(fallbackText)) {
                 throw new IllegalArgumentException("component decode fallback is required");
             }
-        }
+            if (component != null) RichComponent.requireKnown(component);
 
-        static Decode success(RichComponent component) {
+        this.component = component;
+        this.fallbackText = fallbackText;
+        this.failureCode = failureCode;
+    }
+    public RichComponent component() { return component; }
+    public String fallbackText() { return fallbackText; }
+    public String failureCode() { return failureCode; }
+static Decode success(RichComponent component) {
             return new Decode(
                     Objects.requireNonNull(component, "component"), component.fallbackText(), null);
         }
-
-        static Decode failure(String fallback, String code) {
+static Decode failure(String fallback, String code) {
             return new Decode(null, fallback, code);
         }
-
-        public boolean successful() {
+public boolean successful() {
             return component != null;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Decode)) return false;
+        Decode that = (Decode) other;
+        return java.util.Objects.equals(component, that.component) && java.util.Objects.equals(fallbackText, that.fallbackText) && java.util.Objects.equals(failureCode, that.failureCode);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(component);
+        hash = 31 * hash + java.util.Objects.hashCode(fallbackText);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        return hash;
+    }
+    @Override public String toString() { return "Decode[component=" + component + ", fallbackText=" + fallbackText + ", failureCode=" + failureCode + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Decode> schema() {
+            return new dev.openallay.value.ValueSchema<>(Decode.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Decode>>asList(new dev.openallay.value.ValueSchema.Component<>(Decode.class, "component", Decode::component), new dev.openallay.value.ValueSchema.Component<>(Decode.class, "fallbackText", Decode::fallbackText), new dev.openallay.value.ValueSchema.Component<>(Decode.class, "failureCode", Decode::failureCode)), arguments -> new Decode((RichComponent) arguments[0], (String) arguments[1], (String) arguments[2]));
+        }
+    }
+}
 }

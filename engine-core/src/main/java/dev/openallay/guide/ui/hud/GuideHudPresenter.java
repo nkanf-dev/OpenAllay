@@ -127,7 +127,7 @@ public final class GuideHudPresenter {
             if (request.status() != GuideRequestStatus.COMPLETED || request.terminalAt() == null
                     || latest != null && (latest.request() == request || compare(request, latest) < 0)) continue;
             String text = assistantPreview(request, false);
-            if (text.isBlank()) continue;
+            if (dev.openallay.util.Java8Strings.isBlank(text)) continue;
             latest = new Reply(request, text);
         }
         if (latest != null) replies.put(session.sessionId(), latest);
@@ -149,8 +149,8 @@ public final class GuideHudPresenter {
     private List<GuideUiRow> rows(GuideRequestSnapshot request, GuideDisplayConfig config) {
         Projected cached = projected.get(request.requestId());
         if (cached == null || cached.request() != request || cached.debug() != config.debugMode()) {
-            cached = new Projected(request, config.debugMode(), GuideUiView.projectRequestRows(request, config)
-                    .stream().filter(row -> !(row instanceof GuideUiRow.User)).toList());
+            cached = new Projected(request, config.debugMode(), dev.openallay.util.Java8Collections.toList(GuideUiView.projectRequestRows(request, config)
+                    .stream().filter(row -> !(row instanceof GuideUiRow.User))));
             projected.put(request.requestId(), cached);
         }
         return cached.rows();
@@ -176,18 +176,84 @@ public final class GuideHudPresenter {
 
     private static String assistantPreview(GuideRequestSnapshot request, boolean streaming) {
         for (int index = request.timeline().size() - 1; index >= 0; index--) {
-            if (request.timeline().get(index) instanceof GuideTimelineEntry.Assistant assistant) {
-                if (assistant.streaming() != streaming) return "";
-                return assistant.semantic().fallbackText();
+            {
+final java.lang.Object $oaPattern0_value = request.timeline().get(index);
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideTimelineEntry.Assistant;
+GuideTimelineEntry.Assistant $oaPattern0_bound = $oaPattern0_match ? (GuideTimelineEntry.Assistant) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                if ($oaPattern0_bound.streaming() != streaming) return "";
+                return $oaPattern0_bound.semantic().fallbackText();
             }
+}
         }
         return "";
     }
 
-    private record Reply(GuideRequestSnapshot request, String text) {
-        UUID requestId() { return request.requestId(); }
-        Instant terminalAt() { return request.terminalAt(); }
-        Instant createdAt() { return request.createdAt(); }
+    @dev.openallay.value.ValueType(Reply.ValueSchemaProvider.class)
+private static final class Reply {
+    private final GuideRequestSnapshot request;
+    private final String text;
+    private Reply(GuideRequestSnapshot request, String text) {
+        this.request = request;
+        this.text = text;
     }
-    private record Projected(GuideRequestSnapshot request, boolean debug, List<GuideUiRow> rows) {}
+    public GuideRequestSnapshot request() { return request; }
+    public String text() { return text; }
+UUID requestId() { return request.requestId(); }
+Instant terminalAt() { return request.terminalAt(); }
+Instant createdAt() { return request.createdAt(); }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Reply)) return false;
+        Reply that = (Reply) other;
+        return java.util.Objects.equals(request, that.request) && java.util.Objects.equals(text, that.text);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        hash = 31 * hash + java.util.Objects.hashCode(text);
+        return hash;
+    }
+    @Override public String toString() { return "Reply[request=" + request + ", text=" + text + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Reply> schema() {
+            return new dev.openallay.value.ValueSchema<>(Reply.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Reply>>asList(new dev.openallay.value.ValueSchema.Component<>(Reply.class, "request", Reply::request), new dev.openallay.value.ValueSchema.Component<>(Reply.class, "text", Reply::text)), arguments -> new Reply((GuideRequestSnapshot) arguments[0], (String) arguments[1]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Projected.ValueSchemaProvider.class)
+private static final class Projected {
+    private final GuideRequestSnapshot request;
+    private final boolean debug;
+    private final List<GuideUiRow> rows;
+    private Projected(GuideRequestSnapshot request, boolean debug, List<GuideUiRow> rows) {
+        this.request = request;
+        this.debug = debug;
+        this.rows = rows;
+    }
+    public GuideRequestSnapshot request() { return request; }
+    public boolean debug() { return debug; }
+    public List<GuideUiRow> rows() { return rows; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projected)) return false;
+        Projected that = (Projected) other;
+        return java.util.Objects.equals(request, that.request) && debug == that.debug && java.util.Objects.equals(rows, that.rows);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        hash = 31 * hash + Boolean.hashCode(debug);
+        hash = 31 * hash + java.util.Objects.hashCode(rows);
+        return hash;
+    }
+    @Override public String toString() { return "Projected[request=" + request + ", debug=" + debug + ", rows=" + rows + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projected> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projected.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projected>>asList(new dev.openallay.value.ValueSchema.Component<>(Projected.class, "request", Projected::request), new dev.openallay.value.ValueSchema.Component<>(Projected.class, "debug", Projected::debug), new dev.openallay.value.ValueSchema.Component<>(Projected.class, "rows", Projected::rows)), arguments -> new Projected((GuideRequestSnapshot) arguments[0], (Boolean) arguments[1], (List) arguments[2]));
+        }
+    }
+}
 }

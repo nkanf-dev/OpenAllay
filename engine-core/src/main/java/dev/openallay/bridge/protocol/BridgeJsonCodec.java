@@ -11,47 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class BridgeJsonCodec {
-    private static final Map<Class<?>, Set<String>> FIELDS = Map.ofEntries(
-            Map.entry(CapabilityPayload.class, Set.of(
-                    "remoteTools", "serverModel",
-                    "serverContextWindowTokens", "serverMaxOutputTokens",
-                    "serverPromptAndToolTokens", "serverCanonicalModelId",
-                    "serverImageInputCapability", "serverImageInputCapabilitySource")),
-            Map.entry(RemoteToolCallPayload.class,
-                    Set.of("correlationId", "sessionId", "toolId", "argumentsJson")),
-            Map.entry(RemoteToolResultChunkPayload.class,
-                    Set.of("correlationId", "index", "total", "contentHash", "base64Data")),
-            Map.entry(RemoteCancelPayload.class, Set.of("correlationId")),
-            Map.entry(RemoteToolRequestClosePayload.class, Set.of("requestId")),
-            Map.entry(ServerAgentRequestPayload.class,
-                    Set.of(
-                            "requestId", "sessionId", "question", "stream",
-                            "history", "clientToolIds", "skillDocuments",
-                            "userInput", "imageAttachments")),
-            Map.entry(ClientToolCallPayload.class,
-                    Set.of(
-                            "requestId", "invocationId", "sessionId", "toolId",
-                            "argumentsJson")),
-            Map.entry(ClientToolResultChunkPayload.class,
-                    Set.of(
-                            "requestId", "invocationId", "index", "total",
-                            "contentHash", "base64Data")),
-            Map.entry(ClientToolCancelPayload.class,
-                    Set.of("requestId", "invocationId")),
-            Map.entry(ToolExecutionMessage.class, Set.of("result", "imageAttachments")),
-            Map.entry(ServerAgentRequestChunkPayload.class,
-                    Set.of("requestId", "index", "total", "contentHash", "base64Data")),
-            Map.entry(ServerAgentCancelPayload.class, Set.of("requestId")),
-            Map.entry(ServerAgentSteerPayload.class,
-                    Set.of("requestId", "messageId", "operation", "message", "imageAttachments")),
-            Map.entry(ServerAgentSteerChunkPayload.class,
-                    Set.of("requestId", "messageId", "index", "total", "contentHash", "base64Data")),
-            Map.entry(ServerAgentEventPayload.class,
-                    Set.of("requestId", "eventType", "eventJson", "terminal")),
-            Map.entry(ServerAgentEventChunkPayload.class,
-                    Set.of(
-                            "requestId", "eventId", "index", "total",
-                            "contentHash", "base64Data")));
+    private static final Map<Class<?>, Set<String>> FIELDS = dev.openallay.util.Java8Collections.mapOfEntries(dev.openallay.util.Java8Collections.entry(CapabilityPayload.class, dev.openallay.util.Java8Collections.setOf("remoteTools", "serverModel", "serverContextWindowTokens", "serverMaxOutputTokens", "serverPromptAndToolTokens", "serverCanonicalModelId", "serverImageInputCapability", "serverImageInputCapabilitySource")), dev.openallay.util.Java8Collections.entry(RemoteToolCallPayload.class, dev.openallay.util.Java8Collections.setOf("correlationId", "sessionId", "toolId", "argumentsJson")), dev.openallay.util.Java8Collections.entry(RemoteToolResultChunkPayload.class, dev.openallay.util.Java8Collections.setOf("correlationId", "index", "total", "contentHash", "base64Data")), dev.openallay.util.Java8Collections.entry(RemoteCancelPayload.class, dev.openallay.util.Java8Collections.setOf("correlationId")), dev.openallay.util.Java8Collections.entry(RemoteToolRequestClosePayload.class, dev.openallay.util.Java8Collections.setOf("requestId")), dev.openallay.util.Java8Collections.entry(ServerAgentRequestPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "sessionId", "question", "stream", "history", "clientToolIds", "skillDocuments", "userInput", "imageAttachments")), dev.openallay.util.Java8Collections.entry(ClientToolCallPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "invocationId", "sessionId", "toolId", "argumentsJson")), dev.openallay.util.Java8Collections.entry(ClientToolResultChunkPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "invocationId", "index", "total", "contentHash", "base64Data")), dev.openallay.util.Java8Collections.entry(ClientToolCancelPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "invocationId")), dev.openallay.util.Java8Collections.entry(ToolExecutionMessage.class, dev.openallay.util.Java8Collections.setOf("result", "imageAttachments")), dev.openallay.util.Java8Collections.entry(ServerAgentRequestChunkPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "index", "total", "contentHash", "base64Data")), dev.openallay.util.Java8Collections.entry(ServerAgentCancelPayload.class, dev.openallay.util.Java8Collections.setOf("requestId")), dev.openallay.util.Java8Collections.entry(ServerAgentSteerPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "messageId", "operation", "message", "imageAttachments")), dev.openallay.util.Java8Collections.entry(ServerAgentSteerChunkPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "messageId", "index", "total", "contentHash", "base64Data")), dev.openallay.util.Java8Collections.entry(ServerAgentEventPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "eventType", "eventJson", "terminal")), dev.openallay.util.Java8Collections.entry(ServerAgentEventChunkPayload.class, dev.openallay.util.Java8Collections.setOf("requestId", "eventId", "index", "total", "contentHash", "base64Data")));
 
     private final Gson gson;
 
@@ -67,24 +27,32 @@ public final class BridgeJsonCodec {
         if (!FIELDS.containsKey(payload.getClass())) {
             throw new IllegalArgumentException("Unsupported bridge payload " + payload.getClass().getName());
         }
-        if (payload instanceof ToolExecutionMessage message) {
+        final class $oaPattern0_Holder { java.lang.Object value; ToolExecutionMessage bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = payload) instanceof dev.openallay.bridge.protocol.ToolExecutionMessage && (($oaPattern0_holder.bound = (ToolExecutionMessage) $oaPattern0_holder.value) != null))) {
             // Keep explicit nulls in normalized JSON. Reflective Gson serialization would
             // drop them and could turn a malformed optional field into an absent field.
             JsonObject object = new JsonObject();
-            object.add("result", message.result());
-            object.add("imageAttachments", gson.toJsonTree(message.imageAttachments()));
+            object.add("result", $oaPattern0_holder.bound.result());
+            object.add("imageAttachments", gson.toJsonTree($oaPattern0_holder.bound.imageAttachments()));
             return object.toString();
         }
         JsonObject encoded = gson.toJsonTree(payload).getAsJsonObject();
-        if (payload instanceof ServerAgentSteerPayload steer) {
-            encoded.add("message", steer.message() == null ? com.google.gson.JsonNull.INSTANCE
-                    : encodeHistoryMessage(gson, steer.message()));
-        } else if (payload instanceof ServerAgentRequestPayload request) {
+        final class $oaPattern1_Holder { java.lang.Object value; ServerAgentSteerPayload bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = payload) instanceof dev.openallay.bridge.protocol.ServerAgentSteerPayload && (($oaPattern1_holder.bound = (ServerAgentSteerPayload) $oaPattern1_holder.value) != null))) {
+            encoded.add("message", $oaPattern1_holder.bound.message() == null ? com.google.gson.JsonNull.INSTANCE
+                    : encodeHistoryMessage(gson, $oaPattern1_holder.bound.message()));
+        } else {
+final class $oaPattern2_Holder { java.lang.Object value; ServerAgentRequestPayload bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = payload) instanceof dev.openallay.bridge.protocol.ServerAgentRequestPayload && (($oaPattern2_holder.bound = (ServerAgentRequestPayload) $oaPattern2_holder.value) != null))) {
             com.google.gson.JsonArray history = new com.google.gson.JsonArray();
-            for (ServerAgentHistoryMessage message : request.history()) history.add(encodeHistoryMessage(gson, message));
+            for (ServerAgentHistoryMessage message : $oaPattern2_holder.bound.history()) history.add(encodeHistoryMessage(gson, message));
             encoded.add("history", history);
-            encoded.add("userInput", encodeHistoryMessage(gson, request.userInput()));
+            encoded.add("userInput", encodeHistoryMessage(gson, $oaPattern2_holder.bound.userInput()));
         }
+}
         return encoded.toString();
     }
 
@@ -163,7 +131,7 @@ public final class BridgeJsonCodec {
                 throw new IllegalArgumentException("Tool image attachments must be an array");
             }
             for (JsonElement item : attachments.getAsJsonArray()) {
-                JsonObject attachment = exactObject(item, Set.of("reference", "base64Data"));
+                JsonObject attachment = exactObject(item, dev.openallay.util.Java8Collections.setOf("reference", "base64Data"));
                 validateImageReference(attachment.get("reference"));
                 requireText(attachment.get("base64Data"));
             }
@@ -176,14 +144,14 @@ public final class BridgeJsonCodec {
             JsonElement attachments = object.get("imageAttachments");
             if (!attachments.isJsonArray()) throw new IllegalArgumentException("Steer attachments must be an array");
             for (JsonElement item : attachments.getAsJsonArray()) {
-                JsonObject attachment = exactObject(item, Set.of("reference", "base64Data"));
+                JsonObject attachment = exactObject(item, dev.openallay.util.Java8Collections.setOf("reference", "base64Data"));
                 validateImageReference(attachment.get("reference"));
                 requireText(attachment.get("base64Data"));
             }
         }
         if (type == CapabilityPayload.class) {
             requireText(object.get("serverImageInputCapability"));
-            if (!Set.of("SUPPORTED", "UNSUPPORTED", "UNKNOWN").contains(
+            if (!dev.openallay.util.Java8Collections.setOf("SUPPORTED", "UNSUPPORTED", "UNKNOWN").contains(
                     object.get("serverImageInputCapability").getAsString())) {
                 throw new IllegalArgumentException("Unknown server image input capability");
             }
@@ -205,7 +173,7 @@ public final class BridgeJsonCodec {
                 throw new IllegalArgumentException("Server Agent image attachments must be an array");
             }
             for (JsonElement item : attachments.getAsJsonArray()) {
-                JsonObject attachment = exactObject(item, Set.of("reference", "base64Data"));
+                JsonObject attachment = exactObject(item, dev.openallay.util.Java8Collections.setOf("reference", "base64Data"));
                 validateImageReference(attachment.get("reference"));
                 requireText(attachment.get("base64Data"));
             }
@@ -259,18 +227,43 @@ public final class BridgeJsonCodec {
 
             java.util.ArrayDeque<Set<String>> objects = new java.util.ArrayDeque<>();
             do {
-                switch (reader.peek()) {
-                    case BEGIN_OBJECT -> { reader.beginObject(); objects.push(new java.util.HashSet<>()); }
-                    case BEGIN_ARRAY -> { reader.beginArray(); objects.push(Set.of()); }
-                    case NAME -> {
+                switch ((reader.peek())) {
+case BEGIN_OBJECT:
+{
+{ reader.beginObject(); objects.push(new java.util.HashSet<>()); }
+break;
+}
+case BEGIN_ARRAY:
+{
+{ reader.beginArray(); objects.push(dev.openallay.util.Java8Collections.setOf()); }
+break;
+}
+case NAME:
+{
+{
                         if (!objects.peek().add(reader.nextName())) {
                             throw new IllegalArgumentException("Duplicate bridge JSON field");
                         }
                     }
-                    case END_OBJECT -> { reader.endObject(); objects.pop(); }
-                    case END_ARRAY -> { reader.endArray(); objects.pop(); }
-                    default -> reader.skipValue();
-                }
+break;
+}
+case END_OBJECT:
+{
+{ reader.endObject(); objects.pop(); }
+break;
+}
+case END_ARRAY:
+{
+{ reader.endArray(); objects.pop(); }
+break;
+}
+default:
+{
+reader.skipValue();
+break;
+}
+}
+
             } while (!objects.isEmpty());
             if (reader.peek() != JsonToken.END_DOCUMENT) throw new IllegalArgumentException("Trailing bridge JSON");
         } catch (IOException malformed) {
@@ -280,10 +273,10 @@ public final class BridgeJsonCodec {
 
     /** Shared by every current typed history wire boundary. No paths, URLs or encoded bytes. */
     public static void validateHistoryMessage(JsonElement item) {
-        JsonObject message = exactObject(item, Set.of("role", "content", "inputObservation"));
+        JsonObject message = exactObject(item, dev.openallay.util.Java8Collections.setOf("role", "content", "inputObservation"));
         dev.openallay.world.ClientObservationAnchorJson.decode(message.get("inputObservation"));
         requireText(message.get("role"));
-        if (!Set.of("USER", "ASSISTANT").contains(message.get("role").getAsString())) {
+        if (!dev.openallay.util.Java8Collections.setOf("USER", "ASSISTANT").contains(message.get("role").getAsString())) {
             throw new IllegalArgumentException("Unknown Server Agent history role");
         }
         JsonElement content = message.get("content");
@@ -296,36 +289,76 @@ public final class BridgeJsonCodec {
             }
             JsonObject value = block.getAsJsonObject();
             requireText(value.get("kind"));
-            Set<String> fields = switch (value.get("kind").getAsString()) {
-                case "TEXT" -> Set.of("kind", "text");
-                case "IMAGE" -> Set.of("kind", "image", "originToolUseId");
-                case "TOOL_USE" -> Set.of("kind", "toolUseId", "toolName", "json");
-                case "TOOL_RESULT" -> Set.of("kind", "toolUseId", "json", "error", "images");
-                default -> throw new IllegalArgumentException("Unknown Server Agent history content kind");
-            };
+            java.util.Set<java.lang.String> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((value.get("kind").getAsString())) {
+case "TEXT":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "text"); break $oaSwitch0_exit;
+}
+case "IMAGE":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "image", "originToolUseId"); break $oaSwitch0_exit;
+}
+case "TOOL_USE":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "toolUseId", "toolName", "json"); break $oaSwitch0_exit;
+}
+case "TOOL_RESULT":
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.setOf("kind", "toolUseId", "json", "error", "images"); break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException("Unknown Server Agent history content kind");
+}
+}
+}
+Set<String> fields = $oaSwitch0_exit_result;
             exactObject(value, fields);
             for (String field : fields) {
-                switch (field) {
-                    case "image" -> validateImageReference(value.get(field));
-                    case "originToolUseId" -> {
+                switch ((field)) {
+case "image":
+{
+validateImageReference(value.get(field));
+break;
+}
+case "originToolUseId":
+{
+{
                         if (!value.get(field).isJsonNull()) requireText(value.get(field));
                     }
-                    case "images" -> {
+break;
+}
+case "images":
+{
+{
                         JsonElement images = value.get(field);
                         if (images == null || !images.isJsonArray()) {
                             throw new IllegalArgumentException("Tool result images must be an array");
                         }
                         for (JsonElement image : images.getAsJsonArray()) validateImageReference(image);
                     }
-                    case "error" -> requireBoolean(value.get(field));
-                    default -> requireText(value.get(field));
-                }
+break;
+}
+case "error":
+{
+requireBoolean(value.get(field));
+break;
+}
+default:
+{
+requireText(value.get(field));
+break;
+}
+}
+
             }
         }
     }
 
     public static void validateImageReference(JsonElement element) {
-        JsonObject image = exactObject(element, Set.of("sha256", "mimeType", "width", "height", "byteSize"));
+        JsonObject image = exactObject(element, dev.openallay.util.Java8Collections.setOf("sha256", "mimeType", "width", "height", "byteSize"));
         requireText(image.get("sha256"));
         requireText(image.get("mimeType"));
         requireInteger(image.get("width"));
@@ -352,15 +385,14 @@ public final class BridgeJsonCodec {
     }
 
     private static void validateSkillManifest(JsonElement element) {
-        JsonObject manifest = exactObject(element, Set.of("documents"));
+        JsonObject manifest = exactObject(element, dev.openallay.util.Java8Collections.setOf("documents"));
         JsonElement documents = manifest.get("documents");
         if (!documents.isJsonArray()) {
             throw new IllegalArgumentException("Skill documents must be an array");
         }
         for (JsonElement item : documents.getAsJsonArray()) {
-            JsonObject document = exactObject(item, Set.of("name", "document", "source", "fingerprint",
-                    "length", "chunks", "availableReferences", "description"));
-            for (String field : java.util.List.of("name", "document", "source", "fingerprint", "description")) {
+            JsonObject document = exactObject(item, dev.openallay.util.Java8Collections.setOf("name", "document", "source", "fingerprint", "length", "chunks", "availableReferences", "description"));
+            for (String field : dev.openallay.util.Java8Collections.listOf("name", "document", "source", "fingerprint", "description")) {
                 requireText(document.get(field));
             }
             requireInteger(document.get("length"));
@@ -374,7 +406,7 @@ public final class BridgeJsonCodec {
                 throw new IllegalArgumentException("Skill chunks must be an array");
             }
             for (JsonElement raw : chunks.getAsJsonArray()) {
-                JsonObject chunk = exactObject(raw, Set.of("offset", "end", "fingerprint"));
+                JsonObject chunk = exactObject(raw, dev.openallay.util.Java8Collections.setOf("offset", "end", "fingerprint"));
                 requireInteger(chunk.get("offset"));
                 requireInteger(chunk.get("end"));
                 requireText(chunk.get("fingerprint"));

@@ -14,6 +14,13 @@ import org.lwjgl.sdl.SDLKeyboard;
 /** Native input binding for 26.3; shared handlers never own Minecraft event types. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static String getClipboard() { return net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard(); }
+    public static void setClipboard(String text) { net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(text); }
+
+    public static GuideWidgetInput widgetInput(GuiEventListener widget) {
+        return new GuideNativeWidgetInput(widget);
+    }
+
     public static InputConstants.Type keyboardType() { return InputConstants.Type.KEYBOARD; }
 
     /** Inert/probe callback payload, not evidence of physical OS dispatch. */
@@ -21,7 +28,7 @@ public final class GuideNativeInput {
     public static GuideInputKey capture(KeyEvent event) {
         return new GuideInputKey(event.key(), event.key(), event.keycode(), event.modifiers(),
                 event.isConfirmation(), event.hasShiftDown(), event.hasControlDownWithQuirk(),
-                event.isPaste(), event.isCopy(), event.isCut(), event.key() == InputConstants.KEY_ESCAPE);
+                event.isPaste(), event.isCopy(), event.isCut(), event.key() == dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE);
     }
     public static KeyEvent nativeKey(GuideInputKey event) {
         return new KeyEvent(event.key(), event.keycode(), event.modifiers());
@@ -35,7 +42,7 @@ public final class GuideNativeInput {
     }
     public static GuideInputMouse capture(MouseButtonEvent event) {
         return new GuideInputMouse(event.x(), event.y(), event.button(), event.modifiers(),
-                event.button() == InputConstants.MOUSE_BUTTON_LEFT);
+                event.button() == dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT);
     }
     public static MouseButtonEvent nativeMouse(GuideInputMouse event) {
         return new MouseButtonEvent(event.x(), event.y(), new MouseButtonInfo(event.button(), event.modifiers()));

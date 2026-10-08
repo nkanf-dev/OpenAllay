@@ -49,7 +49,7 @@ def verify_forge_shared_runtimes(archive, counts, root, original_engine):
         ("SDK", "dev.openallay", "extension-api", sdk_version, root / "extension-api/build/libs" / ("openallay-extension-api-" + sdk_version + ".jar"),
          "dev/openallay/api/", 52),
         ("Rhino", "dev.openallay", "runtime-rhino", rhino_version, root / "runtime-rhino/build/libs" / ("openallay-rhino-" + rhino_version + ".jar"),
-         "dev/latvian/mods/rhino/", 61),
+         "dev/latvian/mods/rhino/", 52),
     ]
     nested = []
     for name in counts:

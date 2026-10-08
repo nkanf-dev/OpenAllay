@@ -26,11 +26,13 @@ public final class RemoteToolServer {
                 Set<ContextCapability> capabilities,
                 String correlationId,
                 CancellationSignal cancellation);
+        default ContextProvider bind(UUID actor) { return this; }
     }
 
     @FunctionalInterface
     public interface ResponseSink {
         void send(UUID actorId, RemoteToolResultChunkPayload chunk);
+        default ResponseSink bind(UUID actor) { return this; }
     }
 
     private final ExportedToolPolicy policy;
@@ -74,8 +76,17 @@ public final class RemoteToolServer {
             return new ToolResult.Failure<>("duplicate_correlation", "Correlation ID is already active");
         }
         String requestScope = requestScope(sender, payload.sessionId());
-        RequestState request = registerRequest(sender, requestScope, cancellation);
-        contexts.capture(
+        RequestState request;
+        try { request = registerRequest(sender, requestScope, cancellation); }
+        catch (RuntimeException | Error failure) {
+            completeOriginal(sender, payload.correlationId(), cancellation);
+            cancellation.cancel();
+            throw failure;
+        }
+        try {
+            ResponseSink boundResponses = responses.bind(sender);
+            ContextProvider boundContexts = contexts.bind(sender);
+            boundContexts.capture(
                         sender,
                         tool.descriptor().requiredContext(),
                         requestScope,
@@ -86,8 +97,14 @@ public final class RemoteToolServer {
                         failureCode(throwable), safeMessage(throwable)))
                 .thenAccept(result -> {
                     request.complete(cancellation);
-                    finish(sender, payload.correlationId(), tool, result);
+                    finish(sender, payload.correlationId(), cancellation, boundResponses, tool, result);
                 });
+        } catch (RuntimeException | Error failure) {
+            request.complete(cancellation);
+            completeOriginal(sender, payload.correlationId(), cancellation);
+            cancellation.cancel();
+            throw failure;
+        }
         return new ToolResult.Success<>(new VoidResult());
     }
 
@@ -150,20 +167,27 @@ public final class RemoteToolServer {
             java.util.List<CancellationSignal> snapshot;
             synchronized (this) {
                 closed = true;
-                snapshot = java.util.List.copyOf(pending);
+                snapshot = dev.openallay.util.Java8Collections.listCopyOf(pending);
                 pending.clear();
             }
             snapshot.forEach(CancellationSignal::cancel);
         }
     }
 
-    private void finish(UUID actor, UUID correlation, Tool<?, ?> tool, ToolResult<?> result) {
-        if (!correlations.complete(actor, correlation)) {
-            return;
+    private boolean completeOriginal(UUID actor, UUID correlation, CancellationSignal original) {
+        synchronized (correlations) {
+            CorrelationRegistry.Entry entry = correlations.find(actor, correlation).orElse(null);
+            return entry != null && entry.cancellation() == original && correlations.complete(actor, correlation);
         }
+    }
+
+    private void finish(UUID actor, UUID correlation, CancellationSignal original,
+            ResponseSink boundResponses, Tool<?, ?> tool, ToolResult<?> result) {
+        if (!completeOriginal(actor, correlation, original)) return;
+        // Normalize and call retained sinks outside the registry monitor.
         String json = gson.toJson(normalizer.normalize(result, tool.descriptor().outputType()));
         new ResultChunker().split(correlation, json, transportChunkBytes)
-                .forEach(chunk -> responses.send(actor, chunk));
+                .forEach(chunk -> boundResponses.send(actor, chunk));
     }
 
     private CompletableFuture<ToolResult<?>> invoke(
@@ -180,8 +204,10 @@ public final class RemoteToolServer {
         }
         com.google.gson.JsonObject object = parsed.getAsJsonObject();
         ToolResult<?> decoded = arguments.decode(object, tool.descriptor().inputType());
-        if (decoded instanceof ToolResult.Failure<?> failure) {
-            return CompletableFuture.completedFuture(failure);
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<?>) $oaPattern0_holder.value) != null))) {
+            return CompletableFuture.completedFuture($oaPattern0_holder.bound);
         }
         cancellation.throwIfCancelled();
         return invokeTypedAsync(
@@ -218,11 +244,15 @@ public final class RemoteToolServer {
                 && current.getCause() != null) {
             current = current.getCause();
         }
-        if (current instanceof dev.openallay.script.JavascriptExecutionException failure) {
-            return failure.code();
+        final class $oaPattern1_Holder { java.lang.Throwable value; dev.openallay.script.JavascriptExecutionException bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = current) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern1_holder.bound = (dev.openallay.script.JavascriptExecutionException) $oaPattern1_holder.value) != null))) {
+            return $oaPattern1_holder.bound.code();
         }
-        if (current instanceof dev.openallay.model.ModelClientException failure) {
-            return failure.failure().code();
+        final class $oaPattern2_Holder { java.lang.Throwable value; dev.openallay.model.ModelClientException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = current) instanceof dev.openallay.model.ModelClientException && (($oaPattern2_holder.bound = (dev.openallay.model.ModelClientException) $oaPattern2_holder.value) != null))) {
+            return $oaPattern2_holder.bound.failure().code();
         }
         return "remote_tool_failure";
     }
@@ -231,5 +261,26 @@ public final class RemoteToolServer {
         return actorId + "/" + requestId;
     }
 
-    public record VoidResult() {}
+    @dev.openallay.value.ValueType(VoidResult.ValueSchemaProvider.class)
+public static final class VoidResult {
+    public VoidResult() {
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof VoidResult)) return false;
+        VoidResult that = (VoidResult) other;
+        return true;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        return hash;
+    }
+    @Override public String toString() { return "VoidResult[]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<VoidResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(VoidResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VoidResult>>asList(), arguments -> new VoidResult());
+        }
+    }
+}
 }

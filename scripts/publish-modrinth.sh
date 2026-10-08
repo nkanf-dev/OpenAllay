@@ -37,6 +37,20 @@ if [[ -n "${OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY:-}" ]]; then
   publication_arguments+=(--build-receipt-directory "$OPENALLAY_MINECRAFT_BUILD_RECEIPT_DIRECTORY")
 fi
 publication_records=$(python3 "$repository/scripts/build-minecraft-artifacts.py" "${publication_arguments[@]}")
+# Channel policy belongs to reviewed source. Verify the entire stage, then select
+# only real single-mod JARs, including the stock Forge 1.12.2 Java8 product.
+publication_records=$(python3 - "$repository" "$distribution" "$tag" "$publication_records" <<'PY'
+import json
+from pathlib import Path
+import sys
+root, directory, tag, records = sys.argv[1:]
+sys.path.insert(0, str(Path(root) / "scripts"))
+from release_publication import select_records
+selected = select_records(Path(root), Path(directory), json.loads(records), tag, "modrinth")
+print(json.dumps(selected, separators=(",", ":")))
+PY
+)
+
 
 api=https://api.modrinth.com/v2
 slug=openallay
@@ -187,8 +201,10 @@ sha512 = hashlib.sha512(Path(artifact).read_bytes()).hexdigest()
 for item in matching:
     if (sorted(item.get("game_versions", [])) != sorted(json.loads(targets))
             or item.get("loaders") != [loader]
-            or not any(file.get("filename") == Path(artifact).name and file.get("hashes", {}).get("sha512") == sha512
-                       for file in item.get("files", []))):
+            or len(item.get("files", [])) != 1
+            or item["files"][0].get("primary") is not True
+            or item["files"][0].get("filename") != Path(artifact).name
+            or item["files"][0].get("hashes", {}).get("sha512") != sha512):
         raise SystemExit(2)
 raise SystemExit(0)
 PY

@@ -23,7 +23,7 @@ public final class RequirementEvaluator {
 
     private static void evaluate(List<RequirementAssessment> result, RequirementKind kind,
             Set<String> ids, Map<String, RequirementAvailability> available) {
-        for (String id : ids.stream().sorted().toList()) {
+        for (String id : dev.openallay.util.Java8Collections.toList(ids.stream().sorted())) {
             RequirementAvailability value = available.get(id);
             result.add(value == null
                     ? new RequirementAssessment(kind, id, id,

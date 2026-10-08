@@ -1,10 +1,12 @@
 package dev.openallay.client.gui;
 
+import dev.openallay.platform.minecraft.MinecraftComponents;
+
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.Button;
+import dev.openallay.client.gui.GuideNativeButton;
 import dev.openallay.client.gui.GuideTooltip;
-import net.minecraft.network.chat.Component;
+
 
 /** A compact pixel-style button that keeps Minecraft's input and narration behavior. */
 public final class OpenAllayButton extends GuideNativeButton {
@@ -18,15 +20,15 @@ public final class OpenAllayButton extends GuideNativeButton {
             int y,
             int width,
             int height,
-            Component message,
-            OnPress onPress,
+            net.minecraft.network.chat.Component message,
+            java.util.function.Consumer<OpenAllayButton> onPress,
             GuideButtonNarration createNarration,
             boolean selected) {
         super(x, y, width, height, message, onPress, createNarration);
         this.selected = selected;
     }
 
-    public static Builder create(Component message, OnPress onPress) {
+    public static Builder create(net.minecraft.network.chat.Component message, java.util.function.Consumer<OpenAllayButton> onPress) {
         return new Builder(message, onPress);
     }
 
@@ -45,7 +47,7 @@ public final class OpenAllayButton extends GuideNativeButton {
             int mouseY,
             float partialTick) {
         OpenAllayWidgetTheme.ButtonVisualState state = OpenAllayWidgetTheme.buttonState(
-                active, isHovered(), isFocused(), selected);
+                active, isGuideHovered(), isFocused(), selected);
         OpenAllayWidgetTheme.ButtonColors colors = OpenAllayWidgetTheme.buttonColors(state);
         int x = getX();
         int y = getY();
@@ -73,12 +75,12 @@ public final class OpenAllayButton extends GuideNativeButton {
                     colors.marker());
         }
 
-        paintGuideButtonLabel(graphics, getMessage().copy().withStyle(getMessage().getStyle().withColor(colors.text())), 4);
+        paintGuideButtonLabel(graphics, MinecraftComponents.style(MinecraftComponents.copy(getMessage()), GuideNativeTextStyle.color(getMessage().getStyle(), colors.text())), 4);
     }
 
     public static final class Builder {
-        private final Component message;
-        private final OnPress onPress;
+        private final net.minecraft.network.chat.Component message;
+        private final java.util.function.Consumer<OpenAllayButton> onPress;
         private GuideTooltip tooltip;
         private int x;
         private int y;
@@ -87,7 +89,7 @@ public final class OpenAllayButton extends GuideNativeButton {
         private GuideButtonNarration createNarration = GuideButtonNarration.DEFAULT;
         private boolean selected;
 
-        private Builder(Component message, OnPress onPress) {
+        private Builder(net.minecraft.network.chat.Component message, java.util.function.Consumer<OpenAllayButton> onPress) {
             this.message = Objects.requireNonNull(message, "message");
             this.onPress = Objects.requireNonNull(onPress, "onPress");
         }

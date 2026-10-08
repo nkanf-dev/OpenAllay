@@ -38,16 +38,16 @@ final class AnthropicStreamAccumulator {
         JsonObject root = dev.openallay.json.JsonTrees.parse(event.data()).getAsJsonObject();
         String type = root.has("type") ? root.get("type").getAsString() : event.event();
         switch (type) {
-            case "message_start" -> messageStart(root.getAsJsonObject("message"));
-            case "content_block_start" -> blockStart(
-                    root.get("index").getAsInt(), root.getAsJsonObject("content_block"));
-            case "content_block_delta" -> blockDelta(
-                    root.get("index").getAsInt(), root.getAsJsonObject("delta"));
-            case "content_block_stop" -> blockStop(root.get("index").getAsInt());
-            case "message_delta" -> messageDelta(root);
-            case "message_stop", "ping" -> {}
-            case "error" -> throw new IllegalArgumentException("Anthropic SSE error event");
-            default -> throw new IllegalArgumentException("Unknown Anthropic SSE event: " + type);
+            case "message_start": messageStart(root.getAsJsonObject("message")); break;
+            case "content_block_start": blockStart(
+                    root.get("index").getAsInt(), root.getAsJsonObject("content_block")); break;
+            case "content_block_delta": blockDelta(
+                    root.get("index").getAsInt(), root.getAsJsonObject("delta")); break;
+            case "content_block_stop": blockStop(root.get("index").getAsInt()); break;
+            case "message_delta": messageDelta(root); break;
+            case "message_stop": case "ping": break;
+            case "error": throw new IllegalArgumentException("Anthropic SSE error event");
+            default: throw new IllegalArgumentException("Unknown Anthropic SSE event: " + type);
         }
     }
 
@@ -94,19 +94,21 @@ final class AnthropicStreamAccumulator {
         Block block = requiredBlock(index);
         String type = delta.get("type").getAsString();
         switch (type) {
-            case "text_delta" -> {
+            case "text_delta": {
                 String text = delta.get("text").getAsString();
                 block.value.append(text);
                 events.accept(new ModelEvent.TextDelta(text));
+                break;
             }
-            case "thinking_delta" -> {
+            case "thinking_delta": {
                 String text = delta.get("thinking").getAsString();
                 block.value.append(text);
                 events.accept(new ModelEvent.ReasoningDelta(text));
+                break;
             }
-            case "signature_delta" -> block.signature = delta.get("signature").getAsString();
-            case "input_json_delta" -> block.value.append(delta.get("partial_json").getAsString());
-            default -> throw new IllegalArgumentException("Unknown Anthropic delta: " + type);
+            case "signature_delta": block.signature = delta.get("signature").getAsString(); break;
+            case "input_json_delta": block.value.append(delta.get("partial_json").getAsString()); break;
+            default: throw new IllegalArgumentException("Unknown Anthropic delta: " + type);
         }
     }
 
@@ -160,7 +162,7 @@ final class AnthropicStreamAccumulator {
     }
 
     private static JsonObject optionalUsage(JsonObject object) {
-        var value = object.get("usage");
+        com.google.gson.JsonElement value = object.get("usage");
         return value == null || value.isJsonNull() ? null : value.getAsJsonObject();
     }
 
@@ -180,17 +182,17 @@ final class AnthropicStreamAccumulator {
         }
 
         private ModelContent toContent() {
-            return switch (type) {
-                case "text" -> new ModelContent.Text(value.toString());
-                case "thinking" -> new ModelContent.Reasoning(value.toString(), signature);
-                case "tool_use" -> new ModelContent.ToolUse(
+            switch (type) {
+                case "text": return new ModelContent.Text(value.toString());
+                case "thinking": return new ModelContent.Reasoning(value.toString(), signature);
+                case "tool_use": return new ModelContent.ToolUse(
                         id,
                         name,
-                        value.isEmpty()
+                        value.length() == 0
                                 ? new JsonObject()
                                 : dev.openallay.json.JsonTrees.parse(value.toString()).getAsJsonObject());
-                default -> throw new IllegalArgumentException("Unsupported Anthropic block: " + type);
-            };
+                default: throw new IllegalArgumentException("Unsupported Anthropic block: " + type);
+            }
         }
     }
 }

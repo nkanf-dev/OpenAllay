@@ -140,7 +140,7 @@ public final class CommandCapabilityRuntime {
      * while one command for that actor is awaiting feedback.
      */
     public void acceptFeedback(UUID actorId, String message) {
-        if (actorId == null || message == null || message.isBlank()) {
+        if (actorId == null || message == null || dev.openallay.util.Java8Strings.isBlank(message)) {
             return;
         }
         PendingFeedback pending = pendingFeedback.get(actorId);
@@ -186,11 +186,11 @@ public final class CommandCapabilityRuntime {
                 throw new JavascriptExecutionException(
                         "command_invalid", "commands.run requires one command string");
             }
-            String command = source.strip();
+            String command = dev.openallay.util.Java8Strings.strip(source);
             if (command.startsWith("/")) {
                 command = command.substring(1);
             }
-            if (command.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(command)) {
                 throw new JavascriptExecutionException(
                         "command_invalid", "commands.run requires one command string");
             }
@@ -275,14 +275,20 @@ public final class CommandCapabilityRuntime {
             throw failure;
         } catch (RuntimeException | java.util.concurrent.ExecutionException failure) {
             Throwable cause = failure.getCause();
-            if (cause instanceof dev.openallay.model.ModelClientException cancelled) {
-                throw cancelled;
+            final class $oaPattern0_Holder { java.lang.Throwable value; dev.openallay.model.ModelClientException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern0_holder.bound = (dev.openallay.model.ModelClientException) $oaPattern0_holder.value) != null))) {
+                throw $oaPattern0_holder.bound;
             }
-            if (cause instanceof JavascriptExecutionException rejected) {
-                throw rejected;
+            final class $oaPattern1_Holder { java.lang.Throwable value; JavascriptExecutionException bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern1_holder.bound = (JavascriptExecutionException) $oaPattern1_holder.value) != null))) {
+                throw $oaPattern1_holder.bound;
             }
-            if (failure instanceof JavascriptExecutionException rejected) {
-                throw rejected;
+            final class $oaPattern2_Holder { java.lang.Exception value; JavascriptExecutionException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = failure) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern2_holder.bound = (JavascriptExecutionException) $oaPattern2_holder.value) != null))) {
+                throw $oaPattern2_holder.bound;
             }
             throw new JavascriptExecutionException(
                     "command_submission_failed",
@@ -327,10 +333,10 @@ public final class CommandCapabilityRuntime {
                 long now = System.nanoTime();
                 if (!messages.isEmpty()
                         && now - lastMessageNanos >= quietNanos) {
-                    return List.copyOf(messages);
+                    return dev.openallay.util.Java8Collections.listCopyOf(messages);
                 }
                 if (now >= deadlineNanos) {
-                    return List.copyOf(messages);
+                    return dev.openallay.util.Java8Collections.listCopyOf(messages);
                 }
                 long remainingNanos = messages.isEmpty()
                         ? deadlineNanos - now
@@ -353,7 +359,7 @@ public final class CommandCapabilityRuntime {
     }
 
     private static void requireCorrelation(String correlationId) {
-        if (correlationId == null || correlationId.isBlank()) {
+        if (correlationId == null || dev.openallay.util.Java8Strings.isBlank(correlationId)) {
             throw new IllegalArgumentException("correlationId must not be blank");
         }
     }

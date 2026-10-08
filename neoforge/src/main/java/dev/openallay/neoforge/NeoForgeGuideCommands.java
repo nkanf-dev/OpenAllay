@@ -3,87 +3,64 @@ package dev.openallay.neoforge;
 import static com.mojang.brigadier.arguments.StringArgumentType.getString;
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 import static com.mojang.brigadier.arguments.StringArgumentType.word;
-import static net.minecraft.commands.Commands.argument;
-import static net.minecraft.commands.Commands.literal;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import dev.openallay.command.CommandArgument;
+import dev.openallay.command.GuideCommandSpec;
 import dev.openallay.guide.GuideCommandFacade;
-import dev.openallay.guide.GuideModelMode;
-import dev.openallay.guide.GuideNotice;
-import java.util.UUID;
-import java.util.function.Consumer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.commands.CommandSourceStack;
-import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.function.Function;
 
 public final class NeoForgeGuideCommands {
     private NeoForgeGuideCommands() {}
 
     public static void register(GuideCommandFacade guide) {
-        NeoForgeNativeCommandRegistration.client(dispatcher -> dispatcher.register(
-                literal("guide")
-                        .executes(context -> invoke(context.getSource(), sink -> guide.open(actor(), sink)))
-                        .then(literal("cancel").executes(context -> invoke(
-                                context.getSource(), sink -> guide.cancel(actor(), sink))))
-                        .then(literal("retry").executes(context -> invoke(
-                                context.getSource(), sink -> guide.retry(actor(), sink))))
-                        .then(literal("clear").executes(context -> invoke(
-                                context.getSource(), sink -> guide.clear(actor(), sink))))
-                        .then(literal("status").executes(context -> invoke(
-                                context.getSource(), sink -> guide.status(actor(), sink))))
-                        .then(literal("skills").executes(context -> invoke(
-                                context.getSource(), guide::skills)))
-                        .then(literal("sources").executes(context -> invoke(
-                                context.getSource(), guide::sources)))
-                        .then(literal("model")
-                                .then(literal("list").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.models(actor(), sink))))
-                                .then(literal("profile").then(argument("id", word()).executes(
-                                        context -> invoke(context.getSource(), sink -> guide.modelProfile(
-                                                actor(), getString(context, "id"), sink)))))
-                                .then(literal("client").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.model(
-                                                actor(), GuideModelMode.CLIENT, sink))))
-                                .then(literal("server").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.model(
-                                                actor(), GuideModelMode.SERVER, sink)))))
-                        .then(literal("session")
-                                .then(literal("list").executes(context -> invoke(
-                                        context.getSource(), sink -> guide.sessions(actor(), sink))))
-                                .then(literal("new").then(argument("id", word()).executes(context -> invoke(
-                                        context.getSource(), sink -> guide.select(
-                                                actor(), getString(context, "id"), sink)))))
-                                .then(literal("switch").then(argument("id", word()).executes(context -> invoke(
-                                        context.getSource(), sink -> guide.select(
-                                                actor(), getString(context, "id"), sink)))))
-                                .then(literal("close").then(argument("id", word()).executes(context -> invoke(
-                                        context.getSource(), sink -> guide.close(
-                                                actor(), getString(context, "id"), sink))))))
-                        .then(literal("ask").then(argument("question", greedyString()).executes(context -> invoke(
-                                context.getSource(), sink -> guide.ask(
-                                        actor(), getString(context, "question"), sink)))))
-                        .then(argument("question", greedyString()).executes(context -> invoke(
-                                context.getSource(), sink -> guide.ask(
-                                        actor(), getString(context, "question"), sink))))));
+        NeoForgeNativeGuideCommandRegistration.register(guide);
     }
 
-    private static int invoke(
-            CommandSourceStack source,
-            Consumer<Consumer<GuideNotice>> operation) {
-        operation.accept(notice -> publish(source, notice));
-        return 1;
+    /** Project the shared finite grammar onto the real execution source. */
+    public static <S> LiteralArgumentBuilder<S> tree(
+            GuideCommandFacade guide, Function<S, GuideCommandSource> source) {
+        return project(guide, source, List.of(), GuideCommandSpec.ROOT);
     }
 
-    private static UUID actor() {
-        return java.util.Objects.requireNonNull(Minecraft.getInstance().player).getUUID();
-    }
-
-    private static void publish(CommandSourceStack source, GuideNotice notice) {
-        Component message = MinecraftComponents.literal("[OpenAllay] " + notice.message());
-        if (notice.level() == GuideNotice.Level.ERROR) {
-            source.sendFailure(message);
-        } else {
-            dev.openallay.context.minecraft.MinecraftCommandFeedback.success(source, () -> message, false);
+    private static <S> LiteralArgumentBuilder<S> project(
+            GuideCommandFacade guide, Function<S, GuideCommandSource> source,
+            List<String> prefix, String literal) {
+        LiteralArgumentBuilder<S> node = LiteralArgumentBuilder.literal(literal);
+        LinkedHashSet<String> children = new LinkedHashSet<>();
+        for (GuideCommandSpec.Route route : GuideCommandSpec.routes()) {
+            if (route.literals().size() > prefix.size()
+                    && route.literals().subList(0, prefix.size()).equals(prefix)) {
+                children.add(route.literals().get(prefix.size()));
+            }
         }
+        for (String child : children) {
+            List<String> path = new ArrayList<>(prefix);
+            path.add(child);
+            node.then(project(guide, source, path, child));
+        }
+        for (GuideCommandSpec.Route route : GuideCommandSpec.routes()) {
+            if (!route.literals().equals(prefix)) continue;
+            if (route.argument() == CommandArgument.NONE) {
+                node.executes(context -> dispatch(guide, source.apply(context.getSource()), route, null));
+            } else {
+                String name = route.argument().argumentName();
+                node.then(RequiredArgumentBuilder.<S, String>argument(name,
+                        route.argument().kind() == CommandArgument.Kind.WORD ? word() : greedyString())
+                        .executes(context -> dispatch(guide, source.apply(context.getSource()), route,
+                                getString(context, name))));
+            }
+        }
+        return node;
+    }
+
+    private static int dispatch(
+            GuideCommandFacade guide, GuideCommandSource source,
+            GuideCommandSpec.Route route, String value) {
+        return GuideCommandSpec.dispatch(guide, route.action(), value, source::actor, source::publish);
     }
 }

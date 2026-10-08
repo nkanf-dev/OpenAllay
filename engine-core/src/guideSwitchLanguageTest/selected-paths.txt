@@ -1,0 +1,2 @@
+dev/openallay/guide/ui/GuideEvidencePresentation.java
+dev/openallay/settings/ClientSettingsService.java

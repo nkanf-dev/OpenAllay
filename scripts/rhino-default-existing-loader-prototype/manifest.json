@@ -1,0 +1,60 @@
+{
+  "scope": "PROTOTYPEONLYlegitimateexistinggenerator/loader childinterface ownLookup; no productiondefaultrewrite",
+  "base_api_packet_sha256": "bbef0bb3cef82abecef37ce260325986578dc6318c2fc7344101733916e40b92",
+  "verification_source_deltas": [
+    {
+      "path": "dev/latvian/mods/rhino/classfile/ClassFileWriter.java",
+      "pre_bytes": 129687,
+      "pre_sha256": "69dc5d60d3d8d4beaa049a6d614a4f548f4ebfb830523767d023e2817eb63bcf",
+      "post_bytes": 130415,
+      "post_sha256": "1fefdcc8453f2ece6d04cab7a5914d79b891d1513cc537a7633ada5c4ba96ca1"
+    }
+  ],
+  "observable_changes": [
+    "sameJdkProxyadditionalgeneratedchildinterface",
+    "existingcanonicalgeneratedloaderparent; no newloaderclass",
+    "proxyclass/name differ"
+  ],
+  "class_major_required_before_load": 52,
+  "source_count": 277,
+  "localJavaCompile": false,
+  "fullRuntimeJava8Acceptance": false,
+  "base_public_reflection_seam_patch_sha256": "4d4dbb5e1ac8a0ea9891dcb61a5ff6c6844e180fc0a070ee45bf6720e37492b5",
+  "files": [
+    {
+      "path": "run-prototype.py",
+      "bytes": 3226,
+      "sha256": "194ec506435ec3f0bda70cb21a37194cbd9cd846e26648dc9080f7fb7ee28b40"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1510,
+      "sha256": "24eeea23ad6896fd1166044a62f5cea39b215acfd9012e42bee53f76a9d56dee"
+    },
+    {
+      "path": "ExistingLoaderDefaultPrototype.java",
+      "bytes": 5531,
+      "sha256": "c20857e9114fbdfd4b1190465795b4ff93ecd60024589ae638f745912a8a8e4c"
+    },
+    {
+      "path": "post/dev/latvian/mods/rhino/VMBridge.java",
+      "bytes": 10463,
+      "sha256": "f3ffa4275f2926a9080eb21532b3c4b36e84a5ded5f849023fe6c1a9d57f25bd"
+    },
+    {
+      "path": "post/dev/latvian/mods/rhino/classfile/ClassFileWriter.java",
+      "bytes": 130415,
+      "sha256": "1fefdcc8453f2ece6d04cab7a5914d79b891d1513cc537a7633ada5c4ba96ca1"
+    },
+    {
+      "path": "pre/dev/latvian/mods/rhino/VMBridge.java",
+      "bytes": 9978,
+      "sha256": "c2c02a1da8659080e09d616f5c058c12c2bad2c2120839761889a672f9b33fe5"
+    },
+    {
+      "path": "pre/dev/latvian/mods/rhino/classfile/ClassFileWriter.java",
+      "bytes": 129687,
+      "sha256": "69dc5d60d3d8d4beaa049a6d614a4f548f4ebfb830523767d023e2817eb63bcf"
+    }
+  ]
+}

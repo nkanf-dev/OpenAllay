@@ -169,7 +169,7 @@ final class ClientArchitectureTest {
         assertTrue(coordinator.contains("voice.input().setFeedbackVisible(feedback)"));
         assertTrue(host.contains("screen instanceof OpenAllayScreen ? Surface.GUIDE"));
         assertTrue(host.contains("screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT"));
-        assertTrue(host.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(host.contains("GuideNativeKeyMappings.down(OpenAllayKeyMappings.VOICE_PTT)"));
         assertTrue(coordinator.contains("voice.input().pressPtt()"));
         assertTrue(coordinator.contains("voice.input().release()"));
         assertTrue(coordinator.contains("voice.input().tick(current.windowActive(), current.connected(), physicalDown, feedback)"));
@@ -205,7 +205,11 @@ final class ClientArchitectureTest {
         assertTrue(disconnect.indexOf("closeState()") < disconnect.indexOf("voice.input().cancel("));
         assertTrue(disconnect.contains("pttDown = false"));
         assertTrue(facade.contains("public void disconnect() { presentation.disconnect(); }"));
-        assertTrue(facade.contains("public void close() { presentation.close(); }"));
+        String facadeClose = facade.substring(facade.indexOf("@Override public void close()"));
+        assertTrue(facadeClose.contains("if (releaseResourceReload != null) releaseResourceReload.run()"));
+        assertTrue(facadeClose.contains("presentation.close()"));
+        assertTrue(facadeClose.indexOf("releaseResourceReload.run()") < facadeClose.indexOf("presentation.close()"),
+                "Native reload binding is released before the canonical presentation closes");
 
         String fabricClient = Files.readString(entrypoints.getFirst());
         assertTrue(fabricClient.contains("FabricNativeHudRegistration.register(ui)"));
@@ -219,7 +223,7 @@ final class ClientArchitectureTest {
         String neoForgeClient = Files.readString(entrypoints.get(1));
         String neoForgeLifecycle = Files.readString(root.resolve(
                 "neoforge/src/main/java/dev/openallay/neoforge/NeoForgeNativeClientLifecycle.java"));
-        assertTrue(neoForgeClient.contains("NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client))"));
+        assertTrue(neoForgeClient.contains("NeoForgeNativeClientLifecycle.onStarted(client -> start(runtime, bridge, client, resourceReloadRegistration))"));
         assertTrue(neoForgeLifecycle.contains("(ClientStartedEvent event) -> started.accept(event.getClient())"));
         String neoHud = Files.readString(root.resolve(
                 "neoforge/src/main/java/dev/openallay/neoforge/NeoForgeNativeHudRegistration.java"));
@@ -233,18 +237,29 @@ final class ClientArchitectureTest {
         assertTrue(neoForgeClient.contains("coordinator.tick()"));
         assertTrue(neoForgeClient.contains("coordinator.disconnect()"));
         assertTrue(neoForgeClient.contains("coordinator.close()"));
-        assertTrue(neoForgeClient.contains("start(runtime, bridge, client)"));
+        assertTrue(neoForgeClient.contains("start(runtime, bridge, client, resourceReloadRegistration)"));
+        assertTrue(neoForgeClient.contains("NeoForgeNativeResourceReloadRegistration.install()"));
+        assertTrue(neoForgeClient.indexOf("NeoForgeNativeResourceReloadRegistration.install()")
+                < neoForgeClient.indexOf("NeoForgeNativeClientLifecycle.onStarted("),
+                "Actual native reload binding is installed before the same client runtime starts");
+        assertTrue(neoForgeClient.contains("new GuideClientUiCoordinator("));
+        assertTrue(neoForgeClient.contains("resourceReloadRegistration)"));
         assertTrue(neoForgeClient.indexOf("new MinecraftGuideHistoryScope(client)")
                 > neoForgeClient.indexOf("private static void start("));
 
         List<Path> commands = List.of(
                 root.resolve("fabric/src/main/java/dev/openallay/fabric/FabricGuideCommands.java"),
                 root.resolve("neoforge/src/main/java/dev/openallay/neoforge/NeoForgeGuideCommands.java"));
-        for (Path command : commands) {
-            String source = Files.readString(command);
-            assertTrue(source.contains("literal(\"profile\")"), command::toString);
-            assertTrue(source.contains("guide.modelProfile("), command::toString);
-        }
+        String fabricCommands = Files.readString(commands.get(0));
+        assertTrue(fabricCommands.contains("literal(\"profile\")"));
+        assertTrue(fabricCommands.contains("guide.modelProfile("));
+        String neoCommands = Files.readString(commands.get(1));
+        assertTrue(neoCommands.contains("GuideCommandSpec.routes()"));
+        assertTrue(neoCommands.contains("GuideCommandSpec.dispatch(guide, route.action(), value, source::actor, source::publish)"));
+        String sharedCommands = Files.readString(root.resolve(
+                "engine-core/src/main/java/dev/openallay/command/GuideCommandSpec.java"));
+        assertTrue(sharedCommands.contains("route(Action.MODEL_PROFILE, CommandArgument.ID_WORD, \"model\", \"profile\")"));
+        assertTrue(sharedCommands.contains("guide.modelProfile(actor.get(), value, notices)"));
 
         String protocol = Files.readString(root.resolve(
                 "engine-core/src/main/java/dev/openallay/bridge/protocol/BridgeProtocol.java"));

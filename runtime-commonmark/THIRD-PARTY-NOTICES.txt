@@ -1,0 +1,12 @@
+CommonMark Java core and GFM tables
+Upstream: https://github.com/commonmark/commonmark-java
+Source publications: org.commonmark:commonmark:0.28.0:sources and
+org.commonmark:commonmark-ext-gfm-tables:0.28.0:sources from Maven Central.
+Copyright (c) 2015, Atlassian Pty Ltd. All rights reserved.
+License: BSD-2-Clause. The full original notices are included in core-LICENSE.txt
+and tables-LICENSE.txt in META-INF/licenses/commonmark in the runtime and sources JARs.
+OpenAllay changes: explicit Java8 local types, immutable collection factory
+compatibility, and omission of JPMS descriptors for ordinary Java8 packaging.
+All parser, source-span, table, and renderer algorithms remain upstream code.
+The complete modified source is published in the matching sources JAR, with
+upstream source identities and the applied source patch.

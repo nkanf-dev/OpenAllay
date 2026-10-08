@@ -38,10 +38,10 @@ public final class SkillInstructionContext {
 
     public SkillInstructionContext(SkillCatalogManifest manifest) {
         Map<String, SkillCatalogManifest.Document> captured = new HashMap<>();
-        for (var document : manifest.documents()) {
+        for (dev.openallay.skill.SkillCatalogManifest.Document document : manifest.documents()) {
             captured.put(id(document.name(), document.document()), document);
         }
-        documents = Map.copyOf(captured);
+        documents = dev.openallay.util.Java8Collections.mapCopyOf(captured);
     }
 
     public List<ModelMessage> refresh(List<ModelMessage> messages) {
@@ -60,8 +60,9 @@ public final class SkillInstructionContext {
             List<ModelContent> content = new ArrayList<>(message.content().size());
             boolean changed = false;
             for (ModelContent item : message.content()) {
-                Parsed parsed = item instanceof ModelContent.ToolResult result ? scan.loads().get(result) : null;
-                if (item instanceof ModelContent.ToolResult result && scan.loads().containsKey(result)) {
+                ModelContent.ToolResult result = item instanceof ModelContent.ToolResult ? (ModelContent.ToolResult) item : null;
+                Parsed parsed = result == null ? null : scan.loads().get(result);
+                if (result != null && scan.loads().containsKey(result)) {
                     String replacement = null;
                     if (parsed == null || (parsed.state() == LoadSkillTool.LoadState.ALREADY_LOADED
                             && !present.contains(parsed.range()))) {
@@ -84,7 +85,7 @@ public final class SkillInstructionContext {
             }
             refreshed.add(changed ? new ModelMessage(message.role(), content, message.inputObservation()) : message);
         }
-        return List.copyOf(refreshed);
+        return dev.openallay.util.Java8Collections.listCopyOf(refreshed);
     }
 
     /** The session index is reconciled at complete model-message boundaries only. */
@@ -103,7 +104,7 @@ public final class SkillInstructionContext {
         int start = systemPrompt.indexOf(marker);
         if (start >= 0) {
             start += marker.length();
-            var document = documents.get(id(SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT, "SKILL.md"));
+            dev.openallay.skill.SkillCatalogManifest.Document document = documents.get(id(SkillCatalogSnapshot.UNRESTRICTED_JAVASCRIPT, "SKILL.md"));
             if (document != null && start + document.length() <= systemPrompt.length()) {
                 int end = start + document.length();
                 String text = systemPrompt.substring(start, end);
@@ -119,15 +120,15 @@ public final class SkillInstructionContext {
 
     public String manifest(RetainedSkillContext retained) {
         StringBuilder facts = new StringBuilder();
-        var byDocument = retained.ranges().stream().collect(java.util.stream.Collectors.groupingBy(
+        java.util.Map<dev.openallay.skill.RetainedSkillContext.Key, java.util.List<dev.openallay.skill.RetainedSkillContext.Range>> byDocument = retained.ranges().stream().collect(java.util.stream.Collectors.groupingBy(
                 RetainedSkillContext.Range::key));
-        for (var key : byDocument.keySet().stream()
+        for (dev.openallay.skill.RetainedSkillContext.Key key : dev.openallay.util.Java8Collections.toList(byDocument.keySet().stream()
                 .sorted(java.util.Comparator.comparing(RetainedSkillContext.Key::skill)
-                        .thenComparing(RetainedSkillContext.Key::document)).toList()) {
-            var document = documents.get(id(key.skill(), key.document()));
+                        .thenComparing(RetainedSkillContext.Key::document)))) {
+            dev.openallay.skill.SkillCatalogManifest.Document document = documents.get(id(key.skill(), key.document()));
             if (document == null || !document.key().equals(key)) continue;
-            List<RetainedSkillContext.Range> ranges = byDocument.get(key).stream()
-                    .sorted(java.util.Comparator.comparingInt(RetainedSkillContext.Range::offset)).toList();
+            List<RetainedSkillContext.Range> ranges = dev.openallay.util.Java8Collections.toList(byDocument.get(key).stream()
+                    .sorted(java.util.Comparator.comparingInt(RetainedSkillContext.Range::offset)));
             facts.append(document.name()).append(" / ").append(document.document()).append(": ");
             if (retained.contains(document.key(), 0, document.length())) {
                 facts.append("full");
@@ -135,7 +136,7 @@ public final class SkillInstructionContext {
                 facts.append("partial [");
                 facts.append(ranges.stream().map(range -> range.offset() + ".." + range.end())
                         .distinct().collect(java.util.stream.Collectors.joining(", "))).append(']');
-                var missing = document.chunks().stream()
+                dev.openallay.skill.SkillCatalogManifest.Chunk missing = document.chunks().stream()
                         .filter(chunk -> !retained.contains(document.key(), chunk.offset(), chunk.end()))
                         .findFirst().orElse(null);
                 if (missing != null) {
@@ -150,16 +151,16 @@ public final class SkillInstructionContext {
             }
             facts.append('\n');
         }
-        return facts.isEmpty() ? "" : "## Loaded Skill documents in current model context\n" + facts;
+        return facts.length() == 0 ? "" : "## Loaded Skill documents in current model context\n" + facts;
     }
 
     public LoadSkillTool.Output reuse(LoadSkillTool.Input input, RetainedSkillContext retained) {
         try {
-            var document = requested(input);
+            dev.openallay.skill.SkillCatalogManifest.Document document = requested(input);
             if (document == null) return null;
             int offset = LoadSkillTool.decodeCursor(input.cursor(), document.name(),
                     document.document(), document.source(), document.fingerprint());
-            var chunk = document.chunkAt(offset);
+            dev.openallay.skill.SkillCatalogManifest.Chunk chunk = document.chunkAt(offset);
             if (chunk == null || !retained.contains(document.key(), offset, chunk.end())) return null;
             return receipt(document, offset);
         } catch (IllegalArgumentException malformed) {
@@ -170,12 +171,12 @@ public final class SkillInstructionContext {
     /** Remote result validation uses the client's frozen catalog, never a server document body. */
     public boolean validate(LoadSkillTool.Input input, LoadSkillTool.Output output) {
         try {
-            var document = requested(input);
+            dev.openallay.skill.SkillCatalogManifest.Document document = requested(input);
             if (document == null || !document.key().equals(new RetainedSkillContext.Key(
                     output.name(), output.document(), output.source(), output.fingerprint()))) return false;
             int offset = LoadSkillTool.decodeCursor(input.cursor(), document.name(),
                     document.document(), document.source(), document.fingerprint());
-            var chunk = document.chunkAt(offset);
+            dev.openallay.skill.SkillCatalogManifest.Chunk chunk = document.chunkAt(offset);
             if (chunk == null || output.offset() != offset || output.nextOffset() != chunk.end()
                     || output.complete() != (chunk.end() == document.length())
                     || !output.nextCursor().equals(cursor(document, chunk.end()))
@@ -193,7 +194,7 @@ public final class SkillInstructionContext {
     List<LoadSkillTool.Output> deliveredRanges(List<ModelMessage> messages) {
         Scan scan = scan(messages, new RetainedSkillContext());
         List<LoadSkillTool.Output> delivered = new ArrayList<>();
-        for (var entry : scan.loads().entrySet()) {
+        for (java.util.Map.Entry<dev.openallay.model.ModelContent.ToolResult, dev.openallay.skill.SkillInstructionContext.Parsed> entry : scan.loads().entrySet()) {
             Parsed parsed = entry.getValue();
             if (parsed == null || parsed.state() == LoadSkillTool.LoadState.ALREADY_LOADED) continue;
             String text = entry.getKey().value().getAsString();
@@ -206,9 +207,9 @@ public final class SkillInstructionContext {
             delivered.add(new LoadSkillTool.Output(parsed.document().name(), parsed.document().document(),
                     parsed.document().source(), parsed.document().fingerprint(), parsed.state(), content,
                     parsed.range().offset(), parsed.range().end(), parsed.range().end() == parsed.document().length(),
-                    cursor(parsed.document(), parsed.range().end()), parsed.document().availableReferences(), List.of(), ""));
+                    cursor(parsed.document(), parsed.range().end()), parsed.document().availableReferences(), dev.openallay.util.Java8Collections.listOf(), ""));
         }
-        return List.copyOf(delivered);
+        return dev.openallay.util.Java8Collections.listCopyOf(delivered);
     }
 
     private Scan scan(List<ModelMessage> messages, RetainedSkillContext retained) {
@@ -217,11 +218,13 @@ public final class SkillInstructionContext {
         List<RetainedSkillContext.Range> ranges = new ArrayList<>();
         for (ModelMessage message : messages) {
             for (ModelContent item : message.content()) {
-                if (item instanceof ModelContent.ToolUse use && message.role() == ModelRole.ASSISTANT) {
+                if (item instanceof ModelContent.ToolUse && message.role() == ModelRole.ASSISTANT) {
+                    ModelContent.ToolUse use = (ModelContent.ToolUse) item;
                     uses.put(use.id(), use);
-                } else if (item instanceof ModelContent.ToolResult result && message.role() == ModelRole.USER
-                        && !result.error()) {
-                    var use = uses.get(result.toolUseId());
+                } else if (item instanceof ModelContent.ToolResult && message.role() == ModelRole.USER
+                        && !((ModelContent.ToolResult) item).error()) {
+                    ModelContent.ToolResult result = (ModelContent.ToolResult) item;
+                    dev.openallay.model.ModelContent.ToolUse use = uses.get(result.toolUseId());
                     if (use == null || !isLoadSkill(use.name())) continue;
                     Parsed parsed = parse(use, result, retained);
                     loads.put(result, parsed);
@@ -231,15 +234,15 @@ public final class SkillInstructionContext {
                 }
             }
         }
-        return new Scan(loads, List.copyOf(ranges));
+        return new Scan(loads, dev.openallay.util.Java8Collections.listCopyOf(ranges));
     }
 
     private Parsed parse(ModelContent.ToolUse use, ModelContent.ToolResult result, RetainedSkillContext retained) {
         try {
-            var input = input(use.input());
-            var document = requested(input);
+            dev.openallay.skill.LoadSkillTool.Input input = input(use.input());
+            dev.openallay.skill.SkillCatalogManifest.Document document = requested(input);
             if (document == null) return null;
-            var cached = retained.validated(use, result, document);
+            dev.openallay.skill.RetainedSkillContext.Range cached = retained.validated(use, result, document);
             if (cached != null) return new Parsed(document, cached,
                     cached.end() == document.length() ? LoadSkillTool.LoadState.COMPLETE : LoadSkillTool.LoadState.CONTENT);
             JsonElement value = result.value();
@@ -247,7 +250,7 @@ public final class SkillInstructionContext {
             String text = value.getAsString();
             Matcher header = HEADER.matcher(text);
             if (!header.find()) return null;
-            var state = LoadSkillTool.LoadState.valueOf(header.group(5).toUpperCase(Locale.ROOT));
+            dev.openallay.skill.LoadSkillTool.LoadState state = LoadSkillTool.LoadState.valueOf(header.group(5).toUpperCase(Locale.ROOT));
             int offset = Integer.parseInt(header.group(7));
             int end = Integer.parseInt(header.group(8));
             int contentLength = Integer.parseInt(header.group(9));
@@ -279,11 +282,11 @@ public final class SkillInstructionContext {
                         : "\nnext: call load_skill with the same name/reference and cursor " + cursor(document, end));
                 if (!body.equals(expected)) return null;
             }
-            var output = new LoadSkillTool.Output(header.group(1), header.group(2), header.group(3), header.group(4),
+            dev.openallay.skill.LoadSkillTool.Output output = new LoadSkillTool.Output(header.group(1), header.group(2), header.group(3), header.group(4),
                     state, content, offset, end, Boolean.parseBoolean(header.group(6)), cursor(document, end),
-                    document.availableReferences(), List.of(), "");
+                    document.availableReferences(), dev.openallay.util.Java8Collections.listOf(), "");
             if (!validate(input, output)) return null;
-            var range = new RetainedSkillContext.Range(document.key(), offset, end, document.length());
+            dev.openallay.skill.RetainedSkillContext.Range range = new RetainedSkillContext.Range(document.key(), offset, end, document.length());
             if (state != LoadSkillTool.LoadState.ALREADY_LOADED) retained.remember(use, result, range, document);
             return new Parsed(document, range, state);
         } catch (RuntimeException malformed) {
@@ -293,7 +296,7 @@ public final class SkillInstructionContext {
 
     private SkillCatalogManifest.Document requested(LoadSkillTool.Input input) {
         if (input == null || input.name() == null) return null;
-        String reference = input.reference() == null || input.reference().isBlank() ? "SKILL.md" : input.reference().strip();
+        String reference = input.reference() == null || dev.openallay.util.Java8Strings.isBlank(input.reference()) ? "SKILL.md" : dev.openallay.util.Java8Strings.strip(input.reference());
         return documents.get(id(input.name(), reference));
     }
 
@@ -317,15 +320,77 @@ public final class SkillInstructionContext {
                 document.name(), document.document(), document.source(), document.fingerprint(), end);
     }
     private static LoadSkillTool.Output receipt(SkillCatalogManifest.Document document, int offset) {
-        var chunk = document.chunkAt(offset);
+        dev.openallay.skill.SkillCatalogManifest.Chunk chunk = document.chunkAt(offset);
         return new LoadSkillTool.Output(document.name(), document.document(), document.source(), document.fingerprint(),
                 LoadSkillTool.LoadState.ALREADY_LOADED, "", offset, chunk.end(), chunk.end() == document.length(),
-                cursor(document, chunk.end()), document.availableReferences(), List.of(), "");
+                cursor(document, chunk.end()), document.availableReferences(), dev.openallay.util.Java8Collections.listOf(), "");
     }
     private static boolean isLoadSkill(String name) {
         String normalized = name.toLowerCase(Locale.ROOT);
         return normalized.equals("load_skill") || normalized.endsWith(":load_skill") || normalized.endsWith("__load_skill");
     }
-    private record Parsed(SkillCatalogManifest.Document document, RetainedSkillContext.Range range, LoadSkillTool.LoadState state) {}
-    private record Scan(Map<ModelContent.ToolResult, Parsed> loads, List<RetainedSkillContext.Range> ranges) {}
+    @dev.openallay.value.ValueType(Parsed.ValueSchemaProvider.class)
+private static final class Parsed {
+    private final SkillCatalogManifest.Document document;
+    private final RetainedSkillContext.Range range;
+    private final LoadSkillTool.LoadState state;
+    private Parsed(SkillCatalogManifest.Document document, RetainedSkillContext.Range range, LoadSkillTool.LoadState state) {
+        this.document = document;
+        this.range = range;
+        this.state = state;
+    }
+    public SkillCatalogManifest.Document document() { return document; }
+    public RetainedSkillContext.Range range() { return range; }
+    public LoadSkillTool.LoadState state() { return state; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Parsed)) return false;
+        Parsed that = (Parsed) other;
+        return java.util.Objects.equals(document, that.document) && java.util.Objects.equals(range, that.range) && java.util.Objects.equals(state, that.state);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        hash = 31 * hash + java.util.Objects.hashCode(range);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        return hash;
+    }
+    @Override public String toString() { return "Parsed[document=" + document + ", range=" + range + ", state=" + state + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Parsed> schema() {
+            return new dev.openallay.value.ValueSchema<>(Parsed.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Parsed>>asList(new dev.openallay.value.ValueSchema.Component<>(Parsed.class, "document", Parsed::document), new dev.openallay.value.ValueSchema.Component<>(Parsed.class, "range", Parsed::range), new dev.openallay.value.ValueSchema.Component<>(Parsed.class, "state", Parsed::state)), arguments -> new Parsed((SkillCatalogManifest.Document) arguments[0], (RetainedSkillContext.Range) arguments[1], (LoadSkillTool.LoadState) arguments[2]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Scan.ValueSchemaProvider.class)
+private static final class Scan {
+    private final Map<ModelContent.ToolResult, Parsed> loads;
+    private final List<RetainedSkillContext.Range> ranges;
+    private Scan(Map<ModelContent.ToolResult, Parsed> loads, List<RetainedSkillContext.Range> ranges) {
+        this.loads = loads;
+        this.ranges = ranges;
+    }
+    public Map<ModelContent.ToolResult, Parsed> loads() { return loads; }
+    public List<RetainedSkillContext.Range> ranges() { return ranges; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Scan)) return false;
+        Scan that = (Scan) other;
+        return java.util.Objects.equals(loads, that.loads) && java.util.Objects.equals(ranges, that.ranges);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(loads);
+        hash = 31 * hash + java.util.Objects.hashCode(ranges);
+        return hash;
+    }
+    @Override public String toString() { return "Scan[loads=" + loads + ", ranges=" + ranges + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Scan> schema() {
+            return new dev.openallay.value.ValueSchema<>(Scan.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Scan>>asList(new dev.openallay.value.ValueSchema.Component<>(Scan.class, "loads", Scan::loads), new dev.openallay.value.ValueSchema.Component<>(Scan.class, "ranges", Scan::ranges)), arguments -> new Scan((Map) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 }

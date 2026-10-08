@@ -7,6 +7,10 @@ import net.minecraft.network.chat.Component;
 /** Native editor before the builder/line-limit API; not a replacement widget. */
 public final class GuideNativeMultilineText {
     private GuideNativeMultilineText() {}
+    public static GuideMultilineEditor find(GuideWidget widget) {
+        return find(GuideNativeWidgets.nativeWidget(widget));
+    }
+
 
     public static GuideMultilineEditor create(Font font, int x, int y, int width, int height,
             Component placeholder, Component narration) {

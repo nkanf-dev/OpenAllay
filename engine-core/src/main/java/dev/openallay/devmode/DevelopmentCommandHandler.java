@@ -21,11 +21,17 @@ public final class DevelopmentCommandHandler {
 
     public String invoke(ToolInvocationContext context, String id) {
         ToolResult<?> result = java.util.Objects.requireNonNull(inspector.invokeNoArgument(context, id));
-        if (result instanceof ToolResult.Success<?> success) {
-            return "SUCCESS " + success.value();
-        } else if (result instanceof ToolResult.Failure<?> failure) {
-            return "FAILURE " + failure.code() + ": " + failure.message();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<?>) $oaPattern0_holder.value) != null))) {
+            return "SUCCESS " + $oaPattern0_holder.bound.value();
+        } else {
+final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<?>) $oaPattern1_holder.value) != null))) {
+            return "FAILURE " + $oaPattern1_holder.bound.code() + ": " + $oaPattern1_holder.bound.message();
         }
+}
         throw new IncompatibleClassChangeError();
     }
 }

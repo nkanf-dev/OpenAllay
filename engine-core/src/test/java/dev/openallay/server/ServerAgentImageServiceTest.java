@@ -525,19 +525,43 @@ final class ServerAgentImageServiceTest {
                     sessions,
                     (actor, capabilities, id, cancellation) -> CompletableFuture.completedFuture(
                             ToolInvocationContext.developmentConsole(id)),
-                    (actor, event) -> {
-                        events.add(event);
-                        if (event.eventType().equals("failed")) failure.complete((AgentEvent.Failed) decode(event));
-                        if (event.eventType().equals("request_released")) {
-                            assertReleasedCorrelation(actor, event.requestId());
-                            released(event.requestId()).complete(null);
+                    new ServerGuideEvents() {
+                        @Override public void send(UUID actor, ServerAgentEventPayload event) {
+                            events.add(event);
+                            if (event.eventType().equals("failed")) {
+                                failure.complete((AgentEvent.Failed) decode(event));
+                            }
+                            if (event.eventType().equals("request_released")) {
+                                assertPendingReleaseCorrelation(actor, event.requestId());
+                            }
+                        }
+                        @Override public void send(UUID actor, ServerAgentEventPayload event, Runnable retired) {
+                            try {
+                                ServerGuideEvents.super.send(actor, event, retired);
+                                if (event.eventType().equals("request_released")) {
+                                    assertReleasedCorrelation(actor, event.requestId());
+                                    released(event.requestId()).complete(null);
+                                }
+                            } catch (RuntimeException | Error invalid) {
+                                released(event.requestId()).completeExceptionally(invalid);
+                                throw invalid;
+                            }
                         }
                     }, gson, "system", cancellation -> CompletableFuture.completedFuture(null), store, capability);
         }
 
+        private void assertPendingReleaseCorrelation(UUID actor, UUID requestId) {
+            assertTrue(service.hasRequest(actor, requestId),
+                    "The release handoff retains actor-scoped custody until retirement");
+            assertFalse(service.ownsRequest(actor, requestId),
+                    "Pending release cannot grant active request authority");
+            assertFalse(service.hasRequest(UUID.randomUUID(), requestId),
+                    "Pending release cannot grant another actor correlation access");
+        }
+
         private void assertReleasedCorrelation(UUID actor, UUID requestId) {
             assertFalse(service.hasRequest(actor, requestId),
-                    "The released event must not expose a live request correlation");
+                    "Retirement must remove the actor-scoped request correlation");
         }
 
         private CompletableFuture<Void> released(UUID requestId) {

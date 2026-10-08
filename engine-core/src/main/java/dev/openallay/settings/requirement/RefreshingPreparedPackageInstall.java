@@ -32,7 +32,7 @@ public final class RefreshingPreparedPackageInstall implements PreparedPackageIn
     public ToolResult<Boolean> commit() {
         synchronized (ownerLock) {
             ToolResult<Boolean> result = candidate.commit();
-            if (result instanceof ToolResult.Success<Boolean>) {
+            if (result instanceof ToolResult.Success<?>) {
                 try {
                     refresh.run();
                 } catch (RuntimeException failure) {

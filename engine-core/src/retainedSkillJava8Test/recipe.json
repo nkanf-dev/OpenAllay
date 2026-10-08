@@ -1,0 +1,464 @@
+{
+  "acceptedSourceCommit": "26a88de1404a6af4269de383165c48b0eea60f37",
+  "scope": "Retained skill-context fullowner canonical Java8 lowering; no installer/settings/HTTP or shared model edits",
+  "apiLoweringOrder": "exact longest preimage first on raw canonical sources before accepted record converter",
+  "recordPass1": {
+    "dev/openallay/skill/LoadSkillTool.java": [
+      "LoadSkillTool.Input",
+      "LoadSkillTool.Output",
+      "LoadSkillTool.Binding"
+    ],
+    "dev/openallay/skill/RetainedSkillContext.java": [
+      "RetainedSkillContext.Key",
+      "RetainedSkillContext.Range",
+      "RetainedSkillContext.Validation"
+    ],
+    "dev/openallay/skill/SkillCatalogManifest.java": [
+      "SkillCatalogManifest.Chunk",
+      "SkillCatalogManifest.Document"
+    ],
+    "dev/openallay/skill/SkillInstructionContext.java": [
+      "SkillInstructionContext.Parsed",
+      "SkillInstructionContext.Scan"
+    ],
+    "dev/openallay/skill/SkillDocument.java": [
+      "SkillDocument.Text"
+    ],
+    "dev/openallay/skill/SkillMetadata.java": [
+      "SkillMetadata"
+    ],
+    "dev/openallay/skill/SkillSource.java": [
+      "SkillSource"
+    ],
+    "dev/openallay/skill/SkillParser.java": [
+      "SkillParser.ParsedFrontmatter"
+    ],
+    "dev/openallay/requirement/RequirementSet.java": [
+      "RequirementSet"
+    ],
+    "dev/openallay/tool/ToolDescriptor.java": [
+      "ToolDescriptor"
+    ]
+  },
+  "recordPass2": {
+    "dev/openallay/skill/SkillCatalogManifest.java": [
+      "SkillCatalogManifest"
+    ]
+  },
+  "rawPreimageSha256": {
+    "dev/openallay/skill/LoadSkillTool.java": "6e01d85a1efd118d65b72b5f664f56d7a92eac00e2255a648d2364762c66390d",
+    "dev/openallay/skill/RetainedSkillContext.java": "27c2abc48edc406e672198e1e840cf175fa37c8b7bc69d4dd4e41b76492a8e53",
+    "dev/openallay/skill/SkillCatalogManifest.java": "ce9b81663f60b4743fa4600be665b747ada7dff377f35c9c3aa2f84d8c4e0685",
+    "dev/openallay/skill/SkillInstructionContext.java": "785842e6e6eb6a495f3c5bdb5ecdf965159b50b5294245b6d86f87728fac2270",
+    "dev/openallay/skill/SkillDocument.java": "872780f78ef79da3f18083efaff96a238ef350df6aa9201119f8b227f495e55c",
+    "dev/openallay/skill/SkillMetadata.java": "eaf5e05c2e20081894fa1b9ec5f4339126ee7f213486a0e0db8ec9f06197ac43",
+    "dev/openallay/skill/SkillSource.java": "c1898930b067879489219ba4ac0eb31286e158f9a2f457ab0bcfb3b160b6bfb9",
+    "dev/openallay/skill/SkillParser.java": "1f1daa4d694ad50402d1bf471951bf1850b523970c6b3236cc02e69d5460bc1c",
+    "dev/openallay/requirement/RequirementSet.java": "0ed7ec5404ceba582061fd30c86baca32dd7793194d9d909334fbc9fc20bd110",
+    "dev/openallay/skill/SkillCatalog.java": "bc318888c20c211df5dee305feb557c9267710e392beffa76ecbcd581762534a",
+    "dev/openallay/skill/SkillCatalogSnapshot.java": "fd59f3a1999bbb062604a6e236beafc395355c53b7aa4327f64131f0cec7d8b2",
+    "dev/openallay/requirement/RequirementCodec.java": "95c71fc071ad732e9dc4d5db7c27748a51ac91bc0fd358ef11d7c15c1436717b",
+    "dev/openallay/tool/ToolDescriptor.java": "cceee95920644ffb1f429dcba51643cc865bb4f19379d136fe173d49a57419fa"
+  },
+  "apiPostimageSha256": {
+    "dev/openallay/skill/LoadSkillTool.java": "975724f1f475427da4d96510323a01e0a35255f95b06763701d794b1b1e5f9bf",
+    "dev/openallay/skill/RetainedSkillContext.java": "0c83063834eb582d3c764d6857815d5ea3f6ff2dbf3e77efeee0908d1d4b97fe",
+    "dev/openallay/skill/SkillCatalogManifest.java": "d334b8942d6b089b9d9120145323ba6514e6624dffdb031cea5de6a8614a9f5a",
+    "dev/openallay/skill/SkillInstructionContext.java": "541a0bc6bd876e3a59dd911ae0c53ad22514eb94c900b7682332e2fddcdd298d",
+    "dev/openallay/skill/SkillDocument.java": "a604da364d4b815241659916250959d8dfa968f67297f7019917c7e493d90f3a",
+    "dev/openallay/skill/SkillMetadata.java": "1b729d16ce2666a38e3c70c4e5c608a8bf44e640beba96593ec52720b3cb4b62",
+    "dev/openallay/skill/SkillSource.java": "ee275db50a1ee7210211a0d7d1a4d8bf7be6ae44bba87685aeed484a02c9ca1b",
+    "dev/openallay/skill/SkillParser.java": "c0128797353b3f5e549f40f2e6e4c56d0208fd38c4d44b2f38bfa87caf4bc92c",
+    "dev/openallay/requirement/RequirementSet.java": "61fc8576b850b1ab8a9974acde379d71ba8764cc21d4b098f4a49da676c29c1d",
+    "dev/openallay/skill/SkillCatalog.java": "94c6065e9798ba59c6026d92e437934031a3a4c66bbadbe8d2635d9be13cc336",
+    "dev/openallay/skill/SkillCatalogSnapshot.java": "4297a534d8c0a7fbf9aa5053370da10d9a829dcf4a76e3289faa18c92dcaf7b7",
+    "dev/openallay/requirement/RequirementCodec.java": "86962b9ec31d457cd99b63cbc9a19c9ce8dca495cd457d8536b9267fad23d5f5",
+    "dev/openallay/tool/ToolDescriptor.java": "004c08b932f5c922674b9b04d018eb9bb8ff9418a608c1917be93eb58defffbc"
+  },
+  "apiEdits": {
+    "dev/openallay/skill/LoadSkillTool.java": [
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "input.name().isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(input.name())",
+        "occurrences": 1
+      },
+      {
+        "before": "input.reference().strip()",
+        "after": "dev.openallay.util.Java8Strings.strip(input.reference())",
+        "occurrences": 1
+      },
+      {
+        "before": "cursor.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(cursor)",
+        "occurrences": 1
+      },
+      {
+        "before": "java.util.HexFormat.of().formatHex(digest)",
+        "after": "dev.openallay.util.Java8Hex.formatHex(digest)",
+        "occurrences": 1
+      },
+      {
+        "before": "skill.references().keySet().stream().sorted().toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(skill.references().keySet().stream().sorted())",
+        "occurrences": 1
+      },
+      {
+        "before": "skill.metadata().allowedTools().stream().sorted().toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(skill.metadata().allowedTools().stream().sorted())",
+        "occurrences": 1
+      },
+      {
+        "before": "        if (catalog instanceof SkillCatalogSnapshot snapshot) {\n            captured = snapshot;",
+        "after": "        if (catalog instanceof SkillCatalogSnapshot) {\n            captured = (SkillCatalogSnapshot) catalog;",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/RetainedSkillContext.java": [
+      {
+        "before": "List.of(",
+        "after": "dev.openallay.util.Java8Collections.listOf(",
+        "occurrences": 4
+      },
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 2
+      }
+    ],
+    "dev/openallay/skill/SkillCatalogManifest.java": [
+      {
+        "before": "List.of(",
+        "after": "dev.openallay.util.Java8Collections.listOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "description.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(description)",
+        "occurrences": 1
+      },
+      {
+        "before": "skill.stream().filter(document -> !document.document().equals(\"SKILL.md\"))\n                        .map(Document::document).sorted().toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(skill.stream().filter(document -> !document.document().equals(\"SKILL.md\"))\n                        .map(Document::document).sorted())",
+        "occurrences": 1
+      },
+      {
+        "before": "availableReferences.stream().distinct().sorted().toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(availableReferences.stream().distinct().sorted())",
+        "occurrences": 1
+      },
+      {
+        "before": "skill.references().keySet().stream().sorted().toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(skill.references().keySet().stream().sorted())",
+        "occurrences": 1
+      },
+      {
+        "before": "        return new SkillCatalogManifest(catalog.metadata().stream()\n                .flatMap(metadata -> catalog.find(metadata.name()).stream())\n                .flatMap(skill -> skill.documents().entrySet().stream().map(entry -> {\n                    SkillDocument.Text text = entry.getValue();\n                    return new Document(skill.metadata().name(), entry.getKey(),\n                            source(owner, skill), text.fingerprint(), text.contents().length(),\n                            text.chunks(), skill.references().keySet().stream().sorted().toList(),\n                            skill.metadata().description());\n                }))\n                .sorted(java.util.Comparator.comparing(Document::name).thenComparing(Document::document))\n                .toList());",
+        "after": "        return new SkillCatalogManifest(dev.openallay.util.Java8Collections.toList(catalog.metadata().stream()\n                .flatMap(metadata -> catalog.find(metadata.name()).stream())\n                .flatMap(skill -> skill.documents().entrySet().stream().map(entry -> {\n                    SkillDocument.Text text = entry.getValue();\n                    return new Document(skill.metadata().name(), entry.getKey(),\n                            source(owner, skill), text.fingerprint(), text.contents().length(),\n                            text.chunks(), skill.references().keySet().stream().sorted().toList(),\n                            skill.metadata().description());\n                }))\n                .sorted(java.util.Comparator.comparing(Document::name).thenComparing(Document::document))\n                ));",
+        "occurrences": 1
+      },
+      {
+        "before": "catalog.find(metadata.name()).stream()",
+        "after": "catalog.find(metadata.name()).map(java.util.stream.Stream::of).orElseGet(java.util.stream.Stream::empty)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillInstructionContext.java": [
+      {
+        "before": "List.of(",
+        "after": "dev.openallay.util.Java8Collections.listOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "input.reference().isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(input.reference())",
+        "occurrences": 1
+      },
+      {
+        "before": "input.reference().strip()",
+        "after": "dev.openallay.util.Java8Strings.strip(input.reference())",
+        "occurrences": 1
+      },
+      {
+        "before": "facts.isEmpty()",
+        "after": "facts.length() == 0",
+        "occurrences": 1
+      },
+      {
+        "before": "byDocument.keySet().stream()\n                .sorted(java.util.Comparator.comparing(RetainedSkillContext.Key::skill)\n                        .thenComparing(RetainedSkillContext.Key::document)).toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(byDocument.keySet().stream()\n                .sorted(java.util.Comparator.comparing(RetainedSkillContext.Key::skill)\n                        .thenComparing(RetainedSkillContext.Key::document)))",
+        "occurrences": 1
+      },
+      {
+        "before": "byDocument.get(key).stream()\n                    .sorted(java.util.Comparator.comparingInt(RetainedSkillContext.Range::offset)).toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(byDocument.get(key).stream()\n                    .sorted(java.util.Comparator.comparingInt(RetainedSkillContext.Range::offset)))",
+        "occurrences": 1
+      },
+      {
+        "before": "                Parsed parsed = item instanceof ModelContent.ToolResult result ? scan.loads().get(result) : null;\n                if (item instanceof ModelContent.ToolResult result && scan.loads().containsKey(result)) {",
+        "after": "                ModelContent.ToolResult result = item instanceof ModelContent.ToolResult ? (ModelContent.ToolResult) item : null;\n                Parsed parsed = result == null ? null : scan.loads().get(result);\n                if (result != null && scan.loads().containsKey(result)) {",
+        "occurrences": 1
+      },
+      {
+        "before": "                if (item instanceof ModelContent.ToolUse use && message.role() == ModelRole.ASSISTANT) {\n                    uses.put(use.id(), use);\n                } else if (item instanceof ModelContent.ToolResult result && message.role() == ModelRole.USER\n                        && !result.error()) {",
+        "after": "                if (item instanceof ModelContent.ToolUse && message.role() == ModelRole.ASSISTANT) {\n                    ModelContent.ToolUse use = (ModelContent.ToolUse) item;\n                    uses.put(use.id(), use);\n                } else if (item instanceof ModelContent.ToolResult && message.role() == ModelRole.USER\n                        && !((ModelContent.ToolResult) item).error()) {\n                    ModelContent.ToolResult result = (ModelContent.ToolResult) item;",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillDocument.java": [
+      {
+        "before": "java.util.List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "instructions.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(instructions)",
+        "occurrences": 1
+      },
+      {
+        "before": "        return other instanceof SkillDocument document\n                && metadata.equals(document.metadata)",
+        "after": "        if (!(other instanceof SkillDocument)) return false;\n        SkillDocument document = (SkillDocument) other;\n        return metadata.equals(document.metadata)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillMetadata.java": [
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "Set.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.setCopyOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "description.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(description)",
+        "occurrences": 1
+      },
+      {
+        "before": "value.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(value)",
+        "occurrences": 2
+      },
+      {
+        "before": "provenance.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(provenance)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillSource.java": [
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "provenance.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(provenance)",
+        "occurrences": 1
+      },
+      {
+        "before": "path.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(path)",
+        "occurrences": 1
+      },
+      {
+        "before": "java.nio.file.Path.of(path)",
+        "after": "java.nio.file.Paths.get(path)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillParser.java": [
+      {
+        "before": "List.of(",
+        "after": "dev.openallay.util.Java8Collections.listOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "List.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.listCopyOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "Set.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.setCopyOf(",
+        "occurrences": 4
+      },
+      {
+        "before": "Map.of(",
+        "after": "dev.openallay.util.Java8Collections.mapOf(",
+        "occurrences": 2
+      },
+      {
+        "before": "Map.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "item.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(item)",
+        "occurrences": 1
+      },
+      {
+        "before": "raw.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(raw)",
+        "occurrences": 1
+      },
+      {
+        "before": "raw.stripLeading()",
+        "after": "dev.openallay.util.Java8Strings.stripLeading(raw)",
+        "occurrences": 2
+      },
+      {
+        "before": "key.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(key)",
+        "occurrences": 1
+      },
+      {
+        "before": "rawValue.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(rawValue)",
+        "occurrences": 1
+      },
+      {
+        "before": "body.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(body)",
+        "occurrences": 1
+      },
+      {
+        "before": "normalized.substring(end + 5).strip()",
+        "after": "dev.openallay.util.Java8Strings.strip(normalized.substring(end + 5))",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/requirement/RequirementSet.java": [
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "        Pattern pattern = switch (kind) {\n            case CAPABILITY -> CAPABILITY;\n            case EXTENSION -> EXTENSION;\n            case SKILL -> SKILL;\n        };",
+        "after": "        Pattern pattern;\n        switch (kind) {\n            case CAPABILITY: pattern = CAPABILITY; break;\n            case EXTENSION: pattern = EXTENSION; break;\n            case SKILL: pattern = SKILL; break;\n            default: throw new IllegalStateException(\"Unknown advisory requirement kind: \" + kind);\n        }",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/requirement/RequirementCodec.java": [
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 3
+      },
+      {
+        "before": "value.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(value)",
+        "occurrences": 1
+      },
+      {
+        "before": "value.strip()",
+        "after": "dev.openallay.util.Java8Strings.strip(value)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/tool/ToolDescriptor.java": [
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "Set.copyOf(",
+        "after": "dev.openallay.util.Java8Collections.setCopyOf(",
+        "occurrences": 1
+      },
+      {
+        "before": "description.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(description)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillCatalog.java": [
+      {
+        "before": "prompt.toString().stripTrailing()",
+        "after": "dev.openallay.util.Java8Strings.stripTrailing(prompt.toString())",
+        "occurrences": 1
+      },
+      {
+        "before": "xml(metadata.name())",
+        "after": "SkillCatalogText.xml(metadata.name())",
+        "occurrences": 1
+      },
+      {
+        "before": "xml(metadata.description())",
+        "after": "SkillCatalogText.xml(metadata.description())",
+        "occurrences": 1
+      },
+      {
+        "before": "    private static String xml(String value) {",
+        "after": "}\n\n/** Package-private helper keeps the catalog interface Java8 without new public methods. */\nfinal class SkillCatalogText {\n    private SkillCatalogText() {}\n    static String xml(String value) {",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/skill/SkillCatalogSnapshot.java": [
+      {
+        "before": "skills.values().stream().map(SkillDocument::metadata).toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(skills.values().stream().map(SkillDocument::metadata))",
+        "occurrences": 1
+      }
+    ]
+  },
+  "converter": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+  "converterSha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+  "pendingRealDependencies": "model12 canonical owners independently owned; use only actual settled source files after model worker applies",
+  "rawPreimageGitBlob": {
+    "dev/openallay/skill/LoadSkillTool.java": "09fc61d370568543441c79385cc9b39e8b2f6f0a",
+    "dev/openallay/skill/RetainedSkillContext.java": "15bad5580a37441a4666f25b6f3219ec634b0e23",
+    "dev/openallay/skill/SkillCatalogManifest.java": "2efff8e67c749d4737aa55f6f25ac5d4aa169ea7",
+    "dev/openallay/skill/SkillInstructionContext.java": "378682090d58c00d4ca7a3ed1eca8f11ca68c4ee",
+    "dev/openallay/skill/SkillDocument.java": "844816c4fb3ed0301b15eba27d162df0f3b3dbfe",
+    "dev/openallay/skill/SkillMetadata.java": "4cb870c19a5d72a187b6afbb0cfb48bc7bcc7f27",
+    "dev/openallay/skill/SkillSource.java": "5346d9e55c3ef78680d1696039cb5baa7dcb4864",
+    "dev/openallay/skill/SkillParser.java": "5d09cc265e24bd83a49956a3b52195343a87d3d5",
+    "dev/openallay/requirement/RequirementSet.java": "9812c23cc2cfc75407e00651050f5d1dabcf2242",
+    "dev/openallay/skill/SkillCatalog.java": "ffd2c91f663eebefd61c603e6752691b4a709000",
+    "dev/openallay/skill/SkillCatalogSnapshot.java": "da91fc6d0874babd70482d1596dc2c9841dc3b26",
+    "dev/openallay/requirement/RequirementCodec.java": "c21917d6efb5e399fe10c19af743767411b9b0c2",
+    "dev/openallay/tool/ToolDescriptor.java": "ac180e656b4b9bd0b065826339f7b137823e1547"
+  }
+}

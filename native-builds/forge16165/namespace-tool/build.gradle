@@ -1,0 +1,15 @@
+plugins { id 'java' }
+def source = file(rootProject.gradle.ext.nativeBuildRequest.sourceRoot)
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+sourceSets.main.java {
+    setSrcDirs([new File(source, 'build-logic/src/main/java')])
+    include 'dev/openallay/build/MinecraftClassNamespaceProducer.java'
+    include 'dev/openallay/build/MinecraftClassNamespaceProducerMain.java'
+    include 'dev/openallay/build/NamespaceMetadataAcceptance.java'
+}
+sourceSets.main.resources.setSrcDirs([])
+// This named task belongs only to the build tool. Forge game compilers are untouched.
+tasks.named('compileJava', JavaCompile) {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}

@@ -20,31 +20,41 @@ public final class ToolResultNormalizer {
 
     public JsonObject normalize(ToolResult<?> result, Class<?> outputType) {
         JsonObject normalized = new JsonObject();
-        if (result instanceof ToolResult.Success<?> success) {
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<?>) $oaPattern0_holder.value) != null))) {
             if (EvidenceBearing.class.isAssignableFrom(outputType)) {
-                if (!(success.value() instanceof EvidenceBearing grounded)
-                        || grounded.evidence() == null
-                        || grounded.evidence().isEmpty()) {
+                final class $oaPattern1_Holder { java.lang.Object value; EvidenceBearing bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = $oaPattern0_holder.bound.value()) instanceof dev.openallay.context.EvidenceBearing && (($oaPattern1_holder.bound = (EvidenceBearing) $oaPattern1_holder.value) != null)))
+                        || $oaPattern1_holder.bound.evidence() == null
+                        || $oaPattern1_holder.bound.evidence().isEmpty()) {
                     throw new IllegalArgumentException("Grounded tool output has no evidence");
                 }
             }
             normalized.addProperty("status", "success");
             normalized.addProperty("outputType", outputType.getName());
-            normalized.add("value", canonicalize(gson.toJsonTree(success.value())));
-            if (success.value() instanceof ModelFacingToolOutput projection) {
-                String text = projection.modelText();
-                if (text == null || text.isBlank()) {
+            normalized.add("value", canonicalize(gson.toJsonTree($oaPattern0_holder.bound.value())));
+            final class $oaPattern2_Holder { java.lang.Object value; ModelFacingToolOutput bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = $oaPattern0_holder.bound.value()) instanceof dev.openallay.tool.ModelFacingToolOutput && (($oaPattern2_holder.bound = (ModelFacingToolOutput) $oaPattern2_holder.value) != null))) {
+                String text = $oaPattern2_holder.bound.modelText();
+                if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) {
                     throw new IllegalArgumentException("Model-facing tool text must not be blank");
                 }
                 normalized.addProperty("modelText", text);
             }
-        } else if (result instanceof ToolResult.Failure<?> failure) {
+        } else {
+final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<?>) $oaPattern3_holder.value) != null))) {
             normalized.addProperty("status", "failure");
-            normalized.addProperty("code", failure.code());
-            normalized.addProperty("message", failure.message());
+            normalized.addProperty("code", $oaPattern3_holder.bound.code());
+            normalized.addProperty("message", $oaPattern3_holder.bound.message());
         } else {
             throw new IllegalArgumentException("Unknown ToolResult implementation: " + result);
         }
+}
         return canonicalize(normalized).getAsJsonObject();
     }
 

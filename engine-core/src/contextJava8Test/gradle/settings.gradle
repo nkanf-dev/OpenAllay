@@ -1,0 +1,2 @@
+rootProject.name = 'openallay-context-snapshots-java8-proof'
+dependencyResolutionManagement { repositories { mavenCentral() } }

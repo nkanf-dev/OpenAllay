@@ -34,7 +34,7 @@ public final class MinecraftWikiKnowledgeSource implements OnlineKnowledgeSource
     @Override
     public CompletableFuture<List<RawHit>> search(
             String query, int limit, HttpCancellation cancellation) {
-        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String encoded = dev.openallay.util.Java8ApiSupport.urlEncodeUtf8(query);
         URI uri = URI.create("https://minecraft.wiki/api.php?action=query&list=search"
                 + "&format=json&utf8=1&srprop=snippet&srlimit=" + limit + "&srsearch=" + encoded);
         HttpExchangeRequest request = HttpExchangeRequest.newBuilder(uri)
@@ -65,22 +65,21 @@ public final class MinecraftWikiKnowledgeSource implements OnlineKnowledgeSource
                         ? value.get("snippet").getAsString()
                         : "");
                 String reference = "https://minecraft.wiki/w/"
-                        + URLEncoder.encode(title.replace(' ', '_'), StandardCharsets.UTF_8)
+                        + dev.openallay.util.Java8ApiSupport.urlEncodeUtf8(title.replace(' ', '_'))
                                 .replace("+", "%20");
                 hits.add(new RawHit(title, excerpt, reference));
             }
-            return List.copyOf(hits);
+            return dev.openallay.util.Java8Collections.listCopyOf(hits);
         });
     }
 
     static String cleanHtml(String value) {
-        return value.replaceAll("(?s)<[^>]*>", "")
+        return dev.openallay.util.Java8Strings.strip(value.replaceAll("(?s)<[^>]*>", "")
                 .replace("&quot;", "\"")
                 .replace("&#39;", "'")
                 .replace("&amp;", "&")
                 .replace("&lt;", "<")
                 .replace("&gt;", ">")
-                .replaceAll("\\s+", " ")
-                .strip();
+                .replaceAll("\\s+", " "));
     }
 }

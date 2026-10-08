@@ -15,8 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class RecipeClientConfigLoader {
-    private static final Set<String> ROOT_FIELDS = Set.of(
-            "visibility", "preferredViewer", "disabledSources");
+    private static final Set<String> ROOT_FIELDS = dev.openallay.util.Java8Collections.setOf("visibility", "preferredViewer", "disabledSources");
 
     public ToolResult<RecipeClientConfig> load(Path path) {
         Objects.requireNonNull(path, "path");
@@ -93,7 +92,7 @@ public final class RecipeClientConfigLoader {
         JsonElement value = required(object, field);
         if (!value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be nonblank text");
         }
         return value.getAsString();

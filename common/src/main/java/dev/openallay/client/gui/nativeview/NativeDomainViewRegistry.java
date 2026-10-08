@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
+import dev.openallay.client.gui.MinecraftClientWindow;
 
 /** One Screen's visible native-view lifecycle and provider fallback owner. */
 public final class NativeDomainViewRegistry implements AutoCloseable {
@@ -23,7 +23,7 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
         this(
                 NativeDomainViewProviderRegistry::providers,
                 new GenericRecipeNativeViewProvider(),
-                () -> Minecraft.getInstance().isSameThread());
+                () -> MinecraftClientWindow.ownerThread(MinecraftClientWindow.instance()));
     }
 
     NativeDomainViewRegistry(
@@ -67,17 +67,19 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
             diagnostics.add(new NativeDomainViewDiagnostic(
                     binding.stableId(), view.providerId(), "native_view_failed"));
             close(view);
-            NativeDomainViewProvider.Attempt attempt = fallback.create(binding);
-            if (!(attempt instanceof NativeDomainViewProvider.Attempt.Ready ready)) {
+            NativeDomainViewProvider.Attempt attempt = NativeDomainViewProvider.Attempt.requireKnown(fallback.create(binding));
+            final class $oaPattern0_Holder { dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt value; NativeDomainViewProvider.Attempt.Ready bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = attempt) instanceof dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt.Ready && (($oaPattern0_holder.bound = (NativeDomainViewProvider.Attempt.Ready) $oaPattern0_holder.value) != null)))) {
                 active.remove(binding.stableId());
                 return false;
             }
-            active.put(binding.stableId(), new Entry(binding, ready.view()));
+            active.put(binding.stableId(), new Entry(binding, $oaPattern0_holder.bound.view()));
             try {
-                ready.view().render(context);
+                $oaPattern0_holder.bound.view().render(context);
                 return true;
             } catch (RuntimeException fallbackFailure) {
-                close(ready.view());
+                close($oaPattern0_holder.bound.view());
                 active.remove(binding.stableId());
                 return false;
             }
@@ -86,15 +88,14 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
 
     public void endFrame() {
         requireClientThread();
-        List<String> released = active.keySet().stream()
-                .filter(id -> !visible.contains(id))
-                .toList();
+        List<String> released = dev.openallay.util.Java8Collections.toList(active.keySet().stream()
+                .filter(id -> !visible.contains(id)));
         released.forEach(id -> close(active.remove(id).view()));
     }
 
     public void tick() {
         requireClientThread();
-        List.copyOf(active.values()).forEach(entry -> {
+        dev.openallay.util.Java8Collections.listCopyOf(active.values()).forEach(entry -> {
             try {
                 entry.view().tick();
             } catch (RuntimeException failure) {
@@ -107,7 +108,7 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
     }
 
     public List<NativeDomainViewDiagnostic> diagnostics() {
-        return List.copyOf(diagnostics);
+        return dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
     }
 
     public int activeViewCount() {
@@ -131,16 +132,26 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
         providers.add(fallback);
         for (NativeDomainViewProvider provider : providers) {
             if (!provider.supports(binding)) continue;
+            NativeDomainViewProvider.Attempt attempt;
             try {
-                NativeDomainViewProvider.Attempt attempt = provider.create(binding);
-                if (attempt instanceof NativeDomainViewProvider.Attempt.Ready ready) {
-                    if (ready.view().family() != binding.family()) {
-                        close(ready.view());
+                attempt = provider.create(binding);
+            } catch (LinkageError | RuntimeException failure) {
+                diagnostics.add(new NativeDomainViewDiagnostic(
+                        binding.stableId(), provider.providerId(), "native_view_failed"));
+                continue;
+            }
+            attempt = NativeDomainViewProvider.Attempt.requireKnown(attempt);
+            try {
+                final class $oaPattern1_Holder { dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt value; NativeDomainViewProvider.Attempt.Ready bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = attempt) instanceof dev.openallay.client.gui.nativeview.NativeDomainViewProvider.Attempt.Ready && (($oaPattern1_holder.bound = (NativeDomainViewProvider.Attempt.Ready) $oaPattern1_holder.value) != null))) {
+                    if ($oaPattern1_holder.bound.view().family() != binding.family()) {
+                        close($oaPattern1_holder.bound.view());
                         diagnostics.add(new NativeDomainViewDiagnostic(
                                 binding.stableId(), provider.providerId(), "native_view_failed"));
                         continue;
                     }
-                    return ready.view();
+                    return $oaPattern1_holder.bound.view();
                 }
                 NativeDomainViewProvider.Attempt.Unsupported unsupported =
                         (NativeDomainViewProvider.Attempt.Unsupported) attempt;
@@ -168,5 +179,34 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
         }
     }
 
-    private record Entry(NativeDomainViewBinding binding, NativeDomainView view) {}
+    @dev.openallay.value.ValueType(Entry.ValueSchemaProvider.class)
+private static final class Entry {
+    private final NativeDomainViewBinding binding;
+    private final NativeDomainView view;
+    private Entry(NativeDomainViewBinding binding, NativeDomainView view) {
+        this.binding = binding;
+        this.view = view;
+    }
+    public NativeDomainViewBinding binding() { return binding; }
+    public NativeDomainView view() { return view; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Entry)) return false;
+        Entry that = (Entry) other;
+        return java.util.Objects.equals(binding, that.binding) && java.util.Objects.equals(view, that.view);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(binding);
+        hash = 31 * hash + java.util.Objects.hashCode(view);
+        return hash;
+    }
+    @Override public String toString() { return "Entry[binding=" + binding + ", view=" + view + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Entry> schema() {
+            return new dev.openallay.value.ValueSchema<>(Entry.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Entry>>asList(new dev.openallay.value.ValueSchema.Component<>(Entry.class, "binding", Entry::binding), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "view", Entry::view)), arguments -> new Entry((NativeDomainViewBinding) arguments[0], (NativeDomainView) arguments[1]));
+        }
+    }
+}
 }

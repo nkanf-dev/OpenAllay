@@ -30,7 +30,7 @@ def fields = { value, expected, context ->
     }
 }
 fields(nativeInputs, ['root', 'target', 'properties', 'nativeSources', 'engine', 'adapter', 'resources',
-              'sdk', 'rhino', 'accessTransformer'], receiptFile)
+              'sdk', 'rhino', 'commonmark', 'accessTransformer'], receiptFile)
 fields(nativeInputs.properties, ['version', 'archiveName', 'group', 'mod_id', 'mod_name', 'mod_author', 'java_version',
         'neoforge_version', 'jeiArtifactTarget', 'jei_version', 'rei_version', 'architectury_version',
         'sqlite_jdbc_version', 'commonmark_version', 'jtokkit_version'], 'properties')
@@ -50,7 +50,11 @@ def expectedReceipt = new File(sourceRoot, "build/early-neoforge/${nativeInputs.
 if (file(nativeInputs.root).canonicalFile != sourceRoot || receiptFile.canonicalFile != expectedReceipt) {
     throw new GradleException('Native input receipt must come from this checkout and exact target')
 }
-def records = nativeInputs.nativeSources + nativeInputs.engine + nativeInputs.adapter + nativeInputs.resources + [nativeInputs.sdk, nativeInputs.rhino]
+def records = nativeInputs.nativeSources + nativeInputs.engine + nativeInputs.adapter + nativeInputs.resources + [nativeInputs.sdk, nativeInputs.rhino, nativeInputs.commonmark]
+if (nativeInputs.commonmark.group != 'dev.openallay' || nativeInputs.commonmark.name != 'runtime-commonmark'
+        || nativeInputs.commonmark.version != nativeInputs.properties.commonmark_version) {
+    throw new GradleException('Canonical CommonMark provider identity differs')
+}
 if (nativeInputs.accessTransformer != null) records += nativeInputs.accessTransformer
 def recordFields = { record, extra ->
     fields(record, ['path', 'sha256'] + extra, 'record')
@@ -61,7 +65,7 @@ def recordFields = { record, extra ->
 }
 nativeInputs.nativeSources.each { recordFields(it, []) }
 if (nativeInputs.accessTransformer != null) recordFields(nativeInputs.accessTransformer, [])
-[nativeInputs.sdk, nativeInputs.rhino].each { recordFields(it, ['group', 'name', 'version']) }
+[nativeInputs.sdk, nativeInputs.rhino, nativeInputs.commonmark].each { recordFields(it, ['group', 'name', 'version']) }
 [nativeInputs.engine, nativeInputs.adapter, nativeInputs.resources].each { entries -> entries.each { recordFields(it, ['entry']) } }
 def userdevProfiles = [
         '1.20.2': [javaVersion: 17, loader: '20.2.93', descriptor: 'META-INF/mods.toml'],
@@ -205,6 +209,7 @@ tasks.named('compileJava', JavaCompile) {
 // Configure the two real artifact variants before root JarJar resolution.
 evaluationDependsOn(':extension-api')
 evaluationDependsOn(':runtime-rhino')
+evaluationDependsOn(':runtime-commonmark')
 repositories {
     mavenCentral()
     maven { url = uri('https://maven.neoforged.net/releases') }
@@ -217,11 +222,13 @@ repositories {
 def props = nativeInputs.properties
 def sdk = files(nativeInputs.sdk.path)
 def rhino = files(nativeInputs.rhino.path)
+def commonmark = files(nativeInputs.commonmark.path)
 dependencies {
     implementation("net.neoforged:neoforge:${props.neoforge_version}")
     implementation(files(directories(nativeInputs.engine) + directories(nativeInputs.adapter)))
     implementation(sdk)
     implementation(rhino)
+    implementation(commonmark)
     // Rhino root runtime dependencies stay explicit, never a second upstream runtime JAR.
     implementation('com.google.guava:guava:31.1-jre')
     implementation('org.slf4j:slf4j-api:2.0.1')
@@ -232,9 +239,8 @@ dependencies {
     compileOnly("dev.architectury:architectury-neoforge:${props.architectury_version}")
     jarJar(project(':extension-api'))
     jarJar(project(':runtime-rhino'))
+    jarJar(project(':runtime-commonmark'))
     ["org.xerial:sqlite-jdbc:${props.sqlite_jdbc_version}",
-     "org.commonmark:commonmark:${props.commonmark_version}",
-     "org.commonmark:commonmark-ext-gfm-tables:${props.commonmark_version}",
      "com.knuddels:jtokkit:${props.jtokkit_version}"].each { coordinate ->
         implementation(coordinate)
         def parts = coordinate.split(':')
@@ -311,7 +317,7 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
                     throw new GradleException("Reused shared/native resource bytes differ: ${record.entry}")
                 }
             }
-            [nativeInputs.sdk, nativeInputs.rhino].each { record ->
+            [nativeInputs.sdk, nativeInputs.rhino, nativeInputs.commonmark].each { record ->
                 def name = 'META-INF/jarjar/' + file(record.path).name
                 def entry = jar.getEntry(name)
                 if (entry == null || MessageDigest.getInstance('SHA-256')
@@ -320,13 +326,14 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
                 }
             }
             def metadata = new JsonSlurper().parse(jar.getInputStream(jar.getEntry('META-INF/jarjar/metadata.json')))
-            [nativeInputs.sdk, nativeInputs.rhino].each { record ->
+            [nativeInputs.sdk, nativeInputs.rhino, nativeInputs.commonmark].each { record ->
                 def included = metadata.jars.findAll { item ->
                     item.identifier.group == record.group && item.identifier.artifact == record.name
                 }
-                if (included.size() != 1 || included[0].version.artifactVersion != record.version
+                if (included.size() != 1 || included[0].path != 'META-INF/jarjar/' + file(record.path).name
+                        || included[0].version.artifactVersion != record.version
                         || !(included[0].version.range in ["[${record.version}]".toString(), "[${record.version},${record.version}]".toString()])) {
-                    throw new GradleException("SDK/Rhino JarJar identity or singleton range differs: ${record.name}")
+                    throw new GradleException("SDK/Rhino/CommonMark JarJar identity or singleton range differs: ${record.name}")
                 }
             }
             def otherDescriptor = userdevProfile.descriptor == 'META-INF/mods.toml'
@@ -343,7 +350,7 @@ def verifyReusedPackage = tasks.register('verifyReusedPackage') {
                 productionJar: archive.absolutePath, productionSha256: sha256(archive),
                 reusedEngineEntries: nativeInputs.engine.size(), reusedAdapterEntries: nativeInputs.adapter.size(),
                 reusedResources: nativeInputs.resources.size(), sdkSha256: nativeInputs.sdk.sha256,
-                rhinoSha256: nativeInputs.rhino.sha256])) + '\n'
+                rhinoSha256: nativeInputs.rhino.sha256, commonmarkSha256: nativeInputs.commonmark.sha256])) + '\n'
     }
 }
 tasks.named('assemble') { dependsOn verifyReusedPackage }

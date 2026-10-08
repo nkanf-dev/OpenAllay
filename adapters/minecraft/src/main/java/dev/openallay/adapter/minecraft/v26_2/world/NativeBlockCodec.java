@@ -25,7 +25,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.TrappedChestBlock;
-import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -71,7 +70,7 @@ final class NativeBlockCodec {
         checkOwnerAndPosition(level,pos);
         BlockState state=level.getBlockState(pos);
         BlockEntity entity=level.getBlockEntity(pos);
-        if(state.hasBlockEntity()&&entity==null)
+        if(NativeBlockEntityLifecycle.hasEntity(state)&&entity==null)
             throw new ExtensionException("missing_block_entity","Missing live block entity at "+pos);
         // Opaque BE data must be captured before arbitrary native shape hooks. Plain
         // states need no JSON, properties map or string allocation at this stage.
@@ -82,7 +81,7 @@ final class NativeBlockCodec {
     static String terrainState(ServerLevel level, BlockPos pos) {
         checkOwnerAndPosition(level,pos);
         BlockState state = level.getBlockState(pos);
-        if (state.hasBlockEntity() && level.getBlockEntity(pos) == null)
+        if (NativeBlockEntityLifecycle.hasEntity(state) && level.getBlockEntity(pos) == null)
             throw new ExtensionException("missing_block_entity", "Missing live block entity at " + pos);
         return stateJson(state);
     }
@@ -134,7 +133,7 @@ final class NativeBlockCodec {
     }
 
     private static void cacheInput(String input, JsonObject json, BlockState state) {
-        if (!state.hasBlockEntity() && (!json.has("blockEntity") || json.get("blockEntity").isJsonNull()))
+        if (!NativeBlockEntityLifecycle.hasEntity(state) && (!json.has("blockEntity") || json.get("blockEntity").isJsonNull()))
             PALETTE.get().inputs.put(input, state);
     }
 
@@ -229,6 +228,9 @@ final class NativeBlockCodec {
         // One admission point for the synchronous owner-thread commit. Rechecking
         // between BE removal and insertion could leave a block with missing contents.
         requireActive.run();
+        // Conservatively admit native persistence before any mutating hook. A
+        // remove/install/onLoad failure can leave a changed image that must be saved.
+        NativeBlockEntityLifecycle.markDirty(level, pos);
         if (!before.equals(prepared.state())) {
             if (!level.setBlock(pos, prepared.state(), WRITE_FLAGS)) {
                 throw placementFailed(pos, "Native setBlock refused the placement");
@@ -240,10 +242,7 @@ final class NativeBlockCodec {
         if (prepared.entity() != null) {
             // Unregister the old listener/ticker before installing the validated entity.
             level.removeBlockEntity(pos);
-            level.setBlockEntity(prepared.entity());
-            // BlockEntity.setChanged also updates comparator neighbors. Defer that work
-            // to the controller's neighbor pass and mark the chunk dirty directly.
-            level.blockEntityChanged(pos);
+            NativeBlockEntityLifecycle.install(level, pos, prepared.entity());
             level.sendBlockUpdated(pos, prepared.state(), prepared.state(), WRITE_FLAGS);
         }
         String actual = read(level, pos);
@@ -264,7 +263,7 @@ final class NativeBlockCodec {
         else if (blockClass == ShulkerBoxBlock.class) expected = NativeContainerEntityTypes.shulkerBox();
         else return false;
         var id = NativeWorldResourceIds.tryParse(NativeBlockEntityTags.containerTransformId(tag));
-        if (id == null || !expected.isValid(state)
+        if (id == null || !NativeBlockEntityLifecycle.valid(expected, state)
                 || NativeWorldRegistries.blockEntity(id.toString()).map(type -> type != expected).orElse(true)) return false;
         if (!NativeBlockEntityTags.hasOnlyContainerFields(tag, CONTAINER_FIELDS)) return false;
         // Unknown attached BE components can contain orientation. Fail rather than guess.
@@ -277,24 +276,19 @@ final class NativeBlockCodec {
         JsonObject json = parse(stateJson);
         BlockState state = decode(json);
         CompoundTag tag = blockEntity(json);
-        if (!state.hasBlockEntity()) {
+        if (!NativeBlockEntityLifecycle.hasEntity(state)) {
             if (tag != null) throw new IllegalArgumentException("Block does not support blockEntity: " + json.get("id"));
             cacheInput(stateJson, json, state);
             return new Prepared(state, null, null);
         }
-        if (!(state.getBlock() instanceof EntityBlock entityBlock)) {
-            throw new ExtensionException("invalid_block_entity", "Block has no native block-entity factory");
-        }
-        BlockEntity entity = entityBlock.newBlockEntity(pos, state);
-        if (entity == null || !entity.getType().isValid(state)) {
-            throw new ExtensionException("invalid_block_entity", "Native block-entity factory did not create a valid entity");
-        }
+        BlockEntity entity = NativeBlockEntityLifecycle.createDetached(level, pos, state);
+        BlockEntityType<?> expectedType = entity.getType();
         if (tag != null) {
             String rawId = NativeBlockEntityTags.requiredId(tag);
             var id = NativeWorldResourceIds.parse(rawId, "blockEntity id");
             BlockEntityType<?> type = NativeWorldRegistries.blockEntity(id.toString())
                     .orElseThrow(() -> new IllegalArgumentException("Unknown blockEntity id: " + rawId));
-            if (type != entity.getType() || !type.isValid(state)) {
+            if (type != entity.getType() || !NativeBlockEntityLifecycle.valid(type, state)) {
                 throw new IllegalArgumentException("blockEntity id " + rawId + " does not match block " + json.get("id"));
             }
             tag.putString("id", id.toString());
@@ -302,8 +296,16 @@ final class NativeBlockCodec {
             tag.putInt("y", pos.getY());
             tag.putInt("z", pos.getZ());
             NativeBlockEntityData.load(level, entity, tag);
+            NativeBlockEntityLifecycle.afterLoad(entity, pos, state);
         }
-        return new Prepared(state, entity, save(level, entity));
+        NativeBlockEntityLifecycle.validateDetached(entity, pos, state);
+        if (entity.getType() != expectedType)
+            throw new ExtensionException("invalid_block_entity", "Native load changed the prepared entity type");
+        CompoundTag image = save(level, entity);
+        NativeBlockEntityLifecycle.validateDetached(entity, pos, state);
+        if (entity.getType() != expectedType)
+            throw new ExtensionException("invalid_block_entity", "Native save changed the prepared entity type");
+        return new Prepared(state, entity, image);
     }
 
     private static CompoundTag save(ServerLevel level, BlockEntity entity) {

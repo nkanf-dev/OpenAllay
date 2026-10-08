@@ -28,29 +28,49 @@ public final class ServerAgentEventCodec {
         String type = type(event);
         boolean terminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
         String eventJson;
-        if (event instanceof AgentEvent.SteerApplied applied) {
+        final class $oaPattern0_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.SteerApplied bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = event) instanceof dev.openallay.agent.AgentEvent.SteerApplied && (($oaPattern0_holder.bound = (AgentEvent.SteerApplied) $oaPattern0_holder.value) != null))) {
             JsonObject body = new JsonObject();
-            body.addProperty("messageId", applied.messageId().toString());
-            body.add("message", BridgeJsonCodec.encodeHistoryMessage(gson, ServerAgentHistoryMessage.from(applied.message())));
+            body.addProperty("messageId", $oaPattern0_holder.bound.messageId().toString());
+            body.add("message", BridgeJsonCodec.encodeHistoryMessage(gson, ServerAgentHistoryMessage.from($oaPattern0_holder.bound.message())));
             eventJson = body.toString();
-        } else if (event instanceof AgentEvent.ContextCompacted compacted) {
-            eventJson = checkpoints.encode(compacted.checkpoint());
-        } else if (event instanceof AgentEvent.ContextUpdated updated) {
-            JsonObject context = new JsonObject();
-            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode(updated.messages())));
-            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode(updated.requestMessages())));
-            eventJson = context.toString();
-        } else if (event instanceof AgentEvent.ContextFinalized finalized) {
-            JsonObject context = new JsonObject();
-            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode(finalized.messages())));
-            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode(finalized.requestMessages())));
-            eventJson = context.toString();
-        } else if (event instanceof AgentEvent.ToolStarted started) {
-            eventJson = encodeToolStarted(started).toString();
         } else {
-            Object body = event instanceof AgentEvent.ModelProgress progress ? progress.event() : event;
+final class $oaPattern1_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextCompacted bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextCompacted && (($oaPattern1_holder.bound = (AgentEvent.ContextCompacted) $oaPattern1_holder.value) != null))) {
+            eventJson = checkpoints.encode($oaPattern1_holder.bound.checkpoint());
+        } else {
+final class $oaPattern2_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextUpdated bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextUpdated && (($oaPattern2_holder.bound = (AgentEvent.ContextUpdated) $oaPattern2_holder.value) != null))) {
+            JsonObject context = new JsonObject();
+            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern2_holder.bound.messages())));
+            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern2_holder.bound.requestMessages())));
+            eventJson = context.toString();
+        } else {
+final class $oaPattern3_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ContextFinalized bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ContextFinalized && (($oaPattern3_holder.bound = (AgentEvent.ContextFinalized) $oaPattern3_holder.value) != null))) {
+            JsonObject context = new JsonObject();
+            context.add("messages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern3_holder.bound.messages())));
+            context.add("requestMessages", dev.openallay.json.JsonTrees.parse(contexts.encode($oaPattern3_holder.bound.requestMessages())));
+            eventJson = context.toString();
+        } else {
+final class $oaPattern4_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ToolStarted bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ToolStarted && (($oaPattern4_holder.bound = (AgentEvent.ToolStarted) $oaPattern4_holder.value) != null))) {
+            eventJson = encodeToolStarted($oaPattern4_holder.bound).toString();
+        } else {
+            final class $oaPattern5_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelProgress bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+Object body = (($oaPattern5_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelProgress && (($oaPattern5_holder.bound = (AgentEvent.ModelProgress) $oaPattern5_holder.value) != null)) ? $oaPattern5_holder.bound.event() : event;
             eventJson = gson.toJson(body);
         }
+}
+}
+}
+}
         return new ServerAgentEventPayload(
                 requestId, type, eventJson, terminal);
     }
@@ -63,7 +83,7 @@ public final class ServerAgentEventCodec {
         JsonObject body;
         try {
             BridgeJsonCodec.rejectDuplicateFields(payload.eventJson());
-            var parsed = dev.openallay.json.JsonTrees.parse(payload.eventJson());
+            com.google.gson.JsonElement parsed = dev.openallay.json.JsonTrees.parse(payload.eventJson());
             if (!parsed.isJsonObject()) {
                 throw new IllegalArgumentException("Server Agent event body must be an object");
             }
@@ -72,44 +92,116 @@ public final class ServerAgentEventCodec {
             throw new IllegalArgumentException("Malformed server Agent event JSON", failure);
         }
 
-        AgentEvent event = switch (payload.eventType()) {
-            case "state" -> new AgentEvent.StateChanged(read(body, Set.of("state"), AgentEvent.StateChanged.class).state());
-            case "context_compacted" ->
-                    new AgentEvent.ContextCompacted(checkpoints.decode(body.toString()));
-            case "context_updated" -> readContext(body);
-            case "context_finalized" -> readFinalized(body);
-            case "steer_applied" -> readSteerApplied(body);
-            case "steer_rejected" -> new AgentEvent.SteerRejected(readMessageId(body, Set.of("messageId")));
-            case "text_delta" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("text"), ModelEvent.TextDelta.class));
-            case "reasoning_delta" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("text"), ModelEvent.ReasoningDelta.class));
-            case "tool_use_complete" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("id", "name", "input"), ModelEvent.ToolUseComplete.class));
-            case "request_released" -> read(body, Set.of(), AgentEvent.RequestReleased.class);
-            case "model_usage_started" -> readUsageStarted(body);
-            case "model_usage_observed" -> readUsageObserved(body);
-            case "usage" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("usage"), ModelEvent.UsageUpdate.class));
-            case "model_attempt_started" -> new AgentEvent.ModelProgress(
-                    readAttemptStarted(body));
-            case "model_response_started" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of(), ModelEvent.ResponseStarted.class));
-            case "rate_limited" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class));
-            case "model_complete" -> new AgentEvent.ModelProgress(
-                    read(body, Set.of("stopReason"), ModelEvent.MessageComplete.class));
-            case "model_failure" -> new AgentEvent.ModelProgress(readModelFailure(body));
-            case "tool_started" -> readToolStarted(body);
-            case "tool_completed" -> read(
+        dev.openallay.agent.AgentEvent $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((payload.eventType())) {
+case "state":
+{
+$oaSwitch0_exit_result = new AgentEvent.StateChanged(read(body, dev.openallay.util.Java8Collections.setOf("state"), AgentEvent.StateChanged.class).state()); break $oaSwitch0_exit;
+}
+case "context_compacted":
+{
+$oaSwitch0_exit_result = new AgentEvent.ContextCompacted(checkpoints.decode(body.toString())); break $oaSwitch0_exit;
+}
+case "context_updated":
+{
+$oaSwitch0_exit_result = readContext(body); break $oaSwitch0_exit;
+}
+case "context_finalized":
+{
+$oaSwitch0_exit_result = readFinalized(body); break $oaSwitch0_exit;
+}
+case "steer_applied":
+{
+$oaSwitch0_exit_result = readSteerApplied(body); break $oaSwitch0_exit;
+}
+case "steer_rejected":
+{
+$oaSwitch0_exit_result = new AgentEvent.SteerRejected(readMessageId(body, dev.openallay.util.Java8Collections.setOf("messageId"))); break $oaSwitch0_exit;
+}
+case "text_delta":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.TextDelta.class)); break $oaSwitch0_exit;
+}
+case "reasoning_delta":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("text"), ModelEvent.ReasoningDelta.class)); break $oaSwitch0_exit;
+}
+case "tool_use_complete":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("id", "name", "input"), ModelEvent.ToolUseComplete.class)); break $oaSwitch0_exit;
+}
+case "request_released":
+{
+$oaSwitch0_exit_result = read(body, dev.openallay.util.Java8Collections.setOf(), AgentEvent.RequestReleased.class); break $oaSwitch0_exit;
+}
+case "model_usage_started":
+{
+$oaSwitch0_exit_result = readUsageStarted(body); break $oaSwitch0_exit;
+}
+case "model_usage_observed":
+{
+$oaSwitch0_exit_result = readUsageObserved(body); break $oaSwitch0_exit;
+}
+case "usage":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("usage"), ModelEvent.UsageUpdate.class)); break $oaSwitch0_exit;
+}
+case "model_attempt_started":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    readAttemptStarted(body)); break $oaSwitch0_exit;
+}
+case "model_response_started":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf(), ModelEvent.ResponseStarted.class)); break $oaSwitch0_exit;
+}
+case "rate_limited":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("retryAfterMillis", "attempt"), ModelEvent.RateLimited.class)); break $oaSwitch0_exit;
+}
+case "model_complete":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(
+                    read(body, dev.openallay.util.Java8Collections.setOf("stopReason"), ModelEvent.MessageComplete.class)); break $oaSwitch0_exit;
+}
+case "model_failure":
+{
+$oaSwitch0_exit_result = new AgentEvent.ModelProgress(readModelFailure(body)); break $oaSwitch0_exit;
+}
+case "tool_started":
+{
+$oaSwitch0_exit_result = readToolStarted(body); break $oaSwitch0_exit;
+}
+case "tool_completed":
+{
+$oaSwitch0_exit_result = read(
                     body,
-                    Set.of("invocationId", "toolId", "failure", "normalized"),
-                    AgentEvent.ToolCompleted.class);
-            case "final_text" -> read(body, Set.of("text"), AgentEvent.FinalText.class);
-            case "failed" -> read(body, Set.of("code", "message"), AgentEvent.Failed.class);
-            default -> throw new IllegalArgumentException(
+                    dev.openallay.util.Java8Collections.setOf("invocationId", "toolId", "failure", "normalized"),
+                    AgentEvent.ToolCompleted.class); break $oaSwitch0_exit;
+}
+case "final_text":
+{
+$oaSwitch0_exit_result = read(body, dev.openallay.util.Java8Collections.setOf("text"), AgentEvent.FinalText.class); break $oaSwitch0_exit;
+}
+case "failed":
+{
+$oaSwitch0_exit_result = read(body, dev.openallay.util.Java8Collections.setOf("code", "message"), AgentEvent.Failed.class); break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException(
                     "Unknown server Agent event type " + payload.eventType());
-        };
+}
+}
+}
+AgentEvent event = $oaSwitch0_exit_result;
         boolean expectedTerminal = event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed;
         if (payload.terminal() != expectedTerminal) {
             throw new IllegalArgumentException("Server Agent event terminal flag is inconsistent");
@@ -118,7 +210,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ModelUsageStarted readUsageStarted(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("callId", "modelIdentifier"))
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("callId", "modelIdentifier"))
                 || !body.get("callId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("callId").isString()
                 || !body.get("modelIdentifier").isJsonPrimitive()
@@ -130,7 +222,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ModelUsageObserved readUsageObserved(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("callId", "modelIdentifier", "usage"))
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("callId", "modelIdentifier", "usage"))
                 || !body.get("callId").isJsonPrimitive()
                 || !body.getAsJsonPrimitive("callId").isString()
                 || !body.get("modelIdentifier").isJsonPrimitive()
@@ -139,10 +231,8 @@ public final class ServerAgentEventCodec {
             throw new IllegalArgumentException("Server model usage receipt schema mismatch");
         }
         JsonObject usage = body.getAsJsonObject("usage");
-        Set<String> counts = Set.of("inputTokens", "outputTokens", "cacheReadTokens",
-                "cacheWriteTokens", "uncachedInputTokens");
-        Set<String> known = Set.of("inputKnown", "outputKnown", "cacheReadKnown",
-                "cacheWriteKnown", "uncachedInputKnown");
+        Set<String> counts = dev.openallay.util.Java8Collections.setOf("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens", "uncachedInputTokens");
+        Set<String> known = dev.openallay.util.Java8Collections.setOf("inputKnown", "outputKnown", "cacheReadKnown", "cacheWriteKnown", "uncachedInputKnown");
         java.util.HashSet<String> fields = new java.util.HashSet<>(counts);
         fields.addAll(known);
         if (!dev.openallay.json.JsonTrees.keys(usage).equals(fields)) {
@@ -171,7 +261,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.SteerApplied readSteerApplied(JsonObject body) {
-        UUID messageId = readMessageId(body, Set.of("messageId", "message"));
+        UUID messageId = readMessageId(body, dev.openallay.util.Java8Collections.setOf("messageId", "message"));
         BridgeJsonCodec.validateHistoryMessage(body.get("message"));
         ServerAgentHistoryMessage message = gson.fromJson(body.get("message"), ServerAgentHistoryMessage.class);
         ServerAgentSteerPayload.validateMessage(message);
@@ -188,7 +278,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ContextUpdated readContext(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("messages", "requestMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server model context schema mismatch");
         }
         return new AgentEvent.ContextUpdated(contexts.decode(body.get("messages").toString()),
@@ -196,7 +286,7 @@ public final class ServerAgentEventCodec {
     }
 
     private AgentEvent.ContextFinalized readFinalized(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("messages", "requestMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("messages", "requestMessages"))) {
             throw new IllegalArgumentException("Server finalized context schema mismatch");
         }
         return new AgentEvent.ContextFinalized(contexts.decode(body.get("messages").toString()),
@@ -217,16 +307,16 @@ public final class ServerAgentEventCodec {
 
     private ModelFailure readModelFailure(JsonObject body) {
         Set<String> fields = dev.openallay.json.JsonTrees.keys(body);
-        if (!fields.equals(Set.of("code", "message"))
-                && !fields.equals(Set.of("code", "message", "httpStatus"))) {
+        if (!fields.equals(dev.openallay.util.Java8Collections.setOf("code", "message"))
+                && !fields.equals(dev.openallay.util.Java8Collections.setOf("code", "message", "httpStatus"))) {
             throw new IllegalArgumentException("Server Agent event schema mismatch for ModelFailure");
         }
         return gson.fromJson(body, ModelFailure.class);
     }
 
     private ModelEvent.AttemptStarted readAttemptStarted(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of("attempt"))
-                && !dev.openallay.json.JsonTrees.keys(body).equals(Set.of("attempt", "attemptTimeoutMillis"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("attempt"))
+                && !dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("attempt", "attemptTimeoutMillis"))) {
             throw new IllegalArgumentException(
                     "Server Agent event schema mismatch for AttemptStarted");
         }
@@ -243,8 +333,7 @@ public final class ServerAgentEventCodec {
     }
 
     private static AgentEvent.ToolStarted readToolStarted(JsonObject body) {
-        if (!dev.openallay.json.JsonTrees.keys(body).equals(Set.of(
-                "invocationId", "toolId", "presentationMessages"))) {
+        if (!dev.openallay.json.JsonTrees.keys(body).equals(dev.openallay.util.Java8Collections.setOf("invocationId", "toolId", "presentationMessages"))) {
             throw new IllegalArgumentException("Server Tool start schema mismatch");
         }
         if (!body.get("invocationId").isJsonPrimitive()
@@ -274,8 +363,10 @@ public final class ServerAgentEventCodec {
         if (event instanceof AgentEvent.RequestReleased) return "request_released";
         if (event instanceof AgentEvent.ModelUsageStarted) return "model_usage_started";
         if (event instanceof AgentEvent.ModelUsageObserved) return "model_usage_observed";
-        if (event instanceof AgentEvent.ModelProgress progress) {
-            ModelEvent modelEvent = Objects.requireNonNull(progress.event());
+        final class $oaPattern6_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelProgress bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelProgress && (($oaPattern6_holder.bound = (AgentEvent.ModelProgress) $oaPattern6_holder.value) != null))) {
+            ModelEvent modelEvent = Objects.requireNonNull($oaPattern6_holder.bound.event());
             if (modelEvent instanceof ModelEvent.TextDelta) return "text_delta";
             if (modelEvent instanceof ModelEvent.ReasoningDelta) return "reasoning_delta";
             if (modelEvent instanceof ModelEvent.ToolUseComplete) return "tool_use_complete";

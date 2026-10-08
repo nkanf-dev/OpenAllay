@@ -32,7 +32,7 @@ public final class OpenAllayExtensionRegistry {
     private final Set<JavascriptInvocationScope> liveInvocations = new HashSet<>();
     private boolean closing;
     private java.util.concurrent.CompletableFuture<Void> shutdown;
-    private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = List.of();
+    private List<JavascriptInvocationParticipant> javascriptInvocationParticipants = dev.openallay.util.Java8Collections.listOf();
     private long generation;
 
     public OpenAllayExtensionRegistry(
@@ -45,7 +45,7 @@ public final class OpenAllayExtensionRegistry {
         this.dataModules = Objects.requireNonNull(dataModules, "dataModules");
         this.javascriptModules = Objects.requireNonNull(javascriptModules, "javascriptModules");
         this.skills = Objects.requireNonNull(skills, "skills");
-        this.installedMods = Set.copyOf(installedMods);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
     }
 
     public synchronized Registration register(OpenAllayExtension extension) {
@@ -71,10 +71,9 @@ public final class OpenAllayExtensionRegistry {
             // Capture foreign IDs only after identity and compatibility admission, before mutation.
             contribution = new OpenAllayExtensionContribution(
                     declared.dataModules(), declared.javascriptModules(), declared.skills(),
-                    declared.resultViews(), declared.javascriptInvocationParticipants().stream()
+                    declared.resultViews(), dev.openallay.util.Java8Collections.toList(declared.javascriptInvocationParticipants().stream()
                             .map(participant -> (JavascriptInvocationParticipant)
-                                    new RegisteredParticipant(participant.id(), participant))
-                            .toList(), declared.hostBindings());
+                                    new RegisteredParticipant(participant.id(), participant))), declared.hostBindings());
             validateContribution(descriptor.id(), contribution);
             publish(descriptor, contribution);
             generation++;
@@ -96,9 +95,8 @@ public final class OpenAllayExtensionRegistry {
     public synchronized Snapshot snapshot() {
         return new Snapshot(
                 generation,
-                active.values().stream()
-                        .map(RegisteredExtension::view)
-                        .toList());
+                dev.openallay.util.Java8Collections.toList(active.values().stream()
+                        .map(RegisteredExtension::view)));
     }
 
     public synchronized List<JavascriptInvocationParticipant> javascriptInvocationParticipants() {
@@ -124,16 +122,16 @@ public final class OpenAllayExtensionRegistry {
         Set<JavascriptInvocationScope> scopes =
                 invocations.computeIfAbsent(requestId, ignored -> new HashSet<>());
         JavascriptInvocationScope[] reference = new JavascriptInvocationScope[1];
-        List<JavascriptInvocationScope.Participant> participants = active.values().stream()
+        List<JavascriptInvocationScope.Participant> participants = dev.openallay.util.Java8Collections.toList(active.values().stream()
                 .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream()
                         .map(participant -> new JavascriptInvocationScope.Participant(
-                                value.descriptor().id(), participant))).toList();
-        List<JavascriptInvocationScope.Binding> bindings = active.values().stream()
+                                value.descriptor().id(), participant))));
+        List<JavascriptInvocationScope.Binding> bindings = dev.openallay.util.Java8Collections.toList(active.values().stream()
                 .flatMap(value -> value.contribution().hostBindings().stream()
                         .map(binding -> new JavascriptInvocationScope.Binding(
-                                value.descriptor().id(), binding))).toList();
+                                value.descriptor().id(), binding))));
         JavascriptInvocationScope scope = new JavascriptInvocationScope(
-                invocation, cancellation, participants, bindings, Set.copyOf(active.keySet()),
+                invocation, cancellation, participants, bindings, dev.openallay.util.Java8Collections.setCopyOf(active.keySet()),
                 () -> releaseInvocation(requestId, reference[0]));
         reference[0] = scope;
         scopes.add(scope);
@@ -161,7 +159,7 @@ public final class OpenAllayExtensionRegistry {
         synchronized (this) {
             if (shutdown != null) return shutdown;
             closing = true;
-            captured = List.copyOf(liveInvocations);
+            captured = dev.openallay.util.Java8Collections.listCopyOf(liveInvocations);
             shutdown = new java.util.concurrent.CompletableFuture<>();
             receipt = shutdown;
         }
@@ -202,7 +200,7 @@ public final class OpenAllayExtensionRegistry {
             Objects.requireNonNull(view, "resultView");
             claim(extensionId, view.id(), batch);
             Objects.requireNonNull(view.kind(), "resultView.kind");
-            if (view.summary() == null || view.summary().isBlank()) {
+            if (view.summary() == null || dev.openallay.util.Java8Strings.isBlank(view.summary())) {
                 throw new IllegalArgumentException("Result view summary is required");
             }
         }
@@ -227,7 +225,7 @@ public final class OpenAllayExtensionRegistry {
     }
 
     private void claim(String extensionId, String contributionId, Set<String> batch) {
-        if (contributionId == null || contributionId.isBlank()) {
+        if (contributionId == null || dev.openallay.util.Java8Strings.isBlank(contributionId)) {
             throw new IllegalArgumentException("Contribution ID is required");
         }
         if (!batch.add(contributionId)) {
@@ -260,9 +258,8 @@ public final class OpenAllayExtensionRegistry {
         contribution.hostBindings().forEach(binding ->
                 contributionOwners.put(binding.id(), descriptor.id()));
         active.put(descriptor.id(), registered);
-        javascriptInvocationParticipants = active.values().stream()
-                .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream())
-                .toList();
+        javascriptInvocationParticipants = dev.openallay.util.Java8Collections.toList(active.values().stream()
+                .flatMap(value -> value.contribution().javascriptInvocationParticipants().stream()));
     }
 
     private Registration rejected(
@@ -270,76 +267,230 @@ public final class OpenAllayExtensionRegistry {
         return new Registration(extensionId, state, diagnostic, generation);
     }
 
-    public record Registration(
-            String extensionId,
-            OpenAllayExtensionState state,
-            String diagnostic,
-            long generation) {}
-
-    public record Snapshot(long generation, List<ExtensionView> extensions) {
-        public Snapshot {
-            extensions = List.copyOf(extensions);
+    @dev.openallay.value.ValueType(Registration.ValueSchemaProvider.class)
+public static final class Registration {
+    private final String extensionId;
+    private final OpenAllayExtensionState state;
+    private final String diagnostic;
+    private final long generation;
+    public Registration(String extensionId, OpenAllayExtensionState state, String diagnostic, long generation) {
+        this.extensionId = extensionId;
+        this.state = state;
+        this.diagnostic = diagnostic;
+        this.generation = generation;
+    }
+    public String extensionId() { return extensionId; }
+    public OpenAllayExtensionState state() { return state; }
+    public String diagnostic() { return diagnostic; }
+    public long generation() { return generation; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Registration)) return false;
+        Registration that = (Registration) other;
+        return java.util.Objects.equals(extensionId, that.extensionId) && java.util.Objects.equals(state, that.state) && java.util.Objects.equals(diagnostic, that.diagnostic) && generation == that.generation;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(extensionId);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        hash = 31 * hash + Long.hashCode(generation);
+        return hash;
+    }
+    @Override public String toString() { return "Registration[extensionId=" + extensionId + ", state=" + state + ", diagnostic=" + diagnostic + ", generation=" + generation + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Registration> schema() {
+            return new dev.openallay.value.ValueSchema<>(Registration.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Registration>>asList(new dev.openallay.value.ValueSchema.Component<>(Registration.class, "extensionId", Registration::extensionId), new dev.openallay.value.ValueSchema.Component<>(Registration.class, "state", Registration::state), new dev.openallay.value.ValueSchema.Component<>(Registration.class, "diagnostic", Registration::diagnostic), new dev.openallay.value.ValueSchema.Component<>(Registration.class, "generation", Registration::generation)), arguments -> new Registration((String) arguments[0], (OpenAllayExtensionState) arguments[1], (String) arguments[2], (Long) arguments[3]));
         }
     }
+}
 
-    public record ExtensionView(
-            OpenAllayExtensionDescriptor descriptor,
-            OpenAllayExtensionState state,
-            List<String> dataModules,
-            List<String> javascriptModules,
-            List<String> skills,
-            List<String> resultViews,
-            String diagnostic,
-            List<String> hostBindings) {
-        public ExtensionView {
-            dataModules = List.copyOf(dataModules);
-            javascriptModules = List.copyOf(javascriptModules);
-            skills = List.copyOf(skills);
-            resultViews = List.copyOf(resultViews);
-            diagnostic = diagnostic == null ? "" : diagnostic;
-            hostBindings = List.copyOf(hostBindings);
+    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
+public static final class Snapshot {
+    private final long generation;
+    private final List<ExtensionView> extensions;
+    public Snapshot(long generation, List<ExtensionView> extensions) {
+
+            extensions = dev.openallay.util.Java8Collections.listCopyOf(extensions);
+
+        this.generation = generation;
+        this.extensions = extensions;
+    }
+    public long generation() { return generation; }
+    public List<ExtensionView> extensions() { return extensions; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Snapshot)) return false;
+        Snapshot that = (Snapshot) other;
+        return generation == that.generation && java.util.Objects.equals(extensions, that.extensions);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(extensions);
+        return hash;
+    }
+    @Override public String toString() { return "Snapshot[generation=" + generation + ", extensions=" + extensions + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
+            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "generation", Snapshot::generation), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "extensions", Snapshot::extensions)), arguments -> new Snapshot((Long) arguments[0], (List) arguments[1]));
         }
+    }
+}
 
-        public ExtensionView(OpenAllayExtensionDescriptor descriptor, OpenAllayExtensionState state,
+    @dev.openallay.value.ValueType(ExtensionView.ValueSchemaProvider.class)
+public static final class ExtensionView {
+    private final OpenAllayExtensionDescriptor descriptor;
+    private final OpenAllayExtensionState state;
+    private final List<String> dataModules;
+    private final List<String> javascriptModules;
+    private final List<String> skills;
+    private final List<String> resultViews;
+    private final String diagnostic;
+    private final List<String> hostBindings;
+    public ExtensionView(OpenAllayExtensionDescriptor descriptor, OpenAllayExtensionState state, List<String> dataModules, List<String> javascriptModules, List<String> skills, List<String> resultViews, String diagnostic, List<String> hostBindings) {
+
+            dataModules = dev.openallay.util.Java8Collections.listCopyOf(dataModules);
+            javascriptModules = dev.openallay.util.Java8Collections.listCopyOf(javascriptModules);
+            skills = dev.openallay.util.Java8Collections.listCopyOf(skills);
+            resultViews = dev.openallay.util.Java8Collections.listCopyOf(resultViews);
+            diagnostic = diagnostic == null ? "" : diagnostic;
+            hostBindings = dev.openallay.util.Java8Collections.listCopyOf(hostBindings);
+
+        this.descriptor = descriptor;
+        this.state = state;
+        this.dataModules = dataModules;
+        this.javascriptModules = javascriptModules;
+        this.skills = skills;
+        this.resultViews = resultViews;
+        this.diagnostic = diagnostic;
+        this.hostBindings = hostBindings;
+    }
+    public OpenAllayExtensionDescriptor descriptor() { return descriptor; }
+    public OpenAllayExtensionState state() { return state; }
+    public List<String> dataModules() { return dataModules; }
+    public List<String> javascriptModules() { return javascriptModules; }
+    public List<String> skills() { return skills; }
+    public List<String> resultViews() { return resultViews; }
+    public String diagnostic() { return diagnostic; }
+    public List<String> hostBindings() { return hostBindings; }
+public ExtensionView(OpenAllayExtensionDescriptor descriptor, OpenAllayExtensionState state,
                 List<String> dataModules, List<String> javascriptModules, List<String> skills,
                 List<String> resultViews, String diagnostic) {
             this(descriptor, state, dataModules, javascriptModules, skills, resultViews,
-                    diagnostic, List.of());
+                    diagnostic, dev.openallay.util.Java8Collections.listOf());
+        }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ExtensionView)) return false;
+        ExtensionView that = (ExtensionView) other;
+        return java.util.Objects.equals(descriptor, that.descriptor) && java.util.Objects.equals(state, that.state) && java.util.Objects.equals(dataModules, that.dataModules) && java.util.Objects.equals(javascriptModules, that.javascriptModules) && java.util.Objects.equals(skills, that.skills) && java.util.Objects.equals(resultViews, that.resultViews) && java.util.Objects.equals(diagnostic, that.diagnostic) && java.util.Objects.equals(hostBindings, that.hostBindings);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(descriptor);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(dataModules);
+        hash = 31 * hash + java.util.Objects.hashCode(javascriptModules);
+        hash = 31 * hash + java.util.Objects.hashCode(skills);
+        hash = 31 * hash + java.util.Objects.hashCode(resultViews);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        hash = 31 * hash + java.util.Objects.hashCode(hostBindings);
+        return hash;
+    }
+    @Override public String toString() { return "ExtensionView[descriptor=" + descriptor + ", state=" + state + ", dataModules=" + dataModules + ", javascriptModules=" + javascriptModules + ", skills=" + skills + ", resultViews=" + resultViews + ", diagnostic=" + diagnostic + ", hostBindings=" + hostBindings + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ExtensionView> schema() {
+            return new dev.openallay.value.ValueSchema<>(ExtensionView.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ExtensionView>>asList(new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "descriptor", ExtensionView::descriptor), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "state", ExtensionView::state), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "dataModules", ExtensionView::dataModules), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "javascriptModules", ExtensionView::javascriptModules), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "skills", ExtensionView::skills), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "resultViews", ExtensionView::resultViews), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "diagnostic", ExtensionView::diagnostic), new dev.openallay.value.ValueSchema.Component<>(ExtensionView.class, "hostBindings", ExtensionView::hostBindings)), arguments -> new ExtensionView((OpenAllayExtensionDescriptor) arguments[0], (OpenAllayExtensionState) arguments[1], (List) arguments[2], (List) arguments[3], (List) arguments[4], (List) arguments[5], (String) arguments[6], (List) arguments[7]));
         }
     }
+}
 
-    private record RegisteredExtension(
-            OpenAllayExtensionDescriptor descriptor,
-            OpenAllayExtensionContribution contribution) {
-        private ExtensionView view() {
+    @dev.openallay.value.ValueType(RegisteredExtension.ValueSchemaProvider.class)
+private static final class RegisteredExtension {
+    private final OpenAllayExtensionDescriptor descriptor;
+    private final OpenAllayExtensionContribution contribution;
+    private RegisteredExtension(OpenAllayExtensionDescriptor descriptor, OpenAllayExtensionContribution contribution) {
+        this.descriptor = descriptor;
+        this.contribution = contribution;
+    }
+    public OpenAllayExtensionDescriptor descriptor() { return descriptor; }
+    public OpenAllayExtensionContribution contribution() { return contribution; }
+private ExtensionView view() {
             return new ExtensionView(
                     descriptor,
                     OpenAllayExtensionState.ACTIVE,
-                    contribution.dataModules().stream().map(JavascriptDataModule::id).sorted().toList(),
-                    contribution.javascriptModules().stream()
+                    dev.openallay.util.Java8Collections.toList(contribution.dataModules().stream().map(JavascriptDataModule::id).sorted()),
+                    dev.openallay.util.Java8Collections.toList(contribution.javascriptModules().stream()
                             .map(JavascriptModuleSource::id)
-                            .sorted()
-                            .toList(),
-                    contribution.skills().stream()
+                            .sorted()),
+                    dev.openallay.util.Java8Collections.toList(contribution.skills().stream()
                             .map(source -> source.directoryName())
-                            .sorted()
-                            .toList(),
-                    contribution.resultViews().stream()
+                            .sorted()),
+                    dev.openallay.util.Java8Collections.toList(contribution.resultViews().stream()
                             .map(JavascriptResultViewProvider::id)
-                            .sorted()
-                            .toList(),
+                            .sorted()),
                     "",
-                    contribution.hostBindings().stream().map(JavascriptHostBinding::id).sorted().toList());
+                    dev.openallay.util.Java8Collections.toList(contribution.hostBindings().stream().map(JavascriptHostBinding::id).sorted()));
+        }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RegisteredExtension)) return false;
+        RegisteredExtension that = (RegisteredExtension) other;
+        return java.util.Objects.equals(descriptor, that.descriptor) && java.util.Objects.equals(contribution, that.contribution);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(descriptor);
+        hash = 31 * hash + java.util.Objects.hashCode(contribution);
+        return hash;
+    }
+    @Override public String toString() { return "RegisteredExtension[descriptor=" + descriptor + ", contribution=" + contribution + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RegisteredExtension> schema() {
+            return new dev.openallay.value.ValueSchema<>(RegisteredExtension.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RegisteredExtension>>asList(new dev.openallay.value.ValueSchema.Component<>(RegisteredExtension.class, "descriptor", RegisteredExtension::descriptor), new dev.openallay.value.ValueSchema.Component<>(RegisteredExtension.class, "contribution", RegisteredExtension::contribution)), arguments -> new RegisteredExtension((OpenAllayExtensionDescriptor) arguments[0], (OpenAllayExtensionContribution) arguments[1]));
         }
     }
+}
 
-    private record RegisteredParticipant(String id, JavascriptInvocationParticipant delegate)
-            implements JavascriptInvocationParticipant {
-        @Override
+    @dev.openallay.value.ValueType(RegisteredParticipant.ValueSchemaProvider.class)
+private static final class RegisteredParticipant implements JavascriptInvocationParticipant {
+    private final String id;
+    private final JavascriptInvocationParticipant delegate;
+    private RegisteredParticipant(String id, JavascriptInvocationParticipant delegate) {
+        this.id = id;
+        this.delegate = delegate;
+    }
+    public String id() { return id; }
+    public JavascriptInvocationParticipant delegate() { return delegate; }
+@Override
         public AutoCloseable open(JavascriptInvocationContext context) throws Exception {
             return delegate.open(context);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RegisteredParticipant)) return false;
+        RegisteredParticipant that = (RegisteredParticipant) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(delegate, that.delegate);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(delegate);
+        return hash;
+    }
+    @Override public String toString() { return "RegisteredParticipant[id=" + id + ", delegate=" + delegate + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RegisteredParticipant> schema() {
+            return new dev.openallay.value.ValueSchema<>(RegisteredParticipant.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RegisteredParticipant>>asList(new dev.openallay.value.ValueSchema.Component<>(RegisteredParticipant.class, "id", RegisteredParticipant::id), new dev.openallay.value.ValueSchema.Component<>(RegisteredParticipant.class, "delegate", RegisteredParticipant::delegate)), arguments -> new RegisteredParticipant((String) arguments[0], (JavascriptInvocationParticipant) arguments[1]));
+        }
+    }
+}
 
     private static final class DuplicateContribution extends RuntimeException {}
 }

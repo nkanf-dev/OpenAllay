@@ -3,6 +3,7 @@ package dev.openallay.integration.rei;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import dev.architectury.fluid.FluidStack;
 import dev.openallay.context.DataCompleteness;
@@ -107,9 +108,13 @@ final class ReiRecipeProviderTest {
 
     @Test
     void capturesFluidInputAndCreatesStableFallbackId() {
+        FluidStack fluid = FluidStack.create(Fluids.WATER, 1000L);
+        EntryStack<FluidStack> stack = entryValue(fluid);
+        assertSame(stack, stack.<FluidStack>cast(), "published default cast preserves the exact proxy identity");
+        assertSame(fluid, stack.<FluidStack>cast().getValue());
         Display display = display(
                 null,
-                ingredientValue(FluidStack.create(Fluids.WATER, 1000L)),
+                ingredientValue(fluid),
                 ingredient(new ItemStack(Items.GOLD_BLOCK)));
 
         RecipeProviderSnapshot snapshot = provider(registry(Map.of(CATEGORY, List.of(display))))
@@ -209,6 +214,8 @@ final class ReiRecipeProviderTest {
     private static <T> EntryStack<T> entryValue(T value) {
         return proxy(EntryStack.class, (self, method, args) -> switch (method.getName()) {
             case "getValue" -> value;
+            // The published EntryStack default cast() returns this exact stack.
+            case "cast" -> self;
             case "isEmpty" -> value instanceof ItemStack stack && stack.isEmpty();
             case "getIdentifier" -> value instanceof ItemStack stack
                     ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem())

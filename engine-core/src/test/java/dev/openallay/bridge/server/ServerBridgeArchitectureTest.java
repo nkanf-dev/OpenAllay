@@ -30,7 +30,11 @@ final class ServerBridgeArchitectureTest {
             assertFalse(source.contains("switch ("), relative);
             assertFalse(source.contains("ServerAgentRequestChunker"), relative);
             assertFalse(source.contains("ServerGuideRuntime.create"), relative);
-            assertTrue(source.contains("players.get(actor) == player"), relative);
+            assertTrue(source.contains("NativeServerActorHandoffs"), relative);
+            assertTrue(source.contains("handoffs.bind(actor,"), relative);
+            assertTrue(source.contains("player == null || players.get(actor) != player"), relative);
+            assertTrue(source.contains("value.handoffs.revoke(player)"), relative);
+            assertTrue(source.contains("value.handoffs.stop()"), relative);
         }
     }
 }

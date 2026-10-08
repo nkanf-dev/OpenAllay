@@ -1,0 +1,14 @@
+{
+  "scope": "Addition-only standardCompletableFuture.completeOnTimeout null/identity/deadline terminal semantics; priororTimeout37740378961proof reused unchangedbody.",
+  "sources": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "7d220f420132ce518442b7b150e38db5d2b679c3a8df4d35c24fcbe7e7a5d3d4"
+    },
+    {
+      "path": "engine-core/src/futureTimeoutJava8Test/java/dev/openallay/util/FutureTimeoutJava8Fixture.java",
+      "sha256": "0c02ed489889718bfc3f591985d39b946d641c5271d5b2082c74556c36dd19b6"
+    }
+  ],
+  "runner_sha256": "42507017d96701334c515ee3ad69c0a54e4150db0bc2fc5796d466fe196ff65a"
+}

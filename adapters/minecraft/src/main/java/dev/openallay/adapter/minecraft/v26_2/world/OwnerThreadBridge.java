@@ -13,14 +13,62 @@ import java.util.function.BooleanSupplier;
 
 /** Only Java-owned actions reach game executors. No JavaScript callback crosses this boundary. */
 final class OwnerThreadBridge implements AutoCloseable {
-    record Owner(Executor executor, BooleanSupplier isOwnerThread, Runnable validate) {}
+static final class Owner {
+    private final Executor executor;
+    private final BooleanSupplier isOwnerThread;
+    private final Runnable validate;
+    Owner(Executor executor, BooleanSupplier isOwnerThread, Runnable validate) {
+        this.executor = executor;
+        this.isOwnerThread = isOwnerThread;
+        this.validate = validate;
+    }
+    public Executor executor() { return executor; }
+    public BooleanSupplier isOwnerThread() { return isOwnerThread; }
+    public Runnable validate() { return validate; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Owner)) return false;
+        Owner that = (Owner) other;
+        return java.util.Objects.equals(executor, that.executor) && java.util.Objects.equals(isOwnerThread, that.isOwnerThread) && java.util.Objects.equals(validate, that.validate);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(executor);
+        hash = 31 * hash + java.util.Objects.hashCode(isOwnerThread);
+        hash = 31 * hash + java.util.Objects.hashCode(validate);
+        return hash;
+    }
+    @Override public String toString() { return "Owner[executor=" + executor + ", isOwnerThread=" + isOwnerThread + ", validate=" + validate + "]"; }
+}
     private final Thread worker = Thread.currentThread();
     private final Runnable requireActive;
     private final java.util.concurrent.atomic.AtomicLong dispatches = new java.util.concurrent.atomic.AtomicLong();
     private volatile BooleanSupplier anyOwnerThread;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Set<Pending<?>> pending = ConcurrentHashMap.newKeySet();
-    private record Pending<T>(CompletableFuture<T> future, AtomicBoolean claimed) {}
+private static final class Pending<T> {
+    private final CompletableFuture<T> future;
+    private final AtomicBoolean claimed;
+    private Pending(CompletableFuture<T> future, AtomicBoolean claimed) {
+        this.future = future;
+        this.claimed = claimed;
+    }
+    public CompletableFuture<T> future() { return future; }
+    public AtomicBoolean claimed() { return claimed; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Pending)) return false;
+        Pending that = (Pending) other;
+        return java.util.Objects.equals(future, that.future) && java.util.Objects.equals(claimed, that.claimed);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(future);
+        hash = 31 * hash + java.util.Objects.hashCode(claimed);
+        return hash;
+    }
+    @Override public String toString() { return "Pending[future=" + future + ", claimed=" + claimed + "]"; }
+}
 
     OwnerThreadBridge(Runnable requireActive, BooleanSupplier anyOwnerThread) {
         this.requireActive = requireActive;
@@ -95,8 +143,12 @@ final class OwnerThreadBridge implements AutoCloseable {
         checkActive();
     }
     static RuntimeException propagate(Throwable cause) {
-        if (cause instanceof ExtensionException extension) return extension;
-        if (cause instanceof Error error) throw error;
+        final class $oaPattern0_Holder { java.lang.Throwable value; ExtensionException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.api.extension.ExtensionException && (($oaPattern0_holder.bound = (ExtensionException) $oaPattern0_holder.value) != null))) return $oaPattern0_holder.bound;
+        final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
         if (cause instanceof IllegalArgumentException)
             return new ExtensionException("invalid_native_input", "The native world operation has invalid input", cause);
         return new ExtensionException("native_failure", "The native world operation failed", cause);

@@ -10,7 +10,7 @@ import dev.openallay.net.HttpTransportPolicy;
 import dev.openallay.net.JdkHttpTransport;
 import dev.openallay.tool.ToolResult;
 import java.io.InputStream;
-import java.net.http.HttpTimeoutException;
+import dev.openallay.net.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashSet;
@@ -104,30 +104,46 @@ public final class ProviderModelCatalogClient {
             JsonElement id = element.getAsJsonObject().get("id");
             if (id == null || !id.isJsonPrimitive()
                     || !id.getAsJsonPrimitive().isString()
-                    || id.getAsString().isBlank()) {
+                    || dev.openallay.util.Java8Strings.isBlank(id.getAsString())) {
                 throw new IllegalArgumentException("catalog model id");
             }
             ids.add(id.getAsString());
         }
-        return new ModelCatalog(ids.stream().toList());
+        return new ModelCatalog(dev.openallay.util.Java8Collections.toList(ids.stream()));
     }
 
     private static String read(InputStream body) throws java.io.IOException {
-        return new String(body.readAllBytes(), StandardCharsets.UTF_8);
+        return new String(dev.openallay.util.Java8Streams.readAllBytes(body), StandardCharsets.UTF_8);
     }
 
     private static ToolResult.Failure<ModelCatalog> statusFailure(int status) {
-        return switch (status) {
-            case 401, 403 -> failure(
+        {
+dev.openallay.tool.ToolResult.Failure<dev.openallay.model.catalog.ModelCatalog> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((status)) {
+case 401:
+case 403:
+{
+$oaSwitch0_exit_result = failure(
                     "model_catalog_auth_failed",
-                    "The model provider rejected catalog authentication");
-            case 429 -> failure(
+                    "The model provider rejected catalog authentication"); break $oaSwitch0_exit;
+}
+case 429:
+{
+$oaSwitch0_exit_result = failure(
                     "model_catalog_rate_limited",
-                    "The model provider rate-limited the catalog request");
-            default -> failure(
+                    "The model provider rate-limited the catalog request"); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = failure(
                     "model_catalog_unavailable",
-                    "The model provider catalog is unavailable");
-        };
+                    "The model provider catalog is unavailable"); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static ToolResult.Failure<ModelCatalog> classify(
@@ -168,14 +184,40 @@ public final class ProviderModelCatalogClient {
         return new ToolResult.Failure<>(code, message);
     }
 
-    private record Response(int status, String body) {
-        private Response {
-            Objects.requireNonNull(body, "body");
-        }
+    @dev.openallay.value.ValueType(Response.ValueSchemaProvider.class)
+private static final class Response {
+    private final int status;
+    private final String body;
+    private Response(int status, String body) {
 
-        @Override
+            Objects.requireNonNull(body, "body");
+
+        this.status = status;
+        this.body = body;
+    }
+    public int status() { return status; }
+    public String body() { return body; }
+@Override
         public String toString() {
             return "Response[status=" + status + "]";
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Response)) return false;
+        Response that = (Response) other;
+        return status == that.status && java.util.Objects.equals(body, that.body);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(body);
+        return hash;
+    }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Response> schema() {
+            return new dev.openallay.value.ValueSchema<>(Response.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Response>>asList(new dev.openallay.value.ValueSchema.Component<>(Response.class, "status", Response::status), new dev.openallay.value.ValueSchema.Component<>(Response.class, "body", Response::body)), arguments -> new Response((Integer) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

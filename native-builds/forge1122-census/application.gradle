@@ -1,0 +1,228 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+def req = new JsonSlurper().parse(file(property('nativeBuildRequest')))
+def java8DiagnosticOnly=project.hasProperty('nativeJava8Diagnostic')
+if (java8DiagnosticOnly && project.property('nativeJava8Diagnostic')!='true') throw new GradleException('Explicit diagnostic true required')
+if (req.keySet() != (['canonicalSourceRoot','javac17','java17','closure','actualMcpUnits','output'] as Set))
+    throw new GradleException('Exact native request fields required')
+def canonical = file(req.canonicalSourceRoot).canonicalFile
+def java17 = file(req.java17); def javac17 = file(req.javac17)
+def out = file(req.output).canonicalFile
+if (out.toPath().startsWith(canonical.toPath())) throw new GradleException('Native output outside canonical source required')
+def sha = { File f ->
+    def d=MessageDigest.getInstance('SHA-256'); f.withInputStream { s -> byte[] b=new byte[65536]; int n
+        while((n=s.read(b))!=-1) d.update(b,0,n) }; d.digest().encodeHex().toString()
+}
+def roles=req.closure.collectEntries { [(it.role):it] }
+if (!(roles.keySet().containsAll(['engine','sdk','builder'])) || req.closure.any {
+    it.keySet() != (['role','path','sha256','compile'] as Set) || !new File(it.path).isAbsolute() ||
+    !file(it.path).isFile() || sha(file(it.path)) != it.sha256 || !(it.compile instanceof Boolean)
+}) throw new GradleException('Exact current engine8/SDK8/Builder8 closure hashes required')
+['engine':52,'sdk':52,'builder':52].each { role, expected ->
+    new java.util.zip.ZipFile(file(roles[role].path)).withCloseable { zip ->
+        def majorVersions=[] as Set
+        zip.entries().each { entry ->
+            if (entry.name.endsWith('.class') && !entry.name.startsWith('META-INF/versions/') && entry.name!='module-info.class') {
+                byte[] bytes=zip.getInputStream(entry).withCloseable { it.bytes }
+                majorVersions.add(((bytes[6]&255)<<8)|(bytes[7]&255))
+            }
+        }
+        if (majorVersions.empty || majorVersions.any { it>expected } || role=='engine' && !majorVersions.contains(52))
+            throw new GradleException("Retained ${role} classfile contract differs: ${majorVersions}")
+    }
+}
+// No publication, SDK, Builder or engine rebuild. The canonical feature/native owners remain one each.
+configurations {
+    nativeApplicationProcessor
+    nativeApplicationRuntime { transitive = false }
+}
+dependencies {
+    nativeApplicationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    nativeApplicationRuntime 'org.spongepowered:mixin:0.8.5'
+}
+def staging=new File(out,'generated-java'); def classes=new File(out,'classes')
+def toolClasses=new File(out,'namespace-tool'); def ap=new File(out,'ap')
+def toolSources=['MinecraftClassNamespaceProducer','MinecraftClassNamespaceProducerMain','NamespaceMetadataAcceptance','CuratedNamespaceAcceptanceMain'].collect {
+    new File(canonical,"build-logic/src/main/java/dev/openallay/build/${it}.java")
+}
+def curated=file('curated-classes.tsv')
+// Normal FG task, exact SRG format for the standard Mixin searge processor.
+tasks.getByName('createMcpToSrg').setFormat('SRG')
+tasks.getByName('createMcpToSrg').setOutput(file('build/createMcpToSrg/output.srg'))
+def execute = { List command ->
+    exec { commandLine command; standardOutput=System.out; errorOutput=System.err }
+}
+task prepareNativeApplication {
+    dependsOn exportNativeInputs
+    doLast {
+        if (out.exists()) throw new GradleException('Fresh native output path required')
+        out.mkdirs(); toolClasses.mkdirs(); ap.mkdirs()
+        def evidence=project.file(project.property('censusOutput'))
+        def selected=new JsonSlurper().parse(new File(evidence,'source-selection.json'))
+        def inputs=new JsonSlurper().parse(new File(evidence,'native-inputs.json'))
+        execute(['python3','-B',new File(canonical,'scripts/supplement-forge1122-native-api.py').absolutePath,
+            '--inputs',new File(evidence,'native-inputs.json').absolutePath,
+            '--javap',new File(java17.parentFile,'javap').absolutePath,
+            '--output',new File(out,'supplement').absolutePath])
+        def selectedPaths=selected.java*.path as Set
+        if (!(req.actualMcpUnits instanceof List) || req.actualMcpUnits.toSet().size()!=req.actualMcpUnits.size() ||
+                !selectedPaths.containsAll(req.actualMcpUnits)) throw new GradleException('ACTUAL_MCP units must be explicit selected physical owners')
+        def processorArtifacts=configurations.nativeApplicationProcessor.resolvedConfiguration.resolvedArtifacts.collect { a ->
+            [coordinate:a.moduleVersion.id.toString(),classifier:a.classifier ?: '',path:a.file.canonicalPath,sha256:sha(a.file)]
+        }
+        new File(out,'normal-annotation-processor-inputs.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(processorArtifacts))+'\n','UTF-8')
+        // The normal Mixin processor jar also owns the source annotation types.
+        def cp=(inputs.classpath + req.closure.findAll { it.compile }*.path + configurations.nativeApplicationProcessor.files*.absolutePath).unique()
+        new File(out,'classpath.txt').setText(cp.join('\n')+'\n','UTF-8')
+        new File(out,'units.tsv').setText(selected.java.collect { r ->
+            if (sha(file(r.path))!=r.sha256) throw new GradleException('Selected canonical source changed')
+            [r.owner,r.logicalPath,req.actualMcpUnits.contains(r.path)?'ACTUAL_MCP':'CANONICAL_SEMANTIC',r.path].join('\t')
+        }.join('\n')+'\n','UTF-8')
+        new File(out,'symbol-units.tsv').setText('','UTF-8')
+        execute([javac17.absolutePath,'--release','17','-d',toolClasses.absolutePath]+toolSources*.absolutePath)
+        execute([java17.absolutePath,'-cp',toolClasses.absolutePath,'dev.openallay.build.NamespaceMetadataAcceptance',
+            new File(out,'classpath.txt').absolutePath,new File(out,'metadata-acceptance.properties').absolutePath,'forge1122'])
+        execute([java17.absolutePath,'-cp',toolClasses.absolutePath,'dev.openallay.build.MinecraftClassNamespaceProducerMain',
+            '--units',new File(out,'units.tsv').absolutePath,'--symbol-units',new File(out,'symbol-units.tsv').absolutePath,
+            '--curated-classes',curated.absolutePath,'--curated-classes-sha256',sha(curated),
+            '--classpath',new File(out,'classpath.txt').absolutePath,'--source','17','--preview','false',
+            '--metadata-acceptance',new File(out,'metadata-acceptance.properties').absolutePath,
+            '--output',staging.absolutePath,'--receipt',new File(out,'namespace-receipt.json').absolutePath])
+        def resourceRoot=new File(out,'resources');resourceRoot.mkdirs()
+        selected.resources.each { r ->
+            if (sha(file(r.path))!=r.sha256) throw new GradleException('Selected resource changed')
+            def dest=new File(resourceRoot,r.logicalPath); dest.parentFile.mkdirs(); dest.bytes=file(r.path).bytes
+        }
+        new File(out,'retained-closure.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(req.closure))+'\n','UTF-8')
+    }
+}
+task compileNativeApplication {
+    dependsOn prepareNativeApplication, 'createMcpToSrg'
+    doLast {
+        classes.mkdirs()
+        def cp=new File(out,'classpath.txt').readLines('UTF-8').join(File.pathSeparator)
+        def mapping=tasks.createMcpToSrg.outputs.files.singleFile
+        def command=[javac17.absolutePath,'--release','8','-encoding','UTF-8','-Xmaxerrs','1000',
+            '-classpath',cp,'-processorpath',configurations.nativeApplicationProcessor.files*.absolutePath.join(File.pathSeparator),
+            '-d',classes.absolutePath,'-AreobfSrgFile='+mapping.absolutePath,
+            '-AoutSrgFile='+new File(ap,'mixins.srg').absolutePath,
+            '-AoutRefMapFile='+new File(ap,'openallay.refmap.json').absolutePath,
+            '-AmappingTypes=searge','-AdefaultObfuscationEnv=searge']
+        def sources=fileTree(staging).matching { include '**/*.java' }.files.sort { it.path }*.absolutePath
+        def argsFile=new File(out,'native-javac.args')
+        argsFile.setText(sources.collect { '"'+it.replace('\\','\\\\').replace('"','\\"')+'"' }.join('\n')+'\n','UTF-8')
+        execute(command+['@'+argsFile.absolutePath])
+        fileTree(classes).matching { include '**/*.class' }.files.each { f ->
+            byte[] bytes=f.bytes
+            if ((((bytes[6]&255)<<8)|(bytes[7]&255))!=52) throw new GradleException('Native application output must be Java8')
+        }
+        // Cheap constructor/closed-family fixtures reuse the actual accepted native outputs and normal FG classpath.
+        // Their classes live outside native application output and are never packed.
+        def fixtureSources=[
+            new File(canonical,'common/src/nativeJava8UnionFixture/java/dev/openallay/client/gui/nativeview/NativeClosedFamilyIngressFixture.java'),
+            new File(canonical,'common/src/nativeJava8UnionFixture/java/dev/openallay/integration/jei/NativeJeiClosedValueIngressFixture.java')]
+        def fixtureClasses=new File(out,'native-union-fixture/classes');fixtureClasses.mkdirs()
+        def fixtureCp=classes.absolutePath+File.pathSeparator+cp
+        execute([javac17.absolutePath,'--release','8','-proc:none','-encoding','UTF-8','-classpath',fixtureCp,
+            '-d',fixtureClasses.absolutePath]+fixtureSources*.absolutePath)
+        def java8=new File(System.getProperty('java.home'),'bin/java')
+        def receipts=[]
+        ['dev.openallay.client.gui.nativeview.NativeClosedFamilyIngressFixture',
+         'dev.openallay.integration.jei.NativeJeiClosedValueIngressFixture'].each { main ->
+            def fixtureCommand=[java8.absolutePath,'-cp',fixtureClasses.absolutePath+File.pathSeparator+fixtureCp,main]
+            def log=new File(out,'native-union-fixture/'+main.substring(main.lastIndexOf('.')+1)+'.log')
+            def result
+            log.withOutputStream { stream ->
+                result=project.exec { commandLine fixtureCommand; standardOutput=stream;errorOutput=stream;ignoreExitValue=true }
+            }
+            receipts.add([main:main,exitCode:result.exitValue,command:fixtureCommand,logSha256:sha(log)])
+        }
+        new File(out,'native-union-fixture/receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
+            scope:'actual compiled native source closed-family constructor/aggregate Java8 fixtures',
+            classesRuntime:'genuine Java8 build-island JVM',nativeClassVersion:52,fixtureJarShipped:false,
+            sources:fixtureSources.collect { [path:it.absolutePath,sha256:sha(it)] },results:receipts,
+            gameLaunch:false]))+'\n','UTF-8')
+        if (receipts.any {it.exitCode!=0}) throw new GradleException('Actual native closed-family fixture failed; exact logs retained')
+    }
+}
+tasks.jar.enabled=true
+tasks.jar.dependsOn compileNativeApplication
+tasks.jar.from classes
+tasks.jar.from new File(out,'resources')
+tasks.jar.from(new File(ap,'openallay.refmap.json'))
+tasks.jar.destinationDir=new File(out,'jar')
+tasks.jar.archiveName='openallay-forge1122-native.jar'
+tasks.jar.preserveFileTimestamps=false
+tasks.jar.reproducibleFileOrder=true
+tasks.jar.duplicatesStrategy=DuplicatesStrategy.FAIL
+tasks.jar.doFirst {
+    if (!new File(ap,'openallay.refmap.json').isFile() || !new File(ap,'mixins.srg').isFile())
+        throw new GradleException('Normal MixinAP refmap/SRG outputs required')
+}
+// FG registers reobfJar after evaluation. Use its normal task, never custom remapping.
+tasks.matching { it.name=='reobfJar' }.all {
+    setTool('net.md-5:SpecialSource:1.11.4:shaded')
+    doFirst {
+        if (sha(getToolJar()) != 'e2cab24b1c12400ad73b15972bb21e4273a0dc7081c8b3c136ddfdd824c78518')
+            throw new GradleException('Exact build-only SpecialSource1.11.4 tool digest differs')
+    }
+    enabled=true
+    dependsOn compileNativeApplication
+    extraMapping(new File(ap,'mixins.srg'))
+}
+task buildNativeApplication {
+    dependsOn 'reobfJar'
+    doLast {
+        def jar=tasks.jar.archivePath
+        new File(out,'native-build-receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
+            minecraft:'1.12.2',forge:'14.23.5.2864',forgeGradle:'3.0.197',toolJava:System.getProperty('java.version'),
+            nativeRelease:8,engineSha256:roles.engine.sha256,sdkSha256:roles.sdk.sha256,builderSha256:roles.builder.sha256,
+            namespaceReceiptSha256:sha(new File(out,'namespace-receipt.json')),curatedClassMapSha256:sha(curated),
+            jar:jar.absolutePath,jarSha256:sha(jar),gameLaunch:false]))+'\n','UTF-8')
+    }
+}
+
+if (java8DiagnosticOnly) apply from: project.file('java8-diagnostic.gradle')
+
+if (project.hasProperty('nativeLanguageCandidates')) {
+    if (project.property('nativeLanguageCandidates')!='true') throw new GradleException('Explicit native language candidate mode required')
+    task materializeNativeLanguageCandidates {
+        dependsOn prepareNativeApplication
+        doLast {
+            def request=new groovy.json.JsonSlurper().parse(project.file(project.property('nativeBuildRequest')))
+            def command
+            if (project.hasProperty('nativeResidualApiOnly')) {
+                command=['python3','-B',new File(request.canonicalSourceRoot,'scripts/native-residual-api-cohort/prepare.py'),
+                    '--project',request.canonicalSourceRoot,'--native-output',request.output,
+                    '--javac',request.javac17,'--java',request.java17,
+                    '--true-javac8',new File(System.getenv('JAVA_HOME_8_X64'),'bin/javac'),
+                    '--true-java8',new File(System.getenv('JAVA_HOME_8_X64'),'bin/java'),
+                    '--output',request.output+'-language-candidate']
+            } else {
+                command=['python3','-B',new File(request.canonicalSourceRoot,'scripts/materialize-native-language-cohort.py'),
+                    '--project',request.canonicalSourceRoot,'--native-output',request.output,
+                    '--javac',request.javac17,'--java',request.java17,'--output',request.output+'-language-candidate']
+                if (project.hasProperty('nativeCandidateOwners')) command.addAll(['--selected-owners',project.file(project.property('nativeCandidateOwners'))])
+            }
+            project.exec { commandLine command }
+        }
+    }
+}
+
+// Runtime publication is distinct from the fat annotation processor classifier.
+task exportNativeApplicationRuntime {
+    dependsOn compileNativeApplication
+    doLast {
+        def records=configurations.nativeApplicationRuntime.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+            [coordinate:artifact.moduleVersion.id.toString(),classifier:artifact.classifier ?: '',
+             path:artifact.file.canonicalPath,sha256:sha(artifact.file)]
+        }
+        if (records.size()!=1 || records[0].coordinate!='org.spongepowered:mixin:0.8.5' || records[0].classifier!='')
+            throw new GradleException('One genuine unclassified Mixin runtime artifact required')
+        out.mkdirs()
+        new File(out,'normal-runtime-dependency-inputs.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(records))+'\n','UTF-8')
+    }
+}
+tasks.getByName('buildNativeApplication').dependsOn exportNativeApplicationRuntime

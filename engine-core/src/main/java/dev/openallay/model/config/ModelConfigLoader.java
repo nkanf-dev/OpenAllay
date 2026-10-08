@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class ModelConfigLoader {
-    private static final Set<String> ALLOWED_FIELDS = Set.of(
+    private static final Set<String> ALLOWED_FIELDS = dev.openallay.util.Java8Collections.setOf(
             "enabled",
             "protocol",
             "baseUrl",
@@ -47,7 +47,7 @@ public final class ModelConfigLoader {
 
     public ToolResult<ModelConfig> load(Reader reader, Map<String, String> environment) {
         Objects.requireNonNull(reader, "reader");
-        environment = Map.copyOf(environment);
+        environment = dev.openallay.util.Java8Collections.mapCopyOf(environment);
         try {
             JsonElement root = dev.openallay.json.JsonTrees.parse(reader);
             if (!root.isJsonObject()) {
@@ -69,7 +69,7 @@ public final class ModelConfigLoader {
                     .toUpperCase(Locale.ROOT));
             String baseUrl = string(environment, "OPENALLAY_MODEL_BASE_URL", object, "baseUrl", null);
             String model = string(environment, "OPENALLAY_MODEL", object, "model", null);
-            String keyEnvName = string(Map.of(), "", object, "apiKeyEnv", "OPENALLAY_API_KEY");
+            String keyEnvName = string(dev.openallay.util.Java8Collections.mapOf(), "", object, "apiKeyEnv", "OPENALLAY_API_KEY");
             String apiKey = firstNonBlank(
                     environment.get(keyEnvName),
                     environment.get("OPENALLAY_API_KEY"),
@@ -82,7 +82,7 @@ public final class ModelConfigLoader {
             java.net.URI endpoint = java.net.URI.create(require(baseUrl, "baseUrl"));
             String modelId = require(model, "model");
             Integer maxOutputTokens = ModelOutputResolution.resolve(endpoint, modelId,
-                    optionalOutputInteger(environment, object), Map.of(),
+                    optionalOutputInteger(environment, object), dev.openallay.util.Java8Collections.mapOf(),
                     BuiltinModelCatalog.bundled().catalog()).maxOutputTokens();
             if (maxOutputTokens == null) {
                 throw new IllegalArgumentException(
@@ -113,7 +113,7 @@ public final class ModelConfigLoader {
                                     ? dev.openallay.model.image.ImageInputCapability.parse(
                                             optionalString(object, "imageInputCapability"))
                                     : null,
-                            Map.of(), BuiltinModelCatalog.bundled().catalog())));
+                            dev.openallay.util.Java8Collections.mapOf(), BuiltinModelCatalog.bundled().catalog())));
         } catch (RuntimeException exception) {
             return new ToolResult.Failure<>(
                     "invalid_model_config",
@@ -223,7 +223,7 @@ public final class ModelConfigLoader {
         if (value == null && object.has(field)) {
             value = object.get(field).getAsString();
         }
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(
                     field + " is required unless trusted model metadata resolves it");
         }
@@ -235,7 +235,7 @@ public final class ModelConfigLoader {
     }
 
     private static String require(String value, String name) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(name + " is required");
         }
         return value;
@@ -243,7 +243,7 @@ public final class ModelConfigLoader {
 
     private static String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !dev.openallay.util.Java8Strings.isBlank(value)) {
                 return value;
             }
         }

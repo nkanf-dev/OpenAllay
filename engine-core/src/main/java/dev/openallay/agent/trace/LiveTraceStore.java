@@ -43,10 +43,9 @@ public final class LiveTraceStore {
     }
 
     public List<UUID> ids() {
-        return traces.values().stream()
+        return dev.openallay.util.Java8Collections.toList(traces.values().stream()
                 .sorted(java.util.Comparator.comparing(LiveAgentTrace::startedAt).reversed())
-                .map(LiveAgentTrace::requestId)
-                .toList();
+                .map(LiveAgentTrace::requestId));
     }
 
     public String encoded(UUID requestId) {
@@ -61,7 +60,7 @@ public final class LiveTraceStore {
             Path target = persistenceDirectory.resolve(trace.requestId() + ".json");
             Path temporary = Files.createTempFile(persistenceDirectory, ".openallay-trace-", ".tmp");
             try {
-                Files.writeString(temporary, json.encode(trace), StandardCharsets.UTF_8);
+                Files.write(temporary, json.encode(trace).getBytes(StandardCharsets.UTF_8));
                 try {
                     Files.move(temporary, target,
                             StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);

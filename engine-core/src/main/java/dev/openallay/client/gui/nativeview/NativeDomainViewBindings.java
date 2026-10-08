@@ -42,11 +42,11 @@ public final class NativeDomainViewBindings {
                 || !"success".equals(string(normalized, "status"))
                 || !normalized.has("value")
                 || !normalized.get("value").isJsonObject()) {
-            return java.util.List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         JsonObject value = normalized.getAsJsonObject("value");
         if (!"RECIPE".equals(string(value, "viewKind"))) {
-            return java.util.List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         JsonElement preview = value.get("preview");
         JsonArray recipes = new JsonArray();

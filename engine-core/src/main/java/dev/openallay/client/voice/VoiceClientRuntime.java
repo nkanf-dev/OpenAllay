@@ -33,7 +33,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
     private boolean captureShutdown;
     private final VoiceRuntime input;
     private final Settings actions = new Settings();
-    private volatile List<AudioCapture.Device> devices = List.of();
+    private volatile List<AudioCapture.Device> devices = dev.openallay.util.Java8Collections.listOf();
     private volatile boolean closed;
     private volatile boolean busy;
     private volatile boolean modelReady;
@@ -47,7 +47,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
             java.util.Map<String, String> credentialEnvironment, AudioCapture.Factory captures) {
         Objects.requireNonNull(directory); Objects.requireNonNull(dispatcher);
         this.captures = Objects.requireNonNull(captures, "captures");
-        credentialEnvironment = java.util.Map.copyOf(credentialEnvironment);
+        credentialEnvironment = dev.openallay.util.Java8Collections.mapCopyOf(credentialEnvironment);
         runtimeDirectory = directory.resolve("voice-models").resolve("runtime");
         store = new VoiceConfigStore(directory.resolve("voice.json"));
         credentials = new LocalCredentialStore(directory.resolve("voice-credentials.sqlite3"), Clock.systemUTC());
@@ -69,7 +69,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
         input.setFeedbackVisible(false);
         settingsWorker.execute(() -> {
             ToolResult<VoiceConfig> result = store.reload();
-            if (result instanceof ToolResult.Failure<VoiceConfig>) code = "invalid_voice_config";
+            if (result instanceof ToolResult.Failure<?>) code = "invalid_voice_config";
             refreshModelReady();
         });
     }
@@ -79,7 +79,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
             delegate = new HttpSpeechToText(config.httpBaseUrl(), config.httpModel(), config.credential(), credentialResolver, Duration.ofSeconds(90));
         } else {
             if (config.nativeModelDirectory().isEmpty()) throw new IllegalStateException("model_not_installed");
-            delegate = new NativeSpeechToText(Path.of(config.nativeModelDirectory()), runtimeDirectory);
+            delegate = new NativeSpeechToText(java.nio.file.Paths.get(config.nativeModelDirectory()), runtimeDirectory);
         }
         return (request, cancellation) -> {
             cancellation.check();
@@ -92,8 +92,12 @@ public final class VoiceClientRuntime implements AutoCloseable {
                 try { return result.get(); }
                 catch (java.util.concurrent.ExecutionException failure) {
                     Throwable cause = failure.getCause();
-                    if (cause instanceof Exception e) throw e;
-                    if (cause instanceof Error e) throw e;
+                    final class $oaPattern0_Holder { java.lang.Throwable value; Exception bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof java.lang.Exception && (($oaPattern0_holder.bound = (Exception) $oaPattern0_holder.value) != null))) throw $oaPattern0_holder.bound;
+                    final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
                     throw new IllegalStateException("voice_failed");
                 }
             }
@@ -103,7 +107,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
     public VoiceSettingsActions settings() { return actions; }
     private void refreshModelReady() {
         String directory = store.config().nativeModelDirectory();
-        modelReady = !directory.isEmpty() && NativeModelFiles.modelReady(Path.of(directory));
+        modelReady = !directory.isEmpty() && NativeModelFiles.modelReady(java.nio.file.Paths.get(directory));
         if (modelReady) {
             try { NativeRuntimeCatalog.validate(runtimeDirectory); }
             catch (Exception failure) { modelReady = false; }
@@ -133,7 +137,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
         private ToolResult<VoiceConfig> saved(VoiceConfig candidate) {
             input.cancel(VoiceRuntime.CancelReason.USER);
             ToolResult<VoiceConfig> result = store.save(candidate);
-            code = result instanceof ToolResult.Success<VoiceConfig> ? "voice_saved" : "voice_save_failed";
+            code = result instanceof ToolResult.Success<?> ? "voice_saved" : "voice_save_failed";
             refreshModelReady();
             return result;
         }
@@ -200,7 +204,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
                 code = "idle";
                 return new ToolResult.Success<>(devices);
             } catch (AudioCapture.CaptureException failure) {
-                devices = List.of();
+                devices = dev.openallay.util.Java8Collections.listOf();
                 code = VoiceRuntime.safeCode(failure);
                 return new ToolResult.Failure<>(code, "The microphone capture runtime is unavailable");
             }
@@ -223,7 +227,7 @@ public final class VoiceClientRuntime implements AutoCloseable {
             }
             if (!candidate.nativeModelDirectory().isEmpty() && (changedDirectory || activatingNative)) {
                 try {
-                    NativeModelFiles.validate(Path.of(candidate.nativeModelDirectory()));
+                    NativeModelFiles.validate(java.nio.file.Paths.get(candidate.nativeModelDirectory()));
                     NativeRuntimeCatalog.validate(runtimeDirectory);
                 } catch (Exception invalid) {
                     return new ToolResult.Failure<>("model_invalid",
@@ -232,25 +236,27 @@ public final class VoiceClientRuntime implements AutoCloseable {
             }
             if (replacement != null) {
                 ToolResult<CredentialReference> result = credentials.insert(SecretValue.of(new String(replacement)));
-                if (result instanceof ToolResult.Failure<CredentialReference> failure) {
-                    return new ToolResult.Failure<>(failure.code(), failure.message());
+                final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.CredentialReference> value; ToolResult.Failure<CredentialReference> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<CredentialReference>) $oaPattern2_holder.value) != null))) {
+                    return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
                 }
                 inserted = ((ToolResult.Success<CredentialReference>) result).value();
             }
             VoiceConfig submitted = inserted == null ? candidate : candidate.withCredential(inserted);
             ToolResult<VoiceConfig> result = save.apply(submitted);
-            committed = result instanceof ToolResult.Success<VoiceConfig>;
+            committed = result instanceof ToolResult.Success<?>;
             if (committed && !Objects.equals(previous.credential(), submitted.credential())
                     && previous.credential() != null) {
                 // This store owns only voice refs. Delete only the replaced ref, never unrelated rows.
                 credentials.deleteIfUnreferenced(previous.credential(), submitted.credential() == null
-                        ? java.util.Set.of() : java.util.Set.of(submitted.credential()));
+                        ? dev.openallay.util.Java8Collections.setOf() : dev.openallay.util.Java8Collections.setOf(submitted.credential()));
             }
             return result;
         } finally {
             if (!committed && inserted != null) {
                 credentials.deleteIfUnreferenced(inserted, previous.credential() == null
-                        ? java.util.Set.of() : java.util.Set.of(previous.credential()));
+                        ? dev.openallay.util.Java8Collections.setOf() : dev.openallay.util.Java8Collections.setOf(previous.credential()));
             }
             if (replacement != null) Arrays.fill(replacement, '\0');
         }

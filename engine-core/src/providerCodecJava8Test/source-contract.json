@@ -1,0 +1,483 @@
+{
+  "scope": "Canonical complete provider codec/stream/config frontier; actualusage/parser algorithms preserved, no metadata/credential production changes",
+  "productionSourcePaths": [
+    "engine-core/src/main/java/dev/openallay/OpenAllayConstants.java",
+    "engine-core/src/main/java/dev/openallay/agent/context/ContextBudget.java",
+    "engine-core/src/main/java/dev/openallay/concurrent/NamedThreads.java",
+    "engine-core/src/main/java/dev/openallay/context/ContextValidation.java",
+    "engine-core/src/main/java/dev/openallay/context/DataAuthority.java",
+    "engine-core/src/main/java/dev/openallay/context/DataCompleteness.java",
+    "engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java",
+    "engine-core/src/main/java/dev/openallay/guide/GuideFailure.java",
+    "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+    "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+    "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+    "engine-core/src/main/java/dev/openallay/logging/OpenAllayLogger.java",
+    "engine-core/src/main/java/dev/openallay/model/CancellationSignal.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelClientException.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelContent.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelEvent.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelFailure.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelMessage.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelRequest.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelRole.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelToolDefinition.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelTurn.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelUsage.java",
+    "engine-core/src/main/java/dev/openallay/model/ProviderToolIds.java",
+    "engine-core/src/main/java/dev/openallay/model/anthropic/AnthropicJsonCodec.java",
+    "engine-core/src/main/java/dev/openallay/model/anthropic/AnthropicStreamAccumulator.java",
+    "engine-core/src/main/java/dev/openallay/model/config/ModelConfig.java",
+    "engine-core/src/main/java/dev/openallay/model/config/ModelProtocol.java",
+    "engine-core/src/main/java/dev/openallay/model/config/ModelReasoningEffort.java",
+    "engine-core/src/main/java/dev/openallay/model/config/SecretValue.java",
+    "engine-core/src/main/java/dev/openallay/model/http/ModelTransportDiagnostics.java",
+    "engine-core/src/main/java/dev/openallay/model/http/SseEvent.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImageInputCapability.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImagePayloadResolver.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImageReference.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ModelImages.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/BuiltinModelCatalog.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/BuiltinModelMatcher.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/ModelImageCapabilityResolution.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/ModelMetadata.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/ModelMetadataResolution.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/ModelMetadataResolver.java",
+    "engine-core/src/main/java/dev/openallay/model/metadata/OpenRouterMetadataResolver.java",
+    "engine-core/src/main/java/dev/openallay/model/openai/OpenAiJsonCodec.java",
+    "engine-core/src/main/java/dev/openallay/model/openai/OpenAiStreamAccumulator.java",
+    "engine-core/src/main/java/dev/openallay/model/tokenizer/ModelTokenEncoding.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpCancellation.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpExchangeRequest.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpResponseHeaders.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpTimeoutException.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpTransport.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpTransportPolicy.java",
+    "engine-core/src/main/java/dev/openallay/net/JdkHttpTransport.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+    "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
+    "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+    "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+    "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+    "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchor.java",
+    "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchorJson.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java",
+    "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+    "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java"
+  ],
+  "productionSourceCount": 68,
+  "sharedSourcePins": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/OpenAllayConstants.java",
+      "sha256": "a82818cb4b070d783e76030210f33ddc1955cdc94a0545229545ba8cd5ec8f23",
+      "bytes": 460
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/concurrent/NamedThreads.java",
+      "sha256": "e4c975206720eb3d9be6c42ae26d56f50c4c9688b8ddfb0f8c6d14a97484a814",
+      "bytes": 1940
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextValidation.java",
+      "sha256": "413b83e466d050e596533a72b30f323a19d3371aedb0aad15af39d7288deaba1",
+      "bytes": 978
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataAuthority.java",
+      "sha256": "04b4f8024f76c374d00e6a117c847cabd814d17e93b7b9011928c713c48bacf3",
+      "bytes": 172
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataCompleteness.java",
+      "sha256": "fbca30849903e1b47448a760a8689496a48fd57631c8057443392f8abfdc684d",
+      "bytes": 104
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java",
+      "sha256": "95ff0f4885c589039edd39467b85bf008d0b2cf8dca75102e6c8e4de868df65d",
+      "bytes": 5830
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/guide/GuideFailure.java",
+      "sha256": "7b45f7f087aeaa8cd08b3c15454f6e53d8832ee6668fe88b56b0118ec824b076",
+      "bytes": 1978
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+      "sha256": "638fe24a01f86e13701ad11073c3630938b76778e4138d34f53592c316b3ac60",
+      "bytes": 12218
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+      "sha256": "ba0183b406daac7f1e97ca0d95f1e42b24bb8b7e8ef571d81f833ebd2e24f9ac",
+      "bytes": 17687
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+      "sha256": "7fa96c324f1eae6a2a86965b202f9bdfd0ae38a2437fba7dad49b620dc4098cb",
+      "bytes": 4878
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/CancellationSignal.java",
+      "sha256": "7f6f10330c371907404798eb8de1a66a60b122fca1dab9cf420697875b3ffcab",
+      "bytes": 3832
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelClientException.java",
+      "sha256": "1eec916538ffae550d70ba54c86c843436c91503018baa16616589b3b88556a4",
+      "bytes": 353
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelContent.java",
+      "sha256": "27f4d5c31d410ccbaa336ff4918ed73a7417616cd42771e7998d9f38dff2119f",
+      "bytes": 11774
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelEvent.java",
+      "sha256": "8f3a0df11c52f9d9769e4d4c1b46f640078a57d422a3edd483ce609c83e044aa",
+      "bytes": 18665
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelFailure.java",
+      "sha256": "9932d8269059ec3ed3f5647a0fa37433d69206f09445135451902692f3391f9d",
+      "bytes": 2445
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelMessage.java",
+      "sha256": "f482752ac99acef8fa9392991ce97138f7fb779faaaeaf5c0c6d9770c03a351c",
+      "bytes": 7252
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelRequest.java",
+      "sha256": "2f4365b10f9ac2f5bedc41b6404b91c4aaba900d5336b430c33addac60dcb391",
+      "bytes": 6222
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelRole.java",
+      "sha256": "af6ed3a27c9885a89818faa09863c6fef6830be8265d1ddd1f2c35a62a33b9bd",
+      "bytes": 80
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelToolDefinition.java",
+      "sha256": "46beb3e7ce67da115fe6660fab6f24f88865b1f1978804d1683678966b867a4b",
+      "bytes": 2847
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelTurn.java",
+      "sha256": "0f0a8d9056412797eed6a41ac51c5790fc26b0c21e9d35584afd875a7b0860b0",
+      "bytes": 4060
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelUsage.java",
+      "sha256": "95764703006530bdeb8353a89e45c3ec7ff2de33fe6a6f97a39983e62464afde",
+      "bytes": 8162
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/config/ModelProtocol.java",
+      "sha256": "e41a1ca4885701f860511bacdfc1430703b5f8ea49ce4cdf6b08abbe942c724e",
+      "bytes": 107
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/config/SecretValue.java",
+      "sha256": "d93ab2efc4695b8647ae666b6561c9cb2c3208ed6f7447cb03014dbefc05ee4e",
+      "bytes": 921
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImageInputCapability.java",
+      "sha256": "abdea0fd3909287130f278cfae5d93a6844a9cc6b8b5db3e1cb557007d32d91e",
+      "bytes": 1032
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImagePayloadResolver.java",
+      "sha256": "a57abeeca074bf8b2e738abbc567b5dcb5ec7a74713720af4b4dc2b0e17ffcb5",
+      "bytes": 859
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImageReference.java",
+      "sha256": "52ffa4fbf3b7d7f50eaccfc073e90a8a125865ff52385570e1e3b4a99996f283",
+      "bytes": 3489
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ModelImages.java",
+      "sha256": "6113286ccf7ed417279009c22c0c39bc968da78f2f9756317c5d56ff46836256",
+      "bytes": 7316
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/BuiltinModelCatalog.java",
+      "sha256": "94b5b0b8dbe69b12226df6e6875ce68d305b0afb7549917c99e1a11d8b1f7575",
+      "bytes": 28176
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/BuiltinModelMatcher.java",
+      "sha256": "17f69f52547eb88e8499be3d8d87f7ef780e7bf7e8ca201b88bbfcdba9c96350",
+      "bytes": 13670
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/ModelImageCapabilityResolution.java",
+      "sha256": "fe6806e6112bedc1191e61215fea7cf403767e8a28d0a002a63fc4ffe4ab2af2",
+      "bytes": 5699
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/ModelMetadata.java",
+      "sha256": "d1476af28364fadbb14848c63598f99df8e985ea3fd7266c7603644974d1e0ee",
+      "bytes": 7808
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/ModelMetadataResolution.java",
+      "sha256": "a76e910eb3a113a6d989d401d921e0448203b25bd435cc584fb3dd32f10ea453",
+      "bytes": 4894
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/ModelMetadataResolver.java",
+      "sha256": "57b79d6dccc4026e9992dd749392764924ed40b86c10a5176b1865d15f5bd049",
+      "bytes": 401
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/metadata/OpenRouterMetadataResolver.java",
+      "sha256": "bc7790fc179f058ecd74eb822af26ae33a5b00c11e2688661318f63b18315044",
+      "bytes": 12354
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpCancellation.java",
+      "sha256": "2884bde4c25d3a729629ad993749fa4f3f681208b11cc14d7b7abccf1bc0f9fe",
+      "bytes": 203
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpExchangeRequest.java",
+      "sha256": "661a7d1e57e34a8b5ea69f4775cd94fd88743347b73a08c164ce7b634fc55789",
+      "bytes": 3951
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpResponseHeaders.java",
+      "sha256": "902098845b56132102788a39be64e94bcef42fee9100966dbbf1a614d43e98ef",
+      "bytes": 1846
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpTimeoutException.java",
+      "sha256": "1151622b04de5e4ab21100f14b5ca12423b904f914831f5e94098639e68a2b54",
+      "bytes": 326
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpTransport.java",
+      "sha256": "ee1323c91f57d4587629484b8055b483c6fc6d26ce0d5faa6b208e4172a19d2d",
+      "bytes": 576
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/HttpTransportPolicy.java",
+      "sha256": "3703cbea44b213a787a736ed24a340824116844d5ad617cadacd5aef5c693562",
+      "bytes": 1611
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/net/JdkHttpTransport.java",
+      "sha256": "edaa147d50dfa1d78b445aa27dfc8ad9328814430f78d26487f8322baf2c693f",
+      "bytes": 13531
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
+      "bytes": 4686
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "b6d8885c726960be323c8d501396a7ebc0d866c35066bf90e11932ad96ed00da",
+      "bytes": 473
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+      "sha256": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
+      "bytes": 3667
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
+      "sha256": "3cb1573ce1a0773a85b0ff797cfa444b55cb2ef610a503c142743f3683b9d8ab",
+      "bytes": 4235
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+      "sha256": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81",
+      "bytes": 4108
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+      "sha256": "3b1ab1d755049ee829d20c6f8d0a8504def3368f4d4a68a9f61f8fb975040b5c",
+      "bytes": 1521
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+      "sha256": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e",
+      "bytes": 415
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchor.java",
+      "sha256": "c52ea7420c6c34b0b6901f35a4568287cba9ff5d61ea9dea724750d350dc4708",
+      "bytes": 3688
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchorJson.java",
+      "sha256": "b999fcf3d95fb6f03337b66335bea1e54442a40dfdd11e0a79591a7b8188c5d8",
+      "bytes": 8065
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+      "sha256": "0b16b1b7b595a1113a610822dfb7f5487b9207531e9bf4f54be003d7e67aa905",
+      "bytes": 42552
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+      "sha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0",
+      "bytes": 2028
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java",
+      "sha256": "1507b8a04e8dc5ec8b489c07979e81955001e947a9c9868211919ae1f45ed6f5",
+      "bytes": 8386
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java",
+      "sha256": "f23c6533af3fdea4a4a7cad60cf5dda6dbb111463e4390549522e50f3b787047",
+      "bytes": 1694
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+      "sha256": "374c7d12e8d02ed33234c8029c2f2717713f92fec90fdde34971242c0730c4aa",
+      "bytes": 3757
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java",
+      "sha256": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
+      "bytes": 3587
+    }
+  ],
+  "gsonPins": [
+    {
+      "name": "gson-2.8.0.jar",
+      "bytes": 231952,
+      "digest_algorithm": "sha1",
+      "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+      "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+      "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+    },
+    {
+      "name": "gson-2.13.2.jar",
+      "bytes": 289901,
+      "digest_algorithm": "sha256",
+      "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+      "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+      "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+    }
+  ],
+  "fixturePaths": [
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/logging/LoggerJava8Fixture.java",
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/ProviderCodecJava8Fixture.java",
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/anthropic/AnthropicStreamJava8Fixture.java",
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/openai/OpenAiStreamJava8Fixture.java"
+  ],
+  "expectedChecks": 49,
+  "emittedJava8ClassMajor": 52,
+  "changedOwnerCount": 12,
+  "recordSchemaCount": 4,
+  "loggerBackendChange": "System.Logger (modern public bridge) to java.util.logging.Logger on canonical Java8 owner. INFO/WARNING/ERROR map to JUL INFO/WARNING/SEVERE; custom LoggerFinder behavior not retained. Message formatting/cause/lazy checks preserved.",
+  "selectedModernTests": [
+    "dev.openallay.model.anthropic.AnthropicStreamAccumulatorUsageTest",
+    "dev.openallay.model.openai.OpenAiStreamAccumulatorTest",
+    "dev.openallay.model.anthropic.AnthropicJsonCodecTest",
+    "dev.openallay.model.openai.OpenAiJsonCodecTest",
+    "dev.openallay.model.anthropic.AnthropicUsageReportingTest",
+    "dev.openallay.model.ModelImageProviderEncodingTest",
+    "dev.openallay.model.ProviderToolIdsTest"
+  ],
+  "artifactPins": {
+    "recipe": {
+      "path": "engine-core/src/providerCodecJava8Test/recipe.json",
+      "sha256": "3fbaa3f2ffe6f9d3fd468811c7087669cba5b2978aed3be9a70998dd949ca8b7"
+    },
+    "materializer": {
+      "path": "scripts/materialize-provider-codec-java8.py",
+      "sha256": "aaa1e372478443649efe82238729eeac69613fb464da05846d92e91700f8eca0"
+    },
+    "runner": {
+      "path": "scripts/verify-provider-codec-java8.py",
+      "sha256": "8f98fb0f08477b497aa2ae00a6ecad5d1840faced89df55686a60cb46c8bd666"
+    },
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/anthropic/AnthropicStreamJava8Fixture.java": {
+      "path": "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/anthropic/AnthropicStreamJava8Fixture.java",
+      "sha256": "f23cf6f2b3ec55f7e9de63a744aa4c6b0757f566d31232e2f185a8d4fe76d19a"
+    },
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/openai/OpenAiStreamJava8Fixture.java": {
+      "path": "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/openai/OpenAiStreamJava8Fixture.java",
+      "sha256": "981e0e971dcc6cfac51a46da15eb07d27f64f43f4d4b4ba695d31ad610001c87"
+    },
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/ProviderCodecJava8Fixture.java": {
+      "path": "engine-core/src/providerCodecJava8Test/java/dev/openallay/model/ProviderCodecJava8Fixture.java",
+      "sha256": "41b3c057649ac89dc04efb7bdad842ecab840ba9a0467be34eac523e0a5fc443"
+    },
+    "engine-core/src/providerCodecJava8Test/java/dev/openallay/logging/LoggerJava8Fixture.java": {
+      "path": "engine-core/src/providerCodecJava8Test/java/dev/openallay/logging/LoggerJava8Fixture.java",
+      "sha256": "416d8cff2cc6466c7408be871ac7ddaf3b0e78f76c72963f9736111bc8f87300"
+    }
+  },
+  "normalizedCanonicalTargets": {
+    "engine-core/src/main/java/dev/openallay/agent/context/ContextBudget.java": {
+      "sha256": "45abce2842aedb98bf1acb7c063a020e339d2e67e33064b8955ad3e4158cd66a",
+      "bytes": 2745
+    },
+    "engine-core/src/main/java/dev/openallay/logging/OpenAllayLogger.java": {
+      "sha256": "8ab259c3ff482f018ea3a1203d8f998b0e5027402f1a1fde83e2e21147abc9ee",
+      "bytes": 2079
+    },
+    "engine-core/src/main/java/dev/openallay/model/ProviderToolIds.java": {
+      "sha256": "741a10d2b9a9f202822dd708f5bfd589d8f5d5d54080a55551bbbc1c7b409342",
+      "bytes": 4259
+    },
+    "engine-core/src/main/java/dev/openallay/model/anthropic/AnthropicJsonCodec.java": {
+      "sha256": "b6245a807963e3f805303b88457197760bf8456b0cfbb4518d88448e97fa2620",
+      "bytes": 16131
+    },
+    "engine-core/src/main/java/dev/openallay/model/anthropic/AnthropicStreamAccumulator.java": {
+      "sha256": "fad3e96fc85b980f45e49097de49ee375fb728b18bbeb772ffca433bebb4e243",
+      "bytes": 8446
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelConfig.java": {
+      "sha256": "204b2882fe61a9f46bde0295a13e50afb0abd609635db8278a66d2fcc28018bc",
+      "bytes": 17008
+    },
+    "engine-core/src/main/java/dev/openallay/model/config/ModelReasoningEffort.java": {
+      "sha256": "c3beadc476df2aebd3ae10801c7b3caf91c428ff07a2b25a68883a3dcaac4bb5",
+      "bytes": 1558
+    },
+    "engine-core/src/main/java/dev/openallay/model/http/ModelTransportDiagnostics.java": {
+      "sha256": "9c5200b3a16e89626448d8e5b5f21d040b2ec6c21e5cfe57a51641761c8ff486",
+      "bytes": 7801
+    },
+    "engine-core/src/main/java/dev/openallay/model/http/SseEvent.java": {
+      "sha256": "83805cfc3efabf683e977a74bb9f839ae11ca4208549a2229db055a5c208528c",
+      "bytes": 1648
+    },
+    "engine-core/src/main/java/dev/openallay/model/openai/OpenAiJsonCodec.java": {
+      "sha256": "5aed13899258a48454645390ff59d367707338d4d6a6532bc4bac68db537700e",
+      "bytes": 16813
+    },
+    "engine-core/src/main/java/dev/openallay/model/openai/OpenAiStreamAccumulator.java": {
+      "sha256": "ecca426b8f3c10aecfac5fd9cc77255b9716fc8797eebaef38a2d237798bd7f7",
+      "bytes": 5776
+    },
+    "engine-core/src/main/java/dev/openallay/model/tokenizer/ModelTokenEncoding.java": {
+      "sha256": "afcc2351f9df448301d7724e179b614e61c6af3aa484f1105279605574cb51c4",
+      "bytes": 811
+    }
+  },
+  "preservedRuntimeOracle": {
+    "run": 37571848055,
+    "scope": "Complete68source original17/release8/truejavac8 sixexecutions;49checks/two authenticatedGson hosts, identicalreports, actual223Java8classes major52",
+    "sourceAppliedCommit": "da0d4d1e98dbab514532f7bebafee56f513084fe",
+    "actualAcceptedPatchSha256": "fc68e23bef7de9acaefdcb939aa2bc1684562a3f0b9c4f9e999a082072cdbbbd",
+    "JULHandlerSemanticsPassed": true,
+    "runtimeReexecuted": false
+  },
+  "historicalReplay": "Pinned originalGit12owners from actual pre-apply commit5aa19714d79814d051662a5eaf35d493b9ca37e5; Gitblob+independentrawSHA256 checked; no external source overlays"
+}

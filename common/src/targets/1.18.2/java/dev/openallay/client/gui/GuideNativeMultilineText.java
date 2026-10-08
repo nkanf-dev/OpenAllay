@@ -7,6 +7,10 @@ import net.minecraft.network.chat.Component;
 /** Native input primitive binding where Minecraft has no multiline widget. */
 public final class GuideNativeMultilineText {
     private GuideNativeMultilineText() {}
+    public static GuideMultilineEditor find(GuideWidget widget) {
+        return find(GuideNativeWidgets.nativeWidget(widget));
+    }
+
     public static GuideMultilineEditor create(Font font, int x, int y, int width, int height,
             Component placeholder, Component narration) {
         return new GuideNativeMultilineEditor(font, x, y, width, height, placeholder, narration);

@@ -13,19 +13,10 @@ import java.util.TreeSet;
 /** Strict codec: unknown or missing fields reject the candidate catalog generation. */
 public final class ExtensionCatalogCodec {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("schemaVersion", "kind", "generatedAt", "extensions");
-    private static final Set<String> ENTRY_FIELDS = Set.of(
-            "id",
-            "name",
-            "version",
-            "provider",
-            "summary",
-            "minecraftVersionRange",
-            "openAllayApiVersionRange",
-            "artifacts",
-            "source");
+            dev.openallay.util.Java8Collections.setOf("schemaVersion", "kind", "generatedAt", "extensions");
+    private static final Set<String> ENTRY_FIELDS = dev.openallay.util.Java8Collections.setOf("id", "name", "version", "provider", "summary", "minecraftVersionRange", "openAllayApiVersionRange", "artifacts", "source");
     private static final Set<String> ARTIFACT_FIELDS =
-            Set.of("loader", "artifact", "sha256", "modIds");
+            dev.openallay.util.Java8Collections.setOf("loader", "artifact", "sha256", "modIds");
     private final Gson gson = dev.openallay.json.EngineJson.create(builder -> builder.setPrettyPrinting());
 
     public ExtensionCatalogManifest decode(String json) {
@@ -74,7 +65,7 @@ public final class ExtensionCatalogCodec {
         root.addProperty("schemaVersion", manifest.schemaVersion());
         root.addProperty("kind", manifest.kind());
         root.addProperty("generatedAt", manifest.generatedAt().toString());
-        var entries = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray entries = new com.google.gson.JsonArray();
         for (ExtensionCatalogEntry entry : manifest.extensions()) {
             JsonObject encoded = new JsonObject();
             encoded.addProperty("id", entry.id());
@@ -84,7 +75,7 @@ public final class ExtensionCatalogCodec {
             encoded.addProperty("summary", entry.summary());
             encoded.addProperty("minecraftVersionRange", entry.minecraftVersionRange());
             encoded.addProperty("openAllayApiVersionRange", entry.openAllayApiVersionRange());
-            var artifacts = new com.google.gson.JsonArray();
+            com.google.gson.JsonArray artifacts = new com.google.gson.JsonArray();
             for (ExtensionCatalogArtifact artifact : entry.artifacts()) {
                 JsonObject encodedArtifact = new JsonObject();
                 encodedArtifact.addProperty("loader", artifact.loader());
@@ -116,7 +107,7 @@ public final class ExtensionCatalogCodec {
         if (value == null
                 || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be a non-blank string");
         }
         return value.getAsString();
@@ -131,12 +122,12 @@ public final class ExtensionCatalogCodec {
         for (JsonElement item : value.getAsJsonArray()) {
             if (!item.isJsonPrimitive()
                     || !item.getAsJsonPrimitive().isString()
-                    || item.getAsString().isBlank()
+                    || dev.openallay.util.Java8Strings.isBlank(item.getAsString())
                     || !values.add(item.getAsString())) {
                 throw new IllegalArgumentException(field + " must contain unique strings");
             }
         }
-        return Set.copyOf(values);
+        return dev.openallay.util.Java8Collections.setCopyOf(values);
     }
 
     private static List<ExtensionCatalogArtifact> artifacts(JsonObject object) {
@@ -154,11 +145,11 @@ public final class ExtensionCatalogCodec {
                     string(artifact, "sha256"),
                     strings(artifact, "modIds")));
         }
-        return List.copyOf(artifacts);
+        return dev.openallay.util.Java8Collections.listCopyOf(artifacts);
     }
 
     private static com.google.gson.JsonArray strings(Set<String> values) {
-        var encoded = new com.google.gson.JsonArray();
+        com.google.gson.JsonArray encoded = new com.google.gson.JsonArray();
         values.stream().sorted().forEach(encoded::add);
         return encoded;
     }

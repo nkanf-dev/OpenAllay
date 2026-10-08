@@ -1,0 +1,78 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
+allprojects { p ->
+    p.afterEvaluate {
+        if (p.path == ':engine-core') {
+            p.tasks.register('exportForge36Closure') {
+                dependsOn p.tasks.named('jar'), ':extension-api:jar', ':runtime-rhino:jar', ':runtime-json:jar',
+                        ':runtime-maven:shadowJar', ':stageBundledExtensions'
+                dependsOn p.configurations.runtimeClasspath.buildDependencies
+                doLast {
+                    def root = p.rootProject
+                    def output = root.layout.buildDirectory.dir('forge36-shared').get().asFile
+                    if (output.exists()) throw new GradleException('Preserve an existing closure export')
+                    output.mkdirs()
+                    def policy = new JsonSlurper().parse(root.file('scripts/forge16165-engine-prerequisite/ownership.json'))
+                    def lock = new JsonSlurper().parse(root.file('distribution/extensions.lock.json'))
+                    def digest = { File path ->
+                        def h = MessageDigest.getInstance('SHA-256')
+                        path.withInputStream { stream ->
+                            byte[] bytes = new byte[65536]; int count
+                            while ((count = stream.read(bytes)) != -1) h.update(bytes, 0, count)
+                        }
+                        h.digest().encodeHex().toString()
+                    }
+                    def artifacts = []
+                    def rawResolution = []
+                    def add = { String role, File file, String originalCoordinate ->
+                        def owner = policy.roles[role] ?: policy.annotationRoles[role]
+                        def coordinate = owner ? owner.coordinate : policy.hostRoles[role]
+                        if (!coordinate || !file.isFile()) throw new GradleException('Missing classified closure artifact ' + role)
+                        def target = new File(output, role + '.jar')
+                        java.nio.file.Files.copy(file.toPath(), target.toPath())
+                        def hash = digest(target)
+                        if (hash != digest(file)) throw new GradleException('Closure copy changed')
+                        artifacts.add([role: role, coordinate: coordinate.toString(), path: target.absolutePath, sha256: hash])
+                        rawResolution.add([role: role, resolvedCoordinate: originalCoordinate, originalPath: file.absolutePath,
+                                           artifactSha256: hash, deploymentCoordinate: coordinate.toString()])
+                    }
+                    add('engine', p.tasks.named('jar').get().archiveFile.get().asFile, root.group.toString()+':engine-core:'+p.version)
+                    p.configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                        def id = artifact.moduleVersion.id
+                        def coordinate = "${id.group}:${id.name}:${id.version}".toString()
+                        def role
+                        if (artifact.id.componentIdentifier instanceof ProjectComponentIdentifier) {
+                            def projectPath = artifact.id.componentIdentifier.projectPath
+                            role = [':extension-api':'sdk', ':runtime-rhino':'rhino'][projectPath]
+                        } else if (artifact.id.componentIdentifier instanceof ModuleComponentIdentifier) {
+                            role = (policy.roles + policy.annotationRoles + policy.hostRoles.collectEntries { key, value -> [(key): [coordinate:value]] })
+                                    .find { key, value -> value.coordinate == coordinate }?.key
+                        }
+                        if (!role) throw new GradleException('Unclassified actual engine runtime dependency ' + coordinate)
+                        add(role.toString(), artifact.file, coordinate)
+                    }
+                    add('builder', root.file('build/distribution/bundled-extension-resources/META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar'),
+                            lock.source.repository+'@'+lock.source.revision+' '+lock.artifact)
+                    add('json-proof', root.project(':runtime-json').tasks.named('jar').get().archiveFile.get().asFile, 'runtime-json constituent proof')
+                    add('maven-proof', root.project(':runtime-maven').tasks.named('shadowJar').get().archiveFile.get().asFile, 'private Maven constituent proof')
+                    def resolution = [sourceRevision:policy.sourceRevision,
+                                      runtimeCoordinates:artifacts.findAll { !it.role.endsWith('-proof') }.collect { it.coordinate }.sort()]
+                    def resolutionFile = new File(output, 'effective-runtime-resolution.json')
+                    resolutionFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(resolution))+'\n'
+                    new File(output, 'raw-gradle-resolution.json').text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                        actualWorkflowSource:root.providers.environmentVariable('GITHUB_SHA').get(),
+                        effectiveInputSource:policy.sourceRevision, runtimeClasspathConfiguration:'engine-core:runtimeClasspath',
+                        artifacts:rawResolution, deploymentAdditions:['engine','builder'], constituentProofs:['json-proof','maven-proof']]))+'\n'
+                    new File(output, 'closure-input.json').text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                        sourceRevision:policy.sourceRevision, artifacts:artifacts,
+                        resolution:[path:resolutionFile.absolutePath,sha256:digest(resolutionFile)]]))+'\n'
+                    println 'Forge36 closure exported once: '+output
+                }
+            }
+        }
+    }
+}

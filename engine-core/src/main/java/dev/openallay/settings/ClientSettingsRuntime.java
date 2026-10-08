@@ -51,17 +51,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Loader-neutral lifecycle bundle for the model registry and native settings owner. */
-public record ClientSettingsRuntime(
-        ClientModelRuntimeRegistry models,
-        ClientSettingsService settings,
-        UnrestrictedJavascriptRuntime unrestrictedJavascript) {
-    public ClientSettingsRuntime {
+@dev.openallay.value.ValueType(ClientSettingsRuntime.ValueSchemaProvider.class)
+public final class ClientSettingsRuntime {
+    private final ClientModelRuntimeRegistry models;
+    private final ClientSettingsService settings;
+    private final UnrestrictedJavascriptRuntime unrestrictedJavascript;
+    public ClientSettingsRuntime(ClientModelRuntimeRegistry models, ClientSettingsService settings, UnrestrictedJavascriptRuntime unrestrictedJavascript) {
+
         Objects.requireNonNull(models, "models");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(unrestrictedJavascript, "unrestrictedJavascript");
-    }
 
-    public static ToolResult<ClientSettingsRuntime> create(
+        this.models = models;
+        this.settings = settings;
+        this.unrestrictedJavascript = unrestrictedJavascript;
+    }
+    public ClientModelRuntimeRegistry models() { return models; }
+    public ClientSettingsService settings() { return settings; }
+    public UnrestrictedJavascriptRuntime unrestrictedJavascript() { return unrestrictedJavascript; }
+public static ToolResult<ClientSettingsRuntime> create(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -89,8 +97,7 @@ public record ClientSettingsRuntime(
                 clock,
                 display);
     }
-
-    public static ToolResult<ClientSettingsRuntime> create(
+public static ToolResult<ClientSettingsRuntime> create(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -118,8 +125,7 @@ public record ClientSettingsRuntime(
                 new ClientSettingsHistoryBinding(),
                 null);
     }
-
-    public static ToolResult<ClientSettingsRuntime> create(
+public static ToolResult<ClientSettingsRuntime> create(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -162,8 +168,7 @@ public record ClientSettingsRuntime(
                 historyActions,
                 display.failure());
     }
-
-    private static ToolResult<ClientSettingsRuntime> createInternal(
+private static ToolResult<ClientSettingsRuntime> createInternal(
             FeatureServices product,
             Path profilesPath,
             Path metadataCachePath,
@@ -189,7 +194,7 @@ public record ClientSettingsRuntime(
         Objects.requireNonNull(displayActions, "displayActions");
         Objects.requireNonNull(historyActions, "historyActions");
 
-        Map<String, String> environmentSnapshot = Map.copyOf(environment);
+        Map<String, String> environmentSnapshot = dev.openallay.util.Java8Collections.mapCopyOf(environment);
         LocalCredentialStore credentialStore = new LocalCredentialStore(
                 profilesPath.toAbsolutePath().normalize().resolveSibling("credentials.sqlite3"),
                 clock);
@@ -199,11 +204,13 @@ public record ClientSettingsRuntime(
                 .load(
                         profilesPath,
                         credentials,
-                        Map.of());
+                        dev.openallay.util.Java8Collections.mapOf());
         ModelProfilesConfigLoader.Load initial;
         SettingsNotice startupNotice = null;
-        if (loaded instanceof ToolResult.Success<ModelProfilesConfigLoader.Load> success) {
-            initial = success.value();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Success<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<ModelProfilesConfigLoader.Load>) $oaPattern0_holder.value) != null))) {
+            initial = $oaPattern0_holder.bound.value();
         } else {
             ToolResult.Failure<ModelProfilesConfigLoader.Load> failure =
                     (ToolResult.Failure<ModelProfilesConfigLoader.Load>) loaded;
@@ -225,8 +232,10 @@ public record ClientSettingsRuntime(
                     configDirectory.resolve("experimental-commands.json"));
             ToolResult<CommandCapabilityConfig> loadedCommands = commandStore.reload();
             CommandCapabilityConfig initialCommands;
-            if (loadedCommands instanceof ToolResult.Success<CommandCapabilityConfig> success) {
-                initialCommands = success.value();
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.command.CommandCapabilityConfig> value; ToolResult.Success<CommandCapabilityConfig> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = loadedCommands) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<CommandCapabilityConfig>) $oaPattern1_holder.value) != null))) {
+                initialCommands = $oaPattern1_holder.bound.value();
             } else {
                 ToolResult.Failure<CommandCapabilityConfig> failure =
                         (ToolResult.Failure<CommandCapabilityConfig>) loadedCommands;
@@ -239,29 +248,34 @@ public record ClientSettingsRuntime(
             UnrestrictedJavascriptConfigStore unrestrictedStore = new UnrestrictedJavascriptConfigStore(
                     configDirectory.resolve("unrestricted-javascript.json"));
             ToolResult<UnrestrictedJavascriptConfig> loadedUnrestricted = unrestrictedStore.reload();
-            UnrestrictedJavascriptConfig initialUnrestricted = loadedUnrestricted instanceof ToolResult.Success<UnrestrictedJavascriptConfig> s
-                    ? s.value() : UnrestrictedJavascriptConfig.defaults();
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> value; ToolResult.Success<UnrestrictedJavascriptConfig> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+UnrestrictedJavascriptConfig initialUnrestricted = (($oaPattern2_holder.value = loadedUnrestricted) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<UnrestrictedJavascriptConfig>) $oaPattern2_holder.value) != null))
+                    ? $oaPattern2_holder.bound.value() : UnrestrictedJavascriptConfig.defaults();
             UnrestrictedJavascriptRuntime unrestrictedRuntime = new UnrestrictedJavascriptRuntime();
             unrestrictedRuntime.replace(initialUnrestricted);
-            if (loadedUnrestricted instanceof ToolResult.Failure<UnrestrictedJavascriptConfig> f && startupNotice == null) {
-                startupNotice = SettingsNotice.failure(f.code(), f.message());
+            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> value; ToolResult.Failure<UnrestrictedJavascriptConfig> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = loadedUnrestricted) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<UnrestrictedJavascriptConfig>) $oaPattern3_holder.value) != null)) && startupNotice == null) {
+                startupNotice = SettingsNotice.failure($oaPattern3_holder.bound.code(), $oaPattern3_holder.bound.message());
             }
             updateCommandGuidance(product, unrestrictedRuntime);
             Set<String> installedSkillMods = installedSkillMods(product);
             SkillSettingsBackend skills = new SkillSettingsBackend(
-                    configDirectory.resolve("skills"), product.skills(), installedSkillMods);
+                    configDirectory.resolve("skills"), product.skills(), installedSkillMods,
+                    product.platform().gameVersion());
             ExtensionSettingsBackend extensions = new ExtensionSettingsBackend(
                     configDirectory,
                     managedModsRoot(configDirectory),
                     product.extensions(),
                     product.javascriptModules());
-            if (product.tools().find("openallay:manage_skill").isEmpty()) {
+            if (dev.openallay.util.Java8ApiSupport.isEmpty(product.tools().find("openallay:manage_skill"))) {
                 Set<String> availableTools = product.tools().descriptors().stream()
                         .map(descriptor -> descriptor.id())
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                        .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
                 product.tools().register(
                         "openallay:managed-skills",
-                        List.of(new ManageSkillTool(new AgentSkillManager(
+                        dev.openallay.util.Java8Collections.listOf(new ManageSkillTool(new AgentSkillManager(
                                 configDirectory.resolve("skills"),
                                 product.skills(),
                                 new SkillParser(),
@@ -279,8 +293,10 @@ public record ClientSettingsRuntime(
                                 GuideDisplayConfig candidate) {
                             ToolResult<GuideDisplayConfig> result =
                                     traceDisplayActions.saveDisplay(candidate);
-                            if (result instanceof ToolResult.Success<GuideDisplayConfig> success) {
-                                activeDisplay.set(success.value());
+                            final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.ui.GuideDisplayConfig> value; ToolResult.Success<GuideDisplayConfig> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern4_holder.bound = (ToolResult.Success<GuideDisplayConfig>) $oaPattern4_holder.value) != null))) {
+                                activeDisplay.set($oaPattern4_holder.bound.value());
                             }
                             return result;
                         }
@@ -289,8 +305,10 @@ public record ClientSettingsRuntime(
                         public ToolResult<GuideDisplayConfig> reloadDisplay() {
                             ToolResult<GuideDisplayConfig> result =
                                     traceDisplayActions.reloadDisplay();
-                            if (result instanceof ToolResult.Success<GuideDisplayConfig> success) {
-                                activeDisplay.set(success.value());
+                            final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.ui.GuideDisplayConfig> value; ToolResult.Success<GuideDisplayConfig> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern5_holder.bound = (ToolResult.Success<GuideDisplayConfig>) $oaPattern5_holder.value) != null))) {
+                                activeDisplay.set($oaPattern5_holder.bound.value());
                             }
                             return result;
                         }
@@ -418,19 +436,19 @@ public record ClientSettingsRuntime(
                     "settings_unavailable", "Native settings are unavailable");
         }
     }
-
-    public CompletableFuture<Void> closeAsync() {
+public CompletableFuture<Void> closeAsync() {
         return settings.closeAsync();
     }
-
-    private static ToolResult<CommandCapabilityConfig> publishCommandConfig(
+private static ToolResult<CommandCapabilityConfig> publishCommandConfig(
             ToolResult<CommandCapabilityConfig> loaded,
             CommandCapabilityConfigStore store,
             FeatureServices product,
             CapabilitySettingsBackend capabilities,
             UnrestrictedJavascriptRuntime unrestrictedRuntime) {
-        if (loaded instanceof ToolResult.Failure<CommandCapabilityConfig> failure) {
-            return failure;
+        final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.command.CommandCapabilityConfig> value; ToolResult.Failure<CommandCapabilityConfig> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern6_holder.bound = (ToolResult.Failure<CommandCapabilityConfig>) $oaPattern6_holder.value) != null))) {
+            return $oaPattern6_holder.bound;
         }
         CommandCapabilityConfig candidate =
                 ((ToolResult.Success<CommandCapabilityConfig>) loaded).value();
@@ -439,24 +457,27 @@ public record ClientSettingsRuntime(
         product.commands().replace(candidate);
         updateCommandGuidance(product, unrestrictedRuntime);
         ToolResult<CapabilitySettingsView> published = capabilities.refreshCapabilities();
-        if (published instanceof ToolResult.Failure<CapabilitySettingsView> failure) {
+        final class $oaPattern7_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.capability.CapabilitySettingsView> value; ToolResult.Failure<CapabilitySettingsView> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = published) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern7_holder.bound = (ToolResult.Failure<CapabilitySettingsView>) $oaPattern7_holder.value) != null))) {
             product.commands().replace(prior);
             updateCommandGuidance(product, unrestrictedRuntime);
             store.save(prior);
             capabilities.refreshCapabilities();
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+            return new ToolResult.Failure<>($oaPattern7_holder.bound.code(), $oaPattern7_holder.bound.message());
         }
         return new ToolResult.Success<>(candidate);
     }
-
-    private static ToolResult<UnrestrictedJavascriptConfig> publishUnrestrictedConfig(
+private static ToolResult<UnrestrictedJavascriptConfig> publishUnrestrictedConfig(
             ToolResult<UnrestrictedJavascriptConfig> loaded,
             UnrestrictedJavascriptConfigStore store,
             UnrestrictedJavascriptRuntime unrestrictedRuntime,
             FeatureServices product,
             CapabilitySettingsBackend capabilities) {
-        if (loaded instanceof ToolResult.Failure<UnrestrictedJavascriptConfig> failure) {
-            return failure;
+        final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> value; ToolResult.Failure<UnrestrictedJavascriptConfig> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern8_holder.bound = (ToolResult.Failure<UnrestrictedJavascriptConfig>) $oaPattern8_holder.value) != null))) {
+            return $oaPattern8_holder.bound;
         }
         UnrestrictedJavascriptConfig candidate =
                 ((ToolResult.Success<UnrestrictedJavascriptConfig>) loaded).value();
@@ -464,24 +485,24 @@ public record ClientSettingsRuntime(
         unrestrictedRuntime.replace(candidate);
         updateCommandGuidance(product, unrestrictedRuntime);
         ToolResult<CapabilitySettingsView> published = capabilities.refreshCapabilities();
-        if (published instanceof ToolResult.Failure<CapabilitySettingsView> failure) {
+        final class $oaPattern9_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.capability.CapabilitySettingsView> value; ToolResult.Failure<CapabilitySettingsView> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = published) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern9_holder.bound = (ToolResult.Failure<CapabilitySettingsView>) $oaPattern9_holder.value) != null))) {
             unrestrictedRuntime.replace(prior);
             updateCommandGuidance(product, unrestrictedRuntime);
             store.save(prior);
             capabilities.refreshCapabilities();
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+            return new ToolResult.Failure<>($oaPattern9_holder.bound.code(), $oaPattern9_holder.bound.message());
         }
         return new ToolResult.Success<>(candidate);
     }
-
-    private static void updateCommandGuidance(
+private static void updateCommandGuidance(
             FeatureServices product, UnrestrictedJavascriptRuntime unrestrictedRuntime) {
         product.skills().setRuntimeDisabledSkills(unrestrictedRuntime.enabled() || product.commands().enabled()
-                ? Set.of()
-                : Set.of(dev.openallay.skill.SkillCatalogSnapshot.GAME_COMMANDS));
+                ? dev.openallay.util.Java8Collections.setOf()
+                : dev.openallay.util.Java8Collections.setOf(dev.openallay.skill.SkillCatalogSnapshot.GAME_COMMANDS));
     }
-
-    private static ClientSettingsService.DisplayActions unavailableDisplayActions() {
+private static ClientSettingsService.DisplayActions unavailableDisplayActions() {
         return new ClientSettingsService.DisplayActions() {
             @Override
             public ToolResult<GuideDisplayConfig> saveDisplay(GuideDisplayConfig candidate) {
@@ -496,8 +517,7 @@ public record ClientSettingsRuntime(
             }
         };
     }
-
-    private static ModelProfilesConfigLoader.Load unconfigured() {
+private static ModelProfilesConfigLoader.Load unconfigured() {
         ModelProfileDefinition definition = new ModelProfileDefinition(
                 "default",
                 "Configure a model",
@@ -513,16 +533,15 @@ public record ClientSettingsRuntime(
                 null);
         ModelProfilesConfig config = new ModelProfilesConfig(
                 definition.id(),
-                List.of(definition));
+                dev.openallay.util.Java8Collections.listOf(definition));
         ResolvedModelProfile resolved = new ResolvedModelProfile(
                 definition,
                 null,
                 new GuideFailure("invalid_model_config", "Configure a model"));
         return new ModelProfilesConfigLoader.Load(
-                config, List.of(resolved));
+                config, dev.openallay.util.Java8Collections.listOf(resolved));
     }
-
-    private static Set<String> installedSkillMods(FeatureServices product) {
+private static Set<String> installedSkillMods(FeatureServices product) {
         java.util.TreeSet<String> installed = new java.util.TreeSet<>();
         try {
             product.platform().installedMods().stream()
@@ -535,10 +554,9 @@ public record ClientSettingsRuntime(
         product.skills().externalSources().stream()
                 .flatMap(source -> parser.parse(source).metadata().requiredMods().stream())
                 .filter(product.platform()::isModLoaded).forEach(installed::add);
-        return Set.copyOf(installed);
+        return dev.openallay.util.Java8Collections.setCopyOf(installed);
     }
-
-    private static Path managedModsRoot(Path configDirectory) {
+private static Path managedModsRoot(Path configDirectory) {
         Path configRoot = configDirectory.toAbsolutePath().normalize().getParent();
         Path gameRoot = configRoot == null ? null : configRoot.getParent();
         if (gameRoot == null) {
@@ -546,5 +564,25 @@ public record ClientSettingsRuntime(
                     "OpenAllay configuration directory requires a game directory");
         }
         return gameRoot.resolve("mods");
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ClientSettingsRuntime)) return false;
+        ClientSettingsRuntime that = (ClientSettingsRuntime) other;
+        return java.util.Objects.equals(models, that.models) && java.util.Objects.equals(settings, that.settings) && java.util.Objects.equals(unrestrictedJavascript, that.unrestrictedJavascript);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(models);
+        hash = 31 * hash + java.util.Objects.hashCode(settings);
+        hash = 31 * hash + java.util.Objects.hashCode(unrestrictedJavascript);
+        return hash;
+    }
+    @Override public String toString() { return "ClientSettingsRuntime[models=" + models + ", settings=" + settings + ", unrestrictedJavascript=" + unrestrictedJavascript + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ClientSettingsRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(ClientSettingsRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ClientSettingsRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(ClientSettingsRuntime.class, "models", ClientSettingsRuntime::models), new dev.openallay.value.ValueSchema.Component<>(ClientSettingsRuntime.class, "settings", ClientSettingsRuntime::settings), new dev.openallay.value.ValueSchema.Component<>(ClientSettingsRuntime.class, "unrestrictedJavascript", ClientSettingsRuntime::unrestrictedJavascript)), arguments -> new ClientSettingsRuntime((ClientModelRuntimeRegistry) arguments[0], (ClientSettingsService) arguments[1], (UnrestrictedJavascriptRuntime) arguments[2]));
+        }
     }
 }

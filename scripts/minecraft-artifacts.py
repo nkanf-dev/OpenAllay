@@ -15,7 +15,7 @@ DEFAULT_LOADERS = ("fabric", "neoforge")
 MAX_JSON_BYTES = 1024 * 1024
 MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 MAX_EVIDENCE_BYTES = 16 * 1024 * 1024
-FAMILY_FIELDS = {"id", "loader", "buildTarget", "supportedTargets", "filenameTemplate"}
+FAMILY_FIELDS = {"id", "loader", "buildTarget", "supportedTargets", "filenameTemplate", "packagingRecipe", "artifactKind", "publicationChannels"}
 
 
 def require(condition, message):
@@ -97,14 +97,22 @@ def label_for(targets):
 
 def family_for(loader, build_target, targets):
     label = label_for(targets)
+    legacy = loader == "forge" and targets == [build_target] and build_target == "1.16.5"
+    kind = "jar"
+    recipe = "forge-stock8" if loader == "forge" and targets == ["1.12.2"] else ("forge-flat" if legacy else "nested-mod")
     return {"id": loader + "-" + label, "loader": loader, "buildTarget": build_target,
-            "supportedTargets": list(targets), "filenameTemplate": "openallay-" + loader + "-" + label + "-{version}.jar"}
+            "supportedTargets": list(targets), "filenameTemplate": "openallay-" + loader + "-" + label + "-{version}." + kind,
+            "packagingRecipe": recipe, "artifactKind": kind,
+            "publicationChannels": ["github", "modrinth"]}
 
 
 def validate_family(family, order):
     shape(family, FAMILY_FIELDS, "Artifact family")
     require(family["loader"] in LOADERS, "Unsupported loader")
     interval(family["supportedTargets"], order)
+    if any(target_key(target) < target_key("1.18.2") for target in family["supportedTargets"]):
+        require(family["loader"] == "forge" and family["supportedTargets"] == [family["buildTarget"]]
+                and family["buildTarget"] in ("1.12.2", "1.16.5"), "Stock legacy recipes require an exact accepted Forge tuple")
     require(family["buildTarget"] in family["supportedTargets"], "buildTarget must be inside its interval")
     require(family == family_for(family["loader"], family["buildTarget"], family["supportedTargets"]), "Family id/filename must match its loader and exact interval")
 
@@ -116,7 +124,8 @@ def read_catalog(path):
     order = catalog["targetOrder"]
     require(type(order) is list and order and len(order) <= 128, "Expected bounded external target order")
     keys = [target_key(target) for target in order]
-    require(keys == sorted(set(keys)) and keys[0] >= target_key("1.18.2") and "26.2" in order, "External target order must be unique, ascending, and within this phase")
+    require(keys == sorted(set(keys)) and keys[0] >= target_key("1.12.2") and "26.2" in order
+            and all(target_key(target) >= target_key("1.18.2") or target in ("1.12.2", "1.16.5") for target in order), "External target order must be unique, ascending, and within this phase")
     accepted = catalog["acceptedFamilies"]
     candidates = catalog["candidateIntervals"]
     require(type(accepted) is list and 0 < len(accepted) <= 128 and type(candidates) is list and len(candidates) <= 128, "Expected bounded family/candidate lists")
@@ -196,7 +205,7 @@ def evidence_file(value, directory):
 def verify_receipt(family, receipt_path, artifact_path, expected_sha):
     expected_sha = hash_text(expected_sha)
     artifact = absolute_file(str(artifact_path))
-    require(artifact.suffix == ".jar", "Expected a JAR artifact")
+    require(artifact.suffix == "." + family["artifactKind"], "Artifact suffix differs from exact family format")
     actual_sha = file_hash(artifact, MAX_ARTIFACT_BYTES)
     require(actual_sha == expected_sha, "Actual artifact SHA256 differs from expected SHA256")
     receipt_path = receipt_path.resolve(strict=True)

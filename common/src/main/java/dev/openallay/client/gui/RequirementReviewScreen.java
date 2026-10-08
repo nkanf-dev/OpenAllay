@@ -10,11 +10,11 @@ import dev.openallay.settings.requirement.RequirementReview;
 import dev.openallay.tool.ToolResult;
 import java.util.Objects;
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
+import dev.openallay.client.gui.GuideNativeButton;
+
 import dev.openallay.client.gui.GuideInputKey;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 
 /** Reviews the already checked candidate; only Continue anyway publishes it. */
 public final class RequirementReviewScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -24,7 +24,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     private static final int ACCENT = 0xFF72D5C4;
     private static final int ERROR = 0xFFFF7D7D;
     private final ClientSettingsService service;
-    private final Screen parent;
+    private final net.minecraft.client.gui.screens.Screen parent;
     private final RequirementReview.Token token;
     private ClientSettingsSnapshot snapshot;
     private RequirementReview review;
@@ -39,7 +39,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     private String failure = "";
 
     public RequirementReviewScreen(
-            ClientSettingsService service, Screen parent, RequirementReview review) {
+            ClientSettingsService service, net.minecraft.client.gui.screens.Screen parent, RequirementReview review) {
         super(MinecraftComponents.translatable(PREFIX + "title"));
         this.service = Objects.requireNonNull(service, "service");
         this.parent = Objects.requireNonNull(parent, "parent");
@@ -58,7 +58,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             if (current != null && current.token() == token) {
                 review = current;
             } else if (!actionPending && !finished) {
-                failure = MinecraftComponents.translatable(PREFIX + "expired").getString();
+                failure = MinecraftComponents.getString(MinecraftComponents.translatable(PREFIX + "expired"));
             }
             // Minecraft 26.2 calls added() before init(width, height). A local dispatcher
             // may deliver this snapshot inline; retain it, but do not create widgets yet.
@@ -119,14 +119,14 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         int x = left();
         int w = panelWidth();
         int half = (w - 6) / 2;
-        Button cancel = addRenderableWidget(OpenAllayButton.create(
+        GuideNativeButton cancel = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(PREFIX + "cancel"), ignored -> {
                             if (confirming == null) onClose();
                             else { confirming = null; scroll = 0; guideRebuildWidgets(); }
                         })
                 .bounds(x, height - 29, half, 20).build());
         cancel.active = !actionPending;
-        Button proceed = addRenderableWidget(OpenAllayButton.create(
+        GuideNativeButton proceed = addGuideWidget(OpenAllayButton.create(
                         MinecraftComponents.translatable(confirming == null
                                 ? projection().continueKey() : PREFIX + "confirm_enable"),
                         ignored -> {
@@ -150,7 +150,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         int w = panelWidth() - 16;
         int start = viewportTop() + 7 - scroll;
         int y = start;
-        if (!failure.isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(failure)) {
             y = text(graphics, MinecraftComponents.literal(failure), x, y, w, ERROR) + 12;
         }
         if (actionPending) {
@@ -188,7 +188,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
             for (Row row : projection.rows()) {
                 y = text(graphics, rowLabel(row), x, y + 12, w,
                         row.status() == RequirementStatus.SATISFIED ? ACCENT : TEXT);
-                if (!row.detail().isBlank()) {
+                if (!dev.openallay.util.Java8Strings.isBlank(row.detail())) {
                     y = text(graphics, MinecraftComponents.literal(row.detail()), x, y + 3, w, MUTED);
                 }
                 if (row.canEnable()) {
@@ -196,7 +196,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
                             MinecraftComponents.translatable(row.kindKey()), MinecraftComponents.literal(row.id())),
                             x, y + 4, w, MUTED);
                     if (buttons) {
-                        Button enable = addRenderableWidget(OpenAllayButton.create(
+                        GuideNativeButton enable = addGuideWidget(OpenAllayButton.create(
                                         MinecraftComponents.translatable(PREFIX + "enable", MinecraftComponents.literal(row.id())),
                                         ignored -> requestEnable(row))
                                 .bounds(x, y + 4, w, 20).build());
@@ -210,12 +210,11 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         contentHeight = y - start + 16;
     }
 
-    public static Component rowLabel(Row row) {
-        Component identity = row.kind() == dev.openallay.requirement.RequirementKind.CAPABILITY
+    public static net.minecraft.network.chat.Component rowLabel(Row row) {
+        net.minecraft.network.chat.Component identity = row.kind() == dev.openallay.requirement.RequirementKind.CAPABILITY
                         && dev.openallay.settings.requirement.RequirementSettingsEnvironment
                                 .isUnrestrictedJavascript(row.id())
-                ? MinecraftComponents.translatable(PREFIX + "name.unrestricted_javascript")
-                        .append(MinecraftComponents.literal(" (" + row.id() + ")"))
+                ? MinecraftComponents.append(MinecraftComponents.translatable(PREFIX + "name.unrestricted_javascript"), MinecraftComponents.literal(" (" + row.id() + ")"))
                 : MinecraftComponents.literal(row.name().equals(row.id())
                         ? row.id() : row.name() + " (" + row.id() + ")");
         return MinecraftComponents.translatable(PREFIX + "row",
@@ -223,8 +222,8 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
                 MinecraftComponents.translatable(row.statusKey()));
     }
 
-    private int text(GuideGraphics graphics, Component value, int x, int y, int w, int color) {
-        for (var line : font.split(value, Math.max(20, w))) {
+    private int text(GuideGraphics graphics, net.minecraft.network.chat.Component value, int x, int y, int w, int color) {
+        for (dev.openallay.client.gui.GuideTextLine line : GuideNativeFont.split(font, value, Math.max(20, w))) {
             if (graphics != null) graphics.text(font, line, x, y, color, false);
             y += 11;
         }
@@ -250,16 +249,18 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         failure = "";
         guideRebuildWidgets();
         long epoch = attachment.epoch();
-        var client = minecraft;
+        net.minecraft.client.Minecraft client = minecraft;
         service.enablePackageRequirement(token, row.kind(), row.id(), consent).thenAccept(result ->
-                client.execute(() -> {
+                MinecraftClientWindow.execute(client, () -> {
                     if (!attached(epoch)) return;
                     actionPending = false;
                     snapshot = service.snapshot();
                     snapshot.requirementReview().filter(value -> value.token() == token)
                             .ifPresent(value -> review = value);
-                    if (result instanceof ToolResult.Failure<Boolean> failed) {
-                        failure = failed.code() + ": " + failed.message();
+                    final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern0_holder.value) != null))) {
+                        failure = $oaPattern0_holder.bound.code() + ": " + $oaPattern0_holder.bound.message();
                     } else {
                         savedSettings = true;
                     }
@@ -274,12 +275,14 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
         failure = "";
         guideRebuildWidgets();
         long epoch = attachment.epoch();
-        var client = minecraft;
-        service.continuePackageInstall(token).thenAccept(result -> client.execute(() -> {
+        net.minecraft.client.Minecraft client = minecraft;
+        service.continuePackageInstall(token).thenAccept(result -> MinecraftClientWindow.execute(client, () -> {
             if (!attached(epoch)) return;
             actionPending = false;
-            if (result instanceof ToolResult.Failure<Boolean> failed) {
-                failure = failed.code() + ": " + failed.message();
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern1_holder.value) != null))) {
+                failure = $oaPattern1_holder.bound.code() + ": " + $oaPattern1_holder.bound.message();
                 snapshot = service.snapshot();
                 guideRebuildWidgets();
             } else {
@@ -346,7 +349,7 @@ public final class RequirementReviewScreen extends dev.openallay.client.gui.Guid
     @Override
     protected void paintGuideScreen(GuideGraphics graphics, int mouseX, int mouseY, float tick) {
         graphics.fill(0, 0, width, height, 0xF00B0D12);
-        graphics.text(font, title, left() + 8, 14, ACCENT, false);
+        graphics.text(font, getTitle(), left() + 8, 14, ACCENT, false);
         graphics.fill(left(), viewportTop(), left() + panelWidth(), viewportBottom(), 0xE0181B22);
         graphics.enableScissor(left(), viewportTop(), left() + panelWidth(), viewportBottom());
         layoutContents(graphics, false);

@@ -64,7 +64,7 @@ public final class CancellationSignal implements dev.openallay.net.HttpCancellat
         }
         List<Runnable> snapshot;
         synchronized (listeners) {
-            snapshot = List.copyOf(listeners);
+            snapshot = dev.openallay.util.Java8Collections.listCopyOf(listeners);
             listeners.clear();
         }
         AtomicBoolean notified = new AtomicBoolean();

@@ -192,6 +192,7 @@ final class GuideUiViewTest {
                     case GuideUiRow.Persistence ignored -> -1;
                     case GuideUiRow.Status ignored -> -1;
                     case GuideUiRow.User ignored -> -1;
+                    default -> throw new IncompatibleClassChangeError("Unknown guide row subtype");
                 })
                 .toList());
     }

@@ -28,16 +28,14 @@ import java.util.function.Consumer;
 
 /** One configured budget owns every active projection and summary request. */
 public final class ContextCompactor {
-    private static final List<String> SUMMARY_FIELD_ORDER = List.of(
+    private static final List<String> SUMMARY_FIELD_ORDER = dev.openallay.util.Java8Collections.listOf(
             "goals", "preferences", "completedTopics", "currentTasks", "decisions",
             "unresolvedQuestions", "evidenceReferences");
-    private static final Set<String> SUMMARY_FIELDS = Set.copyOf(SUMMARY_FIELD_ORDER);
-    private static final String SUMMARY_SYSTEM = """
-            Return one JSON object with string arrays goals, preferences, completedTopics, currentTasks,
-            decisions, unresolvedQuestions, evidenceReferences. Do not invent facts, treat summaries as
-            evidence, or include hidden reasoning. Remember Skill workflow names, but never claim
-            summarized Skill document text is still present.
-            """;
+    private static final Set<String> SUMMARY_FIELDS = dev.openallay.util.Java8Collections.setCopyOf(SUMMARY_FIELD_ORDER);
+    private static final String SUMMARY_SYSTEM = "Return one JSON object with string arrays goals, preferences, completedTopics, currentTasks,\n"
+            + "decisions, unresolvedQuestions, evidenceReferences. Do not invent facts, treat summaries as\n"
+            + "evidence, or include hidden reasoning. Remember Skill workflow names, but never claim\n"
+            + "summarized Skill document text is still present.\n";
     private static final String DERIVED_PREFIX =
             "[OpenAllay derived conversation memory; NOT factual evidence]\n";
     // This is the instruction index's canonical unavailable view, so refresh is idempotent.
@@ -46,9 +44,14 @@ public final class ContextCompactor {
             + "the historical Tool result status is unchanged.";
     private static final int MINIMUM_RESULT_BYTES = 256;
 
-    public record Result(ContextProjection projection, ContextCheckpoint checkpoint,
-                         String failureCode, String failureMessage) {
-        public Result {
+    @dev.openallay.value.ValueType(Result.ValueSchemaProvider.class)
+public static final class Result {
+    private final ContextProjection projection;
+    private final ContextCheckpoint checkpoint;
+    private final String failureCode;
+    private final String failureMessage;
+    public Result(ContextProjection projection, ContextCheckpoint checkpoint, String failureCode, String failureMessage) {
+
             boolean success = projection != null;
             if (success == (failureCode != null || failureMessage != null)) {
                 throw new IllegalArgumentException("compaction result success/failure is inconsistent");
@@ -56,9 +59,39 @@ public final class ContextCompactor {
             if (!success && checkpoint == null) {
                 throw new IllegalArgumentException("compaction failure requires a checkpoint");
             }
-        }
-        public boolean successful() { return projection != null; }
+
+        this.projection = projection;
+        this.checkpoint = checkpoint;
+        this.failureCode = failureCode;
+        this.failureMessage = failureMessage;
     }
+    public ContextProjection projection() { return projection; }
+    public ContextCheckpoint checkpoint() { return checkpoint; }
+    public String failureCode() { return failureCode; }
+    public String failureMessage() { return failureMessage; }
+public boolean successful() { return projection != null; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Result)) return false;
+        Result that = (Result) other;
+        return java.util.Objects.equals(projection, that.projection) && java.util.Objects.equals(checkpoint, that.checkpoint) && java.util.Objects.equals(failureCode, that.failureCode) && java.util.Objects.equals(failureMessage, that.failureMessage);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(projection);
+        hash = 31 * hash + java.util.Objects.hashCode(checkpoint);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        hash = 31 * hash + java.util.Objects.hashCode(failureMessage);
+        return hash;
+    }
+    @Override public String toString() { return "Result[projection=" + projection + ", checkpoint=" + checkpoint + ", failureCode=" + failureCode + ", failureMessage=" + failureMessage + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Result> schema() {
+            return new dev.openallay.value.ValueSchema<>(Result.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Result>>asList(new dev.openallay.value.ValueSchema.Component<>(Result.class, "projection", Result::projection), new dev.openallay.value.ValueSchema.Component<>(Result.class, "checkpoint", Result::checkpoint), new dev.openallay.value.ValueSchema.Component<>(Result.class, "failureCode", Result::failureCode), new dev.openallay.value.ValueSchema.Component<>(Result.class, "failureMessage", Result::failureMessage)), arguments -> new Result((ContextProjection) arguments[0], (ContextCheckpoint) arguments[1], (String) arguments[2], (String) arguments[3]));
+        }
+    }
+}
 
     private final ModelClient model;
     private final Gson gson;
@@ -73,7 +106,7 @@ public final class ContextCompactor {
         this.gson = Objects.requireNonNull(gson, "gson");
         this.estimator = Objects.requireNonNull(estimator, "estimator");
         this.budget = Objects.requireNonNull(budget, "budget");
-        if (modelIdentifier == null || modelIdentifier.isBlank()) {
+        if (modelIdentifier == null || dev.openallay.util.Java8Strings.isBlank(modelIdentifier)) {
             throw new IllegalArgumentException("modelIdentifier is required");
         }
         this.modelIdentifier = modelIdentifier;
@@ -91,25 +124,25 @@ public final class ContextCompactor {
     /** Prepare opaque restored data before model admission, without touching diagnostics. */
     public List<ModelMessage> prepareModelView(List<ModelMessage> messages) {
         ResultValues values = new ResultValues(messages);
-        List<ModelMessage> receipts = boundResults(messages, MINIMUM_RESULT_BYTES, false, List.of(), values);
-        configureResultPlan(values, messages, receipts, List.of());
-        if (withinResultPlan(messages, values)) return List.copyOf(messages);
+        List<ModelMessage> receipts = boundResults(messages, MINIMUM_RESULT_BYTES, false, dev.openallay.util.Java8Collections.listOf(), values);
+        configureResultPlan(values, messages, receipts, dev.openallay.util.Java8Collections.listOf());
+        if (withinResultPlan(messages, values)) return dev.openallay.util.Java8Collections.listCopyOf(messages);
         ArrayList<ModelMessage> projected = new ArrayList<>();
         for (int index = 0; index < messages.size(); index++) {
             ModelMessage message = messages.get(index);
             ArrayList<ModelContent> content = new ArrayList<>();
             for (int item = 0; item < message.content().size(); item++) {
                 ModelContent original = message.content().get(item);
-                if (original instanceof ModelContent.ToolResult result
-                        && values.plannedTokens.containsKey(result.toolUseId())
-                        && estimator.estimateText(modelText(result.value()))
-                                > values.plannedTokens.get(result.toolUseId())) {
+                if (original instanceof ModelContent.ToolResult
+                        && values.plannedTokens.containsKey(((ModelContent.ToolResult) original).toolUseId())
+                        && estimator.estimateText(modelText(((ModelContent.ToolResult) original).value()))
+                                > values.plannedTokens.get(((ModelContent.ToolResult) original).toolUseId())) {
                     content.add(receipts.get(index).content().get(item));
                 } else content.add(original);
             }
             projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content, message.inputObservation()));
         }
-        return List.copyOf(projected);
+        return dev.openallay.util.Java8Collections.listCopyOf(projected);
     }
 
     public int inputTokenBudget() { return budget.inputTokens(); }
@@ -118,7 +151,7 @@ public final class ContextCompactor {
                                       List<ModelToolDefinition> tools) {
         ResultValues values = new ResultValues(messages);
         configureResultPlan(values, messages,
-                boundResults(messages, MINIMUM_RESULT_BYTES, false, List.of(), values), List.of());
+                boundResults(messages, MINIMUM_RESULT_BYTES, false, dev.openallay.util.Java8Collections.listOf(), values), dev.openallay.util.Java8Collections.listOf());
         if (!withinResultPlan(messages, values)) return true;
         return estimateTokens(systemPrompt, messages, tools) > inputTokenBudget();
     }
@@ -130,7 +163,7 @@ public final class ContextCompactor {
      */
     public Optional<ContextProjection> fitResults(String systemPrompt, List<ModelMessage> messages,
                                                   List<ModelToolDefinition> tools) {
-        return fitResults(systemPrompt, messages, tools, List.of());
+        return fitResults(systemPrompt, messages, tools, dev.openallay.util.Java8Collections.listOf());
     }
 
     /** Fresh results still have a structured normalized view; use it instead of re-clipping text. */
@@ -216,8 +249,8 @@ public final class ContextCompactor {
         int count = 0;
         if (!freshResults.isEmpty()) {
             for (ModelContent item : source.get(source.size() - 1).content()) {
-                if (item instanceof ModelContent.ToolResult result && !result.error()
-                        && !values.instructions.contains(result)) count++;
+                if (item instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) item).error()
+                        && !values.instructions.contains((ModelContent.ToolResult) item)) count++;
             }
         }
         int currentShare = Math.max(1, budget.maxOutputTokens() / Math.max(1, count));
@@ -227,8 +260,9 @@ public final class ContextCompactor {
             List<ModelContent> originals = source.get(index).content();
             List<ModelContent> minimums = receipts.get(index).content();
             for (int item = 0; item < originals.size(); item++) {
-                if (originals.get(item) instanceof ModelContent.ToolResult result && !result.error()
-                        && !values.instructions.contains(result)) {
+                if (originals.get(item) instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) originals.get(item)).error()
+                        && !values.instructions.contains((ModelContent.ToolResult) originals.get(item))) {
+                    ModelContent.ToolResult result = (ModelContent.ToolResult) originals.get(item);
                     ModelContent.ToolResult minimum = (ModelContent.ToolResult) minimums.get(item);
                     int floor = estimator.estimateText(modelText(minimum.value()));
                     values.plannedTokens.put(result.toolUseId(), (int) Math.min(Integer.MAX_VALUE,
@@ -240,9 +274,9 @@ public final class ContextCompactor {
 
     private boolean withinResultPlan(List<ModelMessage> candidate, ResultValues values) {
         for (ModelMessage message : candidate) for (ModelContent item : message.content()) {
-            if (item instanceof ModelContent.ToolResult result && values.plannedTokens.containsKey(result.toolUseId())
-                    && estimator.estimateText(modelText(result.value()))
-                            > values.plannedTokens.get(result.toolUseId())) return false;
+            if (item instanceof ModelContent.ToolResult && values.plannedTokens.containsKey(((ModelContent.ToolResult) item).toolUseId())
+                    && estimator.estimateText(modelText(((ModelContent.ToolResult) item).value()))
+                            > values.plannedTokens.get(((ModelContent.ToolResult) item).toolUseId())) return false;
         }
         return true;
     }
@@ -308,13 +342,13 @@ public final class ContextCompactor {
         Objects.requireNonNull(images, "images");
         Objects.requireNonNull(usageObserver, "usageObserver");
         cancellation.throwIfCancelled();
-        List<ModelMessage> source = List.copyOf(messages);
-        List<ModelToolDefinition> requestTools = List.copyOf(tools);
+        List<ModelMessage> source = dev.openallay.util.Java8Collections.listCopyOf(messages);
+        List<ModelToolDefinition> requestTools = dev.openallay.util.Java8Collections.listCopyOf(tools);
         List<ContextStructure.Unit> units = ContextStructure.units(source);
         ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
-        Optional<ContextProjection> fitted = fitResults(promptForProjection, source, requestTools, List.of());
+        Optional<ContextProjection> fitted = fitResults(promptForProjection, source, requestTools, dev.openallay.util.Java8Collections.listOf());
         if (fitted.isPresent()) return CompletableFuture.completedFuture(
-                new Result(fitted.orElseThrow(), null, null, null));
+                new Result(fitted.orElseThrow(() -> new java.util.NoSuchElementException("No value present")), null, null, null));
 
         List<ModelMessage> minimum = ModelContextCodec.safe(boundResults(source, MINIMUM_RESULT_BYTES, true));
         int originalEstimate = estimateProjection(promptForProjection, minimum, requestTools);
@@ -339,7 +373,7 @@ public final class ContextCompactor {
                 Math.max(1, protectedFromIndex), "fixed_context_over_budget",
                 "Protected question, tool arguments, errors and minimum result projections exceed "
                         + "the configured model input budget", originalEstimate));
-        List<ModelMessage> suffix = List.copyOf(minimum.subList(prefixEnd, minimum.size()));
+        List<ModelMessage> suffix = dev.openallay.util.Java8Collections.listCopyOf(minimum.subList(prefixEnd, minimum.size()));
         return compactPrefix(promptForProjection, source, prefixEnd,
                 minimum.subList(0, prefixEnd), suffix, requestTools, summaryTarget,
                 schedulingKey, cancellation, images, usageObserver, originalEstimate, false);
@@ -353,16 +387,16 @@ public final class ContextCompactor {
             Consumer<ModelEvent> usageObserver, int originalEstimate, boolean manual) {
         List<ModelContent> retainedImages = imageBlocks(history);
         List<ContextStructure.Unit> historyUnits = ContextStructure.units(history);
-        List<String> serializedUnits = historyUnits.stream().map(unit ->
-                gson.toJson(summarySource(unit.messages()))).toList();
+        List<String> serializedUnits = dev.openallay.util.Java8Collections.toList(historyUnits.stream().map(unit ->
+                gson.toJson(summarySource(unit.messages()))));
         return summarizeChunks(historyUnits, serializedUnits, 0, null, target, schedulingKey, cancellation,
                         promptForProjection, retainedImages, suffix, requestTools, images, usageObserver, manual)
                 .handle((summary, throwable) -> {
                     cancellation.throwIfCancelled();
                     if (throwable != null) {
                         Throwable cause = unwrap(throwable);
-                        String code = cause instanceof ModelClientException modelFailure
-                                ? modelFailure.failure().code() : "summary_failure";
+                        String code = cause instanceof ModelClientException
+                                ? ((ModelClientException) cause).failure().code() : "summary_failure";
                         return failure(source, end, code, safeMessage(cause), originalEstimate);
                     }
                     List<ModelMessage> projected = summarized(summary, retainedImages, suffix);
@@ -417,8 +451,8 @@ public final class ContextCompactor {
         Objects.requireNonNull(images, "images");
         Objects.requireNonNull(usageObserver, "usageObserver");
         cancellation.throwIfCancelled();
-        List<ModelMessage> source = List.copyOf(messages);
-        List<ModelToolDefinition> requestTools = List.copyOf(tools);
+        List<ModelMessage> source = dev.openallay.util.Java8Collections.listCopyOf(messages);
+        List<ModelToolDefinition> requestTools = dev.openallay.util.Java8Collections.listCopyOf(tools);
         List<ContextStructure.Unit> units = ContextStructure.units(source);
         ContextStructure.requireBoundary(units, protectedFromIndex, source.size());
         List<ModelMessage> safe = ModelContextCodec.safe(source);
@@ -465,15 +499,15 @@ public final class ContextCompactor {
     }
 
     private static boolean derivedMemory(ModelMessage message) {
-        return !message.content().isEmpty() && message.content().get(0) instanceof ModelContent.Text text
-                && text.text().startsWith(DERIVED_PREFIX);
+        return !message.content().isEmpty() && message.content().get(0) instanceof ModelContent.Text
+                && ((ModelContent.Text) message.content().get(0)).text().startsWith(DERIVED_PREFIX);
     }
 
     private static boolean substantive(ContextStructure.Unit unit) {
         for (ModelMessage message : unit.messages()) {
             if (derivedMemory(message)) continue;
             for (ModelContent content : message.content()) {
-                if (content instanceof ModelContent.Text text && !text.text().isBlank()) return true;
+                if (content instanceof ModelContent.Text && !dev.openallay.util.Java8Strings.isBlank(((ModelContent.Text) content).text())) return true;
                 if (content instanceof ModelContent.ToolUse || content instanceof ModelContent.ToolResult
                         || content instanceof ModelContent.Image) return true;
             }
@@ -499,9 +533,9 @@ public final class ContextCompactor {
         // Additive text costs are a planning hint, never admission proof. Native token merges and
         // provider framing are measured on the selected full request below.
         long planned = estimateTokens(summarySystem, prior == null
-                ? List.of(ModelMessage.userText("[]"))
-                : List.of(summaryInput(DERIVED_PREFIX + prior, unitImages(units, 0, from)),
-                        ModelMessage.userText("[]")), List.of());
+                ? dev.openallay.util.Java8Collections.listOf(ModelMessage.userText("[]"))
+                : dev.openallay.util.Java8Collections.listOf(summaryInput(DERIVED_PREFIX + prior, unitImages(units, 0, from)),
+                        ModelMessage.userText("[]")), dev.openallay.util.Java8Collections.listOf());
         int next = from;
         while (next < units.size()) {
             int unitCost = estimator.estimateText(serialized.get(next));
@@ -513,9 +547,9 @@ public final class ContextCompactor {
         while (next > from) {
             String payload = joinUnits(serialized.subList(from, next));
             ModelMessage sourceInput = summaryInput(payload, unitImages(units, from, next));
-            List<ModelMessage> input = prior == null ? List.of(sourceInput)
-                    : List.of(summaryInput(DERIVED_PREFIX + prior, unitImages(units, 0, from)), sourceInput);
-            ModelRequest request = new ModelRequest(summarySystem, input, List.of(),
+            List<ModelMessage> input = prior == null ? dev.openallay.util.Java8Collections.listOf(sourceInput)
+                    : dev.openallay.util.Java8Collections.listOf(summaryInput(DERIVED_PREFIX + prior, unitImages(units, 0, from)), sourceInput);
+            ModelRequest request = new ModelRequest(summarySystem, input, dev.openallay.util.Java8Collections.listOf(),
                     false, schedulingKey, target, images);
             if (estimateTokens(request.systemPrompt(), request.messages(), request.tools()) <= inputTokenBudget()) {
                 selected = request;
@@ -523,17 +557,17 @@ public final class ContextCompactor {
             }
             next--;
         }
-        if (selected == null) return CompletableFuture.failedFuture(new ModelClientException(
+        if (selected == null) return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(
                 new dev.openallay.model.ModelFailure("summary_source_unit_over_budget",
                         "A complete historical structural unit cannot fit a summary request", null)));
         final int following = next;
         final String nextPayload = following < units.size() ? serialized.get(following) : null;
         int carryTarget = target;
         if (nextPayload != null) {
-            int minimumCarry = estimateTokens(summarySystem, List.of(
+            int minimumCarry = estimateTokens(summarySystem, dev.openallay.util.Java8Collections.listOf(
                     summaryInput(DERIVED_PREFIX + emptySummary(), unitImages(units, 0, following)),
-                    summaryInput(nextPayload, unitImages(units, following, following + 1))), List.of());
-            if (minimumCarry > inputTokenBudget()) return CompletableFuture.failedFuture(
+                    summaryInput(nextPayload, unitImages(units, following, following + 1))), dev.openallay.util.Java8Collections.listOf());
+            if (minimumCarry > inputTokenBudget()) return dev.openallay.util.Java8Futures.failedFuture(
                     new ModelClientException(new dev.openallay.model.ModelFailure(
                             "summary_carry_over_budget",
                             "The next structural unit cannot fit with minimum conversation memory", null)));
@@ -548,9 +582,9 @@ public final class ContextCompactor {
                     > inputTokenBudget()) {
                 return false;
             }
-            return nextPayload == null || estimateTokens(summarySystem, List.of(
+            return nextPayload == null || estimateTokens(summarySystem, dev.openallay.util.Java8Collections.listOf(
                     summaryInput(DERIVED_PREFIX + summary, unitImages(units, 0, following)),
-                    summaryInput(nextPayload, unitImages(units, following, following + 1))), List.of())
+                    summaryInput(nextPayload, unitImages(units, following, following + 1))), dev.openallay.util.Java8Collections.listOf())
                     <= inputTokenBudget();
         };
         return summarizeAdmitted(admitted, cancellation, fits, false, usageObserver, enforceOutputLimit)
@@ -564,13 +598,13 @@ public final class ContextCompactor {
 
     /** Full anchors stay in durable original context; summary source gets only the concise projection. */
     private static List<ModelMessage> summarySource(List<ModelMessage> messages) {
-        return ContextStructure.summarySafe(messages).stream().map(message -> {
-            if (message.inputObservation().isEmpty()) return message;
+        return dev.openallay.util.Java8Collections.toList(ContextStructure.summarySafe(messages).stream().map(message -> {
+            if (!message.inputObservation().isPresent()) return message;
             ArrayList<ModelContent> content = new ArrayList<>(message.content());
             content.add(new ModelContent.Text(dev.openallay.model.image.ModelImages.inputObservationLabel(
-                    message.inputObservation().orElseThrow())));
+                    message.inputObservation().get())));
             return new ModelMessage(message.role(), content);
-        }).toList();
+        }));
     }
 
     private static String joinUnits(List<String> serialized) {
@@ -590,7 +624,7 @@ public final class ContextCompactor {
             boolean targetedRetry, Consumer<ModelEvent> usageObserver, boolean enforceOutputLimit) {
         cancellation.throwIfCancelled();
         if (estimateTokens(admitted.systemPrompt(), admitted.messages(), admitted.tools())
-                > inputTokenBudget()) return CompletableFuture.failedFuture(new ModelClientException(
+                > inputTokenBudget()) return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(
                         new dev.openallay.model.ModelFailure("summary_input_over_budget",
                                 "Final summary request exceeds the configured input budget", null)));
         return cancellation.observe(model.complete(admitted, event -> {
@@ -602,13 +636,13 @@ public final class ContextCompactor {
                     JsonObject summary;
                     try { summary = parseSummary(turn.text()); }
                     catch (RuntimeException malformed) {
-                        return CompletableFuture.failedFuture(new ModelClientException(
+                        return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(
                                 new dev.openallay.model.ModelFailure("summary_malformed",
                                         "Summary response did not match schema", null)));
                     }
                     if ((!enforceOutputLimit || estimator.estimateText(turn.text()) <= admitted.maxOutputTokens())
                             && fits.test(summary)) return CompletableFuture.completedFuture(summary);
-                    if (targetedRetry) return CompletableFuture.failedFuture(new ModelClientException(
+                    if (targetedRetry) return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(
                             new dev.openallay.model.ModelFailure("summary_output_over_budget",
                                     "Summary exceeded its target after one bounded retry", null)));
                     // Never feed an overlong response back into the model. Re-read only the already
@@ -620,9 +654,9 @@ public final class ContextCompactor {
                             + "claim omitted Skill plaintext is loaded. Output budget: "
                             + admitted.maxOutputTokens() + " tokens.";
                     ModelRequest retry = new ModelRequest(prompt, admitted.messages(),
-                            List.of(), false, admitted.sessionKey(), admitted.maxOutputTokens(), admitted.images());
+                            dev.openallay.util.Java8Collections.listOf(), false, admitted.sessionKey(), admitted.maxOutputTokens(), admitted.images());
                     if (estimateTokens(retry.systemPrompt(), retry.messages(), retry.tools())
-                            > inputTokenBudget()) return CompletableFuture.failedFuture(
+                            > inputTokenBudget()) return dev.openallay.util.Java8Futures.failedFuture(
                                     new ModelClientException(new dev.openallay.model.ModelFailure(
                                             "summary_retry_input_over_budget",
                                             "Targeted summary retry cannot fit the configured input budget", null)));
@@ -636,7 +670,7 @@ public final class ContextCompactor {
         // Text may be derived memory, but retained images remain actual visual input.
         projected.add(summaryInput(DERIVED_PREFIX + summary, images));
         projected.addAll(suffix);
-        return List.copyOf(projected);
+        return dev.openallay.util.Java8Collections.listCopyOf(projected);
     }
 
     private static ModelMessage summaryInput(String text, List<ModelContent> images) {
@@ -652,13 +686,13 @@ public final class ContextCompactor {
     }
 
     private static List<ModelContent> unitImages(List<ContextStructure.Unit> units, int from, int to) {
-        return imageBlocks(units.subList(from, to).stream()
-                .flatMap(unit -> unit.messages().stream()).toList());
+        return imageBlocks(dev.openallay.util.Java8Collections.toList(units.subList(from, to).stream()
+                .flatMap(unit -> unit.messages().stream())));
     }
 
     private static List<ModelMessage> boundResults(List<ModelMessage> messages, int cap,
                                                    boolean retireSkills) {
-        return boundResults(messages, cap, retireSkills, List.of(), new ResultValues(messages));
+        return boundResults(messages, cap, retireSkills, dev.openallay.util.Java8Collections.listOf(), new ResultValues(messages));
     }
 
     private static List<ModelMessage> boundResults(List<ModelMessage> messages, int cap,
@@ -669,7 +703,8 @@ public final class ContextCompactor {
             int resultIndex = 0;
             ArrayList<ModelContent> content = new ArrayList<>();
             for (ModelContent item : message.content()) {
-                if (item instanceof ModelContent.ToolResult result && !result.error()) {
+                if (item instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) item).error()) {
+                    ModelContent.ToolResult result = (ModelContent.ToolResult) item;
                     JsonElement value = values.values.get(result);
                     int originalBytes = values.encodedSizes.get(result);
                     boolean skill = values.instructions.contains(result);
@@ -690,7 +725,7 @@ public final class ContextCompactor {
             projected.add(content.equals(message.content()) ? message : new ModelMessage(message.role(), content, message.inputObservation()));
             messageIndex++;
         }
-        return List.copyOf(projected);
+        return dev.openallay.util.Java8Collections.listCopyOf(projected);
     }
 
     /** Request-local immutable snapshots avoid repeated full result encoding/deep copies. */
@@ -707,8 +742,12 @@ public final class ContextCompactor {
         private ResultValues(List<ModelMessage> messages) {
             java.util.Map<String, String> names = new java.util.HashMap<>();
             for (ModelMessage message : messages) for (ModelContent item : message.content()) {
-                if (item instanceof ModelContent.ToolUse use) names.put(use.id(), use.name());
-                if (item instanceof ModelContent.ToolResult result && !result.error()) {
+                if (item instanceof ModelContent.ToolUse) {
+                    ModelContent.ToolUse use = (ModelContent.ToolUse) item;
+                    names.put(use.id(), use.name());
+                }
+                if (item instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) item).error()) {
+                    ModelContent.ToolResult result = (ModelContent.ToolResult) item;
                     JsonElement value = result.value();
                     long measuredBytes = dev.openallay.tool.result.JsonResultProjection.serializedBytes(value);
                     int size = measuredBytes >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) measuredBytes;
@@ -735,7 +774,7 @@ public final class ContextCompactor {
     public Optional<ContextProjection> reuse(ContextCheckpoint checkpoint, String systemPrompt,
             List<ModelMessage> messages, int protectedFromIndex, List<ModelToolDefinition> tools) {
         Objects.requireNonNull(checkpoint, "checkpoint");
-        messages = List.copyOf(messages);
+        messages = dev.openallay.util.Java8Collections.listCopyOf(messages);
         if (checkpoint.status() != ContextCheckpoint.Status.SUCCEEDED
                 || checkpoint.sourceFromIndex() != 0
                 || checkpoint.sourceToIndexExclusive() > protectedFromIndex
@@ -800,6 +839,6 @@ public final class ContextCompactor {
 
     private static String safeMessage(Throwable throwable) {
         String message = throwable.getMessage();
-        return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
+        return message == null || dev.openallay.util.Java8Strings.isBlank(message) ? throwable.getClass().getSimpleName() : message;
     }
 }

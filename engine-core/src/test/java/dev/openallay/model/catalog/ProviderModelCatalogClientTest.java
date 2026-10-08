@@ -14,7 +14,7 @@ import dev.openallay.net.HttpTransport;
 import dev.openallay.tool.ToolResult;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
-import java.net.http.HttpTimeoutException;
+import dev.openallay.net.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;

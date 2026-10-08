@@ -17,12 +17,34 @@ public interface GuideObservationSubmission {
     /** Existing transport for constructors used outside the coordinated observation entry path. */
     static GuideObservationSubmission existing(GuideService service) {
         Objects.requireNonNull(service, "service");
-        return (owner, route, pendingId, message, observation) -> switch (route) {
-            case ASK -> service.ask(message);
-            case FOLLOW_UP -> service.followUp(message);
-            case STEER -> service.steer(message);
-            case EDIT_PENDING -> service.editPending(pendingId, message);
-            case EDIT_INVALID -> throw new IllegalStateException("Invalid edit cannot be submitted");
-        };
+        return (owner, route, pendingId, message, observation) -> {
+java.util.concurrent.CompletableFuture<? extends dev.openallay.tool.ToolResult<?>> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((route)) {
+case ASK:
+{
+$oaSwitch0_exit_result = service.ask(message); break $oaSwitch0_exit;
+}
+case FOLLOW_UP:
+{
+$oaSwitch0_exit_result = service.followUp(message); break $oaSwitch0_exit;
+}
+case STEER:
+{
+$oaSwitch0_exit_result = service.steer(message); break $oaSwitch0_exit;
+}
+case EDIT_PENDING:
+{
+$oaSwitch0_exit_result = service.editPending(pendingId, message); break $oaSwitch0_exit;
+}
+case EDIT_INVALID:
+{
+throw new IllegalStateException("Invalid edit cannot be submitted");
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+};
     }
 }

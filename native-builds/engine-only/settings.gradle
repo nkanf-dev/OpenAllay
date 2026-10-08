@@ -1,0 +1,21 @@
+import groovy.json.JsonSlurper
+
+// Only the current engine is compiled. No native plugin or game project is admitted.
+rootProject.name = 'OpenAllayEngineOnly'
+def request = new JsonSlurper().parse(file(providers.gradleProperty('engineOnlyInputs').get()))
+if (request.keySet() != (['sourceRoot', 'sourceRevision', 'retainedDirectory', 'builderJar'] as Set)) {
+    throw new GradleException('Expected exact engine-only input fields')
+}
+if (request.values().any { !(it instanceof String) || it.isEmpty() } ||
+        ['sourceRoot', 'retainedDirectory', 'builderJar'].any { !new File(request[it]).isAbsolute() }) {
+    throw new GradleException('Engine-only input paths must be nonempty absolute strings')
+}
+gradle.ext.engineOnlyRequest = request
+gradle.ext.engineOnlySource = file(request.sourceRoot).canonicalFile
+gradle.ext.engineOnlyPins = new JsonSlurper().parse(file('retained-inputs.json'))
+include('engine-core', 'extension-api', 'runtime-rhino', 'runtime-json', 'runtime-maven')
+project(':engine-core').projectDir = file('engine-core')
+['extension-api', 'runtime-rhino', 'runtime-json', 'runtime-maven'].each { name ->
+    project(":${name}").projectDir = file("inputs/${name}")
+    project(":${name}").buildFileName = '../../artifact-input.gradle'
+}

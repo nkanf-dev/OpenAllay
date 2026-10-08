@@ -1,5 +1,7 @@
 package dev.openallay.client.gui.hud;
 
+import dev.openallay.client.gui.GuideNativeFont;
+
 import dev.openallay.client.gui.MinecraftClientWindow;
 
 import dev.openallay.client.gui.OpenAllayButton;
@@ -16,10 +18,10 @@ import java.util.function.Supplier;
 import dev.openallay.client.gui.GuideGraphics;
 import dev.openallay.client.gui.GuideNativeSlider;
 import dev.openallay.client.gui.GuideTooltip;
-import net.minecraft.client.gui.screens.Screen;
+
 import dev.openallay.client.gui.GuideInputMouse;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
+
 
 /** Native, non-pausing HUD editor. Changes stay in memory until the player presses Apply. */
 public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNativeScreen {
@@ -32,7 +34,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
 
     private final Draft draft;
     private final Interaction interaction;
-    private final Screen returnScreen;
+    private final net.minecraft.client.gui.screens.Screen returnScreen;
     private final BooleanSupplier ownerValid;
     private final GuideHudRenderer renderer;
     private final Supplier<GuideHudView> view;
@@ -47,7 +49,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     public GuideHudEditorScreen(
             GuideDisplayConfig draft,
             Consumer<GuideDisplayConfig> applied,
-            Screen returnScreen,
+            net.minecraft.client.gui.screens.Screen returnScreen,
             BooleanSupplier ownerValid,
             GuideHudRenderer renderer,
             Supplier<GuideHudView> view) {
@@ -92,14 +94,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         addBodyButton("height_decrease", x, 2, 26, () -> changeSize(0, -8));
         addBodyButton("height_increase", x + w - 26, 2, 26, () -> changeSize(0, 8));
         if (form.rowVisible(3, formScroll)) {
-            addRenderableWidget(new HudSlider(x, form.rowY(3, formScroll), w, form.rowHeight(), true));
+            addGuideWidget(new HudSlider(x, form.rowY(3, formScroll), w, form.rowHeight(), true));
         }
         if (form.rowVisible(4, formScroll)) {
-            addRenderableWidget(new HudSlider(x, form.rowY(4, formScroll), w, form.rowHeight(), false));
+            addGuideWidget(new HudSlider(x, form.rowY(4, formScroll), w, form.rowHeight(), false));
         }
         int half = Math.max(0, (w - 4) / 2);
         if (form.rowVisible(5, formScroll)) {
-            addRenderableWidget(OpenAllayButton.create(enabledLabel(), button -> {
+            addGuideWidget(OpenAllayButton.create(enabledLabel(), button -> {
                         draft.update(draft.hud().withEnabled(!draft.hud().enabled()));
                         button.setMessage(enabledLabel());
                     }).bounds(x, form.rowY(5, formScroll), half, form.rowHeight()).build());
@@ -122,7 +124,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         int next = Math.max(0, Math.min(form.maximumScroll(), formScroll + amount));
         if (next != formScroll) {
             formScroll = next;
-            setDragging(false);
+            guideDragging(false);
             guideRebuildWidgets();
         }
     }
@@ -137,7 +139,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     private void addButton(String key, int x, int y, int w, int h, Runnable action) {
-        addRenderableWidget(OpenAllayButton.create(label(key), button -> action.run())
+        addGuideWidget(OpenAllayButton.create(label(key), button -> action.run())
                 .bounds(x, y, w, h)
                 .tooltip(GuideTooltip.create(label(key + ".tooltip")))
                 .build());
@@ -158,7 +160,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
                 newWidth * hud.scale(), newHeight * hud.scale()));
     }
 
-    private Component enabledLabel() {
+    private net.minecraft.network.chat.Component enabledLabel() {
         return label(draft.hud().enabled() ? "enabled" : "disabled");
     }
 
@@ -202,9 +204,9 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
             returnToOwner(false);
             return;
         }
-        if (!minecraft.isWindowActive()) {
+        if (!MinecraftClientWindow.focused(minecraft)) {
             interaction.cancel();
-            setDragging(false);
+            guideDragging(false);
             GuideNativeFocus.clear(this);
         }
     }
@@ -212,14 +214,14 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     @Override
     protected void resizeGuide(int width, int height) {
         interaction.cancel();
-        setDragging(false);
+        guideDragging(false);
         resizeGuideWidgets(width, height);
     }
 
     @Override
     protected void guideRemoved() {
         interaction.cancel();
-        setDragging(false);
+        guideDragging(false);
         draft.cancel();
         // The native Screen transition owns cursor release/grab and the replacement Screen.
         super.guideRemoved();
@@ -244,7 +246,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     @Override
     public boolean guideMouseDragged(GuideInputMouse event, double dx, double dy) {
         if (interaction.active()) {
-            if (GuideNativeInput.isLeftClick(event) && ownerValid.getAsBoolean() && minecraft.isWindowActive()) {
+            if (GuideNativeInput.isLeftClick(event) && ownerValid.getAsBoolean() && MinecraftClientWindow.focused(minecraft)) {
                 interaction.move(width, height, event.x(), event.y());
             } else {
                 interaction.cancel();
@@ -303,7 +305,7 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
                 boundedText(graphics, label("apply_hint"), panelX + 6, panelY + 36, panelWidth - 12, MUTED);
             }
             graphics.enableScissor(panelX + 6, form.bodyTop(), panelX + panelWidth - 6, form.bodyBottom());
-            Component anchor = MinecraftComponents.translatable("screen.openallay.hud.anchor."
+            net.minecraft.network.chat.Component anchor = MinecraftComponents.translatable("screen.openallay.hud.anchor."
                     + hud.anchor().name().toLowerCase(Locale.ROOT));
             if (form.rowVisible(0, formScroll)) {
                 boundedCenteredText(graphics, label("anchor", anchor), form.rowY(0, formScroll) + 4);
@@ -321,17 +323,17 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
         renderGuideWidgets(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void boundedCenteredText(GuideGraphics graphics, Component message, int y) {
+    private void boundedCenteredText(GuideGraphics graphics, net.minecraft.network.chat.Component message, int y) {
         int available = Math.max(0, panelWidth - 76);
-        String text = font.plainSubstrByWidth(message.getString(), available);
-        graphics.text(font, text, panelX + (panelWidth - font.width(text)) / 2, y, TEXT);
+        String text = GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(message), available);
+        graphics.text(font, text, panelX + (panelWidth - GuideNativeFont.width(font, text)) / 2, y, TEXT);
     }
 
-    private void boundedText(GuideGraphics graphics, Component message, int x, int y, int width, int color) {
-        graphics.text(font, font.plainSubstrByWidth(message.getString(), Math.max(0, width)), x, y, color);
+    private void boundedText(GuideGraphics graphics, net.minecraft.network.chat.Component message, int x, int y, int width, int color) {
+        graphics.text(font, GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(message), Math.max(0, width)), x, y, color);
     }
 
-    private static Component label(String key, Object... arguments) {
+    private static net.minecraft.network.chat.Component label(String key, Object... arguments) {
         return MinecraftComponents.translatable(PREFIX + key, arguments);
     }
 
@@ -366,10 +368,30 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     /** Fixed footer and bounded form rows. Short viewports retain every control through scrolling. */
-    record Form(int bodyTop, int bodyBottom, int footerY, int footerHeight, int rowHeight, int rowStep) {
-        private static final int ROWS = 6;
-
-        static Form calculate(int panelY, int panelHeight) {
+    @dev.openallay.value.ValueType(Form.ValueSchemaProvider.class)
+static final class Form {
+    private final int bodyTop;
+    private final int bodyBottom;
+    private final int footerY;
+    private final int footerHeight;
+    private final int rowHeight;
+    private final int rowStep;
+    Form(int bodyTop, int bodyBottom, int footerY, int footerHeight, int rowHeight, int rowStep) {
+        this.bodyTop = bodyTop;
+        this.bodyBottom = bodyBottom;
+        this.footerY = footerY;
+        this.footerHeight = footerHeight;
+        this.rowHeight = rowHeight;
+        this.rowStep = rowStep;
+    }
+    public int bodyTop() { return bodyTop; }
+    public int bodyBottom() { return bodyBottom; }
+    public int footerY() { return footerY; }
+    public int footerHeight() { return footerHeight; }
+    public int rowHeight() { return rowHeight; }
+    public int rowStep() { return rowStep; }
+private static final int ROWS = 6;
+static Form calculate(int panelY, int panelHeight) {
             int footerHeight = Math.min(18, Math.max(0, panelHeight - 6));
             int footerY = panelY + Math.max(0, panelHeight - footerHeight - 4);
             int bodyBottom = Math.max(panelY, footerY - 4);
@@ -379,20 +401,40 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
             int rowHeight = bodyHeight >= 106 && bodyHeight < 118 ? 16 : 18;
             return new Form(bodyTop, bodyBottom, footerY, footerHeight, rowHeight, rowHeight + 2);
         }
-
-        int maximumScroll() {
+int maximumScroll() {
             return Math.max(0, (ROWS - 1) * rowStep + rowHeight - (bodyBottom - bodyTop));
         }
-
-        int rowY(int row, int scroll) {
+int rowY(int row, int scroll) {
             return bodyTop + row * rowStep - scroll;
         }
-
-        boolean rowVisible(int row, int scroll) {
+boolean rowVisible(int row, int scroll) {
             int y = rowY(row, scroll);
             return y >= bodyTop && y + rowHeight <= bodyBottom;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Form)) return false;
+        Form that = (Form) other;
+        return bodyTop == that.bodyTop && bodyBottom == that.bodyBottom && footerY == that.footerY && footerHeight == that.footerHeight && rowHeight == that.rowHeight && rowStep == that.rowStep;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(bodyTop);
+        hash = 31 * hash + Integer.hashCode(bodyBottom);
+        hash = 31 * hash + Integer.hashCode(footerY);
+        hash = 31 * hash + Integer.hashCode(footerHeight);
+        hash = 31 * hash + Integer.hashCode(rowHeight);
+        hash = 31 * hash + Integer.hashCode(rowStep);
+        return hash;
+    }
+    @Override public String toString() { return "Form[bodyTop=" + bodyTop + ", bodyBottom=" + bodyBottom + ", footerY=" + footerY + ", footerHeight=" + footerHeight + ", rowHeight=" + rowHeight + ", rowStep=" + rowStep + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Form> schema() {
+            return new dev.openallay.value.ValueSchema<>(Form.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Form>>asList(new dev.openallay.value.ValueSchema.Component<>(Form.class, "bodyTop", Form::bodyTop), new dev.openallay.value.ValueSchema.Component<>(Form.class, "bodyBottom", Form::bodyBottom), new dev.openallay.value.ValueSchema.Component<>(Form.class, "footerY", Form::footerY), new dev.openallay.value.ValueSchema.Component<>(Form.class, "footerHeight", Form::footerHeight), new dev.openallay.value.ValueSchema.Component<>(Form.class, "rowHeight", Form::rowHeight), new dev.openallay.value.ValueSchema.Component<>(Form.class, "rowStep", Form::rowStep)), arguments -> new Form((Integer) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Integer) arguments[5]));
+        }
+    }
+}
 
     /** Pure transaction used by native callbacks. It cannot write settings or apply more than once. */
     static final class Draft {

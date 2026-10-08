@@ -13,7 +13,6 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Member;
@@ -88,7 +87,7 @@ final class UnrestrictedJavaAccess {
                     Throwable targetFailure = failure.getCause();
                     JavascriptFailureFormatter.rethrowControlFailure(targetFailure);
                     throw failure("javascript_java_target_error", targetFailure);
-                } catch (IllegalAccessException | InaccessibleObjectException | SecurityException failure) {
+                } catch (IllegalAccessException | SecurityException failure) {
                     throw failure("javascript_java_inaccessible", failure);
                 } catch (ClassNotFoundException failure) {
                     throw failure("javascript_class_unavailable", failure);
@@ -102,7 +101,7 @@ final class UnrestrictedJavaAccess {
                     throw failure("javascript_class_unavailable", failure);
                 } catch (RuntimeException failure) {
                     JavascriptFailureFormatter.rethrowControlFailure(failure);
-                    throw failure("javascript_java_invalid", failure);
+                    throw failure(isModuleAccessFailure(failure) ? "javascript_java_inaccessible" : "javascript_java_invalid", failure);
                 }
             }
 
@@ -117,7 +116,9 @@ final class UnrestrictedJavaAccess {
     }
 
     private void checkBudget() {
-        if (context instanceof OpenAllayRhinoContext openContext) openContext.checkBudget();
+        final class $oaPattern0_Holder { dev.latvian.mods.rhino.Context value; OpenAllayRhinoContext bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = context) instanceof dev.openallay.script.OpenAllayRhinoContext && (($oaPattern0_holder.bound = (OpenAllayRhinoContext) $oaPattern0_holder.value) != null))) $oaPattern0_holder.bound.checkBudget();
     }
 
     private Object get(Object targetValue, Object selectorValue) throws ReflectiveOperationException {
@@ -161,12 +162,45 @@ final class UnrestrictedJavaAccess {
 
     private Object wrap(Object value, Class<?> type) {
         if (type == void.class) return Undefined.INSTANCE;
-        if (value instanceof Character character) return character.toString();
-        if (value instanceof Class<?> javaClass) return context.wrapJavaClass(scope, javaClass);
+        final class $oaPattern1_Holder { java.lang.Object value; Character bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = value) instanceof java.lang.Character && (($oaPattern1_holder.bound = (Character) $oaPattern1_holder.value) != null))) return $oaPattern1_holder.bound.toString();
+        final class $oaPattern2_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = value) instanceof java.lang.Class && (($oaPattern2_holder.bound = (Class<?>) $oaPattern2_holder.value) != null))) return context.wrapJavaClass(scope, $oaPattern2_holder.bound);
         return context.wrap(scope, value, TypeInfo.of(type));
     }
 
-    private record Target(Class<?> type, Object instance) {}
+    @dev.openallay.value.ValueType(Target.ValueSchemaProvider.class)
+private static final class Target {
+    private final Class<?> type;
+    private final Object instance;
+    private Target(Class<?> type, Object instance) {
+        this.type = type;
+        this.instance = instance;
+    }
+    public Class<?> type() { return type; }
+    public Object instance() { return instance; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Target)) return false;
+        Target that = (Target) other;
+        return java.util.Objects.equals(type, that.type) && java.util.Objects.equals(instance, that.instance);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + java.util.Objects.hashCode(instance);
+        return hash;
+    }
+    @Override public String toString() { return "Target[type=" + type + ", instance=" + instance + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Target> schema() {
+            return new dev.openallay.value.ValueSchema<>(Target.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Target>>asList(new dev.openallay.value.ValueSchema.Component<>(Target.class, "type", Target::type), new dev.openallay.value.ValueSchema.Component<>(Target.class, "instance", Target::instance)), arguments -> new Target((Class) arguments[0], (Object) arguments[1]));
+        }
+    }
+}
 
     private Target target(Object value) {
         Object raw = unwrap(value);
@@ -176,13 +210,19 @@ final class UnrestrictedJavaAccess {
         if (raw instanceof Scriptable && !(value instanceof Wrapper)) {
             throw invalid("Java target must be a Java class, wrapped Java instance, or scalar, not a JavaScript object");
         }
-        return raw instanceof Class<?> type ? new Target(type, null) : new Target(raw.getClass(), raw);
+        final class $oaPattern3_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+return (($oaPattern3_holder.value = raw) instanceof java.lang.Class && (($oaPattern3_holder.bound = (Class<?>) $oaPattern3_holder.value) != null)) ? new Target($oaPattern3_holder.bound, null) : new Target(raw.getClass(), raw);
     }
 
     /** Host-side unwrap only; never requests a guest-visible .class/getClass property. */
     private static Object unwrap(Object value) {
-        if (value instanceof NativeJavaClass javaClass) return javaClass.getClassObject();
-        return value instanceof Wrapper wrapper ? wrapper.unwrap() : value;
+        final class $oaPattern4_Holder { java.lang.Object value; NativeJavaClass bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = value) instanceof dev.latvian.mods.rhino.NativeJavaClass && (($oaPattern4_holder.bound = (NativeJavaClass) $oaPattern4_holder.value) != null))) return $oaPattern4_holder.bound.getClassObject();
+        final class $oaPattern5_Holder { java.lang.Object value; Wrapper bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+return (($oaPattern5_holder.value = value) instanceof dev.latvian.mods.rhino.Wrapper && (($oaPattern5_holder.bound = (Wrapper) $oaPattern5_holder.value) != null)) ? $oaPattern5_holder.bound.unwrap() : value;
     }
 
     private Object receiver(Target target, int modifiers, String member) {
@@ -194,19 +234,150 @@ final class UnrestrictedJavaAccess {
     }
 
     private static void accessible(AccessibleObject member) {
-        if (!member.trySetAccessible()) {
+        Method tryAccessible = PublicJdkFacts.TRY_SET_ACCESSIBLE;
+        if (tryAccessible == null) {
+            member.setAccessible(true);
+            return;
+        }
+        if (!Boolean.TRUE.equals(invokePublic(tryAccessible, member))) {
             Class<?> declaration = ((Member) member).getDeclaringClass();
-            Module owner = declaration.getModule();
-            Module bridge = UnrestrictedJavaAccess.class.getModule();
-            throw new InaccessibleObjectException("Module "
-                    + (owner.isNamed() ? owner.getName() : "<unnamed>")
-                    + " does not open package " + declaration.getPackageName()
-                    + " to bridge module " + (bridge.isNamed() ? bridge.getName() : "<unnamed>")
+            Object owner = moduleOf(declaration);
+            Object bridge = moduleOf(UnrestrictedJavaAccess.class);
+            throw moduleAccessFailure("Module "
+                    + (Boolean.TRUE.equals(invokePublic(PublicJdkFacts.MODULE_IS_NAMED, owner))
+                            ? invokePublic(PublicJdkFacts.MODULE_NAME, owner) : "<unnamed>")
+                    + " does not open package " + packageName(declaration)
+                    + " to bridge module "
+                    + (Boolean.TRUE.equals(invokePublic(PublicJdkFacts.MODULE_IS_NAMED, bridge))
+                            ? invokePublic(PublicJdkFacts.MODULE_NAME, bridge) : "<unnamed>")
                     + ": " + member);
         }
     }
 
-    private record Selector(String name, Object declaringClass, Object returnType, Object parameterTypes) {}
+    /** Only public JDK capabilities. No lookup privilege or module opening is introduced. */
+    private static final class PublicJdkFacts {
+        static final Method TRY_SET_ACCESSIBLE = publicMethod(AccessibleObject.class, "trySetAccessible");
+        static final Method CLASS_MODULE = publicMethod(Class.class, "getModule");
+        static final Class<?> MODULE = CLASS_MODULE == null ? null : CLASS_MODULE.getReturnType();
+        static final Method MODULE_NAME = publicMethod(MODULE, "getName");
+        static final Method MODULE_IS_NAMED = publicMethod(MODULE, "isNamed");
+        static final Method MODULE_DESCRIPTOR = publicMethod(MODULE, "getDescriptor");
+        static final Method MODULE_IS_OPEN = MODULE == null ? null : publicMethod(MODULE, "isOpen", String.class, MODULE);
+        static final Method DESCRIPTOR_AUTOMATIC = MODULE_DESCRIPTOR == null ? null
+                : publicMethod(MODULE_DESCRIPTOR.getReturnType(), "isAutomatic");
+        static final Method LOADER_NAME = publicMethod(ClassLoader.class, "getName");
+        static final Constructor<?> INACCESSIBLE_EXCEPTION = inaccessibleExceptionConstructor();
+    }
+
+    private static Method publicMethod(Class<?> owner, String name, Class<?>... arguments) {
+        if (owner == null) return null;
+        try { return owner.getMethod(name, arguments); }
+        catch (NoSuchMethodException absent) { return null; }
+    }
+
+    private static Object invokePublic(Method method, Object receiver, Object... arguments) {
+        if (method == null) throw new IllegalStateException("Required public JDK capability is unavailable");
+        try { return method.invoke(receiver, arguments); }
+        catch (IllegalAccessException failure) { throw new IllegalStateException("Public JDK capability is not accessible", failure); }
+        catch (InvocationTargetException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause;
+            if (cause instanceof Error) throw (Error) cause;
+            throw new IllegalStateException("Public JDK capability invocation failed", cause);
+        }
+    }
+
+    private static Constructor<?> inaccessibleExceptionConstructor() {
+        try {
+            Class<?> type = Class.forName("java.lang.reflect.InaccessibleObjectException", false, UnrestrictedJavaAccess.class.getClassLoader());
+            return type.getConstructor(String.class);
+        } catch (ClassNotFoundException | NoSuchMethodException absent) { return null; }
+    }
+
+    private static RuntimeException moduleAccessFailure(String message) {
+        Constructor<?> constructor = PublicJdkFacts.INACCESSIBLE_EXCEPTION;
+        if (constructor == null) return new SecurityException(message);
+        try { return (RuntimeException) constructor.newInstance(message); }
+        catch (ReflectiveOperationException failure) { return new SecurityException(message, failure); }
+    }
+
+    private static boolean isModuleAccessFailure(RuntimeException failure) {
+        Constructor<?> constructor = PublicJdkFacts.INACCESSIBLE_EXCEPTION;
+        return constructor != null && constructor.getDeclaringClass().isInstance(failure);
+    }
+
+    private static Object moduleOf(Class<?> type) {
+        return PublicJdkFacts.CLASS_MODULE == null ? null : invokePublic(PublicJdkFacts.CLASS_MODULE, type);
+    }
+
+    private static String packageName(Class<?> type) {
+        if (type.isPrimitive() || type.isArray()) return null;
+        String name = type.getName();
+        int separator = name.lastIndexOf('.');
+        return separator < 0 ? "" : name.substring(0, separator);
+    }
+
+    private static Map<String, Object> moduleView(Class<?> type) {
+        String packageName = packageName(type);
+        Object module = moduleOf(type);
+        Map<String, Object> view = new LinkedHashMap<String, Object>();
+        if (module == null) {
+            // Java8 has no module system. Openness is inapplicable, not an access denial.
+            view.put("name", null);
+            view.put("named", false);
+            view.put("automatic", false);
+            view.put("packageName", packageName);
+            view.put("packageOpenToBridge", null);
+            return view;
+        }
+        Object descriptor = invokePublic(PublicJdkFacts.MODULE_DESCRIPTOR, module);
+        view.put("name", invokePublic(PublicJdkFacts.MODULE_NAME, module));
+        view.put("named", invokePublic(PublicJdkFacts.MODULE_IS_NAMED, module));
+        view.put("automatic", descriptor != null && Boolean.TRUE.equals(invokePublic(PublicJdkFacts.DESCRIPTOR_AUTOMATIC, descriptor)));
+        view.put("packageName", packageName);
+        view.put("packageOpenToBridge", packageName != null
+                && Boolean.TRUE.equals(invokePublic(PublicJdkFacts.MODULE_IS_OPEN, module, packageName, moduleOf(UnrestrictedJavaAccess.class))));
+        return view;
+    }
+
+    @dev.openallay.value.ValueType(Selector.ValueSchemaProvider.class)
+private static final class Selector {
+    private final String name;
+    private final Object declaringClass;
+    private final Object returnType;
+    private final Object parameterTypes;
+    private Selector(String name, Object declaringClass, Object returnType, Object parameterTypes) {
+        this.name = name;
+        this.declaringClass = declaringClass;
+        this.returnType = returnType;
+        this.parameterTypes = parameterTypes;
+    }
+    public String name() { return name; }
+    public Object declaringClass() { return declaringClass; }
+    public Object returnType() { return returnType; }
+    public Object parameterTypes() { return parameterTypes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Selector)) return false;
+        Selector that = (Selector) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(declaringClass, that.declaringClass) && java.util.Objects.equals(returnType, that.returnType) && java.util.Objects.equals(parameterTypes, that.parameterTypes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(declaringClass);
+        hash = 31 * hash + java.util.Objects.hashCode(returnType);
+        hash = 31 * hash + java.util.Objects.hashCode(parameterTypes);
+        return hash;
+    }
+    @Override public String toString() { return "Selector[name=" + name + ", declaringClass=" + declaringClass + ", returnType=" + returnType + ", parameterTypes=" + parameterTypes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Selector> schema() {
+            return new dev.openallay.value.ValueSchema<>(Selector.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Selector>>asList(new dev.openallay.value.ValueSchema.Component<>(Selector.class, "name", Selector::name), new dev.openallay.value.ValueSchema.Component<>(Selector.class, "declaringClass", Selector::declaringClass), new dev.openallay.value.ValueSchema.Component<>(Selector.class, "returnType", Selector::returnType), new dev.openallay.value.ValueSchema.Component<>(Selector.class, "parameterTypes", Selector::parameterTypes)), arguments -> new Selector((String) arguments[0], (Object) arguments[1], (Object) arguments[2], (Object) arguments[3]));
+        }
+    }
+}
 
     private Selector selector(Object value) {
         if (value instanceof CharSequence) return new Selector(name(value, "member name"), null, null, null);
@@ -219,8 +390,10 @@ final class UnrestrictedJavaAccess {
     }
 
     private Object property(Object value, String name) {
-        Object result = value instanceof Scriptable scriptable
-                ? ScriptableObject.getProperty(scriptable, name, context)
+        final class $oaPattern6_Holder { java.lang.Object value; Scriptable bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+Object result = (($oaPattern6_holder.value = value) instanceof dev.latvian.mods.rhino.Scriptable && (($oaPattern6_holder.bound = (Scriptable) $oaPattern6_holder.value) != null))
+                ? ScriptableObject.getProperty($oaPattern6_holder.bound, name, context)
                 : ((Map<?, ?>) value).get(name);
         return result == Scriptable.NOT_FOUND || Undefined.isUndefined(result) ? null : result;
     }
@@ -242,7 +415,7 @@ final class UnrestrictedJavaAccess {
     private Method method(Target target, Selector selector, Object typesValue)
             throws ReflectiveOperationException {
         List<Class<?>> declarations = selector.declaringClass() == null
-                ? hierarchy(target.type()) : List.of(declaringClass(target, selector.declaringClass()));
+                ? hierarchy(target.type()) : dev.openallay.util.Java8Collections.listOf(declaringClass(target, selector.declaringClass()));
         ClassLoader loader = selector.declaringClass() == null
                 ? target.type().getClassLoader() : declarations.get(0).getClassLoader();
         Class<?>[] types = parameterTypes(typesValue, loader);
@@ -275,7 +448,9 @@ final class UnrestrictedJavaAccess {
     private Class<?> declaringClass(Target target, Object value) {
         Object raw = unwrap(value);
         for (Class<?> declaration : hierarchy(target.type())) {
-            if (raw instanceof Class<?> type ? declaration == type
+            final class $oaPattern7_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = raw) instanceof java.lang.Class && (($oaPattern7_holder.bound = (Class<?>) $oaPattern7_holder.value) != null)) ? declaration == $oaPattern7_holder.bound
                     : declaration.getName().equals(name(raw, "declaringClass"))) return declaration;
         }
         throw invalid("Descriptor declaringClass is not in the target hierarchy");
@@ -316,7 +491,9 @@ final class UnrestrictedJavaAccess {
             // JS numbers have only 53 exact bits. A decimal string preserves the full Java long range.
             if (type == long.class || type == Long.class) {
                 if (raw instanceof Long) return raw;
-                if (raw instanceof CharSequence text) return Long.parseLong(text.toString());
+                final class $oaPattern8_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = raw) instanceof java.lang.CharSequence && (($oaPattern8_holder.bound = (CharSequence) $oaPattern8_holder.value) != null))) return Long.parseLong($oaPattern8_holder.bound.toString());
             }
             return context.jsToJava(value, TypeInfo.of(type));
         } catch (RuntimeException failure) {
@@ -332,15 +509,21 @@ final class UnrestrictedJavaAccess {
             for (int index = 0; index < entries.length; index++) entries[index] = Array.get(raw, index);
             return entries;
         }
-        if (raw instanceof List<?> list) return list.toArray();
-        if (raw instanceof Scriptable scriptable) {
-            Object length = ScriptableObject.getProperty(scriptable, "length", context);
-            if (length instanceof Number number && number.doubleValue() >= 0
-                    && number.doubleValue() <= Integer.MAX_VALUE
-                    && number.doubleValue() == Math.rint(number.doubleValue())) {
-                Object[] entries = new Object[number.intValue()];
+        final class $oaPattern9_Holder { java.lang.Object value; List<?> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = raw) instanceof java.util.List && (($oaPattern9_holder.bound = (List<?>) $oaPattern9_holder.value) != null))) return $oaPattern9_holder.bound.toArray();
+        final class $oaPattern10_Holder { java.lang.Object value; Scriptable bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = raw) instanceof dev.latvian.mods.rhino.Scriptable && (($oaPattern10_holder.bound = (Scriptable) $oaPattern10_holder.value) != null))) {
+            Object length = ScriptableObject.getProperty($oaPattern10_holder.bound, "length", context);
+            final class $oaPattern11_Holder { java.lang.Object value; Number bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = length) instanceof java.lang.Number && (($oaPattern11_holder.bound = (Number) $oaPattern11_holder.value) != null)) && $oaPattern11_holder.bound.doubleValue() >= 0
+                    && $oaPattern11_holder.bound.doubleValue() <= Integer.MAX_VALUE
+                    && $oaPattern11_holder.bound.doubleValue() == Math.rint($oaPattern11_holder.bound.doubleValue())) {
+                Object[] entries = new Object[$oaPattern11_holder.bound.intValue()];
                 for (int index = 0; index < entries.length; index++) {
-                    Object entry = ScriptableObject.getProperty(scriptable, index, context);
+                    Object entry = ScriptableObject.getProperty($oaPattern10_holder.bound, index, context);
                     entries[index] = entry == Scriptable.NOT_FOUND ? Undefined.INSTANCE : entry;
                 }
                 return entries;
@@ -351,47 +534,85 @@ final class UnrestrictedJavaAccess {
 
     private Class<?> resolveType(Object value, ClassLoader loader) throws ClassNotFoundException {
         Object raw = unwrap(value);
-        if (raw instanceof Class<?> type) return type;
+        final class $oaPattern12_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if ((($oaPattern12_holder.value = raw) instanceof java.lang.Class && (($oaPattern12_holder.bound = (Class<?>) $oaPattern12_holder.value) != null))) return $oaPattern12_holder.bound;
         return resolveName(name(raw, "type"), loader, false);
     }
 
     private Class<?> resolveName(String name, ClassLoader loader, boolean initialize)
             throws ClassNotFoundException {
-        Class<?> primitive = switch (name) {
-            case "boolean" -> boolean.class;
-            case "byte" -> byte.class;
-            case "short" -> short.class;
-            case "char" -> char.class;
-            case "int" -> int.class;
-            case "long" -> long.class;
-            case "float" -> float.class;
-            case "double" -> double.class;
-            case "void" -> void.class;
-            default -> null;
-        };
+        java.lang.Class<?> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((name)) {
+case "boolean":
+{
+$oaSwitch0_exit_result = boolean.class; break $oaSwitch0_exit;
+}
+case "byte":
+{
+$oaSwitch0_exit_result = byte.class; break $oaSwitch0_exit;
+}
+case "short":
+{
+$oaSwitch0_exit_result = short.class; break $oaSwitch0_exit;
+}
+case "char":
+{
+$oaSwitch0_exit_result = char.class; break $oaSwitch0_exit;
+}
+case "int":
+{
+$oaSwitch0_exit_result = int.class; break $oaSwitch0_exit;
+}
+case "long":
+{
+$oaSwitch0_exit_result = long.class; break $oaSwitch0_exit;
+}
+case "float":
+{
+$oaSwitch0_exit_result = float.class; break $oaSwitch0_exit;
+}
+case "double":
+{
+$oaSwitch0_exit_result = double.class; break $oaSwitch0_exit;
+}
+case "void":
+{
+$oaSwitch0_exit_result = void.class; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = null; break $oaSwitch0_exit;
+}
+}
+}
+Class<?> primitive = $oaSwitch0_exit_result;
         if (primitive != null) return primitive;
         if (name.endsWith("[]")) {
             Class<?> component = resolveName(name.substring(0, name.length() - 2), loader, false);
             if (component == void.class) throw invalid("void[] is not a Java type");
-            return component.arrayType();
+            return Array.newInstance(component, 0).getClass();
         }
         // Support conventional String[] as well as binary names and JVM [I/[Ljava.lang.String; forms.
         return Class.forName(name.equals("String") ? "java.lang.String" : name, initialize, loader);
     }
 
     private String name(Object value, String label) {
-        if (!(value instanceof CharSequence text) || text.isEmpty()) {
+        final class $oaPattern13_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+if (!((($oaPattern13_holder.value = value) instanceof java.lang.CharSequence && (($oaPattern13_holder.bound = (CharSequence) $oaPattern13_holder.value) != null))) || (($oaPattern13_holder.bound).length() == 0)) {
             throw invalid(label + " must be a nonempty string");
         }
-        return text.toString();
+        return $oaPattern13_holder.bound.toString();
     }
 
     /** Class chain first, then inherited interfaces. No accessible flags or shared caches are changed. */
     private static List<Class<?>> hierarchy(Class<?> target) {
         LinkedHashSet<Class<?>> types = new LinkedHashSet<>();
         for (Class<?> current = target; current != null; current = current.getSuperclass()) types.add(current);
-        for (Class<?> current : List.copyOf(types)) addInterfaces(current, types);
-        return List.copyOf(types);
+        for (Class<?> current : dev.openallay.util.Java8Collections.listCopyOf(types)) addInterfaces(current, types);
+        return dev.openallay.util.Java8Collections.listCopyOf(types);
     }
 
     private static void addInterfaces(Class<?> type, LinkedHashSet<Class<?>> types) {
@@ -411,21 +632,12 @@ final class UnrestrictedJavaAccess {
         result.put("componentType", type.isArray() ? type.getComponentType().getTypeName() : null);
         result.put("modifiers", Modifier.toString(type.getModifiers()));
         result.put("modifierBits", type.getModifiers());
-        Module module = type.getModule();
-        String packageName = type.isPrimitive() || type.isArray() ? null : type.getPackageName();
-        Map<String, Object> moduleView = new LinkedHashMap<>();
-        moduleView.put("name", module.getName());
-        moduleView.put("named", module.isNamed());
-        moduleView.put("automatic", module.getDescriptor() != null && module.getDescriptor().isAutomatic());
-        moduleView.put("packageName", packageName);
-        moduleView.put("packageOpenToBridge", packageName != null
-                && module.isOpen(packageName, UnrestrictedJavaAccess.class.getModule()));
-        result.put("module", moduleView);
+        result.put("module", moduleView(type));
         ClassLoader loader = type.getClassLoader();
         if (loader == null) result.put("classLoader", null);
         else {
             Map<String, Object> loaderView = new LinkedHashMap<>();
-            loaderView.put("name", loader.getName());
+            loaderView.put("name", PublicJdkFacts.LOADER_NAME == null ? null : invokePublic(PublicJdkFacts.LOADER_NAME, loader));
             loaderView.put("type", loader.getClass().getName());
             loaderView.put("identity", Integer.toHexString(System.identityHashCode(loader)));
             result.put("classLoader", loaderView);
@@ -485,7 +697,7 @@ final class UnrestrictedJavaAccess {
     }
 
     private static List<String> typeNames(Class<?>[] types) {
-        return Arrays.stream(types).map(Class::getTypeName).toList();
+        return dev.openallay.util.Java8Collections.toList(Arrays.stream(types).map(Class::getTypeName));
     }
 
     private static JavascriptExecutionException invalid(String message) {
@@ -494,7 +706,7 @@ final class UnrestrictedJavaAccess {
 
     private static JavascriptExecutionException failure(String code, Throwable failure) {
         String message = failure.getClass().getName();
-        if (failure.getMessage() != null && !failure.getMessage().isBlank()) message += ": " + failure.getMessage();
+        if (failure.getMessage() != null && !dev.openallay.util.Java8Strings.isBlank(failure.getMessage())) message += ": " + failure.getMessage();
         if (failure instanceof ExceptionInInitializerError && failure.getCause() != null) {
             Throwable cause = failure.getCause();
             message += " (caused by " + cause.getClass().getName()

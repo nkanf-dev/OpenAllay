@@ -1,0 +1,50 @@
+{
+  "scope": "ONE actualcompleteGuideClientUiState owner namedcapturedparameter binding acceptedpublicdeclaredwildcard policy; remaining1pattern only",
+  "sourceAppliedCommit": "6334e99fdc8d9cd2b0a33247a166364a79c45f86",
+  "acceptedToolOracleRun": 37580894604,
+  "acceptedFixtureRun": 37580894604,
+  "fixtureReexecuted": false,
+  "acceptedCaptureProofReceiptSha256": "d7380cee442b0041bfabe84f9828fbd378ea904c5ec3cf7cdee9a658bb7031cb",
+  "acceptedCaptureProof": {
+    "scope": "Narrowpattern publicTypes directidentifier declaredwildcard denotation proof; no Object/raw operand widening or othercaptures admission",
+    "tool_sha256": "fda0d01ba3183a39bb5bf4b55bbfabcadf1f7111b2ee586c8893e4f0144383c4",
+    "shared_renderer_sha256": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c",
+    "fixture_sha256": "a28c38fefa38db69009932e3f01c63c592fbb6f60cec514c1b2ea042c591d021",
+    "public_captured_expression_and_declared_symbol_proofs": 4,
+    "actual_declared_identifier_patterns": 4,
+    "behavior_cases": 13,
+    "value_reads": 9,
+    "original17_release8_genuine8_equal": true,
+    "java8_class_major": 52,
+    "captured_methodcall_owner_rejected_without_partialoutput": true,
+    "object_fallback": false,
+    "accepted_prior17pattern18eval_oracle_reexecuted": false,
+    "wholeClientJava8Accepted": false,
+    "output": "PASS public attributed pattern conversion preflight owners=1 supported=1\nPASS public attributed pattern conversion preflight owners=1 supported=0\nPASS public capture/declaration4proofs; wildcard parameter/local/extends/super true17=release8=genuine8 13cases9lazyreads; capturedcall rejected, no Object fallback\n"
+  },
+  "selectedOwnerCount": 1,
+  "selectedOwners": [
+    "dev/openallay/client/gui/GuideClientUiState.java"
+  ],
+  "selectedPreimageSha256": {
+    "dev/openallay/client/gui/GuideClientUiState.java": "ccf24951967d4338116f91b857d8e8c3ff88c7f8aa25f36fee3220b1fc040095"
+  },
+  "publicCompiler": "completecurrentproduction701source/rootGradleactualcompileClasspath; attributionerrors failclosed",
+  "unsupportedPolicy": "Named1capture boundary admittedonlybyactualVariableElement param/local type proof; unexpectedstatus/sitecountfailsclosed,no partialowner; noObjectfallback/manualextractedmethod",
+  "toolPins": {
+    "build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java": "fda0d01ba3183a39bb5bf4b55bbfabcadf1f7111b2ee586c8893e4f0144383c4",
+    "scripts/pattern-language-port/CanonicalPatternPortFixture.java": "f9522f774f15795ec90d0f9f011f651e53268c08146f2f602562033776b8e67c",
+    "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c",
+    "scripts/pattern-language-port/CanonicalCapturedIdentifierFixture.java": "a28c38fefa38db69009932e3f01c63c592fbb6f60cec514c1b2ea042c591d021",
+    "build-logic/src/patternCapturedIdentifierTest/verify.py": "b209f25e2604d442d5a4cb2c80af391ca571d141a7d540d1549fed79c8cfb55b"
+  },
+  "runtimeJava8Acceptance": false,
+  "modernAcceptance": "Actualwholeowner output/sourcecustody review thenoneaffectednative moderngate; accepted20/94andold17/18 runtimeevidence notrerun",
+  "ownerBoundary": "ONEcompleteclient/gui/GuideClientUiState only; Guide/** API/switch workindependent",
+  "noLocalCompilerOrSourceCopy": true,
+  "driver_sha256": "ea6328a143e1e4b069d347b84310463d883551c66927fb754905f5dc70b399a5",
+  "historicalProofsUnchanged": {
+    "client20owners94patterns": "37579512487classification +37580012183modern2100",
+    "prior17pattern18eval": "37577421648"
+  }
+}

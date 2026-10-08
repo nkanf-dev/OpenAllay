@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /** JSON Schema pattern whose value must also be enforced by the Tool runtime boundary. */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.RECORD_COMPONENT)
+@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
 public @interface ToolPattern {
     String value();
 }

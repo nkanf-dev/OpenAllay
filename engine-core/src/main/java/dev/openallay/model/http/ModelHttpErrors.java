@@ -61,7 +61,36 @@ public final class ModelHttpErrors {
         return new ModelClientException(new ModelFailure(code, message, status));
     }
 
-    private record BadRequestClassifier(String text, boolean toolCallIdSchemaRejection) {}
+    @dev.openallay.value.ValueType(BadRequestClassifier.ValueSchemaProvider.class)
+private static final class BadRequestClassifier {
+    private final String text;
+    private final boolean toolCallIdSchemaRejection;
+    private BadRequestClassifier(String text, boolean toolCallIdSchemaRejection) {
+        this.text = text;
+        this.toolCallIdSchemaRejection = toolCallIdSchemaRejection;
+    }
+    public String text() { return text; }
+    public boolean toolCallIdSchemaRejection() { return toolCallIdSchemaRejection; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof BadRequestClassifier)) return false;
+        BadRequestClassifier that = (BadRequestClassifier) other;
+        return java.util.Objects.equals(text, that.text) && toolCallIdSchemaRejection == that.toolCallIdSchemaRejection;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(text);
+        hash = 31 * hash + Boolean.hashCode(toolCallIdSchemaRejection);
+        return hash;
+    }
+    @Override public String toString() { return "BadRequestClassifier[text=" + text + ", toolCallIdSchemaRejection=" + toolCallIdSchemaRejection + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<BadRequestClassifier> schema() {
+            return new dev.openallay.value.ValueSchema<>(BadRequestClassifier.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<BadRequestClassifier>>asList(new dev.openallay.value.ValueSchema.Component<>(BadRequestClassifier.class, "text", BadRequestClassifier::text), new dev.openallay.value.ValueSchema.Component<>(BadRequestClassifier.class, "toolCallIdSchemaRejection", BadRequestClassifier::toolCallIdSchemaRejection)), arguments -> new BadRequestClassifier((String) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 
     /** Returns only classifier fields and never preserves the provider body itself. */
     private static BadRequestClassifier readBounded(InputStream body) throws IOException {
@@ -75,7 +104,7 @@ public final class ModelHttpErrors {
             }
             bytes.write(buffer, 0, read);
         }
-        String encoded = bytes.toString(java.nio.charset.StandardCharsets.UTF_8);
+        String encoded = dev.openallay.util.Java8ApiSupport.toString(bytes, java.nio.charset.StandardCharsets.UTF_8);
         try {
             JsonElement parsed = dev.openallay.json.JsonTrees.parse(encoded);
             if (!parsed.isJsonObject()) {
@@ -137,7 +166,7 @@ public final class ModelHttpErrors {
 
     private static Duration retryAfter(HttpResponseHeaders headers) {
         String value = headers.firstValue("retry-after").orElse(null);
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             return null;
         }
         try {

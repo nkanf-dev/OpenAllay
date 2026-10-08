@@ -71,11 +71,7 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
 
     private static Optional<NativeRecipeLayout<?>> find(
             IJeiRuntime runtime, JeiRecipeProvider references, RecipeReference exact) {
-        List<IRecipeCategory<?>> categories = runtime.getRecipeManager()
-                .createRecipeCategoryLookup()
-                .includeHidden()
-                .get()
-                .toList();
+        List<IRecipeCategory<?>> categories = MinecraftJeiRecipeApi.categories(runtime, true);
         for (IRecipeCategory<?> category : categories) {
             Optional<NativeRecipeLayout<?>> found = findInCategory(
                     runtime, references, category, exact.recipeId());
@@ -89,11 +85,7 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
             JeiRecipeProvider references,
             IRecipeCategory<T> category,
             String recipeId) {
-        List<T> recipes = runtime.getRecipeManager()
-                .createRecipeLookup(category.getRecipeType())
-                .includeHidden()
-                .get()
-                .toList();
+        List<T> recipes = MinecraftJeiRecipeApi.recipes(runtime, category, true);
         for (T recipe : recipes) {
             if (!references.referenceIdIfSupported(category, recipe)
                     .filter(recipeId::equals)
@@ -101,10 +93,7 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
                 continue;
             }
             return MinecraftJeiRecipeApi.createLayout(
-                    runtime.getRecipeManager(),
-                    category,
-                    recipe,
-                    runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup())
+                    runtime, category, recipe)
                     .<NativeRecipeLayout<?>>map(layout -> layout);
         }
         return Optional.empty();
@@ -137,8 +126,8 @@ final class JeiNativeRecipeViewProvider implements NativeDomainViewProvider {
 
         @Override
         public void render(RenderContext context) {
-            int layoutWidth = layout.getRecipeCategory().getWidth();
-            int layoutHeight = layout.getRecipeCategory().getHeight();
+            int layoutWidth = layout.width();
+            int layoutHeight = layout.height();
             int contentHeight = context.bounds().height() - 16;
             if (layoutWidth > context.bounds().width()
                     || layoutHeight > contentHeight) {

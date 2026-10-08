@@ -24,27 +24,27 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import net.minecraft.client.Minecraft;
+
 import dev.openallay.client.gui.GuideGraphics;
-import net.minecraft.server.packs.resources.ReloadableResourceManager;
-import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+
+
 
 /** Native composition and rendering entry point for the shared presentation coordinator. */
 public final class GuideClientUiCoordinator implements AutoCloseable {
-    private final Minecraft minecraft;
+    private final net.minecraft.client.Minecraft minecraft;
     private final GuideHudRenderer renderer;
     private final GuideNativeToastPort notificationPort;
     private final GuidePresentationCoordinator presentation;
     private final Runnable releaseResourceReload;
 
-    public GuideClientUiCoordinator(Minecraft minecraft, GuideServiceManager services,
+    public GuideClientUiCoordinator(net.minecraft.client.Minecraft minecraft, GuideServiceManager services,
             RecipeClientRuntime recipes, GuideDisplayRuntime display, ClientSettingsService settings,
             Path configDirectory, ClientEventDispatcher dispatcher, Clock clock) {
         this(minecraft, services, recipes, display, settings, configDirectory, dispatcher, clock, null);
     }
 
     /** The loader installs its native listener early, then binds this renderer's lifetime. */
-    public GuideClientUiCoordinator(Minecraft minecraft, GuideServiceManager services,
+    public GuideClientUiCoordinator(net.minecraft.client.Minecraft minecraft, GuideServiceManager services,
             RecipeClientRuntime recipes, GuideDisplayRuntime display, ClientSettingsService settings,
             Path configDirectory, ClientEventDispatcher dispatcher, Clock clock,
             Function<Runnable, Runnable> resourceReloadRegistration) {
@@ -64,8 +64,10 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
                     resourceReloadRegistration.apply(invalidateLayout), "releaseResourceReload");
         } else {
             // Preserve the existing Fabric/older-loader registration path and constructor ABI.
-            if (minecraft.getResourceManager() instanceof ReloadableResourceManager resources) {
-                resources.registerReloadListener((ResourceManagerReloadListener) ignored -> invalidateLayout.run());
+            final class $oaPattern0_Holder { net.minecraft.server.packs.resources.ResourceManager value; net.minecraft.server.packs.resources.ReloadableResourceManager bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = minecraft.getResourceManager()) instanceof net.minecraft.server.packs.resources.ReloadableResourceManager && (($oaPattern0_holder.bound = (net.minecraft.server.packs.resources.ReloadableResourceManager) $oaPattern0_holder.value) != null))) {
+                $oaPattern0_holder.bound.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) ignored -> invalidateLayout.run());
             }
             releaseResourceReload = null;
         }
@@ -93,8 +95,8 @@ public final class GuideClientUiCoordinator implements AutoCloseable {
         if (presentation.closed()) return;
         graphics.paint(() -> {
             renderer.extractRenderState(graphics, presentation.hud().view());
-            if (MinecraftClientWindow.screen(minecraft) == null && MinecraftClientWindow.overlay(minecraft) == null
-                    && minecraft.player != null && minecraft.level != null && !MinecraftClientWindow.hudHidden(minecraft)) {
+            if (MinecraftClientWindow.screen(minecraft) == null && !MinecraftClientWindow.overlayPresent(minecraft)
+                    && minecraft.player != null && MinecraftClientWindow.world(minecraft) != null && !MinecraftClientWindow.hudHidden(minecraft)) {
                 GuideVoiceIndicator.extract(graphics, minecraft, presentation.voiceInput());
             }
         });

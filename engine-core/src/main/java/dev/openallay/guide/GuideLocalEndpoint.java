@@ -20,7 +20,7 @@ public interface GuideLocalEndpoint {
     }
 
     default List<GuideClientModelProfile> profiles() {
-        return List.of(new GuideClientModelProfile(
+        return dev.openallay.util.Java8Collections.listOf(new GuideClientModelProfile(
                 defaultProfileId(),
                 "Client model",
                 true,
@@ -112,7 +112,7 @@ public interface GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         if (!defaultProfileId().equals(profileId)) {
-            return CompletableFuture.failedFuture(new GuideModelProfileException(
+            return dev.openallay.util.Java8Futures.failedFuture(new GuideModelProfileException(
                     "model_not_configured", "The selected client model profile does not exist"));
         }
         return ask(actor, sessionId, requestId, question, context, events);
@@ -128,8 +128,8 @@ public interface GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
-        if (dev.openallay.model.image.ModelImages.hasImages(java.util.List.of(userInput))) {
-            return CompletableFuture.failedFuture(new GuideModelProfileException(
+        if (dev.openallay.model.image.ModelImages.hasImages(dev.openallay.util.Java8Collections.listOf(userInput))) {
+            return dev.openallay.util.Java8Futures.failedFuture(new GuideModelProfileException(
                     "image_input_unsupported", "This client model endpoint does not support image input"));
         }
         return ask(actor, sessionId, requestId,
@@ -146,8 +146,8 @@ public interface GuideLocalEndpoint {
             ToolInvocationContext context,
             Consumer<AgentEvent> events) {
         dev.openallay.agent.AgentRequest.validateUserInput(userInput);
-        if (dev.openallay.model.image.ModelImages.hasImages(java.util.List.of(userInput))) {
-            return CompletableFuture.failedFuture(new GuideModelProfileException(
+        if (dev.openallay.model.image.ModelImages.hasImages(dev.openallay.util.Java8Collections.listOf(userInput))) {
+            return dev.openallay.util.Java8Futures.failedFuture(new GuideModelProfileException(
                     "image_input_unsupported", "This client model endpoint does not support image input"));
         }
         return ask(profileId, actor, sessionId, requestId,

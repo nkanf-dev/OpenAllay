@@ -11,14 +11,41 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class GuideDisplayConfigLoader {
-    private static final Set<String> FIELDS = Set.of(
-            "debugMode", "animationsEnabled", "assistantName", "ui");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("debugMode", "animationsEnabled", "assistantName", "ui");
 
-    public record Load(GuideDisplayConfig config, GuideFailure failure) {
-        public Load {
+    @dev.openallay.value.ValueType(Load.ValueSchemaProvider.class)
+public static final class Load {
+    private final GuideDisplayConfig config;
+    private final GuideFailure failure;
+    public Load(GuideDisplayConfig config, GuideFailure failure) {
+
             Objects.requireNonNull(config, "config");
+
+        this.config = config;
+        this.failure = failure;
+    }
+    public GuideDisplayConfig config() { return config; }
+    public GuideFailure failure() { return failure; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Load)) return false;
+        Load that = (Load) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(failure, that.failure);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(failure);
+        return hash;
+    }
+    @Override public String toString() { return "Load[config=" + config + ", failure=" + failure + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Load> schema() {
+            return new dev.openallay.value.ValueSchema<>(Load.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Load>>asList(new dev.openallay.value.ValueSchema.Component<>(Load.class, "config", Load::config), new dev.openallay.value.ValueSchema.Component<>(Load.class, "failure", Load::failure)), arguments -> new Load((GuideDisplayConfig) arguments[0], (GuideFailure) arguments[1]));
         }
     }
+}
 
     public Load load(Path path) {
         Objects.requireNonNull(path, "path");
@@ -61,15 +88,10 @@ public final class GuideDisplayConfigLoader {
     }
 
     private static GuideUiConfig ui(JsonElement value) {
-        JsonObject ui = object(value, "ui", Set.of("fullscreen", "hud", "notifications"));
-        JsonObject full = object(ui.get("fullscreen"), "fullscreen", Set.of(
-                "density", "sessionRailVisible", "theme"));
-        JsonObject hud = object(ui.get("hud"), "hud", Set.of(
-                "enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale",
-                "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply",
-                "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"));
-        JsonObject notifications = object(ui.get("notifications"), "notifications", Set.of(
-                "enabled", "policy", "replyCompleted", "cardBatches", "taskFailures", "durationSeconds"));
+        JsonObject ui = object(value, "ui", dev.openallay.util.Java8Collections.setOf("fullscreen", "hud", "notifications"));
+        JsonObject full = object(ui.get("fullscreen"), "fullscreen", dev.openallay.util.Java8Collections.setOf("density", "sessionRailVisible", "theme"));
+        JsonObject hud = object(ui.get("hud"), "hud", dev.openallay.util.Java8Collections.setOf("enabled", "anchor", "offsetX", "offsetY", "width", "height", "scale", "backgroundOpacity", "collapsed", "maxReplyLines", "showLatestReply", "showStreamingPreview", "hideWithDebug", "hideOnOtherScreens"));
+        JsonObject notifications = object(ui.get("notifications"), "notifications", dev.openallay.util.Java8Collections.setOf("enabled", "policy", "replyCompleted", "cardBatches", "taskFailures", "durationSeconds"));
         return new GuideUiConfig(
                 new GuideUiConfig.Fullscreen(
                         enumeration(full, "density", GuideUiConfig.Density.class),
@@ -129,7 +151,7 @@ public final class GuideDisplayConfigLoader {
                 GuideDisplayConfig.defaults(),
                 new GuideFailure(
                         "invalid_display_config",
-                        message == null || message.isBlank()
+                        message == null || dev.openallay.util.Java8Strings.isBlank(message)
                                 ? "Invalid display configuration"
                                 : message));
     }

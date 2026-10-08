@@ -48,43 +48,79 @@ public final class GuideToolDetailPresenter {
 
     private static Projection projectCards(String toolId, JsonObject normalized) {
         if (normalized == null) {
-            return new Projection(List.of(), "restored result detail is unavailable");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "restored result detail is unavailable");
         }
         if (!"success".equals(string(normalized, "status"))) {
-            return new Projection(List.of(), "tool returned a normalized failure");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "tool returned a normalized failure");
         }
         JsonObject value = object(normalized, "value");
         if (value == null) {
-            return new Projection(List.of(), "value is missing");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "value is missing");
         }
         String name = toolName(toolId);
         try {
-            return switch (name) {
-                case "run_javascript" -> javascriptCards(value);
-                default -> new Projection(List.of(), "generic tool projection");
-            };
+            {
+dev.openallay.guide.ui.GuideToolDetailPresenter.Projection $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((name)) {
+case "run_javascript":
+{
+$oaSwitch0_exit_result = javascriptCards(value); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = new Projection(dev.openallay.util.Java8Collections.listOf(), "generic tool projection"); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
         } catch (RuntimeException exception) {
-            return new Projection(List.of(), "malformed semantic result");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "malformed semantic result");
         }
     }
 
     private static Projection javascriptCards(JsonObject value) {
         JsonElement preview = value.get("preview");
         if (preview == null || preview.isJsonNull()) {
-            return new Projection(List.of(), "analysis preview is missing");
+            return new Projection(dev.openallay.util.Java8Collections.listOf(), "analysis preview is missing");
         }
         String viewKind = string(value, "viewKind");
         try {
-            return switch (viewKind) {
-                case "RECIPE" -> javascriptRecipeCards(value, preview);
-                case "ITEM" -> javascriptItemCards(value, preview);
-                case "TABLE" -> javascriptTableCard(value, preview);
-                case "KEY_VALUE" -> javascriptKeyValueCard(value, preview);
-                case "SCALAR" -> new Projection(List.of(new GuideDetailCard.Text(
+            {
+dev.openallay.guide.ui.GuideToolDetailPresenter.Projection $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((viewKind)) {
+case "RECIPE":
+{
+$oaSwitch2_exit_result = javascriptRecipeCards(value, preview); break $oaSwitch2_exit;
+}
+case "ITEM":
+{
+$oaSwitch2_exit_result = javascriptItemCards(value, preview); break $oaSwitch2_exit;
+}
+case "TABLE":
+{
+$oaSwitch2_exit_result = javascriptTableCard(value, preview); break $oaSwitch2_exit;
+}
+case "KEY_VALUE":
+{
+$oaSwitch2_exit_result = javascriptKeyValueCard(value, preview); break $oaSwitch2_exit;
+}
+case "SCALAR":
+{
+$oaSwitch2_exit_result = new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.Text(
                         "screen.openallay.detail.analysis",
-                        List.of(displayValue(preview)))), "");
-                default -> javascriptFallbackCard(value, preview);
-            };
+                        dev.openallay.util.Java8Collections.listOf(displayValue(preview)))), ""); break $oaSwitch2_exit;
+}
+default:
+{
+$oaSwitch2_exit_result = javascriptFallbackCard(value, preview); break $oaSwitch2_exit;
+}
+}
+}
+return $oaSwitch2_exit_result;
+}
         } catch (RuntimeException malformed) {
             return javascriptFallbackCard(value, preview);
         }
@@ -97,11 +133,10 @@ public final class GuideToolDetailPresenter {
         } else if (preview.isJsonObject()) {
             recipes.add(preview);
         }
-        List<GuideDetailCard> cards = GuideRecipePresenter
+        List<GuideDetailCard> cards = dev.openallay.util.Java8Collections.toList(GuideRecipePresenter
                 .cards(recipes)
                 .stream()
-                .<GuideDetailCard>map(GuideDetailCard.Recipe::new)
-                .toList();
+                .<GuideDetailCard>map(GuideDetailCard.Recipe::new));
         return cards.isEmpty()
                 ? javascriptFallbackCard(value, preview)
                 : new Projection(cards, "");
@@ -110,7 +145,7 @@ public final class GuideToolDetailPresenter {
     private static Projection javascriptItemCards(JsonObject value, JsonElement preview) {
         List<JsonElement> encoded = preview.isJsonArray()
                 ? dev.openallay.json.JsonReaders.elements(preview.getAsJsonArray())
-                : List.of(preview);
+                : dev.openallay.util.Java8Collections.listOf(preview);
         List<GuideItemView> items = new ArrayList<>();
         for (JsonElement element : encoded) {
             if (!element.isJsonObject()) {
@@ -118,10 +153,10 @@ public final class GuideToolDetailPresenter {
             }
             JsonObject object = element.getAsJsonObject();
             String id = string(object, "itemId");
-            if (id.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(id)) {
                 id = string(object, "id");
             }
-            if (id.isBlank()) {
+            if (dev.openallay.util.Java8Strings.isBlank(id)) {
                 continue;
             }
             String displayName = string(object, "displayName");
@@ -130,7 +165,7 @@ public final class GuideToolDetailPresenter {
         }
         return items.isEmpty()
                 ? javascriptFallbackCard(value, preview)
-                : new Projection(List.of(new GuideDetailCard.ItemGrid(
+                : new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.ItemGrid(
                         "screen.openallay.detail.analysis.items", items)), "");
     }
 
@@ -168,11 +203,10 @@ public final class GuideToolDetailPresenter {
                 return javascriptFallbackCard(value, preview);
             }
             JsonObject row = element.getAsJsonObject();
-            rows.add(columns.stream()
-                    .map(column -> displayValue(row.get(column)))
-                    .toList());
+            rows.add(dev.openallay.util.Java8Collections.toList(columns.stream()
+                    .map(column -> displayValue(row.get(column)))));
         }
-        return new Projection(List.of(new GuideDetailCard.Table(
+        return new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.Table(
                 "screen.openallay.detail.analysis.table",
                 columns,
                 rows,
@@ -185,13 +219,12 @@ public final class GuideToolDetailPresenter {
         if (!preview.isJsonObject()) {
             return javascriptFallbackCard(value, preview);
         }
-        List<GuideDetailCard.DataCell> entries = preview.getAsJsonObject().entrySet().stream()
+        List<GuideDetailCard.DataCell> entries = dev.openallay.util.Java8Collections.toList(preview.getAsJsonObject().entrySet().stream()
                 .map(entry -> new GuideDetailCard.DataCell(
-                        clip(entry.getKey(), 80), displayValue(entry.getValue())))
-                .toList();
+                        clip(entry.getKey(), 80), displayValue(entry.getValue()))));
         return entries.isEmpty()
                 ? javascriptFallbackCard(value, preview)
-                : new Projection(List.of(new GuideDetailCard.KeyValue(
+                : new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.KeyValue(
                         "screen.openallay.detail.analysis.fields",
                         entries,
                         bool(value, "complete"),
@@ -209,10 +242,9 @@ public final class GuideToolDetailPresenter {
             rows.add(dataRow(preview, "value"));
         }
         if (rows.isEmpty()) {
-            rows.add(new GuideDetailCard.DataRow(List.of(
-                    new GuideDetailCard.DataCell("result", "(empty)"))));
+            rows.add(new GuideDetailCard.DataRow(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.DataCell("result", "(empty)"))));
         }
-        return new Projection(List.of(new GuideDetailCard.DataPreview(
+        return new Projection(dev.openallay.util.Java8Collections.listOf(new GuideDetailCard.DataPreview(
                 "screen.openallay.detail.analysis",
                 requiredString(value, "resultType"),
                 nonnegativeLong(value.get("cardinality")),
@@ -249,11 +281,26 @@ public final class GuideToolDetailPresenter {
     }
 
     private static String titleKey(String toolId) {
-        return switch (toolName(toolId)) {
-            case "run_javascript" -> "screen.openallay.tool.run_javascript";
-            case "load_skill" -> "screen.openallay.tool.load_skill";
-            default -> "screen.openallay.tool.result";
-        };
+        {
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((toolName(toolId))) {
+case "run_javascript":
+{
+$oaSwitch1_exit_result = "screen.openallay.tool.run_javascript"; break $oaSwitch1_exit;
+}
+case "load_skill":
+{
+$oaSwitch1_exit_result = "screen.openallay.tool.load_skill"; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = "screen.openallay.tool.result"; break $oaSwitch1_exit;
+}
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     private static String toolName(String toolId) {
@@ -268,7 +315,7 @@ public final class GuideToolDetailPresenter {
 
     private static String requiredString(JsonObject value, String field) {
         String result = string(value, field);
-        if (result.isBlank()) throw new IllegalArgumentException(field + " is required");
+        if (dev.openallay.util.Java8Strings.isBlank(result)) throw new IllegalArgumentException(field + " is required");
         return result;
     }
 
@@ -320,11 +367,39 @@ public final class GuideToolDetailPresenter {
         return value.substring(0, end) + "…";
     }
 
-    private record Projection(List<GuideDetailCard> cards, String diagnostic) {
-        private Projection {
-            cards = List.copyOf(cards);
+    @dev.openallay.value.ValueType(Projection.ValueSchemaProvider.class)
+private static final class Projection {
+    private final List<GuideDetailCard> cards;
+    private final String diagnostic;
+    private Projection(List<GuideDetailCard> cards, String diagnostic) {
+
+            cards = dev.openallay.util.Java8Collections.listCopyOf(cards);
             diagnostic = diagnostic == null ? "" : diagnostic;
+
+        this.cards = cards;
+        this.diagnostic = diagnostic;
+    }
+    public List<GuideDetailCard> cards() { return cards; }
+    public String diagnostic() { return diagnostic; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projection)) return false;
+        Projection that = (Projection) other;
+        return java.util.Objects.equals(cards, that.cards) && java.util.Objects.equals(diagnostic, that.diagnostic);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(cards);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        return hash;
+    }
+    @Override public String toString() { return "Projection[cards=" + cards + ", diagnostic=" + diagnostic + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projection>>asList(new dev.openallay.value.ValueSchema.Component<>(Projection.class, "cards", Projection::cards), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "diagnostic", Projection::diagnostic)), arguments -> new Projection((List) arguments[0], (String) arguments[1]));
         }
     }
+}
 
 }

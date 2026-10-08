@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.RecordComponent;
+import dev.openallay.value.RecordMetadata;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -26,10 +26,11 @@ public final class ToolSchemaGenerator {
     }
 
     private JsonObject schema(Type type, Set<Type> visiting, boolean inputContract) {
-        if (type instanceof Class<?> raw) {
-            return classSchema(raw, visiting, inputContract);
+        if (type instanceof Class<?>) {
+            return classSchema((Class<?>) type, visiting, inputContract);
         }
-        if (type instanceof ParameterizedType parameterized) {
+        if (type instanceof ParameterizedType) {
+            ParameterizedType parameterized = (ParameterizedType) type;
             Class<?> raw = (Class<?>) parameterized.getRawType();
             Type[] arguments = parameterized.getActualTypeArguments();
             if (raw == Optional.class) {
@@ -46,12 +47,42 @@ public final class ToolSchemaGenerator {
                 return result;
             }
         }
-        if (type instanceof GenericArrayType array) {
+        if (type instanceof GenericArrayType) {
+            GenericArrayType array = (GenericArrayType) type;
             JsonObject result = typed("array");
             result.add("items", schema(array.getGenericComponentType(), visiting, inputContract));
             return result;
         }
         throw new IllegalArgumentException("Unsupported tool schema type: " + type.getTypeName());
+    }
+
+    private static final class Component {
+        private final String name;
+        private final Type genericType;
+        private final java.util.function.Function<Class<? extends java.lang.annotation.Annotation>, java.lang.annotation.Annotation> annotations;
+        private Component(String name, Type genericType,
+                java.util.function.Function<Class<? extends java.lang.annotation.Annotation>, java.lang.annotation.Annotation> annotations) {
+            this.name = name; this.genericType = genericType; this.annotations = annotations;
+        }
+        String name() { return name; }
+        Type genericType() { return genericType; }
+        @SuppressWarnings("unchecked") <A extends java.lang.annotation.Annotation> A annotation(Class<A> type) {
+            return (A) annotations.apply(type);
+        }
+    }
+
+    private static java.util.List<Component> components(Class<?> type) {
+        java.util.List<Component> components = new java.util.ArrayList<>();
+        if (dev.openallay.value.ValueSchemas.supports(type)) {
+            for (dev.openallay.value.ValueSchema.Component<?> component : dev.openallay.value.ValueSchemas.of(type).components()) {
+                components.add(new Component(component.name(), component.genericType(), component::annotation));
+            }
+        } else {
+            for (RecordMetadata.Component component : RecordMetadata.components(type)) {
+                components.add(new Component(component.name(), component.genericType(), component::annotation));
+            }
+        }
+        return components;
     }
 
     private JsonObject classSchema(Class<?> type, Set<Type> visiting, boolean inputContract) {
@@ -111,7 +142,7 @@ public final class ToolSchemaGenerator {
         if (com.google.gson.JsonElement.class.isAssignableFrom(type) || type == Object.class) {
             return new JsonObject();
         }
-        if (type.isRecord()) {
+        if (dev.openallay.value.ValueSchemas.supports(type) || RecordMetadata.isRecord(type)) {
             if (!visiting.add(type)) {
                 throw new IllegalArgumentException("Recursive tool record is unsupported: " + type.getName());
             }
@@ -122,23 +153,23 @@ public final class ToolSchemaGenerator {
             }
             JsonObject properties = new JsonObject();
             JsonArray required = new JsonArray();
-            for (RecordComponent component : type.getRecordComponents()) {
+            for (Component component : components(type)) {
                 JsonObject componentSchema = schema(
-                        component.getGenericType(), visiting, inputContract);
-                ToolDescription description = component.getAnnotation(ToolDescription.class);
+                        component.genericType(), visiting, inputContract);
+                ToolDescription description = component.annotation(ToolDescription.class);
                 if (description != null) {
                     componentSchema.addProperty("description", description.value());
                 }
-                ToolPattern pattern = component.getAnnotation(ToolPattern.class);
+                ToolPattern pattern = component.annotation(ToolPattern.class);
                 if (pattern != null) {
                     componentSchema.addProperty("pattern", pattern.value());
                 }
-                properties.add(component.getName(), componentSchema);
+                properties.add(component.name(), componentSchema);
                 if (inputContract
-                        && component.getAnnotation(ToolOptional.class) == null
-                        && !(component.getGenericType() instanceof ParameterizedType parameterized
-                                && parameterized.getRawType() == Optional.class)) {
-                    required.add(component.getName());
+                        && component.annotation(ToolOptional.class) == null
+                        && !(component.genericType() instanceof ParameterizedType
+                                && ((ParameterizedType) component.genericType()).getRawType() == Optional.class)) {
+                    required.add(component.name());
                 }
             }
             result.add("properties", properties);
@@ -147,9 +178,9 @@ public final class ToolSchemaGenerator {
             ToolAtLeastOne atLeastOne = inputContract
                     ? type.getAnnotation(ToolAtLeastOne.class) : null;
             if (atLeastOne != null) {
-                Set<String> componentNames = Arrays.stream(type.getRecordComponents())
-                        .map(RecordComponent::getName)
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                Set<String> componentNames = components(type).stream()
+                        .map(Component::name)
+                        .collect(java.util.stream.Collectors.toSet());
                 JsonArray anyOf = new JsonArray();
                 for (String name : atLeastOne.value()) {
                     if (!componentNames.contains(name)) {

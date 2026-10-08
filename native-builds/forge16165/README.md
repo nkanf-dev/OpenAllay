@@ -1,0 +1,23 @@
+# Private Forge 1.16.5 native project
+
+This project builds the exact stock Forge36.2.42 tuple. The task branch has passed native compilation, normal Mixin AP/reobfuscation, product packaging, actual startup, the isolated-world UI scenario, public WorldSession operations and two-process persistence. Independent Builder discovery and restricted basic/partial/cancel/undo calls also passed. The final product bundles the exact tested Builder candidate. Five available presets, geometry, decoration, terrain and templates passed 80 independent native checks; a second clean client reload passed the same 80 checks plus exact 13-operation journal and template persistence. The skyscraper test is `SKIPPED` because the native palette has no lightning rod. `docs/forge-1.16.5-native-validation.json` records the accepted target and exact artifact identities.
+
+This does not add the tuple to the central release selector or publish a release. Optional viewer combinations, dedicated-server scope and visual screenshot review are not included in these accepted facts. The tested runtime uses Java17; SDK and Builder remain Java8 payloads.
+
+Use the unchanged official Forge36.2.42 MDK wrapper launcher/scripts/JAR and the exact Gradle8.4 wrapper properties included here. The root coordinator supplies that retained wrapper. Do not substitute the root Gradle wrapper or include the root multi-loader build. No wrapper binary is included in this source packet.
+
+The Gradle daemon and native compileJava use JDK17. The build-only namespace tool compiles Java17 bytecode with JDK21 and runs under full JDK21. ForgeGradle owns its internal Java8 game recompilation. No broad JavaCompile configuration is allowed.
+
+Supply -PnativeBuildInputs=/absolute/request.json. All request fields are required. The source root must contain the reviewed neutral selector and namespace producer packet plus completed typed16 leaves. Source selection, mapping files, component closure and reviewed native compiler lock are explicit inputs.
+
+Preparation tasks, if separately authorized:
+
+1. exportNativeToolingInputs resolves and records the actual normal FG compile/AP closure without compiling native Java. Root reviews the proposed lock and places its accepted content at compilerArtifactLock.
+2. acceptNamespaceMetadata compiles only the build tool, checks public Elements against that exact classpath/JDK, and writes metadataAcceptance. It does not compile feature/native Java or run a game. Add the root-requested missing native declarations to the same separately reviewed collector, not a duplicate inventory.
+3. emitNativeBuildMetadata produces the one raw selected native javac union, normal Mixin AP outputs and normal FG reobf pair. Immutable engine, SDK, Rhino, Builder and component outputs are not rebuilt or transformed.
+
+These steps are a plan, not authorization to execute them.
+
+The emitted native JAR is not yet the complete fat mod. A separately reviewed product pack gate must combine its reobfuscated native bytes with the unchanged retained component closure and raw Builder discovery resource. Do not reuse the probe-only pack entry gate, advertise support, or publish this intermediate JAR.
+
+canonicalSourcesJar packages selected canonical Java/resources once. Generated namespace views are compile-only outputs and are not maintained source copies.

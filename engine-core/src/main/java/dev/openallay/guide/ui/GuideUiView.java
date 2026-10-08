@@ -12,59 +12,81 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Pure, immutable screen view derived from the one GuideService snapshot. */
-public record GuideUiView(
-        String selectedSession,
-        GuideModelMode modelMode,
-        boolean clientModelAvailable,
-        boolean serverModelAvailable,
-        boolean canSend,
-        boolean canCancel,
-        boolean canRetry,
-        GuideUiProgress progress,
-        List<GuideUiSession> sessions,
-        List<GuideUiRow> rows,
-        List<GuideUiModelChoice> modelChoices,
-        String capabilityMessage) {
-    public GuideUiView {
-        sessions = List.copyOf(sessions);
-        rows = List.copyOf(rows);
-        modelChoices = List.copyOf(modelChoices);
+@dev.openallay.value.ValueType(GuideUiView.ValueSchemaProvider.class)
+public final class GuideUiView {
+    private final String selectedSession;
+    private final GuideModelMode modelMode;
+    private final boolean clientModelAvailable;
+    private final boolean serverModelAvailable;
+    private final boolean canSend;
+    private final boolean canCancel;
+    private final boolean canRetry;
+    private final GuideUiProgress progress;
+    private final List<GuideUiSession> sessions;
+    private final List<GuideUiRow> rows;
+    private final List<GuideUiModelChoice> modelChoices;
+    private final String capabilityMessage;
+    public GuideUiView(String selectedSession, GuideModelMode modelMode, boolean clientModelAvailable, boolean serverModelAvailable, boolean canSend, boolean canCancel, boolean canRetry, GuideUiProgress progress, List<GuideUiSession> sessions, List<GuideUiRow> rows, List<GuideUiModelChoice> modelChoices, String capabilityMessage) {
+
+        sessions = dev.openallay.util.Java8Collections.listCopyOf(sessions);
+        rows = dev.openallay.util.Java8Collections.listCopyOf(rows);
+        modelChoices = dev.openallay.util.Java8Collections.listCopyOf(modelChoices);
         if (modelChoices.stream().filter(GuideUiModelChoice::selected).count() != 1) {
             throw new IllegalArgumentException("exactly one model choice must be selected");
         }
         if (modelChoices.stream().filter(GuideUiModelChoice::running).count() > 1) {
             throw new IllegalArgumentException("at most one model choice may be running");
         }
-    }
 
-    public GuideUiModelChoice selectedModel() {
+        rows.forEach(GuideUiRow::requireKnown);
+        this.selectedSession = selectedSession;
+        this.modelMode = modelMode;
+        this.clientModelAvailable = clientModelAvailable;
+        this.serverModelAvailable = serverModelAvailable;
+        this.canSend = canSend;
+        this.canCancel = canCancel;
+        this.canRetry = canRetry;
+        this.progress = progress;
+        this.sessions = sessions;
+        this.rows = rows;
+        this.modelChoices = modelChoices;
+        this.capabilityMessage = capabilityMessage;
+    }
+    public String selectedSession() { return selectedSession; }
+    public GuideModelMode modelMode() { return modelMode; }
+    public boolean clientModelAvailable() { return clientModelAvailable; }
+    public boolean serverModelAvailable() { return serverModelAvailable; }
+    public boolean canSend() { return canSend; }
+    public boolean canCancel() { return canCancel; }
+    public boolean canRetry() { return canRetry; }
+    public GuideUiProgress progress() { return progress; }
+    public List<GuideUiSession> sessions() { return sessions; }
+    public List<GuideUiRow> rows() { return rows; }
+    public List<GuideUiModelChoice> modelChoices() { return modelChoices; }
+    public String capabilityMessage() { return capabilityMessage; }
+public GuideUiModelChoice selectedModel() {
         return modelChoices.stream().filter(GuideUiModelChoice::selected)
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
     }
-
-    public dev.openallay.model.image.ImageInputCapability selectedImageInputCapability() {
+public dev.openallay.model.image.ImageInputCapability selectedImageInputCapability() {
         return selectedModel().imageInput();
     }
-
-    public GuideUiModelChoice runningModel() {
+public GuideUiModelChoice runningModel() {
         return modelChoices.stream().filter(GuideUiModelChoice::running)
                 .findFirst().orElseGet(this::selectedModel);
     }
-
-    public boolean modelSwitchPending() {
+public boolean modelSwitchPending() {
         return modelChoices.stream().anyMatch(GuideUiModelChoice::running)
                 && !runningModel().selection().equals(selectedModel().selection());
     }
-
-    public static GuideUiView from(GuideSnapshot snapshot) {
+public static GuideUiView from(GuideSnapshot snapshot) {
         return from(snapshot, GuideDisplayConfig.defaults());
     }
-
-    public static GuideUiView from(GuideSnapshot snapshot, GuideDisplayConfig displayConfig) {
+public static GuideUiView from(GuideSnapshot snapshot, GuideDisplayConfig displayConfig) {
         java.util.Objects.requireNonNull(displayConfig, "displayConfig");
         GuideSessionSnapshot selected = snapshot.sessions().stream()
                 .filter(value -> value.sessionId().equals(snapshot.selectedSession()))
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         GuideRequestSnapshot active = selected.requests().stream()
                 .filter(value -> !value.terminal()).reduce((first, second) -> second).orElse(null);
         GuideRequestSnapshot retry = selected.requests().stream()
@@ -75,28 +97,42 @@ public record GuideUiView(
         List<GuideUiModelChoice> modelChoices = modelChoices(snapshot, active);
         GuideUiModelChoice selectedModel = modelChoices.stream()
                 .filter(GuideUiModelChoice::selected)
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         boolean targetAvailable = selectedModel.available();
-        List<GuideUiSession> sessions = snapshot.sessions().stream()
+        List<GuideUiSession> sessions = dev.openallay.util.Java8Collections.toList(snapshot.sessions().stream()
                 .map(value -> new GuideUiSession(
                         value.sessionId(),
                         value.sessionId().equals(snapshot.selectedSession()),
                         value.requests().stream().anyMatch(request -> !request.terminal()),
                         Math.toIntExact(Math.min(
-                                Integer.MAX_VALUE, value.historyWindow().totalRequests()))))
-                .toList();
+                                Integer.MAX_VALUE, value.historyWindow().totalRequests())))));
         List<GuideUiRow> rows = new ArrayList<>();
-        switch (snapshot.persistence().state()) {
-            case LOADING -> rows.add(new GuideUiRow.Persistence(
+        switch ((snapshot.persistence().state())) {
+case LOADING:
+{
+rows.add(new GuideUiRow.Persistence(
                     snapshot.persistence().state(),
                     "screen.openallay.history.loading",
                     null));
-            case UNAVAILABLE -> rows.add(new GuideUiRow.Persistence(
+break;
+}
+case UNAVAILABLE:
+{
+rows.add(new GuideUiRow.Persistence(
                     snapshot.persistence().state(),
                     "screen.openallay.history.unavailable",
                     snapshot.persistence().failure()));
-            case SAVING, DISABLED, AVAILABLE -> { }
-        }
+break;
+}
+case SAVING:
+case DISABLED:
+case AVAILABLE:
+{
+{ }
+break;
+}
+}
+
         for (GuideRequestSnapshot request : selected.requests()) {
             rows.addAll(projectRequestRows(request, displayConfig));
         }
@@ -125,9 +161,7 @@ public record GuideUiView(
                 modelChoices,
                 capability);
     }
-
-    /** Shared typed projection for native transcript and compact task-result surfaces. */
-    public static List<GuideUiRow> projectRequestRows(
+public static List<GuideUiRow> projectRequestRows(
             GuideRequestSnapshot request, GuideDisplayConfig displayConfig) {
         java.util.Objects.requireNonNull(request, "request");
         java.util.Objects.requireNonNull(displayConfig, "displayConfig");
@@ -135,27 +169,42 @@ public record GuideUiView(
         rows.add(new GuideUiRow.User(request.requestId(), request.userMessage()));
         for (GuideTimelineEntry entry : request.timeline()) {
             java.util.Objects.requireNonNull(entry);
-            if (entry instanceof GuideTimelineEntry.User user) {
-                rows.add(new GuideUiRow.User(user.messageId(), user.text()));
-            } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+            {
+final java.lang.Object $oaPattern0_value = entry;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof GuideTimelineEntry.User;
+GuideTimelineEntry.User $oaPattern0_bound = $oaPattern0_match ? (GuideTimelineEntry.User) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+                rows.add(new GuideUiRow.User($oaPattern0_bound.messageId(), $oaPattern0_bound.text()));
+            } else {
+final java.lang.Object $oaPattern1_value = entry;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof GuideTimelineEntry.Assistant;
+GuideTimelineEntry.Assistant $oaPattern1_bound = $oaPattern1_match ? (GuideTimelineEntry.Assistant) $oaPattern1_value : null;
+if ($oaPattern1_match) {
                 rows.add(new GuideUiRow.Assistant(
                         request.requestId(),
-                        assistant.ordinal(),
-                        assistant.text(),
-                        assistant.semantic(),
-                        assistant.streaming(),
-                        assistant.sources()));
-            } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+                        $oaPattern1_bound.ordinal(),
+                        $oaPattern1_bound.text(),
+                        $oaPattern1_bound.semantic(),
+                        $oaPattern1_bound.streaming(),
+                        $oaPattern1_bound.sources()));
+            } else {
+final java.lang.Object $oaPattern2_value = entry;
+final boolean $oaPattern2_match = $oaPattern2_value instanceof GuideTimelineEntry.Tool;
+GuideTimelineEntry.Tool $oaPattern2_bound = $oaPattern2_match ? (GuideTimelineEntry.Tool) $oaPattern2_value : null;
+if ($oaPattern2_match) {
                 rows.add(new GuideUiRow.Tool(
                         request.requestId(),
-                        tool.ordinal(),
-                        tool.activity(),
+                        $oaPattern2_bound.ordinal(),
+                        $oaPattern2_bound.activity(),
                         GuideToolDetailPresenter.project(
-                                tool.activity(), displayConfig.debugMode())
+                                $oaPattern2_bound.activity(), displayConfig.debugMode())
                                 .forRequest(request.terminal())));
             } else {
                 throw new IncompatibleClassChangeError();
             }
+}
+}
+}
         }
         if (request.status() == GuideRequestStatus.FAILED
                 || request.status() == GuideRequestStatus.CANCELLED
@@ -166,10 +215,9 @@ public record GuideUiView(
                     request.failure() == null ? request.status().name() : request.failure().message(),
                     request.failure()));
         }
-        return List.copyOf(rows);
+        return dev.openallay.util.Java8Collections.listCopyOf(rows);
     }
-
-    private static List<GuideUiModelChoice> modelChoices(
+private static List<GuideUiModelChoice> modelChoices(
             GuideSnapshot snapshot, GuideRequestSnapshot active) {
         List<ChoiceSeed> seeds = new ArrayList<>();
         for (GuideClientModelProfile profile : snapshot.clientProfiles()) {
@@ -212,7 +260,7 @@ public record GuideUiView(
                     snapshot.serverModelAvailable()));
         }
         GuideModelSelection running = active == null ? null : active.modelSelection();
-        return seeds.stream().map(seed -> new GuideUiModelChoice(
+        return dev.openallay.util.Java8Collections.toList(seeds.stream().map(seed -> new GuideUiModelChoice(
                 seed.selection(),
                 seed.displayName(),
                 seed.origin(),
@@ -226,10 +274,9 @@ public record GuideUiView(
                         : snapshot.clientProfiles().stream()
                                 .filter(profile -> profile.id().equals(seed.selection().profileId()))
                                 .map(GuideClientModelProfile::imageInputSource)
-                                .filter(java.util.Objects::nonNull).findFirst().orElse(null))).toList();
+                                .filter(java.util.Objects::nonNull).findFirst().orElse(null))));
     }
-
-    private static void ensureClientChoice(
+private static void ensureClientChoice(
             List<ChoiceSeed> seeds,
             List<GuideClientModelProfile> profiles,
             GuideModelSelection selection,
@@ -248,11 +295,75 @@ public record GuideUiView(
                 true,
                 retained == null ? compatibilityAvailable : retained.available()));
     }
-
-    private record ChoiceSeed(
-            GuideModelSelection selection,
-            String displayName,
-            ModelOrigin origin,
-            boolean editable,
-            boolean available) {}
+@dev.openallay.value.ValueType(ChoiceSeed.ValueSchemaProvider.class)
+private static final class ChoiceSeed {
+    private final GuideModelSelection selection;
+    private final String displayName;
+    private final ModelOrigin origin;
+    private final boolean editable;
+    private final boolean available;
+    private ChoiceSeed(GuideModelSelection selection, String displayName, ModelOrigin origin, boolean editable, boolean available) {
+        this.selection = selection;
+        this.displayName = displayName;
+        this.origin = origin;
+        this.editable = editable;
+        this.available = available;
+    }
+    public GuideModelSelection selection() { return selection; }
+    public String displayName() { return displayName; }
+    public ModelOrigin origin() { return origin; }
+    public boolean editable() { return editable; }
+    public boolean available() { return available; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ChoiceSeed)) return false;
+        ChoiceSeed that = (ChoiceSeed) other;
+        return java.util.Objects.equals(selection, that.selection) && java.util.Objects.equals(displayName, that.displayName) && java.util.Objects.equals(origin, that.origin) && editable == that.editable && available == that.available;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(selection);
+        hash = 31 * hash + java.util.Objects.hashCode(displayName);
+        hash = 31 * hash + java.util.Objects.hashCode(origin);
+        hash = 31 * hash + Boolean.hashCode(editable);
+        hash = 31 * hash + Boolean.hashCode(available);
+        return hash;
+    }
+    @Override public String toString() { return "ChoiceSeed[selection=" + selection + ", displayName=" + displayName + ", origin=" + origin + ", editable=" + editable + ", available=" + available + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ChoiceSeed> schema() {
+            return new dev.openallay.value.ValueSchema<>(ChoiceSeed.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ChoiceSeed>>asList(new dev.openallay.value.ValueSchema.Component<>(ChoiceSeed.class, "selection", ChoiceSeed::selection), new dev.openallay.value.ValueSchema.Component<>(ChoiceSeed.class, "displayName", ChoiceSeed::displayName), new dev.openallay.value.ValueSchema.Component<>(ChoiceSeed.class, "origin", ChoiceSeed::origin), new dev.openallay.value.ValueSchema.Component<>(ChoiceSeed.class, "editable", ChoiceSeed::editable), new dev.openallay.value.ValueSchema.Component<>(ChoiceSeed.class, "available", ChoiceSeed::available)), arguments -> new ChoiceSeed((GuideModelSelection) arguments[0], (String) arguments[1], (ModelOrigin) arguments[2], (Boolean) arguments[3], (Boolean) arguments[4]));
+        }
+    }
+}
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof GuideUiView)) return false;
+        GuideUiView that = (GuideUiView) other;
+        return java.util.Objects.equals(selectedSession, that.selectedSession) && java.util.Objects.equals(modelMode, that.modelMode) && clientModelAvailable == that.clientModelAvailable && serverModelAvailable == that.serverModelAvailable && canSend == that.canSend && canCancel == that.canCancel && canRetry == that.canRetry && java.util.Objects.equals(progress, that.progress) && java.util.Objects.equals(sessions, that.sessions) && java.util.Objects.equals(rows, that.rows) && java.util.Objects.equals(modelChoices, that.modelChoices) && java.util.Objects.equals(capabilityMessage, that.capabilityMessage);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(selectedSession);
+        hash = 31 * hash + java.util.Objects.hashCode(modelMode);
+        hash = 31 * hash + Boolean.hashCode(clientModelAvailable);
+        hash = 31 * hash + Boolean.hashCode(serverModelAvailable);
+        hash = 31 * hash + Boolean.hashCode(canSend);
+        hash = 31 * hash + Boolean.hashCode(canCancel);
+        hash = 31 * hash + Boolean.hashCode(canRetry);
+        hash = 31 * hash + java.util.Objects.hashCode(progress);
+        hash = 31 * hash + java.util.Objects.hashCode(sessions);
+        hash = 31 * hash + java.util.Objects.hashCode(rows);
+        hash = 31 * hash + java.util.Objects.hashCode(modelChoices);
+        hash = 31 * hash + java.util.Objects.hashCode(capabilityMessage);
+        return hash;
+    }
+    @Override public String toString() { return "GuideUiView[selectedSession=" + selectedSession + ", modelMode=" + modelMode + ", clientModelAvailable=" + clientModelAvailable + ", serverModelAvailable=" + serverModelAvailable + ", canSend=" + canSend + ", canCancel=" + canCancel + ", canRetry=" + canRetry + ", progress=" + progress + ", sessions=" + sessions + ", rows=" + rows + ", modelChoices=" + modelChoices + ", capabilityMessage=" + capabilityMessage + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<GuideUiView> schema() {
+            return new dev.openallay.value.ValueSchema<>(GuideUiView.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<GuideUiView>>asList(new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "selectedSession", GuideUiView::selectedSession), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "modelMode", GuideUiView::modelMode), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "clientModelAvailable", GuideUiView::clientModelAvailable), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "serverModelAvailable", GuideUiView::serverModelAvailable), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "canSend", GuideUiView::canSend), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "canCancel", GuideUiView::canCancel), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "canRetry", GuideUiView::canRetry), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "progress", GuideUiView::progress), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "sessions", GuideUiView::sessions), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "rows", GuideUiView::rows), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "modelChoices", GuideUiView::modelChoices), new dev.openallay.value.ValueSchema.Component<>(GuideUiView.class, "capabilityMessage", GuideUiView::capabilityMessage)), arguments -> new GuideUiView((String) arguments[0], (GuideModelMode) arguments[1], (Boolean) arguments[2], (Boolean) arguments[3], (Boolean) arguments[4], (Boolean) arguments[5], (Boolean) arguments[6], (GuideUiProgress) arguments[7], (List) arguments[8], (List) arguments[9], (List) arguments[10], (String) arguments[11]));
+        }
+    }
 }

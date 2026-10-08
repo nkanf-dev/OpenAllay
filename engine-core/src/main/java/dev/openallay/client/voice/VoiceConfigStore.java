@@ -12,8 +12,7 @@ import java.util.Set;
 
 /** Exact current shape; malformed files are retained, never replaced with defaults. */
 public final class VoiceConfigStore {
-    private static final Set<String> FIELDS = Set.of("enabled", "backend", "deviceId", "maxClipSeconds", "language",
-            "cpuThreads", "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef", "gameplayAction");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("enabled", "backend", "deviceId", "maxClipSeconds", "language", "cpuThreads", "nativeModelDirectory", "httpBaseUrl", "httpModel", "credentialRef", "gameplayAction");
     private final Path path;
     private volatile VoiceConfig config = VoiceConfig.defaults();
     public VoiceConfigStore(Path path) { this.path = path; }
@@ -22,7 +21,7 @@ public final class VoiceConfigStore {
         if (!Files.exists(path)) return new ToolResult.Success<>(config);
         try {
             if (Files.size(path) > 64 * 1024) throw new IllegalArgumentException();
-            VoiceConfig next = decode(Files.readString(path));
+            VoiceConfig next = decode(dev.openallay.util.Java8Files.readString(path));
             config = next;
             return new ToolResult.Success<>(next);
         } catch (Exception failure) { return new ToolResult.Failure<>("invalid_voice_config", "Voice settings are invalid; the last valid settings are retained"); }

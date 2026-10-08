@@ -47,8 +47,8 @@ final class BenchmarkRunnerTest {
                 result.attemptReports().stream()
                         .map(BenchmarkReport.AttemptReport::failureKind)
                         .toList());
-        assertFalse(java.util.Arrays.stream(BenchmarkMetrics.class.getRecordComponents())
-                .anyMatch(component -> component.getName().toLowerCase().contains("time")));
+        assertFalse(dev.openallay.value.ValueSchemas.of(BenchmarkMetrics.class).components().stream()
+                .anyMatch(component -> component.name().toLowerCase().contains("time")));
     }
 
     @Test

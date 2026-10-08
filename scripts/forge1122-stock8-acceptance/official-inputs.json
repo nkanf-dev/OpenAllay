@@ -1,0 +1,14 @@
+{
+  "installer": {
+    "url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864-installer.jar",
+    "size": 4532339,
+    "sha1": "b5ec0016c292830f2325e39417d1ec4d9e166cab",
+    "sha256": "2c0065938de6df6f3deb4a08a3018940a1cc86111adb34a3be55d657857a11cc",
+    "officialSha1Url": "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2864/forge-1.12.2-14.23.5.2864-installer.jar.sha1"
+  },
+  "metadata": {
+    "install_profile.json": "b41951a4a2b50562252c6060046c0e6929039f2239f7a560d919877726fbf28e",
+    "version.json": "6d28c3dc3d67c0a6a496c7855d0fc54df014d419dd48bca3829540dfc15b4f58",
+    "minecraft-1.12.2.json": "56dac2e1caa872d7e37a7b5523056cd812dca94f912ad2bd652817bee60edca4"
+  }
+}

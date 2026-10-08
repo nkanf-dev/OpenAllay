@@ -14,7 +14,7 @@ public enum SettingsSection {
     DIAGNOSTICS("screen.openallay.settings.diagnostics"),
     ABOUT("screen.openallay.settings.about");
 
-    private static final List<SettingsSection> TOP_LEVEL = List.of(values());
+    private static final List<SettingsSection> TOP_LEVEL = dev.openallay.util.Java8Collections.listOf(values());
     private final String translationKey;
 
     SettingsSection(String translationKey) {

@@ -61,7 +61,9 @@ final class CaptureOpenOwner {
             } catch (ExecutionException failure) {
                 cancellation.check();
                 Throwable cause = failure.getCause();
-                if (cause instanceof Exception exception) throw exception;
+                final class $oaPattern0_Holder { java.lang.Throwable value; Exception bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof java.lang.Exception && (($oaPattern0_holder.bound = (Exception) $oaPattern0_holder.value) != null))) throw $oaPattern0_holder.bound;
                 throw new AudioCapture.CaptureException(AudioCapture.Failure.OPEN_FAILED,
                         "Could not open the microphone.");
             } catch (InterruptedException failure) {

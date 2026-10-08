@@ -191,14 +191,22 @@ final class OpenAllayScreenNativeTooltipTest {
                 "telemetryTooltipLanguage == language", "telemetryTooltipWidth == wrapWidth"}) {
             assertTrue(refresh.contains(dependency), dependency);
         }
-        assertTrue(refresh.contains("wrapNativeTooltip(telemetryTooltip, wrapWidth, font::split)"));
+        assertTrue(refresh.contains("wrapNativeTooltip(telemetryTooltip, wrapWidth, (text, width) -> GuideNativeFont.split(font, text, width))"));
         assertFalse(refresh.contains("detail.append(\"\\n\")"));
         assertFalse(refresh.contains("screen.openallay.telemetry.budget\""));
         assertFalse(refresh.contains("screen.openallay.telemetry.session\""));
         String render = screen.substring(screen.indexOf("private void renderTelemetry("),
                 screen.indexOf("private boolean telemetryImageBarEligible()"));
         assertTrue(render.contains("setTooltipForNextFrame(font, telemetryTooltipWrapped,"));
-        assertTrue(render.contains("DefaultTooltipPositioner.INSTANCE"));
+        assertTrue(render.contains("GuideTooltipPlacement.DEFAULT"));
+        String nativeGraphics = Files.readString(root().resolve(
+                "common/src/main/java/dev/openallay/client/gui/GuideNativeGraphics.java"));
+        String placement = nativeGraphics.substring(nativeGraphics.indexOf(
+                "Font font, List<GuideTextLine> lines, GuideTooltipPlacement positioner"),
+                nativeGraphics.indexOf("/** Normalized texture coordinates"));
+        assertTrue(placement.contains("GuideNativeFont.nativeLines(lines)"));
+        assertTrue(placement.contains("DefaultTooltipPositioner.INSTANCE"));
+        assertTrue(placement.contains("x, y, replaceExisting"));
         assertTrue(render.contains("mouseX, mouseY, false"));
         assertTrue(render.contains("requestedTelemetryTooltipLines = telemetryTooltipWrapped.size()"));
         assertFalse(render.contains("font.split"));

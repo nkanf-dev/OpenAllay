@@ -33,7 +33,7 @@ public final class AgentResultWorkspaceRegistry {
     }
 
     private static String requireId(String value) {
-        if (Objects.requireNonNull(value, "correlationId").isBlank()) {
+        if (dev.openallay.util.Java8Strings.isBlank(Objects.requireNonNull(value, "correlationId"))) {
             throw new IllegalArgumentException("correlationId must not be blank");
         }
         return value;

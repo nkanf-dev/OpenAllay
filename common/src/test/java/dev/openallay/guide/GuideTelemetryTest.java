@@ -71,7 +71,7 @@ final class GuideTelemetryTest {
         // the total-window track and its fill only under the same known-accounting predicate.
         assertTrue(render.contains("graphics.text(font, telemetryCompact"));
         assertTrue(render.contains("graphics.text(font, telemetryContext"));
-        assertTrue(refresh.contains("telemetryCompact = Component.translatable(\"screen.openallay.telemetry.compact\", occupancy, cache, cost)"));
+        assertTrue(refresh.contains("telemetryCompact = MinecraftComponents.translatable(\"screen.openallay.telemetry.compact\", occupancy, cache, cost)"));
         int knownGuard = render.indexOf("if (telemetryImageBarEligible())");
         int barTrack = render.indexOf("graphics.fill(x, y + 25");
         int ratio = render.indexOf("double ratio");

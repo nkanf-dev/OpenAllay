@@ -1,0 +1,227 @@
+package dev.openallay.server;
+
+import dev.openallay.bridge.server.ServerBridgeSession;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BooleanSupplier;
+
+
+
+/** Small native send/task custody owner shared by loader transports; no request registry. */
+public final class NativeServerActorHandoffs {
+    // Native task custody budget, not a wire format or player permission gate.
+    private static final int MAX_PENDING_HANDOFFS = 1024;
+    private final net.minecraft.server.MinecraftServer server;
+    private final Object lock = new Object();
+    private final Map<UUID, Admission> actors = new HashMap<>();
+    private final Set<Handoff> pending = new HashSet<>();
+    private boolean stopped;
+    public NativeServerActorHandoffs(net.minecraft.server.MinecraftServer server) { this.server = server; }
+    private void owner() {
+        if (!NativeServerOwner.isOwner(server)) throw new IllegalStateException("Native handoff requires server owner");
+    }
+    public void admit(net.minecraft.server.level.ServerPlayer player) {
+        owner();
+        UUID actor = NativeServerOwner.actor(player);
+        Admission value = new Admission(player, NativeServerConnectionGuard.capture(player));
+        synchronized (lock) {
+            if (stopped || actors.containsKey(actor)) throw new IllegalStateException("Actor must be revoked before admission");
+            actors.put(actor, value);
+        }
+    }
+    /** Revoke before callbacks. Returned retirement action is invoked outside all native locks. */
+    public Runnable revoke(net.minecraft.server.level.ServerPlayer player) {
+        owner();
+        UUID actor = NativeServerOwner.actor(player);
+        List<Handoff> detached = new ArrayList<>();
+        synchronized (lock) {
+            Admission old = actors.get(actor);
+            if (old == null || old.player != player) return () -> {};
+            actors.remove(actor);
+            detach(old, detached);
+        }
+        return () -> retireAll(detached);
+    }
+    public Runnable stop() {
+        owner();
+        List<Handoff> detached = new ArrayList<>();
+        synchronized (lock) {
+            stopped = true;
+            actors.clear();
+            for (Handoff value : dev.openallay.util.Java8Collections.listCopyOf(pending)) {
+                if (value.state == State.PENDING) { value.state = State.RETIRED; pending.remove(value); detached.add(value); }
+            }
+        }
+        return () -> retireAll(detached);
+    }
+    private void detach(Admission token, List<Handoff> detached) {
+        for (Handoff value : dev.openallay.util.Java8Collections.listCopyOf(pending)) {
+            if (value.token == token && value.state == State.PENDING) {
+                value.state = State.RETIRED; pending.remove(value); detached.add(value);
+            }
+        }
+    }
+    public ServerBridgeSession.Transport bind(UUID actor, ServerBridgeSession.Transport wire) {
+        owner();
+        Admission token;
+        synchronized (lock) { token = actors.get(actor); }
+        return new ServerBridgeSession.Transport() {
+            @Override public ServerBridgeSession.Transport bind(UUID requested) {
+                if (!actor.equals(requested)) throw new IllegalArgumentException("Bound actor differs");
+                return this;
+            }
+            @Override public boolean send(UUID requested, String kind, String json) {
+                if (!actor.equals(requested)) return false;
+                // Tool sends use no-op retirement; no synchronous callback can enter Agent Owner.
+                return dispatch(requested, () -> wire.send(actor, kind, json), () -> {});
+            }
+            @Override public boolean dispatch(UUID requested, Runnable action, Runnable retired) {
+                if (!actor.equals(requested)) { retired.run(); return false; }
+                return enqueue(actor, token, action, retired, false);
+            }
+            @Override public boolean dispatchLater(UUID requested, Runnable action, Runnable retired) {
+                if (!actor.equals(requested)) { retired.run(); return false; }
+                return enqueue(actor, token, action, retired, true);
+            }
+        };
+    }
+    private boolean admitted(UUID actor, Admission token) {
+        synchronized (lock) { return token != null && !stopped && actors.get(actor) == token; }
+    }
+    private boolean nativeCurrent(UUID actor, Admission token) {
+        owner();
+        return admitted(actor, token) && NativeServerOwner.player(server, actor) == token.player
+                && NativeServerOwner.server(token.player) == server && token.connection.getAsBoolean();
+    }
+    private boolean enqueue(UUID actor, Admission token, Runnable action, Runnable retired, boolean nativeSchedule) {
+        Handoff value = new Handoff(actor, token, action, retired);
+        boolean rejected;
+        boolean atCapacity;
+        synchronized (lock) {
+            atCapacity = pending.size() >= MAX_PENDING_HANDOFFS;
+            rejected = token == null || stopped || actors.get(actor) != token
+                    || atCapacity;
+            if (!rejected) pending.add(value);
+            else value.state = State.RETIRED;
+        }
+        if (rejected) {
+            retired.run();
+            if (atCapacity) dev.openallay.OpenAllayConstants.LOGGER.warn("Native server handoff capacity reached; admission rejected");
+            return false;
+        }
+        if (NativeServerOwner.isOwner(server) && !nativeSchedule) return run(value);
+        try {
+            if (nativeSchedule && NativeServerOwner.isOwner(server)) NativeServerDeferredHandoff.enqueue(server, () -> run(value));
+            else NativeServerOwner.execute(server, () -> run(value));
+            return true;
+        }
+        catch (RuntimeException failure) {
+            Runnable cleanup = retirePending(value);
+            Throwable retained = attempt(failure, cleanup);
+            final class $oaPattern0_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = retained) instanceof java.lang.Error && (($oaPattern0_holder.bound = (Error) $oaPattern0_holder.value) != null))) throw $oaPattern0_holder.bound;
+            dev.openallay.OpenAllayConstants.LOGGER.error("Native server handoff queue rejected", retained);
+            return false;
+        } catch (Error failure) {
+            rethrow(attempt(failure, retirePending(value))); return false;
+        }
+    }
+    private Runnable retirePending(Handoff value) {
+        synchronized (lock) {
+            if (value.state != State.PENDING) return () -> {};
+            value.state = State.RETIRED; pending.remove(value);
+        }
+        return value.retired;
+    }
+    private boolean run(Handoff value) {
+        owner();
+        boolean claim;
+        synchronized (lock) {
+            if (value.state != State.PENDING) return false;
+            claim = !stopped && actors.get(value.actor) == value.token;
+            value.state = claim ? State.CLAIMED : State.RETIRED;
+            if (!claim) pending.remove(value);
+        }
+        if (!claim) { value.retired.run(); return false; }
+        Throwable failure = null;
+        boolean executed = false;
+        try {
+            if (nativeCurrent(value.actor, value.token)) { value.action.run(); executed = true; }
+        } catch (RuntimeException | Error error) { failure = error; }
+        synchronized (lock) { value.state = State.RETIRED; pending.remove(value); }
+        rethrow(attempt(failure, value.retired));
+        return executed;
+    }
+    private static void retireAll(List<Handoff> values) {
+        Throwable failure = null;
+        for (Handoff value : values) failure = attempt(failure, value.retired);
+        rethrow(failure);
+    }
+    /** Also used by native lifecycle owners: all cleanup is attempted, original Errors win. */
+    public static void cleanup(Runnable... actions) {
+        Throwable failure = null;
+        for (Runnable action : actions) failure = attempt(failure, action);
+        rethrow(failure);
+    }
+    private static Throwable attempt(Throwable first, Runnable action) {
+        try { action.run(); return first; }
+        catch (RuntimeException | Error second) {
+            if (first == null) return second;
+            if (second instanceof Error && !(first instanceof Error)) { second.addSuppressed(first); return second; }
+            if (first != second) first.addSuppressed(second);
+            return first;
+        }
+    }
+    private static void rethrow(Throwable failure) {
+        final class $oaPattern1_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = failure) instanceof java.lang.Error && (($oaPattern1_holder.bound = (Error) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
+        final class $oaPattern2_Holder { java.lang.Throwable value; RuntimeException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = failure) instanceof java.lang.RuntimeException && (($oaPattern2_holder.bound = (RuntimeException) $oaPattern2_holder.value) != null))) throw $oaPattern2_holder.bound;
+    }
+    @dev.openallay.value.ValueType(Admission.ValueSchemaProvider.class)
+private static final class Admission {
+    private final net.minecraft.server.level.ServerPlayer player;
+    private final BooleanSupplier connection;
+    private Admission(net.minecraft.server.level.ServerPlayer player, BooleanSupplier connection) {
+        this.player = player;
+        this.connection = connection;
+    }
+    public net.minecraft.server.level.ServerPlayer player() { return player; }
+    public BooleanSupplier connection() { return connection; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Admission)) return false;
+        Admission that = (Admission) other;
+        return java.util.Objects.equals(player, that.player) && java.util.Objects.equals(connection, that.connection);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(player);
+        hash = 31 * hash + java.util.Objects.hashCode(connection);
+        return hash;
+    }
+    @Override public String toString() { return "Admission[player=" + player + ", connection=" + connection + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Admission> schema() {
+            return new dev.openallay.value.ValueSchema<>(Admission.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Admission>>asList(new dev.openallay.value.ValueSchema.Component<>(Admission.class, "player", Admission::player), new dev.openallay.value.ValueSchema.Component<>(Admission.class, "connection", Admission::connection)), arguments -> new Admission((net.minecraft.server.level.ServerPlayer) arguments[0], (BooleanSupplier) arguments[1]));
+        }
+    }
+}
+    private enum State { PENDING, CLAIMED, RETIRED }
+    private static final class Handoff {
+        final UUID actor; final Admission token; final Runnable action; final Runnable retired;
+        State state = State.PENDING;
+        Handoff(UUID actor, Admission token, Runnable action, Runnable retired) {
+            this.actor = actor; this.token = token; this.action = action; this.retired = retired;
+        }
+    }
+}

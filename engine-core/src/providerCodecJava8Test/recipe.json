@@ -1,0 +1,267 @@
+{
+  "acceptedSourceCommit": "5aa19714d79814d051662a5eaf35d493b9ca37e5",
+  "scope": "Canonical complete provider codec/stream/config frontier; actualusage/parser algorithms preserved, no metadata/credential production changes",
+  "recordPass1": {
+    "dev/openallay/model/http/SseEvent.java": [
+      "SseEvent"
+    ],
+    "dev/openallay/model/config/ModelConfig.java": [
+      "ModelConfig.DiagnosticView"
+    ],
+    "dev/openallay/agent/context/ContextBudget.java": [
+      "ContextBudget"
+    ]
+  },
+  "recordPass2": {
+    "dev/openallay/model/config/ModelConfig.java": [
+      "ModelConfig"
+    ]
+  },
+  "apiEdits": {
+    "dev/openallay/model/anthropic/AnthropicJsonCodec.java": [
+      {
+        "before": "if (block instanceof ModelContent.Text text) {",
+        "after": "if (block instanceof ModelContent.Text) {\n            ModelContent.Text text = (ModelContent.Text) block;",
+        "occurrences": 2
+      },
+      {
+        "before": "if (block instanceof ModelContent.Image image) {",
+        "after": "if (block instanceof ModelContent.Image) {\n            ModelContent.Image image = (ModelContent.Image) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "if (block instanceof ModelContent.Reasoning reasoning) {",
+        "after": "if (block instanceof ModelContent.Reasoning) {\n            ModelContent.Reasoning reasoning = (ModelContent.Reasoning) block;",
+        "occurrences": 2
+      },
+      {
+        "before": "if (block instanceof ModelContent.ToolUse toolUse) {",
+        "after": "if (block instanceof ModelContent.ToolUse) {\n            ModelContent.ToolUse toolUse = (ModelContent.ToolUse) block;",
+        "occurrences": 2
+      },
+      {
+        "before": "if (block instanceof ModelContent.ToolResult result) {",
+        "after": "if (block instanceof ModelContent.ToolResult) {\n            ModelContent.ToolResult result = (ModelContent.ToolResult) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "if (block instanceof ModelContent.Image image && image.originToolUseId() != null) {",
+        "after": "if (block instanceof ModelContent.Image && ((ModelContent.Image) block).originToolUseId() != null) {\n                    ModelContent.Image image = (ModelContent.Image) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "        return switch (requiredString(object, \"type\")) {\n            case \"text\" -> new ModelContent.Text(requiredString(object, \"text\"));\n            case \"thinking\" -> new ModelContent.Reasoning(\n                    requiredString(object, \"thinking\"),\n                    object.has(\"signature\") ? object.get(\"signature\").getAsString() : null);\n            case \"tool_use\" -> new ModelContent.ToolUse(\n                    requiredString(object, \"id\"),\n                    requiredString(object, \"name\"),\n                    object.getAsJsonObject(\"input\"));\n            default -> throw new IllegalArgumentException(\n                    \"Unsupported Anthropic content type: \" + requiredString(object, \"type\"));\n        };",
+        "after": "        switch (requiredString(object, \"type\")) {\n            case \"text\": return new ModelContent.Text(requiredString(object, \"text\"));\n            case \"thinking\": return new ModelContent.Reasoning(\n                    requiredString(object, \"thinking\"),\n                    object.has(\"signature\") ? object.get(\"signature\").getAsString() : null);\n            case \"tool_use\": return new ModelContent.ToolUse(\n                    requiredString(object, \"id\"),\n                    requiredString(object, \"name\"),\n                    object.getAsJsonObject(\"input\"));\n            default: throw new IllegalArgumentException(\n                    \"Unsupported Anthropic content type: \" + requiredString(object, \"type\"));\n        }",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/openai/OpenAiJsonCodec.java": [
+      {
+        "before": "if (block instanceof ModelContent.Text value) {",
+        "after": "if (block instanceof ModelContent.Text) {\n            ModelContent.Text value = (ModelContent.Text) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "if (block instanceof ModelContent.Image value) {",
+        "after": "if (block instanceof ModelContent.Image) {\n            ModelContent.Image value = (ModelContent.Image) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "if (block instanceof ModelContent.Reasoning value) {",
+        "after": "if (block instanceof ModelContent.Reasoning) {\n            ModelContent.Reasoning value = (ModelContent.Reasoning) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "if (block instanceof ModelContent.ToolUse value) {",
+        "after": "if (block instanceof ModelContent.ToolUse) {\n            ModelContent.ToolUse value = (ModelContent.ToolUse) block;",
+        "occurrences": 1
+      },
+      {
+        "before": "text.isEmpty()",
+        "after": "text.length() == 0",
+        "occurrences": 1
+      },
+      {
+        "before": "!reasoning.isEmpty()",
+        "after": "reasoning.length() != 0",
+        "occurrences": 1
+      },
+      {
+        "before": "message.content().stream()\n                .filter(ModelContent.ToolResult.class::isInstance)\n                .map(ModelContent.ToolResult.class::cast)\n                .toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(message.content().stream()\n                .filter(ModelContent.ToolResult.class::isInstance)\n                .map(ModelContent.ToolResult.class::cast))",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/ProviderToolIds.java": [
+      {
+        "before": "if (content instanceof ModelContent.ToolUse use) {",
+        "after": "if (content instanceof ModelContent.ToolUse) {\n            ModelContent.ToolUse use = (ModelContent.ToolUse) content;",
+        "occurrences": 1
+      },
+      {
+        "before": "if (content instanceof ModelContent.ToolResult result) {",
+        "after": "if (content instanceof ModelContent.ToolResult) {\n            ModelContent.ToolResult result = (ModelContent.ToolResult) content;",
+        "occurrences": 1
+      },
+      {
+        "before": "ids.stream().filter(value -> !providerSafe.test(value)).sorted().toList()",
+        "after": "dev.openallay.util.Java8Collections.toList(ids.stream().filter(value -> !providerSafe.test(value)).sorted())",
+        "occurrences": 1
+      },
+      {
+        "before": "Map.copyOf(mapping)",
+        "after": "dev.openallay.util.Java8Collections.mapCopyOf(mapping)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/anthropic/AnthropicStreamAccumulator.java": [
+      {
+        "before": "var value = object.get(\"usage\");",
+        "after": "com.google.gson.JsonElement value = object.get(\"usage\");",
+        "occurrences": 1
+      },
+      {
+        "before": "        switch (type) {\n            case \"message_start\" -> messageStart(root.getAsJsonObject(\"message\"));\n            case \"content_block_start\" -> blockStart(\n                    root.get(\"index\").getAsInt(), root.getAsJsonObject(\"content_block\"));\n            case \"content_block_delta\" -> blockDelta(\n                    root.get(\"index\").getAsInt(), root.getAsJsonObject(\"delta\"));\n            case \"content_block_stop\" -> blockStop(root.get(\"index\").getAsInt());\n            case \"message_delta\" -> messageDelta(root);\n            case \"message_stop\", \"ping\" -> {}\n            case \"error\" -> throw new IllegalArgumentException(\"Anthropic SSE error event\");\n            default -> throw new IllegalArgumentException(\"Unknown Anthropic SSE event: \" + type);\n        }",
+        "after": "        switch (type) {\n            case \"message_start\": messageStart(root.getAsJsonObject(\"message\")); break;\n            case \"content_block_start\": blockStart(\n                    root.get(\"index\").getAsInt(), root.getAsJsonObject(\"content_block\")); break;\n            case \"content_block_delta\": blockDelta(\n                    root.get(\"index\").getAsInt(), root.getAsJsonObject(\"delta\")); break;\n            case \"content_block_stop\": blockStop(root.get(\"index\").getAsInt()); break;\n            case \"message_delta\": messageDelta(root); break;\n            case \"message_stop\": case \"ping\": break;\n            case \"error\": throw new IllegalArgumentException(\"Anthropic SSE error event\");\n            default: throw new IllegalArgumentException(\"Unknown Anthropic SSE event: \" + type);\n        }",
+        "occurrences": 1
+      },
+      {
+        "before": "        switch (type) {\n            case \"text_delta\" -> {\n                String text = delta.get(\"text\").getAsString();\n                block.value.append(text);\n                events.accept(new ModelEvent.TextDelta(text));\n            }\n            case \"thinking_delta\" -> {\n                String text = delta.get(\"thinking\").getAsString();\n                block.value.append(text);\n                events.accept(new ModelEvent.ReasoningDelta(text));\n            }\n            case \"signature_delta\" -> block.signature = delta.get(\"signature\").getAsString();\n            case \"input_json_delta\" -> block.value.append(delta.get(\"partial_json\").getAsString());\n            default -> throw new IllegalArgumentException(\"Unknown Anthropic delta: \" + type);\n        }",
+        "after": "        switch (type) {\n            case \"text_delta\": {\n                String text = delta.get(\"text\").getAsString();\n                block.value.append(text);\n                events.accept(new ModelEvent.TextDelta(text));\n                break;\n            }\n            case \"thinking_delta\": {\n                String text = delta.get(\"thinking\").getAsString();\n                block.value.append(text);\n                events.accept(new ModelEvent.ReasoningDelta(text));\n                break;\n            }\n            case \"signature_delta\": block.signature = delta.get(\"signature\").getAsString(); break;\n            case \"input_json_delta\": block.value.append(delta.get(\"partial_json\").getAsString()); break;\n            default: throw new IllegalArgumentException(\"Unknown Anthropic delta: \" + type);\n        }",
+        "occurrences": 1
+      },
+      {
+        "before": "            return switch (type) {\n                case \"text\" -> new ModelContent.Text(value.toString());\n                case \"thinking\" -> new ModelContent.Reasoning(value.toString(), signature);\n                case \"tool_use\" -> new ModelContent.ToolUse(\n                        id,\n                        name,\n                        value.isEmpty()\n                                ? new JsonObject()\n                                : dev.openallay.json.JsonTrees.parse(value.toString()).getAsJsonObject());\n                default -> throw new IllegalArgumentException(\"Unsupported Anthropic block: \" + type);\n            };",
+        "after": "            switch (type) {\n                case \"text\": return new ModelContent.Text(value.toString());\n                case \"thinking\": return new ModelContent.Reasoning(value.toString(), signature);\n                case \"tool_use\": return new ModelContent.ToolUse(\n                        id,\n                        name,\n                        value.length() == 0\n                                ? new JsonObject()\n                                : dev.openallay.json.JsonTrees.parse(value.toString()).getAsJsonObject());\n                default: throw new IllegalArgumentException(\"Unsupported Anthropic block: \" + type);\n            }",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/openai/OpenAiStreamAccumulator.java": [
+      {
+        "before": "tool.name.isEmpty()",
+        "after": "tool.name.length() == 0",
+        "occurrences": 1
+      },
+      {
+        "before": "tool.arguments.isEmpty()",
+        "after": "tool.arguments.length() == 0",
+        "occurrences": 1
+      },
+      {
+        "before": "!text.isEmpty()",
+        "after": "text.length() != 0",
+        "occurrences": 1
+      },
+      {
+        "before": "!reasoning.isEmpty()",
+        "after": "reasoning.length() != 0",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/http/ModelTransportDiagnostics.java": [
+      {
+        "before": "Set.of(",
+        "after": "dev.openallay.util.Java8Collections.setOf(",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/config/ModelConfig.java": [
+      {
+        "before": "model.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(model)",
+        "occurrences": 1
+      },
+      {
+        "before": "java.util.Map.of()",
+        "after": "dev.openallay.util.Java8Collections.mapOf()",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/tokenizer/ModelTokenEncoding.java": [
+      {
+        "before": "value.isBlank()",
+        "after": "dev.openallay.util.Java8Strings.isBlank(value)",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/model/config/ModelReasoningEffort.java": [
+      {
+        "before": "        return switch (protocol) {\n            case OPENAI_CHAT -> List.of(values());\n            case ANTHROPIC_MESSAGES -> List.of(AUTO, LOW, MEDIUM, HIGH, XHIGH, MAX);\n        };",
+        "after": "        switch (protocol) {\n            case OPENAI_CHAT: return dev.openallay.util.Java8Collections.listOf(values());\n            case ANTHROPIC_MESSAGES: return dev.openallay.util.Java8Collections.listOf(AUTO, LOW, MEDIUM, HIGH, XHIGH, MAX);\n            default: throw new IncompatibleClassChangeError();\n        }",
+        "occurrences": 1
+      }
+    ],
+    "dev/openallay/logging/OpenAllayLogger.java": [
+      {
+        "before": "import java.lang.System.Logger.Level;",
+        "after": "import java.util.logging.Level;",
+        "occurrences": 1
+      },
+      {
+        "before": "private final System.Logger logger;",
+        "after": "private final java.util.logging.Logger logger;",
+        "occurrences": 1
+      },
+      {
+        "before": "logger = System.getLogger(name);",
+        "after": "logger = java.util.logging.Logger.getLogger(name);",
+        "occurrences": 1
+      },
+      {
+        "before": "log(Level.ERROR, message, arguments);",
+        "after": "log(Level.SEVERE, message, arguments);",
+        "occurrences": 1
+      },
+      {
+        "before": "arguments[count - 1] instanceof Throwable throwable\n                ? throwable : null",
+        "after": "arguments[count - 1] instanceof Throwable\n                ? (Throwable) arguments[count - 1] : null",
+        "occurrences": 1
+      }
+    ]
+  },
+  "rawPreimageSha256": {
+    "dev/openallay/model/anthropic/AnthropicJsonCodec.java": "d0c944a5c63673c3e2390c3fddaf7a33cdd0044cc5bc5cd05cf9f3376701a21b",
+    "dev/openallay/model/anthropic/AnthropicStreamAccumulator.java": "ee0257b5ec9df00d400a0e9590818560b2a41f6415396c4288363268bdee7128",
+    "dev/openallay/model/openai/OpenAiJsonCodec.java": "1430e01d77f1278ca334147190723e9529960ae996e58902f0b1a84163ac880a",
+    "dev/openallay/model/openai/OpenAiStreamAccumulator.java": "bba96e8a3acdce9c0a8d901ce9aba35c5be0663e532de1c05ad5656077680ee8",
+    "dev/openallay/model/http/SseEvent.java": "63f29a031139a8ec378eabdeea9e9b67b5434bbf88a960aefc0e7364a5125184",
+    "dev/openallay/model/ProviderToolIds.java": "973745914353862626f483ef321c7bb646a5a489c8ff733840b4fe5d782f6a32",
+    "dev/openallay/model/http/ModelTransportDiagnostics.java": "6b88e4958334e1a3dbaa0ca70bdac369185dbeab54a1d40cb6b4a85808344539",
+    "dev/openallay/model/config/ModelConfig.java": "93a9abd0cc716c10d5e696a738bb3eb1fa844ae1a0a4e508abe8db9ec4186637",
+    "dev/openallay/model/config/ModelReasoningEffort.java": "b420d9772a865cb4e3b13fb6f281c09bbaae6fd7e8377ac8f88d8e78f6cbd810",
+    "dev/openallay/agent/context/ContextBudget.java": "d19817e21e42fac7753b6e0ab7716e69b01b531ccae6339bb9cda72183819be5",
+    "dev/openallay/model/tokenizer/ModelTokenEncoding.java": "e359550768ae704370ecde00080618faae914a0a1fcf9c4b29e4103d109a5dc7",
+    "dev/openallay/logging/OpenAllayLogger.java": "d05c19fcfee8c81a2bd322c0ebbad8902cadd2381cd71ab91b27e10661a447b1"
+  },
+  "rawPreimageGitBlob": {
+    "dev/openallay/model/anthropic/AnthropicJsonCodec.java": "5b97b85eb291e451e8722d806ee157e1696c8b44",
+    "dev/openallay/model/anthropic/AnthropicStreamAccumulator.java": "b7bcc1695f50619648ea748553ffb94472f50431",
+    "dev/openallay/model/openai/OpenAiJsonCodec.java": "9f9320ae6a2dd4a8bd4c0247d63ac37be943632b",
+    "dev/openallay/model/openai/OpenAiStreamAccumulator.java": "7bff1f7acbe8329a92f0c3ec5a574a1e531ea138",
+    "dev/openallay/model/http/SseEvent.java": "7725c4e3e15c15183fa8fca03b7215518a869508",
+    "dev/openallay/model/ProviderToolIds.java": "3ce41fc18ce462e937d380b8500941165a2a1469",
+    "dev/openallay/model/http/ModelTransportDiagnostics.java": "c880637040bdf82497dd4a135f54183819172814",
+    "dev/openallay/model/config/ModelConfig.java": "1f0dd9204d9f7653bb16676368fb893711b5bf85",
+    "dev/openallay/model/config/ModelReasoningEffort.java": "a807d40ee9766393925b262835d9f35faef6136b",
+    "dev/openallay/agent/context/ContextBudget.java": "cde4dcac7ee8d181fb08395ffc1507c42461797f",
+    "dev/openallay/model/tokenizer/ModelTokenEncoding.java": "baa6acee55125d954e118c0085600cd85634513c",
+    "dev/openallay/logging/OpenAllayLogger.java": "b39ea6f94d8f949daaa043ee993a08e5671de66e"
+  },
+  "apiPostimageSha256": {
+    "dev/openallay/model/anthropic/AnthropicJsonCodec.java": "b6245a807963e3f805303b88457197760bf8456b0cfbb4518d88448e97fa2620",
+    "dev/openallay/model/anthropic/AnthropicStreamAccumulator.java": "fad3e96fc85b980f45e49097de49ee375fb728b18bbeb772ffca433bebb4e243",
+    "dev/openallay/model/openai/OpenAiJsonCodec.java": "5aed13899258a48454645390ff59d367707338d4d6a6532bc4bac68db537700e",
+    "dev/openallay/model/openai/OpenAiStreamAccumulator.java": "ecca426b8f3c10aecfac5fd9cc77255b9716fc8797eebaef38a2d237798bd7f7",
+    "dev/openallay/model/http/SseEvent.java": "63f29a031139a8ec378eabdeea9e9b67b5434bbf88a960aefc0e7364a5125184",
+    "dev/openallay/model/ProviderToolIds.java": "741a10d2b9a9f202822dd708f5bfd589d8f5d5d54080a55551bbbc1c7b409342",
+    "dev/openallay/model/http/ModelTransportDiagnostics.java": "9c5200b3a16e89626448d8e5b5f21d040b2ec6c21e5cfe57a51641761c8ff486",
+    "dev/openallay/model/config/ModelConfig.java": "3a67905a488da37e235d4ee71c2b0f3420d72d7e969f355454a459a2a56a23a7",
+    "dev/openallay/model/config/ModelReasoningEffort.java": "c3beadc476df2aebd3ae10801c7b3caf91c428ff07a2b25a68883a3dcaac4bb5",
+    "dev/openallay/agent/context/ContextBudget.java": "d19817e21e42fac7753b6e0ab7716e69b01b531ccae6339bb9cda72183819be5",
+    "dev/openallay/model/tokenizer/ModelTokenEncoding.java": "afcc2351f9df448301d7724e179b614e61c6af3aa484f1105279605574cb51c4",
+    "dev/openallay/logging/OpenAllayLogger.java": "8ab259c3ff482f018ea3a1203d8f998b0e5027402f1a1fde83e2e21147abc9ee"
+  },
+  "converter": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+  "converterSha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+  "loggerBackendChange": "System.Logger (modern public bridge) to java.util.logging.Logger on canonical Java8 owner. INFO/WARNING/ERROR map to JUL INFO/WARNING/SEVERE; custom LoggerFinder behavior not retained. Message formatting/cause/lazy checks preserved."
+}

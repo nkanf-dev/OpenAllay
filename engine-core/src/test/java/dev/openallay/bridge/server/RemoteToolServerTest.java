@@ -67,6 +67,52 @@ final class RemoteToolServerTest {
     }
 
     @Test
+    void oldCompletionCannotRemoveReplacementCorrelationWithSameActorAndId() {
+        UUID actor = UUID.randomUUID();
+        UUID correlation = UUID.randomUUID();
+        ScopeTool tool = new ScopeTool();
+        ToolRegistry tools = new ToolRegistry();
+        tools.register("test", List.of(tool));
+        CorrelationRegistry correlations = new CorrelationRegistry();
+        List<CompletableFuture<ToolInvocationContext>> captures = new ArrayList<>();
+        List<RemoteToolResultChunkPayload> output = new ArrayList<>();
+        RemoteToolServer server = new RemoteToolServer(new ExportedToolPolicy(tools, Set.of("test:scope")),
+                (sender, capabilities, scope, cancellation) -> {
+                    CompletableFuture<ToolInvocationContext> capture = new CompletableFuture<>();
+                    captures.add(capture); return capture;
+                }, (sender, chunk) -> output.add(chunk), correlations, dev.openallay.json.EngineJson.create(), 128);
+        RemoteToolCallPayload call = new RemoteToolCallPayload(correlation, "main", "test:scope", "{}");
+        server.handle(actor, call);
+        server.disconnect(actor);
+        server.handle(actor, call);
+        CancellationSignal replacement = correlations.find(actor, correlation).orElseThrow().cancellation();
+        captures.get(0).complete(ToolInvocationContext.developmentConsole(actor + "/main"));
+        assertTrue(correlations.find(actor, correlation).orElseThrow().cancellation() == replacement);
+        assertTrue(output.isEmpty());
+        captures.get(1).complete(ToolInvocationContext.developmentConsole(actor + "/main"));
+        assertTrue(correlations.find(actor, correlation).isEmpty());
+        assertFalse(output.isEmpty());
+    }
+
+    @Test
+    void synchronousBindFailureRetiresOnlyItsOriginalCorrelation() {
+        UUID actor = UUID.randomUUID(); UUID correlation = UUID.randomUUID();
+        ScopeTool tool = new ScopeTool(); ToolRegistry tools = new ToolRegistry();
+        tools.register("test", List.of(tool)); CorrelationRegistry correlations = new CorrelationRegistry();
+        RemoteToolServer.ResponseSink sink = new RemoteToolServer.ResponseSink() {
+            @Override public void send(UUID sender, RemoteToolResultChunkPayload chunk) { throw new AssertionError(); }
+            @Override public RemoteToolServer.ResponseSink bind(UUID sender) { throw new IllegalStateException("bind failed"); }
+        };
+        RemoteToolServer server = new RemoteToolServer(new ExportedToolPolicy(tools, Set.of("test:scope")),
+                (sender, capabilities, scope, cancellation) -> { throw new AssertionError("capture ran"); },
+                sink, correlations, dev.openallay.json.EngineJson.create(), 128);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> server.handle(actor,
+                new RemoteToolCallPayload(correlation, "main", "test:scope", "{}")));
+        assertTrue(correlations.find(actor, correlation).isEmpty());
+        assertEquals(0, tool.asyncInvocations);
+    }
+
+    @Test
     void rootFreeServerJavascriptReadsTheServerSnapshotWithoutScanningSource() throws Exception {
         JavascriptRequest request = new JavascriptRequest();
         try {

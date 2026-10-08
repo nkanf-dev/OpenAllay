@@ -1,6 +1,5 @@
 package dev.openallay.context.minecraft;
 
-import dev.architectury.fluid.FluidStack;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
@@ -38,11 +37,6 @@ public final class MinecraftItemDataFacts {
         return new Defaults(ids, encoded);
     }
     public static boolean hasCustomData(ItemStack stack) { return !stack.getComponentsPatch().isEmpty(); }
-    /** Optional REI/Architectury linkage stays in a separate nested class. */
-    public static final class Fluids {
-        private Fluids() {}
-        public static boolean hasCustomData(FluidStack stack) { return !stack.getPatch().isEmpty(); }
-    }
     public static DataResult<JsonElement> persistentData(ItemStack stack, RegistryAccess registries) {
         return DataComponentMap.CODEC.encodeStart(
                 registries.createSerializationContext(JsonOps.INSTANCE), stack.getComponents());

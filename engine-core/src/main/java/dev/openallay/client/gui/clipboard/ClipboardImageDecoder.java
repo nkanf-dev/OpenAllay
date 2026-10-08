@@ -12,8 +12,8 @@ final class ClipboardImageDecoder {
     private ClipboardImageDecoder() {}
 
     static BufferedImage read(InputStream bytes) throws IOException {
-        try (var input = new MemoryCacheImageInputStream(bytes)) {
-            var readers = ImageIO.getImageReaders(input);
+        try (MemoryCacheImageInputStream input = new MemoryCacheImageInputStream(bytes)) {
+            java.util.Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) return null;
             ImageReader reader = readers.next();
             try {

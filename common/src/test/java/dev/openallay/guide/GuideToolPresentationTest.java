@@ -263,14 +263,14 @@ final class GuideToolPresentationTest {
         JsonObject english = language("en_us");
         JsonObject chinese = language("zh_cn");
         String previewKey = GuideToolMessage.Key.ANALYSIS_PREVIEW.translationKey();
-        assertEquals("Execution complete",
+        assertEquals("Results ready",
                 english.get(previewKey).getAsString().formatted("1", "5"));
-        assertEquals("执行完成",
+        assertEquals("结果已准备好",
                 chinese.get(previewKey).getAsString().formatted("1", "5"));
         String fieldsKey = GuideToolMessage.Key.ANALYSIS_FIELDS_PREVIEW.translationKey();
-        assertEquals("Execution complete",
+        assertEquals("Results ready",
                 english.get(fieldsKey).getAsString().formatted("5", "5"));
-        assertEquals("执行完成",
+        assertEquals("结果已准备好",
                 chinese.get(fieldsKey).getAsString().formatted("5", "5"));
         for (JsonObject locale : List.of(english, chinese)) {
             assertTrue(!locale.get(previewKey).getAsString().contains("/"));
@@ -287,8 +287,8 @@ final class GuideToolPresentationTest {
     void everyClosedMessageHasEnglishAndSimplifiedChineseTranslations() {
         JsonObject english = language("en_us");
         JsonObject chinese = language("zh_cn");
-        assertEquals("Run JavaScript", english.get("screen.openallay.tool.run_javascript").getAsString());
-        assertEquals("执行 JavaScript", chinese.get("screen.openallay.tool.run_javascript").getAsString());
+        assertEquals("Work on your request", english.get("screen.openallay.tool.run_javascript").getAsString());
+        assertEquals("处理你的请求", chinese.get("screen.openallay.tool.run_javascript").getAsString());
         for (String key : List.of("screen.openallay.tool.run_javascript",
                 "screen.openallay.tool.intent.label")) {
             assertTrue(english.has(key), "missing en_us: " + key);

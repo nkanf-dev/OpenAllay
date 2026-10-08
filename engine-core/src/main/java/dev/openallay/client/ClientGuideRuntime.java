@@ -160,11 +160,13 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         this.selectedSessions = Objects.requireNonNull(selectedSessions, "selectedSessions");
         this.promptModes = promptModes;
         LocalAgentToolExecutor local = new LocalAgentToolExecutor(capabilities.localTools(), gson);
-        toolExecutor = extension == null
+        final class $oaPattern0_Holder { dev.openallay.agent.tool.AgentToolExecutor value; RemoteToolExecutor bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+toolExecutor = extension == null
                 ? local
-                : extension instanceof RemoteToolExecutor remote
-                        ? new ClientPlacedToolExecutor(local, remote)
-                        : new CompositeAgentToolExecutor(List.of(local, extension));
+                : (($oaPattern0_holder.value = extension) instanceof dev.openallay.bridge.client.RemoteToolExecutor && (($oaPattern0_holder.bound = (RemoteToolExecutor) $oaPattern0_holder.value) != null))
+                        ? new ClientPlacedToolExecutor(local, $oaPattern0_holder.bound)
+                        : new CompositeAgentToolExecutor(dev.openallay.util.Java8Collections.listOf(local, extension));
         agent = new GameGuideAgent(
                 endpoint.scheduler(), toolExecutor, sessions, gson, endpoint.compactor(),
                 (request, tokens) -> {
@@ -178,10 +180,9 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                                             endpoint.contextBudget(), endpoint.contextBudget() == null
                                                     ? null : endpoint.modelIdentifier(),
                                             endpoint.estimator().imageAccounting(
-                                                    java.util.stream.Stream.concat(
+                                                    dev.openallay.util.Java8Collections.toList(java.util.stream.Stream.concat(
                                                             sessions.history(request.sessionKey()).stream(),
-                                                            java.util.stream.Stream.of(request.userInput()))
-                                                            .toList())));
+                                                            java.util.stream.Stream.of(request.userInput()))))));
                         }
                     }
                 });
@@ -242,9 +243,9 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         ClientGuideRuntime enabled = withCapabilities(capabilities.forRequest(true, true));
         ContextTokenEstimator estimator = endpoint.estimator();
         int promptAndTools = Math.max(
-                estimator.estimate(budgetSystemPrompt(systemPrompt()), List.of(), toolExecutor.definitions()),
+                estimator.estimate(budgetSystemPrompt(systemPrompt()), dev.openallay.util.Java8Collections.listOf(), toolExecutor.definitions()),
                 estimator.estimate(enabled.budgetSystemPrompt(enabled.systemPrompt(true, true)),
-                        List.of(), enabled.toolExecutor.definitions()));
+                        dev.openallay.util.Java8Collections.listOf(), enabled.toolExecutor.definitions()));
         if (promptAndTools >= endpoint.contextBudget().inputTokens()) {
             return Optional.empty();
         }
@@ -256,13 +257,13 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         // Match the Agent's initial actual system delivery, including inline Skill range facts.
         AgentToolExecutor captured = toolExecutor;
         String system = captured.skillSystemPrompt(prompt);
-        var retained = new dev.openallay.skill.RetainedSkillContext();
+        dev.openallay.skill.RetainedSkillContext retained = new dev.openallay.skill.RetainedSkillContext();
         String correlation = "context-budget-" + UUID.randomUUID();
         captured.prepareSystem(system, retained);
-        captured.prepareContext(correlation, List.of(), retained);
+        captured.prepareContext(correlation, dev.openallay.util.Java8Collections.listOf(), retained);
         try {
             String facts = captured.skillManifest(correlation);
-            return facts.isBlank() ? system : system + "\n" + facts;
+            return dev.openallay.util.Java8Strings.isBlank(facts) ? system : system + "\n" + facts;
         } finally {
             captured.closeSkillContext(correlation);
         }
@@ -314,8 +315,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 new ToolResult.Failure<>("compact_cancelled", "Manual compaction was cancelled"));
         ToolResult<AgentSessionStore.ControlLease> reservation = sessions.reserveControl(
                 new AgentSessionKey(actor, sessionId), controlId, durableSeed);
-        if (reservation instanceof ToolResult.Failure<AgentSessionStore.ControlLease> failure) {
-            return CompletableFuture.completedFuture(new ToolResult.Failure<>(failure.code(), failure.message()));
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.agent.session.AgentSessionStore.ControlLease> value; ToolResult.Failure<AgentSessionStore.ControlLease> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = reservation) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<AgentSessionStore.ControlLease>) $oaPattern1_holder.value) != null))) {
+            return CompletableFuture.completedFuture(new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message()));
         }
         AgentSessionStore.ControlLease lease =
                 ((ToolResult.Success<AgentSessionStore.ControlLease>) reservation).value();
@@ -337,7 +340,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                         "The selected model has no confirmed image input support"));
             }
             ContextCompactor compactor = endpoint.compactor();
-            List<dev.openallay.model.ModelToolDefinition> definitions = List.copyOf(capturedTools.definitions());
+            List<dev.openallay.model.ModelToolDefinition> definitions = dev.openallay.util.Java8Collections.listCopyOf(capturedTools.definitions());
             // This index is private to preparation. It never touches the session's retained facts.
             RetainedSkillContext retained = new RetainedSkillContext();
             String system = capturedTools.skillSystemPrompt(captured.systemPrompt(
@@ -349,7 +352,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 lease.cancellation().throwIfCancelled();
                 capturedTools.prepareContext(scope.correlationId, candidate, retained);
                 String facts = capturedTools.skillManifest(scope.correlationId);
-                return facts.isBlank() ? system : system + "\n" + facts;
+                return dev.openallay.util.Java8Strings.isBlank(facts) ? system : system + "\n" + facts;
             };
             int before = compactor.estimateTokens(prompt.apply(source), source, definitions);
             if (source.isEmpty()) {
@@ -388,7 +391,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                             scope.finishPreparation();
                         }
                     }).thenApply(result -> {
-                        if (result instanceof ToolResult.Failure<GuidePreparedCompaction>) scope.close();
+                        if (result instanceof ToolResult.Failure<?>) scope.close();
                         return result;
                     });
         } catch (Throwable failure) {
@@ -418,8 +421,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private static boolean realQuestion(ModelMessage message) {
         if (message.role() != ModelRole.USER || message.content().stream().anyMatch(
                 ModelContent.ToolResult.class::isInstance)) return false;
-        if (message.content().get(0) instanceof ModelContent.Text text
-                && text.text().startsWith("[OpenAllay derived conversation memory; NOT factual evidence]\n")) {
+        final class $oaPattern2_Holder { dev.openallay.model.ModelContent value; ModelContent.Text bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = message.content().get(0)) instanceof dev.openallay.model.ModelContent.Text && (($oaPattern2_holder.bound = (ModelContent.Text) $oaPattern2_holder.value) != null))
+                && $oaPattern2_holder.bound.text().startsWith("[OpenAllay derived conversation memory; NOT factual evidence]\n")) {
             return false;
         }
         return message.content().stream().anyMatch(item -> item instanceof ModelContent.Text
@@ -433,8 +438,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
         }
         if (cancellation.isCancelled()) return new ToolResult.Failure<>(
                 "compact_cancelled", "Manual compaction was cancelled");
-        if (failure instanceof ModelClientException model) return new ToolResult.Failure<>(
-                model.failure().code(), model.failure().message());
+        final class $oaPattern3_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = failure) instanceof dev.openallay.model.ModelClientException && (($oaPattern3_holder.bound = (ModelClientException) $oaPattern3_holder.value) != null))) return new ToolResult.Failure<>(
+                $oaPattern3_holder.bound.failure().code(), $oaPattern3_holder.bound.failure().message());
         return new ToolResult.Failure<>("compact_failed", "Manual compaction could not prepare a valid summary");
     }
 
@@ -459,11 +466,17 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
 
         private void observeUsage(ModelEvent event) {
             AgentEvent forwarded;
-            if (event instanceof ModelEvent.UsageStarted started) forwarded = new AgentEvent.ModelUsageStarted(
-                    started.callId(), started.modelIdentifier());
-            else if (event instanceof ModelEvent.UsageObserved observed) forwarded = new AgentEvent.ModelUsageObserved(
-                    observed.callId(), observed.modelIdentifier(), observed.usage());
+            final class $oaPattern4_Holder { dev.openallay.model.ModelEvent value; ModelEvent.UsageStarted bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = event) instanceof dev.openallay.model.ModelEvent.UsageStarted && (($oaPattern4_holder.bound = (ModelEvent.UsageStarted) $oaPattern4_holder.value) != null))) forwarded = new AgentEvent.ModelUsageStarted(
+                    $oaPattern4_holder.bound.callId(), $oaPattern4_holder.bound.modelIdentifier());
+            else {
+final class $oaPattern5_Holder { dev.openallay.model.ModelEvent value; ModelEvent.UsageObserved bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = event) instanceof dev.openallay.model.ModelEvent.UsageObserved && (($oaPattern5_holder.bound = (ModelEvent.UsageObserved) $oaPattern5_holder.value) != null))) forwarded = new AgentEvent.ModelUsageObserved(
+                    $oaPattern5_holder.bound.callId(), $oaPattern5_holder.bound.modelIdentifier(), $oaPattern5_holder.bound.usage());
             else return;
+}
             usage.accept(forwarded);
         }
 
@@ -497,7 +510,7 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
                 GuideCompactResult outcome, List<ModelMessage> projection) {
             this.scope = scope;
             this.outcome = outcome;
-            this.projection = List.copyOf(projection);
+            this.projection = dev.openallay.util.Java8Collections.listCopyOf(projection);
         }
 
         @Override public GuideCompactResult outcome() { return outcome; }
@@ -620,10 +633,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
 
 
     public List<String> sessions(UUID actor) {
-        java.util.TreeSet<String> ids = new java.util.TreeSet<>(sessions.sessions(actor).stream()
-                .map(AgentSessionKey::sessionId).toList());
+        java.util.TreeSet<String> ids = new java.util.TreeSet<>(dev.openallay.util.Java8Collections.toList(sessions.sessions(actor).stream()
+                .map(AgentSessionKey::sessionId)));
         ids.add(selectedSession(actor));
-        return List.copyOf(ids);
+        return dev.openallay.util.Java8Collections.listCopyOf(ids);
     }
 
     public boolean closeSession(UUID actor, String sessionId) {
@@ -719,8 +732,10 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     private static ClientCapabilitySnapshot defaultCapabilities(FeatureServices runtime) {
         ToolResult<ClientCapabilitySnapshot> resolved = new ClientCapabilityResolver().resolve(
                 CapabilityPolicy.defaults(), runtime.tools().registrations(), runtime.skills());
-        if (resolved instanceof ToolResult.Success<ClientCapabilitySnapshot> success) {
-            return success.value();
+        final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.capability.ClientCapabilitySnapshot> value; ToolResult.Success<ClientCapabilitySnapshot> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern6_holder.bound = (ToolResult.Success<ClientCapabilitySnapshot>) $oaPattern6_holder.value) != null))) {
+            return $oaPattern6_holder.bound.value();
         }
         ToolResult.Failure<ClientCapabilitySnapshot> failure =
                 (ToolResult.Failure<ClientCapabilitySnapshot>) resolved;
@@ -728,14 +743,85 @@ public final class ClientGuideRuntime implements GuideLocalEndpoint {
     }
 
     /** Optional guidance modes from an actual admitted request, never from a new resource capture. */
-    private record PromptModes(boolean unrestrictedJavascript, boolean commandsAvailable) {}
+    @dev.openallay.value.ValueType(PromptModes.ValueSchemaProvider.class)
+private static final class PromptModes {
+    private final boolean unrestrictedJavascript;
+    private final boolean commandsAvailable;
+    private PromptModes(boolean unrestrictedJavascript, boolean commandsAvailable) {
+        this.unrestrictedJavascript = unrestrictedJavascript;
+        this.commandsAvailable = commandsAvailable;
+    }
+    public boolean unrestrictedJavascript() { return unrestrictedJavascript; }
+    public boolean commandsAvailable() { return commandsAvailable; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PromptModes)) return false;
+        PromptModes that = (PromptModes) other;
+        return unrestrictedJavascript == that.unrestrictedJavascript && commandsAvailable == that.commandsAvailable;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Boolean.hashCode(unrestrictedJavascript);
+        hash = 31 * hash + Boolean.hashCode(commandsAvailable);
+        return hash;
+    }
+    @Override public String toString() { return "PromptModes[unrestrictedJavascript=" + unrestrictedJavascript + ", commandsAvailable=" + commandsAvailable + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PromptModes> schema() {
+            return new dev.openallay.value.ValueSchema<>(PromptModes.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PromptModes>>asList(new dev.openallay.value.ValueSchema.Component<>(PromptModes.class, "unrestrictedJavascript", PromptModes::unrestrictedJavascript), new dev.openallay.value.ValueSchema.Component<>(PromptModes.class, "commandsAvailable", PromptModes::commandsAvailable)), arguments -> new PromptModes((Boolean) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 
-    private record EndpointRuntime(
-            ModelRequestScheduler scheduler,
-            ContextCompactor compactor,
-            ContextTokenEstimator estimator,
-            ContextBudget contextBudget,
-            String modelIdentifier,
-            Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates,
-            Map<AgentSessionKey, PromptModes> promptModes) {}
+    @dev.openallay.value.ValueType(EndpointRuntime.ValueSchemaProvider.class)
+private static final class EndpointRuntime {
+    private final ModelRequestScheduler scheduler;
+    private final ContextCompactor compactor;
+    private final ContextTokenEstimator estimator;
+    private final ContextBudget contextBudget;
+    private final String modelIdentifier;
+    private final Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates;
+    private final Map<AgentSessionKey, PromptModes> promptModes;
+    private EndpointRuntime(ModelRequestScheduler scheduler, ContextCompactor compactor, ContextTokenEstimator estimator, ContextBudget contextBudget, String modelIdentifier, Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates, Map<AgentSessionKey, PromptModes> promptModes) {
+        this.scheduler = scheduler;
+        this.compactor = compactor;
+        this.estimator = estimator;
+        this.contextBudget = contextBudget;
+        this.modelIdentifier = modelIdentifier;
+        this.estimates = estimates;
+        this.promptModes = promptModes;
+    }
+    public ModelRequestScheduler scheduler() { return scheduler; }
+    public ContextCompactor compactor() { return compactor; }
+    public ContextTokenEstimator estimator() { return estimator; }
+    public ContextBudget contextBudget() { return contextBudget; }
+    public String modelIdentifier() { return modelIdentifier; }
+    public Map<AgentSessionKey, dev.openallay.guide.GuideContextEstimate> estimates() { return estimates; }
+    public Map<AgentSessionKey, PromptModes> promptModes() { return promptModes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof EndpointRuntime)) return false;
+        EndpointRuntime that = (EndpointRuntime) other;
+        return java.util.Objects.equals(scheduler, that.scheduler) && java.util.Objects.equals(compactor, that.compactor) && java.util.Objects.equals(estimator, that.estimator) && java.util.Objects.equals(contextBudget, that.contextBudget) && java.util.Objects.equals(modelIdentifier, that.modelIdentifier) && java.util.Objects.equals(estimates, that.estimates) && java.util.Objects.equals(promptModes, that.promptModes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(scheduler);
+        hash = 31 * hash + java.util.Objects.hashCode(compactor);
+        hash = 31 * hash + java.util.Objects.hashCode(estimator);
+        hash = 31 * hash + java.util.Objects.hashCode(contextBudget);
+        hash = 31 * hash + java.util.Objects.hashCode(modelIdentifier);
+        hash = 31 * hash + java.util.Objects.hashCode(estimates);
+        hash = 31 * hash + java.util.Objects.hashCode(promptModes);
+        return hash;
+    }
+    @Override public String toString() { return "EndpointRuntime[scheduler=" + scheduler + ", compactor=" + compactor + ", estimator=" + estimator + ", contextBudget=" + contextBudget + ", modelIdentifier=" + modelIdentifier + ", estimates=" + estimates + ", promptModes=" + promptModes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<EndpointRuntime> schema() {
+            return new dev.openallay.value.ValueSchema<>(EndpointRuntime.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<EndpointRuntime>>asList(new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "scheduler", EndpointRuntime::scheduler), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "compactor", EndpointRuntime::compactor), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "estimator", EndpointRuntime::estimator), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "contextBudget", EndpointRuntime::contextBudget), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "modelIdentifier", EndpointRuntime::modelIdentifier), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "estimates", EndpointRuntime::estimates), new dev.openallay.value.ValueSchema.Component<>(EndpointRuntime.class, "promptModes", EndpointRuntime::promptModes)), arguments -> new EndpointRuntime((ModelRequestScheduler) arguments[0], (ContextCompactor) arguments[1], (ContextTokenEstimator) arguments[2], (ContextBudget) arguments[3], (String) arguments[4], (Map) arguments[5], (Map) arguments[6]));
+        }
+    }
+}
 }

@@ -46,5 +46,34 @@ public interface AudioCapture extends AutoCloseable {
         public Failure failure() { return failure; }
     }
 
-    record Device(String id, String name) {}
+    @dev.openallay.value.ValueType(Device.ValueSchemaProvider.class)
+public static final class Device {
+    private final String id;
+    private final String name;
+    public Device(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+    public String id() { return id; }
+    public String name() { return name; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Device)) return false;
+        Device that = (Device) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(name, that.name);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        return hash;
+    }
+    @Override public String toString() { return "Device[id=" + id + ", name=" + name + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Device> schema() {
+            return new dev.openallay.value.ValueSchema<>(Device.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Device>>asList(new dev.openallay.value.ValueSchema.Component<>(Device.class, "id", Device::id), new dev.openallay.value.ValueSchema.Component<>(Device.class, "name", Device::name)), arguments -> new Device((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

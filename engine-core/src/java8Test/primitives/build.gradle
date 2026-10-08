@@ -1,0 +1,54 @@
+plugins {
+    id 'java-base'
+}
+
+// Standalone proof: no engine Gradle project, dependency resolution, or source copies.
+// Gradle runs on its normal modern JVM; the test process uses the genuine JDK 8 toolchain.
+def repository = file('../../../..')
+def production = new File(repository, 'engine-core/src/main/java')
+def fixture = file('src/main/java')
+def classes = layout.buildDirectory.dir('classes')
+def compiler = javaToolchains.compilerFor {
+    languageVersion = JavaLanguageVersion.of(21)
+}
+def modernRuntime = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+}
+def owners = [
+    'dev/openallay/util/Java8Collections.java',
+    'dev/openallay/util/Java8Futures.java',
+    'dev/openallay/util/Java8Strings.java',
+    'dev/openallay/util/Java8Hex.java',
+    'dev/openallay/guide/semantic/SemanticIds.java'
+]
+def compilePrimitives = tasks.register('compilePrimitives', JavaCompile) {
+    javaCompiler = compiler
+    source(owners.collect { new File(production, it) })
+    source(fileTree(fixture) { include '**/*.java' })
+    classpath = files()
+    destinationDirectory = classes
+    options.release = 8
+    options.encoding = 'UTF-8'
+    options.compilerArgs.addAll(['-Xlint:all,-options', '-Werror'])
+}
+def modernOracle = tasks.register('modernOracleTest', JavaExec) {
+    dependsOn(compilePrimitives)
+    javaLauncher = modernRuntime
+    classpath = files(classes)
+    mainClass = 'dev.openallay.guide.semantic.PrimitivesFixture'
+    args '--modern-oracle'
+}
+def java8Runtime = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(8)
+}
+def testJava8 = tasks.register('java8CompatibilityTest', JavaExec) {
+    dependsOn(compilePrimitives)
+    javaLauncher = java8Runtime
+    classpath = files(classes)
+    mainClass = 'dev.openallay.guide.semantic.PrimitivesFixture'
+}
+tasks.register('verifyJava8Primitives') {
+    group = 'verification'
+    description = 'Compile canonical production owners with --release 8, compare modern String semantics, and run on genuine Java 8.'
+    dependsOn(modernOracle, testJava8)
+}

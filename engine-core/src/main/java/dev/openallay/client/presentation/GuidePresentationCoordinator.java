@@ -101,17 +101,33 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
                 try {
                     if (!validVoiceTarget(target)) return VoiceRuntime.Insertion.REJECTED;
                     GuideClientUiState.Insertion captured = voiceInsertion(target);
-                    return switch (state.insertTranscript(captured, text, observationForVoice(target).orElse(null))) {
-                        case INSERTED -> {
+                    {
+dev.openallay.client.voice.VoiceRuntime.Insertion $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((state.insertTranscript(captured, text, observationForVoice(target).orElse(null)))) {
+case INSERTED:
+{
+{
                             if (target.sessionId().equals(state.selectedSession())
                                     && host.facts().surface() == GuidePresentationHost.Surface.GUIDE) {
                                 host.focusComposerAfterVoiceDraft();
                             }
-                            yield VoiceRuntime.Insertion.INSERTED;
+                            { $oaSwitch0_exit_result = VoiceRuntime.Insertion.INSERTED; break $oaSwitch0_exit; }
                         }
-                        case PENDING -> VoiceRuntime.Insertion.PENDING;
-                        case REJECTED -> VoiceRuntime.Insertion.REJECTED;
-                    };
+}
+case PENDING:
+{
+$oaSwitch0_exit_result = VoiceRuntime.Insertion.PENDING; break $oaSwitch0_exit;
+}
+case REJECTED:
+{
+$oaSwitch0_exit_result = VoiceRuntime.Insertion.REJECTED; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
                 } finally { releaseVoiceObservation(target); }
             }
             @Override public java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<VoiceRuntime.DeliveryReceipt>> send(
@@ -158,7 +174,7 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
     }
 
     private void closeVoiceObservations() {
-        List.copyOf(voiceObservations.values()).forEach(GuideClientUiState.ObservationLease::close);
+        dev.openallay.util.Java8Collections.listCopyOf(voiceObservations.values()).forEach(GuideClientUiState.ObservationLease::close);
         voiceObservations.clear();
     }
 
@@ -308,11 +324,13 @@ public final class GuidePresentationCoordinator implements AutoCloseable {
         GuideClientUiState.ObservationCapture observation = observationForVoice(target).orElse(null);
         java.util.function.BooleanSupplier fence = () -> service == bound && voiceAdmissionAllowed(target)
                 && admissionFence.getAsBoolean();
-        dev.openallay.model.ModelMessage input = dev.openallay.model.ModelMessage.userInput(text, List.of(),
+        dev.openallay.model.ModelMessage input = dev.openallay.model.ModelMessage.userInput(text, dev.openallay.util.Java8Collections.listOf(),
                 observation == null ? Optional.empty() : observation.anchor());
         return service.followUp(target.sessionId(), target.sessionOwner(), input, fence).thenApply(result -> {
-            if (result instanceof dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt> success) {
-                GuideService.InputReceipt receipt = success.value();
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.GuideService.InputReceipt> value; dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (dev.openallay.tool.ToolResult.Success<GuideService.InputReceipt>) $oaPattern0_holder.value) != null))) {
+                GuideService.InputReceipt receipt = $oaPattern0_holder.bound.value();
                 dispatcher.execute(() -> {
                     if (owner == state && !owner.closed()) owner.acceptedObservation(observation);
                     releaseVoiceObservation(target);

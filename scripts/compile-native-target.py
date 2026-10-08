@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select POM-only NeoForge userdev recipes; every other root recipe stays unchanged."""
+"""Select actual native recipes; stock legacy Forge uses its explicit release preparer."""
 import argparse
 import json
 import os
@@ -10,6 +10,7 @@ from minecraft_target_loaders import target_loaders
 
 ROOT = Path(__file__).resolve().parents[1]
 EARLY = frozenset(("1.20.2", "1.20.3", "1.20.5"))
+LEGACY = {"1.16.5": "forge16165"}
 
 
 def target_exists(root, target):
@@ -49,6 +50,38 @@ def commands(root, target, *, loaders=None, artifact_ids=None, candidate_ids=Non
         ids = selection.split(",")
         if not ids or len(set(ids)) != len(ids) or any(not re.fullmatch(r"[a-z0-9][a-z0-9.-]*", value) for value in ids):
             raise ValueError("Expected distinct safe native family IDs")
+    if target == "1.12.2":
+        if loaders != ("forge",) or candidate_ids is not None or artifact_ids != "forge-1.12.2":
+            raise ValueError("Stock Forge14 requires its exact accepted ordinary Java8 JAR family")
+        version = dict(re.findall(r"(?m)^([^#=\s]+)=([^\r\n]+)$", (root / "gradle.properties").read_text()))["version"]
+        if not re.fullmatch(r"[0-9][0-9A-Za-z]*(?:[.+-][0-9A-Za-z]+)*", version):
+            raise ValueError("Unsafe source product version")
+        output = root / "native-builds/forge1122/build/libs" / ("openallay-forge-1.12.2-" + version + ".jar")
+        canonical = [str(root / "gradlew"), "--max-workers=2", "-PminecraftTarget=26.2",
+                     "-PtestBundledExtensions=false", ":engine-core:assemble", ":runtime-json:assemble",
+                     ":extension-api:assemble", ":runtime-rhino:assemble", ":engine-core:processResources",
+                     ":buildBundledExtensions", ":stageBundledExtensions"]
+        materialize = ["python3", "-B", str(root / "scripts/materialize-stock8-release.py"),
+                       "--output", str(output)]
+        return [(canonical, "root"), (materialize, "retained-stock8")]
+    if target in LEGACY:
+        if loaders != ("forge",) or candidate_ids is not None or artifact_ids != "forge-" + target:
+            raise ValueError("Stock legacy Forge requires its exact accepted release family")
+        properties = dict(re.findall(r"(?m)^([^#=\s]+)=([^\r\n]+)$", (root / "gradle.properties").read_text()))
+        release_version = properties["version"]
+        if not re.fullmatch(r"[0-9][0-9A-Za-z]*(?:[.+-][0-9A-Za-z]+)*", release_version):
+            raise ValueError("Unsafe source product version")
+        kind = "jar"
+        output = root / "native-builds" / LEGACY[target] / "build/libs" / ("openallay-forge-" + target + "-" + release_version + "." + kind)
+        # Compile the one current feature engine, public SDK/Rhino and Builder first.
+        # 26.2 only selects the root feature tasks; legacy native sources are never aliased.
+        canonical = [str(root / "gradlew"), "--max-workers=2", "-PminecraftTarget=26.2",
+                     "-PtestBundledExtensions=false", ":engine-core:assemble", ":runtime-json:assemble",
+                     ":extension-api:assemble", ":runtime-rhino:assemble", ":engine-core:processResources", ":buildBundledExtensions", ":stageBundledExtensions"]
+        prepare = ["python3", "-B", str(root / "scripts/prepare-legacy-forge-release.py"),
+                   "--target", target, "--family", artifact_ids, "--version", release_version,
+                   "--output", str(output), "--receipt", str(output) + ".packaging.json"]
+        return [(canonical, "root"), (prepare, "legacy-forge")]
     shared = [str(root / "gradlew"), "--max-workers=2", "-PminecraftTarget=" + target,
               "-PtestBundledExtensions=false"]
     if artifact_ids is not None:
@@ -71,6 +104,8 @@ def compile_target(root, target, environment=None, execute=subprocess.run, *,
                    loaders=None, artifact_ids=None, candidate_ids=None):
     selected = commands(root, target, loaders=loaders, artifact_ids=artifact_ids, candidate_ids=candidate_ids)
     environment = dict(os.environ if environment is None else environment)
+    if (target in LEGACY or target == "1.12.2") and environment.get("GITHUB_ACTIONS") != "true":
+        raise ValueError("Stock legacy Forge release packaging runs remotely only")
     # Validate the installed isolated build JVM before allocating any native build output.
     isolated_env = java21_environment(environment) if any(runtime == "java21" for _, runtime in selected) else None
     for command, runtime in selected:

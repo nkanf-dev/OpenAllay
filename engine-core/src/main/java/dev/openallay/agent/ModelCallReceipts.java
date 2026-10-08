@@ -13,10 +13,11 @@ public final class ModelCallReceipts {
     private boolean finished;
 
     public synchronized void accept(AgentEvent event, Consumer<AgentEvent> handoff) {
-        if (event instanceof AgentEvent.ModelUsageStarted started) pending.add(started.callId());
+        AgentEvent.requireKnown(event);
+        if (event instanceof AgentEvent.ModelUsageStarted) pending.add(((AgentEvent.ModelUsageStarted) event).callId());
         try { handoff.accept(event); }
         finally {
-            if (event instanceof AgentEvent.ModelUsageObserved observed) pending.remove(observed.callId());
+            if (event instanceof AgentEvent.ModelUsageObserved) pending.remove(((AgentEvent.ModelUsageObserved) event).callId());
             sealIfFinished();
         }
     }

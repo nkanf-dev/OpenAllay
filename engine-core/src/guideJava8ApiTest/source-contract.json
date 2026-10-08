@@ -1,0 +1,25 @@
+{
+  "scope": "OnlycurrentwholeMinecraftAgentHostGraph acceptedZERO List::of supplier +existing16API scopes actualclassifier; no partialhostsource",
+  "selectedOwners": [
+    "dev/openallay/script/data/MinecraftAgentHostGraph.java"
+  ],
+  "selectedPreimageSha256": {
+    "dev/openallay/script/data/MinecraftAgentHostGraph.java": "dc58607b5bc0a18583a1e7ad4fadbf9ffa04f8f7d1ae492ce8227e8020984fcb"
+  },
+  "sourceLanguageStage": "Actual full switch owner postimage from 37662223647, prior whole API20 classifier37662774536 postimage held unapplied; reuse genuine supplier oracle37661220439",
+  "excludedOwners": {},
+  "acceptedToolOracleRun": 37661220439,
+  "fixtureReexecuted": false,
+  "toolPins": {
+    "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java": "0438bff520114e55728f4d4b4f25c42503ceeb04a292b8dc5cc06d4bc045982d",
+    "scripts/java8-api-port/CanonicalJava8ApiPortFixture.java": "c1fd0e1a27886c2d5d37d00d3c8db81d49fc0f7dac158d911ef4fd940f4efd65"
+  },
+  "helperPins": {
+    "engine-core/src/main/java/dev/openallay/util/Java8Collections.java": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
+    "engine-core/src/main/java/dev/openallay/util/Java8Strings.java": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
+    "engine-core/src/main/java/dev/openallay/util/Java8Hex.java": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
+    "engine-core/src/main/java/dev/openallay/util/Java8Futures.java": "be44b1a5deed7cd847fa1d6bc9acaf0a11fefe8ad6367ade750ac0e770a43268"
+  },
+  "unsupportedPolicy": "ZEROarg List.of actualstaticTypeElement/uniquefunctionaldescriptor only; nonzero/devshadowrefs namedreject/no partialowner; no SourceGraph method slicing.",
+  "rawSourceCommit": "3ea48e4a06f8a15947ef4c8c93c7a82730eba675"
+}

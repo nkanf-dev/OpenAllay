@@ -16,24 +16,28 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /** Exact external community-package shape. Released loader-mod schema 1 is not reinterpreted. */
-public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor descriptor) {
-    public static final String JAR_PATH = "META-INF/openallay-extension.json";
-    private static final Set<String> FIELDS = Set.of("schemaVersion", "id", "name", "version", "provider",
-            "summary", "source", "entrypoint", "support");
-    private static final Set<String> SUPPORT_FIELDS = Set.of("targets", "minimumJavaVersion",
-            "requiredHostFeatures", "validatedTargetIds");
-    private static final Set<String> TARGET_FIELDS = Set.of("loader", "minecraftVersionRange",
-            "openAllayVersionRange", "openAllayApiVersionRange");
+@dev.openallay.value.ValueType(UniversalExtensionManifest.ValueSchemaProvider.class)
+public final class UniversalExtensionManifest {
+    private final String entrypoint;
+    private final ExtensionDescriptor descriptor;
+    public UniversalExtensionManifest(String entrypoint, ExtensionDescriptor descriptor) {
 
-    public UniversalExtensionManifest {
         if (entrypoint == null || !entrypoint.matches(
                 "[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)*")) {
             throw new IllegalArgumentException("Invalid explicit Extension entrypoint");
         }
         Objects.requireNonNull(descriptor, "descriptor");
-    }
 
-    public static UniversalExtensionManifest decode(String json) {
+        this.entrypoint = entrypoint;
+        this.descriptor = descriptor;
+    }
+    public String entrypoint() { return entrypoint; }
+    public ExtensionDescriptor descriptor() { return descriptor; }
+public static final String JAR_PATH = "META-INF/openallay-extension.json";
+private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("schemaVersion", "id", "name", "version", "provider", "summary", "source", "entrypoint", "support");
+private static final Set<String> SUPPORT_FIELDS = dev.openallay.util.Java8Collections.setOf("targets", "minimumJavaVersion", "requiredHostFeatures", "validatedTargetIds");
+private static final Set<String> TARGET_FIELDS = dev.openallay.util.Java8Collections.setOf("loader", "minecraftVersionRange", "openAllayVersionRange", "openAllayApiVersionRange");
+public static UniversalExtensionManifest decode(String json) {
         JsonObject root = object(UniversalExtensionJson.parse(json));
         Set<String> fields = new HashSet<>(dev.openallay.json.JsonTrees.keys(root));
         fields.remove("requirements");
@@ -55,7 +59,7 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
                     range(target, "minecraftVersionRange"), range(target, "openAllayVersionRange"),
                     range(target, "openAllayApiVersionRange")));
         }
-        var requirements = RequirementCodec.decode(root.get("requirements"));
+        dev.openallay.requirement.RequirementSet requirements = RequirementCodec.decode(root.get("requirements"));
         ExtensionDescriptor descriptor = new ExtensionDescriptor(string(root, "id"), string(root, "name"),
                 string(root, "version"), string(root, "provider"), string(root, "summary"), string(root, "source"),
                 new SupportDeclaration(targets, integer(support, "minimumJavaVersion"),
@@ -63,24 +67,23 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
                 new ExtensionRequirements(requirements.capabilities(), requirements.extensions(), requirements.skills()));
         return new UniversalExtensionManifest(string(root, "entrypoint"), descriptor);
     }
-
-    private static String range(JsonObject value, String field) {
+private static String range(JsonObject value, String field) {
         return ExtensionCompatibility.requireRange(string(value, field), field);
     }
-    private static void exact(JsonObject value, Set<String> fields) {
+private static void exact(JsonObject value, Set<String> fields) {
         if (!dev.openallay.json.JsonTrees.keys(value).equals(fields)) throw new IllegalArgumentException("Package fields do not match");
     }
-    private static JsonObject object(JsonElement value) {
+private static JsonObject object(JsonElement value) {
         if (value == null || !value.isJsonObject()) throw new IllegalArgumentException("Expected package object");
         return value.getAsJsonObject();
     }
-    private static String string(JsonObject value, String field) {
+private static String string(JsonObject value, String field) {
         JsonElement encoded = value.get(field);
         if (encoded == null || !encoded.isJsonPrimitive() || !encoded.getAsJsonPrimitive().isString()
-                || encoded.getAsString().isBlank()) throw new IllegalArgumentException("Expected package string");
+                || dev.openallay.util.Java8Strings.isBlank(encoded.getAsString())) throw new IllegalArgumentException("Expected package string");
         return encoded.getAsString();
     }
-    private static int integer(JsonObject value, String field) {
+private static int integer(JsonObject value, String field) {
         JsonElement encoded = value.get(field);
         if (encoded == null || !encoded.isJsonPrimitive() || !encoded.getAsJsonPrimitive().isNumber()) {
             throw new IllegalArgumentException("Expected package integer");
@@ -88,7 +91,7 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
         try { return encoded.getAsBigDecimal().intValueExact(); }
         catch (ArithmeticException invalid) { throw new IllegalArgumentException("Expected package integer"); }
     }
-    private static Set<String> strings(JsonObject value, String field) {
+private static Set<String> strings(JsonObject value, String field) {
         JsonElement encoded = value.get(field);
         if (encoded == null || !encoded.isJsonArray()) throw new IllegalArgumentException("Expected package array");
         Set<String> values = new TreeSet<>();
@@ -96,6 +99,25 @@ public record UniversalExtensionManifest(String entrypoint, ExtensionDescriptor 
             if (!item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()
                     || !values.add(item.getAsString())) throw new IllegalArgumentException("Expected unique strings");
         }
-        return Set.copyOf(values);
+        return dev.openallay.util.Java8Collections.setCopyOf(values);
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof UniversalExtensionManifest)) return false;
+        UniversalExtensionManifest that = (UniversalExtensionManifest) other;
+        return java.util.Objects.equals(entrypoint, that.entrypoint) && java.util.Objects.equals(descriptor, that.descriptor);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(entrypoint);
+        hash = 31 * hash + java.util.Objects.hashCode(descriptor);
+        return hash;
+    }
+    @Override public String toString() { return "UniversalExtensionManifest[entrypoint=" + entrypoint + ", descriptor=" + descriptor + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<UniversalExtensionManifest> schema() {
+            return new dev.openallay.value.ValueSchema<>(UniversalExtensionManifest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<UniversalExtensionManifest>>asList(new dev.openallay.value.ValueSchema.Component<>(UniversalExtensionManifest.class, "entrypoint", UniversalExtensionManifest::entrypoint), new dev.openallay.value.ValueSchema.Component<>(UniversalExtensionManifest.class, "descriptor", UniversalExtensionManifest::descriptor)), arguments -> new UniversalExtensionManifest((String) arguments[0], (ExtensionDescriptor) arguments[1]));
+        }
     }
 }

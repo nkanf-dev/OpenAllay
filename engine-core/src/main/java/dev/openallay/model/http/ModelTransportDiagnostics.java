@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class ModelTransportDiagnostics {
     private static final String PROPERTY = "openallay.model.diagnostics";
     private static final AtomicLong EXCHANGES = new AtomicLong();
-    private static final Set<String> FRAME_CLASSES = Set.of(
+    private static final Set<String> FRAME_CLASSES = dev.openallay.util.Java8Collections.setOf(
             "dev.openallay.model.openai.OpenAiJsonCodec",
             "dev.openallay.model.openai.OpenAiStreamAccumulator",
             "dev.openallay.model.openai.OpenAiChatClient",

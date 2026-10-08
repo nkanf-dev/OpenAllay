@@ -6,13 +6,13 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import net.minecraft.server.packs.resources.ResourceManager;
+
 
 /** Creates detached UTF-8 snapshots; no reload-era Resource object is retained. */
 public final class MinecraftClientResourceAccess implements ClientResourceAccess {
-    private final ResourceManager resources;
+    private final net.minecraft.server.packs.resources.ResourceManager resources;
 
-    public MinecraftClientResourceAccess(ResourceManager resources) {
+    public MinecraftClientResourceAccess(net.minecraft.server.packs.resources.ResourceManager resources) {
         this.resources = java.util.Objects.requireNonNull(resources, "resources");
     }
 
@@ -20,12 +20,11 @@ public final class MinecraftClientResourceAccess implements ClientResourceAccess
     public List<ClientResource> list(String pathPrefix) {
         String prefix = ClientResourceAccess.validatePrefix(pathPrefix);
         List<ClientResource> detached = new ArrayList<>();
-        for (var id : MinecraftResourceAccess.listIds(
-                resources, prefix, value -> value.getPath().startsWith(prefix))) {
+        MinecraftResourceAccess.listIds(resources, prefix, value -> true).forEach(id -> {
             try {
-                var stack = MinecraftResourceAccess.textLayers(resources, id);
+                java.util.List<dev.openallay.platform.minecraft.MinecraftResourceAccess.TextLayer> stack = MinecraftResourceAccess.textLayers(resources, id);
                 for (int index = 0; index < stack.size(); index++) {
-                    var layer = stack.get(index);
+                    dev.openallay.platform.minecraft.MinecraftResourceAccess.TextLayer layer = stack.get(index);
                     detached.add(new ClientResource(
                             id.toString(), layer.packId(), index,
                             index == stack.size() - 1, layer.content()));
@@ -33,9 +32,9 @@ public final class MinecraftClientResourceAccess implements ClientResourceAccess
             } catch (IOException failure) {
                 throw new UncheckedIOException("Failed reading client resource " + id, failure);
             }
-        }
+        });
         detached.sort(Comparator.comparing(ClientResource::resourceId)
                 .thenComparingInt(ClientResource::priority));
-        return List.copyOf(detached);
+        return dev.openallay.util.Java8Collections.listCopyOf(detached);
     }
 }

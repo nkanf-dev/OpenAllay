@@ -1,5 +1,7 @@
 package dev.openallay.net;
 
+import dev.openallay.util.Java8Collections;
+import dev.openallay.util.Java8Strings;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -21,7 +23,7 @@ public final class HttpExchangeRequest {
         uri = Objects.requireNonNull(builder.uri, "uri");
         method = builder.method;
         LinkedHashMap<String, List<String>> copied = new LinkedHashMap<>();
-        builder.headers.forEach((name, values) -> copied.put(name, List.copyOf(values)));
+        builder.headers.forEach((name, values) -> copied.put(name, Java8Collections.listCopyOf(values)));
         headers = java.util.Collections.unmodifiableMap(copied);
         body = builder.body.clone();
         timeout = Objects.requireNonNull(builder.timeout, "timeout");
@@ -76,7 +78,7 @@ public final class HttpExchangeRequest {
         }
 
         public Builder header(String name, String value) {
-            if (name == null || name.isBlank() || value == null) {
+            if (name == null || Java8Strings.isBlank(name) || value == null) {
                 throw new IllegalArgumentException("HTTP header name and value are required");
             }
             headers.computeIfAbsent(name, ignored -> new ArrayList<>()).add(value);
@@ -93,6 +95,20 @@ public final class HttpExchangeRequest {
             method = "POST";
             body = Objects.requireNonNull(json, "json").getBytes(StandardCharsets.UTF_8);
             return this;
+        }
+
+        /** Binary POST payloads, including bounded WAV multipart requests. */
+        public Builder postBytes(byte[] bytes, String contentType) {
+            Objects.requireNonNull(bytes, "bytes");
+            if (contentType == null || Java8Strings.isBlank(contentType)
+                    || contentType.indexOf('\r') >= 0 || contentType.indexOf('\n') >= 0) {
+                throw new IllegalArgumentException("HTTP content type is required");
+            }
+            method = "POST";
+            body = bytes.clone();
+            // A body has one media type. Replace prior casing variants rather than append.
+            headers.keySet().removeIf(name -> name.equalsIgnoreCase("Content-Type"));
+            return header("Content-Type", contentType);
         }
 
         public HttpExchangeRequest build() {

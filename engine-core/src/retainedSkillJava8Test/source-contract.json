@@ -1,0 +1,233 @@
+{
+  "scope": "Bound original17/release8/realjavac8 full actual retained Skill source closure",
+  "productionSourcePaths": [
+    "engine-core/src/main/java/dev/openallay/agent/tool/ToolOptional.java",
+    "engine-core/src/main/java/dev/openallay/context/BlockPositionSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/CallerKind.java",
+    "engine-core/src/main/java/dev/openallay/context/CallerSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/ContextCapability.java",
+    "engine-core/src/main/java/dev/openallay/context/ContextMetrics.java",
+    "engine-core/src/main/java/dev/openallay/context/ContextValidation.java",
+    "engine-core/src/main/java/dev/openallay/context/DataAuthority.java",
+    "engine-core/src/main/java/dev/openallay/context/DataCompleteness.java",
+    "engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java",
+    "engine-core/src/main/java/dev/openallay/context/FluidRequirementSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/IngredientAlternativeSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/IngredientRequirementSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/InventorySlotSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/InventorySnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/ItemStackSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/PlayerSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RecipeEntrySnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RecipeLayoutSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RecipeOutputSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RecipeProcessingSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RecipeReference.java",
+    "engine-core/src/main/java/dev/openallay/context/RecipeSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RegistryEntrySnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/RegistrySnapshot.java",
+    "engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java",
+    "engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+    "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+    "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+    "engine-core/src/main/java/dev/openallay/model/CancellationSignal.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelClientException.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelContent.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelEvent.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelFailure.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelMessage.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelRequest.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelRole.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelToolDefinition.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelTurn.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelUsage.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImageInputLimits.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImagePayloadResolver.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImageReference.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ModelImages.java",
+    "engine-core/src/main/java/dev/openallay/net/HttpCancellation.java",
+    "engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeCanonicalizer.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeCatalogDiagnostic.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderDiagnostic.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeProviderState.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeSemanticGroup.java",
+    "engine-core/src/main/java/dev/openallay/recipe/RecipeUnlockState.java",
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementCodec.java",
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementKind.java",
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementSet.java",
+    "engine-core/src/main/java/dev/openallay/skill/LoadSkillTool.java",
+    "engine-core/src/main/java/dev/openallay/skill/RetainedSkillContext.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalog.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalogManifest.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalogSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillDocument.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillInstructionContext.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillMetadata.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillParser.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillSource.java",
+    "engine-core/src/main/java/dev/openallay/tool/InstructionModelFacingToolOutput.java",
+    "engine-core/src/main/java/dev/openallay/tool/ModelFacingToolOutput.java",
+    "engine-core/src/main/java/dev/openallay/tool/ModelResultSource.java",
+    "engine-core/src/main/java/dev/openallay/tool/RequestScopeParticipant.java",
+    "engine-core/src/main/java/dev/openallay/tool/Tool.java",
+    "engine-core/src/main/java/dev/openallay/tool/ToolAccess.java",
+    "engine-core/src/main/java/dev/openallay/tool/ToolDescriptor.java",
+    "engine-core/src/main/java/dev/openallay/tool/ToolResult.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+    "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+    "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
+    "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+    "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+    "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+    "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchor.java",
+    "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchorJson.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java",
+    "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+    "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java"
+  ],
+  "productionSourceCount": 90,
+  "changedSkillOwners": [
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementCodec.java",
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementSet.java",
+    "engine-core/src/main/java/dev/openallay/skill/LoadSkillTool.java",
+    "engine-core/src/main/java/dev/openallay/skill/RetainedSkillContext.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalog.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalogManifest.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalogSnapshot.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillDocument.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillInstructionContext.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillMetadata.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillParser.java",
+    "engine-core/src/main/java/dev/openallay/skill/SkillSource.java",
+    "engine-core/src/main/java/dev/openallay/tool/ToolDescriptor.java"
+  ],
+  "expectedFixtureChecks": 52,
+  "candidateClassMajor": 52,
+  "originalClassMajor": 61,
+  "gsonPins": [
+    {
+      "name": "gson-2.8.0.jar",
+      "bytes": 231952,
+      "digest_algorithm": "sha1",
+      "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+      "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+      "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+    },
+    {
+      "name": "gson-2.13.2.jar",
+      "bytes": 289901,
+      "digest_algorithm": "sha256",
+      "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+      "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+      "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+    }
+  ],
+  "modelSourceContract": "engine-core/src/modelMessageImageJava8Test/source-contract.json",
+  "model12Paths": [
+    "engine-core/src/main/java/dev/openallay/model/ModelContent.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelMessage.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelTurn.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelRequest.java",
+    "engine-core/src/main/java/dev/openallay/model/ModelToolDefinition.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImageReference.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ImageInputLimits.java",
+    "engine-core/src/main/java/dev/openallay/model/image/ModelImages.java",
+    "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchor.java",
+    "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchorJson.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java",
+    "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java"
+  ],
+  "artifactPins": {
+    "fixture": {
+      "path": "engine-core/src/retainedSkillJava8Test/java/dev/openallay/skill/RetainedSkillJava8Fixture.java",
+      "sha256": "bc2ae718ac9ad634bd6e356d012b5d4460a1544515a89880fd13c12adb9bcf36"
+    },
+    "runner": {
+      "path": "scripts/verify-retained-skill-java8.py",
+      "sha256": "f034a1fddb2b5fb3dd8758bf49a047604a6fe9f3645759719e033d555bf608cc"
+    },
+    "materializer": {
+      "path": "scripts/materialize-retained-skill-java8.py",
+      "sha256": "754b14b2262f66e3b7f45f3a95b26482c15ca443ccb5d722bbef7e0209686415"
+    },
+    "recipe": {
+      "path": "engine-core/src/retainedSkillJava8Test/recipe.json",
+      "sha256": "6bf01bcaf04f1eac15886067f939710a88429d8eb1f8db63d5c856dac05ad246"
+    },
+    "sourceManifest": {
+      "path": "engine-core/src/retainedSkillJava8Test/compile-source-manifest.json",
+      "sha256": "b1dad1fe50c1dc6f193f250dac482e30340339ee221e5d0c44cb121b54d0ad5c"
+    }
+  },
+  "candidateCustody": "Only13 changed Skill owners from the actual materializer pre/post manifest; any other overlay is rejected. Shared/model owners resolve only from repository source.",
+  "modelAdmission": "Current repository Model12 raw bytes must match post_sha256 in separately accepted repository-owned model source contract. No external candidate overlay.",
+  "materializerFormatting": "Blank-line ASCII space/tab removal + one exact SkillDocument chunks-line trailing space; raw converter posthashes and exact line changes recorded before normalized source hashes",
+  "normalizedCanonicalTargets": {
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementCodec.java": {
+      "sha256": "86962b9ec31d457cd99b63cbc9a19c9ce8dca495cd457d8536b9267fad23d5f5",
+      "bytes": 4081
+    },
+    "engine-core/src/main/java/dev/openallay/requirement/RequirementSet.java": {
+      "sha256": "e3bf87881c5d50be42ebc78959bb22f9722e7ae47824d6ce2d0b8548fcd08ffb",
+      "bytes": 4325
+    },
+    "engine-core/src/main/java/dev/openallay/skill/LoadSkillTool.java": {
+      "sha256": "d0afa0ca46da60294514b9bfcb3506df795aec4541bf00dc3e2caee1d915cb46",
+      "bytes": 26218
+    },
+    "engine-core/src/main/java/dev/openallay/skill/RetainedSkillContext.java": {
+      "sha256": "19cf57a9d3abf094807fb02f78613969344649a45978e784254e8cf9c6fe4422",
+      "bytes": 12324
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalog.java": {
+      "sha256": "94c6065e9798ba59c6026d92e437934031a3a4c66bbadbe8d2635d9be13cc336",
+      "bytes": 1258
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalogManifest.java": {
+      "sha256": "d92855c8a8d91750ed0bd005a420e5fcd8f633c7b17f7adec77d67074fc7366d",
+      "bytes": 14023
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillCatalogSnapshot.java": {
+      "sha256": "4297a534d8c0a7fbf9aa5053370da10d9a829dcf4a76e3289faa18c92dcaf7b7",
+      "bytes": 2589
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillDocument.java": {
+      "sha256": "3f7a6bc3076ec2917e1463ed1092f2ea0996c9efcdf0c341efcaa97720296f08",
+      "bytes": 5130
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillInstructionContext.java": {
+      "sha256": "0504763c150485534ddc2917cc77b1b50b22736b2ca3f904bb047e30c6acc2bd",
+      "bytes": 24763
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillMetadata.java": {
+      "sha256": "39f166e2a1df4768ecd23d9d1e33c3ba7537b4b00387ca9287bcc0efbda7f0b5",
+      "bytes": 7469
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillParser.java": {
+      "sha256": "0317e345e51c4bde387587ec78a89ffec29d5a62c6558062162a4c348f1366d6",
+      "bytes": 18401
+    },
+    "engine-core/src/main/java/dev/openallay/skill/SkillSource.java": {
+      "sha256": "9fd3296791d1422e8dcaec5c3c7278108357f5fe35df4418aa646f44bbe44869",
+      "bytes": 4882
+    },
+    "engine-core/src/main/java/dev/openallay/tool/ToolDescriptor.java": {
+      "sha256": "f879d31f46e21ac05f8401895df805c68a3c9515beaa618a998bf4d0c50211b4",
+      "bytes": 4698
+    }
+  },
+  "preservedRuntimeOracle": {
+    "run": 37570749870,
+    "scope": "Actual90 production source closure; original17/release8/truejavac8+java8 two genuine Gson hosts;52checks each, identicalreports",
+    "formattedIntegrationCommit": "fc36b822c96106e78cbe7bdedffc4fec8cab01b5",
+    "runtimeReplayForWhitespaceRequired": false
+  },
+  "historicalReplay": "13 exact raw Git blobs from recorded acceptedSourceCommit with independent SHA256 pins; no external original overlay or full source checkout copy"
+}

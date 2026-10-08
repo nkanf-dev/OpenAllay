@@ -2,6 +2,51 @@ name: Build release packages
 on:
   workflow_dispatch:
     inputs:
+      package_only:
+        type: boolean
+        default: false
+        description: Package only the33 nested products with the exact approved raw Builder; no compilation
+      build_targets:
+        type: string
+        default: ''
+        description: Exact comma-separated accepted build targets; empty builds all
+      stage_only:
+        type: boolean
+        default: false
+        description: Stage every exact approved current-version original group without compiling
+      stock8_acceptance:
+        type: choice
+        default: none
+        options: [none, boot, world, persistence, builder-suite, builder-restricted, builder-partial, builder-cancel, builder-undo, builder-legacy-shapes, menus]
+        description: Ordinary stock Forge 1.12.2 Java 8 final-product game acceptance
+      native_residual_api_candidates:
+        type: boolean
+        default: false
+        description: One residual API cohort over the complete native source universe
+      native_java8_package_only:
+        type: boolean
+        default: false
+        description: Reuse one provider-verified normal native AP/reobf artifact and package current runtime graph only
+      native_java8_package_probe:
+        type: boolean
+        default: false
+        description: Normal Forge1.12.2 native Java8 compile, Mixin AP, searge reobf and native JAR probe
+      native_held_candidates:
+        type: boolean
+        default: false
+        description: Produce only the five exact held native language owners, preserve all251 attribution
+      native_language_candidates:
+        type: boolean
+        default: false
+        description: One actual normalized native source var-pattern-switch-API cohort candidate
+      native_record_candidates:
+        type: boolean
+        default: false
+        description: Parse exact selected native source record candidates only, no Forge build
+      native_java8_diagnostic:
+        type: boolean
+        default: false
+        description: Compile the exact Forge1.12.2 selected native source Java8 frontier only
       metadata_only:
         type: boolean
         default: false
@@ -9,11 +54,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-packages-${{ github.ref }}
+  group: release-packages-${{ github.ref }}-${{ inputs.stock8_acceptance || 'none' }}-${{ inputs.native_java8_package_probe || false }}-${{ inputs.native_java8_package_only || false }}
   cancel-in-progress: false
 jobs:
   plan:
-    if: ${{ !inputs.metadata_only }}
+    if: ${{ !inputs.package_only && !inputs.stage_only && !inputs.metadata_only && !inputs.native_java8_diagnostic && !inputs.native_record_candidates && !inputs.native_language_candidates && !inputs.native_held_candidates && !inputs.native_java8_package_probe && !inputs.native_residual_api_candidates && !inputs.native_java8_package_only && (inputs.stock8_acceptance == 'none' || inputs.stock8_acceptance == '') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -23,8 +68,13 @@ jobs:
         with:
           persist-credentials: false
       - id: groups
-        run: python3 -B scripts/build-minecraft-artifacts.py groups --github-output "$GITHUB_OUTPUT"
+        env:
+          RELEASE_BUILD_TARGETS: ${{ inputs.build_targets }}
+        run: python3 -B scripts/build-minecraft-artifacts.py groups --targets "$RELEASE_BUILD_TARGETS" --github-output "$GITHUB_OUTPUT"
   build-packages:
+    permissions:
+      contents: read
+      actions: read
     needs: plan
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -37,6 +87,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with:
           distribution: temurin
@@ -54,7 +105,22 @@ jobs:
         env:
           RELEASE_TARGET: ${{ matrix.target }}
           RELEASE_FAMILIES: ${{ matrix.families }}
+          GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/build-minecraft-artifacts.py build-and-stage release-group --target "$RELEASE_TARGET" --families "$RELEASE_FAMILIES"
+      - name: Capture exact CommonMark provider and nested bytes
+        if: always()
+        run: |
+          python3 -B scripts/capture-commonmark-provider-nested.py \
+            --project . --target '${{ matrix.target }}' --families '${{ matrix.families }}' \
+            --output build/commonmark-provider-nested-capture
+      - name: Preserve exact small CommonMark capture
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-commonmark-provider-nested-${{ matrix.target }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: build/commonmark-provider-nested-capture/
       - name: Preserve new packages and source-bound package receipts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -83,7 +149,64 @@ jobs:
           path: |
             build/release-build-logs/
             build/reports/problems/
+            build/legacy-release-inputs/*/canonical.log
+            build/legacy-release-inputs/*/native-inputs.log
+            build/legacy-release-inputs/*/native-build.log
+            build/legacy-release-inputs/*/package.log
+            build/legacy-release-inputs/*/current-runtime-classpath.json
+            build/legacy-release-inputs/*/base-closure-provider.json
+            build/legacy-release-inputs/*/builder-provider.json
+            build/legacy-release-inputs/*/accepted-product-provider.json
+            build/legacy-release-inputs/*/old-native16-provider.json
+            build/legacy-release-inputs/*/closure.json
+            build/legacy-release-inputs/*/resolution.json
+            build/legacy-release-inputs/*/mapping-inputs.json
+            build/legacy-release-inputs/*/native-request.json
+            build/legacy-release-inputs/*/compiler-lock.json
+            build/legacy-release-inputs/*/provider-receipt.json
+            build/legacy-release-inputs/*/REQUEST.json
+  package-only-plan:
+    if: ${{ inputs.package_only && !inputs.stage_only && !inputs.metadata_only && inputs.build_targets == '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.groups.outputs.groups }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - id: groups
+        env: {RELEASE_DISPATCH_INPUTS: '${{ toJson(inputs) }}'}
+        run: python3 -B scripts/build-minecraft-artifacts.py builder-package-groups --github-output "$GITHUB_OUTPUT"
+  package-only-products:
+    needs: package-only-plan
+    permissions: {contents: read, actions: read}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include: ${{ fromJson(needs.package-only-plan.outputs.groups) }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - name: Authenticate the exact original compiled group
+        env: {GH_TOKEN: '${{ github.token }}', TARGET: '${{ matrix.target }}'}
+        run: python3 -B scripts/fetch-release-build-groups.py --selection "$PWD/distribution/builder-package-originals.json" --targets "$TARGET" --output build/builder-package-original-cache
+      - name: Package only canonical Builder resources
+        env: {GH_TOKEN: '${{ github.token }}', TARGET: '${{ matrix.target }}'}
+        run: python3 -B scripts/run-builder-package-only-group.py --target "$TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-packages-${{ matrix.target }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: error
+          path: release-group/
   stage:
+    if: ${{ always() && !cancelled() && !inputs.package_only && (inputs.stage_only || (needs.build-packages.result == 'success' && inputs.build_targets == '')) }}
+    permissions:
+      contents: read
+      actions: read
     needs: build-packages
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -92,7 +215,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Require complete exact original-group approval before stage-only fetch
+        if: ${{ inputs.stage_only }}
+        env:
+          RELEASE_DISPATCH_INPUTS: ${{ toJson(inputs) }}
+        run: python3 -B scripts/build-minecraft-artifacts.py stage-only-selection
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        if: ${{ !inputs.stage_only }}
         with:
           pattern: release-packages-*
           path: build/release-groups
@@ -100,7 +229,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/fetch-release-build-groups.py --output build/release-groups
-      - name: Bind all current packages to compile-package evidence
+      - name: Authenticate immutable original compile inputs for derived package verification
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/fetch-release-build-groups.py --selection "$PWD/distribution/builder-package-originals.json" --targets "1.18.2,1.19.2,1.20.1,1.20.2,1.20.3,1.20.4,1.20.5,1.21,1.21.2,1.21.4,1.21.5,1.21.6,1.21.7,1.21.9,1.21.11,26.1,26.2,26.3" --output build/builder-package-original-cache
+      - name: Bind all current packages to exact compile or package-only evidence
+        env: {OPENALLAY_ORIGINAL_PACKAGE_DIRECTORY: '${{ github.workspace }}/build/builder-package-original-cache'}
         run: python3 -B scripts/build-minecraft-artifacts.py merge-staged build/release-groups release
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -109,7 +242,7 @@ jobs:
           if-no-files-found: error
           path: release/
   collect-metadata:
-    if: ${{ inputs.metadata_only }}
+    if: ${{ !inputs.package_only && (inputs.metadata_only) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -135,3 +268,240 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: build/release-metadata/
+
+  forge1122-java8-source-diagnostic:
+    if: ${{ !inputs.package_only && (inputs.native_java8_diagnostic) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: One exact native Java8 source/API diagnostic; no game or packaging
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/diagnose-forge1122-native-java8.py
+      - name: Keep complete native compiler/source/classpath diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge1122-java8-source-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            build/forge1122-java8-diagnostic/
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/current-engine-classpath.json
+            ${{ runner.temp }}/forge1122-java8-tooling/*.json
+            ${{ runner.temp }}/forge1122-java8-tooling/*.log
+            ${{ runner.temp }}/forge1122-java8-native/namespace-receipt.json
+            ${{ runner.temp }}/forge1122-java8-native/java8-diagnostic/*.json
+            ${{ runner.temp }}/forge1122-java8-native/java8-diagnostic/*.log
+
+  forge1122-native-record-source-candidates:
+    if: ${{ !inputs.package_only && (inputs.native_record_candidates) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - name: One parse-only exact native record source candidate packet
+        run: python3 -B scripts/materialize-native-record-language.py --project "$PWD" --javac "$JAVA_HOME/bin/javac" --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/native-record-candidate"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-record-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/native-record-candidate/
+
+  forge1122-native-language-source-candidates:
+    if: ${{ !inputs.package_only && (inputs.native_language_candidates || inputs.native_held_candidates || inputs.native_residual_api_candidates) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25.0.2+10.0.LTS'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: One real normalized whole native source language cohort candidate
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/diagnose-forge1122-native-java8.py --language-candidates ${{ inputs.native_residual_api_candidates && '--residual-api-only' || (inputs.native_held_candidates && '--selected-owners native-builds/forge1122-census/held-language-owners.txt' || '') }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-language-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            build/forge1122-java8-diagnostic/
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/current-engine-classpath.json
+            ${{ runner.temp }}/forge1122-java8-tooling/*.json
+            ${{ runner.temp }}/forge1122-java8-tooling/*.log
+            ${{ runner.temp }}/forge1122-java8-native/namespace-receipt.json
+            ${{ runner.temp }}/forge1122-java8-native/units.tsv
+            ${{ runner.temp }}/forge1122-java8-native-language-candidate/
+
+  forge1122-native-java8-package-probe:
+    if: ${{ !inputs.package_only && (inputs.native_java8_package_probe) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25.0.2+10.0.LTS'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '17.0.18+8'}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - name: Normal native Java8 AP/reobf then same-job ordinary flat package
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/diagnose-forge1122-native-java8.py --native-package-probe
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-java8-package-probe-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            build/forge1122-java8-diagnostic/
+            build/forge1122-stock8-product/
+            ${{ runner.temp }}/native-complete-on-timeout-java8/receipt.json
+            ${{ runner.temp }}/native-complete-on-timeout-java8/*.log
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/source-bound-current-engine-classpath.json
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/source-bound-current-engine8-receipt.json
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/ordinary-stock8-package-inputs.json
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/actual-runtime-classification.json
+            ${{ runner.temp }}/forge1122-java8-tooling/*.json
+            ${{ runner.temp }}/forge1122-java8-tooling/*.log
+            ${{ runner.temp }}/forge1122-java8-native/namespace-receipt.json
+            ${{ runner.temp }}/forge1122-java8-native/native-build-receipt.json
+            ${{ runner.temp }}/forge1122-java8-native/ap/
+            ${{ runner.temp }}/forge1122-java8-native/native-union-fixture/*.json
+            ${{ runner.temp }}/forge1122-java8-native/native-union-fixture/*.log
+            ${{ runner.temp }}/forge1122-java8-native/jar/
+
+  forge1122-stock8-package-only:
+    if: ${{ !inputs.package_only && (inputs.native_java8_package_only) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false, fetch-depth: 0}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '25.0.2+10.0.LTS'}
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+        with: {cache-provider: basic, cache-read-only: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - name: Package only after exact retained native/source custody and current engine byte parity
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 -B scripts/package-retained-stock8-native.py --native-pin native-builds/forge1122-census/accepted-stock8-native.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: stock8-flat-package-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/forge1122-stock8-package-reuse/
+            build/forge1122-stock8-product/
+            ${{ runner.temp }}/forge1122-stock8-package-reuse/*.json
+
+  forge1122-stock8-ordinary-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+      with:
+        distribution: temurin
+        java-version: 8.0.482+8
+    - name: Share immutable official download cache, never player profiles
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+      with:
+        path: 'build/e2e/runtime/forge1122-stock8/minecraft/.provision/owner.json
+
+          build/e2e/runtime/forge1122-stock8/minecraft/launcher_profiles.json
+
+          build/e2e/runtime/forge1122-stock8/minecraft/libraries
+
+          build/e2e/runtime/forge1122-stock8/minecraft/versions/1.12.2
+
+          build/e2e/runtime/assets
+
+          '
+        key: stock-forge1122-java8-official-2864-linux
+    - name: Install actual isolated display support
+      run: 'sudo apt-get update
+
+        sudo apt-get install -y xvfb xauth x11-xserver-utils xdotool openbox libgl1-mesa-dri
+        libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+
+        '
+    - name: Run original real-client scenario on one retained packaged Java8 JAR
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: xvfb-run -a -s '-screen 0 1280x960x24' python3 -B scripts/run-forge1122-stock8-acceptance.py
+        --product-pin native-builds/forge1122-census/accepted-stock8-product.json --scenario
+        '${{ inputs.stock8_acceptance }}' --run-id '${{ inputs.stock8_acceptance }}-${{
+        github.run_id }}-${{ github.run_attempt }}'
+    - name: Retain only bounded reports, logs and real UI frames
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: stock-forge1122-java8-${{ inputs.stock8_acceptance }}-${{ github.sha }}
+        retention-days: 30
+        if-no-files-found: warn
+        path: 'build/e2e/forge1122-stock8/*/*.json
+
+          build/e2e/forge1122-stock8/*/sqlite-proof/*.json
+
+          build/e2e/forge1122-stock8/*/sqlite-proof/*.log
+
+          build/e2e/forge1122-stock8/*/scenario/*.json
+
+          build/e2e/forge1122-stock8/*/scenario/*.log
+
+          build/e2e/forge1122-stock8/*/scenario/frames/
+
+          build/e2e/forge1122-stock8/*/suite/*/scenario/*.json
+
+          build/e2e/forge1122-stock8/*/suite/*/scenario/*.log
+
+          build/e2e/forge1122-stock8/*/suite/*/scenario/frames/
+
+          build/e2e/forge1122-stock8/*/persist/*.json
+
+          build/e2e/forge1122-stock8/*/persist/*.log
+
+          build/e2e/forge1122-stock8/*/reload/*.json
+
+          build/e2e/forge1122-stock8/*/reload/*.log
+
+          build/e2e/runtime/forge1122-stock8/minecraft/.provision/*.json
+
+          build/e2e/runtime/forge1122-stock8/minecraft/.provision/*.log
+
+          '
+    if: ${{ !inputs.package_only && (inputs.stock8_acceptance != 'none' && inputs.stock8_acceptance != '') }}

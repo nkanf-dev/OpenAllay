@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 /** Live native slot hit-test. Reading hoveredSlot would instead reuse the previous extraction. */
 @Mixin(AbstractContainerScreen.class)
-public interface AbstractContainerScreenObservationAccessor {
+public interface AbstractContainerScreenObservationAccessor extends dev.openallay.client.context.GuideNativeSlotHitTest {
     @Invoker("getHoveredSlot")
     /** Returns null when no native slot is under the pointer. */
     Slot openallay$getHoveredSlot(double x, double y);

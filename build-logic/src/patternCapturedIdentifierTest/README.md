@@ -1,0 +1,9 @@
+# Declared wildcard identifier pattern operand proof
+
+The narrow helper lives only in `CanonicalPatternPort`. Shared `AttributedVarTypes` stays unchanged. The existing successful expression-type path returns exactly the original compiler TypeMirror. If that renderer rejects a captured variable, the helper can use the actual declared VariableElement type only for a direct parameter/local IdentifierTree. Public compiler `Types.isAssignable`, equal erasures, shared denotability and actual scope accessibility must all pass. Member access, calls, nested expressions and other failures do not use this policy. No guessed Object or raw operand widening occurs.
+
+The separate compiler oracle proves four actual capture-converted expression versus declared wildcard identifier type pairs. It converts parameter/local/unbounded/extends/super cases, then compares original17, release8 and genuine javac8/java8 behavior: 13 admission/lazy-access cases and nine reads, with class major52. A captured method-call operand remains a named rejected complete owner without partial output. The existing accepted 17-pattern/18-evaluation fixture is not reexecuted.
+
+Run `build-logic/src/patternCapturedIdentifierTest/verify.py --project <project> --javac <tooling-javac> --java <tooling-java> --javac8 <genuine-javac8> --java8 <genuine-java8> --output <fresh-external-output>` remotely. After actual proof passes, use the existing full-source attributed materializer for the entire current `GuideClientUiState` owner and then one current native modern gate. This packet contains no handwritten production owner change. It does not establish whole-client, engine or game Java8 acceptance.
+
+Prior failed wildcard classification, accepted 20-owner/94-pattern sources and their modern2100 proof stay frozen. Old tool and fixture evidence remains immutable. No local Java, heavy build, runtime data or source copies were used.

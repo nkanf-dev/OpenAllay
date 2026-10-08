@@ -10,6 +10,23 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 final class GuideBuilderE2EProbeTest {
+    @Test void legacyShapesHasFixedNativeIdsWithoutReplayingLifecycleOrModernPresets() {
+        assertTrue(GuideBuilderE2EProbe.enabled("builder-legacy-shapes"));
+        var landmarks = GuideBuilderE2EProbe.landmarks("builder-legacy-shapes");
+        assertEquals(16, landmarks.size());
+        assertTrue(landmarks.stream().noneMatch(value -> value.name().startsWith("partial-")
+                || value.name().startsWith("cancel-") || value.name().startsWith("undo-") || value.name().startsWith("house-")));
+        assertEquals("minecraft:stonebrick", landmarks.get(0).id());
+        assertEquals(Map.of("variant", "stonebrick"), landmarks.get(0).properties());
+        assertEquals(Map.of("facing", "south"), landmarks.stream()
+                .filter(value -> value.name().equals("legacy-rotated-chest")).findFirst().orElseThrow().properties());
+        assertEquals(Map.of("facing", "west"), landmarks.stream()
+                .filter(value -> value.name().equals("legacy-mirrored-chest")).findFirst().orElseThrow().properties());
+        var anchor = new GuideBuilderE2EProbe.Anchor(0,64,0,"minecraft:overworld");
+        assertEquals(17, GuideBuilderE2EProbe.oracleLandmarks("builder-legacy-shapes",anchor).size());
+        assertFalse(GuideBuilderE2EProbe.startupSettingsMatch("builder-legacy-shapes",true));
+        assertTrue(GuideBuilderE2EProbe.startupSettingsMatch("builder-legacy-shapes",false));
+    }
     @Test void oracleRequiresExactNativeIdAndEveryExpectedProperty() {
         var expected = new GuideBuilderE2EProbe.Landmark("door", 3, 1, 0,
                 "minecraft:oak_door", Map.of("half", "lower", "facing", "north"));
@@ -334,6 +351,7 @@ final class GuideBuilderE2EProbeTest {
 
     private static JsonObject commonReceipt(String scenario, String stage) {
         var receipt = receipt("builder_" + scenario, "completed"); receipt.addProperty("stage", stage);
+        if (scenario.equals("acceptance")) receipt.add("skipped", new com.google.gson.JsonArray());
         receipt.addProperty("probeToken", PROBE_TOKEN); receipt.add("anchor", position(10, 64, 20));
         receipt.add("context", dev.openallay.json.JsonTrees.parse("""
                 {"dimension":"minecraft:overworld","playerUuid":"00000000-0000-0000-0000-000000000017"}
@@ -444,8 +462,39 @@ final class GuideBuilderE2EProbeTest {
     private static JsonObject wireReceipt(JsonObject normalized) {
         return dev.openallay.json.JsonTrees.parse(normalized.getAsJsonObject("value").get("preview").getAsString()).getAsJsonObject();
     }
+    @Test void skippedSkyscraperRetainsExactOtherBuildAndReloadReceipts() {
+        var history = acceptanceHistory();
+        var skipped = dev.openallay.json.JsonTrees.parse("""
+                [{"name":"skyscraper","status":"SKIPPED","reason":"missing_material_palette_role","role":"lightning_rod_up"}]
+                """);
+        for (int index : List.of(0, 2, 4, 5, 6)) {
+            var receipt = wireReceipt(history.get(index));
+            receipt.add("skipped", dev.openallay.json.JsonTrees.copy(skipped));
+            for (String key : List.of("operations", "baselineOperations", "durableOperations")) {
+                if (!receipt.has(key)) continue;
+                var rows = receipt.getAsJsonArray(key);
+                for (int row = rows.size() - 1; row >= 0; row--) {
+                    var item = rows.get(row).getAsJsonObject();
+                    if ((item.has("name") && "skyscraper".equals(item.get("name").getAsString()))
+                            || (item.has("id") && "unit-skyscraper".equals(item.get("id").getAsString()))) rows.remove(row);
+                }
+            }
+            history.set(index, normalized(receipt));
+        }
+        var retained = GuideBuilderE2EProbe.builderReceipt(fixtureRequest(history));
+        assertEquals(8, retained.getAsJsonArray("operations").size());
+        var reload = reloadReceipt(retained); reload.addProperty("operationCount", 13);
+        assertTrue(GuideBuilderE2EProbe.persistedOperationsMatch(retained, reload));
+        reload.add("skipped", new com.google.gson.JsonArray());
+        assertFalse(GuideBuilderE2EProbe.persistedOperationsMatch(retained, reload));
+        var changed = wireReceipt(history.get(2)); changed.add("skipped", new com.google.gson.JsonArray());
+        history.set(2, normalized(changed));
+        assertRejected(history, "partial stage cannot drop the skipped receipt");
+    }
+
     private static JsonObject reloadReceipt(JsonObject retained) {
         var reload = receipt("builder_reload", "completed"); reload.add("status", readOnlyStatus());
+        reload.add("skipped", dev.openallay.json.JsonTrees.copy(retained.get("skipped")));
         reload.add("operations", dev.openallay.json.JsonTrees.copy(retained.getAsJsonArray("durableOperations"))); reload.addProperty("operationCount", 14);
         reload.add("listed", dev.openallay.json.JsonTrees.parse("[\"openallay_e2e_builder_native\"]"));
         var template = new JsonObject(); template.addProperty("name", "openallay_e2e_builder_native"); reload.add("template", template); return reload;
@@ -460,7 +509,7 @@ final class GuideBuilderE2EProbeTest {
         history.set(index, normalized(receipt));
         var finalReceipt = wireReceipt(history.getLast());
         if (index == 0) {
-            for (String key : List.of("anchor", "context", "probeToken", "operations", "status", "actions", "templates", "sites", "terrain", "baselineOperations")) {
+            for (String key : List.of("anchor", "context", "probeToken", "operations", "status", "actions", "templates", "sites", "terrain", "baselineOperations", "skipped")) {
                 if (receipt.has(key)) finalReceipt.add(key, dev.openallay.json.JsonTrees.copy(receipt.get(key))); else finalReceipt.remove(key);
             }
         } else if (index == 2 || index == 4 || index == 5) {

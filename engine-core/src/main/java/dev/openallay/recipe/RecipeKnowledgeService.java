@@ -23,7 +23,7 @@ public final class RecipeKnowledgeService {
             RecipeVisibilityPolicy visibility,
             List<RecipeKnowledgeProvider> providers) {
         List<RecipeProviderSnapshot> snapshots = new ArrayList<>();
-        for (RecipeKnowledgeProvider provider : List.copyOf(providers)) {
+        for (RecipeKnowledgeProvider provider : dev.openallay.util.Java8Collections.listCopyOf(providers)) {
             String sourceId = RecipeReference.requireSourceId(provider.sourceId());
             try {
                 RecipeProviderSnapshot snapshot = Objects.requireNonNull(

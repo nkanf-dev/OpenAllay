@@ -39,7 +39,7 @@ final class DirectRhinoHostArchitectureTest {
         assertFalse(sources.contains("NativeJavaMap"));
         assertFalse(sources.contains("implements Wrapper"));
         assertFalse(sources.contains("javaToJS"));
-        assertTrue(object.contains("value.getClass().isRecord()")
-                || adapter.contains("value.getClass().isRecord()"));
+        assertTrue(adapter.contains("ValueSchemas.supports(value.getClass())"));
+        assertTrue(adapter.contains("dev.openallay.value.RecordMetadata.isRecord(value.getClass())"));
     }
 }

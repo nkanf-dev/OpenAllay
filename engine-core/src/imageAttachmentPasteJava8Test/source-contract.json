@@ -1,0 +1,677 @@
+{
+  "scope": "seven-complete-owner-image-attachment-paste-java8",
+  "original_custody_commit": "5aa19714d79814d051662a5eaf35d493b9ca37e5",
+  "files": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/FileImageAttachmentStore.java",
+      "git_blob": "aa94ba313a5565bfe71c31b0ea30df85fd3f4d3b",
+      "pre_sha256": "c4cdf9de0da070775f966dc8c628a262eca41c0e8262742fd42b12ba2f2f6142",
+      "pre_bytes": 18907,
+      "converter_expected_sha256": "c4cdf9de0da070775f966dc8c628a262eca41c0e8262742fd42b12ba2f2f6142",
+      "post_sha256": "4fb1b129dc8fd80c081e2a773b8b975de7da9e7ebf7b2a93cb9ef40183722ab1",
+      "post_bytes": 19228
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/guide/ToolObservationImageIndex.java",
+      "git_blob": "146581fbf7b0a816446fd2b24bf582cc3123906d",
+      "pre_sha256": "ee2ce2e82eeaab510ef98b96729c066361bc0e6286903fd8db872648c8edde15",
+      "pre_bytes": 1517,
+      "converter_expected_sha256": "ee2ce2e82eeaab510ef98b96729c066361bc0e6286903fd8db872648c8edde15",
+      "post_sha256": "301288b1be8ed42ee3a32eb2dedd78c6444babc6587a885f805ad14857acd585",
+      "post_bytes": 1771
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/gui/ComposerImageDraft.java",
+      "git_blob": "9bd41b2ee47f3b4091585a8b4808bb70d483e444",
+      "pre_sha256": "53d73d4de4edfec3eef1937a5612560275fa88d041e29d11f9b944872c3b4dde",
+      "pre_bytes": 10388,
+      "converter_expected_sha256": "ac3cfb600394683c0f2db81be9083941e7b4dc13cb54fe95f7aae2bc606a9920",
+      "post_sha256": "5d1418c75269b2863f303c413d1923f4e31e7e7605672ef76eb372baa47445b4",
+      "post_bytes": 17013
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/gui/clipboard/AwtImageClipboard.java",
+      "git_blob": "4c5ecadfba1bcf537f4ccc6a2308960e0fbbff78",
+      "pre_sha256": "907d9bdc9544584a9c11fdf721b9ec4dd4ba2ba5fa10045056205736ac499acc",
+      "pre_bytes": 6432,
+      "converter_expected_sha256": "907d9bdc9544584a9c11fdf721b9ec4dd4ba2ba5fa10045056205736ac499acc",
+      "post_sha256": "894e2a50409810a2c2a094ddef6222a609516732c5bcb83da654bbea1393acae",
+      "post_bytes": 6661
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ClipboardImageEncoder.java",
+      "git_blob": "7c9cf4d1c36772f9f557fba05a00798e3425b2d2",
+      "pre_sha256": "56d4b842aede4f295b06070c6efc8b7295012fc569ded7f46914e40a20b021a7",
+      "pre_bytes": 3919,
+      "converter_expected_sha256": "eac1ecd54e466e72623944e2c2398f2420e8331cd0e1e4003c8a746e500ca7c6",
+      "post_sha256": "ed0f3efad1feb07fa643aa28500cddbf6f52e77cac52e07895d912b79f07efee",
+      "post_bytes": 7802
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ImageClipboard.java",
+      "git_blob": "dda75c07384f0e02e0e28444d0de381bf8fd2eed",
+      "pre_sha256": "79da5905c939c529ff235d64c2c82446d0c1c021d22ff296368485bf03d09d51",
+      "pre_bytes": 1200,
+      "converter_expected_sha256": "8c3866f86f56ef657ea8e77bbb8a92ebba3c93d0ef0252a477faf07cc9d9fb39",
+      "post_sha256": "f71142c3facd1feca25fc34029b1b8556c6425c9bf8461da5b574fda4833e308",
+      "post_bytes": 2704
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ClipboardImageDecoder.java",
+      "git_blob": "d3b5ef8156bdf37dedaef7660bfa1cd7886e1c81",
+      "pre_sha256": "6c08bb6b219c0a3e0e14a658a693d5b19c10340c702838af96d7156c87dbf661",
+      "pre_bytes": 1120,
+      "converter_expected_sha256": "6c08bb6b219c0a3e0e14a658a693d5b19c10340c702838af96d7156c87dbf661",
+      "post_sha256": "b6c8cdbaf8193947e52be6d015e0b006e5f59e5a4f357aed9d70c03c5ccb9cf7",
+      "post_bytes": 1172
+    }
+  ],
+  "unchanged_compile_frontier": [
+    {
+      "path": "engine-core/src/main/java/dev/openallay/client/ClientEventDispatcher.java",
+      "sha256": "e7bf7c4082a1bdbc800d68598140f68c398559f14cad67c44a938583a70bbd2e",
+      "bytes": 129
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/ContextValidation.java",
+      "sha256": "413b83e466d050e596533a72b30f323a19d3371aedb0aad15af39d7288deaba1",
+      "bytes": 978
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataAuthority.java",
+      "sha256": "04b4f8024f76c374d00e6a117c847cabd814d17e93b7b9011928c713c48bacf3",
+      "bytes": 172
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/DataCompleteness.java",
+      "sha256": "fbca30849903e1b47448a760a8689496a48fd57631c8057443392f8abfdc684d",
+      "bytes": 104
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java",
+      "sha256": "95ff0f4885c589039edd39467b85bf008d0b2cf8dca75102e6c8e4de868df65d",
+      "bytes": 5830
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/ConstructorValueJsonAdapter.java",
+      "sha256": "638fe24a01f86e13701ad11073c3630938b76778e4138d34f53592c316b3ac60",
+      "bytes": 12218
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/EngineJson.java",
+      "sha256": "ba0183b406daac7f1e97ca0d95f1e42b24bb8b7e8ef571d81f833ebd2e24f9ac",
+      "bytes": 17687
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/json/RecordJsonAdapter.java",
+      "sha256": "7fa96c324f1eae6a2a86965b202f9bdfd0ae38a2437fba7dad49b620dc4098cb",
+      "bytes": 4878
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelContent.java",
+      "sha256": "27f4d5c31d410ccbaa336ff4918ed73a7417616cd42771e7998d9f38dff2119f",
+      "bytes": 11774
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelMessage.java",
+      "sha256": "f482752ac99acef8fa9392991ce97138f7fb779faaaeaf5c0c6d9770c03a351c",
+      "bytes": 7252
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelRequest.java",
+      "sha256": "2f4365b10f9ac2f5bedc41b6404b91c4aaba900d5336b430c33addac60dcb391",
+      "bytes": 6222
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelRole.java",
+      "sha256": "af6ed3a27c9885a89818faa09863c6fef6830be8265d1ddd1f2c35a62a33b9bd",
+      "bytes": 80
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelToolDefinition.java",
+      "sha256": "46beb3e7ce67da115fe6660fab6f24f88865b1f1978804d1683678966b867a4b",
+      "bytes": 2847
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelTurn.java",
+      "sha256": "0f0a8d9056412797eed6a41ac51c5790fc26b0c21e9d35584afd875a7b0860b0",
+      "bytes": 4060
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/ModelUsage.java",
+      "sha256": "95764703006530bdeb8353a89e45c3ec7ff2de33fe6a6f97a39983e62464afde",
+      "bytes": 8162
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImageAttachmentStore.java",
+      "sha256": "9482249f6aed3f9957b9ca76f4648cab4baeda997953148388c0d2cc8c43cdb0",
+      "bytes": 2219
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImageInputLimits.java",
+      "sha256": "ff4bff957d12c025e92662cd699221ef48c225d84d4e8c239b86b144c9514090",
+      "bytes": 3923
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImagePayloadResolver.java",
+      "sha256": "a57abeeca074bf8b2e738abbc567b5dcb5ec7a74713720af4b4dc2b0e17ffcb5",
+      "bytes": 859
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ImageReference.java",
+      "sha256": "52ffa4fbf3b7d7f50eaccfc073e90a8a125865ff52385570e1e3b4a99996f283",
+      "bytes": 3489
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/model/image/ModelImages.java",
+      "sha256": "6113286ccf7ed417279009c22c0c39bc968da78f2f9756317c5d56ff46836256",
+      "bytes": 7316
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/tool/ToolResult.java",
+      "sha256": "6fa63fc6450fabea5af1b008ed1d71a02893f4f1371064489478264e9e31f7dd",
+      "bytes": 4060
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "e93f4ee9e3e3e0da650db9154fb436e99f246fa19bc696237aef4a4036295de3",
+      "bytes": 4686
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Hex.java",
+      "sha256": "f1b2ceff46f490a0ed241cc120cfc03769577b7f0edcad39a3890343610e4d22",
+      "bytes": 1191
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Strings.java",
+      "sha256": "2f92e6e13a4dca8284b26ab59a7844b14b918165666730783654dc353e820073",
+      "bytes": 3667
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/RecordMetadata.java",
+      "sha256": "3cb1573ce1a0773a85b0ff797cfa444b55cb2ef610a503c142743f3683b9d8ab",
+      "bytes": 4235
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchema.java",
+      "sha256": "96e34afacd8295e7c9846790355827da69237ecfe28ca15e4f7989317b015c81",
+      "bytes": 4108
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueSchemas.java",
+      "sha256": "3b1ab1d755049ee829d20c6f8d0a8504def3368f4d4a68a9f61f8fb975040b5c",
+      "bytes": 1521
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/value/ValueType.java",
+      "sha256": "5c93eb191245124f94a95097be71a6f61f1c116d9695021bee442a8e2c5b8b9e",
+      "bytes": 415
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchor.java",
+      "sha256": "c52ea7420c6c34b0b6901f35a4568287cba9ff5d61ea9dea724750d350dc4708",
+      "bytes": 3688
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/ClientObservationAnchorJson.java",
+      "sha256": "b999fcf3d95fb6f03337b66335bea1e54442a40dfdd11e0a79591a7b8188c5d8",
+      "bytes": 8065
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java",
+      "sha256": "0b16b1b7b595a1113a610822dfb7f5487b9207531e9bf4f54be003d7e67aa905",
+      "bytes": 42552
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldPosition.java",
+      "sha256": "fde9f9d871224556fe4e40647aa445770700d1d67877911a7ccac75c0c1c65e0",
+      "bytes": 2028
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldViewCapture.java",
+      "sha256": "1507b8a04e8dc5ec8b489c07979e81955001e947a9c9868211919ae1f45ed6f5",
+      "bytes": 8386
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/world/WorldViewRequest.java",
+      "sha256": "f23c6533af3fdea4a4a7cad60cf5dda6dbb111463e4390549522e50f3b787047",
+      "bytes": 1694
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonReaders.java",
+      "sha256": "374c7d12e8d02ed33234c8029c2f2717713f92fec90fdde34971242c0730c4aa",
+      "bytes": 3757
+    },
+    {
+      "path": "runtime-json/src/main/java/dev/openallay/json/JsonTrees.java",
+      "sha256": "5d6e03b273f1f33ae383d6d365cd47a1bd1faf91543226a3568172b70af99974",
+      "bytes": 3587
+    }
+  ],
+  "converter": {
+    "path": "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java",
+    "sha256": "6e50efc1bf78fc0f4ee29118d1cf606275fb02dfd6f5131d1ebfc0b4f1fdf218",
+    "selected": {
+      "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ImageClipboard.java": "ImageClipboard.Read",
+      "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ClipboardImageEncoder.java": "ClipboardImageEncoder.Encoded,ClipboardImageEncoder.Preview",
+      "engine-core/src/main/java/dev/openallay/client/gui/ComposerImageDraft.java": "ComposerImageDraft.Attachment,ComposerImageDraft.Submission,ComposerImageDraft.Scope"
+    }
+  },
+  "api_lowering": {
+    "engine-core/src/main/java/dev/openallay/model/image/FileImageAttachmentStore.java": [
+      {
+        "old": "List.copyOf(",
+        "new": "dev.openallay.util.Java8Collections.listCopyOf("
+      },
+      {
+        "old": "import java.util.HexFormat;",
+        "new": "import dev.openallay.util.Java8Hex;"
+      },
+      {
+        "old": "HexFormat.of().formatHex(",
+        "new": "Java8Hex.formatHex("
+      },
+      {
+        "old": "for (var owner : captured.entrySet())",
+        "new": "for (Map.Entry<String, List<ImageReference>> owner : captured.entrySet())"
+      },
+      {
+        "old": "try (var entries = Files.list(directory))",
+        "new": "try (java.util.stream.Stream<Path> entries = Files.list(directory))"
+      },
+      {
+        "old": "entries.toList()",
+        "new": "dev.openallay.util.Java8Collections.toList(entries)"
+      },
+      {
+        "old": "try (var input = new MemoryCacheImageInputStream",
+        "new": "try (MemoryCacheImageInputStream input = new MemoryCacheImageInputStream"
+      },
+      {
+        "old": "var readers = ImageIO.getImageReaders(input);",
+        "new": "java.util.Iterator<ImageReader> readers = ImageIO.getImageReaders(input);"
+      },
+      {
+        "old": "String mimeType = switch (format) {\n                    case \"png\" -> \"image/png\";\n                    case \"jpeg\", \"jpg\" -> \"image/jpeg\";\n                    default -> throw new IOException(\"only PNG and JPEG image inputs are supported\");\n                };",
+        "new": "String mimeType;\n                switch (format) {\n                    case \"png\": mimeType = \"image/png\"; break;\n                    case \"jpeg\": case \"jpg\": mimeType = \"image/jpeg\"; break;\n                    default: throw new IOException(\"only PNG and JPEG image inputs are supported\");\n                }"
+      },
+      {
+        "old": "Channels.newReader(channel, StandardCharsets.US_ASCII)",
+        "new": "Channels.newReader(channel, StandardCharsets.US_ASCII.newDecoder(), -1)"
+      },
+      {
+        "old": "if (!line.isEmpty())",
+        "new": "if (line.length() != 0)"
+      },
+      {
+        "old": "identifier.isBlank()",
+        "new": "dev.openallay.util.Java8Strings.isBlank(identifier)"
+      }
+    ],
+    "engine-core/src/main/java/dev/openallay/guide/ToolObservationImageIndex.java": [
+      {
+        "old": "List.copyOf(",
+        "new": "dev.openallay.util.Java8Collections.listCopyOf("
+      },
+      {
+        "old": "List.of(",
+        "new": "dev.openallay.util.Java8Collections.listOf("
+      },
+      {
+        "old": "Map.copyOf(",
+        "new": "dev.openallay.util.Java8Collections.mapCopyOf("
+      },
+      {
+        "old": "if (content instanceof ModelContent.ToolResult result && !result.images().isEmpty()) {",
+        "new": "if (content instanceof ModelContent.ToolResult && !((ModelContent.ToolResult) content).images().isEmpty()) {\n                        ModelContent.ToolResult result = (ModelContent.ToolResult) content;"
+      }
+    ],
+    "engine-core/src/main/java/dev/openallay/client/gui/ComposerImageDraft.java": [
+      {
+        "old": "List.copyOf(",
+        "new": "dev.openallay.util.Java8Collections.listCopyOf("
+      },
+      {
+        "old": "List.of(",
+        "new": "dev.openallay.util.Java8Collections.listOf("
+      },
+      {
+        "old": "return attachments().stream().map(Attachment::reference).filter(Objects::nonNull).toList();",
+        "new": "return dev.openallay.util.Java8Collections.toList(attachments().stream().map(Attachment::reference).filter(Objects::nonNull));"
+      },
+      {
+        "old": "if (result instanceof ToolResult.Success<ImageReference> imported) {\n                                        discardedImport.accept(imported.value());",
+        "new": "if (result instanceof ToolResult.Success<?>) {\n                                        @SuppressWarnings(\"unchecked\")\n                                        ToolResult.Success<ImageReference> imported = (ToolResult.Success<ImageReference>) result;\n                                        discardedImport.accept(imported.value());"
+      },
+      {
+        "old": "if (failure != null || !(result instanceof ToolResult.Success<ImageReference> imported)) {",
+        "new": "if (failure != null || !(result instanceof ToolResult.Success<?>)) {"
+      },
+      {
+        "old": "replace(scope.session, id, new Attachment(id, imported.value(), image.preview()));",
+        "new": "@SuppressWarnings(\"unchecked\")\n                                ToolResult.Success<ImageReference> imported = (ToolResult.Success<ImageReference>) result;\n                                replace(scope.session, id, new Attachment(id, imported.value(), image.preview()));"
+      },
+      {
+        "old": "attachments().stream().map(Attachment::id).toList()",
+        "new": "dev.openallay.util.Java8Collections.toList(attachments().stream().map(Attachment::id))"
+      },
+      {
+        "old": "return drafts.values().stream().flatMap(List::stream).map(Attachment::reference)\n                .filter(Objects::nonNull).distinct().toList();",
+        "new": "return dev.openallay.util.Java8Collections.toList(drafts.values().stream().flatMap(List::stream).map(Attachment::reference)\n                .filter(Objects::nonNull).distinct());"
+      },
+      {
+        "old": " ids = dev.openallay.util.Java8Collections.listCopyOf(ids); ",
+        "new": " ids = dev.openallay.util.Java8Collections.listCopyOf(ids);"
+      }
+    ],
+    "engine-core/src/main/java/dev/openallay/client/gui/clipboard/AwtImageClipboard.java": [
+      {
+        "old": "if (transferred instanceof Image image) return Read.image(ClipboardImageEncoder.bitmap(image));",
+        "new": "if (transferred instanceof Image) return Read.image(ClipboardImageEncoder.bitmap((Image) transferred));"
+      },
+      {
+        "old": "InputStream stream = data instanceof InputStream input ? input\n                            : data instanceof byte[] bytes ? new ByteArrayInputStream(bytes) : null;",
+        "new": "InputStream stream = data instanceof InputStream ? (InputStream) data\n                            : data instanceof byte[] ? new ByteArrayInputStream((byte[]) data) : null;"
+      },
+      {
+        "old": "try (stream) {\n                        BufferedImage image = ClipboardImageDecoder.read(stream);",
+        "new": "try (InputStream capturedStream = stream) {\n                        BufferedImage image = ClipboardImageDecoder.read(capturedStream);"
+      },
+      {
+        "old": "if (data instanceof List<?> files) {",
+        "new": "if (data instanceof List<?>) {\n                        List<?> files = (List<?>) data;"
+      },
+      {
+        "old": "if (!(entry instanceof File file) || !isImageFile(file.toPath())) continue;",
+        "new": "if (!(entry instanceof File) || !isImageFile(((File) entry).toPath())) continue;\n                            File file = (File) entry;"
+      },
+      {
+        "old": "try (var reader = new BufferedReader",
+        "new": "try (BufferedReader reader = new BufferedReader"
+      },
+      {
+        "old": "try (var stream = java.nio.file.Files.newInputStream",
+        "new": "try (InputStream stream = java.nio.file.Files.newInputStream"
+      },
+      {
+        "old": "line.strip()",
+        "new": "dev.openallay.util.Java8Strings.strip(line)"
+      },
+      {
+        "old": "Path.of(uri)",
+        "new": "java.nio.file.Paths.get(uri)"
+      }
+    ],
+    "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ClipboardImageEncoder.java": [
+      {
+        "old": "var loaded = new javax.swing.ImageIcon(image);",
+        "new": "javax.swing.ImageIcon loaded = new javax.swing.ImageIcon(image);"
+      },
+      {
+        "old": "try (var output = new MemoryCacheImageOutputStream",
+        "new": "try (MemoryCacheImageOutputStream output = new MemoryCacheImageOutputStream"
+      },
+      {
+        "old": " png = png.clone(); java.util.Objects.requireNonNull(preview, \"preview\"); ",
+        "new": " png = png.clone(); java.util.Objects.requireNonNull(preview, \"preview\");"
+      }
+    ],
+    "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ImageClipboard.java": [],
+    "engine-core/src/main/java/dev/openallay/client/gui/clipboard/ClipboardImageDecoder.java": [
+      {
+        "old": "try (var input = new MemoryCacheImageInputStream",
+        "new": "try (MemoryCacheImageInputStream input = new MemoryCacheImageInputStream"
+      },
+      {
+        "old": "var readers = ImageIO.getImageReaders(input);",
+        "new": "java.util.Iterator<ImageReader> readers = ImageIO.getImageReaders(input);"
+      }
+    ]
+  },
+  "explicit_schema_count": 6,
+  "actual_production_compile_frontier_count": 43,
+  "fixture_path": "engine-core/src/java8Test/java/dev/openallay/client/gui/ImageAttachmentPasteJava8Fixture.java",
+  "junit_fixture_path": "engine-core/src/java8Test/java/dev/openallay/client/gui/ImageAttachmentPasteJava8Test.java",
+  "fixture_artifacts": [
+    {
+      "path": "engine-core/src/java8Test/java/dev/openallay/client/gui/ImageAttachmentPasteJava8Fixture.java",
+      "sha256": "3964d7a1d74fc9efeedc58e4ca3a95fcceaa932a69c1aeca4fd5264bc99ce5ad",
+      "bytes": 18493
+    },
+    {
+      "path": "engine-core/src/java8Test/java/dev/openallay/client/gui/ImageAttachmentPasteJava8Test.java",
+      "sha256": "6cdb4f50c76e32f9423130eb72afd2c32e9b2f93d0ebf2b642b746b77731f91c",
+      "bytes": 734
+    }
+  ],
+  "staged_test_inputs": [
+    {
+      "path": "engine-core/src/test/java/dev/openallay/model/image/FileImageAttachmentStoreTest.java",
+      "sha256": "f9a1b8f8d4a51ef28e1e925722e82364bf2c20ec7bf743048bbeffeeff35d1f8",
+      "bytes": 15113,
+      "substitutions": [
+        {
+          "old": "List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf("
+        },
+        {
+          "old": "Map.of(",
+          "new": "dev.openallay.util.Java8Collections.mapOf("
+        },
+        {
+          "old": "import java.util.HexFormat;",
+          "new": "import dev.openallay.util.Java8Hex;"
+        },
+        {
+          "old": "HexFormat.of().formatHex(",
+          "new": "Java8Hex.formatHex("
+        },
+        {
+          "old": "try (var paths = Files.list",
+          "new": "try (java.util.stream.Stream<Path> paths = Files.list"
+        },
+        {
+          "old": "List<Callable<Void>> operations = java.util.stream.IntStream.range(0, 24)",
+          "new": "List<Callable<Void>> operations = dev.openallay.util.Java8Collections.toList(java.util.stream.IntStream.range(0, 24)"
+        },
+        {
+          "old": "}).toList();",
+          "new": "}));"
+        },
+        {
+          "old": "try (var executor = Executors.newFixedThreadPool(8)) {\n            for (var result : executor.invokeAll(operations)) result.get();\n        }",
+          "new": "java.util.concurrent.ExecutorService executor = Executors.newFixedThreadPool(8);\n        try {\n            for (java.util.concurrent.Future<Void> result : executor.invokeAll(operations)) result.get();\n        } finally {\n            executor.shutdown();\n            if (!executor.awaitTermination(1, java.util.concurrent.TimeUnit.MINUTES)) {\n                executor.shutdownNow();\n                throw new AssertionError(\"Synthetic storage workers did not finish\");\n            }\n        }"
+        },
+        {
+          "old": "Files.writeString(exported, \"not an artifact\")",
+          "new": "java.nio.file.Files.write(exported, (\"not an artifact\").getBytes(java.nio.charset.StandardCharsets.UTF_8))"
+        },
+        {
+          "old": "Files.writeString(nested.resolve(reference.sha256()), \"not an artifact\")",
+          "new": "java.nio.file.Files.write(nested.resolve(reference.sha256()), (\"not an artifact\").getBytes(java.nio.charset.StandardCharsets.UTF_8))"
+        },
+        {
+          "old": "Files.writeString(externalOwners, \"must not change\")",
+          "new": "java.nio.file.Files.write(externalOwners, (\"must not change\").getBytes(java.nio.charset.StandardCharsets.UTF_8))"
+        },
+        {
+          "old": "Files.writeString(actorDirectory().resolve(\".owners\"), \"incomplete or corrupt manifest\")",
+          "new": "java.nio.file.Files.write(actorDirectory().resolve(\".owners\"), (\"incomplete or corrupt manifest\").getBytes(java.nio.charset.StandardCharsets.UTF_8))"
+        },
+        {
+          "old": "Files.readString(exported)",
+          "new": "new String(java.nio.file.Files.readAllBytes(exported), java.nio.charset.StandardCharsets.UTF_8)"
+        },
+        {
+          "old": "Files.readString(nested.resolve(reference.sha256()))",
+          "new": "new String(java.nio.file.Files.readAllBytes(nested.resolve(reference.sha256())), java.nio.charset.StandardCharsets.UTF_8)"
+        },
+        {
+          "old": "Files.readString(externalOwners)",
+          "new": "new String(java.nio.file.Files.readAllBytes(externalOwners), java.nio.charset.StandardCharsets.UTF_8)"
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/client/gui/clipboard/AwtImageClipboardTest.java",
+      "sha256": "662fe6a41285226e2a87e6d94154bc4a36af48a7ab7760780dc4658a59e19fbb",
+      "bytes": 11053,
+      "substitutions": [
+        {
+          "old": "java.util.List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf("
+        },
+        {
+          "old": "java.util.Map.of(",
+          "new": "dev.openallay.util.Java8Collections.mapOf("
+        },
+        {
+          "old": "try (var input = new ByteArrayInputStream",
+          "new": "try (ByteArrayInputStream input = new ByteArrayInputStream"
+        },
+        {
+          "old": "var clipboard = new AwtImageClipboard",
+          "new": "AwtImageClipboard clipboard = new AwtImageClipboard"
+        },
+        {
+          "old": "values.keySet().toArray(DataFlavor[]::new)",
+          "new": "values.keySet().toArray(new DataFlavor[0])"
+        },
+        {
+          "old": "java.nio.file.Files.writeString(text, \"ordinary document\")",
+          "new": "java.nio.file.Files.write(text, (\"ordinary document\").getBytes(java.nio.charset.StandardCharsets.UTF_8))"
+        },
+        {
+          "old": "java.nio.file.Files.writeString(broken, \"not PNG data\")",
+          "new": "java.nio.file.Files.write(broken, (\"not PNG data\").getBytes(java.nio.charset.StandardCharsets.UTF_8))"
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/client/gui/clipboard/ClipboardImageDecoderTest.java",
+      "sha256": "bf9e2ad708cc2f7d7901d28d316fde562d1cc51c66579b307389f3f71f62dcf6",
+      "bytes": 2498,
+      "substitutions": [
+        {
+          "old": "try (var bytes = new ByteArrayInputStream",
+          "new": "try (ByteArrayInputStream bytes = new ByteArrayInputStream"
+        },
+        {
+          "old": "var bytes = new CloseTrackedStream",
+          "new": "CloseTrackedStream bytes = new CloseTrackedStream"
+        },
+        {
+          "old": "try (bytes) {",
+          "new": "try (CloseTrackedStream captured = bytes) {"
+        }
+      ]
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/guide/ToolObservationImageIndexTest.java",
+      "sha256": "ee608dbba864b58adf0cf51f550514484ee0dd57618096e3d4d8afea43a9f379",
+      "bytes": 1510,
+      "substitutions": [
+        {
+          "old": "List.of(",
+          "new": "dev.openallay.util.Java8Collections.listOf("
+        },
+        {
+          "old": "Map.of(",
+          "new": "dev.openallay.util.Java8Collections.mapOf("
+        },
+        {
+          "old": "var image =",
+          "new": "ImageReference image ="
+        },
+        {
+          "old": "\"a\".repeat(64)",
+          "new": "new String(new char[64]).replace(\"\\0\", \"a\")"
+        },
+        {
+          "old": "var originals =",
+          "new": "Map<UUID, List<ModelMessage>> originals ="
+        },
+        {
+          "old": "var index =",
+          "new": "Map<UUID, Map<String, List<ImageReference>>> index ="
+        }
+      ]
+    }
+  ],
+  "selected_modern_tests": [
+    {
+      "path": "engine-core/src/test/java/dev/openallay/client/gui/GuideClientUiStateTest.java",
+      "sha256": "fa4f6b215d14c13fc794f84de1504ea1b0270c23d875164d1987ee1f4ffd35e2",
+      "bytes": 21652
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/model/image/FileImageAttachmentStoreTest.java",
+      "sha256": "f9a1b8f8d4a51ef28e1e925722e82364bf2c20ec7bf743048bbeffeeff35d1f8",
+      "bytes": 15113
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/client/gui/clipboard/AwtImageClipboardTest.java",
+      "sha256": "662fe6a41285226e2a87e6d94154bc4a36af48a7ab7760780dc4658a59e19fbb",
+      "bytes": 11053
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/client/gui/clipboard/ClipboardImageDecoderTest.java",
+      "sha256": "bf9e2ad708cc2f7d7901d28d316fde562d1cc51c66579b307389f3f71f62dcf6",
+      "bytes": 2498
+    },
+    {
+      "path": "engine-core/src/test/java/dev/openallay/guide/ToolObservationImageIndexTest.java",
+      "sha256": "ee608dbba864b58adf0cf51f550514484ee0dd57618096e3d4d8afea43a9f379",
+      "bytes": 1510
+    }
+  ],
+  "junit_classes": [
+    "dev.openallay.client.gui.ImageAttachmentPasteJava8Test",
+    "dev.openallay.model.image.FileImageAttachmentStoreTest",
+    "dev.openallay.client.gui.clipboard.AwtImageClipboardTest",
+    "dev.openallay.client.gui.clipboard.ClipboardImageDecoderTest",
+    "dev.openallay.guide.ToolObservationImageIndexTest"
+  ],
+  "dependency_pins": {
+    "gson": [
+      {
+        "name": "gson-2.8.0.jar",
+        "bytes": 231952,
+        "digest_algorithm": "sha1",
+        "digest": "c4ba5371a29ac9b2ad6129b1d39ea38750043eff",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.8.0/gson-2.8.0.jar.sha1"
+      },
+      {
+        "name": "gson-2.13.2.jar",
+        "bytes": 289901,
+        "digest_algorithm": "sha256",
+        "digest": "dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0",
+        "artifact_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar.sha256"
+      }
+    ],
+    "junit_console": [
+      {
+        "name": "junit-platform-console-standalone-1.11.4.jar",
+        "bytes": 2809597,
+        "digest_algorithm": "sha256",
+        "digest": "b016ef6b1c3454d6d7c2c88ce081dabf289699686af6622d6e4e2e1b54b4a2fc",
+        "artifact_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar",
+        "digest_url": "https://repo.maven.apache.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar.sha256"
+      }
+    ]
+  },
+  "runner_sha256": "f601daca67cc6b4b65de895324e7c5c95bd610d0fc0450498d4b683e6c35aee0",
+  "hash_oracle_contract": {
+    "formula": "ordered zero-seeded31 fold of actual declared raw fields; primitive boxed record formulas, arrays and references retain identities",
+    "identity_bearing_values": "Read/Encoded/Preview/Attachment/Scope may contain VM-local image, enum, array or reference hashes; exact formula asserted within each VM, no cross-VM numeric identity hash output",
+    "no_production_hash_normalization": true
+  },
+  "security_scope": {
+    "allowed_runtime_inputs": "synthetic BufferedImage/Transferable and fresh temporary store paths only",
+    "forbidden": "system clipboard, mic, credentials, profile/config/world/history/model access",
+    "storage_algorithm": "complete actual actor/hash/atomic manifest/file lock/no-follow; API/syntax only"
+  },
+  "scope_private_constructor_fixture": "Reflection is test-only constructor invocation for original+post private Scope; no private-field writes, Unsafe, allocation bypass or production constructor change."
+}

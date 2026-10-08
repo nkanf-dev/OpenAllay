@@ -91,7 +91,10 @@ final class NativeSpeechToTextTest {
                 try { return NativeSpeechToText.runProcess(call, cancellation, (directory, command) -> {
                     job.set(directory); assertTrue(Files.exists(directory.resolve("audio.pcm")));
                     assertEquals("-Xmx256m", command.get(2));
-                    assertEquals("--enable-native-access=ALL-UNNAMED", command.get(3));
+                    assertEquals(NativeJavaRuntime.supportsNativeAccess(), command.contains("--enable-native-access=ALL-UNNAMED"));
+                    assertEquals(java.nio.file.Paths.get(System.getProperty("java.home"), "bin",
+                            System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win")
+                                    ? "java.exe" : "java").toString(), command.get(0));
                     assertTrue(command.contains(NativeSpeechToText.Worker.class.getName()));
                     started.countDown(); return process;
                 }); } catch (Exception failure) { throw new java.util.concurrent.CompletionException(failure); }

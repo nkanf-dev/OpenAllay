@@ -40,20 +40,20 @@ public final class SkillPackageInstaller {
     private final Set<String> availableTools;
     private final Set<String> installedMods;
 
-    public SkillPackageInstaller(Path managedRoot, SkillParser parser) {
-        this(managedRoot, parser, Set.of());
+    public SkillPackageInstaller(Path managedRoot, SkillParser parser, String minecraftVersion) {
+        this(managedRoot, parser, minecraftVersion, dev.openallay.util.Java8Collections.setOf());
     }
 
     public SkillPackageInstaller(
-            Path managedRoot, SkillParser parser, Set<String> installedMods) {
+            Path managedRoot, SkillParser parser, String minecraftVersion, Set<String> installedMods) {
         this(
                 managedRoot,
                 parser,
                 new JdkHttpTransport(new HttpTransportPolicy(
                         java.time.Duration.ofSeconds(15), "openallay-skill-package-http")),
-                "26.2",
+                minecraftVersion,
                 OpenAllayConstants.SKILL_API_VERSION,
-                Set.of("openallay:run_javascript", "openallay:load_skill"),
+                dev.openallay.util.Java8Collections.setOf("openallay:run_javascript", "openallay:load_skill"),
                 installedMods);
     }
 
@@ -69,8 +69,8 @@ public final class SkillPackageInstaller {
                 transport,
                 minecraftVersion,
                 openallayApiVersion,
-                Set.of("openallay:run_javascript", "openallay:load_skill"),
-                Set.of());
+                dev.openallay.util.Java8Collections.setOf("openallay:run_javascript", "openallay:load_skill"),
+                dev.openallay.util.Java8Collections.setOf());
     }
 
     public SkillPackageInstaller(
@@ -87,8 +87,8 @@ public final class SkillPackageInstaller {
         this.transport = Objects.requireNonNull(transport, "transport");
         this.minecraftVersion = requireText(minecraftVersion, "minecraftVersion");
         this.openallayApiVersion = requireText(openallayApiVersion, "openallayApiVersion");
-        this.availableTools = Set.copyOf(availableTools);
-        this.installedMods = Set.copyOf(installedMods);
+        this.availableTools = dev.openallay.util.Java8Collections.setCopyOf(availableTools);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
     }
 
     public CompletableFuture<ToolResult<InstallResult>> install(
@@ -101,14 +101,18 @@ public final class SkillPackageInstaller {
     }
 
     private ToolResult<InstallResult> commitPrepared(ToolResult<PreparedSkillInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedSkillInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.skill.install.PreparedSkillInstall> value; ToolResult.Failure<PreparedSkillInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<PreparedSkillInstall>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         try (PreparedSkillInstall prepared =
                 ((ToolResult.Success<PreparedSkillInstall>) result).value()) {
             ToolResult<Boolean> committed = prepared.commit();
-            if (committed instanceof ToolResult.Failure<Boolean> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = committed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern1_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
             }
             return new ToolResult.Success<>(new InstallResult(prepared.id(), prepared.provenance()));
         }
@@ -119,8 +123,7 @@ public final class SkillPackageInstaller {
             CommunityCatalogManifest.PackageEntry entry, CancellationSignal cancellation) {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(cancellation, "cancellation");
-        if (!entry.compatibility().minecraft().equals(minecraftVersion)
-                || !entry.compatibility().openallayApi().equals(openallayApiVersion)) {
+        if (!entry.compatibility().supports(minecraftVersion, openallayApiVersion)) {
             return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                     "skill_install_incompatible",
                     "The Skill package is not compatible with this OpenAllay game runtime"));
@@ -136,7 +139,7 @@ public final class SkillPackageInstaller {
                             .header("accept", "application/zip, application/octet-stream")
                             .get().build(),
                     cancellation,
-                    (status, headers, body) -> new ArchiveResponse(status, body.readAllBytes()));
+                    (status, headers, body) -> new ArchiveResponse(status, dev.openallay.util.Java8Streams.readAllBytes(body)));
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(installFailure());
         }
@@ -155,8 +158,10 @@ public final class SkillPackageInstaller {
                 Files.write(temporary, archive.bytes());
                 ToolResult<PreparedSkillInstall> result = prepareLocal(temporary,
                         entry.version(), entry.source().toString(), cancellation);
-                if (result instanceof ToolResult.Success<PreparedSkillInstall> success) {
-                    PreparedSkillInstall candidate = success.value();
+                final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.skill.install.PreparedSkillInstall> value; ToolResult.Success<PreparedSkillInstall> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<PreparedSkillInstall>) $oaPattern2_holder.value) != null))) {
+                    PreparedSkillInstall candidate = $oaPattern2_holder.bound.value();
                     if (!candidate.id().equals(entry.id())
                             || !candidate.metadata().attributes()
                                     .getOrDefault("openallay/version", entry.version())
@@ -223,7 +228,7 @@ public final class SkillPackageInstaller {
             }
             Candidate candidate = candidate(extracted);
             String digest = candidate.sha256();
-            var metadata = candidate.document().metadata();
+            dev.openallay.skill.SkillMetadata metadata = candidate.document().metadata();
             PreparedSkillInstall prepared = new PreparedSkillInstall(metadata, digest,
                     version == null ? metadata.attributes().getOrDefault("openallay/version", "") : version,
                     provenance == null ? metadata.provenance() : provenance,
@@ -261,7 +266,7 @@ public final class SkillPackageInstaller {
             for (String directory : captured.directories()) {
                 Files.createDirectories(verified.resolve(directory));
             }
-            for (var file : captured.files().entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, byte[]> file : captured.files().entrySet()) {
                 Path target = verified.resolve(file.getKey());
                 Files.createDirectories(target.getParent());
                 Files.write(target, file.getValue());
@@ -282,8 +287,8 @@ public final class SkillPackageInstaller {
         }
         Map<String, byte[]> files = new java.util.TreeMap<>();
         Set<String> directories = new java.util.TreeSet<>();
-        try (var paths = Files.walk(root)) {
-            for (Path path : paths.sorted().toList()) {
+        try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(root)) {
+            for (Path path : dev.openallay.util.Java8Collections.toList(paths.sorted())) {
                 if (path.equals(root)) {
                     continue;
                 }
@@ -301,22 +306,55 @@ public final class SkillPackageInstaller {
             }
         }
         try {
-            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             for (String directory : directories) {
                 digest.update(("D" + directory + "\0").getBytes(StandardCharsets.UTF_8));
             }
-            for (var file : files.entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, byte[]> file : files.entrySet()) {
                 digest.update(("F" + file.getKey() + "\0" + file.getValue().length + "\0")
                         .getBytes(StandardCharsets.UTF_8));
                 digest.update(file.getValue());
             }
-            return new CapturedTree(files, directories, java.util.HexFormat.of().formatHex(digest.digest()));
+            return new CapturedTree(files, directories, dev.openallay.util.Java8Hex.formatHex(digest.digest()));
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 unavailable", impossible);
         }
     }
 
-    private record CapturedTree(Map<String, byte[]> files, Set<String> directories, String sha256) {}
+    @dev.openallay.value.ValueType(CapturedTree.ValueSchemaProvider.class)
+private static final class CapturedTree {
+    private final Map<String, byte[]> files;
+    private final Set<String> directories;
+    private final String sha256;
+    private CapturedTree(Map<String, byte[]> files, Set<String> directories, String sha256) {
+        this.files = files;
+        this.directories = directories;
+        this.sha256 = sha256;
+    }
+    public Map<String, byte[]> files() { return files; }
+    public Set<String> directories() { return directories; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CapturedTree)) return false;
+        CapturedTree that = (CapturedTree) other;
+        return java.util.Objects.equals(files, that.files) && java.util.Objects.equals(directories, that.directories) && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(files);
+        hash = 31 * hash + java.util.Objects.hashCode(directories);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "CapturedTree[files=" + files + ", directories=" + directories + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CapturedTree> schema() {
+            return new dev.openallay.value.ValueSchema<>(CapturedTree.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CapturedTree>>asList(new dev.openallay.value.ValueSchema.Component<>(CapturedTree.class, "files", CapturedTree::files), new dev.openallay.value.ValueSchema.Component<>(CapturedTree.class, "directories", CapturedTree::directories), new dev.openallay.value.ValueSchema.Component<>(CapturedTree.class, "sha256", CapturedTree::sha256)), arguments -> new CapturedTree((Map) arguments[0], (Set) arguments[1], (String) arguments[2]));
+        }
+    }
+}
 
     private static <T> ToolResult.Failure<T> cancelled() {
         return new ToolResult.Failure<>("skill_install_cancelled", "Skill installation was cancelled");
@@ -328,10 +366,9 @@ public final class SkillPackageInstaller {
 
     private Candidate candidate(Path extracted) throws IOException {
         java.util.List<Path> entries;
-        try (var stream = Files.walk(extracted)) {
-            entries = stream.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
-                            && path.getFileName().toString().equals("SKILL.md"))
-                    .toList();
+        try (java.util.stream.Stream<java.nio.file.Path> stream = Files.walk(extracted)) {
+            entries = dev.openallay.util.Java8Collections.toList(stream.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+                            && path.getFileName().toString().equals("SKILL.md")));
         }
         if (entries.size() != 1) {
             throw new IllegalArgumentException("Skill package must contain exactly one SKILL.md");
@@ -344,7 +381,7 @@ public final class SkillPackageInstaller {
         }
         CapturedTree captured = capture(packageRoot);
         Map<String, String> encoded = new LinkedHashMap<>();
-        for (var file : captured.files().entrySet()) {
+        for (java.util.Map.Entry<java.lang.String, byte[]> file : captured.files().entrySet()) {
             encoded.put(file.getKey(), StandardCharsets.UTF_8.newDecoder()
                     .decode(java.nio.ByteBuffer.wrap(file.getValue())).toString());
         }
@@ -386,7 +423,7 @@ public final class SkillPackageInstaller {
 
     private static void copyDirectory(Path source, Path target) throws IOException {
         Path realSource = source.toRealPath();
-        Files.walkFileTree(source, new SimpleFileVisitor<>() {
+        Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes)
                     throws IOException {
@@ -416,7 +453,7 @@ public final class SkillPackageInstaller {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
                 String raw = entry.getName();
-                if (raw.isBlank() || raw.startsWith("/") || raw.contains("\\")) {
+                if (dev.openallay.util.Java8Strings.isBlank(raw) || raw.startsWith("/") || raw.contains("\\")) {
                     throw new IOException("Unsafe ZIP entry");
                 }
                 Path destination = target.resolve(raw).normalize();
@@ -438,8 +475,8 @@ public final class SkillPackageInstaller {
         if (root == null || !Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
-        try (var paths = Files.walk(root)) {
-            for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+        try (java.util.stream.Stream<java.nio.file.Path> paths = Files.walk(root)) {
+            for (Path path : dev.openallay.util.Java8Collections.toList(paths.sorted(java.util.Comparator.reverseOrder()))) {
                 Files.deleteIfExists(path);
             }
         } catch (IOException ignored) {
@@ -450,7 +487,7 @@ public final class SkillPackageInstaller {
     private static String sha256(byte[] bytes) {
         try {
             byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
-            return java.util.HexFormat.of().formatHex(digest);
+            return dev.openallay.util.Java8Hex.formatHex(digest);
         } catch (java.security.NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 unavailable", impossible);
         }
@@ -463,31 +500,118 @@ public final class SkillPackageInstaller {
     }
 
     private static String requireText(String value, String label) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException(label + " must not be blank");
         }
         return value;
     }
 
-    public record InstallResult(String skillName, String provenance) {
-        public InstallResult {
-            if (skillName == null || skillName.isBlank()
-                    || provenance == null || provenance.isBlank()) {
+    @dev.openallay.value.ValueType(InstallResult.ValueSchemaProvider.class)
+public static final class InstallResult {
+    private final String skillName;
+    private final String provenance;
+    public InstallResult(String skillName, String provenance) {
+
+            if (skillName == null || dev.openallay.util.Java8Strings.isBlank(skillName)
+                    || provenance == null || dev.openallay.util.Java8Strings.isBlank(provenance)) {
                 throw new IllegalArgumentException("Installed Skill identity is required");
             }
+
+        this.skillName = skillName;
+        this.provenance = provenance;
+    }
+    public String skillName() { return skillName; }
+    public String provenance() { return provenance; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof InstallResult)) return false;
+        InstallResult that = (InstallResult) other;
+        return java.util.Objects.equals(skillName, that.skillName) && java.util.Objects.equals(provenance, that.provenance);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(skillName);
+        hash = 31 * hash + java.util.Objects.hashCode(provenance);
+        return hash;
+    }
+    @Override public String toString() { return "InstallResult[skillName=" + skillName + ", provenance=" + provenance + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<InstallResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(InstallResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<InstallResult>>asList(new dev.openallay.value.ValueSchema.Component<>(InstallResult.class, "skillName", InstallResult::skillName), new dev.openallay.value.ValueSchema.Component<>(InstallResult.class, "provenance", InstallResult::provenance)), arguments -> new InstallResult((String) arguments[0], (String) arguments[1]));
         }
     }
+}
 
-    private record Candidate(Path packageRoot, SkillDocument document, String sha256) {}
-
-    private record ArchiveResponse(int status, byte[] bytes) {
-        private ArchiveResponse {
-            bytes = bytes.clone();
+    @dev.openallay.value.ValueType(Candidate.ValueSchemaProvider.class)
+private static final class Candidate {
+    private final Path packageRoot;
+    private final SkillDocument document;
+    private final String sha256;
+    private Candidate(Path packageRoot, SkillDocument document, String sha256) {
+        this.packageRoot = packageRoot;
+        this.document = document;
+        this.sha256 = sha256;
+    }
+    public Path packageRoot() { return packageRoot; }
+    public SkillDocument document() { return document; }
+    public String sha256() { return sha256; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Candidate)) return false;
+        Candidate that = (Candidate) other;
+        return java.util.Objects.equals(packageRoot, that.packageRoot) && java.util.Objects.equals(document, that.document) && java.util.Objects.equals(sha256, that.sha256);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(packageRoot);
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        hash = 31 * hash + java.util.Objects.hashCode(sha256);
+        return hash;
+    }
+    @Override public String toString() { return "Candidate[packageRoot=" + packageRoot + ", document=" + document + ", sha256=" + sha256 + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Candidate> schema() {
+            return new dev.openallay.value.ValueSchema<>(Candidate.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Candidate>>asList(new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "packageRoot", Candidate::packageRoot), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "document", Candidate::document), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "sha256", Candidate::sha256)), arguments -> new Candidate((Path) arguments[0], (SkillDocument) arguments[1], (String) arguments[2]));
         }
+    }
+}
 
-        @Override
+    @dev.openallay.value.ValueType(ArchiveResponse.ValueSchemaProvider.class)
+private static final class ArchiveResponse {
+    private final int status;
+    private final byte[] bytes;
+    private ArchiveResponse(int status, byte[] bytes) {
+
+            bytes = bytes.clone();
+
+        this.status = status;
+        this.bytes = bytes;
+    }
+    public int status() { return status; }
+
         public byte[] bytes() {
             return bytes.clone();
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ArchiveResponse)) return false;
+        ArchiveResponse that = (ArchiveResponse) other;
+        return status == that.status && java.util.Objects.equals(bytes, that.bytes);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(bytes);
+        return hash;
+    }
+    @Override public String toString() { return "ArchiveResponse[status=" + status + ", bytes=" + bytes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ArchiveResponse> schema() {
+            return new dev.openallay.value.ValueSchema<>(ArchiveResponse.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ArchiveResponse>>asList(new dev.openallay.value.ValueSchema.Component<>(ArchiveResponse.class, "status", ArchiveResponse::status), new dev.openallay.value.ValueSchema.Component<>(ArchiveResponse.class, "bytes", ArchiveResponse::bytes)), arguments -> new ArchiveResponse((Integer) arguments[0], (byte[]) arguments[1]));
+        }
+    }
+}
 }

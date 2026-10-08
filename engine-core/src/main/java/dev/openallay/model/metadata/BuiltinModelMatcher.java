@@ -21,9 +21,86 @@ public final class BuiltinModelMatcher {
 
     private BuiltinModelMatcher() {}
     public enum Kind { EXACT, NORMALIZED, SIMILAR }
-    public record Match(BuiltinModelCatalog.Entry entry, Kind kind, double similarity, int identityRank) {}
-    private record Candidate(BuiltinModelCatalog.Entry entry, String name,
-                             List<String> numbers, List<String> words, int rank) {}
+    @dev.openallay.value.ValueType(Match.ValueSchemaProvider.class)
+public static final class Match {
+    private final BuiltinModelCatalog.Entry entry;
+    private final Kind kind;
+    private final double similarity;
+    private final int identityRank;
+    public Match(BuiltinModelCatalog.Entry entry, Kind kind, double similarity, int identityRank) {
+        this.entry = entry;
+        this.kind = kind;
+        this.similarity = similarity;
+        this.identityRank = identityRank;
+    }
+    public BuiltinModelCatalog.Entry entry() { return entry; }
+    public Kind kind() { return kind; }
+    public double similarity() { return similarity; }
+    public int identityRank() { return identityRank; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Match)) return false;
+        Match that = (Match) other;
+        return java.util.Objects.equals(entry, that.entry) && java.util.Objects.equals(kind, that.kind) && Double.compare(similarity, that.similarity) == 0 && identityRank == that.identityRank;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(entry);
+        hash = 31 * hash + java.util.Objects.hashCode(kind);
+        hash = 31 * hash + Double.hashCode(similarity);
+        hash = 31 * hash + Integer.hashCode(identityRank);
+        return hash;
+    }
+    @Override public String toString() { return "Match[entry=" + entry + ", kind=" + kind + ", similarity=" + similarity + ", identityRank=" + identityRank + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Match> schema() {
+            return new dev.openallay.value.ValueSchema<>(Match.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Match>>asList(new dev.openallay.value.ValueSchema.Component<>(Match.class, "entry", Match::entry), new dev.openallay.value.ValueSchema.Component<>(Match.class, "kind", Match::kind), new dev.openallay.value.ValueSchema.Component<>(Match.class, "similarity", Match::similarity), new dev.openallay.value.ValueSchema.Component<>(Match.class, "identityRank", Match::identityRank)), arguments -> new Match((BuiltinModelCatalog.Entry) arguments[0], (Kind) arguments[1], (Double) arguments[2], (Integer) arguments[3]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Candidate.ValueSchemaProvider.class)
+private static final class Candidate {
+    private final BuiltinModelCatalog.Entry entry;
+    private final String name;
+    private final List<String> numbers;
+    private final List<String> words;
+    private final int rank;
+    private Candidate(BuiltinModelCatalog.Entry entry, String name, List<String> numbers, List<String> words, int rank) {
+        this.entry = entry;
+        this.name = name;
+        this.numbers = numbers;
+        this.words = words;
+        this.rank = rank;
+    }
+    public BuiltinModelCatalog.Entry entry() { return entry; }
+    public String name() { return name; }
+    public List<String> numbers() { return numbers; }
+    public List<String> words() { return words; }
+    public int rank() { return rank; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Candidate)) return false;
+        Candidate that = (Candidate) other;
+        return java.util.Objects.equals(entry, that.entry) && java.util.Objects.equals(name, that.name) && java.util.Objects.equals(numbers, that.numbers) && java.util.Objects.equals(words, that.words) && rank == that.rank;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(entry);
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(numbers);
+        hash = 31 * hash + java.util.Objects.hashCode(words);
+        hash = 31 * hash + Integer.hashCode(rank);
+        return hash;
+    }
+    @Override public String toString() { return "Candidate[entry=" + entry + ", name=" + name + ", numbers=" + numbers + ", words=" + words + ", rank=" + rank + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Candidate> schema() {
+            return new dev.openallay.value.ValueSchema<>(Candidate.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Candidate>>asList(new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "entry", Candidate::entry), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "name", Candidate::name), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "numbers", Candidate::numbers), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "words", Candidate::words), new dev.openallay.value.ValueSchema.Component<>(Candidate.class, "rank", Candidate::rank)), arguments -> new Candidate((BuiltinModelCatalog.Entry) arguments[0], (String) arguments[1], (List) arguments[2], (List) arguments[3], (Integer) arguments[4]));
+        }
+    }
+}
 
     /** All static names are normalized once, not on the Minecraft render thread. */
     public static final class Index {
@@ -31,10 +108,39 @@ public final class BuiltinModelMatcher {
         private final Map<String, List<Match>> normalized = new HashMap<>();
         private final List<Candidate> candidates = new ArrayList<>();
         private volatile Lookup previous;
-        private record Lookup(String name, Optional<Match> match) {}
+        @dev.openallay.value.ValueType(Lookup.ValueSchemaProvider.class)
+private static final class Lookup {
+    private final String name;
+    private final Optional<Match> match;
+    private Lookup(String name, Optional<Match> match) {
+        this.name = name;
+        this.match = match;
+    }
+    public String name() { return name; }
+    public Optional<Match> match() { return match; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Lookup)) return false;
+        Lookup that = (Lookup) other;
+        return java.util.Objects.equals(name, that.name) && java.util.Objects.equals(match, that.match);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(match);
+        return hash;
+    }
+    @Override public String toString() { return "Lookup[name=" + name + ", match=" + match + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Lookup> schema() {
+            return new dev.openallay.value.ValueSchema<>(Lookup.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Lookup>>asList(new dev.openallay.value.ValueSchema.Component<>(Lookup.class, "name", Lookup::name), new dev.openallay.value.ValueSchema.Component<>(Lookup.class, "match", Lookup::match)), arguments -> new Lookup((String) arguments[0], (Optional) arguments[1]));
+        }
+    }
+}
 
         public Index(List<BuiltinModelCatalog.Entry> entries) {
-            for (var entry : entries) {
+            for (BuiltinModelCatalog.Entry entry : entries) {
                 List<String> names = new ArrayList<>();
                 names.add(entry.id()); names.add(entry.upstreamModelId()); names.addAll(entry.aliases());
                 for (int index = 0; index < names.size(); index++) {
@@ -53,7 +159,7 @@ public final class BuiltinModelMatcher {
         }
 
         public Optional<Match> match(String requested) {
-            if (requested == null || requested.isBlank()) return Optional.empty();
+            if (requested == null || dev.openallay.util.Java8Strings.isBlank(requested)) return Optional.empty();
             Lookup cached = previous;
             if (cached != null && cached.name().equals(requested)) return cached.match();
             Optional<Match> result = find(requested);
@@ -106,11 +212,15 @@ public final class BuiltinModelMatcher {
         return true;
     }
     private static List<String> numbers(String value) {
-        return NUMBERS.matcher(value).results().map(java.util.regex.MatchResult::group).toList();
+        java.util.regex.Matcher matcher = NUMBERS.matcher(value);
+        List<String> numbers = new ArrayList<>();
+        while (matcher.find()) numbers.add(matcher.group());
+        return java.util.Collections.unmodifiableList(numbers);
     }
     private static List<String> identityWords(String value, String family) {
-        return java.util.Arrays.stream(value.substring(family.length()).split("[-.0-9]+"))
-                .filter(word -> !word.isBlank()).toList();
+        return dev.openallay.util.Java8Collections.toList(
+                java.util.Arrays.stream(value.substring(family.length()).split("[-.0-9]+"))
+                .filter(word -> !dev.openallay.util.Java8Strings.isBlank(word)));
     }
     private static double similarity(String first, String second) {
         int[] previous = new int[second.length() + 1];

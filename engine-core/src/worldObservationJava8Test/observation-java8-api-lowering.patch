@@ -1,0 +1,172 @@
+diff --git a/engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java b/engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java
+--- a/engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java
++++ b/engine-core/src/main/java/dev/openallay/context/game/ObservableGameStateSnapshot.java
+@@ -102,7 +102,7 @@
+             loader = require(loader, "loader");
+             connectionKind = require(connectionKind, "connectionKind");
+             Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.gameVersion = gameVersion;
+         this.loader = loader;
+@@ -148,9 +148,9 @@
+     private final List<SectionDiagnostic> diagnostics;
+     public ModsState(List<InstalledModMetadata> installed, EvidenceMetadata evidence, List<SectionDiagnostic> diagnostics) {
+ 
+-            installed = List.copyOf(installed);
+-            Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            installed = dev.openallay.util.Java8Collections.listCopyOf(installed);
++            Objects.requireNonNull(evidence, "evidence");
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.installed = installed;
+         this.evidence = evidence;
+@@ -231,9 +231,9 @@
+     private final List<SectionDiagnostic> diagnostics;
+     public OptionsState(List<OptionValue> values, EvidenceMetadata evidence, List<SectionDiagnostic> diagnostics) {
+ 
+-            values = List.copyOf(values);
+-            Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            values = dev.openallay.util.Java8Collections.listCopyOf(values);
++            Objects.requireNonNull(evidence, "evidence");
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.values = values;
+         this.evidence = evidence;
+@@ -328,10 +328,10 @@
+     private final List<SectionDiagnostic> diagnostics;
+     public PacksState(List<PackInfo> resourcePacks, List<String> visibleDataPacks, EvidenceMetadata evidence, List<SectionDiagnostic> diagnostics) {
+ 
+-            resourcePacks = List.copyOf(resourcePacks);
+-            visibleDataPacks = List.copyOf(visibleDataPacks);
+-            Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            resourcePacks = dev.openallay.util.Java8Collections.listCopyOf(resourcePacks);
++            visibleDataPacks = dev.openallay.util.Java8Collections.listCopyOf(visibleDataPacks);
++            Objects.requireNonNull(evidence, "evidence");
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.resourcePacks = resourcePacks;
+         this.visibleDataPacks = visibleDataPacks;
+@@ -376,9 +376,9 @@
+ 
+             provider = require(provider, "provider");
+             selectedPack = selectedPack == null ? "" : selectedPack;
+-            publicOptions = Map.copyOf(publicOptions);
+-            Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            publicOptions = dev.openallay.util.Java8Collections.mapCopyOf(publicOptions);
++            Objects.requireNonNull(evidence, "evidence");
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.integrationAvailable = integrationAvailable;
+         this.provider = provider;
+@@ -463,9 +463,9 @@
+     private final List<SectionDiagnostic> diagnostics;
+     public DiagnosticsState(List<DiagnosticValue> values, EvidenceMetadata evidence, List<SectionDiagnostic> diagnostics) {
+ 
+-            values = List.copyOf(values);
+-            Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            values = dev.openallay.util.Java8Collections.listCopyOf(values);
++            Objects.requireNonNull(evidence, "evidence");
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.values = values;
+         this.evidence = evidence;
+@@ -508,7 +508,7 @@
+             openScreen = require(openScreen, "openScreen");
+             openScreenTitle = openScreenTitle == null ? "" : openScreenTitle;
+             Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+             focus = Objects.requireNonNull(focus, "focus");
+         
+         this.player = player;
+@@ -602,9 +602,9 @@
+     private final List<SectionDiagnostic> diagnostics;
+     public WorldQueriesState(Map<String, QueryValue> values, EvidenceMetadata evidence, List<SectionDiagnostic> diagnostics) {
+ 
+-            values = Map.copyOf(values);
+-            Objects.requireNonNull(evidence, "evidence");
+-            diagnostics = List.copyOf(diagnostics);
++            values = dev.openallay.util.Java8Collections.mapCopyOf(values);
++            Objects.requireNonNull(evidence, "evidence");
++            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
+         
+         this.values = values;
+         this.evidence = evidence;
+@@ -635,7 +635,7 @@
+     }
+ }
+ private static String require(String value, String name) {
+-        if (value == null || value.isBlank()) {
++        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
+             throw new IllegalArgumentException(name + " must not be blank");
+         }
+         return value;
+diff --git a/engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java b/engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java
+--- a/engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java
++++ b/engine-core/src/main/java/dev/openallay/context/ToolInvocationContext.java
+@@ -27,7 +27,7 @@
+         observableGameState = Objects.requireNonNull(observableGameState, "observableGameState");
+         Objects.requireNonNull(metrics, "metrics");
+         if (caller.kind() == CallerKind.PLAYER && player.isPresent()
+-                && !caller.uuid().equals(player.orElseThrow().uuid())) {
++                && !caller.uuid().equals(player.get().uuid())) {
+             throw new IllegalArgumentException("Caller and player UUIDs differ");
+         }
+     
+diff --git a/engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java b/engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java
+--- a/engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java
++++ b/engine-core/src/main/java/dev/openallay/platform/InstalledModMetadata.java
+@@ -21,11 +21,11 @@
+         name = require(name, "name");
+         version = require(version, "version");
+         description = description == null ? "" : description;
+-        authors = List.copyOf(authors);
+-        licenses = List.copyOf(licenses);
+-        contacts = Map.copyOf(contacts);
++        authors = dev.openallay.util.Java8Collections.listCopyOf(authors);
++        licenses = dev.openallay.util.Java8Collections.listCopyOf(licenses);
++        contacts = dev.openallay.util.Java8Collections.mapCopyOf(contacts);
+         environment = require(environment, "environment");
+-        dependencies = List.copyOf(dependencies);
++        dependencies = dev.openallay.util.Java8Collections.listCopyOf(dependencies);
+     
+         this.id = id;
+         this.name = name;
+@@ -47,7 +47,7 @@
+     public String environment() { return environment; }
+     public List<String> dependencies() { return dependencies; }
+ private static String require(String value, String name) {
+-        if (value == null || value.isBlank()) {
++        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
+             throw new IllegalArgumentException(name + " must not be blank");
+         }
+         return value;
+diff --git a/engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java b/engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java
+--- a/engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java
++++ b/engine-core/src/main/java/dev/openallay/world/WorldFocusObservation.java
+@@ -358,7 +358,7 @@
+             if (componentsAvailable && !diagnostic.isEmpty()) {
+                 throw new IllegalArgumentException("Available item components must not report a failure");
+             }
+-            if (!componentsAvailable && diagnostic.isBlank()) {
++            if (!componentsAvailable && dev.openallay.util.Java8Strings.isBlank(diagnostic)) {
+                 throw new IllegalArgumentException("Unavailable item components require a diagnostic");
+             }
+         
+@@ -602,7 +602,7 @@
+     }
+ }
+ private static String nonBlank(String value, String field) {
+-        if (value == null || value.isBlank()) {
++        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
+             throw new IllegalArgumentException(field + " must not be blank");
+         }
+         return value;
+diff --git a/engine-core/src/main/java/dev/openallay/world/WorldPosition.java b/engine-core/src/main/java/dev/openallay/world/WorldPosition.java

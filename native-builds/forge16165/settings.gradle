@@ -1,0 +1,18 @@
+import groovy.json.JsonSlurper
+pluginManagement {
+    repositories { gradlePluginPortal(); maven { url = 'https://maven.minecraftforge.net/' } }
+}
+rootProject.name = 'OpenAllayForge16165Native'
+def requestFile = file(providers.gradleProperty('nativeBuildInputs').get())
+def request = new JsonSlurper().parse(requestFile)
+def fields = ['sourceRoot', 'sourceRevision', 'closureSpec', 'sourceSelectionPlan',
+        'mappingInputs', 'metadataAcceptance', 'compilerArtifactLock'] as Set
+if (!(request instanceof Map) || request.keySet() != fields ||
+        request.values().any { !(it instanceof String) || it.empty } ||
+        (fields - ['sourceRevision']).any { !new File(request[it]).isAbsolute() } ||
+        !(request.sourceRevision ==~ /[0-9a-f]{40}/)) {
+    throw new GradleException('Exact native-build input contract required')
+}
+gradle.ext.nativeBuildRequest = request
+gradle.ext.nativeBuildRequestFile = requestFile
+include('namespace-tool')

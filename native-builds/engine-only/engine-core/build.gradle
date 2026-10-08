@@ -1,0 +1,293 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+import java.nio.file.Files
+import java.util.zip.ZipFile
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
+plugins { id 'java-library' }
+
+// This is the existing engine, selected once from its canonical source owner.
+def source = rootProject.ext.engineOnlySource
+def request = rootProject.ext.engineOnlyRequest
+def pins = rootProject.ext.engineOnlyPins
+base { archivesName = 'openallay-engine-core' }
+java { toolchain.languageVersion = JavaLanguageVersion.of(21) }
+sourceSets.main.java.setSrcDirs([])
+sourceSets.main.java.srcDir(new File(source, 'engine-core/src/main/java'))
+sourceSets.main.resources.setSrcDirs([])
+sourceSets.main.resources.srcDir(new File(source, 'engine-core/src/main/resources'))
+tasks.withType(JavaCompile).configureEach { options.release = 17; options.encoding = 'UTF-8' }
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    from(new File(source, 'LICENSE')) { rename { 'LICENSE_OpenAllay' } }
+}
+dependencies {
+    api(project(':extension-api'))
+    compileOnlyApi(project(':runtime-json'))
+    api('com.google.code.gson:gson:2.8.0')
+    api(project(':runtime-rhino'))
+    compileOnly(project(path: ':runtime-maven', configuration: 'privateRuntime'))
+    implementation("org.commonmark:commonmark:${rootProject.commonmark_version}")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:${rootProject.commonmark_version}")
+    implementation("com.knuddels:jtokkit:${rootProject.jtokkit_version}")
+    runtimeOnly("org.xerial:sqlite-jdbc:${rootProject.sqlite_jdbc_version}")
+}
+def shaBytes = { byte[] bytes -> MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString() }
+def shaFile = { File file ->
+    def digest = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        byte[] buffer = new byte[65536]; int count
+        while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+    }
+    digest.digest().encodeHex().toString()
+}
+def entries = { File file ->
+    def result = new TreeMap()
+    new ZipFile(file).withCloseable { jar ->
+        jar.entries().each { entry ->
+            if (!entry.directory) {
+                if (result.containsKey(entry.name)) throw new GradleException("Duplicate entry ${entry.name}: ${file}")
+                byte[] bytes = jar.getInputStream(entry).withCloseable { it.readAllBytes() }
+                def major = null
+                if (entry.name.endsWith('.class')) {
+                    if (bytes.length < 8 || (bytes[0] & 255) != 202 || (bytes[1] & 255) != 254 ||
+                            (bytes[2] & 255) != 186 || (bytes[3] & 255) != 190) {
+                        throw new GradleException("Invalid class header: ${entry.name}")
+                    }
+                    major = (bytes[6] & 255) * 256 + (bytes[7] & 255)
+                    if (major < 45) throw new GradleException("Invalid class major: ${entry.name}")
+                }
+                result[entry.name] = [sha256: shaBytes(bytes), major: major]
+            }
+        }
+    }
+    result
+}
+def retained = { String role -> rootProject.ext.engineOnlyArtifact(role) }
+def git = { List<String> args ->
+    providers.exec { commandLine(['git', '-C', source.absolutePath] + args) }.standardOutput.asText.get().trim()
+}
+def sourceInputs = layout.buildDirectory.file('engine-source-inputs.json')
+def writeJson = { File file, Object value ->
+    file.parentFile.mkdirs()
+    file.text = JsonOutput.prettyPrint(JsonOutput.toJson(value)) + '\n'
+}
+def verifyInputs = tasks.register('verifyRetainedInputs') {
+    inputs.files(pins.artifacts.collect { retained(it.role).file })
+    inputs.files(sourceSets.main.allSource, new File(source, 'LICENSE'), new File(source, 'engine-core/build.gradle'))
+    outputs.upToDateWhen { false }
+    doLast {
+        pins.artifacts.each { pin ->
+            def record = retained(pin.role)
+            if (!record.file.isFile() || shaFile(record.file) != pin.sha256) {
+                throw new GradleException("Retained bytes differ: ${pin.role}")
+            }
+            def limit = pin.role == 'sdk' ? 52 : 61
+            if (pin.role in ['sdk', 'rhino', 'builder', 'json-proof', 'maven-proof']) {
+                entries(record.file).each { name, entry ->
+                    if (entry.major != null && entry.major > limit) throw new GradleException(
+                            "Retained ${pin.role} exceeds class major ${limit}: ${name}")
+                }
+            }
+        }
+        if (!(request.sourceRevision ==~ /[0-9a-f]{40}/) || git(['rev-parse', 'HEAD']) != request.sourceRevision) {
+            throw new GradleException('Engine sourceRevision must equal actual checkout HEAD')
+        }
+        if (!git(['status', '--porcelain', '--untracked-files=all', '--', 'engine-core', 'runtime-json',
+                  'runtime-maven', 'runtime-rhino', 'extension-api', 'gradle.properties', 'LICENSE']).empty) {
+            throw new GradleException('Canonical engine/component source inputs must be committed')
+        }
+        def unchanged = ['runtime-json', 'runtime-maven', 'runtime-rhino', 'extension-api']
+        if (!git(['diff', '--name-only', pins.retainedSourceRevision, request.sourceRevision, '--'] + unchanged).empty) {
+            throw new GradleException('Retained component source differs from immutable input source')
+        }
+        // Keep this bounded duplicate build declaration tied to the source-owned production declaration.
+        def canonical = new File(source, 'engine-core/build.gradle').getText('UTF-8')
+        def declared = canonical.readLines().collect { it.trim() }.findAll {
+            it ==~ /(?:api|compileOnlyApi|compileOnly|implementation|runtimeOnly)\(.*/
+        }
+        def selected = buildFile.readLines().collect { it.trim() }.findAll {
+            it ==~ /(?:api|compileOnlyApi|compileOnly|implementation|runtimeOnly)\(.*/
+        }.collect { it.replace('rootProject.', '') }
+        if (declared != selected) throw new GradleException('Canonical engine production dependency declaration changed')
+        if (!canonical.contains('def engineJavaVersion = 17') || !canonical.contains('JavaLanguageVersion.of(21)')) {
+            throw new GradleException('Canonical engine compiler boundary changed')
+        }
+        def inputs = new TreeMap()
+        [rootProject.file('build.gradle'), rootProject.file('settings.gradle'), rootProject.file('artifact-input.gradle'),
+         rootProject.file('retained-inputs.json'), buildFile].each { file ->
+            inputs['producer/' + rootProject.projectDir.toPath().relativize(file.toPath()).toString()] = shaFile(file)
+        }
+        sourceSets.main.allSource.files.each { file -> inputs[source.toPath().relativize(file.toPath()).toString()] = shaFile(file) }
+        ['LICENSE', 'engine-core/build.gradle', 'gradle.properties'].each { inputs[it] = shaFile(new File(source, it)) }
+        writeJson(sourceInputs.get().asFile, [sourceRevision: request.sourceRevision,
+                retainedSourceRevision: pins.retainedSourceRevision, canonicalSourceRoot: source.absolutePath, inputs: inputs])
+    }
+}
+def mergeJson = tasks.register('mergeRetainedJson', Sync) {
+    dependsOn(verifyInputs)
+    inputs.file(retained('json-proof').file)
+    from({ zipTree(retained('json-proof').file) }) { exclude 'META-INF/MANIFEST.MF' }
+    into(layout.buildDirectory.dir('generated/runtime-json'))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    includeEmptyDirs = false
+}
+def mergeMaven = tasks.register('mergeRetainedPrivateMaven', Sync) {
+    dependsOn(verifyInputs)
+    inputs.file(retained('maven-proof').file)
+    from({ zipTree(retained('maven-proof').file) }) { exclude 'META-INF/MANIFEST.MF' }
+    into(layout.buildDirectory.dir('generated/private-maven'))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    includeEmptyDirs = false
+}
+sourceSets.main.output.dir([builtBy: mergeJson], layout.buildDirectory.dir('generated/runtime-json'))
+sourceSets.main.output.dir([builtBy: mergeMaven], layout.buildDirectory.dir('generated/private-maven'))
+tasks.named('classes') { dependsOn(mergeJson, mergeMaven) }
+def nativePrefixes = ['net/minecraft/', 'com/mojang/', 'net/fabricmc/', 'net/neoforged/',
+        'net/minecraftforge/', 'org/lwjgl/', 'org/spongepowered/', 'com/llamalad7/',
+        'mezz/jei/', 'me/shedaniel/', 'dev/architectury/']
+def rejectNative = { String name ->
+    def path = name.replaceFirst('^META-INF/versions/[0-9]+/', '')
+    if (path.endsWith('.class') && nativePrefixes.any { path.startsWith(it) }) {
+        throw new GradleException("Native class in engine closure: ${name}")
+    }
+}
+def runtimeRecords = []
+def verifyDependencies = tasks.register('verifyProductionDependencies') {
+    dependsOn(verifyInputs, configurations.compileClasspath.buildDependencies, configurations.runtimeClasspath.buildDependencies)
+    doLast {
+        runtimeRecords.clear()
+        ['compileClasspath', 'runtimeClasspath'].each { name ->
+            def configuration = configurations.getByName(name)
+            configuration.incoming.resolutionResult.allComponents.each { component ->
+                def id = component.id
+                if (id instanceof ProjectComponentIdentifier) {
+                    if (!(id.projectPath in [project.path, ':extension-api', ':runtime-json', ':runtime-maven', ':runtime-rhino'])) {
+                        throw new GradleException("Unapproved engine project: ${id.projectPath}")
+                    }
+                } else if (id instanceof ModuleComponentIdentifier) {
+                    def coordinate = "${id.group}:${id.module}:${id.version}".toString()
+                    if (!pins.artifacts.any { it.coordinate == coordinate }) {
+                        throw new GradleException("Unapproved actual engine dependency: ${coordinate}")
+                    }
+                } else throw new GradleException("Unidentified component: ${id.displayName}")
+            }
+            configuration.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                def id = artifact.moduleVersion.id
+                def component = artifact.id.componentIdentifier
+                def coordinate = "${id.group}:${id.name}:${id.version}".toString()
+                def role = component instanceof ProjectComponentIdentifier ?
+                        [':extension-api': 'sdk', ':runtime-rhino': 'rhino', ':runtime-json': 'json-proof', ':runtime-maven': 'maven-proof'][component.projectPath] :
+                        pins.artifacts.find { it.coordinate == coordinate }?.role
+                def pin = pins.artifacts.find { it.role == role }
+                if (!pin || shaFile(artifact.file) != pin.sha256) throw new GradleException("Resolved bytes differ: ${coordinate}")
+                if (name == 'runtimeClasspath') runtimeRecords.add([role: role, coordinate: pin.coordinate,
+                        originalCoordinate: coordinate, file: artifact.file, sha256: pin.sha256])
+            }
+            configuration.files.each { file ->
+                if (!file.isFile() || !file.name.endsWith('.jar')) throw new GradleException("Unexpected engine classpath artifact ${file}")
+                entries(file).keySet().each { rejectNative(it) }
+            }
+        }
+        def required = pins.artifacts.findAll { !(it.role in ['json-proof', 'maven-proof', 'builder']) }.collect { it.role }.toSet()
+        if (runtimeRecords.collect { it.role }.toSet() != required) throw new GradleException('Actual runtime role set differs')
+        def nativeClasses = [:]
+        ['common/src/main/java', 'common/src/targets', 'fabric/src/main/java', 'neoforge/src/main/java', 'adapters'].each { path ->
+            fileTree(new File(source, path)) { include '**/*.java' }.each { file ->
+                def match = file.getText('UTF-8') =~ /(?m)^\s*package\s+([\w.]+)\s*;/
+                if (match.find()) nativeClasses[match.group(1) + '.' + file.name.replaceFirst(/\.java$/, '')] = file
+            }
+        }
+        sourceSets.main.allJava.each { file ->
+            def match = file.getText('UTF-8') =~ /(?m)^\s*package\s+([\w.]+)\s*;/
+            if (!match.find()) throw new GradleException("Engine source lacks package: ${file}")
+            def name = match.group(1) + '.' + file.name.replaceFirst(/\.java$/, '')
+            if (nativeClasses.containsKey(name)) throw new GradleException("Duplicate native engine class ${name}")
+        }
+    }
+}
+tasks.named('compileJava') { dependsOn(verifyDependencies) }
+tasks.register('exportEngineOnlyClosure') {
+    dependsOn(tasks.named('jar'), verifyDependencies, mergeJson, mergeMaven)
+    doLast {
+        def output = new File(source, 'build/forge36-shared')
+        if (output.canonicalFile == rootProject.file(request.retainedDirectory).canonicalFile) {
+            throw new GradleException('New engine output must not overwrite immutable retained inputs')
+        }
+        if (output.exists()) throw new GradleException('Preserve an existing engine-only closure export')
+        def jar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def jarEntries = entries(jar)
+        jarEntries.each { name, entry ->
+            rejectNative(name)
+            if (name.startsWith('dev/openallay/api/extension/') || name.startsWith('dev/latvian/mods/rhino/') ||
+                    name.startsWith('org/slf4j/')) throw new GradleException("Foreign class owner in engine: ${name}")
+            if (entry.major != null && entry.major > 61) throw new GradleException("Engine exceeds Java17: ${name}")
+        }
+        ['json-proof', 'maven-proof'].each { role ->
+            entries(retained(role).file).each { name, entry ->
+                if (name != 'META-INF/MANIFEST.MF' && jarEntries[name] != entry) {
+                    throw new GradleException("Changed merged constituent ${role}: ${name}")
+                }
+            }
+        }
+        def compiled = tasks.named('compileJava', JavaCompile).get().destinationDirectory.get().asFile
+        fileTree(compiled) { include '**/*.class' }.each { file ->
+                def name = compiled.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+                if (jarEntries[name]?.sha256 != shaFile(file) || jarEntries[name]?.major != 61) {
+                    throw new GradleException("Compiled engine output missing or not Java17: ${name}")
+                }
+        }
+        sourceSets.main.resources.files.each { file ->
+            def name = new File(source, 'engine-core/src/main/resources').toPath().relativize(file.toPath()).toString().replace('\\', '/')
+            if (jarEntries[name]?.sha256 != shaFile(file)) throw new GradleException("Engine resource differs: ${name}")
+        }
+        if (jarEntries['LICENSE_OpenAllay']?.sha256 != shaFile(new File(source, 'LICENSE'))) throw new GradleException('Engine license missing')
+        output.mkdirs()
+        def artifactRecords = []
+        def raw = []
+        def add = { String role, String coordinate, File input ->
+            def target = new File(output, role + '.jar')
+            Files.copy(input.toPath(), target.toPath())
+            if (shaFile(target) != shaFile(input)) throw new GradleException("Closure copy changed: ${role}")
+            artifactRecords.add([role: role, coordinate: coordinate, path: target.absolutePath, sha256: shaFile(target)])
+            raw.add([role: role, coordinate: coordinate, originalPath: input.absolutePath, sha256: shaFile(input),
+                    sourceRevision: role == 'engine' ? request.sourceRevision : (role == 'builder' ?
+                            'e37eb4f325d6917b2a0b32afc47dd139a55acb83' : pins.retainedSourceRevision)])
+        }
+        add('engine', "dev.openallay:openallay-engine-core:${version}", jar)
+        runtimeRecords.sort { it.role }.each { add(it.role, it.coordinate, it.file) }
+        ['builder', 'json-proof', 'maven-proof'].each { def r = retained(it); add(it, r.coordinate, r.file) }
+        def resolution = new File(output, 'effective-runtime-resolution.json')
+        writeJson(resolution, [sourceRevision: request.sourceRevision,
+                runtimeCoordinates: artifactRecords.findAll { !it.role.endsWith('-proof') }.collect { it.coordinate }.sort()])
+        writeJson(new File(output, 'closure-input.json'), [sourceRevision: request.sourceRevision, artifacts: artifactRecords,
+                resolution: [path: resolution.absolutePath, sha256: shaFile(resolution)]])
+        writeJson(new File(output, 'raw-gradle-resolution.json'), [actualEngineSource: request.sourceRevision,
+                retainedInputSource: pins.retainedSourceRevision, retainedArchive: pins.retainedArchive,
+                builderArchive: pins.builderArchive, runtimeClasspathConfiguration: 'engine-core:runtimeClasspath',
+                artifacts: raw, deploymentAdditions: ['engine', 'builder'], constituentProofs: ['json-proof', 'maven-proof']])
+        Files.copy(sourceInputs.get().asFile.toPath(), new File(output, 'engine-source-inputs.json').toPath())
+        writeJson(new File(output, 'engine-entry-manifest.json'), [sourceRevision: request.sourceRevision,
+                engineSha256: shaFile(jar), entries: jarEntries])
+        println "Engine-only closure exported: ${output}"
+    }
+}
+
+// Only changed bridge/custody call-chain tests. Production closure verification stays separate.
+if (providers.gradleProperty('focusedBridgeTests').isPresent() || providers.gradleProperty('focusedNativeSeamTests').isPresent()) {
+    sourceSets.test.java.setSrcDirs([new File(source, 'engine-core/src/test/java'),
+            new File(source, 'engine-core/src/testFixtures/java')])
+    sourceSets.test.java.setIncludes(providers.gradleProperty('focusedNativeSeamTests').isPresent() ? ['dev/openallay/guide/GuideServiceManagerSerialExecutorTest.java'] : ['dev/openallay/bridge/server/RemoteToolServerTest.java', 'dev/openallay/bridge/RemoteToolBridgeTest.java', 'dev/openallay/bridge/server/ServerBoundDispatchTest.java', 'dev/openallay/bridge/PlayerClientToolRouterTest.java', 'dev/openallay/server/ServerClientToolAgentTest.java', 'dev/openallay/server/ServerCancellationCorrelationTest.java', 'dev/openallay/bridge/ClientToolImageTransportTest.java', 'dev/openallay/testing/GroundedTestFixtures.java'])
+    dependencies {
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.4'
+    }
+    tasks.named('compileTestJava', JavaCompile) { options.release = 21 }
+    tasks.named('test', Test) {
+        useJUnitPlatform()
+        dependsOn(verifyInputs)
+    }
+}

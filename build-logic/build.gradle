@@ -1,3 +1,10 @@
 plugins {
     id 'groovy-gradle-plugin'
 }
+
+// Build-only namespace tools use public Java compiler APIs and Java17 bytecode.
+// Parsing runs in the consumer's explicit full tooling JDK, not the native runtime.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}

@@ -10,10 +10,12 @@ import net.minecraft.client.gui.components.MultilineTextField;
 /** Text operations delegate to the live native widget; input, rendering and IME stay native. */
 public final class GuideNativeMultilineEditor implements GuideMultilineEditor {
     private final MultiLineEditBox nativeEditor;
+    private final GuideWidget guideWidget;
     public GuideNativeMultilineEditor(MultiLineEditBox nativeEditor) {
         this.nativeEditor = Objects.requireNonNull(nativeEditor);
+        guideWidget = GuideNativeWidgets.wrap(nativeEditor);
     }
-    @Override public AbstractWidget widget() { return nativeEditor; }
+    @Override public GuideWidget widget() { return guideWidget; }
     @Override public String getValue() { return nativeEditor.getValue(); }
     @Override public void setValue(String value, boolean bypassLineLimit) {
         GuideNativeMultilineText.setValue(nativeEditor, value, bypassLineLimit);

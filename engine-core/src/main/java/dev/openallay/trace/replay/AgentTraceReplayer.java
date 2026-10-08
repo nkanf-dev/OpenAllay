@@ -47,7 +47,9 @@ public final class AgentTraceReplayer {
 
         for (int index = 0; index < trace.steps().size(); index++) {
             TraceStep step = trace.steps().get(index);
-            if (step instanceof AssistantMessageStep message) {
+            final class $oaPattern0_Holder { dev.openallay.trace.model.TraceStep value; AssistantMessageStep bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = step) instanceof dev.openallay.trace.model.AssistantMessageStep && (($oaPattern0_holder.bound = (AssistantMessageStep) $oaPattern0_holder.value) != null))) {
                 reports.add(new ReplayStepReport(
                         index,
                         "assistant_message",
@@ -56,7 +58,7 @@ public final class AgentTraceReplayer {
                         0,
                         null,
                         null,
-                        message.content(),
+                        $oaPattern0_holder.bound.content(),
                         null));
                 continue;
             }
@@ -72,8 +74,10 @@ public final class AgentTraceReplayer {
 
             ToolResult<?> decoded = arguments.decode(call.arguments(), tool.descriptor().inputType());
             ToolResult<?> toolResult;
-            if (decoded instanceof ToolResult.Failure<?> failure) {
-                toolResult = failure;
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<?>) $oaPattern1_holder.value) != null))) {
+                toolResult = $oaPattern1_holder.bound;
             } else {
                 try {
                     toolResult = invoke(tool, context, ((ToolResult.Success<?>) decoded).value());
@@ -117,12 +121,29 @@ public final class AgentTraceReplayer {
 
     private static String missingContext(AgentTrace trace, ToolInvocationContext context) {
         for (ContextCapability capability : trace.requiredContext()) {
-            boolean present = switch (capability) {
-                case REGISTRIES -> context.registries().isPresent();
-                case RECIPES -> context.recipes().isPresent();
-                case PLAYER -> context.player().isPresent();
-                case OBSERVABLE_GAME_STATE -> context.observableGameState().isPresent();
-            };
+            boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((capability)) {
+case REGISTRIES:
+{
+$oaSwitch0_exit_result = context.registries().isPresent(); break $oaSwitch0_exit;
+}
+case RECIPES:
+{
+$oaSwitch0_exit_result = context.recipes().isPresent(); break $oaSwitch0_exit;
+}
+case PLAYER:
+{
+$oaSwitch0_exit_result = context.player().isPresent(); break $oaSwitch0_exit;
+}
+case OBSERVABLE_GAME_STATE:
+{
+$oaSwitch0_exit_result = context.observableGameState().isPresent(); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+boolean present = $oaSwitch0_exit_result;
             if (!present) {
                 return "missing_context: " + capability.name().toLowerCase();
             }

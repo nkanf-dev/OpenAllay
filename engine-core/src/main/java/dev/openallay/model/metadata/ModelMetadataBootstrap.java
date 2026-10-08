@@ -32,7 +32,7 @@ public final class ModelMetadataBootstrap {
     private final List<CancellationSignal> active = new CopyOnWriteArrayList<>();
     private final AtomicReference<GuideFailure> failure = new AtomicReference<>();
     private final AtomicReference<Map<ModelMetadata.Key, ModelMetadata>> lastEntries =
-            new AtomicReference<>(Map.of());
+            new AtomicReference<>(dev.openallay.util.Java8Collections.mapOf());
 
     public ModelMetadataBootstrap(
             ModelMetadataCache cache,
@@ -95,7 +95,7 @@ public final class ModelMetadataBootstrap {
             Function<ModelProfileDefinition, ModelMetadataResolver> resolverFactory) {
         this.cache = Objects.requireNonNull(cache, "cache");
         this.profilesPath = Objects.requireNonNull(profilesPath, "profilesPath");
-        this.environment = Map.copyOf(environment);
+        this.environment = dev.openallay.util.Java8Collections.mapCopyOf(environment);
         this.credentials = Objects.requireNonNull(credentials, "credentials");
         this.updates = Objects.requireNonNull(updates, "updates");
         this.resolverFactory = Objects.requireNonNull(resolverFactory, "resolverFactory");
@@ -149,7 +149,7 @@ public final class ModelMetadataBootstrap {
                 failure.set(null);
                 return CompletableFuture.completedFuture(null);
             }
-            return CompletableFuture.allOf(refreshes.toArray(CompletableFuture[]::new))
+            return CompletableFuture.allOf(refreshes.toArray(new CompletableFuture<?>[0]))
                     .thenCompose(ignored -> cache.load())
                     .thenAccept(updated -> {
                         if (updated.failure() != null) {
@@ -205,15 +205,17 @@ public final class ModelMetadataBootstrap {
             Map<ModelMetadata.Key, ModelMetadata> metadata) {
         ToolResult<ModelProfilesConfigLoader.Load> result = loader.load(
                 profilesPath, credentials, metadata);
-        if (result instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> invalid) {
-            failure.set(new GuideFailure(invalid.code(), invalid.message()));
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern0_holder.value) != null))) {
+            failure.set(new GuideFailure($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message()));
             return null;
         }
         return ((ToolResult.Success<ModelProfilesConfigLoader.Load>) result).value();
     }
 
     private static SecretValue secret(String value) {
-        return value == null || value.isBlank() ? null : SecretValue.of(value);
+        return value == null || dev.openallay.util.Java8Strings.isBlank(value) ? null : SecretValue.of(value);
     }
 
     private static String environmentName(String encoded) {
@@ -232,8 +234,10 @@ public final class ModelMetadataBootstrap {
         try {
             ToolResult<SecretValue> resolved = credentials.resolve(
                     CredentialReference.parse(encoded));
-            return resolved instanceof ToolResult.Success<SecretValue> success
-                    ? success.value()
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.SecretValue> value; ToolResult.Success<SecretValue> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+return (($oaPattern1_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<SecretValue>) $oaPattern1_holder.value) != null))
+                    ? $oaPattern1_holder.bound.value()
                     : null;
         } catch (RuntimeException failure) {
             return null;

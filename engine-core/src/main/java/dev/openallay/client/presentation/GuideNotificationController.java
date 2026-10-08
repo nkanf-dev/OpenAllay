@@ -31,7 +31,7 @@ public final class GuideNotificationController implements GuidePresentationListe
     private GuideService service;
     private UUID generation;
     private UUID actor;
-    private Set<GuidePresentationEvent.Key> visible = Set.of();
+    private Set<GuidePresentationEvent.Key> visible = dev.openallay.util.Java8Collections.setOf();
     private String visibleSession;
     private boolean windowActive;
     private boolean enabled;
@@ -106,16 +106,15 @@ public final class GuideNotificationController implements GuidePresentationListe
         });
         if (!enabled || generation == null) return;
         GuideUiConfig.Notifications config = config();
-        for (Batch batch : List.copyOf(pending.values())) {
+        for (Batch batch : dev.openallay.util.Java8Collections.listCopyOf(pending.values())) {
             long quiet = java.time.Duration.between(batch.last, now).toMillis();
             long age = java.time.Duration.between(batch.first, now).toMillis();
             if (quiet < QUIET_MILLIS && age < MAX_BATCH_MILLIS) continue;
             pending.remove(batch.task);
-            List<GuidePresentationEvent> deliverable = batch.events.stream()
+            List<GuidePresentationEvent> deliverable = dev.openallay.util.Java8Collections.toList(batch.events.stream()
                     .map(receipts::get).filter(Objects::nonNull).map(receipt -> receipt.event)
                     .filter(event -> eligible(event, config))
-                    .filter(event -> !suppressed(event, config))
-                    .toList();
+                    .filter(event -> !suppressed(event, config)));
             if (deliverable.isEmpty()) continue; // Suppression is not read acknowledgement.
             OwnedToast previous = owned.get(batch.task);
             GuideNotificationPort.Fence fence = previous == null
@@ -123,10 +122,10 @@ public final class GuideNotificationController implements GuidePresentationListe
             Set<GuidePresentationEvent.Key> merged = new LinkedHashSet<>();
             if (previous != null) merged.addAll(previous.events);
             merged.addAll(batch.events);
-            List<GuidePresentationEvent> all = merged.stream().map(receipts::get)
+            List<GuidePresentationEvent> all = dev.openallay.util.Java8Collections.toList(merged.stream().map(receipts::get)
                     .filter(Objects::nonNull).map(receipt -> receipt.event)
                     .filter(event -> eligible(event, config))
-                    .filter(event -> !suppressed(event, config)).toList();
+                    .filter(event -> !suppressed(event, config)));
             GuideNotificationPort.Notification notification = notification(batch.task, all,
                     config.durationSeconds(), fence, overflowTasks);
             if (notification.cardPreviews().isEmpty() && !notification.replyCompleted()
@@ -163,9 +162,9 @@ public final class GuideNotificationController implements GuidePresentationListe
     }
 
     public List<GuidePresentationEvent> receipts(GuideService owner, String sessionId) {
-        if (owner != service || generation == null) return List.of();
-        return receipts.values().stream().map(receipt -> receipt.event)
-                .filter(event -> event.key().sessionId().equals(sessionId) && currentOwner(event.key())).toList();
+        if (owner != service || generation == null) return dev.openallay.util.Java8Collections.listOf();
+        return dev.openallay.util.Java8Collections.toList(receipts.values().stream().map(receipt -> receipt.event)
+                .filter(event -> event.key().sessionId().equals(sessionId) && currentOwner(event.key())));
     }
 
     public int unread(GuideService owner, String sessionId) {
@@ -184,12 +183,12 @@ public final class GuideNotificationController implements GuidePresentationListe
         windowActive = active;
         visible = actuallyVisible.stream().filter(receipts::containsKey)
                 .filter(key -> key.connectionGeneration().equals(generation)
-                        && key.sessionId().equals(sessionId)).collect(java.util.stream.Collectors.toUnmodifiableSet());
+                        && key.sessionId().equals(sessionId)).collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         suppressVisibleSession();
     }
 
     public void clearVisibility(GuideService owner) {
-        if (owner == service) { visible = Set.of(); visibleSession = null; windowActive = false; }
+        if (owner == service) { visible = dev.openallay.util.Java8Collections.setOf(); visibleSession = null; windowActive = false; }
     }
 
     /** Explicit real content-view acknowledgement. Toast expiry, HUD preview and suppression do not call it. */
@@ -217,9 +216,9 @@ public final class GuideNotificationController implements GuidePresentationListe
         UUID id = UUID.randomUUID();
         GuideNotificationPort.Notification preview = new GuideNotificationPort.Notification(
                 generation == null ? id : generation, actor == null ? new UUID(0, 0) : actor,
-                id, "preview", id, "", 0, List.of(), true, true, false,
+                id, "preview", id, "", 0, dev.openallay.util.Java8Collections.listOf(), true, true, false,
                 config.durationSeconds(), fence);
-        tests.add(new OwnedToast(fence, port.show(preview), Set.of()));
+        tests.add(new OwnedToast(fence, port.show(preview), dev.openallay.util.Java8Collections.setOf()));
     }
 
     @Override public void close() { clearConnection(); closed = true; }
@@ -241,13 +240,31 @@ public final class GuideNotificationController implements GuidePresentationListe
     }
     private GuideUiConfig.Notifications config() { return Objects.requireNonNull(settings.get(), "notification settings"); }
     private static boolean eligible(GuidePresentationEvent event, GuideUiConfig.Notifications config) {
-        return switch (event.kind()) {
-            case REPLY_FINAL -> config.replyCompleted();
-            case CARD_BATCH -> config.cardBatches();
-            // Task completion is a fallback under the reply option, never an unconfigurable extra toast.
-            case TASK_COMPLETED -> config.replyCompleted();
-            case TASK_FAILED -> config.taskFailures();
-        };
+        {
+boolean $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((event.kind())) {
+case REPLY_FINAL:
+{
+$oaSwitch0_exit_result = config.replyCompleted(); break $oaSwitch0_exit;
+}
+case CARD_BATCH:
+{
+$oaSwitch0_exit_result = config.cardBatches(); break $oaSwitch0_exit;
+}
+case TASK_COMPLETED:
+{
+$oaSwitch0_exit_result = config.replyCompleted(); break $oaSwitch0_exit;
+}
+case TASK_FAILED:
+{
+$oaSwitch0_exit_result = config.taskFailures(); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
     private GuideNotificationPort.Notification notification(Task task, List<GuidePresentationEvent> events,
                                                            int duration, GuideNotificationPort.Fence fence,
@@ -256,20 +273,37 @@ public final class GuideNotificationController implements GuidePresentationListe
         Set<GuidePresentationEvent.ContentRef> cards = new LinkedHashSet<>();
         Map<GuidePresentationEvent.ContentRef, GuidePresentationEvent.CardPreview> previews = new LinkedHashMap<>();
         boolean reply = false, complete = false, failed = false;
-        for (GuidePresentationEvent event : events.stream()
-                .sorted(java.util.Comparator.comparingLong(event -> event.key().sequence())).toList()) {
-            switch (event.kind()) {
-                case REPLY_FINAL -> { reply = true; text = event.preview(); }
-                case CARD_BATCH -> {
+        for (GuidePresentationEvent event : dev.openallay.util.Java8Collections.toList(events.stream()
+                .sorted(java.util.Comparator.comparingLong(event -> event.key().sequence())))) {
+            switch ((event.kind())) {
+case REPLY_FINAL:
+{
+{ reply = true; text = event.preview(); }
+break;
+}
+case CARD_BATCH:
+{
+{
                     cards.addAll(event.content());
                     event.cardPreviews().forEach(card -> previews.putIfAbsent(card.source(), card));
                 }
-                case TASK_COMPLETED -> complete = true;
-                case TASK_FAILED -> { failed = true; failure = event.preview(); }
-            }
+break;
+}
+case TASK_COMPLETED:
+{
+complete = true;
+break;
+}
+case TASK_FAILED:
+{
+{ failed = true; failure = event.preview(); }
+break;
+}
+}
+
         }
         return new GuideNotificationPort.Notification(task.generation, task.actor, task.owner,
-                task.session, task.request, failed ? failure : text, cards.size(), List.copyOf(previews.values()),
+                task.session, task.request, failed ? failure : text, cards.size(), dev.openallay.util.Java8Collections.listCopyOf(previews.values()),
                 reply, complete, failed, duration, fence, additionalTasks);
     }
     private boolean currentOwner(GuidePresentationEvent.Key key) {
@@ -278,8 +312,8 @@ public final class GuideNotificationController implements GuidePresentationListe
     }
     private void pruneDeletedSessions() {
         receipts.entrySet().removeIf(entry -> !currentOwner(entry.getKey()));
-        pending.entrySet().removeIf(entry -> service == null || service.presentationSessionOwner(entry.getKey().session)
-                .filter(entry.getKey().owner::equals).isEmpty());
+        pending.entrySet().removeIf(entry -> service == null || dev.openallay.util.Java8ApiSupport.isEmpty(service.presentationSessionOwner(entry.getKey().session)
+                .filter(entry.getKey().owner::equals)));
         owned.entrySet().removeIf(entry -> {
             if (service != null && service.presentationSessionOwner(entry.getKey().session)
                     .filter(entry.getKey().owner::equals).isPresent()) return false;
@@ -291,7 +325,7 @@ public final class GuideNotificationController implements GuidePresentationListe
         owned.values().forEach(OwnedToast::hide);
         tests.forEach(OwnedToast::hide);
         owned.clear(); tests.clear(); pending.clear(); receipts.clear();
-        visible = Set.of(); visibleSession = null; windowActive = false; overflowTasks = 0;
+        visible = dev.openallay.util.Java8Collections.setOf(); visibleSession = null; windowActive = false; overflowTasks = 0;
         service = null; generation = null; actor = null;
     }
     private static String preview(String text) {
@@ -303,11 +337,51 @@ public final class GuideNotificationController implements GuidePresentationListe
         boolean seen, delivered;
         Receipt(GuidePresentationEvent event) { this.event = event; }
     }
-    private record Task(UUID generation, UUID actor, UUID owner, String session, UUID request) {
-        static Task of(GuidePresentationEvent.Key key) {
+    @dev.openallay.value.ValueType(Task.ValueSchemaProvider.class)
+private static final class Task {
+    private final UUID generation;
+    private final UUID actor;
+    private final UUID owner;
+    private final String session;
+    private final UUID request;
+    private Task(UUID generation, UUID actor, UUID owner, String session, UUID request) {
+        this.generation = generation;
+        this.actor = actor;
+        this.owner = owner;
+        this.session = session;
+        this.request = request;
+    }
+    public UUID generation() { return generation; }
+    public UUID actor() { return actor; }
+    public UUID owner() { return owner; }
+    public String session() { return session; }
+    public UUID request() { return request; }
+static Task of(GuidePresentationEvent.Key key) {
             return new Task(key.connectionGeneration(), key.actorId(), key.sessionOwner(), key.sessionId(), key.requestId());
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Task)) return false;
+        Task that = (Task) other;
+        return java.util.Objects.equals(generation, that.generation) && java.util.Objects.equals(actor, that.actor) && java.util.Objects.equals(owner, that.owner) && java.util.Objects.equals(session, that.session) && java.util.Objects.equals(request, that.request);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(actor);
+        hash = 31 * hash + java.util.Objects.hashCode(owner);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "Task[generation=" + generation + ", actor=" + actor + ", owner=" + owner + ", session=" + session + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Task> schema() {
+            return new dev.openallay.value.ValueSchema<>(Task.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Task>>asList(new dev.openallay.value.ValueSchema.Component<>(Task.class, "generation", Task::generation), new dev.openallay.value.ValueSchema.Component<>(Task.class, "actor", Task::actor), new dev.openallay.value.ValueSchema.Component<>(Task.class, "owner", Task::owner), new dev.openallay.value.ValueSchema.Component<>(Task.class, "session", Task::session), new dev.openallay.value.ValueSchema.Component<>(Task.class, "request", Task::request)), arguments -> new Task((UUID) arguments[0], (UUID) arguments[1], (UUID) arguments[2], (String) arguments[3], (UUID) arguments[4]));
+        }
+    }
+}
     private static final class Batch {
         final Task task;
         final Instant first;

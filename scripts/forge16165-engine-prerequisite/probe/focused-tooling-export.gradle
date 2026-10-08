@@ -1,0 +1,50 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+// Focused declarations/tooling evidence only. Never depends on compileJava/reobf/run tasks.
+repositories { maven { url = 'https://maven.shedaniel.me' } }
+configurations {
+    publicationApiEvidence { canBeConsumed = false; transitive = false }
+    publicationFullEvidence { canBeConsumed = false; transitive = false }
+}
+dependencies {
+    publicationApiEvidence 'me.shedaniel:RoughlyEnoughItems-api-forge:6.5.436'
+    publicationApiEvidence 'me.shedaniel:architectury-forge:1.32.68'
+    publicationFullEvidence 'me.shedaniel:RoughlyEnoughItems-forge:6.5.436'
+}
+def sha256File = { File artifact ->
+    MessageDigest digest = MessageDigest.getInstance('SHA-256')
+    artifact.withInputStream { stream -> byte[] buffer = new byte[65536]; int count
+        while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+    }
+    digest.digest().encodeHex().toString()
+}
+tasks.register('exportFocusedToolingClasspath') {
+    outputs.upToDateWhen { false }
+    doLast {
+        File output = layout.buildDirectory.dir('focused-tooling-classpath').get().asFile
+        if (output.exists()) throw new GradleException('Preserve prior focused classpath evidence')
+        output.mkdirs()
+        def groups = [nativeHost: configurations.compileClasspath,
+                      publicationApi: configurations.publicationApiEvidence,
+                      publicationFull: configurations.publicationFullEvidence]
+        def records = [:]
+        groups.each { key, configuration ->
+            def artifacts = configuration.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                def id = artifact.moduleVersion.id
+                [coordinate: "${id.group}:${id.name}:${id.version}".toString(), classifier: artifact.classifier,
+                 extension: artifact.extension, path: artifact.file.absolutePath,
+                 sha256: sha256File(artifact.file), bytes: artifact.file.length()]
+            }
+            // compileClasspath contains absent probe closure file dependencies. They are not resolved host artifacts.
+            def files = configuration.files.findAll { it.isFile() }.toList()
+            new File(output, "${key}.paths.txt").text = files.collect { it.absolutePath }.join('\n') + '\n'
+            records[key] = [artifacts: artifacts, files: files.collect { [path: it.absolutePath, sha256: sha256File(it)] }]
+        }
+        new File(output, 'resolution.json').text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                source: System.getenv('GITHUB_SHA'), minecraft: '1.16.5', forge: '36.2.42',
+                forgeGradle: '6.0.54', gradle: gradle.gradleVersion, daemonJava: System.getProperty('java.runtime.version'),
+                mappings: 'official_1.16.5', groups: records, rawPublicationResolution: true,
+                namespaceToolCompiled: false, productCompiled: false, gameExecuted: false])) + '\n'
+    }
+}

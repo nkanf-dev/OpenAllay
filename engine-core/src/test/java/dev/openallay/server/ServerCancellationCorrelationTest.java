@@ -91,11 +91,17 @@ final class ServerCancellationCorrelationTest {
                     return CompletableFuture.completedFuture(
                             ToolInvocationContext.developmentConsole(correlationId));
                 },
-                (sender, event) -> {
-                    assertEquals(actor, sender);
-                    received.add(event);
-                    if (event.eventType().equals("request_released")) {
-                        (event.requestId().equals(oldId) ? oldReleased : newReleased).complete(null);
+                new ServerGuideEvents() {
+                    @Override public void send(UUID sender, ServerAgentEventPayload event) {
+                        assertEquals(actor, sender);
+                        received.add(event);
+                    }
+                    @Override public void send(UUID sender, ServerAgentEventPayload event, Runnable retired) {
+                        try { send(sender, event); }
+                        finally { retired.run(); }
+                        if (event.eventType().equals("request_released")) {
+                            (event.requestId().equals(oldId) ? oldReleased : newReleased).complete(null);
+                        }
                     }
                 },
                 gson,

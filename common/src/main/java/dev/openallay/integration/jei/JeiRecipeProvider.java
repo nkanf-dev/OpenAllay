@@ -29,11 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
-import mezz.jei.api.gui.ingredient.IRecipeSlotView;
-import mezz.jei.api.ingredients.IIngredientHelper;
-import mezz.jei.api.ingredients.IIngredientType;
-import mezz.jei.api.ingredients.ITypedIngredient;
-import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.runtime.IJeiRuntime;
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
@@ -68,15 +63,11 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
 
         List<RecipeProviderDiagnostic> diagnostics = new ArrayList<>();
         TreeMap<String, RecipeEntrySnapshot> recipes = new TreeMap<>();
-        List<IRecipeCategory<?>> categories = runtime.getRecipeManager()
-                .createRecipeCategoryLookup()
-                .includeHidden()
-                .get()
-                .sorted(Comparator.comparing(category ->
-                        category.getRecipeType().getUid().toString()))
+        List<IRecipeCategory<?>> categories = MinecraftJeiRecipeApi.categories(runtime, true).stream()
+                .sorted(Comparator.comparing(category -> MinecraftJeiRecipeApi.categoryId(category).toString()))
                 .toList();
         for (IRecipeCategory<?> category : categories) {
-            if (category.getRecipeType().getUid().toString().startsWith(TAG_CATEGORY_PREFIX)) {
+            if (MinecraftJeiRecipeApi.categoryId(category).toString().startsWith(TAG_CATEGORY_PREFIX)) {
                 // JEI exposes item and block tag membership through recipe-shaped layouts. These
                 // are viewer metadata, not crafting or processing recipes.
                 continue;
@@ -87,7 +78,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                 diagnostics.add(diagnostic(
                         "category_capture_failed",
                         "JEI category could not be detached: "
-                                + category.getRecipeType().getUid()));
+                                + MinecraftJeiRecipeApi.categoryId(category)));
             }
         }
         DataCompleteness completeness = diagnostics.isEmpty()
@@ -101,11 +92,7 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
             IRecipeCategory<T> category,
             Map<String, RecipeEntrySnapshot> recipes,
             List<RecipeProviderDiagnostic> diagnostics) {
-        List<T> categoryRecipes = runtime.getRecipeManager()
-                .createRecipeLookup(category.getRecipeType())
-                .includeHidden()
-                .get()
-                .toList();
+        List<T> categoryRecipes = MinecraftJeiRecipeApi.recipes(runtime, category, true);
         for (T recipe : categoryRecipes) {
             try {
                 RecipeEntrySnapshot detached = detach(category, recipe);
@@ -123,22 +110,19 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                 diagnostics.add(diagnostic(
                         "recipe_capture_failed",
                         "JEI recipe could not be detached from category "
-                                + category.getRecipeType().getUid()));
+                                + MinecraftJeiRecipeApi.categoryId(category)));
             }
         }
     }
 
     private <T> RecipeEntrySnapshot detach(IRecipeCategory<T> category, T recipe) {
         NativeRecipeLayout<T> layout = MinecraftJeiRecipeApi.createLayout(
-                        runtime.getRecipeManager(),
-                        category,
-                        recipe,
-                        runtime.getJeiHelpers().getFocusFactory().getEmptyFocusGroup())
+                        runtime, category, recipe)
                 .orElseThrow(() -> new UnsupportedRecipe(
                         "layout_unavailable", "JEI did not provide a recipe layout"));
-        CapturedSlots slots = captureSlots(layout.getRecipeSlotsView().getSlotViews());
+        CapturedSlots slots = captureSlots(layout.captureSlots(runtime));
         MinecraftResourceId explicitId = MinecraftJeiResourceIds.recipe(category, recipe);
-        MinecraftResourceId categoryId = MinecraftResourceId.from(category.getRecipeType().getUid().toString());
+        MinecraftResourceId categoryId = MinecraftResourceId.from(MinecraftJeiRecipeApi.categoryId(category).toString());
         String provisionalId = explicitId == null
                 ? "openallay:jei_pending"
                 : explicitId.toString();
@@ -168,32 +152,32 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
         }
     }
 
-    private CapturedSlots captureSlots(List<IRecipeSlotView> slots) {
+    private CapturedSlots captureSlots(List<JeiIngredientSlot> slots) {
         List<IngredientRequirementSnapshot> ingredients = new ArrayList<>();
         List<IngredientRequirementSnapshot> catalysts = new ArrayList<>();
         List<FluidRequirementSnapshot> fluids = new ArrayList<>();
         List<RecipeOutputSnapshot> outputs = new ArrayList<>();
         int inputIndex = 0;
         int catalystIndex = 0;
-        for (IRecipeSlotView slot : slots) {
-            List<ITypedIngredient<?>> values = MinecraftJeiRecipeApi.slotValues(slot);
-            if (values.isEmpty() || slot.getRole() == RecipeIngredientRole.RENDER_ONLY) {
+        for (JeiIngredientSlot slot : slots) {
+            List<JeiIngredientValue> values = slot.values();
+            if (values.isEmpty() || slot.role() == JeiIngredientSlot.Role.RENDER_ONLY) {
                 continue;
             }
-            if (slot.getRole() == RecipeIngredientRole.OUTPUT) {
+            if (slot.role() == JeiIngredientSlot.Role.OUTPUT) {
                 outputs.add(captureOutput(values));
             } else if (allItems(values)) {
                 IngredientRequirementSnapshot requirement = captureItemRequirement(
-                        MinecraftJeiIngredientRoles.craftingStation(slot.getRole())
+                        slot.role() == JeiIngredientSlot.Role.WORKSTATION
                                 ? "catalyst-" + catalystIndex++
                                 : "input-" + inputIndex++,
-                        values);
-                if (MinecraftJeiIngredientRoles.craftingStation(slot.getRole())) {
+                        values, slot.role() == JeiIngredientSlot.Role.INPUT);
+                if (slot.role() == JeiIngredientSlot.Role.WORKSTATION) {
                     catalysts.add(requirement);
-                } else if (slot.getRole() == RecipeIngredientRole.INPUT) {
+                } else if (slot.role() == JeiIngredientSlot.Role.INPUT) {
                     ingredients.add(requirement);
                 }
-            } else if (slot.getRole() == RecipeIngredientRole.INPUT && allFluids(values)) {
+            } else if (slot.role() == JeiIngredientSlot.Role.INPUT && allFluids(values)) {
                 fluids.add(captureFluid(values));
             } else {
                 throw new UnsupportedRecipe(
@@ -213,9 +197,9 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
     }
 
     private IngredientRequirementSnapshot captureItemRequirement(
-            String key, List<ITypedIngredient<?>> values) {
+            String key, List<JeiIngredientValue> values, boolean consumed) {
         List<ItemStack> stacks = values.stream()
-                .map(value -> value.getItemStack().orElseThrow())
+                .map(value -> ((JeiIngredientValue.Item) value).stack())
                 .filter(value -> !value.isEmpty())
                 .toList();
         if (stacks.isEmpty()) {
@@ -233,16 +217,16 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
             alternatives.put(id, new IngredientAlternativeSnapshot("item", id, List.of(id)));
         });
         return new IngredientRequirementSnapshot(
-                key, count, true, List.copyOf(alternatives.values()));
+                key, count, consumed, List.copyOf(alternatives.values()));
     }
 
-    private RecipeOutputSnapshot captureOutput(List<ITypedIngredient<?>> values) {
+    private RecipeOutputSnapshot captureOutput(List<JeiIngredientValue> values) {
         if (!allItems(values)) {
             throw new UnsupportedRecipe(
                     "unsupported_output", "JEI output is not an item stack");
         }
         List<ItemStack> stacks = values.stream()
-                .map(value -> value.getItemStack().orElseThrow())
+                .map(value -> ((JeiIngredientValue.Item) value).stack())
                 .filter(value -> !value.isEmpty())
                 .toList();
         if (stacks.isEmpty()) {
@@ -262,8 +246,8 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
                 new ItemStackSnapshot(id, stack.getCount(), stack.getHoverName().getString()), 1.0D);
     }
 
-    private FluidRequirementSnapshot captureFluid(List<ITypedIngredient<?>> values) {
-        List<FluidValue> fluids = values.stream().map(this::fluid).distinct().toList();
+    private FluidRequirementSnapshot captureFluid(List<JeiIngredientValue> values) {
+        List<FluidValue> fluids = values.stream().map(value -> fluid((JeiIngredientValue.Fluid) value)).distinct().toList();
         if (fluids.size() != 1) {
             throw new UnsupportedRecipe(
                     "alternative_fluid", "JEI fluid slot contains alternatives");
@@ -275,27 +259,18 @@ final class JeiRecipeProvider implements RecipeKnowledgeProvider {
         return new FluidRequirementSnapshot(fluid.id, fluid.amount, true);
     }
 
-    private <T> FluidValue fluid(ITypedIngredient<T> value) {
-        IIngredientType<T> type = value.getType();
-        IIngredientHelper<T> helper = runtime.getIngredientManager().getIngredientHelper(type);
-        T ingredient = value.getIngredient();
-        var id = MinecraftJeiResourceIds.ingredient(helper, ingredient);
-        long amount = MinecraftJeiRecipeApi.amount(helper, ingredient)
-                .orElseThrow(() -> new UnsupportedRecipe(
-                        "fluid_amount_unavailable",
-                        "JEI does not expose the fluid ingredient amount"));
-        return new FluidValue(id.toString(), amount);
+    private static FluidValue fluid(JeiIngredientValue.Fluid value) {
+        long amount = value.amount().orElseThrow(() -> new UnsupportedRecipe(
+                "fluid_amount_unavailable", "JEI does not expose the fluid ingredient amount"));
+        return new FluidValue(value.id(), amount);
     }
 
-    private boolean allFluids(List<ITypedIngredient<?>> values) {
-        IIngredientType<?> fluidType = runtime.getJeiHelpers()
-                .getPlatformFluidHelper()
-                .getFluidIngredientType();
-        return values.stream().allMatch(value -> value.getType().equals(fluidType));
+    private static boolean allFluids(List<JeiIngredientValue> values) {
+        return values.stream().allMatch(value -> value instanceof JeiIngredientValue.Fluid);
     }
 
-    private static boolean allItems(List<ITypedIngredient<?>> values) {
-        return values.stream().allMatch(value -> value.getItemStack().isPresent());
+    private static boolean allItems(List<JeiIngredientValue> values) {
+        return values.stream().allMatch(value -> value instanceof JeiIngredientValue.Item);
     }
 
     private static void rejectComponents(List<ItemStack> stacks) {

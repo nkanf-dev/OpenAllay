@@ -13,7 +13,7 @@ public enum ModelTokenEncoding {
     }
 
     public static ModelTokenEncoding parse(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             throw new IllegalArgumentException("tokenEncoding must be auto, cl100k_base or o200k_base");
         }
         try {

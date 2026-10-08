@@ -28,7 +28,7 @@ final class WorldObservationCoverageCalculator {
         addHeightRanges(bounds, minimumBuildY, maximumBuildY, unavailable);
         if (firstLoadedY > lastLoadedY) {
             return new WorldObservationCoverage(
-                    requested, 0L, false, List.copyOf(unavailable));
+                    requested, 0L, false, dev.openallay.util.Java8Collections.listCopyOf(unavailable));
         }
 
         long loadedYCount = lastLoadedY - firstLoadedY + 1L;
@@ -66,7 +66,7 @@ final class WorldObservationCoverageCalculator {
                 requested,
                 loadedPositions,
                 loadedPositions == requested,
-                List.copyOf(unavailable));
+                dev.openallay.util.Java8Collections.listCopyOf(unavailable));
     }
 
     private static void addHeightRanges(

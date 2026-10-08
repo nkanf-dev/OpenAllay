@@ -11,6 +11,13 @@ import net.minecraft.client.gui.navigation.CommonInputs;
 /** Primitive callback family. Native widgets retain keyboard, clipboard and IME ownership. */
 public final class GuideNativeInput {
     private GuideNativeInput() {}
+    public static String getClipboard() { return net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard(); }
+    public static void setClipboard(String text) { net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(text); }
+
+    public static GuideWidgetInput widgetInput(GuiEventListener widget) {
+        return new GuideNativeWidgetInput(widget);
+    }
+
     public static InputConstants.Type keyboardType() { return InputConstants.Type.KEYSYM; }
     /** Inert/probe callback payload, not evidence of physical OS dispatch. */
     public static GuideInputKey keyEvent(int key, int modifiers) { return capture(key, 0, modifiers); }
@@ -18,12 +25,12 @@ public final class GuideNativeInput {
         return new GuideInputKey(key, scancode, key, modifiers,
                 CommonInputs.selected(key),
                 Screen.hasShiftDown(), Screen.hasControlDown(), Screen.isPaste(key),
-                Screen.isCopy(key), Screen.isCut(key), key == InputConstants.KEY_ESCAPE);
+                Screen.isCopy(key), Screen.isCut(key), key == dev.openallay.client.gui.GuideInputCodes.KEY_ESCAPE);
     }
     public static GuideInputCharacter characterEvent(int codePoint) { return new GuideInputCharacter(codePoint, 0); }
     public static GuideInputCharacter capture(char character, int modifiers) { return new GuideInputCharacter(character, modifiers); }
     public static GuideInputMouse mouseEvent(double x, double y, int button, int modifiers) {
-        return new GuideInputMouse(x, y, button, modifiers, button == InputConstants.MOUSE_BUTTON_LEFT);
+        return new GuideInputMouse(x, y, button, modifiers, button == dev.openallay.client.gui.GuideInputCodes.MOUSE_BUTTON_LEFT);
     }
     public static GuideInputMouse capture(double x, double y, int button) { return mouseEvent(x, y, button, 0); }
     public static boolean controlDown(GuideInputKey event) { return event.controlDown(); }

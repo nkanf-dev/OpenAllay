@@ -1,0 +1,15 @@
+{
+  "fixtureAcceptedRun": 37634712035,
+  "request_sha256": "7ae36a2f15a2560eabe32e6cdaea2751ff9ed0b4d95695566318b6e2b85c7e2a",
+  "selectedOwners": {
+    "dev/openallay/extension/catalog/ExtensionCatalogArtifact.java": "ExtensionCatalogArtifact",
+    "dev/openallay/tool/builtin/RunJavascriptTool.java": "RunJavascriptTool.Input,RunJavascriptTool.Output",
+    "dev/openallay/trace/model/ToolCallStep.java": "ToolCallStep"
+  },
+  "tool_pins": {
+    "build-logic/src/main/java/dev/openallay/build/RecordValueSourceConverter.java": "cc0318520218788f2e004590e77c40d16d519f3147ec2b88cc1ae1be92e079f8",
+    "build-logic/src/main/java/dev/openallay/build/AttributedRecordProof.java": "bf295c8c163ea9e1823101879c9791b413220c17e41b85b2afe183be4a6035ae"
+  },
+  "scope": "ActualcompletecurrentenginepublicJavacTaskattribution+normalproductionclasspath\u21923wholeowner4recordsourceoutputs. No handrender/no strippedimplements/partialowner. Rootmoderngate afterauthenticoutputs.",
+  "commands": "Compileexisting2toolclasses release17; java -cp <toolclasses> dev.openallay.build.AttributedRecordProof <canonicalengine/src/main/java> <actualengineProductionClasspath> <requestTSV> <freshExternalOutput>."
+}

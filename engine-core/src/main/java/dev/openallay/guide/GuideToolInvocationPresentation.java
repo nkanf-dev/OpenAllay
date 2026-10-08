@@ -12,18 +12,33 @@ public final class GuideToolInvocationPresentation {
 
     public static List<GuideToolMessage> messages(String toolId, JsonObject input) {
         String name = toolName(toolId);
-        return switch (name) {
-            case "load_skill" -> loadSkill(input);
-            case "run_javascript" -> javascriptIntent(input);
-            default -> List.of();
-        };
+        {
+java.util.List<dev.openallay.guide.GuideToolMessage> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((name)) {
+case "load_skill":
+{
+$oaSwitch0_exit_result = loadSkill(input); break $oaSwitch0_exit;
+}
+case "run_javascript":
+{
+$oaSwitch0_exit_result = javascriptIntent(input); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Collections.listOf(); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static List<GuideToolMessage> javascriptIntent(JsonObject input) {
         GuideToolIntent intent = GuideToolIntent.fromArguments(input);
         return intent.empty()
                 ? one(GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT)
-                : List.of(GuideToolMessage.of(
+                : dev.openallay.util.Java8Collections.listOf(GuideToolMessage.of(
                         GuideToolMessage.Key.INVOCATION_RUN_JAVASCRIPT,
                         intent.title(), intent.description()));
     }
@@ -32,7 +47,7 @@ public final class GuideToolInvocationPresentation {
         String name = safeName(input, "name");
         String reference = safeReference(primitive(input, "reference"));
         if (!reference.isEmpty()) {
-            return List.of(GuideToolMessage.of(
+            return dev.openallay.util.Java8Collections.listOf(GuideToolMessage.of(
                     GuideToolMessage.Key.INVOCATION_LOAD_SKILL_REFERENCE,
                     name,
                     reference));
@@ -68,14 +83,14 @@ public final class GuideToolInvocationPresentation {
     }
 
     private static List<GuideToolMessage> one(GuideToolMessage.Key key) {
-        return List.of(GuideToolMessage.of(key));
+        return dev.openallay.util.Java8Collections.listOf(GuideToolMessage.of(key));
     }
 
     private static List<GuideToolMessage> optional(
             GuideToolMessage.Key plain,
             GuideToolMessage.Key exact,
             String value) {
-        return List.of(value.isBlank()
+        return dev.openallay.util.Java8Collections.listOf(dev.openallay.util.Java8Strings.isBlank(value)
                 ? GuideToolMessage.of(plain)
                 : GuideToolMessage.of(exact, value));
     }

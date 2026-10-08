@@ -27,7 +27,7 @@ public final class ReiOpenAllayExtension implements OpenAllayExtension {
                 "0.2.0",
                 "OpenAllay",
                 "REI recipe catalog and item-focused recipe or usage navigation",
-                Set.of("fabric", "neoforge"),
+                dev.openallay.util.Java8Collections.setOf("fabric", "neoforge"),
                 "[26.2,26.3)",
                 "[0.2,0.3)",
                 "builtin:openallay/rei");
@@ -36,16 +36,16 @@ public final class ReiOpenAllayExtension implements OpenAllayExtension {
     @Override
     public OpenAllayExtensionContribution contribution() {
         return new OpenAllayExtensionContribution(
-                List.of(new RecipeViewerExtensionDataModule(
+                dev.openallay.util.Java8Collections.listOf(new RecipeViewerExtensionDataModule(
                         "openallay:rei",
                         "viewer:rei",
                         "Detached REI provider, category, recipe, focus, and navigation state",
                         true,
                         true,
                         false)),
-                List.of(),
-                List.of(),
-                List.of(new JavascriptResultViewProvider.Declaration(
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(new JavascriptResultViewProvider.Declaration(
                         "openallay:rei_recipe",
                         JavascriptSemanticKind.RECIPE,
                         "REI-backed recipe presentation with neutral exact-layout fallback")));

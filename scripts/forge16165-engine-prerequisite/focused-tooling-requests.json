@@ -1,0 +1,91 @@
+{
+  "foundation": "728f96a85d306c9d033229a57428abfdb2e3c754",
+  "publicationClasses": [
+    "me.shedaniel.rei.forge.REIPlugin",
+    "me.shedaniel.rei.api.client.plugins.REIClientPlugin",
+    "me.shedaniel.rei.api.common.plugins.REIPlugin",
+    "me.shedaniel.rei.api.common.plugins.REIPluginProvider",
+    "me.shedaniel.rei.api.common.plugins.PluginManager",
+    "me.shedaniel.rei.api.common.registry.ReloadStage",
+    "me.shedaniel.rei.api.client.registry.display.DisplayRegistry",
+    "me.shedaniel.rei.api.common.display.Display",
+    "me.shedaniel.rei.api.common.category.CategoryIdentifier",
+    "me.shedaniel.rei.api.common.util.Identifiable",
+    "me.shedaniel.rei.api.common.entry.EntryIngredient",
+    "me.shedaniel.rei.api.common.entry.EntryStack",
+    "me.shedaniel.rei.api.common.entry.type.EntryType",
+    "me.shedaniel.rei.api.common.entry.type.EntryDefinition",
+    "me.shedaniel.rei.api.common.entry.type.VanillaEntryTypes",
+    "me.shedaniel.rei.api.common.util.EntryStacks",
+    "me.shedaniel.rei.api.client.view.ViewSearchBuilder",
+    "me.shedaniel.rei.api.client.ClientHelper",
+    "me.shedaniel.architectury.fluid.FluidStack",
+    "me.shedaniel.architectury.utils.Fraction",
+    "me.shedaniel.rei.api.common.registry.RecipeManagerContext",
+    "me.shedaniel.rei.api.common.registry.ParentReloadable",
+    "me.shedaniel.rei.api.common.registry.Reloadable",
+    "me.shedaniel.rei.api.common.util.TextRepresentable",
+    "me.shedaniel.rei.api.client.gui.Renderer",
+    "me.shedaniel.rei.impl.display.DisplaySpec"
+  ],
+  "negativeClasses": [
+    "me.shedaniel.rei.forge.REIPluginClient",
+    "dev.architectury.fluid.FluidStack"
+  ],
+  "lateNativeClasses": [
+    "net.minecraft.util.concurrent.RecursiveEventLoop",
+    "net.minecraftforge.fluids.FluidStack",
+    "net.minecraftforge.fml.event.server.FMLServerStoppedEvent",
+    "net.minecraft.client.gui.NewChatGui",
+    "net.minecraft.item.crafting.IRecipe",
+    "net.minecraft.client.renderer.texture.TextureUtil",
+    "net.minecraft.util.concurrent.TickDelayedTask"
+  ],
+  "conditionalBodies": {
+    "me.shedaniel.rei.forge.AnnotationUtils": [
+      "scanAnnotation"
+    ],
+    "me.shedaniel.rei.forge.PluginDetectorImpl": [
+      "detectClientPlugins",
+      "detectCommonPlugins"
+    ],
+    "me.shedaniel.architectury.hooks.forge.FluidStackHooksImpl": [
+      "bucketAmount"
+    ]
+  },
+  "declarationBodies": {
+    "me.shedaniel.rei.api.common.plugins.REIPlugin": [
+      "provide",
+      "preStage",
+      "postStage"
+    ],
+    "me.shedaniel.rei.api.common.util.EntryStacks": [
+      "of"
+    ],
+    "me.shedaniel.rei.api.client.view.ViewSearchBuilder": [
+      "open"
+    ],
+    "me.shedaniel.architectury.fluid.FluidStack": [
+      "getAmount",
+      "bucketAmount",
+      "isEmpty"
+    ]
+  },
+  "pins": {
+    "me.shedaniel:RoughlyEnoughItems-api-forge:6.5.436": "9b4ccab63276256130e641f1d0e58d49083dbac192786d9980157d2aef65b7d5",
+    "me.shedaniel:architectury-forge:1.32.68": "e240c66919e3920d864de30138f0790072fdd72e3a27b69ba2865ab92153fba3",
+    "me.shedaniel:RoughlyEnoughItems-forge:6.5.436": "842193e6f59b3c974331f83f260e06463f3ee1001e93650b766ad814d930a8cf"
+  },
+  "expectedHostCoordinate": "net.minecraftforge:forge:1.16.5-36.2.42_mapped_official_1.16.5",
+  "scope": "raw publication + genuine FG mapped host ABI, no guessed fg.deobf transform; no product feature compile/game/old251 repeats",
+  "lateNativeBodies": {
+    "net.minecraftforge.fluids.FluidStack": [
+      "getFluid",
+      "getAmount"
+    ],
+    "net.minecraft.util.concurrent.TickDelayedTask": [
+      "getTick",
+      "run"
+    ]
+  }
+}

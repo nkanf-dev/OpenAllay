@@ -11,9 +11,7 @@ import java.util.TreeMap;
 
 /** Reviewed JavaScript modules available inside one Rhino scope. */
 public final class JavascriptModuleCatalog {
-    private static final Map<String, String> BUNDLED = Map.of(
-            "openallay:crafting",
-            "assets/openallay/openallay_js_modules/crafting.js");
+    private static final Map<String, String> BUNDLED = dev.openallay.util.Java8Collections.mapOf("openallay:crafting", "assets/openallay/openallay_js_modules/crafting.js");
 
     private final Map<String, RegisteredSource> sources = new TreeMap<>();
 
@@ -33,7 +31,7 @@ public final class JavascriptModuleCatalog {
 
     /** Descriptor-only view used by Settings without loading module source text. */
     public static Set<String> bundledIds() {
-        return Set.copyOf(BUNDLED.keySet());
+        return dev.openallay.util.Java8Collections.setCopyOf(BUNDLED.keySet());
     }
 
     public synchronized String source(String id) {
@@ -47,7 +45,7 @@ public final class JavascriptModuleCatalog {
     }
 
     public synchronized Set<String> ids() {
-        return Set.copyOf(sources.keySet());
+        return dev.openallay.util.Java8Collections.setCopyOf(sources.keySet());
     }
 
     public synchronized void validateRegistration(
@@ -80,16 +78,16 @@ public final class JavascriptModuleCatalog {
         if (id == null || !id.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) {
             throw new IllegalArgumentException("Invalid JavaScript module id");
         }
-        if (source == null || source.isBlank()) {
+        if (source == null || dev.openallay.util.Java8Strings.isBlank(source)) {
             throw new IllegalArgumentException("JavaScript module source is required");
         }
     }
 
     private static String requireProvider(String providerId) {
-        if (providerId == null || providerId.isBlank()) {
+        if (providerId == null || dev.openallay.util.Java8Strings.isBlank(providerId)) {
             throw new IllegalArgumentException("JavaScript module provider ID is required");
         }
-        return providerId.strip();
+        return dev.openallay.util.Java8Strings.strip(providerId);
     }
 
     private static String read(ClassLoader loader, String path) {
@@ -97,11 +95,40 @@ public final class JavascriptModuleCatalog {
             if (stream == null) {
                 throw new IllegalStateException("Missing bundled JavaScript module " + path);
             }
-            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            return new String(dev.openallay.util.Java8Streams.readAllBytes(stream), StandardCharsets.UTF_8);
         } catch (IOException failure) {
             throw new IllegalStateException("Unable to load bundled JavaScript module " + path, failure);
         }
     }
 
-    private record RegisteredSource(String provider, String source) {}
+    @dev.openallay.value.ValueType(RegisteredSource.ValueSchemaProvider.class)
+private static final class RegisteredSource {
+    private final String provider;
+    private final String source;
+    private RegisteredSource(String provider, String source) {
+        this.provider = provider;
+        this.source = source;
+    }
+    public String provider() { return provider; }
+    public String source() { return source; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RegisteredSource)) return false;
+        RegisteredSource that = (RegisteredSource) other;
+        return java.util.Objects.equals(provider, that.provider) && java.util.Objects.equals(source, that.source);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(provider);
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        return hash;
+    }
+    @Override public String toString() { return "RegisteredSource[provider=" + provider + ", source=" + source + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RegisteredSource> schema() {
+            return new dev.openallay.value.ValueSchema<>(RegisteredSource.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RegisteredSource>>asList(new dev.openallay.value.ValueSchema.Component<>(RegisteredSource.class, "provider", RegisteredSource::provider), new dev.openallay.value.ValueSchema.Component<>(RegisteredSource.class, "source", RegisteredSource::source)), arguments -> new RegisteredSource((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

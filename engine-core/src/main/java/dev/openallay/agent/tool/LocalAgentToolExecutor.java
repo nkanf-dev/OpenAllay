@@ -30,23 +30,22 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     public LocalAgentToolExecutor(ToolRegistry tools, Gson gson) {
         this(ToolRuntimeCatalog.from(
-                Objects.requireNonNull(tools, "tools").registrations(), Set.of()), gson);
+                Objects.requireNonNull(tools, "tools").registrations(), dev.openallay.util.Java8Collections.setOf()), gson);
     }
 
     public LocalAgentToolExecutor(ToolRuntimeCatalog tools, Gson gson) {
         this.tools = Objects.requireNonNull(tools, "tools");
         this.gson = dev.openallay.json.EngineJson.withInstant(Objects.requireNonNull(gson, "gson"));
         List<ToolDescriptor<?, ?>> descriptors = tools.descriptors();
-        names = new ToolNameCodec(descriptors.stream().map(ToolDescriptor::id).toList());
+        names = new ToolNameCodec(dev.openallay.util.Java8Collections.toList(descriptors.stream().map(ToolDescriptor::id)));
         arguments = new ToolArgumentCodec(gson);
         normalizer = new ToolResultNormalizer(gson);
         ToolSchemaGenerator schemas = new ToolSchemaGenerator();
-        definitions = descriptors.stream()
+        definitions = dev.openallay.util.Java8Collections.toList(descriptors.stream()
                 .map(descriptor -> new ModelToolDefinition(
                         names.encode(descriptor.id()),
                         descriptor.description(),
-                        schemas.generate(descriptor.inputType())))
-                .toList();
+                        schemas.generate(descriptor.inputType()))));
     }
 
     @Override
@@ -58,7 +57,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     public Set<ContextCapability> requiredContext() {
         return tools.descriptors().stream()
                 .flatMap(descriptor -> descriptor.requiredContext().stream())
-                .collect(Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
     }
 
     @Override
@@ -83,8 +82,10 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                         toolId, normalizer.normalize(unavailable, Object.class), true));
             }
             ToolResult<?> decoded = arguments.decode(rawArguments, tool.descriptor().inputType());
-            if (decoded instanceof ToolResult.Success<?> success) {
-                return invokeAsync(tool, context, success.value(), cancellation)
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<?>) $oaPattern0_holder.value) != null))) {
+                return invokeAsync(tool, context, $oaPattern0_holder.bound.value(), cancellation)
                         .handle((result, failure) -> {
                             if (failure != null) {
                                 if (cancellation.isCancelled()) {
@@ -95,22 +96,28 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                                 String message = cause.getMessage();
                                 result = new ToolResult.Failure<>(
                                         "tool_failure",
-                                        message == null || message.isBlank()
+                                        message == null || dev.openallay.util.Java8Strings.isBlank(message)
                                                 ? cause.getClass().getSimpleName()
                                                 : message);
                             }
                             JsonObject normalized = normalizer.normalize(
                                     result, tool.descriptor().outputType());
-                            dev.openallay.tool.ModelResultSource source = result instanceof ToolResult.Success<?> succeeded
-                                    ? modelResultSource(tool, context, succeeded.value()).orElse(null) : null;
-                            return new AgentToolResult(
+                            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Object> value; ToolResult.Success<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+dev.openallay.tool.ModelResultSource source = (($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<?>) $oaPattern1_holder.value) != null))
+                                    ? modelResultSource(tool, context, $oaPattern1_holder.bound.value()).orElse(null) : null;
+                            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<java.lang.Object> value; ToolResult.Success<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+final class $oaPattern3_Holder { java.lang.Object value; ModelImageToolOutput bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+return new AgentToolResult(
                                     toolId,
                                     normalized,
                                     result instanceof ToolResult.Failure<?>,
                                     source,
-                                    result instanceof ToolResult.Success<?> succeeded
-                                            && succeeded.value() instanceof ModelImageToolOutput visual
-                                            ? visual.images() : List.of());
+                                    (($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<?>) $oaPattern2_holder.value) != null))
+                                            && (($oaPattern3_holder.value = $oaPattern2_holder.bound.value()) instanceof dev.openallay.agent.tool.ModelImageToolOutput && (($oaPattern3_holder.bound = (ModelImageToolOutput) $oaPattern3_holder.value) != null))
+                                            ? $oaPattern3_holder.bound.images() : dev.openallay.util.Java8Collections.listOf());
                         });
             }
             JsonObject normalized = normalizer.normalize(decoded, tool.descriptor().outputType());
@@ -119,7 +126,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
                     normalized,
                     true));
         } catch (RuntimeException exception) {
-            return CompletableFuture.failedFuture(exception);
+            return dev.openallay.util.Java8Futures.failedFuture(exception);
         }
     }
 
@@ -139,7 +146,7 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
         try {
             return tool.invokeAsync(context, (I) rawInput, cancellation);
         } catch (RuntimeException exception) {
-            return CompletableFuture.failedFuture(exception);
+            return dev.openallay.util.Java8Futures.failedFuture(exception);
         }
     }
 
@@ -157,9 +164,11 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     public List<dev.openallay.model.ModelMessage> refreshContext(
             List<dev.openallay.model.ModelMessage> messages) {
         List<dev.openallay.model.ModelMessage> current = messages;
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                current = skill.refreshContext(current);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern4_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern4_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern4_holder.value) != null))) {
+                current = $oaPattern4_holder.bound.refreshContext(current);
             }
         }
         return current;
@@ -167,9 +176,11 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     @Override
     public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages) {
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                skill.prepareContext(correlationId, messages);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern5_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern5_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern5_holder.value) != null))) {
+                $oaPattern5_holder.bound.prepareContext(correlationId, messages);
             }
         }
     }
@@ -178,9 +189,11 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     public List<dev.openallay.model.ModelMessage> refreshContext(
             List<dev.openallay.model.ModelMessage> messages, dev.openallay.skill.RetainedSkillContext retained) {
         List<dev.openallay.model.ModelMessage> current = messages;
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                current = skill.refreshContext(current, retained);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern6_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern6_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern6_holder.value) != null))) {
+                current = $oaPattern6_holder.bound.refreshContext(current, retained);
             }
         }
         return current;
@@ -189,18 +202,22 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
     @Override
     public void prepareContext(String correlationId, List<dev.openallay.model.ModelMessage> messages,
             dev.openallay.skill.RetainedSkillContext retained) {
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                skill.prepareContext(correlationId, messages, retained);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern7_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern7_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern7_holder.value) != null))) {
+                $oaPattern7_holder.bound.prepareContext(correlationId, messages, retained);
             }
         }
     }
 
     @Override
     public void prepareSystem(String systemPrompt, dev.openallay.skill.RetainedSkillContext retained) {
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                skill.prepareSystem(systemPrompt, retained);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern8_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern8_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern8_holder.value) != null))) {
+                $oaPattern8_holder.bound.prepareSystem(systemPrompt, retained);
             }
         }
     }
@@ -210,16 +227,18 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
         return tools.registrations().stream().map(registration -> registration.tool())
                 .filter(dev.openallay.skill.LoadSkillTool.class::isInstance)
                 .map(dev.openallay.skill.LoadSkillTool.class::cast)
-                .map(skill -> skill.manifest(correlationId)).filter(text -> !text.isBlank())
+                .map(skill -> skill.manifest(correlationId)).filter(text -> !dev.openallay.util.Java8Strings.isBlank(text))
                 .collect(java.util.stream.Collectors.joining("\n"));
     }
 
     @Override
     public String skillSystemPrompt(String prompt) {
         String safe = prompt;
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                safe = skill.systemPrompt(safe);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern9_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern9_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern9_holder.value) != null))) {
+                safe = $oaPattern9_holder.bound.systemPrompt(safe);
             }
         }
         return safe;
@@ -227,9 +246,11 @@ public final class LocalAgentToolExecutor implements AgentToolExecutor {
 
     @Override
     public void closeSkillContext(String correlationId) {
-        for (var registration : tools.registrations()) {
-            if (registration.tool() instanceof dev.openallay.skill.LoadSkillTool skill) {
-                skill.closeRequestScope(correlationId);
+        for (dev.openallay.tool.RegisteredTool registration : tools.registrations()) {
+            final class $oaPattern10_Holder { dev.openallay.tool.Tool<?, ?> value; dev.openallay.skill.LoadSkillTool bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern10_holder.bound = (dev.openallay.skill.LoadSkillTool) $oaPattern10_holder.value) != null))) {
+                $oaPattern10_holder.bound.closeRequestScope(correlationId);
             }
         }
     }

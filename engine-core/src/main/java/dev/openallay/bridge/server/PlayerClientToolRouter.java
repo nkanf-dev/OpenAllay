@@ -59,6 +59,7 @@ public final class PlayerClientToolRouter {
         boolean call(UUID actorId, ClientToolCallPayload payload);
 
         void cancel(UUID actorId, ClientToolCancelPayload payload);
+        default Transport bind(UUID actor) { return this; }
     }
 
     /** The Agent request owner imports, pins and grants resolver access before completion. */
@@ -73,7 +74,7 @@ public final class PlayerClientToolRouter {
     private volatile ResultPreparation resultPreparation =
             (actor, request, session, references, attachments, current) -> references.isEmpty()
                     ? CompletableFuture.completedFuture(null)
-                    : CompletableFuture.failedFuture(new IllegalStateException("Server image admission is unavailable"));
+                    : dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Server image admission is unavailable"));
     private volatile int resultByteLimit = dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES;
     private volatile java.util.function.BiPredicate<UUID, UUID> resultAdmission = (actor, request) -> true;
     private final java.util.concurrent.Executor resultWorker;
@@ -121,7 +122,7 @@ public final class PlayerClientToolRouter {
                 .filter(descriptor -> descriptor.access() != ToolAccess.READ_ONLY
                         && descriptor.access() != ToolAccess.EXPERIMENTAL_ACTION)
                 .map(descriptor -> descriptor.id())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         trustedTools = ToolRuntimeCatalog.from(tools.registrations(), nonReadOnly);
         this.gson = EngineJson.withInstant(java.util.Objects.requireNonNull(gson, "gson"));
         this.transport = java.util.Objects.requireNonNull(transport, "transport");
@@ -157,18 +158,17 @@ public final class PlayerClientToolRouter {
         if (sessionId == null || !sessionId.matches("[a-zA-Z0-9_.-]+")) {
             return new ToolResult.Failure<>("invalid_session", "Invalid Agent session ID");
         }
-        Set<String> accepted = List.copyOf(advertisedClientToolIds).stream()
+        Set<String> accepted = dev.openallay.util.Java8Collections.listCopyOf(advertisedClientToolIds).stream()
                 .filter(toolId -> trustedTools.find(toolId).isPresent())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet());
         // Rebind document guidance only. The trusted Tool IDs and placement policy do not change.
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
-                trustedTools.registrations().stream()
+                dev.openallay.util.Java8Collections.toList(trustedTools.registrations().stream()
                         .map(registration -> registration.tool() instanceof LoadSkillTool
                                 ? new RegisteredTool(
                                         registration.providerId(), new LoadSkillTool(requestSkills, "server"))
-                                : registration)
-                        .toList(),
-                Set.of());
+                                : registration)),
+                dev.openallay.util.Java8Collections.setOf());
         RequestKey key = new RequestKey(actorId, requestId);
         RequestExecutor executor = new RequestExecutor(
                 key, sessionId, accepted, requestTools, clientSkillDocuments);
@@ -191,21 +191,25 @@ public final class PlayerClientToolRouter {
     }
 
     public boolean close(UUID actorId, UUID requestId) {
-        RequestExecutor executor = active.remove(new RequestKey(actorId, requestId));
-        if (executor == null) {
-            return false;
-        }
+        RequestKey key = new RequestKey(actorId, requestId);
+        RequestExecutor executor = active.get(key);
+        return executor != null && close(actorId, requestId, executor);
+    }
+
+    public boolean close(UUID actorId, UUID requestId, AgentToolExecutor expected) {
+        RequestKey key = new RequestKey(actorId, requestId);
+        RequestExecutor executor = active.get(key);
+        if (executor == null || executor != expected || !active.remove(key, executor)) return false;
         executor.closed = true;
         executor.cancelPending();
-        List.copyOf(executor.retained.keySet()).forEach(executor::closeRequestScope);
+        dev.openallay.util.Java8Collections.listCopyOf(executor.retained.keySet()).forEach(executor::closeRequestScope);
         executor.closeRequestScope(actorId + "/" + requestId);
         return true;
     }
 
     public int disconnect(UUID actorId) {
-        List<RequestKey> owned = active.keySet().stream()
-                .filter(key -> key.actorId.equals(actorId))
-                .toList();
+        List<RequestKey> owned = dev.openallay.util.Java8Collections.toList(active.keySet().stream()
+                .filter(key -> key.actorId.equals(actorId)));
         owned.forEach(key -> close(key.actorId, key.requestId));
         return owned.size();
     }
@@ -221,6 +225,7 @@ public final class PlayerClientToolRouter {
 
     private final class RequestExecutor implements AgentToolExecutor {
         private final RequestKey key;
+        private final Transport boundTransport;
         private final String sessionId;
         private final Set<String> clientTools;
         private final ToolRuntimeCatalog requestTools;
@@ -242,8 +247,9 @@ public final class PlayerClientToolRouter {
                 ToolRuntimeCatalog requestTools,
                 SkillCatalogManifest clientSkillDocuments) {
             this.key = key;
+            this.boundTransport = transport.bind(key.actorId);
             this.sessionId = sessionId;
-            this.clientTools = Set.copyOf(clientTools);
+            this.clientTools = dev.openallay.util.Java8Collections.setCopyOf(clientTools);
             this.requestTools = requestTools;
             this.local = new LocalAgentToolExecutor(requestTools, gson);
             this.clientSkillContext = clientTools.contains("openallay:load_skill")
@@ -286,13 +292,15 @@ public final class PlayerClientToolRouter {
             LoadSkillTool.Input skillInput = null;
             if (clientSkillContext != null && toolId.equals("openallay:load_skill")) {
                 if (cancellation.isCancelled()) {
-                    return CompletableFuture.failedFuture(new ModelClientException(new ModelFailure(
+                    return dev.openallay.util.Java8Futures.failedFuture(new ModelClientException(new ModelFailure(
                             "agent_cancelled", "Client Tool invocation was cancelled", null)));
                 }
                 ToolResult<LoadSkillTool.Input> decoded = argumentsCodec.decode(
                         arguments, LoadSkillTool.Input.class);
-                if (decoded instanceof ToolResult.Failure<LoadSkillTool.Input> failure) {
-                    return completedFailure(toolId, failure.code(), failure.message());
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.skill.LoadSkillTool.Input> value; ToolResult.Failure<LoadSkillTool.Input> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<LoadSkillTool.Input>) $oaPattern0_holder.value) != null))) {
+                    return completedFailure(toolId, $oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
                 }
                 skillInput = ((ToolResult.Success<LoadSkillTool.Input>) decoded).value();
                 RetainedSkillContext bound = retained.get(context.correlationId());
@@ -317,22 +325,21 @@ public final class PlayerClientToolRouter {
                     sessionId,
                     toolId,
                     arguments.toString());
+            boolean bridgeUnavailable = false;
             synchronized (value) {
                 if (pending.get(invocationId) != value || cancellation.isCancelled()) {
                     return result;
                 }
                 boolean sent;
                 try {
-                    sent = transport.call(key.actorId, payload);
+                    // Bound tool send uses a no-op retirement. It cannot enter a service Owner.
+                    sent = boundTransport.call(key.actorId, payload);
                 } catch (RuntimeException failure) {
                     sent = false;
                 }
                 value.dispatched = sent;
                 if (!sent && pending.remove(invocationId, value)) {
-                    result.complete(failure(
-                            toolId,
-                            "client_tool_bridge_unavailable",
-                            "Player client Tool connection is unavailable"));
+                    bridgeUnavailable = true;
                 } else if (sent && pending.get(invocationId) == value) {
                     ScheduledFuture<?> deadline = TIMEOUTS.schedule(
                             () -> timeoutInvocation(invocationId, value),
@@ -341,6 +348,8 @@ public final class PlayerClientToolRouter {
                     value.setDeadline(deadline);
                 }
             }
+            if (bridgeUnavailable) result.complete(failure(toolId, "client_tool_bridge_unavailable",
+                    "Player client Tool connection is unavailable"));
             return result;
         }
 
@@ -370,11 +379,11 @@ public final class PlayerClientToolRouter {
                 synchronized (value) {
                     if (!current(chunk.invocationId(), value) || value.accepting) return;
                     Optional<String> complete = reassembler.accept(chunk.asRemoteChunk());
-                    if (complete.isEmpty()) return;
+                    if (!complete.isPresent()) return;
                     value.accepting = true;
-                    json = complete.orElseThrow();
+                    json = complete.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
                 }
-                var message = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).decode(
+                dev.openallay.bridge.protocol.ToolExecutionMessage message = new dev.openallay.bridge.protocol.BridgeJsonCodec(gson).decode(
                         json, dev.openallay.bridge.protocol.ToolExecutionMessage.class);
                 JsonObject normalized = message.result();
                 ValidatedResult validated = validateNormalized(requestTools, value.toolId, normalized);
@@ -485,7 +494,7 @@ public final class PlayerClientToolRouter {
         }
 
         private int failPending(String code, String message) {
-            List<Map.Entry<UUID, Pending>> values = List.copyOf(pending.entrySet());
+            List<Map.Entry<UUID, Pending>> values = dev.openallay.util.Java8Collections.listCopyOf(pending.entrySet());
             values.forEach(entry -> {
                 Pending value = entry.getValue();
                 synchronized (value) {
@@ -494,14 +503,15 @@ public final class PlayerClientToolRouter {
                     }
                     value.cancelDeadline();
                     reassembler.cancel(entry.getKey());
-                    value.result.complete(failure(value.toolId, code, message));
                 }
+                // Completion and normalization can enter the service Owner; never hold Pending.
+                value.result.complete(failure(value.toolId, code, message));
             });
             return values.size();
         }
 
         private void cancelPending() {
-            List<Map.Entry<UUID, Pending>> values = List.copyOf(pending.entrySet());
+            List<Map.Entry<UUID, Pending>> values = dev.openallay.util.Java8Collections.listCopyOf(pending.entrySet());
             values.forEach(entry -> cancelInvocation(entry.getKey(), entry.getValue()));
         }
 
@@ -517,7 +527,7 @@ public final class PlayerClientToolRouter {
             reassembler.cancel(invocationId);
             if (dispatched) {
                 try {
-                    transport.cancel(key.actorId, new ClientToolCancelPayload(
+                    boundTransport.cancel(key.actorId, new ClientToolCancelPayload(
                             key.requestId, invocationId));
                 } catch (RuntimeException ignored) {
                     // The enclosing cancellation still owns the terminal request state.
@@ -535,7 +545,7 @@ public final class PlayerClientToolRouter {
                 reassembler.cancel(invocationId);
             }
             try {
-                transport.cancel(key.actorId, new ClientToolCancelPayload(
+                boundTransport.cancel(key.actorId, new ClientToolCancelPayload(
                         key.requestId, invocationId));
             } catch (RuntimeException ignored) {
                 // Timeout remains a complete Tool result even if cancellation cannot be sent.
@@ -559,8 +569,36 @@ public final class PlayerClientToolRouter {
                 true);
     }
 
-    private record ValidatedResult(JsonObject normalized,
-            List<dev.openallay.model.image.ImageReference> images) {}
+    @dev.openallay.value.ValueType(ValidatedResult.ValueSchemaProvider.class)
+private static final class ValidatedResult {
+    private final JsonObject normalized;
+    private final List<dev.openallay.model.image.ImageReference> images;
+    private ValidatedResult(JsonObject normalized, List<dev.openallay.model.image.ImageReference> images) {
+        this.normalized = normalized;
+        this.images = images;
+    }
+    public JsonObject normalized() { return normalized; }
+    public List<dev.openallay.model.image.ImageReference> images() { return images; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ValidatedResult)) return false;
+        ValidatedResult that = (ValidatedResult) other;
+        return java.util.Objects.equals(normalized, that.normalized) && java.util.Objects.equals(images, that.images);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(normalized);
+        hash = 31 * hash + java.util.Objects.hashCode(images);
+        return hash;
+    }
+    @Override public String toString() { return "ValidatedResult[normalized=" + normalized + ", images=" + images + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ValidatedResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(ValidatedResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ValidatedResult>>asList(new dev.openallay.value.ValueSchema.Component<>(ValidatedResult.class, "normalized", ValidatedResult::normalized), new dev.openallay.value.ValueSchema.Component<>(ValidatedResult.class, "images", ValidatedResult::images)), arguments -> new ValidatedResult((JsonObject) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 
     private ValidatedResult validateNormalized(
             ToolRuntimeCatalog requestTools, String toolId, JsonObject normalized) {
@@ -571,7 +609,7 @@ public final class PlayerClientToolRouter {
         }
         String status = normalized.get("status").getAsString();
         if (status.equals("failure")) {
-            if (!dev.openallay.json.JsonTrees.keys(normalized).equals(Set.of("status", "code", "message"))) {
+            if (!dev.openallay.json.JsonTrees.keys(normalized).equals(dev.openallay.util.Java8Collections.setOf("status", "code", "message"))) {
                 return null;
             }
             try {
@@ -579,7 +617,7 @@ public final class PlayerClientToolRouter {
                         new ToolResult.Failure<>(
                                 normalized.get("code").getAsString(),
                                 normalized.get("message").getAsString()),
-                        Object.class), List.of());
+                        Object.class), dev.openallay.util.Java8Collections.listOf());
             } catch (RuntimeException invalid) {
                 return null;
             }
@@ -593,8 +631,8 @@ public final class PlayerClientToolRouter {
         }
         boolean hasModelText = normalized.has("modelText");
         Set<String> expectedKeys = hasModelText
-                ? Set.of("status", "outputType", "value", "modelText")
-                : Set.of("status", "outputType", "value");
+                ? dev.openallay.util.Java8Collections.setOf("status", "outputType", "value", "modelText")
+                : dev.openallay.util.Java8Collections.setOf("status", "outputType", "value");
         if (!dev.openallay.json.JsonTrees.keys(normalized).equals(expectedKeys)) {
             return null;
         }
@@ -602,7 +640,7 @@ public final class PlayerClientToolRouter {
                 && (!ModelFacingToolOutput.class.isAssignableFrom(tool.descriptor().outputType())
                         || !normalized.get("modelText").isJsonPrimitive()
                         || !normalized.get("modelText").getAsJsonPrimitive().isString()
-                        || normalized.get("modelText").getAsString().isBlank())) {
+                        || dev.openallay.util.Java8Strings.isBlank(normalized.get("modelText").getAsString()))) {
             return null;
         }
         if (!normalized.get("outputType").isJsonPrimitive()
@@ -613,9 +651,11 @@ public final class PlayerClientToolRouter {
         try {
             Object value = gson.fromJson(normalized.get("value"), tool.descriptor().outputType());
             // The structured value is authoritative; rebuild any model projection locally.
-            List<dev.openallay.model.image.ImageReference> images =
-                    value instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
-                            ? List.copyOf(visual.images()) : List.of();
+            final class $oaPattern1_Holder { java.lang.Object value; dev.openallay.agent.tool.ModelImageToolOutput bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+List<dev.openallay.model.image.ImageReference> images =
+                    (($oaPattern1_holder.value = value) instanceof dev.openallay.agent.tool.ModelImageToolOutput && (($oaPattern1_holder.bound = (dev.openallay.agent.tool.ModelImageToolOutput) $oaPattern1_holder.value) != null))
+                            ? dev.openallay.util.Java8Collections.listCopyOf($oaPattern1_holder.bound.images()) : dev.openallay.util.Java8Collections.listOf();
             dev.openallay.model.image.ModelImages.unique(images);
             return new ValidatedResult(normalizer.normalize(
                     new ToolResult.Success<>(value), tool.descriptor().outputType()), images);
@@ -625,16 +665,13 @@ public final class PlayerClientToolRouter {
     }
 
     private static boolean exactSkillOutput(JsonObject output) {
-        if (!dev.openallay.json.JsonTrees.keys(output).equals(Set.of("name", "document", "source", "fingerprint", "state",
-                "content", "offset", "nextOffset", "complete", "nextCursor", "availableReferences",
-                "allowedTools", "provenance"))) return false;
-        for (String field : List.of("name", "document", "source", "fingerprint", "state",
-                "content", "nextCursor", "provenance")) {
-            var value = output.get(field);
+        if (!dev.openallay.json.JsonTrees.keys(output).equals(dev.openallay.util.Java8Collections.setOf("name", "document", "source", "fingerprint", "state", "content", "offset", "nextOffset", "complete", "nextCursor", "availableReferences", "allowedTools", "provenance"))) return false;
+        for (String field : dev.openallay.util.Java8Collections.listOf("name", "document", "source", "fingerprint", "state", "content", "nextCursor", "provenance")) {
+            com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) return false;
         }
-        for (String field : List.of("offset", "nextOffset")) {
-            var value = output.get(field);
+        for (String field : dev.openallay.util.Java8Collections.listOf("offset", "nextOffset")) {
+            com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
                     || !value.getAsString().matches("[0-9]+")) return false;
             try {
@@ -643,10 +680,10 @@ public final class PlayerClientToolRouter {
                 return false;
             }
         }
-        var complete = output.get("complete");
+        com.google.gson.JsonElement complete = output.get("complete");
         if (!complete.isJsonPrimitive() || !complete.getAsJsonPrimitive().isBoolean()) return false;
-        for (String field : List.of("availableReferences", "allowedTools")) {
-            var value = output.get(field);
+        for (String field : dev.openallay.util.Java8Collections.listOf("availableReferences", "allowedTools")) {
+            com.google.gson.JsonElement value = output.get(field);
             if (!value.isJsonArray() || dev.openallay.json.JsonReaders.elements(value.getAsJsonArray()).stream()
                     .anyMatch(item -> !item.isJsonPrimitive()
                             || !item.getAsJsonPrimitive().isString())) return false;
@@ -654,7 +691,36 @@ public final class PlayerClientToolRouter {
         return true;
     }
 
-    private record RequestKey(UUID actorId, UUID requestId) {}
+    @dev.openallay.value.ValueType(RequestKey.ValueSchemaProvider.class)
+private static final class RequestKey {
+    private final UUID actorId;
+    private final UUID requestId;
+    private RequestKey(UUID actorId, UUID requestId) {
+        this.actorId = actorId;
+        this.requestId = requestId;
+    }
+    public UUID actorId() { return actorId; }
+    public UUID requestId() { return requestId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RequestKey)) return false;
+        RequestKey that = (RequestKey) other;
+        return java.util.Objects.equals(actorId, that.actorId) && java.util.Objects.equals(requestId, that.requestId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actorId);
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        return hash;
+    }
+    @Override public String toString() { return "RequestKey[actorId=" + actorId + ", requestId=" + requestId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RequestKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(RequestKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RequestKey>>asList(new dev.openallay.value.ValueSchema.Component<>(RequestKey.class, "actorId", RequestKey::actorId), new dev.openallay.value.ValueSchema.Component<>(RequestKey.class, "requestId", RequestKey::requestId)), arguments -> new RequestKey((UUID) arguments[0], (UUID) arguments[1]));
+        }
+    }
+}
 
     private static final class Pending {
         private final String toolId;

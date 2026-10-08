@@ -78,18 +78,26 @@ final class GuideUsageTracker {
 
     boolean accept(UUID owner, AgentEvent event) {
         if (owner == null || !requestModels.containsKey(owner)) return false;
-        if (event instanceof AgentEvent.ModelUsageStarted started) {
-            if (calls.contains(started.callId())) return false;
-            return pendingCalls.putIfAbsent(started.callId(), owner) == null;
+        {
+final java.lang.Object $oaPattern0_value = event;
+final boolean $oaPattern0_match = $oaPattern0_value instanceof AgentEvent.ModelUsageStarted;
+AgentEvent.ModelUsageStarted $oaPattern0_bound = $oaPattern0_match ? (AgentEvent.ModelUsageStarted) $oaPattern0_value : null;
+if ($oaPattern0_match) {
+            if (calls.contains($oaPattern0_bound.callId())) return false;
+            return pendingCalls.putIfAbsent($oaPattern0_bound.callId(), owner) == null;
         }
-        if (!(event instanceof AgentEvent.ModelUsageObserved observed)) return false;
-        UUID startedOwner = pendingCalls.get(observed.callId());
-        if (startedOwner != null && !startedOwner.equals(owner) || !calls.add(observed.callId())) return false;
-        String model = observed.modelIdentifier() == null || observed.modelIdentifier().isBlank()
-                ? requestModels.get(owner) : observed.modelIdentifier();
-        GuideUsageSnapshot delta = project(observed.usage(), pricing(model));
+}
+        final java.lang.Object $oaPattern1_value = event;
+final boolean $oaPattern1_match = $oaPattern1_value instanceof AgentEvent.ModelUsageObserved;
+AgentEvent.ModelUsageObserved $oaPattern1_bound = $oaPattern1_match ? (AgentEvent.ModelUsageObserved) $oaPattern1_value : null;
+if (!($oaPattern1_match)) return false;
+        UUID startedOwner = pendingCalls.get($oaPattern1_bound.callId());
+        if (startedOwner != null && !startedOwner.equals(owner) || !calls.add($oaPattern1_bound.callId())) return false;
+        String model = $oaPattern1_bound.modelIdentifier() == null || dev.openallay.util.Java8Strings.isBlank($oaPattern1_bound.modelIdentifier())
+                ? requestModels.get(owner) : $oaPattern1_bound.modelIdentifier();
+        GuideUsageSnapshot delta = project($oaPattern1_bound.usage(), pricing(model));
         requests.merge(owner, delta, GuideUsageSnapshot::plus);
-        pendingCalls.remove(observed.callId());
+        pendingCalls.remove($oaPattern1_bound.callId());
         session = session.plus(delta);
         if (controls.contains(owner)) control = control.plus(delta);
         return true;
@@ -107,7 +115,7 @@ final class GuideUsageTracker {
     GuideUsageSnapshot inheritedSnapshot() { return inherited; }
 
     private static BuiltinModelCatalog.Pricing pricing(String model) {
-        var bundled = BuiltinModelCatalog.bundled();
+        dev.openallay.model.metadata.BuiltinModelCatalog.Load bundled = BuiltinModelCatalog.bundled();
         return model == null || bundled.catalog() == null ? null : bundled.catalog().match(model)
                 .map(match -> match.entry().pricing()).orElse(null);
     }
@@ -134,7 +142,7 @@ final class GuideUsageTracker {
         // Without complete canonical input, a threshold tier cannot safely be selected.
         BuiltinModelCatalog.Tier tier = null;
         if (usage.inputKnown()) {
-            for (var candidate : pricing.tiers()) {
+            for (dev.openallay.model.metadata.BuiltinModelCatalog.Tier candidate : pricing.tiers()) {
                 if (usage.inputTokens() >= candidate.minInputTokens()) tier = candidate;
             }
         } else if (pricing.tiers().size() == 1 && pricing.tiers().get(0).minInputTokens() == 0) {
@@ -166,6 +174,68 @@ final class GuideUsageTracker {
         return new Quote(known && (!incomplete || amount.signum() > 0) ? amount.movePointLeft(6) : null, incomplete);
     }
 
-    private record Component(long tokens, boolean known, BigDecimal rate) {}
-    private record Quote(BigDecimal amount, boolean incomplete) {}
+    @dev.openallay.value.ValueType(Component.ValueSchemaProvider.class)
+private static final class Component {
+    private final long tokens;
+    private final boolean known;
+    private final BigDecimal rate;
+    private Component(long tokens, boolean known, BigDecimal rate) {
+        this.tokens = tokens;
+        this.known = known;
+        this.rate = rate;
+    }
+    public long tokens() { return tokens; }
+    public boolean known() { return known; }
+    public BigDecimal rate() { return rate; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Component)) return false;
+        Component that = (Component) other;
+        return tokens == that.tokens && known == that.known && java.util.Objects.equals(rate, that.rate);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(tokens);
+        hash = 31 * hash + Boolean.hashCode(known);
+        hash = 31 * hash + java.util.Objects.hashCode(rate);
+        return hash;
+    }
+    @Override public String toString() { return "Component[tokens=" + tokens + ", known=" + known + ", rate=" + rate + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Component> schema() {
+            return new dev.openallay.value.ValueSchema<>(Component.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Component>>asList(new dev.openallay.value.ValueSchema.Component<>(Component.class, "tokens", Component::tokens), new dev.openallay.value.ValueSchema.Component<>(Component.class, "known", Component::known), new dev.openallay.value.ValueSchema.Component<>(Component.class, "rate", Component::rate)), arguments -> new Component((Long) arguments[0], (Boolean) arguments[1], (BigDecimal) arguments[2]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Quote.ValueSchemaProvider.class)
+private static final class Quote {
+    private final BigDecimal amount;
+    private final boolean incomplete;
+    private Quote(BigDecimal amount, boolean incomplete) {
+        this.amount = amount;
+        this.incomplete = incomplete;
+    }
+    public BigDecimal amount() { return amount; }
+    public boolean incomplete() { return incomplete; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Quote)) return false;
+        Quote that = (Quote) other;
+        return java.util.Objects.equals(amount, that.amount) && incomplete == that.incomplete;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(amount);
+        hash = 31 * hash + Boolean.hashCode(incomplete);
+        return hash;
+    }
+    @Override public String toString() { return "Quote[amount=" + amount + ", incomplete=" + incomplete + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Quote> schema() {
+            return new dev.openallay.value.ValueSchema<>(Quote.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Quote>>asList(new dev.openallay.value.ValueSchema.Component<>(Quote.class, "amount", Quote::amount), new dev.openallay.value.ValueSchema.Component<>(Quote.class, "incomplete", Quote::incomplete)), arguments -> new Quote((BigDecimal) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 }

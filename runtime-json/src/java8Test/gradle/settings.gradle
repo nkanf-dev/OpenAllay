@@ -1,0 +1,7 @@
+// Isolated verification selects the canonical module, without copying its sources.
+rootProject.name = 'openallay-runtime-json-java8-proof'
+include('runtime-json')
+project(':runtime-json').projectDir = file('../../..')
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}

@@ -55,33 +55,43 @@ final class GuideLivePresentationSource {
             List<GuidePresentationEvent.ContentRef> cards = new ArrayList<>();
             List<GuidePresentationEvent.CardPreview> previews = new ArrayList<>();
             for (GuideTimelineEntry entry : after.timeline()) {
-                if (entry instanceof GuideTimelineEntry.Tool tool
-                        && event instanceof AgentEvent.ToolCompleted completed
-                        && tool.activity().invocationId().equals(completed.invocationId())
-                        && tool.activity().status() == GuideToolStatus.SUCCEEDED) {
-                    GuideToolDetailView detail = GuideToolDetailPresenter.project(tool.activity(), false);
+                final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+final class $oaPattern1_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ToolCompleted bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern0_holder.bound = (GuideTimelineEntry.Tool) $oaPattern0_holder.value) != null))
+                        && (($oaPattern1_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ToolCompleted && (($oaPattern1_holder.bound = (AgentEvent.ToolCompleted) $oaPattern1_holder.value) != null))
+                        && $oaPattern0_holder.bound.activity().invocationId().equals($oaPattern1_holder.bound.invocationId())
+                        && $oaPattern0_holder.bound.activity().status() == GuideToolStatus.SUCCEEDED) {
+                    GuideToolDetailView detail = GuideToolDetailPresenter.project($oaPattern0_holder.bound.activity(), false);
                     for (int ordinal = 0; ordinal < detail.cards().size(); ordinal++) {
                         if (!(detail.cards().get(ordinal) instanceof GuideDetailCard.Error)) {
                             GuideToolIntent summary = cardSummary(detail.cards().get(ordinal));
-                            add(admission, cards, previews, tool.ordinal(),
-                                    "tool:" + tool.activity().invocationId() + ":card:" + ordinal,
-                                    detail.intent().title().isBlank() ? summary.title() : detail.intent().title(),
-                                    detail.intent().description().isBlank() ? summary.description() : detail.intent().description());
+                            add(admission, cards, previews, $oaPattern0_holder.bound.ordinal(),
+                                    "tool:" + $oaPattern0_holder.bound.activity().invocationId() + ":card:" + ordinal,
+                                    dev.openallay.util.Java8Strings.isBlank(detail.intent().title()) ? summary.title() : detail.intent().title(),
+                                    dev.openallay.util.Java8Strings.isBlank(detail.intent().description()) ? summary.description() : detail.intent().description());
                         }
                     }
-                } else if (entry instanceof GuideTimelineEntry.Assistant assistant && !assistant.streaming()) {
-                    collect(admission, cards, previews, assistant.ordinal(), assistant.semantic().blocks());
+                } else {
+final class $oaPattern2_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern2_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern2_holder.value) != null)) && !$oaPattern2_holder.bound.streaming()) {
+                    collect(admission, cards, previews, $oaPattern2_holder.bound.ordinal(), $oaPattern2_holder.bound.semantic().blocks());
                 }
+}
             }
             if (!cards.isEmpty()) emit(admission, after, GuidePresentationEvent.Kind.CARD_BATCH, cards, "", previews);
         }
         if (after.status() == GuideRequestStatus.COMPLETED && after.terminal()) {
             if (event instanceof AgentEvent.FinalText) {
                 for (int index = after.timeline().size() - 1; index >= 0; index--) {
-                    if (after.timeline().get(index) instanceof GuideTimelineEntry.Assistant assistant) {
-                        String text = assistant.semantic().fallbackText();
-                        if (!text.isBlank()) emit(admission, after, GuidePresentationEvent.Kind.REPLY_FINAL,
-                                List.of(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")), text, List.of());
+                    final class $oaPattern3_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = after.timeline().get(index)) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern3_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern3_holder.value) != null))) {
+                        String text = $oaPattern3_holder.bound.semantic().fallbackText();
+                        if (!dev.openallay.util.Java8Strings.isBlank(text)) emit(admission, after, GuidePresentationEvent.Kind.REPLY_FINAL,
+                                dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef($oaPattern3_holder.bound.ordinal(), "reply")), text, dev.openallay.util.Java8Collections.listOf());
                         break;
                     }
                 }
@@ -89,15 +99,15 @@ final class GuideLivePresentationSource {
             List<GuidePresentationEvent.ContentRef> completedContent = after.timeline().stream()
                     .filter(GuideTimelineEntry.Assistant.class::isInstance)
                     .map(GuideTimelineEntry.Assistant.class::cast)
-                    .filter(assistant -> !assistant.semantic().fallbackText().isBlank())
+                    .filter(assistant -> !dev.openallay.util.Java8Strings.isBlank(assistant.semantic().fallbackText()))
                     .reduce((first, second) -> second)
-                    .map(assistant -> List.of(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")))
-                    .orElse(List.of(new GuidePresentationEvent.ContentRef(-1, "task-completed")));
-            emit(admission, after, GuidePresentationEvent.Kind.TASK_COMPLETED, completedContent, "", List.of());
+                    .map(assistant -> dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef(assistant.ordinal(), "reply")))
+                    .orElse(dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef(-1, "task-completed")));
+            emit(admission, after, GuidePresentationEvent.Kind.TASK_COMPLETED, completedContent, "", dev.openallay.util.Java8Collections.listOf());
         } else if (after.status() == GuideRequestStatus.FAILED && after.terminal()) {
             emit(admission, after, GuidePresentationEvent.Kind.TASK_FAILED,
-                    List.of(new GuidePresentationEvent.ContentRef(-1, "task-failed")),
-                    after.failure() == null ? "" : after.failure().message(), List.of());
+                    dev.openallay.util.Java8Collections.listOf(new GuidePresentationEvent.ContentRef(-1, "task-failed")),
+                    after.failure() == null ? "" : after.failure().message(), dev.openallay.util.Java8Collections.listOf());
         }
         if (after.terminal()) admitted.remove(after.requestId());
     }
@@ -105,56 +115,94 @@ final class GuideLivePresentationSource {
     private void collect(Admission admission, List<GuidePresentationEvent.ContentRef> cards,
                          List<GuidePresentationEvent.CardPreview> previews, int ordinal, List<SemanticBlock> blocks) {
         for (SemanticBlock block : blocks) {
-            if (block instanceof SemanticBlock.Component component
-                    && !(component.component() instanceof RichComponent.ProgressSteps)
-                    && !(component.component() instanceof RichComponent.StatusBadge)) {
-                RichComponent value = component.component();
+            final class $oaPattern4_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Component bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = block) instanceof dev.openallay.guide.semantic.SemanticBlock.Component && (($oaPattern4_holder.bound = (SemanticBlock.Component) $oaPattern4_holder.value) != null))
+                    && !($oaPattern4_holder.bound.component() instanceof RichComponent.ProgressSteps)
+                    && !($oaPattern4_holder.bound.component() instanceof RichComponent.StatusBadge)) {
+                RichComponent value = $oaPattern4_holder.bound.component();
                 String title = componentTitle(value);
-                add(admission, cards, previews, ordinal, "node:" + component.nodeId(),
-                        title.isBlank() ? value.fallbackText() : title, value.fallbackText());
-            } else if (block instanceof SemanticBlock.Table table) {
+                add(admission, cards, previews, ordinal, "node:" + $oaPattern4_holder.bound.nodeId(),
+                        dev.openallay.util.Java8Strings.isBlank(title) ? value.fallbackText() : title, value.fallbackText());
+            } else {
+final class $oaPattern5_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Table bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = block) instanceof dev.openallay.guide.semantic.SemanticBlock.Table && (($oaPattern5_holder.bound = (SemanticBlock.Table) $oaPattern5_holder.value) != null))) {
                 // Tables have no title/description fields. Never substitute raw cells or an unrelated reply.
-                add(admission, cards, previews, ordinal, "node:" + table.nodeId(), "", "");
-            } else if (block instanceof SemanticBlock.Quote quote) {
-                collect(admission, cards, previews, ordinal, quote.content());
-            } else if (block instanceof SemanticBlock.ListBlock list) {
-                list.items().forEach(items -> collect(admission, cards, previews, ordinal, items));
+                add(admission, cards, previews, ordinal, "node:" + $oaPattern5_holder.bound.nodeId(), "", "");
+            } else {
+final class $oaPattern6_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.Quote bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = block) instanceof dev.openallay.guide.semantic.SemanticBlock.Quote && (($oaPattern6_holder.bound = (SemanticBlock.Quote) $oaPattern6_holder.value) != null))) {
+                collect(admission, cards, previews, ordinal, $oaPattern6_holder.bound.content());
+            } else {
+final class $oaPattern7_Holder { dev.openallay.guide.semantic.SemanticBlock value; SemanticBlock.ListBlock bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = block) instanceof dev.openallay.guide.semantic.SemanticBlock.ListBlock && (($oaPattern7_holder.bound = (SemanticBlock.ListBlock) $oaPattern7_holder.value) != null))) {
+                $oaPattern7_holder.bound.items().forEach(items -> collect(admission, cards, previews, ordinal, items));
             }
+}
+}
+}
         }
     }
     private static String componentTitle(RichComponent value) {
         java.util.Objects.requireNonNull(value);
-        if (value instanceof RichComponent.RecipeGrid recipe) {
-            return recipe.label();
-        } else if (value instanceof RichComponent.ChoiceGroup choices) {
-            return choices.prompt();
-        } else if (value instanceof RichComponent.ItemRow items) {
-            return labels(items.items().stream().map(RichComponent.Item::label).toList());
-        } else if (value instanceof RichComponent.IngredientCheck ingredients) {
-            return labels(ingredients.ingredients().stream().map(RichComponent.Ingredient::label).toList());
-        } else if (value instanceof RichComponent.SourceSummary sources) {
-            return labels(sources.sources().stream().map(RichComponent.Source::label).toList());
+        final class $oaPattern8_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.RecipeGrid bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.RecipeGrid && (($oaPattern8_holder.bound = (RichComponent.RecipeGrid) $oaPattern8_holder.value) != null))) {
+            return $oaPattern8_holder.bound.label();
+        } else {
+final class $oaPattern9_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.ChoiceGroup bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.ChoiceGroup && (($oaPattern9_holder.bound = (RichComponent.ChoiceGroup) $oaPattern9_holder.value) != null))) {
+            return $oaPattern9_holder.bound.prompt();
+        } else {
+final class $oaPattern10_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.ItemRow bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.ItemRow && (($oaPattern10_holder.bound = (RichComponent.ItemRow) $oaPattern10_holder.value) != null))) {
+            return labels(dev.openallay.util.Java8Collections.toList($oaPattern10_holder.bound.items().stream().map(RichComponent.Item::label)));
+        } else {
+final class $oaPattern11_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.IngredientCheck bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+if ((($oaPattern11_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.IngredientCheck && (($oaPattern11_holder.bound = (RichComponent.IngredientCheck) $oaPattern11_holder.value) != null))) {
+            return labels(dev.openallay.util.Java8Collections.toList($oaPattern11_holder.bound.ingredients().stream().map(RichComponent.Ingredient::label)));
+        } else {
+final class $oaPattern12_Holder { dev.openallay.guide.semantic.RichComponent value; RichComponent.SourceSummary bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if ((($oaPattern12_holder.value = value) instanceof dev.openallay.guide.semantic.RichComponent.SourceSummary && (($oaPattern12_holder.bound = (RichComponent.SourceSummary) $oaPattern12_holder.value) != null))) {
+            return labels(dev.openallay.util.Java8Collections.toList($oaPattern12_holder.bound.sources().stream().map(RichComponent.Source::label)));
         }
+}
+}
+}
+}
         return "";
     }
     private static String labels(List<String> labels) {
-        return labels.stream().filter(label -> !label.isBlank()).distinct()
+        return labels.stream().filter(label -> !dev.openallay.util.Java8Strings.isBlank(label)).distinct()
                 .reduce((first, next) -> first + ", " + next).orElse("");
     }
     private static GuideToolIntent cardSummary(GuideDetailCard card) {
         // Use only canonical typed display fields. Never read execution arguments or normalized raw values here.
         java.util.Objects.requireNonNull(card);
-        if (card instanceof GuideDetailCard.ItemGrid items) {
+        final class $oaPattern13_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.ItemGrid bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+if ((($oaPattern13_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.ItemGrid && (($oaPattern13_holder.bound = (GuideDetailCard.ItemGrid) $oaPattern13_holder.value) != null))) {
             return new GuideToolIntent(
-                    labels(items.items().stream().map(dev.openallay.guide.ui.GuideItemView::displayName).toList()),
-                    items.items().stream().map(item -> item.displayName() + " × " + item.count())
+                    labels(dev.openallay.util.Java8Collections.toList($oaPattern13_holder.bound.items().stream().map(dev.openallay.guide.ui.GuideItemView::displayName))),
+                    $oaPattern13_holder.bound.items().stream().map(item -> item.displayName() + " × " + item.count())
                             .reduce((first, next) -> first + ", " + next).orElse(""));
-        } else if (card instanceof GuideDetailCard.Recipe recipe) {
+        } else {
+final class $oaPattern14_Holder { dev.openallay.guide.ui.GuideDetailCard value; GuideDetailCard.Recipe bound; }
+final $oaPattern14_Holder $oaPattern14_holder = new $oaPattern14_Holder();
+if ((($oaPattern14_holder.value = card) instanceof dev.openallay.guide.ui.GuideDetailCard.Recipe && (($oaPattern14_holder.bound = (GuideDetailCard.Recipe) $oaPattern14_holder.value) != null))) {
             return new GuideToolIntent(
-                    labels(recipe.recipe().outputs().stream().map(dev.openallay.guide.ui.GuideRecipeCard.Output::displayName).toList()),
-                    recipe.recipe().outputs().stream().map(output -> output.displayName() + " × " + output.count())
+                    labels(dev.openallay.util.Java8Collections.toList($oaPattern14_holder.bound.recipe().outputs().stream().map(dev.openallay.guide.ui.GuideRecipeCard.Output::displayName))),
+                    $oaPattern14_holder.bound.recipe().outputs().stream().map(output -> output.displayName() + " × " + output.count())
                             .reduce((first, next) -> first + ", " + next).orElse(""));
         }
+}
         return GuideToolIntent.none();
     }
     private void add(Admission admission, List<GuidePresentationEvent.ContentRef> cards,
@@ -163,7 +211,7 @@ final class GuideLivePresentationSource {
         GuidePresentationEvent.ContentRef ref = new GuidePresentationEvent.ContentRef(ordinal, id);
         if (!admission.content.add(ref)) return;
         cards.add(ref);
-        if (!title.isBlank() && !description.isBlank()) {
+        if (!dev.openallay.util.Java8Strings.isBlank(title) && !dev.openallay.util.Java8Strings.isBlank(description)) {
             previews.add(new GuidePresentationEvent.CardPreview(ref, title, description));
         }
     }

@@ -24,12 +24,40 @@ import java.util.concurrent.CompletableFuture;
 public final class GuideSessionExportCollector {
     private static final int PAGE_BATCH = 128;
 
-    public record SequencedRequest(long sequence, GuideRequestSnapshot request) {
-        public SequencedRequest {
+    @dev.openallay.value.ValueType(SequencedRequest.ValueSchemaProvider.class)
+public static final class SequencedRequest {
+    private final long sequence;
+    private final GuideRequestSnapshot request;
+    public SequencedRequest(long sequence, GuideRequestSnapshot request) {
+
             if (sequence < 0) throw new IllegalArgumentException("request sequence is negative");
             Objects.requireNonNull(request, "request");
+
+        this.sequence = sequence;
+        this.request = request;
+    }
+    public long sequence() { return sequence; }
+    public GuideRequestSnapshot request() { return request; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SequencedRequest)) return false;
+        SequencedRequest that = (SequencedRequest) other;
+        return sequence == that.sequence && java.util.Objects.equals(request, that.request);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(sequence);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "SequencedRequest[sequence=" + sequence + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SequencedRequest> schema() {
+            return new dev.openallay.value.ValueSchema<>(SequencedRequest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SequencedRequest>>asList(new dev.openallay.value.ValueSchema.Component<>(SequencedRequest.class, "sequence", SequencedRequest::sequence), new dev.openallay.value.ValueSchema.Component<>(SequencedRequest.class, "request", SequencedRequest::request)), arguments -> new SequencedRequest((Long) arguments[0], (GuideRequestSnapshot) arguments[1]));
         }
     }
+}
 
     private final GuideHistoryScope scope;
     private final GuideHistoryAccess history;
@@ -50,10 +78,10 @@ public final class GuideSessionExportCollector {
             Instant capturedAt) {
         requireSession(sessionId);
         if (upperSequence < -1) throw new IllegalArgumentException("invalid export sequence boundary");
-        captured = List.copyOf(captured);
+        captured = dev.openallay.util.Java8Collections.listCopyOf(captured);
         Map<UUID, List<ModelMessage>> copiedOriginals = new LinkedHashMap<>();
-        originals.forEach((id, messages) -> copiedOriginals.put(id, List.copyOf(messages)));
-        Map<UUID, List<ModelMessage>> liveOriginals = Map.copyOf(copiedOriginals);
+        originals.forEach((id, messages) -> copiedOriginals.put(id, dev.openallay.util.Java8Collections.listCopyOf(messages)));
+        Map<UUID, List<ModelMessage>> liveOriginals = dev.openallay.util.Java8Collections.mapCopyOf(copiedOriginals);
         Objects.requireNonNull(capturedAt, "capturedAt");
         for (SequencedRequest value : captured) {
             if (!value.request().sessionId().equals(sessionId)) {
@@ -89,14 +117,14 @@ public final class GuideSessionExportCollector {
             UUID id = request.requestId();
             if (!live.containsKey(id)) {
                 loaded = loaded.thenCompose(ignored -> history.requestContext(scope, id)
-                        .thenAccept(messages -> contexts.put(id, List.copyOf(messages))));
+                        .thenAccept(messages -> contexts.put(id, dev.openallay.util.Java8Collections.listCopyOf(messages))));
             }
         }
         return loaded.handle((ignored, failure) -> {
             if (failure != null) {
                 throw new java.util.concurrent.CompletionException(exportFailure(failure));
             }
-            return Map.copyOf(contexts);
+            return dev.openallay.util.Java8Collections.mapCopyOf(contexts);
         });
     }
 
@@ -115,7 +143,7 @@ public final class GuideSessionExportCollector {
         try {
             loading = Objects.requireNonNull(history.page(request), "history page future");
         } catch (RuntimeException failure) {
-            return CompletableFuture.failedFuture(exportFailure(failure));
+            return dev.openallay.util.Java8Futures.failedFuture(exportFailure(failure));
         }
         return loading.handle((page, failure) -> {
                     if (failure != null) throw new java.util.concurrent.CompletionException(
@@ -141,7 +169,7 @@ public final class GuideSessionExportCollector {
                     GuideHistoryCursor next = page.first();
                     if (next == null || !visited.add(next)
                             || before != null && next.sequence() >= before.sequence()) {
-                        return CompletableFuture.failedFuture(exportFailure(
+                        return dev.openallay.util.Java8Futures.failedFuture(exportFailure(
                                 new IllegalStateException("history cursor did not progress")));
                     }
                     return loadEarlier(sessionId, next, ordered, visited, upperSequence);
@@ -181,16 +209,15 @@ public final class GuideSessionExportCollector {
             Instant capturedAt) {
         return new GuideSessionExportSnapshot(
                 sessionId,
-                ordered.values().stream().map(request -> project(
-                        request, originals.getOrDefault(request.requestId(), List.of()))).toList(),
+                dev.openallay.util.Java8Collections.toList(ordered.values().stream().map(request -> project(
+                        request, originals.getOrDefault(request.requestId(), dev.openallay.util.Java8Collections.listOf())))),
                 capturedAt);
     }
 
     private static GuideSessionExportSnapshot.Request project(
             GuideRequestSnapshot request, List<ModelMessage> originalContext) {
-        List<GuideSessionExportSnapshot.Entry> timeline = request.timeline().stream()
-                .map(GuideSessionExportCollector::projectEntry)
-                .toList();
+        List<GuideSessionExportSnapshot.Entry> timeline = dev.openallay.util.Java8Collections.toList(request.timeline().stream()
+                .map(GuideSessionExportCollector::projectEntry));
         return new GuideSessionExportSnapshot.Request(
                 request.requestId(), request.createdAt(), request.status(), request.userMessage(),
                 timeline, originalContext, request.failure());
@@ -198,25 +225,37 @@ public final class GuideSessionExportCollector {
 
     private static GuideSessionExportSnapshot.Entry projectEntry(GuideTimelineEntry entry) {
         Objects.requireNonNull(entry);
-        if (entry instanceof GuideTimelineEntry.User user) {
-            return new GuideSessionExportSnapshot.Entry.User(user.messageId(), user.text());
-        } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
+        final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.User bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.User && (($oaPattern0_holder.bound = (GuideTimelineEntry.User) $oaPattern0_holder.value) != null))) {
+            return new GuideSessionExportSnapshot.Entry.User($oaPattern0_holder.bound.messageId(), $oaPattern0_holder.bound.text());
+        } else {
+final class $oaPattern1_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern1_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern1_holder.value) != null))) {
             return new GuideSessionExportSnapshot.Entry.Assistant(
-                    assistant.text(), assistant.streaming());
-        } else if (entry instanceof GuideTimelineEntry.Tool tool) {
+                    $oaPattern1_holder.bound.text(), $oaPattern1_holder.bound.streaming());
+        } else {
+final class $oaPattern2_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern2_holder.bound = (GuideTimelineEntry.Tool) $oaPattern2_holder.value) != null))) {
             return new GuideSessionExportSnapshot.Entry.Tool(
-                    tool.activity().invocationId(), tool.activity().toolId(),
-                    tool.activity().status());
+                    $oaPattern2_holder.bound.activity().invocationId(), $oaPattern2_holder.bound.activity().toolId(),
+                    $oaPattern2_holder.bound.activity().status());
         }
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
     private static GuideHistoryException exportFailure(Throwable failure) {
         Throwable cause = unwrap(failure);
-        return cause instanceof GuideHistoryException historyFailure
-                && (historyFailure.code().equals("history_export_failed")
-                        || historyFailure.code().equals("history_layout_unsupported"))
-                ? historyFailure
+        final class $oaPattern3_Holder { java.lang.Throwable value; GuideHistoryException bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+return (($oaPattern3_holder.value = cause) instanceof dev.openallay.guide.history.GuideHistoryException && (($oaPattern3_holder.bound = (GuideHistoryException) $oaPattern3_holder.value) != null))
+                && ($oaPattern3_holder.bound.code().equals("history_export_failed")
+                        || $oaPattern3_holder.bound.code().equals("history_layout_unsupported"))
+                ? $oaPattern3_holder.bound
                 : new GuideHistoryException(
                         "history_export_failed",
                         "Unable to read the complete guide session for export",

@@ -1,5 +1,7 @@
 package dev.openallay.client.voice;
 
+
+import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -41,7 +43,44 @@ public final class NativeSpeechToText implements SpeechToText {
     }
     @FunctionalInterface interface RuntimeValidator { void validate(Path root, VoiceCancellation cancellation) throws IOException; }
     @FunctionalInterface interface WorkerExecutor { String recognize(Call call, VoiceCancellation cancellation) throws Exception; }
-    record Call(Path modelDirectory, Path runtimeRoot, NativeModelFiles.Model model, Request request) {}
+    @dev.openallay.value.ValueType(Call.ValueSchemaProvider.class)
+static final class Call {
+    private final Path modelDirectory;
+    private final Path runtimeRoot;
+    private final NativeModelFiles.Model model;
+    private final Request request;
+    Call(Path modelDirectory, Path runtimeRoot, NativeModelFiles.Model model, Request request) {
+        this.modelDirectory = modelDirectory;
+        this.runtimeRoot = runtimeRoot;
+        this.model = model;
+        this.request = request;
+    }
+    public Path modelDirectory() { return modelDirectory; }
+    public Path runtimeRoot() { return runtimeRoot; }
+    public NativeModelFiles.Model model() { return model; }
+    public Request request() { return request; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Call)) return false;
+        Call that = (Call) other;
+        return java.util.Objects.equals(modelDirectory, that.modelDirectory) && java.util.Objects.equals(runtimeRoot, that.runtimeRoot) && java.util.Objects.equals(model, that.model) && java.util.Objects.equals(request, that.request);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(modelDirectory);
+        hash = 31 * hash + java.util.Objects.hashCode(runtimeRoot);
+        hash = 31 * hash + java.util.Objects.hashCode(model);
+        hash = 31 * hash + java.util.Objects.hashCode(request);
+        return hash;
+    }
+    @Override public String toString() { return "Call[modelDirectory=" + modelDirectory + ", runtimeRoot=" + runtimeRoot + ", model=" + model + ", request=" + request + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Call> schema() {
+            return new dev.openallay.value.ValueSchema<>(Call.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Call>>asList(new dev.openallay.value.ValueSchema.Component<>(Call.class, "modelDirectory", Call::modelDirectory), new dev.openallay.value.ValueSchema.Component<>(Call.class, "runtimeRoot", Call::runtimeRoot), new dev.openallay.value.ValueSchema.Component<>(Call.class, "model", Call::model), new dev.openallay.value.ValueSchema.Component<>(Call.class, "request", Call::request)), arguments -> new Call((Path) arguments[0], (Path) arguments[1], (NativeModelFiles.Model) arguments[2], (Request) arguments[3]));
+        }
+    }
+}
 
     /** Convenience layout matches NativeModelInstaller: model and runtime are siblings. */
     public NativeSpeechToText(Path modelDirectory) {
@@ -79,7 +118,7 @@ public final class NativeSpeechToText implements SpeechToText {
             Request nativeRequest = new Request(request.clip(), language, request.cpuThreads());
             String text = worker.recognize(new Call(modelDirectory, runtimeRoot, model, nativeRequest), cancellation);
             cancellation.check();
-            if (text == null || text.isBlank()) throw new Failure("no_speech");
+            if (text == null || dev.openallay.util.Java8Strings.isBlank(text)) throw new Failure("no_speech");
             try { return new Result(text, "native:" + model.name(), new Usage(request.clip().durationSeconds(), null, null)); }
             catch (IllegalArgumentException invalid) { throw new Failure("native_failed", invalid); }
         } catch (InterruptedException interrupted) {
@@ -90,15 +129,15 @@ public final class NativeSpeechToText implements SpeechToText {
         if (!language.matches("auto|[a-z]{2,3}(-[A-Z]{2})?")) throw new Failure("unsupported_language");
         String base = language.equals("auto") ? "" : language.split("-", 2)[0];
         if (family == NativeModelFiles.ModelFamily.SENSE_VOICE
-                && !List.of("", "zh", "en", "ja", "ko", "yue").contains(base)) throw new Failure("unsupported_language");
+                && !dev.openallay.util.Java8Collections.listOf("", "zh", "en", "ja", "ko", "yue").contains(base)) throw new Failure("unsupported_language");
         if (family == NativeModelFiles.ModelFamily.PARA_FORMER
-                && !List.of("", "zh", "en").contains(base)) throw new Failure("unsupported_language");
+                && !dev.openallay.util.Java8Collections.listOf("", "zh", "en").contains(base)) throw new Failure("unsupported_language");
         return base;
     }
     @FunctionalInterface interface ProcessLauncher { Process start(Path job, List<String> command) throws IOException; }
     private static String runProcess(Call call, VoiceCancellation cancellation) throws Exception {
         return runProcess(call, cancellation, (job, command) -> new ProcessBuilder(command).directory(job.toFile())
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start());
+                .redirectOutput(NativeJavaRuntime.discardFile()).redirectError(NativeJavaRuntime.discardFile()).start());
     }
     static String runProcess(Call call, VoiceCancellation cancellation, ProcessLauncher launcher) throws Exception {
         Path job = Files.createTempDirectory("openallay-asr-");
@@ -107,10 +146,10 @@ public final class NativeSpeechToText implements SpeechToText {
             Path audio = job.resolve("audio.pcm");
             Path transcript = job.resolve("transcript.txt");
             // Restrict the directory before writing PCM. Windows inherits the user's temp ACL.
-            var permissions = Files.getFileAttributeView(job, java.nio.file.attribute.PosixFileAttributeView.class);
+            java.nio.file.attribute.PosixFileAttributeView permissions = Files.getFileAttributeView(job, java.nio.file.attribute.PosixFileAttributeView.class);
             if (permissions != null) permissions.setPermissions(java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
             Files.write(audio, call.request().clip().pcm(), StandardOpenOption.CREATE_NEW);
-            var audioPermissions = Files.getFileAttributeView(audio, java.nio.file.attribute.PosixFileAttributeView.class);
+            java.nio.file.attribute.PosixFileAttributeView audioPermissions = Files.getFileAttributeView(audio, java.nio.file.attribute.PosixFileAttributeView.class);
             if (audioPermissions != null) audioPermissions.setPermissions(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
             cancellation.check();
             List<String> command = command(call, audio, transcript);
@@ -125,7 +164,7 @@ public final class NativeSpeechToText implements SpeechToText {
                 cancellation.check();
                 if (owned.exitValue() != 0 || !Files.isRegularFile(transcript)) throw new Failure("native_failed");
                 if (Files.size(transcript) > MAX_TEXT_BYTES) throw new Failure("native_failed");
-                return Files.readString(transcript, StandardCharsets.UTF_8);
+                return dev.openallay.util.Java8Files.readString(transcript, StandardCharsets.UTF_8);
             }
         } finally {
             if (process != null && process.isAlive()) {
@@ -142,33 +181,43 @@ public final class NativeSpeechToText implements SpeechToText {
     }
     static List<String> command(Call call, Path audio, Path transcript) throws Exception {
         String javaName = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win") ? "java.exe" : "java";
-        Path java = Path.of(System.getProperty("java.home"), "bin", javaName);
+        Path java = Paths.get(System.getProperty("java.home"), "bin", javaName);
         if (!Files.isRegularFile(java)) throw new Failure("native_unavailable");
         URL codeSource = Worker.class.getProtectionDomain().getCodeSource().getLocation();
         if (!codeSource.getProtocol().equals("file")) throw new Failure("native_unavailable");
-        Path classes = Path.of(codeSource.toURI());
+        Path classes = Paths.get(codeSource.toURI());
         Path runtime = NativeRuntimeCatalog.directory(call.runtimeRoot());
         List<NativeRuntimeCatalog.Artifact> artifacts = NativeRuntimeCatalog.artifacts();
         NativeModelFiles.Model model = call.model();
-        NativeModelFiles.Role primary = switch (model.family()) {
-            case SENSE_VOICE -> NativeModelFiles.Role.SENSE_VOICE_MODEL;
-            case PARA_FORMER -> NativeModelFiles.Role.PARA_FORMER_MODEL;
-            case WHISPER -> NativeModelFiles.Role.WHISPER_ENCODER;
-        };
+        dev.openallay.client.voice.NativeModelFiles.Role $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((model.family())) {
+case SENSE_VOICE:
+{
+$oaSwitch0_exit_result = NativeModelFiles.Role.SENSE_VOICE_MODEL; break $oaSwitch0_exit;
+}
+case PARA_FORMER:
+{
+$oaSwitch0_exit_result = NativeModelFiles.Role.PARA_FORMER_MODEL; break $oaSwitch0_exit;
+}
+case WHISPER:
+{
+$oaSwitch0_exit_result = NativeModelFiles.Role.WHISPER_ENCODER; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+NativeModelFiles.Role primary = $oaSwitch0_exit_result;
         String secondary = model.family() == NativeModelFiles.ModelFamily.WHISPER
                 ? model.file(call.modelDirectory(), NativeModelFiles.Role.WHISPER_DECODER).toString() : "";
         // Fixed executable and argv; model metadata can never add VM flags or a classpath entry.
-        return List.of(java.toString(), "-Xms32m", "-Xmx256m", "--enable-native-access=ALL-UNNAMED",
-                "-Djava.io.tmpdir=" + audio.getParent(), "-cp", classes.toString(), Worker.class.getName(),
-                model.family().name(), model.file(call.modelDirectory(), primary).toString(), secondary,
-                model.file(call.modelDirectory(), NativeModelFiles.Role.TOKENS).toString(),
-                runtime.resolve(artifacts.get(0).name()).toString(), runtime.resolve(artifacts.get(1).name()).toString(),
-                NativeRuntimeCatalog.platform(), audio.toString(), transcript.toString(),
-                call.request().language(), Integer.toString(call.request().cpuThreads()));
+        List<String> command = new ArrayList<>(dev.openallay.util.Java8Collections.listOf(java.toString(), "-Xms32m", "-Xmx256m", "-Djava.io.tmpdir=" + audio.getParent(), "-cp", classes.toString(), Worker.class.getName(), model.family().name(), model.file(call.modelDirectory(), primary).toString(), secondary, model.file(call.modelDirectory(), NativeModelFiles.Role.TOKENS).toString(), runtime.resolve(artifacts.get(0).name()).toString(), runtime.resolve(artifacts.get(1).name()).toString(), NativeRuntimeCatalog.platform(), audio.toString(), transcript.toString(), call.request().language(), Integer.toString(call.request().cpuThreads())));
+        if (NativeJavaRuntime.supportsNativeAccess()) command.add(3, "--enable-native-access=ALL-UNNAMED");
+        return dev.openallay.util.Java8Collections.listCopyOf(command);
     }
     private static void deleteJob(Path job) {
-        try (var entries = Files.walk(job)) {
-            for (Path entry : entries.sorted(Comparator.reverseOrder()).toList()) {
+        try (java.util.stream.Stream<java.nio.file.Path> entries = Files.walk(job)) {
+            for (Path entry : dev.openallay.util.Java8Collections.toList(entries.sorted(Comparator.reverseOrder()))) {
                 try { Files.deleteIfExists(entry); } catch (IOException ignored) { /* Best effort after exit. */ }
             }
         } catch (IOException ignored) { /* Only a temporary voice operation directory. */ }
@@ -183,7 +232,7 @@ public final class NativeSpeechToText implements SpeechToText {
                 if (args.length != 11) throw new IllegalArgumentException("arguments");
                 int threads = Integer.parseInt(args[10]);
                 if (threads < 1 || threads > 8) throw new IllegalArgumentException("threads");
-                Path audio = Path.of(args[7]);
+                Path audio = java.nio.file.Paths.get(args[7]);
                 if (Files.size(audio) == 0 || Files.size(audio) > 1_920_000 || Files.size(audio) % 2 != 0) {
                     throw new IllegalArgumentException("audio");
                 }
@@ -192,7 +241,7 @@ public final class NativeSpeechToText implements SpeechToText {
                 float[] samples = new float[pcm.length / 2];
                 for (int i = 0; i < samples.length; i++) samples[i] = input.getShort() / 32768.0f;
                 try (IsolatedLoader loader = new IsolatedLoader(new URL[] {
-                        Path.of(args[4]).toUri().toURL(), Path.of(args[5]).toUri().toURL() })) {
+                        java.nio.file.Paths.get(args[4]).toUri().toURL(), java.nio.file.Paths.get(args[5]).toUri().toURL() })) {
                     invoke(loader.loadClass(PACKAGE + "LibraryLoader"), "setAutoLoadEnabled", new Class<?>[] {boolean.class}, false);
                     Path nativeDirectory = audio.getParent().resolve("native");
                     Files.createDirectory(nativeDirectory);
@@ -206,7 +255,7 @@ public final class NativeSpeechToText implements SpeechToText {
                     invoke(utils, "load", new Class<?>[0]);
                     String text = recognize(loader, args, threads, samples);
                     if (text == null || text.length() > 32_768) throw new IllegalArgumentException("text");
-                    Files.writeString(Path.of(args[8]), text, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+                    dev.openallay.util.Java8Files.writeString(java.nio.file.Paths.get(args[8]), text, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
                 }
             } catch (Throwable failure) {
                 // No native diagnostics, audio, filesystem paths or model data enter the chat.
@@ -216,20 +265,30 @@ public final class NativeSpeechToText implements SpeechToText {
         private static String recognize(ClassLoader loader, String[] args, int threads, float[] samples) throws Exception {
             Object family;
             String setter;
-            switch (args[0]) {
-                case "SENSE_VOICE" -> {
+            switch ((args[0])) {
+case "SENSE_VOICE":
+{
+{
                     Object builder = builder(loader, "OfflineSenseVoiceModelConfig");
                     invoke(builder, "setModel", new Class<?>[] {String.class}, args[1]);
                     invoke(builder, "setLanguage", new Class<?>[] {String.class}, args[9]);
                     invoke(builder, "setInverseTextNormalization", new Class<?>[] {boolean.class}, true);
                     family = invoke(builder, "build", new Class<?>[0]); setter = "setSenseVoice";
                 }
-                case "PARA_FORMER" -> {
+break;
+}
+case "PARA_FORMER":
+{
+{
                     Object builder = builder(loader, "OfflineParaformerModelConfig");
                     invoke(builder, "setModel", new Class<?>[] {String.class}, args[1]);
                     family = invoke(builder, "build", new Class<?>[0]); setter = "setParaformer";
                 }
-                case "WHISPER" -> {
+break;
+}
+case "WHISPER":
+{
+{
                     Object builder = builder(loader, "OfflineWhisperModelConfig");
                     invoke(builder, "setEncoder", new Class<?>[] {String.class}, args[1]);
                     invoke(builder, "setDecoder", new Class<?>[] {String.class}, args[2]);
@@ -237,8 +296,14 @@ public final class NativeSpeechToText implements SpeechToText {
                     invoke(builder, "setTask", new Class<?>[] {String.class}, "transcribe");
                     family = invoke(builder, "build", new Class<?>[0]); setter = "setWhisper";
                 }
-                default -> throw new IllegalArgumentException("family");
-            }
+break;
+}
+default:
+{
+throw new IllegalArgumentException("family");
+}
+}
+
             Object modelBuilder = builder(loader, "OfflineModelConfig");
             invoke(modelBuilder, setter, new Class<?>[] {family.getClass()}, family);
             invoke(modelBuilder, "setTokens", new Class<?>[] {String.class}, args[3]);
@@ -268,20 +333,26 @@ public final class NativeSpeechToText implements SpeechToText {
             return invoke(loader.loadClass(PACKAGE + name), "builder", new Class<?>[0]);
         }
         private static Object invoke(Object target, String name, Class<?>[] types, Object... arguments) throws Exception {
-            Class<?> type = target instanceof Class<?> value ? value : target.getClass();
+            final class $oaPattern0_Holder { java.lang.Object value; Class<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+Class<?> type = (($oaPattern0_holder.value = target) instanceof java.lang.Class && (($oaPattern0_holder.bound = (Class<?>) $oaPattern0_holder.value) != null)) ? $oaPattern0_holder.bound : target.getClass();
             Method method = type.getMethod(name, types);
             try { return method.invoke(target instanceof Class<?> ? null : target, arguments); }
             catch (InvocationTargetException failure) {
                 Throwable cause = failure.getCause();
-                if (cause instanceof Exception exception) throw exception;
-                if (cause instanceof Error error) throw error;
+                final class $oaPattern1_Holder { java.lang.Throwable value; Exception bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof java.lang.Exception && (($oaPattern1_holder.bound = (Exception) $oaPattern1_holder.value) != null))) throw $oaPattern1_holder.bound;
+                final class $oaPattern2_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = cause) instanceof java.lang.Error && (($oaPattern2_holder.bound = (Error) $oaPattern2_holder.value) != null))) throw $oaPattern2_holder.bound;
                 throw failure;
             }
         }
         private static void extract(ClassLoader loader, String resource, Path target) throws IOException {
             try (InputStream input = loader.getResourceAsStream(resource)) {
                 if (input == null) throw new IOException("Missing official native resource");
-                try (var output = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW)) {
+                try (java.io.OutputStream output = Files.newOutputStream(target, StandardOpenOption.CREATE_NEW)) {
                     byte[] buffer = new byte[64 * 1024]; long bytes = 0; int count;
                     while ((count = input.read(buffer)) != -1) {
                         bytes += count;
@@ -292,7 +363,7 @@ public final class NativeSpeechToText implements SpeechToText {
             }
         }
         private static final class IsolatedLoader extends URLClassLoader {
-            IsolatedLoader(URL[] jars) { super(jars, ClassLoader.getPlatformClassLoader()); }
+            IsolatedLoader(URL[] jars) { super(jars, NativeJavaRuntime.platformParent()); }
             @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
                 synchronized (getClassLoadingLock(name)) {
                     Class<?> loaded = findLoadedClass(name);

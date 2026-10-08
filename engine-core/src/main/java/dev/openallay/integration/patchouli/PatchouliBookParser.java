@@ -31,7 +31,7 @@ public final class PatchouliBookParser {
                 "patchouli:book_parser",
                 "test",
                 "common-test",
-                Map.of()));
+                dev.openallay.util.Java8Collections.mapOf()));
     }
 
     public PatchouliParseResult parse(
@@ -128,7 +128,7 @@ public final class PatchouliBookParser {
                     entry.documentId,
                     structureRef == null ? KnowledgeKind.GUIDE_ENTRY : KnowledgeKind.STRUCTURE,
                     title,
-                    String.join("\n\n", body.stream().filter(value -> !value.isBlank()).toList()),
+                    String.join("\n\n", dev.openallay.util.Java8Collections.toList(body.stream().filter(value -> !dev.openallay.util.Java8Strings.isBlank(value)))),
                     entry.namespace,
                     items,
                     recipes,
@@ -175,7 +175,7 @@ public final class PatchouliBookParser {
                     String row = rows.get(z).getAsString();
                     for (int x = 0; x < row.length(); x++) {
                         String symbol = String.valueOf(row.charAt(x));
-                        if (!symbol.isBlank() && mapping.has(symbol)) {
+                        if (!dev.openallay.util.Java8Strings.isBlank(symbol) && mapping.has(symbol)) {
                             blocks.add(new PatchouliMultiblock.Block(
                                     x, y, z, state(mapping.get(symbol))));
                         }
@@ -219,7 +219,7 @@ public final class PatchouliBookParser {
     private void append(JsonObject object, String field, List<String> output) {
         if (object.has(field) && object.get(field).isJsonPrimitive()) {
             String normalized = text.normalize(object.get(field).getAsString());
-            if (!normalized.isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(normalized)) {
                 output.add(normalized);
             }
         }
@@ -284,12 +284,12 @@ public final class PatchouliBookParser {
 
     private static List<String> localeOrder(String active) {
         LinkedHashSet<String> locales = new LinkedHashSet<>();
-        if (active != null && !active.isBlank()) {
+        if (active != null && !dev.openallay.util.Java8Strings.isBlank(active)) {
             locales.add(active.toLowerCase(java.util.Locale.ROOT));
         }
         locales.add("zh_cn");
         locales.add("en_us");
-        return List.copyOf(locales);
+        return dev.openallay.util.Java8Collections.listCopyOf(locales);
     }
 
     private static EntryResource choose(List<EntryResource> candidates, List<String> locales) {
@@ -324,10 +324,49 @@ public final class PatchouliBookParser {
         return new KnowledgeDiagnostic(source, code, message, provenance);
     }
 
-    private record EntryResource(
-            String namespace, String book, String locale, String documentId, ClientResource resource) {
-        private String logicalKey() {
+    @dev.openallay.value.ValueType(EntryResource.ValueSchemaProvider.class)
+private static final class EntryResource {
+    private final String namespace;
+    private final String book;
+    private final String locale;
+    private final String documentId;
+    private final ClientResource resource;
+    private EntryResource(String namespace, String book, String locale, String documentId, ClientResource resource) {
+        this.namespace = namespace;
+        this.book = book;
+        this.locale = locale;
+        this.documentId = documentId;
+        this.resource = resource;
+    }
+    public String namespace() { return namespace; }
+    public String book() { return book; }
+    public String locale() { return locale; }
+    public String documentId() { return documentId; }
+    public ClientResource resource() { return resource; }
+private String logicalKey() {
             return namespace + ":" + book + ":" + documentId;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof EntryResource)) return false;
+        EntryResource that = (EntryResource) other;
+        return java.util.Objects.equals(namespace, that.namespace) && java.util.Objects.equals(book, that.book) && java.util.Objects.equals(locale, that.locale) && java.util.Objects.equals(documentId, that.documentId) && java.util.Objects.equals(resource, that.resource);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(namespace);
+        hash = 31 * hash + java.util.Objects.hashCode(book);
+        hash = 31 * hash + java.util.Objects.hashCode(locale);
+        hash = 31 * hash + java.util.Objects.hashCode(documentId);
+        hash = 31 * hash + java.util.Objects.hashCode(resource);
+        return hash;
+    }
+    @Override public String toString() { return "EntryResource[namespace=" + namespace + ", book=" + book + ", locale=" + locale + ", documentId=" + documentId + ", resource=" + resource + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<EntryResource> schema() {
+            return new dev.openallay.value.ValueSchema<>(EntryResource.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<EntryResource>>asList(new dev.openallay.value.ValueSchema.Component<>(EntryResource.class, "namespace", EntryResource::namespace), new dev.openallay.value.ValueSchema.Component<>(EntryResource.class, "book", EntryResource::book), new dev.openallay.value.ValueSchema.Component<>(EntryResource.class, "locale", EntryResource::locale), new dev.openallay.value.ValueSchema.Component<>(EntryResource.class, "documentId", EntryResource::documentId), new dev.openallay.value.ValueSchema.Component<>(EntryResource.class, "resource", EntryResource::resource)), arguments -> new EntryResource((String) arguments[0], (String) arguments[1], (String) arguments[2], (String) arguments[3], (ClientResource) arguments[4]));
+        }
+    }
+}
 }

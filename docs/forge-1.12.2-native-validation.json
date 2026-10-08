@@ -1,0 +1,701 @@
+{
+  "target": "forge:1.12.2",
+  "status": "ACCEPTED",
+  "scope": "Stock Forge client with integrated server and normally bundled Java 8 Builder",
+  "sourceBranch": "mc/forge1122-continuation",
+  "acceptedRuntimeSource": "a3d928dae837d35299bd4e1452ac0fc3c0dce81c",
+  "runtime": {
+    "minecraft": "1.12.2",
+    "forge": "14.23.5.2864",
+    "java": 17,
+    "topology": "integrated-server",
+    "worldMode": "survival, cheats off"
+  },
+  "product": {
+    "provider": {
+      "artifactId": 11451779085,
+      "runId": 37549724082,
+      "sourceRevision": "7672de916b3b1b593aff98613a35df68719a6613",
+      "sha256": "302debef2c076c387bb0b48179c66c1079ba9bef6691d6a8caa0bd7d49830e6f"
+    },
+    "artifacts": [
+      {
+        "name": "openallay-feature-core.jar",
+        "sha256": "e6013460c4b54626d35fdb5117b0bee28906dae7d8759f543a206c4a809adf0a"
+      },
+      {
+        "name": "openallay-lifecycle-facade.jar",
+        "sha256": "713582bd5e1cad18d25459b9b77b9cfd91afec81ebc9f3c563ab6c8b6ef8cde0"
+      },
+      {
+        "name": "openallay-private-mixin.jar",
+        "sha256": "6778a3383c7c7ed412934c11d99c641f982ab85fa5be75f15e96e0146e457922"
+      }
+    ]
+  },
+  "components": {
+    "effectiveEngine": {
+      "provider": {
+        "artifactId": 11448496488,
+        "runId": 37541732384,
+        "sourceRevision": "12a6a9da48bff722063c2fae1f6e32cead8bf494",
+        "sha256": "27457bfdbb72ba6238c209f80007ea2431bc2bf7f364d8ac7e25c42393ad0987"
+      },
+      "jarSha256": "bec436f8a5c50b7842b293f3546135df08c47365543767a05cfd1c08428ba96c",
+      "classMajor": 61,
+      "physicalEntryEvidence": {
+        "sha256": "013ee0603d80b4cb5271bfde1cf530ad0983b70aa922f921b6e7911311b84cca",
+        "count": 1556,
+        "allMatchedFinalCore": true
+      }
+    },
+    "effectiveNative": {
+      "provider": {
+        "artifactId": 11452326626,
+        "runId": 37549463968,
+        "sourceRevision": "7829b591ac5ddab367b25822210280cba1bda3ab",
+        "sha256": "20f911ca7bcbe6a5bc2217ad9b80d4b16fe953e9af80708a67b423df0c2044f9"
+      },
+      "compiledSource": "7829b591ac5ddab367b25822210280cba1bda3ab",
+      "jarSha256": "9562eaafb362e124465f4f22d98488ee40ebef2ca3f9186edde3db45766de107",
+      "classMajor": 61,
+      "compileReceiptSha256": "a38f508c200e95cf1884eef19153acb4f9903bc628e319d1f86a19e78cbd5a97",
+      "physicalEntryCustodySha256": "f7700f319917c59e871f6cb0e75fb8b8a0a93822e86c909480c7d61bf21214d5",
+      "replacedEntryCount": 417,
+      "allMatchedFinalCore": true,
+      "nonNativePreservedEntryCount": 3127,
+      "allNonNativeMatched": true
+    },
+    "effectiveBuilder": {
+      "provider": {
+        "artifactId": 11447976342,
+        "runId": 37538595660,
+        "sourceRevision": "89d34cf3b5118a5cc555e4802f094af667ded0d1",
+        "sha256": "6fbbd89f669fef2db5c145f9a994534da1eef7ee6c1d7dddab05d8be95d2b41a"
+      },
+      "extensionSource": "6e977110cbe8e0ca0b39c012f0cdfc10bafffef2",
+      "apiVersion": "0.4.0",
+      "jarSha256": "bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345",
+      "rawResource": "META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar",
+      "classMajors": [
+        52
+      ],
+      "targetCount": 50,
+      "validatedTargetIds": [],
+      "distribution": {
+        "source": {
+          "repository": "https://github.com/nkanf-dev/OpenAllay-Extensions.git",
+          "revision": "6e977110cbe8e0ca0b39c012f0cdfc10bafffef2",
+          "dirty": false,
+          "pinned": true
+        },
+        "project": "extensions/minecraft-builder",
+        "version": "0.4.0",
+        "extensionId": "openallay:builder",
+        "openAllayApiVersion": "0.4.0",
+        "artifact": {
+          "path": "META-INF/openallay/bundled-extensions/openallay-builder-universal-0.4.0.jar",
+          "sha256": "bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345"
+        }
+      },
+      "bundled": true,
+      "communityJarRequired": false
+    },
+    "effectiveSdk": {
+      "coordinate": "dev.openallay:openallay-extension-api:0.4.0",
+      "jarSha256": "53fffa91059247a6f191f6ed77d1e7e74ac78318d0122c9ff503e2fcde18590a",
+      "classMajor": 52,
+      "finalCoreEntryCount": 29,
+      "allEntriesMatch": true
+    },
+    "effectiveRhino": {
+      "coordinate": "dev.openallay:openallay-rhino:2101.2.8-build.91",
+      "jarSha256": "df13a966d5c007c84a678b4aef34a3fd430a83003df99cb9b34bdbf24027db67",
+      "classMajor": 61,
+      "finalCoreEntryCount": 398,
+      "allEntriesMatch": true
+    }
+  },
+  "historicalCompilationInputs": {
+    "meaning": "compile classpaths only; not final effective runtime JAR claims",
+    "currentNativeCompileEngineJarSha256": "a26ffddaefc79e8096bceafe7a1948430f46fd9bc0bde46a6228920ffbfc3d56",
+    "currentNativeCompileBuilderJarSha256": "21e5456ba30f24afca87ff5d6d3c4e373742f86b8f8c572e33333de047ab490c",
+    "currentNativeCompileSdkJarSha256": "53fffa91059247a6f191f6ed77d1e7e74ac78318d0122c9ff503e2fcde18590a",
+    "initialAssemblyEngineJarSha256": "a26ffddaefc79e8096bceafe7a1948430f46fd9bc0bde46a6228920ffbfc3d56",
+    "initialAssemblyNativeJarSha256": "2719fb422ae995d86cd50a5909568ab75656fe6e7349321b97a39cb326972d3d",
+    "retainedBuilderProofJarSha256": "21e5456ba30f24afca87ff5d6d3c4e373742f86b8f8c572e33333de047ab490c",
+    "retainedBuilderProofIsNotBundledCandidate": true
+  },
+  "runtimeEvidence": {
+    "nativeUI": {
+      "run": 37544597588,
+      "source": "94b0b368758c12da0c6946a3c38ced631d9151c0",
+      "scope": "Settings/error recovery, recipe, HUD scrolling/sliders, actual drag/Apply/reopen",
+      "artifacts": [
+        {
+          "id": 11449419828,
+          "run": 37544597588,
+          "source": "94b0b368758c12da0c6946a3c38ced631d9151c0",
+          "archiveSha256": "d50dee0c0dd2a6080530d7c45b5ee5d7bd80e13f10dd0ef78f8418a13e235735",
+          "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11449419828"
+        }
+      ],
+      "checkpoints": 41,
+      "clientExit": {
+        "finalExitCode": 0,
+        "initialExitCode": 0,
+        "pid": 3968,
+        "reaped": true,
+        "signals": []
+      },
+      "visualReview": "Screenshots retained; not visually reviewed"
+    },
+    "worldSDK": {
+      "run": 37537971740,
+      "source": "f45ca14c29bee1ce1ac2cf9a591c20412a9133cb",
+      "scope": "WorldSession context, DataVersion 1343, identity, write/readback/noop, full chest NBT, rotation, strict IDs/bounds, restoration and revocation",
+      "artifacts": [
+        {
+          "id": 11447311087,
+          "run": 37537971740,
+          "source": "f45ca14c29bee1ce1ac2cf9a591c20412a9133cb",
+          "archiveSha256": "9859e96316b4635866333a32b8880952bb15d6cc446ab2a294e1231bbd0b82ce",
+          "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11447311087"
+        }
+      ],
+      "clientExit": {
+        "finalExitCode": 0,
+        "initialExitCode": 0,
+        "pid": 3353,
+        "reaped": true,
+        "signals": []
+      }
+    },
+    "worldPersistence": {
+      "run": 37538381359,
+      "source": "2cb88f227f86c434e6e459a4cdde376de586d54e",
+      "scope": "Two actual client processes save/reload the same UUID and full chest NBT, then restore original block",
+      "artifacts": [
+        {
+          "id": 11447776398,
+          "run": 37538381359,
+          "source": "2cb88f227f86c434e6e459a4cdde376de586d54e",
+          "archiveSha256": "8fabc35627ff171cdb9090dacd8e365a8f063246a0f9bcb7cc3e2639f42a6648",
+          "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11447776398"
+        }
+      ],
+      "clientExits": {
+        "forge1122-component-boot-2cb88f227f86c434e6e459a4cdde376de586d54e-1/e2e/forge1122-component/reload/receipt.json": {
+          "finalExitCode": 0,
+          "initialExitCode": 0,
+          "pid": 3634,
+          "reaped": true,
+          "signals": []
+        },
+        "forge1122-component-boot-2cb88f227f86c434e6e459a4cdde376de586d54e-1/e2e/forge1122-component/persist/receipt.json": {
+          "finalExitCode": 0,
+          "initialExitCode": 0,
+          "pid": 3345,
+          "reaped": true,
+          "signals": []
+        }
+      }
+    },
+    "builderBasic": {
+      "run": 37542339251,
+      "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+      "scope": "Normal community discovery, Skill/modules, restricted JavaScript write/read/finish and independent native readback",
+      "artifacts": [
+        {
+          "id": 11449266864,
+          "run": 37542339251,
+          "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+          "archiveSha256": "d59e2d7ab774541778c18b987e6c73a76741c88bfbfe75bfc800789378f8234d",
+          "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11449266864"
+        }
+      ],
+      "clientExit": {
+        "finalExitCode": 0,
+        "initialExitCode": 0,
+        "pid": 3208,
+        "reaped": true,
+        "signals": []
+      }
+    },
+    "builderLifecycle": {
+      "partial": {
+        "run": 37542602426,
+        "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+        "scope": "partial outcome with independent native readbacks",
+        "artifacts": [
+          {
+            "id": 11448777999,
+            "run": 37542602426,
+            "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+            "archiveSha256": "b1be5bdc237746b2c8831183550ea104dda6b53bd8c55929ae0a1c46dfa7895e",
+            "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11448777999"
+          }
+        ],
+        "clientExit": {
+          "finalExitCode": 0,
+          "initialExitCode": 0,
+          "pid": 3300,
+          "reaped": true,
+          "signals": []
+        },
+        "checks": [
+          "earlier-write-retained",
+          "invalid-followup-did-not-write"
+        ]
+      },
+      "cancel": {
+        "run": 37542606847,
+        "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+        "scope": "cancel outcome with independent native readbacks",
+        "artifacts": [
+          {
+            "id": 11448797961,
+            "run": 37542606847,
+            "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+            "archiveSha256": "4660734857738bc51fa7b7ce823d67e86ce84d5805817810bbe0e76e96e1b604",
+            "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11448797961"
+          }
+        ],
+        "clientExit": {
+          "finalExitCode": 0,
+          "initialExitCode": 0,
+          "pid": 3147,
+          "reaped": true,
+          "signals": []
+        },
+        "checks": [
+          "before-cancel-retained",
+          "after-cancel-denied"
+        ]
+      },
+      "undo": {
+        "run": 37542610683,
+        "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+        "scope": "undo outcome with independent native readbacks",
+        "artifacts": [
+          {
+            "id": 11448517890,
+            "run": 37542610683,
+            "source": "54c10381c8ede397c7b6536ca00890163f8d4833",
+            "archiveSha256": "551d9db390a458c2a847a6ca4364854887ea52d61a171c182df027f206cd2ad0",
+            "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11448517890"
+          }
+        ],
+        "clientExit": {
+          "finalExitCode": 0,
+          "initialExitCode": 0,
+          "pid": 3322,
+          "reaped": true,
+          "signals": []
+        },
+        "checks": [
+          "undo-restored",
+          "undo-conflict-preserved"
+        ]
+      }
+    },
+    "bundledBuilder": {
+      "run": 37549916767,
+      "source": "a3d928dae837d35299bd4e1452ac0fc3c0dce81c",
+      "artifact": {
+        "id": 11452393244,
+        "run": 37549916767,
+        "source": "a3d928dae837d35299bd4e1452ac0fc3c0dce81c",
+        "archiveSha256": "c1de18d0747c4a588e3e26dd012aecdac836877c6562309af38f7eb7c394ff89",
+        "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11452393244"
+      },
+      "acceptance": {
+        "accepted": true,
+        "actualAppliedBindings": true,
+        "bundledOnly": true,
+        "candidateSha256": "bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345",
+        "completed": true,
+        "independentNativePassed": true,
+        "naturalExit0": true,
+        "scenario": "legacy-shapes"
+      },
+      "checks": [
+        {
+          "name": "legacy-box-shell",
+          "x": -970,
+          "y": 5,
+          "z": -872,
+          "expectedId": "minecraft:stonebrick",
+          "expectedProperties": {
+            "variant": "stonebrick"
+          },
+          "observed": true,
+          "actualId": "minecraft:stonebrick",
+          "actualProperties": {
+            "variant": "stonebrick"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-box-air",
+          "x": -969,
+          "y": 4,
+          "z": -871,
+          "expectedId": "minecraft:air",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:air",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-path-start",
+          "x": -970,
+          "y": 3,
+          "z": -868,
+          "expectedId": "minecraft:stonebrick",
+          "expectedProperties": {
+            "variant": "stonebrick"
+          },
+          "observed": true,
+          "actualId": "minecraft:stonebrick",
+          "actualProperties": {
+            "variant": "stonebrick"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-path-end",
+          "x": -966,
+          "y": 3,
+          "z": -868,
+          "expectedId": "minecraft:stonebrick",
+          "expectedProperties": {
+            "variant": "stonebrick"
+          },
+          "observed": true,
+          "actualId": "minecraft:stonebrick",
+          "actualProperties": {
+            "variant": "stonebrick"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-path-clearance",
+          "x": -968,
+          "y": 4,
+          "z": -868,
+          "expectedId": "minecraft:air",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:air",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-source-stair",
+          "x": -970,
+          "y": 4,
+          "z": -864,
+          "expectedId": "minecraft:oak_stairs",
+          "expectedProperties": {
+            "facing": "north",
+            "shape": "straight",
+            "half": "bottom"
+          },
+          "observed": true,
+          "actualId": "minecraft:oak_stairs",
+          "actualProperties": {
+            "facing": "north",
+            "half": "bottom",
+            "shape": "straight"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-source-chest",
+          "x": -968,
+          "y": 4,
+          "z": -864,
+          "expectedId": "minecraft:chest",
+          "expectedProperties": {
+            "facing": "east"
+          },
+          "observed": true,
+          "actualId": "minecraft:chest",
+          "actualProperties": {
+            "facing": "east"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-source-marker",
+          "x": -969,
+          "y": 4,
+          "z": -863,
+          "expectedId": "minecraft:gold_block",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:gold_block",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-rotated-stair",
+          "x": -959,
+          "y": 4,
+          "z": -864,
+          "expectedId": "minecraft:oak_stairs",
+          "expectedProperties": {
+            "facing": "east",
+            "shape": "straight",
+            "half": "bottom"
+          },
+          "observed": true,
+          "actualId": "minecraft:oak_stairs",
+          "actualProperties": {
+            "facing": "east",
+            "half": "bottom",
+            "shape": "straight"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-rotated-chest",
+          "x": -959,
+          "y": 4,
+          "z": -862,
+          "expectedId": "minecraft:chest",
+          "expectedProperties": {
+            "facing": "south"
+          },
+          "observed": true,
+          "actualId": "minecraft:chest",
+          "actualProperties": {
+            "facing": "south"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-rotated-marker",
+          "x": -960,
+          "y": 4,
+          "z": -863,
+          "expectedId": "minecraft:gold_block",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:gold_block",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-rotated-air",
+          "x": -960,
+          "y": 4,
+          "z": -864,
+          "expectedId": "minecraft:air",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:air",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-mirrored-stair",
+          "x": -952,
+          "y": 4,
+          "z": -864,
+          "expectedId": "minecraft:oak_stairs",
+          "expectedProperties": {
+            "facing": "north",
+            "shape": "straight",
+            "half": "bottom"
+          },
+          "observed": true,
+          "actualId": "minecraft:oak_stairs",
+          "actualProperties": {
+            "facing": "north",
+            "half": "bottom",
+            "shape": "straight"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-mirrored-chest",
+          "x": -954,
+          "y": 4,
+          "z": -864,
+          "expectedId": "minecraft:chest",
+          "expectedProperties": {
+            "facing": "west"
+          },
+          "observed": true,
+          "actualId": "minecraft:chest",
+          "actualProperties": {
+            "facing": "west"
+          },
+          "passed": true
+        },
+        {
+          "name": "legacy-mirrored-marker",
+          "x": -953,
+          "y": 4,
+          "z": -863,
+          "expectedId": "minecraft:gold_block",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:gold_block",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-mirrored-air",
+          "x": -952,
+          "y": 4,
+          "z": -863,
+          "expectedId": "minecraft:air",
+          "expectedProperties": {},
+          "observed": true,
+          "actualId": "minecraft:air",
+          "actualProperties": {},
+          "passed": true
+        },
+        {
+          "name": "legacy-checkerboard",
+          "x": -966,
+          "y": 3,
+          "z": -872,
+          "expectedId": "minecraft:planks",
+          "expectedProperties": {
+            "variant": "oak"
+          },
+          "observed": true,
+          "actualId": "minecraft:planks",
+          "actualProperties": {
+            "variant": "oak"
+          },
+          "passed": true
+        }
+      ],
+      "nativeRepairPropertyIdentityFixture": true,
+      "templatePersistencePassed": true,
+      "presetAvailabilityMatchedNativePalette": true,
+      "skipped": [
+        {
+          "name": "build_cottage",
+          "status": "SKIPPED",
+          "reason": "missing_material_palette_role",
+          "roles": [
+            "campfire_lit_north",
+            "lantern_hanging"
+          ]
+        },
+        {
+          "name": "build_dock",
+          "status": "SKIPPED",
+          "reason": "missing_material_palette_role",
+          "roles": [
+            "lantern_standing"
+          ]
+        },
+        {
+          "name": "build_farm",
+          "status": "SKIPPED",
+          "reason": "missing_material_palette_role",
+          "roles": [
+            "oak_fence_gate_north"
+          ]
+        },
+        {
+          "name": "build_simple_house",
+          "status": "SKIPPED",
+          "reason": "missing_material_palette_role",
+          "roles": [
+            "furnace_north",
+            "lantern_hanging",
+            "oak_pressure_plate_unpowered"
+          ]
+        },
+        {
+          "name": "build_skyscraper",
+          "status": "SKIPPED",
+          "reason": "missing_material_palette_role",
+          "roles": [
+            "blue_stained_glass",
+            "cyan_stained_glass",
+            "ladder_north",
+            "light_blue_stained_glass",
+            "lightning_rod_up",
+            "smooth_stone",
+            "smooth_stone_slab_bottom",
+            "stone_brick_wall",
+            "stone_bricks"
+          ]
+        },
+        {
+          "name": "build_windmill",
+          "status": "SKIPPED",
+          "reason": "missing_material_palette_role",
+          "roles": [
+            "stone_bricks",
+            "white_concrete",
+            "white_wool"
+          ]
+        }
+      ],
+      "discovery": {
+        "actualCachePaths": [
+          "config/openallay/.bundled-extensions/bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345/openallay-builder-universal-0.4.0.jar"
+        ],
+        "expectedRawJarSha256": "bf8cfff9b82f84914aa1c84173d531f2256f537215a66a8d2057adc504632345",
+        "noCommunityBuilderInstalled": true,
+        "normalBundledDiscovery": true,
+        "rawBytesCached": true
+      },
+      "clientExit": {
+        "finalExitCode": 0,
+        "initialExitCode": 0,
+        "pid": 3122,
+        "reaped": true,
+        "signals": []
+      }
+    }
+  },
+  "nativeRepair": {
+    "causeRun": 37548743826,
+    "cause": "Actual getPropertyKeys wraps property keys with Collections.unmodifiableCollection; its object equality was incorrectly used as a domain comparison",
+    "fix": "Exact IProperty reference identities, cardinality and duplicate rejection; native block identity, allowed values and metadata roundtrip retained",
+    "compiledSource": "7829b591ac5ddab367b25822210280cba1bda3ab",
+    "nativeRun": 37549463968,
+    "fixtureRun": 37549916767
+  },
+  "preservedFailureEvidence": [
+    {
+      "run": 37547611694,
+      "status": "FAILED",
+      "scope": "Accepted bundled discovery and geometry prefix; post-paste native repair failed"
+    },
+    {
+      "run": 37548066786,
+      "status": "FAILED",
+      "scope": "Model endpoint HTTP 422; no expected mirror diagnostic template"
+    },
+    {
+      "run": 37548743826,
+      "status": "FAILED",
+      "scope": "Original neighbor repair cause captured before model endpoint HTTP 422; client exit 0"
+    },
+    {
+      "run": 37529401173,
+      "status": "FAILED",
+      "scope": "Inherited full engine suite had seven failures and seven skips; no full-suite pass claimed"
+    }
+  ],
+  "separateAcceptanceScopes": [
+    "Main/release integration and publication",
+    "Optional JEI4/viewer combinations",
+    "Dedicated server",
+    "Visual screenshot review and physical microphone/IME"
+  ],
+  "releaseState": "Main and published v0.4.3 unchanged"
+}

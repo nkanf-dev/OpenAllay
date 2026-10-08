@@ -9,13 +9,13 @@ public final class VoiceClientRuntimes {
     private VoiceClientRuntimes() {}
 
     public static VoiceClientRuntime create(Path configDirectory, VoiceRuntime.DraftPort drafts, Executor clientDispatcher) {
-        return create(configDirectory, drafts, clientDispatcher, Map.of());
+        return create(configDirectory, drafts, clientDispatcher, dev.openallay.util.Java8Collections.mapOf());
     }
 
     /** Environment is explicitly supplied by the existing client boundary; never read it here. */
     public static VoiceClientRuntime create(Path configDirectory, VoiceRuntime.DraftPort drafts,
             Executor clientDispatcher, Map<String, String> credentialEnvironment) {
         return new VoiceClientRuntime(configDirectory, drafts, clientDispatcher,
-                Map.copyOf(credentialEnvironment), new OpenAlCapture());
+                dev.openallay.util.Java8Collections.mapCopyOf(credentialEnvironment), new OpenAlCapture());
     }
 }

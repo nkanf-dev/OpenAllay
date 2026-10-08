@@ -7,11 +7,11 @@ public final class PlatformServices {
     private PlatformServices() {}
 
     public static PlatformService load() {
-        List<PlatformService> services = ServiceLoader.load(
-                        PlatformService.class, PlatformServices.class.getClassLoader())
-                .stream()
-                .map(ServiceLoader.Provider::get)
-                .toList();
+        java.util.ArrayList<PlatformService> discovered = new java.util.ArrayList<>();
+        for (PlatformService service : ServiceLoader.load(PlatformService.class, PlatformServices.class.getClassLoader())) {
+            discovered.add(service);
+        }
+        List<PlatformService> services = dev.openallay.util.Java8Collections.listCopyOf(discovered);
         if (services.size() != 1) {
             throw new IllegalStateException(
                     "Expected exactly one PlatformService, found " + services.size());

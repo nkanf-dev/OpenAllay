@@ -1,0 +1,66 @@
+{
+  "scope": "One18residualnativeAPIwholeowner sourceonlystage withfull251actualmodernpublicattribution/class-onlyprojector/trusted-forward BYTEroundtrip plusrelease8 census; no variable/pattern/switch/proof replays or gameclaim.",
+  "expected_source_count": 251,
+  "selected_simple_names": [
+    "ClientContextCapture.java",
+    "GuideBuilderE2EProbe.java",
+    "GuideChatLiteScreen.java",
+    "GuideClientE2EController.java",
+    "GuideGraphicalRegressionProbe.java",
+    "GuideNativeCommandE2EProbe.java",
+    "GuideNativeWorldAccessProbe.java",
+    "Minecraft26WorldAccess.java",
+    "MinecraftBundledResources.java",
+    "MinecraftGuideContextProvider.java",
+    "MinecraftResourceAccess.java",
+    "NativeBlockCodec.java",
+    "NativeWorldBinding.java",
+    "NeoForgeNativeClientLifecycle.java",
+    "NeoForgeServerBridge.java",
+    "OpenAllayBootstrap.java",
+    "OpenAllayScreen.java",
+    "OpenAllaySettingsScreen.java"
+  ],
+  "pins": [
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalJava8ApiPort.java",
+      "sha256": "728bbb323b67950463ff65cb0e63ed648e5be98293d99806ac7439f1bee10333"
+    },
+    {
+      "path": "scripts/api-language-port/CanonicalNativeResidualApiFixture.java",
+      "sha256": "8e66d05f736e5602102b76042eae6145ded2dbffa9291082edd795191e01b91b"
+    },
+    {
+      "path": "scripts/api-language-port/RuntimeFeatureJava8Fixture.java",
+      "sha256": "565512603795c9d4b8c7745b97ba5704d4a085d61a4e5bc2e5a9b67e4b7ca17e"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8ApiSupport.java",
+      "sha256": "376d30be818a441587983a26fe25b359c103881ba7d74b8a97714e8f958fedfe"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Collections.java",
+      "sha256": "4f44faf9f82523472ff24d390e861b7870de5953613673526f257dd5b1c23d86"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Files.java",
+      "sha256": "31bd5053b9555f3ec015c52a816eb1479ee532a7356a2c864ea404eb57055235"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Streams.java",
+      "sha256": "912682c15a58e9cdc5b92aaae56ab24cea1112dcb44d7953e2e8d13b728b19a9"
+    },
+    {
+      "path": "engine-core/src/main/java/dev/openallay/util/Java8Futures.java",
+      "sha256": "7d220f420132ce518442b7b150e38db5d2b679c3a8df4d35c24fcbe7e7a5d3d4"
+    },
+    {
+      "path": "scripts/materialize-native-language-cohort.py",
+      "sha256": "c37a6f52933d393b427029583264089f7b3580530b467f160e676a468d410e0f"
+    }
+  ],
+  "runner_sha256": "9324b90e8c8c3ae29cf4dcee81b46b32efb0076f5607d49a65269b91ba7fe216",
+  "accepted_deadline_run": 37740378961,
+  "runtime_fact": "CurrentactualMXBean/publicRuntimefeature spoof-property fixture expectedbeforepublication, rootmodifiedfixturealreadyactualsourcepin.",
+  "selection": "Eachsimplefilename resolvesONEexactlogicalowner fromnormalFGunits, originalphysicalsourceSHAreceipt; full251unchangedsourceuniverse requirement mandatory."
+}

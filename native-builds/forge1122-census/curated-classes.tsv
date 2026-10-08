@@ -1,0 +1,65 @@
+# Canonical semantic binary class	actual MCP binary class	reviewed role. No member mappings.
+net.minecraft.client.Minecraft	net.minecraft.client.Minecraft	client owner
+net.minecraft.server.MinecraftServer	net.minecraft.server.MinecraftServer	server owner
+net.minecraft.client.gui.Font	net.minecraft.client.gui.FontRenderer	native font renderer
+net.minecraft.network.chat.Component	net.minecraft.util.text.ITextComponent	native text component interface
+net.minecraft.world.item.ItemStack	net.minecraft.item.ItemStack	native item stack
+net.minecraft.world.item.Item	net.minecraft.item.Item	native item
+net.minecraft.core.BlockPos	net.minecraft.util.math.BlockPos	native block position
+net.minecraft.world.phys.Vec3	net.minecraft.util.math.Vec3d	native vector
+net.minecraft.world.phys.AABB	net.minecraft.util.math.AxisAlignedBB	native bounding box
+net.minecraft.world.level.block.Block	net.minecraft.block.Block	native block
+net.minecraft.world.level.block.state.BlockState	net.minecraft.block.state.IBlockState	native immutable block state
+net.minecraft.world.level.block.state.properties.Property	net.minecraft.block.properties.IProperty	native state property interface
+net.minecraft.world.level.Level	net.minecraft.world.World	native world
+net.minecraft.server.level.ServerLevel	net.minecraft.world.WorldServer	native server world
+net.minecraft.client.player.LocalPlayer	net.minecraft.client.entity.EntityPlayerSP	native local player
+net.minecraft.server.level.ServerPlayer	net.minecraft.entity.player.EntityPlayerMP	native server player
+net.minecraft.world.entity.player.Player	net.minecraft.entity.player.EntityPlayer	native player base
+net.minecraft.world.entity.Entity	net.minecraft.entity.Entity	native entity
+net.minecraft.world.entity.LivingEntity	net.minecraft.entity.EntityLivingBase	native living entity base
+net.minecraft.nbt.CompoundTag	net.minecraft.nbt.NBTTagCompound	native compound NBT
+net.minecraft.nbt.IntTag	net.minecraft.nbt.NBTTagInt	native integer NBT
+net.minecraft.resources.ResourceLocation	net.minecraft.util.ResourceLocation	native resource identifier
+net.minecraft.ChatFormatting	net.minecraft.util.text.TextFormatting	native text style constants
+net.minecraft.world.level.block.Mirror	net.minecraft.util.Mirror	native block mirror
+net.minecraft.world.level.block.Rotation	net.minecraft.util.Rotation	native block rotation
+net.minecraft.world.level.block.ChestBlock	net.minecraft.block.BlockChest	native chest block
+net.minecraft.world.level.block.ShulkerBoxBlock	net.minecraft.block.BlockShulkerBox	native shulker block
+net.minecraft.world.inventory.Slot	net.minecraft.inventory.Slot	native container slot
+net.minecraft.world.item.crafting.Ingredient	net.minecraft.item.crafting.Ingredient	native ingredient
+net.minecraft.world.item.crafting.ShapedRecipe	net.minecraft.item.crafting.ShapedRecipes	native shaped recipe
+net.minecraft.world.effect.MobEffect	net.minecraft.potion.Potion	native potion effect type
+net.minecraft.world.effect.MobEffectInstance	net.minecraft.potion.PotionEffect	native potion effect instance
+net.minecraft.client.multiplayer.ClientPacketListener	net.minecraft.client.network.NetHandlerPlayClient	native play listener
+net.minecraft.commands.CommandSourceStack	net.minecraft.command.ICommandSender	native command sender authority interface
+net.minecraft.client.multiplayer.ServerData	net.minecraft.client.multiplayer.ServerData	native multiplayer server metadata
+net.minecraft.client.Options	net.minecraft.client.settings.GameSettings	native client game options owner
+net.minecraft.client.KeyMapping	net.minecraft.client.settings.KeyBinding	native key binding identity
+net.minecraft.client.gui.screens.Screen	net.minecraft.client.gui.GuiScreen	native screen lifecycle owner; callbacks remain typed target seams
+net.minecraft.client.gui.Gui	net.minecraft.client.gui.Gui	native GUI primitives owner
+net.minecraft.world.inventory.AbstractContainerMenu	net.minecraft.inventory.Container	native menu container owner
+net.minecraft.network.chat.Style	net.minecraft.util.text.Style	native mutable text style
+net.minecraft.server.packs.resources.ResourceManager	net.minecraft.client.resources.IResourceManager	native resource manager interface
+net.minecraft.server.packs.resources.ReloadableResourceManager	net.minecraft.client.resources.IReloadableResourceManager	native reloadable resource manager interface
+net.minecraft.server.packs.resources.Resource	net.minecraft.client.resources.IResource	native opened resource handle
+net.minecraft.server.packs.resources.ResourceManagerReloadListener	net.minecraft.client.resources.IResourceManagerReloadListener	native resource reload callback interface
+net.minecraft.client.server.IntegratedServer	net.minecraft.server.integrated.IntegratedServer	native integrated server owner
+net.minecraft.world.level.GameType	net.minecraft.world.GameType	native game mode
+net.minecraft.world.Difficulty	net.minecraft.world.EnumDifficulty	native world difficulty enum
+net.minecraft.world.item.alchemy.Potion	net.minecraft.potion.PotionType	native brew potion type; distinct from effect Potion
+net.minecraft.world.item.crafting.Recipe	net.minecraft.item.crafting.IRecipe	native crafting recipe interface
+net.minecraft.client.gui.components.toasts.Toast	net.minecraft.client.gui.toasts.IToast	native toast callback interface
+net.minecraft.client.gui.components.toasts.ToastComponent	net.minecraft.client.gui.toasts.GuiToast	native toast owner
+net.minecraft.client.gui.screens.inventory.AbstractContainerScreen	net.minecraft.client.gui.inventory.GuiContainer	native container screen owner
+net.minecraft.client.gui.screens.TitleScreen	net.minecraft.client.gui.GuiMainMenu	native title screen owner
+net.minecraft.client.renderer.GameRenderer	net.minecraft.client.renderer.EntityRenderer	native client world renderer owner
+net.minecraft.util.Mth	net.minecraft.util.math.MathHelper	native math utility owner; no member remapping
+net.minecraft.client.gui.screens.ConfirmScreen	net.minecraft.client.gui.GuiYesNo	native confirmation screen owner; callback adaptation typed seam
+net.minecraft.client.gui.screens.worldselection.SelectWorldScreen	net.minecraft.client.gui.GuiWorldSelection	native world selection screen owner
+net.minecraft.client.gui.chat.NarratorChatListener	net.minecraft.client.gui.chat.NarratorChatListener	native narrator listener owner
+net.minecraft.client.gui.components.SubtitleOverlay	net.minecraft.client.gui.GuiSubtitleOverlay	native subtitle overlay owner
+net.minecraft.world.phys.HitResult	net.minecraft.util.math.RayTraceResult	actual base native hit payload identity; typed MinecraftHitFacts owns legacy block/entity discrimination, not subtype aliases
+net.minecraft.client.multiplayer.PlayerInfo	net.minecraft.client.network.NetworkPlayerInfo	actual per-player network metadata owner; native latency/member adapters remain typed MinecraftClientContextFacts
+net.minecraft.world.level.border.WorldBorder	net.minecraft.world.border.WorldBorder	actual world border constraint owner, native geometry shared semantic role
+net.minecraft.client.gui.components.toasts.Toast$Visibility	net.minecraft.client.gui.toasts.IToast$Visibility	actual native toast SHOW/HIDE enum nested identity from inherited native toast callback owner

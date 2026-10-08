@@ -1,0 +1,59 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+// Diagnostic only. Retained >52 components are type oracles, never runtime or package inputs.
+def request = new JsonSlurper().parse(project.file(project.property('nativeBuildRequest')))
+def diagnosticOut=project.file(request.output).canonicalFile
+def generated=new File(diagnosticOut,'generated-java')
+task diagnoseNativeJava8 {
+    dependsOn prepareNativeApplication
+    doLast {
+        def sourcePaths=project.fileTree(generated).matching { include '**/*.java' }.files.sort {it.path}
+        def cp=new File(diagnosticOut,'classpath.txt').readLines('UTF-8')
+        def reports=new File(diagnosticOut,'java8-diagnostic');reports.mkdirs()
+        def digest={File path -> MessageDigest.getInstance('SHA-256').digest(path.bytes).encodeHex().toString() }
+        def sourceRows=sourcePaths.collect { [path:it.canonicalPath,sha256:digest(it),bytes:it.length()] }
+        def classpathRows=[]
+        cp.each { name ->
+            def path=new File(name)
+            def majors=[:] ;def above=[]
+            new java.util.zip.ZipFile(path).withCloseable { zip -> zip.entries().each { entry ->
+                if (entry.name.endsWith('.class')) {
+                    byte[] bytes=zip.getInputStream(entry).withCloseable {it.bytes}
+                    int major=((bytes[6]&255)<<8)|(bytes[7]&255)
+                    majors[major.toString()]=(majors[major.toString()] ?: 0)+1
+                    if (major>52 && !entry.name.startsWith('META-INF/versions/')) above.add([entry:entry.name,major:major])
+                }
+            } }
+            classpathRows.add([path:path.canonicalPath,sha256:digest(path),bytes:path.length(),classMajors:majors,
+                runtimeJava8Blocked:!above.empty,above52BaseClasses:above])
+        }
+        new File(reports,'source-inputs.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(sourceRows))+'\n','UTF-8')
+        new File(reports,'classpath-inputs.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(classpathRows))+'\n','UTF-8')
+        def argsFile=new File(reports,'sources.args')
+        argsFile.setText(sourcePaths.collect { '"'+it.canonicalPath.replace('\\','\\\\').replace('"','\\"')+'"' }.join('\n')+'\n','UTF-8')
+        def classes=new File(reports,'classes');classes.mkdirs()
+        def compiler=project.file(request.javac17)
+        def command=[compiler.absolutePath,'--release','8','-proc:none','-encoding','UTF-8','-XDrawDiagnostics',
+            '-Xmaxerrs','10000','-Xmaxwarns','10000','-classpath',cp.join(File.pathSeparator),
+            '-d',classes.absolutePath,'@'+argsFile.absolutePath]
+        def result
+        new File(reports,'javac-release8.log').withOutputStream { log ->
+            result=project.exec { commandLine command; standardOutput=log;errorOutput=log;ignoreExitValue=true }
+        }
+        def outputMajors=[:]
+        project.fileTree(classes).matching { include '**/*.class' }.files.each { path ->
+            byte[] bytes=path.bytes;int major=((bytes[6]&255)<<8)|(bytes[7]&255)
+            outputMajors[major.toString()]=(outputMajors[major.toString()] ?: 0)+1
+        }
+        new File(reports,'receipt.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson([
+            scope:'all exact neutral-selected native owners after actual class-token normalization',sourceCount:sourceRows.size(),
+            command:command,compilerExitCode:result.exitValue,classMajors:outputMajors,
+            sourceInputSha256:digest(new File(reports,'source-inputs.json')),classpathInputSha256:digest(new File(reports,'classpath-inputs.json')),
+            runtimeJava8Blocked:classpathRows.any {it.runtimeJava8Blocked},
+            diagnosticTypeOracleOnly:true,applicationPackageProduced:false,gameLaunch:false,
+            sourceRewrite:false,engineJava8Acceptance:false]))+'\n','UTF-8')
+        if (result.exitValue!=0) throw new GradleException('Actual complete native --release8 diagnostic failed; retained exact compiler report')
+    }
+}

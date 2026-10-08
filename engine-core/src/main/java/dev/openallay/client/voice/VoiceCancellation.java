@@ -27,7 +27,7 @@ public final class VoiceCancellation {
         synchronized (this) {
             if (cancelled) return;
             cancelled = true;
-            callbacks = List.copyOf(hooks);
+            callbacks = dev.openallay.util.Java8Collections.listCopyOf(hooks);
             hooks.clear();
         }
         if (!callbacks.isEmpty()) cleanup.execute(() -> {

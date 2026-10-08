@@ -1,0 +1,108 @@
+import java.security.MessageDigest
+import java.util.zip.ZipFile
+
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '6.0.54'
+}
+if (gradle.gradleVersion != '8.4') throw new GradleException('Use exact Gradle8.4 MDK wrapper')
+if (Runtime.version().feature() != 17) throw new GradleException('Run this standalone probe build on Java17')
+version = '0.4.3'
+group = 'dev.openallay'
+base { archivesName = 'openallay-forge36-probe' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft { mappings channel: 'official', version: '1.16.5' }
+if (providers.gradleProperty('nativeApiSupplement').isPresent()) {
+    repositories { maven { url = 'https://maven.blamejared.com' } }
+}
+dependencies {
+    if (providers.gradleProperty('nativeApiSupplement').isPresent()) {
+        compileOnly 'mezz.jei:jei-1.16.5:7.8.1.1018:api'
+    }
+    minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
+    // Root stages these exact unchanged artifacts after the shared build. Compile-only.
+    compileOnly files('closure/openallay-engine-core.jar', 'closure/openallay-extension-api.jar',
+            'closure/openallay-rhino.jar')
+}
+// Only the production probe uses Java17 release flags. ForgeGradle owns its Java8 game recompilation.
+tasks.named('compileJava', JavaCompile) {
+    javaCompiler.set(javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    })
+    options.release.set(17)
+    options.encoding = 'UTF-8'
+}
+tasks.named('jar', Jar) {
+    manifest.attributes('FMLModType': 'MOD')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+def digest = { File path ->
+    def hash = MessageDigest.getInstance('SHA-256')
+    path.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = stream.read(buffer)) != -1) hash.update(buffer, 0, count)
+    }
+    hash.digest().encodeHex().toString()
+}
+def inventory = { File path ->
+    def entries = [:]
+    new ZipFile(path).withCloseable { zip ->
+        zip.entries().each { entry ->
+            if (!entry.directory) {
+                if (!(entry.name.startsWith('dev/openallay/forge36probe/')
+                        && entry.name.endsWith('.class') || entry.name in
+                        ['META-INF/MANIFEST.MF', 'META-INF/mods.toml'])) {
+                    throw new GradleException("Probe archive contains shared/foreign entry: ${entry.name}")
+                }
+                byte[] bytes = zip.getInputStream(entry).withCloseable { it.readAllBytes() }
+                def record = [size: bytes.length, sha256: MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()]
+                if (entry.name.endsWith('.class')) {
+                    int major = ((bytes[6] & 255) << 8) | (bytes[7] & 255)
+                    if (major != 61) throw new GradleException("Probe bytecode must be Java17: ${entry.name}")
+                    record.classMajor = major
+                }
+                entries[entry.name] = record
+            }
+        }
+    }
+    [path: path.absolutePath, sha256: digest(path), entries: entries.sort()]
+}
+def before = layout.buildDirectory.file('probe-metadata/probe-before-reobf.jar')
+def snapshot = tasks.register('snapshotProbeJar', Copy) {
+    dependsOn 'jar'
+    from(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    into(before.map { it.asFile.parentFile })
+    rename { 'probe-before-reobf.jar' }
+}
+// ForgeGradle registers reobfJar after project evaluation. Configure its normal task lazily.
+tasks.matching { it.name == 'reobfJar' }.configureEach { dependsOn snapshot }
+tasks.register('emitProbeMetadata') {
+    dependsOn 'reobfJar'
+    outputs.file(layout.buildDirectory.file('probe-metadata/probe-build.json'))
+    doLast {
+        def tinyInput = inventory(before.get().asFile)
+        def tinyOutput = inventory(tasks.named('jar', Jar).get().archiveFile.get().asFile)
+        def closure = ['openallay-engine-core.jar', 'openallay-extension-api.jar', 'openallay-rhino.jar'].collectEntries { name ->
+            File artifact = file("closure/${name}")
+            if (!artifact.isFile()) throw new GradleException("Missing unchanged compile closure: ${name}")
+            [(name): [sha256: digest(artifact), size: artifact.length()]]
+        }
+        def metadata = [purpose: 'tiny-probe-build-only', forge: '1.16.5-36.2.42', minecraft: '1.16.5',
+                        forgeGradle: '6.0.54', gradle: gradle.gradleVersion, java: System.getProperty('java.runtime.version'),
+                        reobfInput: tinyInput, reobfOutput: tinyOutput, unchangedCompileInputs: closure,
+                        sharedClosurePacked: false, gameExecuted: false]
+        if (gradle.gradleVersion != '8.4') throw new GradleException('Use exact Gradle8.4 MDK wrapper')
+        File destination = layout.buildDirectory.file('probe-metadata/probe-build.json').get().asFile
+        destination.parentFile.mkdirs()
+        destination.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(metadata)) + '\n'
+        println groovy.json.JsonOutput.toJson(metadata)
+    }
+}
+
+apply from: file('native-api-export.gradle')
+
+if (providers.gradleProperty('focusedToolingAcceptance').isPresent()) {
+    apply from: file('focused-tooling-export.gradle')
+}

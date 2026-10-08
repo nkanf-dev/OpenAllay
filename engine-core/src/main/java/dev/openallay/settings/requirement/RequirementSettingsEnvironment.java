@@ -36,7 +36,7 @@ public final class RequirementSettingsEnvironment {
             UnrestrictedJavascriptConfig unrestricted) {
         boolean commandsAvailable = commands.enabled() || unrestricted.enabled();
         Map<String, RequirementAvailability> capabilityFacts = new TreeMap<>();
-        for (var entry : capabilities.catalog().entries()) {
+        for (dev.openallay.capability.CapabilitySettingsEntry entry : capabilities.catalog().entries()) {
             if (entry.kind() == CapabilityKind.SKILL) continue;
             capabilityFacts.put(entry.id(), fact(entry.id(), !entry.available()
                     ? RequirementStatus.UNAVAILABLE
@@ -52,16 +52,39 @@ public final class RequirementSettingsEnvironment {
                 commandsAvailable ? RequirementStatus.SATISFIED : RequirementStatus.DISABLED));
 
         Map<String, RequirementAvailability> extensionFacts = new TreeMap<>();
-        for (var extension : extensions.extensions()) {
-            extensionFacts.put(extension.id(), fact(extension.name(), switch (extension.state()) {
-                case ACTIVE -> RequirementStatus.SATISFIED;
-                case RESTART_REQUIRED -> RequirementStatus.RESTART_REQUIRED;
-                case COMMUNITY -> RequirementStatus.MISSING;
-                case INCOMPATIBLE, UNAVAILABLE -> RequirementStatus.UNAVAILABLE;
-            }));
+        for (dev.openallay.settings.extension.ExtensionSettingsView.Extension extension : extensions.extensions()) {
+            {
+final java.util.Map<java.lang.String, dev.openallay.requirement.RequirementAvailability> $oaSwitch0_exit_result_prior1 = extensionFacts;
+final java.lang.String $oaSwitch0_exit_result_prior2 = extension.id();
+final java.lang.String $oaSwitch0_exit_result_prior0 = extension.name();
+dev.openallay.requirement.RequirementStatus $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((extension.state())) {
+case ACTIVE:
+{
+$oaSwitch0_exit_result = RequirementStatus.SATISFIED; break $oaSwitch0_exit;
+}
+case RESTART_REQUIRED:
+{
+$oaSwitch0_exit_result = RequirementStatus.RESTART_REQUIRED; break $oaSwitch0_exit;
+}
+case COMMUNITY:
+{
+$oaSwitch0_exit_result = RequirementStatus.MISSING; break $oaSwitch0_exit;
+}
+case INCOMPATIBLE:
+case UNAVAILABLE:
+{
+$oaSwitch0_exit_result = RequirementStatus.UNAVAILABLE; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+$oaSwitch0_exit_result_prior1.put($oaSwitch0_exit_result_prior2, fact($oaSwitch0_exit_result_prior0, $oaSwitch0_exit_result));
+}
         }
         Map<String, RequirementAvailability> skillFacts = new TreeMap<>();
-        for (var skill : skills.skills()) {
+        for (dev.openallay.settings.skill.SkillSettingsView.Skill skill : skills.skills()) {
             String id = skill.metadata().name();
             boolean runtimeUnavailable = (id.equals("run-game-commands") && !commandsAvailable)
                     || (id.equals("unrestricted-javascript") && !unrestricted.enabled());
@@ -75,7 +98,7 @@ public final class RequirementSettingsEnvironment {
     /** Only disabled entries with a known persistent owner can be offered as exact changes. */
     public static List<RequirementChange> changes(
             RequirementReport report, CapabilitySettingsView capabilities) {
-        return report.entries().stream()
+        return dev.openallay.util.Java8Collections.toList(report.entries().stream()
                 .filter(entry -> entry.status() == RequirementStatus.DISABLED)
                 .filter(entry -> entry.kind() == RequirementKind.SKILL
                         ? capabilities.policy().disabledSkills().contains(entry.id())
@@ -84,8 +107,7 @@ public final class RequirementSettingsEnvironment {
                                     || entry.id().equals(EXPERIMENTAL_COMMANDS)
                                     || capabilities.policy().disabledTools().contains(entry.id())))
                 .map(entry -> new RequirementChange(entry.kind(), entry.id(),
-                        isUnrestrictedJavascript(entry.id())))
-                .toList();
+                        isUnrestrictedJavascript(entry.id()))));
     }
 
     /** Two reviewed declarations, one persistent setting owner; no generic ID normalization. */

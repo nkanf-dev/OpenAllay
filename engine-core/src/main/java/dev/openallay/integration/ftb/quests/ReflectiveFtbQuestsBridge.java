@@ -38,11 +38,11 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
             Object api = root.api().invoke();
             Object file = root.getQuestFile().invoke(api, clientSide);
             Optional<?> team = optional(invoke(file, "getTeamData", player));
-            if (team.isEmpty()) {
+            if (!team.isPresent()) {
                 return FtbQuestSnapshot.Result.unavailable(
                         "ftb_team_data_unavailable", "FTB Quests has no visible team data for this player");
             }
-            Object teamData = team.orElseThrow();
+            Object teamData = team.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             List<Object> chapters = list(invoke(file, "getVisibleChapters", teamData));
             List<RawQuest> raw = new ArrayList<>();
             Set<String> visibleIds = new HashSet<>();
@@ -133,17 +133,16 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
         }
         List<Object> values = new ArrayList<>(arguments.length + 1);
         values.add(receiver);
-        values.addAll(List.of(arguments));
+        values.addAll(dev.openallay.util.Java8Collections.listOf(arguments));
         return handle.invokeWithArguments(values);
     }
 
     private static Method unique(Class<?> type, String name, int arity, boolean requireStatic) {
-        List<Method> matches = Stream.of(type.getMethods())
+        List<Method> matches = dev.openallay.util.Java8Collections.toList(Stream.of(type.getMethods())
                 .filter(method -> method.getName().equals(name)
                         && method.getParameterCount() == arity
                         && Modifier.isPublic(method.getModifiers())
-                        && Modifier.isStatic(method.getModifiers()) == requireStatic)
-                .toList();
+                        && Modifier.isStatic(method.getModifiers()) == requireStatic));
         if (matches.size() != 1) {
             throw new IllegalArgumentException(
                     "Expected one public " + name + "/" + arity + " on " + type.getName());
@@ -175,33 +174,114 @@ public final class ReflectiveFtbQuestsBridge implements FtbQuestsBridge {
     }
 
     private static Optional<?> optional(Object value) {
-        if (!(value instanceof Optional<?> optional)) {
+        final class $oaPattern0_Holder { java.lang.Object value; Optional<?> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = value) instanceof java.util.Optional && (($oaPattern0_holder.bound = (Optional<?>) $oaPattern0_holder.value) != null)))) {
             throw new IllegalArgumentException("Expected Optional from getTeamData");
         }
-        return optional;
+        return $oaPattern0_holder.bound;
     }
 
     private static List<Object> list(Object value) {
-        if (!(value instanceof Collection<?> collection)) {
+        final class $oaPattern1_Holder { java.lang.Object value; Collection<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = value) instanceof java.util.Collection && (($oaPattern1_holder.bound = (Collection<?>) $oaPattern1_holder.value) != null)))) {
             throw new IllegalArgumentException("Expected Collection from FTB Quests API");
         }
-        return new ArrayList<>(collection);
+        return new ArrayList<>($oaPattern1_holder.bound);
     }
 
     private static Stream<?> stream(Object value) {
-        if (!(value instanceof Stream<?> stream)) {
+        final class $oaPattern2_Holder { java.lang.Object value; Stream<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if (!((($oaPattern2_holder.value = value) instanceof java.util.stream.Stream && (($oaPattern2_holder.bound = (Stream<?>) $oaPattern2_holder.value) != null)))) {
             throw new IllegalArgumentException("Expected Stream from streamDependencies");
         }
-        return stream;
+        return $oaPattern2_holder.bound;
     }
 
-    private record MethodKey(Class<?> type, String name, int arity) {}
-    private record RawQuest(
-            Object raw,
-            String id,
-            String chapterId,
-            String chapterTitle,
-            String title,
-            String description,
-            boolean completed) {}
+    @dev.openallay.value.ValueType(MethodKey.ValueSchemaProvider.class)
+private static final class MethodKey {
+    private final Class<?> type;
+    private final String name;
+    private final int arity;
+    private MethodKey(Class<?> type, String name, int arity) {
+        this.type = type;
+        this.name = name;
+        this.arity = arity;
+    }
+    public Class<?> type() { return type; }
+    public String name() { return name; }
+    public int arity() { return arity; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof MethodKey)) return false;
+        MethodKey that = (MethodKey) other;
+        return java.util.Objects.equals(type, that.type) && java.util.Objects.equals(name, that.name) && arity == that.arity;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(type);
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + Integer.hashCode(arity);
+        return hash;
+    }
+    @Override public String toString() { return "MethodKey[type=" + type + ", name=" + name + ", arity=" + arity + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<MethodKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(MethodKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<MethodKey>>asList(new dev.openallay.value.ValueSchema.Component<>(MethodKey.class, "type", MethodKey::type), new dev.openallay.value.ValueSchema.Component<>(MethodKey.class, "name", MethodKey::name), new dev.openallay.value.ValueSchema.Component<>(MethodKey.class, "arity", MethodKey::arity)), arguments -> new MethodKey((Class) arguments[0], (String) arguments[1], (Integer) arguments[2]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(RawQuest.ValueSchemaProvider.class)
+private static final class RawQuest {
+    private final Object raw;
+    private final String id;
+    private final String chapterId;
+    private final String chapterTitle;
+    private final String title;
+    private final String description;
+    private final boolean completed;
+    private RawQuest(Object raw, String id, String chapterId, String chapterTitle, String title, String description, boolean completed) {
+        this.raw = raw;
+        this.id = id;
+        this.chapterId = chapterId;
+        this.chapterTitle = chapterTitle;
+        this.title = title;
+        this.description = description;
+        this.completed = completed;
+    }
+    public Object raw() { return raw; }
+    public String id() { return id; }
+    public String chapterId() { return chapterId; }
+    public String chapterTitle() { return chapterTitle; }
+    public String title() { return title; }
+    public String description() { return description; }
+    public boolean completed() { return completed; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RawQuest)) return false;
+        RawQuest that = (RawQuest) other;
+        return java.util.Objects.equals(raw, that.raw) && java.util.Objects.equals(id, that.id) && java.util.Objects.equals(chapterId, that.chapterId) && java.util.Objects.equals(chapterTitle, that.chapterTitle) && java.util.Objects.equals(title, that.title) && java.util.Objects.equals(description, that.description) && completed == that.completed;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(raw);
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(chapterId);
+        hash = 31 * hash + java.util.Objects.hashCode(chapterTitle);
+        hash = 31 * hash + java.util.Objects.hashCode(title);
+        hash = 31 * hash + java.util.Objects.hashCode(description);
+        hash = 31 * hash + Boolean.hashCode(completed);
+        return hash;
+    }
+    @Override public String toString() { return "RawQuest[raw=" + raw + ", id=" + id + ", chapterId=" + chapterId + ", chapterTitle=" + chapterTitle + ", title=" + title + ", description=" + description + ", completed=" + completed + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RawQuest> schema() {
+            return new dev.openallay.value.ValueSchema<>(RawQuest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RawQuest>>asList(new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "raw", RawQuest::raw), new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "id", RawQuest::id), new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "chapterId", RawQuest::chapterId), new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "chapterTitle", RawQuest::chapterTitle), new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "title", RawQuest::title), new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "description", RawQuest::description), new dev.openallay.value.ValueSchema.Component<>(RawQuest.class, "completed", RawQuest::completed)), arguments -> new RawQuest((Object) arguments[0], (String) arguments[1], (String) arguments[2], (String) arguments[3], (String) arguments[4], (String) arguments[5], (Boolean) arguments[6]));
+        }
+    }
+}
 }

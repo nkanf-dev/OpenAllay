@@ -1,10 +1,9 @@
 package dev.openallay.client.gui;
 
 import java.util.List;
-import net.minecraft.client.gui.Font;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.item.ItemStack;
+
+
+
 
 /**
  * One feature-facing paint API for every selected Minecraft graphics family.
@@ -21,7 +20,12 @@ public final class GuideGraphics extends GuideNativeGraphics {
     public void popPose() { nativePopPose(); }
     public void translatePose(float x, float y) { nativeTranslatePose(x, y); }
     public void scalePose(float x, float y) { nativeScalePose(x, y); }
-    public void requestResizeCursor() { nativeRequestResizeCursor(); }
+    /** Return false when the selected native family has no resize cursor ABI. */
+    public boolean requestResizeCursor() {
+        if (!nativeResizeCursorAvailable()) return false;
+        nativeRequestResizeCursor();
+        return true;
+    }
 
     public void enableScissor(int x0, int y0, int x1, int y1) { nativeEnableScissor(x0, y0, x1, y1); }
     public void disableScissor() { nativeDisableScissor(); }
@@ -35,48 +39,47 @@ public final class GuideGraphics extends GuideNativeGraphics {
         fill(x + width - 1, y + 1, x + width, y + height - 1, color);
     }
 
-    public void text(Font font, String text, int x, int y, int color) {
+    public void text(net.minecraft.client.gui.Font font, String text, int x, int y, int color) {
         nativeText(font, text, x, y, color);
     }
-    public void text(Font font, String text, int x, int y, int color, boolean shadow) {
+    public void text(net.minecraft.client.gui.Font font, String text, int x, int y, int color, boolean shadow) {
         nativeText(font, text, x, y, color, shadow);
     }
-    public void text(Font font, Component text, int x, int y, int color) {
+    public void text(net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component text, int x, int y, int color) {
         nativeText(font, text, x, y, color);
     }
-    public void text(Font font, Component text, int x, int y, int color, boolean shadow) {
+    public void text(net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component text, int x, int y, int color, boolean shadow) {
         nativeText(font, text, x, y, color, shadow);
     }
-    public void text(Font font, FormattedCharSequence text, int x, int y, int color) {
+    public void text(net.minecraft.client.gui.Font font, GuideTextLine text, int x, int y, int color) {
         nativeText(font, text, x, y, color);
     }
-    public void text(Font font, FormattedCharSequence text, int x, int y, int color, boolean shadow) {
+    public void text(net.minecraft.client.gui.Font font, GuideTextLine text, int x, int y, int color, boolean shadow) {
         nativeText(font, text, x, y, color, shadow);
     }
-    public void item(ItemStack stack, int x, int y) { nativeItem(stack, x, y); }
-    public void item(ItemStack stack, int x, int y, int seed) { nativeItem(stack, x, y, seed); }
-    public void itemDecorations(Font font, ItemStack stack, int x, int y) {
+    public void item(net.minecraft.world.item.ItemStack stack, int x, int y) { nativeItem(stack, x, y); }
+    public void itemDecorations(net.minecraft.client.gui.Font font, net.minecraft.world.item.ItemStack stack, int x, int y) {
         nativeItemDecorations(font, stack, x, y);
     }
-    public void itemDecorations(Font font, ItemStack stack, int x, int y, String count) {
+    public void itemDecorations(net.minecraft.client.gui.Font font, net.minecraft.world.item.ItemStack stack, int x, int y, String count) {
         nativeItemDecorations(font, stack, x, y, count);
     }
 
-    public void setTooltipForNextFrame(Component text, int x, int y) { nativeTooltip(text, x, y); }
-    public void setTooltipForNextFrame(List<FormattedCharSequence> lines, int x, int y) {
+    public void setTooltipForNextFrame(net.minecraft.network.chat.Component text, int x, int y) { nativeTooltip(text, x, y); }
+    public void setTooltipForNextFrame(List<GuideTextLine> lines, int x, int y) {
         nativeTooltip(lines, x, y);
     }
-    public void setTooltipForNextFrame(Font font, Component text, int x, int y) {
+    public void setTooltipForNextFrame(net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component text, int x, int y) {
         nativeTooltip(font, text, x, y);
     }
-    public void setTooltipForNextFrame(Font font, ItemStack stack, int x, int y) {
+    public void setTooltipForNextFrame(net.minecraft.client.gui.Font font, net.minecraft.world.item.ItemStack stack, int x, int y) {
         nativeTooltip(font, stack, x, y);
     }
-    public void setTooltipForNextFrame(Font font, List<? extends FormattedCharSequence> lines, int x, int y) {
+    public void setTooltipForNextFrame(net.minecraft.client.gui.Font font, List<? extends GuideTextLine> lines, int x, int y) {
         nativeTooltip(font, lines, x, y);
     }
     public void setTooltipForNextFrame(
-            Font font, List<FormattedCharSequence> lines, GuideTooltipPlacement positioner,
+            net.minecraft.client.gui.Font font, List<GuideTextLine> lines, GuideTooltipPlacement positioner,
             int x, int y, boolean replaceExisting) {
         nativeTooltip(font, lines, positioner, x, y, replaceExisting);
     }

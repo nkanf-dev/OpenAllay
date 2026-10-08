@@ -7,8 +7,12 @@ import java.util.Base64;
 import java.util.Objects;
 
 /** Encoded bytes exist only at the player-bound request transport boundary. */
-public record ServerAgentImageAttachment(ImageReference reference, String base64Data) {
-    public ServerAgentImageAttachment {
+@dev.openallay.value.ValueType(ServerAgentImageAttachment.ValueSchemaProvider.class)
+public final class ServerAgentImageAttachment {
+    private final ImageReference reference;
+    private final String base64Data;
+    public ServerAgentImageAttachment(ImageReference reference, String base64Data) {
+
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(base64Data, "base64Data");
         try {
@@ -37,19 +41,40 @@ public record ServerAgentImageAttachment(ImageReference reference, String base64
                 throw new IllegalArgumentException("Image data must be canonical base64");
             }
         }
-    }
 
-    public static ServerAgentImageAttachment from(ImageReference reference, byte[] bytes) {
+        this.reference = reference;
+        this.base64Data = base64Data;
+    }
+    public ImageReference reference() { return reference; }
+    public String base64Data() { return base64Data; }
+public static ServerAgentImageAttachment from(ImageReference reference, byte[] bytes) {
         return new ServerAgentImageAttachment(reference, Base64.getEncoder().encodeToString(bytes));
     }
-
-    /** Heavy byte/hash validation is performed only in the image preparation worker. */
-    public byte[] bytes() {
+public byte[] bytes() {
         byte[] bytes = Base64.getDecoder().decode(base64Data);
         if (bytes.length != reference.byteSize()
                 || !ResultChunker.sha256(bytes).equals(reference.sha256())) {
             throw new IllegalArgumentException("Image bytes do not match reference metadata");
         }
         return bytes;
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ServerAgentImageAttachment)) return false;
+        ServerAgentImageAttachment that = (ServerAgentImageAttachment) other;
+        return java.util.Objects.equals(reference, that.reference) && java.util.Objects.equals(base64Data, that.base64Data);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(reference);
+        hash = 31 * hash + java.util.Objects.hashCode(base64Data);
+        return hash;
+    }
+    @Override public String toString() { return "ServerAgentImageAttachment[reference=" + reference + ", base64Data=" + base64Data + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ServerAgentImageAttachment> schema() {
+            return new dev.openallay.value.ValueSchema<>(ServerAgentImageAttachment.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ServerAgentImageAttachment>>asList(new dev.openallay.value.ValueSchema.Component<>(ServerAgentImageAttachment.class, "reference", ServerAgentImageAttachment::reference), new dev.openallay.value.ValueSchema.Component<>(ServerAgentImageAttachment.class, "base64Data", ServerAgentImageAttachment::base64Data)), arguments -> new ServerAgentImageAttachment((ImageReference) arguments[0], (String) arguments[1]));
+        }
     }
 }

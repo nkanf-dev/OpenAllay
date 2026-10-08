@@ -34,7 +34,7 @@ final class GuideNativeFocusContractsTest {
         String release = source("common/src/main/java/dev/openallay/client/gui/GuideTextInputFocus.java");
         int clear = release.indexOf("GuideNativeFocus.clear(screen);");
         int owners = release.indexOf("for (var child : screen.children())");
-        int retire = release.indexOf("GuideNativeInput.releaseTextFocus(child);");
+        int retire = release.indexOf("GuideWidgetInputs.releaseTextFocus(GuideNativeInput.widgetInput(child));");
         assertTrue(clear >= 0 && owners > clear && retire > owners);
         assertTrue(release.contains("child instanceof EditBox || GuideNativeMultilineText.find(child) != null"));
         assertFalse(release.contains("screen.clearFocus()"));

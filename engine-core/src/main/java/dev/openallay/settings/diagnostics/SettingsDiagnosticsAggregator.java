@@ -49,20 +49,22 @@ public final class SettingsDiagnosticsAggregator {
         FAILED
     }
 
-    public record SourceStatus(
-            String sourceId,
-            String generation,
-            SourceState state,
-            Integer itemCount,
-            String failureCode) {
-        public SourceStatus {
+    @dev.openallay.value.ValueType(SourceStatus.ValueSchemaProvider.class)
+public static final class SourceStatus {
+    private final String sourceId;
+    private final String generation;
+    private final SourceState state;
+    private final Integer itemCount;
+    private final String failureCode;
+    public SourceStatus(String sourceId, String generation, SourceState state, Integer itemCount, String failureCode) {
+
             sourceId = safeIdentifier(sourceId);
             Objects.requireNonNull(state, "state");
             if (itemCount != null && itemCount < 0) {
                 throw new IllegalArgumentException("source item count must not be negative");
             }
             if ((state == SourceState.AVAILABLE || state == SourceState.PARTIAL)
-                    && (generation == null || generation.isBlank())) {
+                    && (generation == null || dev.openallay.util.Java8Strings.isBlank(generation))) {
                 throw new IllegalArgumentException("available source requires a generation");
             }
             if ((state == SourceState.UNAVAILABLE || state == SourceState.FAILED)
@@ -76,31 +78,57 @@ public final class SettingsDiagnosticsAggregator {
                 throw new IllegalArgumentException(
                         "source state and failure diagnostic do not agree");
             }
+
+        this.sourceId = sourceId;
+        this.generation = generation;
+        this.state = state;
+        this.itemCount = itemCount;
+        this.failureCode = failureCode;
+    }
+    public String sourceId() { return sourceId; }
+    public String generation() { return generation; }
+    public SourceState state() { return state; }
+    public Integer itemCount() { return itemCount; }
+    public String failureCode() { return failureCode; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SourceStatus)) return false;
+        SourceStatus that = (SourceStatus) other;
+        return java.util.Objects.equals(sourceId, that.sourceId) && java.util.Objects.equals(generation, that.generation) && java.util.Objects.equals(state, that.state) && java.util.Objects.equals(itemCount, that.itemCount) && java.util.Objects.equals(failureCode, that.failureCode);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sourceId);
+        hash = 31 * hash + java.util.Objects.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(itemCount);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        return hash;
+    }
+    @Override public String toString() { return "SourceStatus[sourceId=" + sourceId + ", generation=" + generation + ", state=" + state + ", itemCount=" + itemCount + ", failureCode=" + failureCode + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SourceStatus> schema() {
+            return new dev.openallay.value.ValueSchema<>(SourceStatus.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SourceStatus>>asList(new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "sourceId", SourceStatus::sourceId), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "generation", SourceStatus::generation), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "state", SourceStatus::state), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "itemCount", SourceStatus::itemCount), new dev.openallay.value.ValueSchema.Component<>(SourceStatus.class, "failureCode", SourceStatus::failureCode)), arguments -> new SourceStatus((String) arguments[0], (String) arguments[1], (SourceState) arguments[2], (Integer) arguments[3], (String) arguments[4]));
         }
     }
+}
 
-    public record DiagnosticsInputs(
-            long settingsGeneration,
-            ModelProfileSettingsView models,
-            CapabilitySettingsView capabilities,
-            RecipeSettingsView recipes,
-            Optional<GuideSnapshot> guide,
-            GuideHistoryActivity historyActivity,
-            HistoryScopeKind historyScopeKind,
-            List<SourceStatus> sources,
-            boolean sourcesKnown,
-            boolean sourcesRetained,
-            Long estimatedContextTokens) {
-        public DiagnosticsInputs(
-                long settingsGeneration, ModelProfileSettingsView models,
-                CapabilitySettingsView capabilities, RecipeSettingsView recipes,
-                Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity,
-                HistoryScopeKind historyScopeKind, List<SourceStatus> sources) {
-            this(settingsGeneration, models, capabilities, recipes, guide, historyActivity,
-                    historyScopeKind, sources, true, false, null);
-        }
+    @dev.openallay.value.ValueType(DiagnosticsInputs.ValueSchemaProvider.class)
+public static final class DiagnosticsInputs {
+    private final long settingsGeneration;
+    private final ModelProfileSettingsView models;
+    private final CapabilitySettingsView capabilities;
+    private final RecipeSettingsView recipes;
+    private final Optional<GuideSnapshot> guide;
+    private final GuideHistoryActivity historyActivity;
+    private final HistoryScopeKind historyScopeKind;
+    private final List<SourceStatus> sources;
+    private final boolean sourcesKnown;
+    private final boolean sourcesRetained;
+    private final Long estimatedContextTokens;
+    public DiagnosticsInputs(long settingsGeneration, ModelProfileSettingsView models, CapabilitySettingsView capabilities, RecipeSettingsView recipes, Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity, HistoryScopeKind historyScopeKind, List<SourceStatus> sources, boolean sourcesKnown, boolean sourcesRetained, Long estimatedContextTokens) {
 
-        public DiagnosticsInputs {
             if (settingsGeneration < 0) {
                 throw new IllegalArgumentException("diagnostic generation is invalid");
             }
@@ -110,28 +138,83 @@ public final class SettingsDiagnosticsAggregator {
             guide = Objects.requireNonNull(guide, "guide");
             Objects.requireNonNull(historyActivity, "historyActivity");
             Objects.requireNonNull(historyScopeKind, "historyScopeKind");
-            sources = List.copyOf(sources);
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
             if (estimatedContextTokens != null && estimatedContextTokens < 0) {
                 throw new IllegalArgumentException("Context estimate must not be negative");
             }
             if (!sourcesKnown && (!sources.isEmpty() || sourcesRetained)) {
                 throw new IllegalArgumentException("Unknown sources cannot expose observed source state");
             }
-            if (guide.isEmpty() != (historyScopeKind == HistoryScopeKind.NONE)) {
+            if (dev.openallay.util.Java8ApiSupport.isEmpty(guide) != (historyScopeKind == HistoryScopeKind.NONE)) {
                 throw new IllegalArgumentException("history scope kind must match Guide availability");
             }
+
+        this.settingsGeneration = settingsGeneration;
+        this.models = models;
+        this.capabilities = capabilities;
+        this.recipes = recipes;
+        this.guide = guide;
+        this.historyActivity = historyActivity;
+        this.historyScopeKind = historyScopeKind;
+        this.sources = sources;
+        this.sourcesKnown = sourcesKnown;
+        this.sourcesRetained = sourcesRetained;
+        this.estimatedContextTokens = estimatedContextTokens;
+    }
+    public long settingsGeneration() { return settingsGeneration; }
+    public ModelProfileSettingsView models() { return models; }
+    public CapabilitySettingsView capabilities() { return capabilities; }
+    public RecipeSettingsView recipes() { return recipes; }
+    public Optional<GuideSnapshot> guide() { return guide; }
+    public GuideHistoryActivity historyActivity() { return historyActivity; }
+    public HistoryScopeKind historyScopeKind() { return historyScopeKind; }
+    public List<SourceStatus> sources() { return sources; }
+    public boolean sourcesKnown() { return sourcesKnown; }
+    public boolean sourcesRetained() { return sourcesRetained; }
+    public Long estimatedContextTokens() { return estimatedContextTokens; }
+public DiagnosticsInputs(
+                long settingsGeneration, ModelProfileSettingsView models,
+                CapabilitySettingsView capabilities, RecipeSettingsView recipes,
+                Optional<GuideSnapshot> guide, GuideHistoryActivity historyActivity,
+                HistoryScopeKind historyScopeKind, List<SourceStatus> sources) {
+            this(settingsGeneration, models, capabilities, recipes, guide, historyActivity,
+                    historyScopeKind, sources, true, false, null);
+        }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof DiagnosticsInputs)) return false;
+        DiagnosticsInputs that = (DiagnosticsInputs) other;
+        return settingsGeneration == that.settingsGeneration && java.util.Objects.equals(models, that.models) && java.util.Objects.equals(capabilities, that.capabilities) && java.util.Objects.equals(recipes, that.recipes) && java.util.Objects.equals(guide, that.guide) && java.util.Objects.equals(historyActivity, that.historyActivity) && java.util.Objects.equals(historyScopeKind, that.historyScopeKind) && java.util.Objects.equals(sources, that.sources) && sourcesKnown == that.sourcesKnown && sourcesRetained == that.sourcesRetained && java.util.Objects.equals(estimatedContextTokens, that.estimatedContextTokens);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(settingsGeneration);
+        hash = 31 * hash + java.util.Objects.hashCode(models);
+        hash = 31 * hash + java.util.Objects.hashCode(capabilities);
+        hash = 31 * hash + java.util.Objects.hashCode(recipes);
+        hash = 31 * hash + java.util.Objects.hashCode(guide);
+        hash = 31 * hash + java.util.Objects.hashCode(historyActivity);
+        hash = 31 * hash + java.util.Objects.hashCode(historyScopeKind);
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + Boolean.hashCode(sourcesKnown);
+        hash = 31 * hash + Boolean.hashCode(sourcesRetained);
+        hash = 31 * hash + java.util.Objects.hashCode(estimatedContextTokens);
+        return hash;
+    }
+    @Override public String toString() { return "DiagnosticsInputs[settingsGeneration=" + settingsGeneration + ", models=" + models + ", capabilities=" + capabilities + ", recipes=" + recipes + ", guide=" + guide + ", historyActivity=" + historyActivity + ", historyScopeKind=" + historyScopeKind + ", sources=" + sources + ", sourcesKnown=" + sourcesKnown + ", sourcesRetained=" + sourcesRetained + ", estimatedContextTokens=" + estimatedContextTokens + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<DiagnosticsInputs> schema() {
+            return new dev.openallay.value.ValueSchema<>(DiagnosticsInputs.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<DiagnosticsInputs>>asList(new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "settingsGeneration", DiagnosticsInputs::settingsGeneration), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "models", DiagnosticsInputs::models), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "capabilities", DiagnosticsInputs::capabilities), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "recipes", DiagnosticsInputs::recipes), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "guide", DiagnosticsInputs::guide), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "historyActivity", DiagnosticsInputs::historyActivity), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "historyScopeKind", DiagnosticsInputs::historyScopeKind), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "sources", DiagnosticsInputs::sources), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "sourcesKnown", DiagnosticsInputs::sourcesKnown), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "sourcesRetained", DiagnosticsInputs::sourcesRetained), new dev.openallay.value.ValueSchema.Component<>(DiagnosticsInputs.class, "estimatedContextTokens", DiagnosticsInputs::estimatedContextTokens)), arguments -> new DiagnosticsInputs((Long) arguments[0], (ModelProfileSettingsView) arguments[1], (CapabilitySettingsView) arguments[2], (RecipeSettingsView) arguments[3], (Optional) arguments[4], (GuideHistoryActivity) arguments[5], (HistoryScopeKind) arguments[6], (List) arguments[7], (Boolean) arguments[8], (Boolean) arguments[9], (Long) arguments[10]));
         }
     }
+}
 
     public SettingsDiagnosticsSnapshot snapshot(
             boolean debugMode, DiagnosticsInputs inputs) {
         Objects.requireNonNull(inputs, "inputs");
         GuideSummary guide = summarizeGuide(inputs.guide());
-        List<SettingsDiagnosticCard> cards = List.of(
-                modelCard(inputs.models()),
-                knowledgeCard(inputs),
-                historyCard(inputs, guide),
-                contextCard(inputs, guide));
+        List<SettingsDiagnosticCard> cards = dev.openallay.util.Java8Collections.listOf(modelCard(inputs.models()), knowledgeCard(inputs), historyCard(inputs, guide), contextCard(inputs, guide));
         Optional<DebugSettingsDiagnostics> debug = debugMode
                 ? Optional.of(debug(inputs, guide))
                 : Optional.empty();
@@ -140,17 +223,14 @@ public final class SettingsDiagnosticsAggregator {
 
     private static SettingsDiagnosticCard modelCard(ModelProfileSettingsView models) {
         int total = models.profiles().size();
-        int available = count(models.profiles().stream().map(
-                ModelProfileSettingsView.Profile::available).toList());
-        int credentials = count(models.profiles().stream().map(
-                ModelProfileSettingsView.Profile::credentialPresent).toList());
+        int available = count(dev.openallay.util.Java8Collections.toList(models.profiles().stream().map(
+                ModelProfileSettingsView.Profile::available)));
+        int credentials = count(dev.openallay.util.Java8Collections.toList(models.profiles().stream().map(
+                ModelProfileSettingsView.Profile::credentialPresent)));
         FriendlyStatus status = total == 0 || available == 0
                 ? FriendlyStatus.UNAVAILABLE
                 : available < total ? FriendlyStatus.ATTENTION : FriendlyStatus.READY;
-        return card(Domain.MODELS, status, List.of(
-                metric("screen.openallay.settings.diagnostics.metric.configured", total),
-                metric("screen.openallay.settings.diagnostics.metric.available", available),
-                metric("screen.openallay.settings.diagnostics.metric.credentials", credentials)));
+        return card(Domain.MODELS, status, dev.openallay.util.Java8Collections.listOf(metric("screen.openallay.settings.diagnostics.metric.configured", total), metric("screen.openallay.settings.diagnostics.metric.available", available), metric("screen.openallay.settings.diagnostics.metric.credentials", credentials)));
     }
 
     private static SettingsDiagnosticCard knowledgeCard(DiagnosticsInputs inputs) {
@@ -170,45 +250,77 @@ public final class SettingsDiagnosticsAggregator {
                 : inputs.sourcesKnown() && !degraded && enabled + availableSources == total
                         ? FriendlyStatus.READY : FriendlyStatus.ATTENTION;
         List<String> notes = !inputs.sourcesKnown()
-                ? List.of("screen.openallay.settings.diagnostics.knowledge.not_observed")
+                ? dev.openallay.util.Java8Collections.listOf("screen.openallay.settings.diagnostics.knowledge.not_observed")
                 : inputs.sourcesRetained()
-                        ? List.of("screen.openallay.settings.diagnostics.knowledge.retained") : List.of();
-        return card(Domain.KNOWLEDGE, status, notes, List.of(
-                metric("screen.openallay.settings.diagnostics.metric.registered", catalog),
-                metric("screen.openallay.settings.diagnostics.metric.enabled", enabled),
-                optionalMetric("screen.openallay.settings.diagnostics.metric.sources",
-                        inputs.sourcesKnown() ? Long.valueOf(sources.size()) : null),
-                optionalMetric("screen.openallay.settings.diagnostics.metric.available_sources",
+                        ? dev.openallay.util.Java8Collections.listOf("screen.openallay.settings.diagnostics.knowledge.retained") : dev.openallay.util.Java8Collections.listOf();
+        return card(Domain.KNOWLEDGE, status, notes, dev.openallay.util.Java8Collections.listOf(metric("screen.openallay.settings.diagnostics.metric.registered", catalog), metric("screen.openallay.settings.diagnostics.metric.enabled", enabled), optionalMetric("screen.openallay.settings.diagnostics.metric.sources",
+                        inputs.sourcesKnown() ? Long.valueOf(sources.size()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.available_sources",
                         inputs.sourcesKnown() ? Long.valueOf(availableSources) : null)));
     }
 
     private static SettingsDiagnosticCard historyCard(
             DiagnosticsInputs inputs, GuideSummary guide) {
         FriendlyStatus status;
-        if (inputs.guide().isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(inputs.guide())) {
             status = FriendlyStatus.NOT_CONNECTED;
         } else {
-            GuideSnapshot snapshot = inputs.guide().orElseThrow();
-            status = switch (snapshot.persistence().state()) {
-                case UNAVAILABLE -> FriendlyStatus.UNAVAILABLE;
-                case LOADING, SAVING -> FriendlyStatus.WORKING;
-                case DISABLED -> FriendlyStatus.ATTENTION;
-                case AVAILABLE -> selectedSession(snapshot)
+            GuideSnapshot snapshot = inputs.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
+            {
+dev.openallay.settings.diagnostics.SettingsDiagnosticCard.FriendlyStatus $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((snapshot.persistence().state())) {
+case UNAVAILABLE:
+{
+$oaSwitch1_exit_result = FriendlyStatus.UNAVAILABLE; break $oaSwitch1_exit;
+}
+case LOADING:
+case SAVING:
+{
+$oaSwitch1_exit_result = FriendlyStatus.WORKING; break $oaSwitch1_exit;
+}
+case DISABLED:
+{
+$oaSwitch1_exit_result = FriendlyStatus.ATTENTION; break $oaSwitch1_exit;
+}
+case AVAILABLE:
+{
+$oaSwitch1_exit_result = selectedSession(snapshot)
                                 .map(GuideSessionSnapshot::historyWindow)
-                                .map(window -> switch (window.state()) {
-                                    case LOADING -> FriendlyStatus.WORKING;
-                                    case FAILED -> FriendlyStatus.ATTENTION;
-                                    case IDLE -> inputs.historyActivity().idleForDeletion()
+                                .map(window -> {
+dev.openallay.settings.diagnostics.SettingsDiagnosticCard.FriendlyStatus $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((window.state())) {
+case LOADING:
+{
+$oaSwitch0_exit_result = FriendlyStatus.WORKING; break $oaSwitch0_exit;
+}
+case FAILED:
+{
+$oaSwitch0_exit_result = FriendlyStatus.ATTENTION; break $oaSwitch0_exit;
+}
+case IDLE:
+{
+$oaSwitch0_exit_result = inputs.historyActivity().idleForDeletion()
                                                     && guide.activeRequests() == 0
-                                            ? FriendlyStatus.READY : FriendlyStatus.WORKING;
-                                })
-                                .orElse(FriendlyStatus.READY);
-            };
+                                            ? FriendlyStatus.READY : FriendlyStatus.WORKING; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+})
+                                .orElse(FriendlyStatus.READY); break $oaSwitch1_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+status = $oaSwitch1_exit_result;
+}
         }
         List<String> notes = new java.util.ArrayList<>();
         if (inputs.guide().isPresent()) {
             notes.add("screen.openallay.settings.diagnostics.history.on_demand");
-            selectedSession(inputs.guide().orElseThrow()).ifPresent(session -> {
+            selectedSession(inputs.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"))).ifPresent(session -> {
                 if (session.historyWindow().state()
                         == GuideHistoryPageState.LOADING) {
                     notes.add("screen.openallay.settings.diagnostics.history.page_loading");
@@ -218,16 +330,14 @@ public final class SettingsDiagnosticsAggregator {
                 }
             });
         }
-        return card(Domain.HISTORY, status, notes, List.of(
-                optionalMetric("screen.openallay.settings.diagnostics.metric.pending_writes",
-                        inputs.guide().isPresent() ? Long.valueOf(inputs.historyActivity().pendingWrites()) : null),
-                optionalMetric("screen.openallay.settings.diagnostics.metric.active_requests",
+        return card(Domain.HISTORY, status, notes, dev.openallay.util.Java8Collections.listOf(optionalMetric("screen.openallay.settings.diagnostics.metric.pending_writes",
+                        inputs.guide().isPresent() ? Long.valueOf(inputs.historyActivity().pendingWrites()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.active_requests",
                         inputs.guide().isPresent() ? Long.valueOf(guide.activeRequests()) : null)));
     }
 
     private static SettingsDiagnosticCard contextCard(DiagnosticsInputs inputs, GuideSummary guide) {
         Optional<GuideSnapshot> guideSnapshot = inputs.guide();
-        FriendlyStatus status = guideSnapshot.isEmpty()
+        FriendlyStatus status = dev.openallay.util.Java8ApiSupport.isEmpty(guideSnapshot)
                 ? FriendlyStatus.NOT_CONNECTED
                 : guide.failedCheckpoints() > 0
                         ? FriendlyStatus.ATTENTION
@@ -236,21 +346,17 @@ public final class SettingsDiagnosticsAggregator {
                                 : FriendlyStatus.READY;
         return card(Domain.CONTEXT, status,
                 guideSnapshot.isPresent()
-                        ? List.of("screen.openallay.settings.diagnostics.context.retained") : List.of(),
-                List.of(
-                        optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoints",
-                                guideSnapshot.isPresent() ? Long.valueOf(guide.checkpointCount()) : null),
-                        optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoint_failures",
-                                guideSnapshot.isPresent() ? Long.valueOf(guide.failedCheckpoints()) : null),
-                        optionalMetric("screen.openallay.settings.diagnostics.metric.estimated_tokens",
+                        ? dev.openallay.util.Java8Collections.listOf("screen.openallay.settings.diagnostics.context.retained") : dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoints",
+                                guideSnapshot.isPresent() ? Long.valueOf(guide.checkpointCount()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.checkpoint_failures",
+                                guideSnapshot.isPresent() ? Long.valueOf(guide.failedCheckpoints()) : null), optionalMetric("screen.openallay.settings.diagnostics.metric.estimated_tokens",
                                 inputs.estimatedContextTokens())));
     }
 
     private static DebugSettingsDiagnostics debug(
             DiagnosticsInputs inputs, GuideSummary summary) {
-        List<DebugModelProfile> models = inputs.models().profiles().stream()
-                .map(profile -> debugModel(profile))
-                .toList();
+        List<DebugModelProfile> models = dev.openallay.util.Java8Collections.toList(inputs.models().profiles().stream()
+                .map(profile -> debugModel(profile)));
         int catalog = inputs.capabilities().catalog().entries().size();
         DebugCapabilities capabilities = new DebugCapabilities(
                 catalog,
@@ -270,14 +376,13 @@ public final class SettingsDiagnosticsAggregator {
                 inputs.capabilities().unknownDisabledTools().size()
                         + inputs.capabilities().unknownDisabledSkills().size()
                         + inputs.recipes().unknownDisabledSources().size());
-        List<DebugSource> sources = inputs.sources().stream()
+        List<DebugSource> sources = dev.openallay.util.Java8Collections.toList(inputs.sources().stream()
                 .map(source -> new DebugSource(
                         source.sourceId(),
                         source.generation(),
                         source.state(),
                         source.itemCount(),
-                        source.failureCode()))
-                .toList();
+                        source.failureCode())));
         return new DebugSettingsDiagnostics(
                 inputs.settingsGeneration(),
                 models,
@@ -362,8 +467,10 @@ public final class SettingsDiagnosticsAggregator {
             add(codes, profile.failure());
         }
         add(codes, inputs.models().metadataFailure());
-        if (inputs.models().connectionResult() instanceof ModelConnectionResult.Failure failure) {
-            codes.add(safeCode(failure.code()));
+        final class $oaPattern0_Holder { dev.openallay.settings.model.ModelConnectionResult value; ModelConnectionResult.Failure bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = inputs.models().connectionResult()) instanceof dev.openallay.settings.model.ModelConnectionResult.Failure && (($oaPattern0_holder.bound = (ModelConnectionResult.Failure) $oaPattern0_holder.value) != null))) {
+            codes.add(safeCode($oaPattern0_holder.bound.code()));
         }
         inputs.guide().ifPresent(guide -> {
             add(codes, guide.persistence().failure());
@@ -382,21 +489,21 @@ public final class SettingsDiagnosticsAggregator {
                 .map(SourceStatus::failureCode)
                 .filter(Objects::nonNull)
                 .forEach(codes::add);
-        return List.copyOf(codes);
+        return dev.openallay.util.Java8Collections.listCopyOf(codes);
     }
 
     private static GuideSummary summarizeGuide(Optional<GuideSnapshot> optional) {
-        if (optional.isEmpty()) return GuideSummary.empty();
-        GuideSnapshot guide = optional.orElseThrow();
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(optional)) return GuideSummary.empty();
+        GuideSnapshot guide = optional.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         long active = guide.sessions().stream()
                 .flatMap(session -> session.requests().stream())
                 .filter(request -> !request.terminal())
                 .count();
         Optional<GuideSessionSnapshot> selected = selectedSession(guide);
-        if (selected.isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(selected)) {
             return new GuideSummary(active, 0, 0, 0);
         }
-        List<ContextCheckpoint> checkpoints = selected.orElseThrow().checkpoints();
+        List<ContextCheckpoint> checkpoints = selected.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).checkpoints();
         int successful = (int) checkpoints.stream()
                 .filter(value -> value.status() == ContextCheckpoint.Status.SUCCEEDED).count();
         int failed = checkpoints.size() - successful;
@@ -411,15 +518,15 @@ public final class SettingsDiagnosticsAggregator {
 
     private static Optional<GuideRequestSnapshot> latestRequest(GuideSessionSnapshot session) {
         if (session.requests().isEmpty()) return Optional.empty();
-        return session.requests().stream()
+        return dev.openallay.util.Java8ApiSupport.or(session.requests().stream()
                 .filter(request -> !request.terminal())
-                .reduce((first, second) -> second)
-                .or(() -> Optional.of(session.requests().get(session.requests().size() - 1)));
+                .reduce((first, second) -> second),
+                () -> Optional.of(session.requests().get(session.requests().size() - 1)));
     }
 
     private static SettingsDiagnosticCard card(
             Domain domain, FriendlyStatus status, List<Metric> metrics) {
-        return card(domain, status, List.of(), metrics);
+        return card(domain, status, dev.openallay.util.Java8Collections.listOf(), metrics);
     }
 
     private static SettingsDiagnosticCard card(
@@ -449,7 +556,7 @@ public final class SettingsDiagnosticsAggregator {
 
     private static String authority(URI endpoint) {
         String authority = endpoint.getRawAuthority();
-        if (authority == null || authority.isBlank()) return "https://redacted.invalid";
+        if (authority == null || dev.openallay.util.Java8Strings.isBlank(authority)) return "https://redacted.invalid";
         String candidate = endpoint.getScheme().toLowerCase(Locale.ROOT) + "://" + authority;
         String safe = safe(candidate, "");
         return safe.isEmpty() ? "https://redacted.invalid" : safe;
@@ -468,7 +575,7 @@ public final class SettingsDiagnosticsAggregator {
     }
 
     private static String safe(String value, String fallback) {
-        if (value == null || value.isBlank() || value.length() > 160) return fallback;
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value) || value.length() > 160) return fallback;
         String lower = value.toLowerCase(Locale.ROOT);
         if (lower.contains("authorization")
                 || lower.contains("secret")
@@ -483,13 +590,45 @@ public final class SettingsDiagnosticsAggregator {
         return value.matches("[a-zA-Z0-9_./:-]+") ? value : fallback;
     }
 
-    private record GuideSummary(
-            long activeRequests,
-            int checkpointCount,
-            int successfulCheckpoints,
-            int failedCheckpoints) {
-        private static GuideSummary empty() {
+    @dev.openallay.value.ValueType(GuideSummary.ValueSchemaProvider.class)
+private static final class GuideSummary {
+    private final long activeRequests;
+    private final int checkpointCount;
+    private final int successfulCheckpoints;
+    private final int failedCheckpoints;
+    private GuideSummary(long activeRequests, int checkpointCount, int successfulCheckpoints, int failedCheckpoints) {
+        this.activeRequests = activeRequests;
+        this.checkpointCount = checkpointCount;
+        this.successfulCheckpoints = successfulCheckpoints;
+        this.failedCheckpoints = failedCheckpoints;
+    }
+    public long activeRequests() { return activeRequests; }
+    public int checkpointCount() { return checkpointCount; }
+    public int successfulCheckpoints() { return successfulCheckpoints; }
+    public int failedCheckpoints() { return failedCheckpoints; }
+private static GuideSummary empty() {
             return new GuideSummary(0, 0, 0, 0);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof GuideSummary)) return false;
+        GuideSummary that = (GuideSummary) other;
+        return activeRequests == that.activeRequests && checkpointCount == that.checkpointCount && successfulCheckpoints == that.successfulCheckpoints && failedCheckpoints == that.failedCheckpoints;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(activeRequests);
+        hash = 31 * hash + Integer.hashCode(checkpointCount);
+        hash = 31 * hash + Integer.hashCode(successfulCheckpoints);
+        hash = 31 * hash + Integer.hashCode(failedCheckpoints);
+        return hash;
+    }
+    @Override public String toString() { return "GuideSummary[activeRequests=" + activeRequests + ", checkpointCount=" + checkpointCount + ", successfulCheckpoints=" + successfulCheckpoints + ", failedCheckpoints=" + failedCheckpoints + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<GuideSummary> schema() {
+            return new dev.openallay.value.ValueSchema<>(GuideSummary.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<GuideSummary>>asList(new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "activeRequests", GuideSummary::activeRequests), new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "checkpointCount", GuideSummary::checkpointCount), new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "successfulCheckpoints", GuideSummary::successfulCheckpoints), new dev.openallay.value.ValueSchema.Component<>(GuideSummary.class, "failedCheckpoints", GuideSummary::failedCheckpoints)), arguments -> new GuideSummary((Long) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3]));
+        }
+    }
+}
 }

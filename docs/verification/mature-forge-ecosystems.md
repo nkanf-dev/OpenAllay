@@ -91,6 +91,11 @@ run/source identities; only affected declarations and failed classes were rechec
 
 ## Older-anchor decisions
 
+Stock Forge 1.16.5 and the archived Forge 1.12.2 Java17 target later completed
+integrated-client adaptation. See the [original validation records](stock-forge-integrated-clients.md)
+and the in-progress [Forge 1.12.2 Java8 port](forge1122-java8-port.md).
+The following prerequisite decisions describe the earlier research checkpoint.
+
 ### Stock Forge 1.16.5: native title prerequisite passed; product port deferred
 
 [37401467532](https://github.com/nkanf-dev/OpenAllay/actions/runs/37401467532)
@@ -101,7 +106,7 @@ launcher arguments were used. The client had Minecraft and Forge built-ins, with
 no OpenAllay or third-party mod. SIGTERM exit 143 was an intentional collection
 stop, not a game-requested orderly-shutdown proof.
 
-The full OpenAllay port is deferred. Game Gson 2.8.0 lacks `Gson.newBuilder()` and
+At this earlier checkpoint, the full OpenAllay port was deferred. Game Gson 2.8.0 lacks `Gson.newBuilder()` and
 other current public APIs. Preserving arbitrary injected Gson adapters and options
 would require a replayable builder ownership project across the shared engine,
 including lazy record probes and Optional overlays. This is larger than a native

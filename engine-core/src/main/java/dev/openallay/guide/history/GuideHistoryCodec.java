@@ -29,21 +29,17 @@ import java.util.Set;
 public final class GuideHistoryCodec {
     private final ContextCheckpointCodec checkpoints = new ContextCheckpointCodec();
     private final SemanticDocumentCodec semanticDocuments = new SemanticDocumentCodec();
-    private static final Set<String> USER_FIELDS = Set.of("type", "ordinal", "messageId", "text");
+    private static final Set<String> USER_FIELDS = dev.openallay.util.Java8Collections.setOf("type", "ordinal", "messageId", "text");
     private static final Set<String> ASSISTANT_FIELDS =
-            Set.of("type", "ordinal", "text", "semantic", "streaming", "sources");
-    private static final Set<String> TOOL_FIELDS = Set.of(
-            "type", "ordinal", "invocationId", "index", "toolId", "status",
-            "invocation", "presentationMessages", "sources");
+            dev.openallay.util.Java8Collections.setOf("type", "ordinal", "text", "semantic", "streaming", "sources");
+    private static final Set<String> TOOL_FIELDS = dev.openallay.util.Java8Collections.setOf("type", "ordinal", "invocationId", "index", "toolId", "status", "invocation", "presentationMessages", "sources");
     private static final Set<String> TOOL_INVOCATION_FIELDS =
-            Set.of("handles", "modules");
+            dev.openallay.util.Java8Collections.setOf("handles", "modules");
     private static final Set<String> SOURCE_FIELDS =
-            Set.of("toolId", "evidence", "lastCapturedAt");
-    private static final Set<String> EVIDENCE_FIELDS = Set.of(
-            "authority", "completeness", "capturedAt", "sourceId", "provenance",
-            "gameVersion", "loader", "details");
-    private static final Set<String> SERVER_SELECTION_FIELDS = Set.of("kind");
-    private static final Set<String> CLIENT_SELECTION_FIELDS = Set.of("kind", "profileId");
+            dev.openallay.util.Java8Collections.setOf("toolId", "evidence", "lastCapturedAt");
+    private static final Set<String> EVIDENCE_FIELDS = dev.openallay.util.Java8Collections.setOf("authority", "completeness", "capturedAt", "sourceId", "provenance", "gameVersion", "loader", "details");
+    private static final Set<String> SERVER_SELECTION_FIELDS = dev.openallay.util.Java8Collections.setOf("kind");
+    private static final Set<String> CLIENT_SELECTION_FIELDS = dev.openallay.util.Java8Collections.setOf("kind", "profileId");
 
     public String encodeModelSelection(GuideModelSelection selection) {
         JsonObject encoded = new JsonObject();
@@ -60,16 +56,29 @@ public final class GuideHistoryCodec {
                 GuideModelSelection.Kind.class,
                 string(encoded, "kind"),
                 "model selection kind");
-        return switch (kind) {
-            case CLIENT -> {
+        {
+dev.openallay.guide.GuideModelSelection $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((kind)) {
+case CLIENT:
+{
+{
                 requireFields(encoded, CLIENT_SELECTION_FIELDS, "client model selection");
-                yield GuideModelSelection.client(string(encoded, "profileId"));
+                { $oaSwitch1_exit_result = GuideModelSelection.client(string(encoded, "profileId")); break $oaSwitch1_exit; }
             }
-            case SERVER -> {
+}
+case SERVER:
+{
+{
                 requireFields(encoded, SERVER_SELECTION_FIELDS, "server model selection");
-                yield GuideModelSelection.server();
+                { $oaSwitch1_exit_result = GuideModelSelection.server(); break $oaSwitch1_exit; }
             }
-        };
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     /** Exact current shape; no missing presence flags are silently interpreted as zero. */
@@ -90,9 +99,7 @@ public final class GuideHistoryCodec {
 
     public ModelUsage decodeModelUsage(String json) {
         JsonObject encoded = object(dev.openallay.json.JsonTrees.parse(json), "model usage");
-        requireFields(encoded, Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
-                "uncachedInputTokens", "inputKnown", "outputKnown", "cacheReadKnown", "cacheWriteKnown",
-                "uncachedInputKnown"), "model usage");
+        requireFields(encoded, dev.openallay.util.Java8Collections.setOf("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens", "uncachedInputTokens", "inputKnown", "outputKnown", "cacheReadKnown", "cacheWriteKnown", "uncachedInputKnown"), "model usage");
         return new ModelUsage(longInteger(encoded, "inputTokens"), longInteger(encoded, "outputTokens"),
                 longInteger(encoded, "cacheReadTokens"), longInteger(encoded, "cacheWriteTokens"),
                 longInteger(encoded, "uncachedInputTokens"), bool(encoded, "inputKnown"),
@@ -117,9 +124,7 @@ public final class GuideHistoryCodec {
 
     public GuideUsageSnapshot decodeUsageProjection(String json) {
         JsonObject encoded = object(dev.openallay.json.JsonTrees.parse(json), "usage projection");
-        requireFields(encoded, Set.of("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
-                "actualCalls", "reportedCalls", "incomplete", "cacheIncomplete", "estimatedUsd",
-                "costIncomplete"), "usage projection");
+        requireFields(encoded, dev.openallay.util.Java8Collections.setOf("inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens", "actualCalls", "reportedCalls", "incomplete", "cacheIncomplete", "estimatedUsd", "costIncomplete"), "usage projection");
         JsonElement price = encoded.get("estimatedUsd");
         if (!price.isJsonNull() && (!price.isJsonPrimitive() || !price.getAsJsonPrimitive().isNumber())) {
             throw new IllegalArgumentException("estimatedUsd must be a decimal or null");
@@ -181,30 +186,58 @@ public final class GuideHistoryCodec {
                 throw new IllegalArgumentException("durable timeline ordinals must be contiguous");
             }
         }
-        return List.copyOf(decoded);
+        return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
 
     private JsonObject encodeEntryObject(GuideTimelineEntry entry) {
         java.util.Objects.requireNonNull(entry);
-        if (entry instanceof GuideTimelineEntry.User user) {
-            return encodeUser(user);
-        } else if (entry instanceof GuideTimelineEntry.Assistant assistant) {
-            return encodeAssistant(assistant);
-        } else if (entry instanceof GuideTimelineEntry.Tool tool) {
-            return encodeTool(tool);
+        final class $oaPattern0_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.User bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.User && (($oaPattern0_holder.bound = (GuideTimelineEntry.User) $oaPattern0_holder.value) != null))) {
+            return encodeUser($oaPattern0_holder.bound);
+        } else {
+final class $oaPattern1_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Assistant bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Assistant && (($oaPattern1_holder.bound = (GuideTimelineEntry.Assistant) $oaPattern1_holder.value) != null))) {
+            return encodeAssistant($oaPattern1_holder.bound);
+        } else {
+final class $oaPattern2_Holder { dev.openallay.guide.GuideTimelineEntry value; GuideTimelineEntry.Tool bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = entry) instanceof dev.openallay.guide.GuideTimelineEntry.Tool && (($oaPattern2_holder.bound = (GuideTimelineEntry.Tool) $oaPattern2_holder.value) != null))) {
+            return encodeTool($oaPattern2_holder.bound);
         }
+}
+}
         throw new IncompatibleClassChangeError();
     }
 
     private GuideTimelineEntry decodeEntryObject(JsonObject object) {
         String type = string(object, "type");
-        return switch (type) {
-            case "user" -> decodeUser(object);
-            case "assistant" -> decodeAssistant(object);
-            case "tool" -> decodeTool(object);
-            default -> throw new IllegalArgumentException(
+        {
+dev.openallay.guide.GuideTimelineEntry $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((type)) {
+case "user":
+{
+$oaSwitch0_exit_result = decodeUser(object); break $oaSwitch0_exit;
+}
+case "assistant":
+{
+$oaSwitch0_exit_result = decodeAssistant(object); break $oaSwitch0_exit;
+}
+case "tool":
+{
+$oaSwitch0_exit_result = decodeTool(object); break $oaSwitch0_exit;
+}
+default:
+{
+throw new IllegalArgumentException(
                     "unknown durable timeline entry type " + type);
-        };
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static JsonObject encodeUser(GuideTimelineEntry.User user) {
@@ -303,7 +336,7 @@ public final class GuideHistoryCodec {
             }
             decoded.add(value.getAsString());
         }
-        return List.copyOf(decoded);
+        return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
 
     public String encodeSources(List<GuideSource> sources) {
@@ -340,7 +373,7 @@ public final class GuideHistoryCodec {
                     decodeEvidence(object(object.get("evidence"), "durable evidence")),
                     Instant.parse(string(object, "lastCapturedAt"))));
         }
-        return List.copyOf(decoded);
+        return dev.openallay.util.Java8Collections.listCopyOf(decoded);
     }
 
     private static JsonObject encodeEvidence(EvidenceMetadata evidence) {

@@ -1,9 +1,13 @@
 package dev.openallay.guide.e2e;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.openallay.client.gui.*;
+import dev.openallay.client.gui.GuideGraphics;
+import dev.openallay.client.gui.GuideMultilineEditor;
+import dev.openallay.client.gui.GuideNativeMultilineEditor;
+import dev.openallay.client.gui.MinecraftClientWindow;
 import dev.openallay.client.gui.hud.GuideNativeToastBinding;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.toasts.Toast;
@@ -41,8 +45,9 @@ public final class GuideNativeEditorE2EProbe {
     boolean started() { return editor != null; }
     void begin(Screen owner, GuideMultilineEditor editor) {
         this.owner = owner; this.editor = editor;
-        check(editor.widget() instanceof GuideNativeMultilineEditor, "selected actual old editor");
-        widget = (GuideNativeMultilineEditor) editor.widget();
+        net.minecraft.client.gui.components.AbstractWidget nativeWidget = dev.openallay.client.gui.GuideNativeWidgets.nativeWidget(editor.widget());
+        check(nativeWidget instanceof GuideNativeMultilineEditor, "selected actual old editor");
+        widget = (GuideNativeMultilineEditor) nativeWidget;
         check(owner.getFocused() == widget && owner.children().contains(widget), "registered focused native owner");
         clipboard = client.keyboardHandler.getClipboard(); draft = editor.getValue();
         originalLimit = widget.e2eCharacterLimit(); active = true;
@@ -61,7 +66,7 @@ public final class GuideNativeEditorE2EProbe {
         key(GLFW.GLFW_KEY_A, control()); editor.resize(40, height, x, y); frame = painted().frame();
     }
     boolean tick(Screen screen, GuideMultilineEditor current) {
-        check(screen == owner && current == editor && current.widget() == widget, "same initialized owner/widget");
+        check(screen == owner && current == editor && dev.openallay.client.gui.GuideNativeWidgets.nativeWidget(current.widget()) == widget, "same initialized owner/widget");
         if (phase == 0) {
             if (painted().frame() <= frame || painted().width() != 40) return false;
             narrow = painted(); check(narrow.start() == 0 && narrow.end() == editor.getValue().length(), "painted selection");

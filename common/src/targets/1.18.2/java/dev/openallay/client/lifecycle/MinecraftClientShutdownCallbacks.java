@@ -17,6 +17,10 @@ public final class MinecraftClientShutdownCallbacks {
 
     public static void onClose() {
         Runnable stopping = STOPPING.getAndSet(null);
+        try { OptionalClientIntegrationShutdown.clear(); }
+        catch (RuntimeException failure) {
+            dev.openallay.OpenAllayConstants.LOGGER.error("Optional client integration shutdown failed", failure);
+        }
         if (stopping != null) stopping.run();
     }
 }

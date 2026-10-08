@@ -30,8 +30,10 @@ public final class CommandCapabilityConfigStore {
 
     public synchronized ToolResult<CommandCapabilityConfig> reload() {
         ToolResult<CommandCapabilityConfig> loaded = loader.load(path);
-        if (loaded instanceof ToolResult.Success<CommandCapabilityConfig> success) {
-            current = success.value();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.command.CommandCapabilityConfig> value; ToolResult.Success<CommandCapabilityConfig> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<CommandCapabilityConfig>) $oaPattern0_holder.value) != null))) {
+            current = $oaPattern0_holder.bound.value();
         }
         return loaded;
     }
@@ -45,8 +47,10 @@ public final class CommandCapabilityConfigStore {
             encoded = writer.encode(candidate);
             ToolResult<CommandCapabilityConfig> decoded =
                     loader.load(new StringReader(encoded));
-            if (decoded instanceof ToolResult.Failure<CommandCapabilityConfig> failure) {
-                return failure;
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.command.CommandCapabilityConfig> value; ToolResult.Failure<CommandCapabilityConfig> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<CommandCapabilityConfig>) $oaPattern1_holder.value) != null))) {
+                return $oaPattern1_holder.bound;
             }
             validated =
                     ((ToolResult.Success<CommandCapabilityConfig>) decoded).value();

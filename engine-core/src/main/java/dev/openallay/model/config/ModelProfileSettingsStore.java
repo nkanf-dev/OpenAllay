@@ -28,17 +28,43 @@ public final class ModelProfileSettingsStore {
         void publish();
     }
 
-    public record Saved(
-            ModelProfilesConfig config,
-            List<ResolvedModelProfile> profiles) {
-        public Saved {
+    @dev.openallay.value.ValueType(Saved.ValueSchemaProvider.class)
+public static final class Saved {
+    private final ModelProfilesConfig config;
+    private final List<ResolvedModelProfile> profiles;
+    public Saved(ModelProfilesConfig config, List<ResolvedModelProfile> profiles) {
+
             Objects.requireNonNull(config, "config");
-            profiles = List.copyOf(profiles);
+            profiles = dev.openallay.util.Java8Collections.listCopyOf(profiles);
             if (profiles.size() != config.profiles().size()) {
                 throw new IllegalArgumentException("every saved profile must have a resolution");
             }
+
+        this.config = config;
+        this.profiles = profiles;
+    }
+    public ModelProfilesConfig config() { return config; }
+    public List<ResolvedModelProfile> profiles() { return profiles; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Saved)) return false;
+        Saved that = (Saved) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(profiles, that.profiles);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(profiles);
+        return hash;
+    }
+    @Override public String toString() { return "Saved[config=" + config + ", profiles=" + profiles + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Saved> schema() {
+            return new dev.openallay.value.ValueSchema<>(Saved.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Saved>>asList(new dev.openallay.value.ValueSchema.Component<>(Saved.class, "config", Saved::config), new dev.openallay.value.ValueSchema.Component<>(Saved.class, "profiles", Saved::profiles)), arguments -> new Saved((ModelProfilesConfig) arguments[0], (List) arguments[1]));
         }
     }
+}
 
     private final Path path;
     private final FileReplacement files;
@@ -107,9 +133,11 @@ public final class ModelProfileSettingsStore {
         try {
             encoded = writer.encode(candidate);
             ToolResult<ModelProfilesConfigLoader.Load> loaded = loader.load(
-                    new StringReader(encoded), credentials, Map.copyOf(metadata));
-            if (loaded instanceof ToolResult.Failure<ModelProfilesConfigLoader.Load> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+                    new StringReader(encoded), credentials, dev.openallay.util.Java8Collections.mapCopyOf(metadata));
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ModelProfilesConfigLoader.Load> value; ToolResult.Failure<ModelProfilesConfigLoader.Load> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<ModelProfilesConfigLoader.Load>) $oaPattern0_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
             }
             resolved = ((ToolResult.Success<ModelProfilesConfigLoader.Load>) loaded).value();
             publication = Objects.requireNonNull(

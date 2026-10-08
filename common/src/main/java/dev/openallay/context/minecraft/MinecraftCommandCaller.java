@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 /** Resolve the actual nullable player entity without exception or permission changes. */
 public final class MinecraftCommandCaller {
     private MinecraftCommandCaller() {}
+    public static CommandSourceStack source(ServerPlayer player) { return player.createCommandSourceStack(); }
 
     public static ServerPlayer player(CommandSourceStack source) {
         return source.getEntity() instanceof ServerPlayer player ? player : null;

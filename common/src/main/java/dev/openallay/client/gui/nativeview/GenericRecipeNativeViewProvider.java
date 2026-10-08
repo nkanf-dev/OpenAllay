@@ -7,11 +7,11 @@ import dev.openallay.guide.ui.GuideRecipeCard;
 import dev.openallay.guide.ui.GuideUiLayout;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.Font;
+
 import dev.openallay.platform.minecraft.MinecraftNativeRegistries;
 import dev.openallay.platform.minecraft.MinecraftComponents;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
+
+
 
 /** Neutral OpenAllay recipe canvas; it deliberately does not imitate a mod screen. */
 final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider {
@@ -43,27 +43,31 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
         return new Attempt.Ready(new View(recipe.recipe()));
     }
 
-    private record View(GuideRecipeCard recipe) implements NativeDomainView {
-        @Override
+    @dev.openallay.value.ValueType(View.ValueSchemaProvider.class)
+private static final class View implements NativeDomainView {
+    private final GuideRecipeCard recipe;
+    private View(GuideRecipeCard recipe) {
+        this.recipe = recipe;
+    }
+    public GuideRecipeCard recipe() { return recipe; }
+@Override
         public String providerId() {
             return "openallay:generic";
         }
-
-        @Override
+@Override
         public NativeDomainViewBinding.Family family() {
             return NativeDomainViewBinding.Family.RECIPE;
         }
-
-        @Override
+@Override
         public void render(RenderContext context) {
             GuideGraphics graphics = context.graphics();
-            Font font = context.font();
+            net.minecraft.client.gui.Font font = context.font();
             GuideUiLayout.Rect bounds = context.bounds();
             graphics.fill(
                     bounds.x(), bounds.y(), bounds.x() + bounds.width(),
                     bounds.y() + bounds.height(), PANEL);
             graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(), BORDER);
-            String title = recipe.workstation().isBlank()
+            String title = dev.openallay.util.Java8Strings.isBlank(recipe.workstation())
                     ? recipe.type() : recipe.workstation();
             graphics.text(font, MinecraftComponents.translatable(
                             "screen.openallay.native.recipe.title", title),
@@ -108,7 +112,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
 
             int factsY = bounds.y() + bounds.height() - 36;
             String facts = processingFacts(recipe.processing());
-            if (!facts.isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(facts)) {
                 graphics.text(font, facts, bounds.x() + 6, factsY, MUTED, false);
             }
             if (!recipe.byproducts().isEmpty()) {
@@ -118,36 +122,33 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                         bounds.x() + 6, factsY + 11, TEXT, false);
             }
         }
-
-        private static String processingFacts(GuideRecipeCard.Processing processing) {
+private static String processingFacts(GuideRecipeCard.Processing processing) {
             List<String> values = new ArrayList<>();
             if (processing.durationTicks() != null) {
-                values.add(MinecraftComponents.translatable(
+                values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.duration",
-                        processing.durationTicks()).getString());
+                        processing.durationTicks())));
             }
             if (processing.energy() != null) {
-                values.add(MinecraftComponents.translatable(
+                values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.energy",
-                        processing.energy()).getString());
+                        processing.energy())));
             }
             if (processing.temperature() != null) {
-                values.add(MinecraftComponents.translatable(
+                values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
                         "screen.openallay.native.recipe.temperature",
-                        processing.temperature()).getString());
+                        processing.temperature())));
             }
             return String.join(" · ", values);
         }
-
-        private static String ingredientItem(GuideRecipeCard.Ingredient ingredient) {
+private static String ingredientItem(GuideRecipeCard.Ingredient ingredient) {
             GuideRecipeCard.Alternative alternative = ingredient.alternatives().get(0);
             return alternative.resolvedItems().isEmpty()
                     ? alternative.id() : alternative.resolvedItems().get(0);
         }
-
-        private static void renderSlot(
+private static void renderSlot(
                 GuideGraphics graphics,
-                Font font,
+                net.minecraft.client.gui.Font font,
                 String itemId,
                 long count,
                 int x,
@@ -156,13 +157,12 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                 int mouseY) {
             graphics.fill(x, y, x + 18, y + 18, SLOT);
             graphics.outline(x, y, 18, 18, BORDER);
-            var id = MinecraftResourceIds.tryParse(itemId);
-            if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
+            if (!dev.openallay.client.gui.GuideNativeItemLookup.validItemId(itemId)) {
                 graphics.text(font, "?", x + 6, y + 5, MUTED, false);
                 return;
             }
-            ItemStack stack = new ItemStack(
-                    dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
+            net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(
+                    dev.openallay.client.gui.GuideNativeItemLookup.item(itemId),
                     (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
             graphics.item(stack, x + 1, y + 1);
             graphics.itemDecorations(font, stack, x + 1, y + 1);
@@ -170,5 +170,23 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                 graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
             }
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof View)) return false;
+        View that = (View) other;
+        return java.util.Objects.equals(recipe, that.recipe);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(recipe);
+        return hash;
+    }
+    @Override public String toString() { return "View[recipe=" + recipe + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<View> schema() {
+            return new dev.openallay.value.ValueSchema<>(View.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<View>>asList(new dev.openallay.value.ValueSchema.Component<>(View.class, "recipe", View::recipe)), arguments -> new View((GuideRecipeCard) arguments[0]));
+        }
+    }
+}
 }

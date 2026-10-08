@@ -64,8 +64,10 @@ public final class JavascriptCommandBridge {
                         capability.submit(string(arguments[0], "commands.run"), cancellation),
                         "feedback", Instant.now()),
                 adapter);
-        if (commands instanceof ScriptableObject object) {
-            object.preventExtensions();
+        final class $oaPattern0_Holder { dev.latvian.mods.rhino.Scriptable value; ScriptableObject bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = commands) instanceof dev.latvian.mods.rhino.ScriptableObject && (($oaPattern0_holder.bound = (ScriptableObject) $oaPattern0_holder.value) != null))) {
+            $oaPattern0_holder.bound.preventExtensions();
         }
         return commands;
     }
@@ -122,10 +124,12 @@ public final class JavascriptCommandBridge {
     }
 
     private static String string(Object value, String operation) {
-        if (!(value instanceof CharSequence text)) {
+        final class $oaPattern1_Holder { java.lang.Object value; CharSequence bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (!((($oaPattern1_holder.value = value) instanceof java.lang.CharSequence && (($oaPattern1_holder.bound = (CharSequence) $oaPattern1_holder.value) != null)))) {
             throw new JavascriptExecutionException(
                     "command_invalid", operation + " requires one command string");
         }
-        return text.toString();
+        return $oaPattern1_holder.bound.toString();
     }
 }

@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.openallay.client.gui.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "openallay.refmap.json",
+  "client": [
+    "MinecraftTeardownStateMixin",
+    "AbstractContainerScreenObservationAccessor",
+    "GameRendererObservationMixin",
+    "GameRendererFovAccess",
+    "KeyboardHandlerObservationMixin",
+    "GuiSubtitleAccess",
+    "ToastInstanceCompletionMixin",
+    "ToastComponentSlotMixin",
+    "GuideProbeMouseInvoker",
+    "GuideTextFieldDrawAccessMixin",
+    "GuiScreenMenuKeyObservationMixin",
+    "GuiTextFieldMenuKeyObservationMixin",
+    "MainWindowResizeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

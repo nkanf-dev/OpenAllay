@@ -1,0 +1,38 @@
+plugins { id 'java' }
+def canonical = file('../../..')
+def repository = new File(canonical, '..')
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+sourceSets.main.java.setSrcDirs([new File(canonical, 'src/main/java'),
+        new File(repository, 'runtime-json/src/main/java'), new File(canonical, 'src/toolSchemaJava8Test/java')])
+sourceSets.main.java.setIncludes([
+        'dev/openallay/agent/tool/ToolSchemaGenerator.java',
+        'dev/openallay/trace/replay/ToolArgumentCodec.java',
+        'dev/openallay/agent/tool/ToolDescription.java', 'dev/openallay/agent/tool/ToolOptional.java',
+        'dev/openallay/agent/tool/ToolPattern.java', 'dev/openallay/agent/tool/ToolAtLeastOne.java',
+        'dev/openallay/value/*.java', 'dev/openallay/tool/ToolResult.java',
+        'dev/openallay/tool/query/QueryOperation.java',
+        'dev/openallay/util/Java8Strings.java', 'dev/openallay/util/Java8Collections.java',
+        'dev/openallay/json/EngineJson.java', 'dev/openallay/json/RecordJsonAdapter.java',
+        'dev/openallay/json/ConstructorValueJsonAdapter.java',
+        'dev/openallay/json/JsonTrees.java', 'dev/openallay/json/JsonReaders.java',
+        'dev/openallay/tool/ToolSchemaJava8Fixture.java'])
+repositories { mavenCentral() }
+dependencies { implementation('com.google.code.gson:gson:2.8.0') }
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+def host = providers.gradleProperty('jsonVerificationGsonVersion').getOrElse('2.8.0')
+configurations.runtimeClasspath.resolutionStrategy.force("com.google.code.gson:gson:${host}")
+tasks.register('java8ToolSchemaTest', JavaExec) {
+    dependsOn('classes')
+    mainClass = 'dev.openallay.tool.ToolSchemaJava8Fixture'
+    classpath = sourceSets.main.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    inputs.property('jsonVerificationGsonVersion', host)
+    doFirst {
+        def artifacts = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+                .findAll { it.moduleVersion.id.group == 'com.google.code.gson' && it.name == 'gson' }
+        if (artifacts.size() != 1 || artifacts.first().moduleVersion.id.version != host) {
+            throw new GradleException("Tool schema runtime must contain exactly Gson ${host}")
+        }
+        logger.lifecycle("Actual tool schema/codec/EngineJson Gson runtime: ${artifacts.first().moduleVersion.id}")
+    }
+}

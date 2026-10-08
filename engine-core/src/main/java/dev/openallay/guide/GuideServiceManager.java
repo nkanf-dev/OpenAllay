@@ -176,14 +176,31 @@ public final class GuideServiceManager {
 
     /** One service's owner jobs keep arrival order while its previous connection settles. */
     private ClientEventDispatcher afterDisconnectDispatcher(CompletableFuture<Void> readiness) {
+        return serialExecutor(dispatcher::execute, readiness);
+    }
+
+    static ClientEventDispatcher serialExecutor(
+            java.util.concurrent.Executor ownerExecutor, CompletableFuture<Void> readiness) {
         return new ClientEventDispatcher() {
             private CompletableFuture<Void> tail = readiness.handle((ignored, failure) -> null);
 
             @Override
-            public synchronized void execute(Runnable task) {
-                // Chain scheduling receipts, not independent completion callbacks (which are LIFO).
-                // The native dispatcher owns actual execution after these FIFO posts.
-                tail = tail.handle((ignored, failure) -> null).thenRun(() -> dispatcher.execute(task));
+            public void execute(Runnable task) {
+                CompletableFuture<Void> predecessor;
+                CompletableFuture<Void> receipt = new CompletableFuture<>();
+                synchronized (this) {
+                    predecessor = tail;
+                    tail = receipt;
+                }
+                // Reserve FIFO position before dispatch, including for reentrant enqueue.
+                // A completed predecessor can dispatch inline: never do that under our monitor.
+                // Receipts track posting, not native execution, and retain posting failures.
+                predecessor.handle((ignored, failure) -> null)
+                        .thenRun(() -> ownerExecutor.execute(task))
+                        .whenComplete((ignored, failure) -> {
+                            if (failure == null) receipt.complete(null);
+                            else receipt.completeExceptionally(failure);
+                        });
             }
         };
     }

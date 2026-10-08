@@ -1,0 +1,27 @@
+{
+  "run": 37510699083,
+  "source": "19d09199cd7272d92e9e14758e8826a7b3c012df",
+  "originalStatus": "success",
+  "artifact": {
+    "id": 11435042093,
+    "node_id": "MDg6QXJ0aWZhY3QxMTQzNTA0MjA5Mw==",
+    "name": "forge16165-native-19d09199cd7272d92e9e14758e8826a7b3c012df",
+    "size_in_bytes": 4897535,
+    "url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11435042093",
+    "archive_download_url": "https://api.github.com/repos/nkanf-dev/OpenAllay/actions/artifacts/11435042093/zip",
+    "expired": false,
+    "digest": "sha256:714f8b1252f9c8891a7d348339677f30d546be0ca99a7f22c3f0d35f5794fa66",
+    "created_at": "2026-10-06T18:22:57Z",
+    "updated_at": "2026-10-06T18:22:57Z",
+    "expires_at": "2026-11-05T18:22:55Z",
+    "workflow_run": {
+      "id": 37510699083,
+      "repository_id": 1302961354,
+      "head_repository_id": 1302961354,
+      "head_branch": "mc/forge16165-engine-continuation",
+      "head_sha": "19d09199cd7272d92e9e14758e8826a7b3c012df"
+    }
+  },
+  "archiveSha256": "714f8b1252f9c8891a7d348339677f30d546be0ca99a7f22c3f0d35f5794fa66",
+  "scope": "Affected development-only Builder SKIPPED oracle compile and normal AP/reobf accepted. Engine unchanged. Remaining preset runtime pending."
+}

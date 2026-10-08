@@ -1,0 +1,34 @@
+name: Forge16 namespace tooling and new publication ABI
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: forge16165-focused-tooling-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  focused-tooling-publication:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21.0.10+7.0.LTS'
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '17.0.18+8'
+      - name: Resolve actual FG host; accept focused tooling; capture only new ABI
+        run: python3 -B scripts/forge16165-engine-prerequisite/focused-tooling-acceptance.py --output "$PWD/build/forge16165-focused-tooling-report"
+      - name: Retain tiny text evidence, never game or library binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: forge16165-focused-tooling-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: build/forge16165-focused-tooling-report/

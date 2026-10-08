@@ -48,7 +48,7 @@ public final class FtbQuestsKnowledgeProvider implements KnowledgeSourceProvider
                 "ftbquests:bridge",
                 gameVersion,
                 loader,
-                java.util.Map.of("ftbquests:side", clientSide ? "client" : "server"));
+                dev.openallay.util.Java8Collections.mapOf("ftbquests:side", clientSide ? "client" : "server"));
         FtbQuestSnapshot.Result result = bridge.snapshot(player, clientSide);
         if (!result.available()) {
             EvidenceMetadata unavailable = new EvidenceMetadata(
@@ -59,14 +59,12 @@ public final class FtbQuestsKnowledgeProvider implements KnowledgeSourceProvider
                     sourceEvidence.provenance(),
                     sourceEvidence.gameVersion(),
                     sourceEvidence.loader(),
-                    java.util.Map.of(
-                            "ftbquests:side", clientSide ? "client" : "server",
-                            "ftbquests:availability", "unavailable"));
-            return new KnowledgeLoad(List.of(), List.of(new KnowledgeDiagnostic(
+                    dev.openallay.util.Java8Collections.mapOf("ftbquests:side", clientSide ? "client" : "server", "ftbquests:availability", "unavailable"));
+            return new KnowledgeLoad(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(new KnowledgeDiagnostic(
                     sourceId(), result.diagnosticCode(), result.diagnosticMessage(), "ftbquests:bridge")),
-                    List.of(unavailable));
+                    dev.openallay.util.Java8Collections.listOf(unavailable));
         }
-        List<KnowledgeDocument> documents = result.quests().stream()
+        List<KnowledgeDocument> documents = dev.openallay.util.Java8Collections.toList(result.quests().stream()
                 .map(quest -> new KnowledgeDocument(
                         sourceId(),
                         quest.questId(),
@@ -75,8 +73,8 @@ public final class FtbQuestsKnowledgeProvider implements KnowledgeSourceProvider
                         quest.description() + "\nDependencies: " + quest.dependencyIds()
                                 + "\nCompleted: " + quest.completed(),
                         "ftbquests",
-                        Set.of(),
-                        Set.of(),
+                        dev.openallay.util.Java8Collections.setOf(),
+                        dev.openallay.util.Java8Collections.setOf(),
                         null,
                         true,
                         quest.provenance(),
@@ -88,10 +86,7 @@ public final class FtbQuestsKnowledgeProvider implements KnowledgeSourceProvider
                                 sourceEvidence.provenance(),
                                 sourceEvidence.gameVersion(),
                                 sourceEvidence.loader(),
-                                java.util.Map.of(
-                                        "ftbquests:side", clientSide ? "client" : "server",
-                                        "ftbquests:quest_provenance", quest.provenance()))))
-                .toList();
-        return new KnowledgeLoad(documents, List.of(), List.of(sourceEvidence));
+                                dev.openallay.util.Java8Collections.mapOf("ftbquests:side", clientSide ? "client" : "server", "ftbquests:quest_provenance", quest.provenance())))));
+        return new KnowledgeLoad(documents, dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf(sourceEvidence));
     }
 }

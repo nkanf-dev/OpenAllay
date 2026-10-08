@@ -1,0 +1,6 @@
+{
+  "source_path": "scripts/public-charset-write-probe/PublicCharsetWriteProbe.java",
+  "source_sha256": "ae1ac7612a37af4cecf2a97a278a19e8164cc801f504b0f3e6c3c6c463435fd2",
+  "runner_sha256": "67ec75d8968c4d4697e6f7a3e3a005954ffce3fcb48694d9c4e260af081236ba",
+  "scope": "OriginalmodernpublicFileswriteStringUTF8/UTF16/UTF16BE/ASCII/customCharset 4Unicodecases20factrows exceptiontype/inputLength/destinationbytes/existence no helperruntime8claim."
+}

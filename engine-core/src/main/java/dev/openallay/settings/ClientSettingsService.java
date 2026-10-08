@@ -294,43 +294,78 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    public record HistoryRuntimeState(
-            boolean configured,
-            Optional<GuideSnapshot> guide,
-            GuideHistoryActivity activity,
-            SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind,
-            Long estimatedContextTokens) {
-        public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide,
-                GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind) {
-            this(configured, guide, activity, scopeKind, null);
-        }
+    @dev.openallay.value.ValueType(HistoryRuntimeState.ValueSchemaProvider.class)
+public static final class HistoryRuntimeState {
+    private final boolean configured;
+    private final Optional<GuideSnapshot> guide;
+    private final GuideHistoryActivity activity;
+    private final SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind;
+    private final Long estimatedContextTokens;
+    public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide, GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind, Long estimatedContextTokens) {
 
-        public HistoryRuntimeState {
             guide = Objects.requireNonNull(guide, "guide");
             Objects.requireNonNull(activity, "activity");
             Objects.requireNonNull(scopeKind, "scopeKind");
-            if (guide.isEmpty()
+            if (dev.openallay.util.Java8ApiSupport.isEmpty(guide)
                     != (scopeKind == SettingsDiagnosticsAggregator.HistoryScopeKind.NONE)) {
                 throw new IllegalArgumentException(
                         "history scope kind must match current Guide availability");
             }
-        }
 
-        public static HistoryRuntimeState disconnected() {
+        this.configured = configured;
+        this.guide = guide;
+        this.activity = activity;
+        this.scopeKind = scopeKind;
+        this.estimatedContextTokens = estimatedContextTokens;
+    }
+    public boolean configured() { return configured; }
+    public Optional<GuideSnapshot> guide() { return guide; }
+    public GuideHistoryActivity activity() { return activity; }
+    public SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind() { return scopeKind; }
+    public Long estimatedContextTokens() { return estimatedContextTokens; }
+public HistoryRuntimeState(boolean configured, Optional<GuideSnapshot> guide,
+                GuideHistoryActivity activity, SettingsDiagnosticsAggregator.HistoryScopeKind scopeKind) {
+            this(configured, guide, activity, scopeKind, null);
+        }
+public static HistoryRuntimeState disconnected() {
             return new HistoryRuntimeState(
                     false,
                     Optional.empty(),
                     GuideHistoryActivity.idle(),
                     SettingsDiagnosticsAggregator.HistoryScopeKind.NONE);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof HistoryRuntimeState)) return false;
+        HistoryRuntimeState that = (HistoryRuntimeState) other;
+        return configured == that.configured && java.util.Objects.equals(guide, that.guide) && java.util.Objects.equals(activity, that.activity) && java.util.Objects.equals(scopeKind, that.scopeKind) && java.util.Objects.equals(estimatedContextTokens, that.estimatedContextTokens);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Boolean.hashCode(configured);
+        hash = 31 * hash + java.util.Objects.hashCode(guide);
+        hash = 31 * hash + java.util.Objects.hashCode(activity);
+        hash = 31 * hash + java.util.Objects.hashCode(scopeKind);
+        hash = 31 * hash + java.util.Objects.hashCode(estimatedContextTokens);
+        return hash;
+    }
+    @Override public String toString() { return "HistoryRuntimeState[configured=" + configured + ", guide=" + guide + ", activity=" + activity + ", scopeKind=" + scopeKind + ", estimatedContextTokens=" + estimatedContextTokens + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<HistoryRuntimeState> schema() {
+            return new dev.openallay.value.ValueSchema<>(HistoryRuntimeState.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<HistoryRuntimeState>>asList(new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "configured", HistoryRuntimeState::configured), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "guide", HistoryRuntimeState::guide), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "activity", HistoryRuntimeState::activity), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "scopeKind", HistoryRuntimeState::scopeKind), new dev.openallay.value.ValueSchema.Component<>(HistoryRuntimeState.class, "estimatedContextTokens", HistoryRuntimeState::estimatedContextTokens)), arguments -> new HistoryRuntimeState((Boolean) arguments[0], (Optional) arguments[1], (GuideHistoryActivity) arguments[2], (SettingsDiagnosticsAggregator.HistoryScopeKind) arguments[3], (Long) arguments[4]));
+        }
+    }
+}
 
-    public record ModelState(
-            ModelProfilesConfig config,
-            List<ModelProfileSettingsView.Resolution> profiles) {
-        public ModelState {
+    @dev.openallay.value.ValueType(ModelState.ValueSchemaProvider.class)
+public static final class ModelState {
+    private final ModelProfilesConfig config;
+    private final List<ModelProfileSettingsView.Resolution> profiles;
+    public ModelState(ModelProfilesConfig config, List<ModelProfileSettingsView.Resolution> profiles) {
+
             Objects.requireNonNull(config, "config");
-            profiles = List.copyOf(profiles);
+            profiles = dev.openallay.util.Java8Collections.listCopyOf(profiles);
             if (profiles.size() != config.profiles().size()) {
                 throw new IllegalArgumentException("every configured profile needs a resolution");
             }
@@ -339,15 +374,67 @@ public final class ClientSettingsService implements AutoCloseable {
                     throw new IllegalArgumentException("resolved profile order must match configuration");
                 }
             }
+
+        this.config = config;
+        this.profiles = profiles;
+    }
+    public ModelProfilesConfig config() { return config; }
+    public List<ModelProfileSettingsView.Resolution> profiles() { return profiles; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ModelState)) return false;
+        ModelState that = (ModelState) other;
+        return java.util.Objects.equals(config, that.config) && java.util.Objects.equals(profiles, that.profiles);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(config);
+        hash = 31 * hash + java.util.Objects.hashCode(profiles);
+        return hash;
+    }
+    @Override public String toString() { return "ModelState[config=" + config + ", profiles=" + profiles + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ModelState> schema() {
+            return new dev.openallay.value.ValueSchema<>(ModelState.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ModelState>>asList(new dev.openallay.value.ValueSchema.Component<>(ModelState.class, "config", ModelState::config), new dev.openallay.value.ValueSchema.Component<>(ModelState.class, "profiles", ModelState::profiles)), arguments -> new ModelState((ModelProfilesConfig) arguments[0], (List) arguments[1]));
         }
     }
+}
 
-    public record PreparedModels(ModelState state, BooleanSupplier publish) {
-        public PreparedModels {
+    @dev.openallay.value.ValueType(PreparedModels.ValueSchemaProvider.class)
+public static final class PreparedModels {
+    private final ModelState state;
+    private final BooleanSupplier publish;
+    public PreparedModels(ModelState state, BooleanSupplier publish) {
+
             Objects.requireNonNull(state, "state");
             Objects.requireNonNull(publish, "publish");
+
+        this.state = state;
+        this.publish = publish;
+    }
+    public ModelState state() { return state; }
+    public BooleanSupplier publish() { return publish; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PreparedModels)) return false;
+        PreparedModels that = (PreparedModels) other;
+        return java.util.Objects.equals(state, that.state) && java.util.Objects.equals(publish, that.publish);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + java.util.Objects.hashCode(publish);
+        return hash;
+    }
+    @Override public String toString() { return "PreparedModels[state=" + state + ", publish=" + publish + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PreparedModels> schema() {
+            return new dev.openallay.value.ValueSchema<>(PreparedModels.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PreparedModels>>asList(new dev.openallay.value.ValueSchema.Component<>(PreparedModels.class, "state", PreparedModels::state), new dev.openallay.value.ValueSchema.Component<>(PreparedModels.class, "publish", PreparedModels::publish)), arguments -> new PreparedModels((ModelState) arguments[0], (BooleanSupplier) arguments[1]));
         }
     }
+}
 
     private final Object lock = new Object();
     private GuideDisplayConfig display;
@@ -388,7 +475,7 @@ public final class ClientSettingsService implements AutoCloseable {
     private long modelGeneration;
     private long metadataGeneration;
     private boolean metadataReconciliationPending;
-    private Map<ModelMetadata.Key, ModelMetadata> metadata = Map.of();
+    private Map<ModelMetadata.Key, ModelMetadata> metadata = dev.openallay.util.Java8Collections.mapOf();
     private GuideFailure metadataFailure;
     private ModelConnectionResult connectionResult;
     private SettingsOperation operation = SettingsOperation.idle();
@@ -1009,8 +1096,10 @@ public final class ClientSettingsService implements AutoCloseable {
             ToolResult<PreparedPackageInstall> completed, Throwable thrown) {
         synchronized (lock) {
             if (activePackagePreparation != active || closed) {
-                if (completed instanceof ToolResult.Success<PreparedPackageInstall> success) {
-                    closePreparedPackage(success.value());
+                final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Success<PreparedPackageInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<PreparedPackageInstall>) $oaPattern0_holder.value) != null))) {
+                    closePreparedPackage($oaPattern0_holder.bound.value());
                 }
                 active.outward().complete(new ToolResult.Failure<>(
                         "package_preview_cancelled", "Package preview cancelled"));
@@ -1018,16 +1107,20 @@ public final class ClientSettingsService implements AutoCloseable {
             }
             activePackagePreparation = null;
             operation = SettingsOperation.idle();
-            if (thrown == null && completed instanceof ToolResult.Success<PreparedPackageInstall> success) {
-                preparedPackage = success.value();
+            final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Success<PreparedPackageInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if (thrown == null && (($oaPattern1_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<PreparedPackageInstall>) $oaPattern1_holder.value) != null))) {
+                preparedPackage = $oaPattern1_holder.bound.value();
                 packageReviewToken = new RequirementReview.Token();
                 notice = SettingsNotice.success("package_preview_ready", "Package ready for review");
                 publishLocked();
                 active.outward().complete(new ToolResult.Success<>(true));
             } else {
-                ToolResult.Failure<PreparedPackageInstall> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<PreparedPackageInstall> value
-                                ? value : new ToolResult.Failure<>(
+                final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Failure<PreparedPackageInstall> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+ToolResult.Failure<PreparedPackageInstall> failure =
+                        thrown == null && (($oaPattern2_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<PreparedPackageInstall>) $oaPattern2_holder.value) != null))
+                                ? $oaPattern2_holder.bound : new ToolResult.Failure<>(
                                         "package_preview_failed", "Unable to prepare the package preview");
                 notice = SettingsNotice.failure(failure.code(), failure.message());
                 publishLocked();
@@ -1100,7 +1193,7 @@ public final class ClientSettingsService implements AutoCloseable {
                         return;
                     }
                     operation = SettingsOperation.idle();
-                    if (completed instanceof ToolResult.Success<Boolean>) {
+                    if (completed instanceof ToolResult.Success<?>) {
                         try {
                             if (candidate.kind() == RequirementKind.SKILL) {
                                 skillState = Objects.requireNonNull(skillActions.currentView());
@@ -1117,7 +1210,7 @@ public final class ClientSettingsService implements AutoCloseable {
                             return;
                         }
                     } else {
-                        var failure = (ToolResult.Failure<Boolean>) completed;
+                        dev.openallay.tool.ToolResult.Failure<java.lang.Boolean> failure = (ToolResult.Failure<Boolean>) completed;
                         notice = SettingsNotice.failure(failure.code(), failure.message());
                     }
                     publishLocked();
@@ -1141,7 +1234,7 @@ public final class ClientSettingsService implements AutoCloseable {
                 return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                         "package_preview_stale", "Prepare a fresh package preview"));
             }
-            RequirementChange change = requirementReviewLocked().orElseThrow().changes().stream()
+            RequirementChange change = requirementReviewLocked().orElseThrow(() -> new java.util.NoSuchElementException("No value present")).changes().stream()
                     .filter(value -> value.kind() == kind && value.id().equals(id)).findFirst().orElse(null);
             if (change == null) return CompletableFuture.completedFuture(new ToolResult.Failure<>(
                     "requirement_not_enableable", "This requirement has no available settings change"));
@@ -1167,7 +1260,7 @@ public final class ClientSettingsService implements AutoCloseable {
 
     private Optional<RequirementReview> requirementReviewLocked() {
         if (preparedPackage == null || packageReviewToken == null) return Optional.empty();
-        var report = RequirementEvaluator.evaluate(preparedPackage.requirements(),
+        dev.openallay.requirement.RequirementReport report = RequirementEvaluator.evaluate(preparedPackage.requirements(),
                 RequirementSettingsEnvironment.from(capabilityState, skillState, extensionState,
                         commandState, unrestrictedState));
         return Optional.of(new RequirementReview(packageReviewToken, preparedPackage.kind(),
@@ -1192,8 +1285,40 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    private record ActivePackagePreparation(long operationId, CancellationSignal cancellation,
-            CompletableFuture<ToolResult<Boolean>> outward) {}
+    @dev.openallay.value.ValueType(ActivePackagePreparation.ValueSchemaProvider.class)
+private static final class ActivePackagePreparation {
+    private final long operationId;
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<ToolResult<Boolean>> outward;
+    private ActivePackagePreparation(long operationId, CancellationSignal cancellation, CompletableFuture<ToolResult<Boolean>> outward) {
+        this.operationId = operationId;
+        this.cancellation = cancellation;
+        this.outward = outward;
+    }
+    public long operationId() { return operationId; }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<ToolResult<Boolean>> outward() { return outward; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ActivePackagePreparation)) return false;
+        ActivePackagePreparation that = (ActivePackagePreparation) other;
+        return operationId == that.operationId && java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(outward, that.outward);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(operationId);
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(outward);
+        return hash;
+    }
+    @Override public String toString() { return "ActivePackagePreparation[operationId=" + operationId + ", cancellation=" + cancellation + ", outward=" + outward + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ActivePackagePreparation> schema() {
+            return new dev.openallay.value.ValueSchema<>(ActivePackagePreparation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ActivePackagePreparation>>asList(new dev.openallay.value.ValueSchema.Component<>(ActivePackagePreparation.class, "operationId", ActivePackagePreparation::operationId), new dev.openallay.value.ValueSchema.Component<>(ActivePackagePreparation.class, "cancellation", ActivePackagePreparation::cancellation), new dev.openallay.value.ValueSchema.Component<>(ActivePackagePreparation.class, "outward", ActivePackagePreparation::outward)), arguments -> new ActivePackagePreparation((Long) arguments[0], (CancellationSignal) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 
     public CompletableFuture<ToolResult<Boolean>> saveDisplay(GuideDisplayConfig candidate) {
         Objects.requireNonNull(candidate, "candidate");
@@ -1253,7 +1378,7 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     public CompletableFuture<ToolResult<Boolean>> saveUnrestrictedJavascript(boolean enabled) {
-        var candidate = new UnrestrictedJavascriptConfig(enabled);
+        dev.openallay.script.UnrestrictedJavascriptConfig candidate = new UnrestrictedJavascriptConfig(enabled);
         Reservation reservation = reserve(SettingsOperation.domain(SettingsOperation.Kind.SAVING_UNRESTRICTED_JAVASCRIPT));
         if (!reservation.accepted()) return CompletableFuture.completedFuture(failed(reservation.failureCode()));
         CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
@@ -1271,12 +1396,14 @@ public final class ClientSettingsService implements AutoCloseable {
         synchronized (lock) {
             if (!isCurrentLocked(operationId)) return;
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<UnrestrictedJavascriptConfig> success) {
-                unrestrictedState = success.value();
+            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.UnrestrictedJavascriptConfig> value; ToolResult.Success<UnrestrictedJavascriptConfig> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern3_holder.bound = (ToolResult.Success<UnrestrictedJavascriptConfig>) $oaPattern3_holder.value) != null))) {
+                unrestrictedState = $oaPattern3_holder.bound.value();
                 notice = SettingsNotice.success("unrestricted_javascript_saved", "Unrestricted JavaScript settings saved");
                 result = new ToolResult.Success<>(true);
             } else {
-                var failure = (ToolResult.Failure<UnrestrictedJavascriptConfig>) completed;
+                dev.openallay.tool.ToolResult.Failure<dev.openallay.script.UnrestrictedJavascriptConfig> failure = (ToolResult.Failure<UnrestrictedJavascriptConfig>) completed;
                 notice = SettingsNotice.failure(failure.code(), failure.message());
                 result = new ToolResult.Failure<>(failure.code(), failure.message());
             }
@@ -1408,7 +1535,7 @@ public final class ClientSettingsService implements AutoCloseable {
         try {
             refresh = metadataActions.refresh();
         } catch (RuntimeException failure) {
-            refresh = CompletableFuture.failedFuture(failure);
+            refresh = dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         refresh.whenComplete((ignored, failure) -> dispatcher.execute(() -> {
             synchronized (lock) {
@@ -1532,7 +1659,7 @@ public final class ClientSettingsService implements AutoCloseable {
             if (closed) {
                 return;
             }
-            metadata = Map.copyOf(update.entries());
+            metadata = dev.openallay.util.Java8Collections.mapCopyOf(update.entries());
             metadataFailure = update.failure();
             expectedMetadataGeneration = ++metadataGeneration;
             expectedGeneration = modelGeneration;
@@ -1583,10 +1710,12 @@ public final class ClientSettingsService implements AutoCloseable {
                 () -> models.resolve(candidate, replacement, metadataSnapshot),
                 "invalid_model_config",
                 "Unable to prepare the connection test");
-        if (resolved instanceof ToolResult.Failure<ResolvedModelProfile> failure) {
+        final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.config.ResolvedModelProfile> value; ToolResult.Failure<ResolvedModelProfile> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = resolved) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern4_holder.bound = (ToolResult.Failure<ResolvedModelProfile>) $oaPattern4_holder.value) != null))) {
             dispatcher.execute(() -> finishProbe(
                     operationId,
-                    connectionFailure(failure.code(), safeProbeMessage(failure.code())),
+                    connectionFailure($oaPattern4_holder.bound.code(), safeProbeMessage($oaPattern4_holder.bound.code())),
                     outward));
             return;
         }
@@ -1648,14 +1777,18 @@ public final class ClientSettingsService implements AutoCloseable {
             }
             activeCatalog = null;
             operation = SettingsOperation.idle();
-            if (thrown == null && completed instanceof ToolResult.Success<ModelCatalog> success) {
-                result = new ToolResult.Success<>(success.value());
+            final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.catalog.ModelCatalog> value; ToolResult.Success<ModelCatalog> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if (thrown == null && (($oaPattern5_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern5_holder.bound = (ToolResult.Success<ModelCatalog>) $oaPattern5_holder.value) != null))) {
+                result = new ToolResult.Success<>($oaPattern5_holder.bound.value());
                 notice = SettingsNotice.success(
                         "model_catalog_loaded", "Model catalog loaded");
             } else {
-                ToolResult.Failure<ModelCatalog> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<ModelCatalog> value
-                                ? value
+                final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.model.catalog.ModelCatalog> value; ToolResult.Failure<ModelCatalog> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+ToolResult.Failure<ModelCatalog> failure =
+                        thrown == null && (($oaPattern6_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern6_holder.bound = (ToolResult.Failure<ModelCatalog>) $oaPattern6_holder.value) != null))
+                                ? $oaPattern6_holder.bound
                                 : new ToolResult.Failure<>(
                                         cancellation.isCancelled()
                                                 ? "model_catalog_cancelled"
@@ -1677,6 +1810,16 @@ public final class ClientSettingsService implements AutoCloseable {
             CompletableFuture<ModelConnectionResult> outward) {
         synchronized (lock) {
             if (!isCurrentLocked(operationId)) {
+                return;
+            }
+            try {
+                ModelConnectionResult.requireKnown(result);
+            } catch (IncompatibleClassChangeError foreign) {
+                activeProbe = null;
+                operation = SettingsOperation.idle();
+                // Publish only cleanup with the previous known result and notice.
+                publishLocked();
+                outward.completeExceptionally(foreign);
                 return;
             }
             activeProbe = null;
@@ -1706,13 +1849,28 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<ModelState> success) {
-                modelState = success.value();
+            final class $oaPattern7_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsService.ModelState> value; ToolResult.Success<ModelState> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern7_holder.bound = (ToolResult.Success<ModelState>) $oaPattern7_holder.value) != null))) {
+                modelState = $oaPattern7_holder.bound.value();
                 connectionResult = null;
-                notice = SettingsNotice.success(successCode, switch (successCode) {
-                    case "models_reloaded" -> "Model settings reloaded";
-                    default -> "Model settings saved";
-                });
+                {
+final java.lang.String $oaSwitch1_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((successCode)) {
+case "models_reloaded":
+{
+$oaSwitch1_exit_result = "Model settings reloaded"; break $oaSwitch1_exit;
+}
+default:
+{
+$oaSwitch1_exit_result = "Model settings saved"; break $oaSwitch1_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch1_exit_result_prior0, $oaSwitch1_exit_result);
+}
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
                 ToolResult.Failure<ModelState> failure =
@@ -1741,8 +1899,10 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<CapabilitySettingsView> success) {
-                capabilityState = success.value();
+            final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.capability.CapabilitySettingsView> value; ToolResult.Success<CapabilitySettingsView> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern8_holder.bound = (ToolResult.Success<CapabilitySettingsView>) $oaPattern8_holder.value) != null))) {
+                capabilityState = $oaPattern8_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("capabilities_reloaded")
@@ -1771,8 +1931,10 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<RecipeSettingsView> success) {
-                recipeState = success.value();
+            final class $oaPattern9_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.capability.RecipeSettingsView> value; ToolResult.Success<RecipeSettingsView> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern9_holder.bound = (ToolResult.Success<RecipeSettingsView>) $oaPattern9_holder.value) != null))) {
+                recipeState = $oaPattern9_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("recipes_reloaded")
@@ -1801,13 +1963,31 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<SkillSettingsView> success) {
-                skillState = success.value();
-                notice = SettingsNotice.success(successCode, switch (successCode) {
-                    case "skills_reloaded" -> "Skills reloaded";
-                    case "skill_override_deleted" -> "Skill override deleted";
-                    default -> "Skill override saved";
-                });
+            final class $oaPattern10_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.skill.SkillSettingsView> value; ToolResult.Success<SkillSettingsView> bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern10_holder.bound = (ToolResult.Success<SkillSettingsView>) $oaPattern10_holder.value) != null))) {
+                skillState = $oaPattern10_holder.bound.value();
+                {
+final java.lang.String $oaSwitch3_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch3_exit_result;
+$oaSwitch3_exit: {
+switch ((successCode)) {
+case "skills_reloaded":
+{
+$oaSwitch3_exit_result = "Skills reloaded"; break $oaSwitch3_exit;
+}
+case "skill_override_deleted":
+{
+$oaSwitch3_exit_result = "Skill override deleted"; break $oaSwitch3_exit;
+}
+default:
+{
+$oaSwitch3_exit_result = "Skill override saved"; break $oaSwitch3_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch3_exit_result_prior0, $oaSwitch3_exit_result);
+}
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
                 ToolResult.Failure<SkillSettingsView> failure =
@@ -1832,7 +2012,7 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (thrown == null && completed instanceof ToolResult.Success<SkillCommunityView>) {
+            if (thrown == null && completed instanceof ToolResult.Success<?>) {
                 try {
                     SkillCommunityView updatedCommunity = Objects.requireNonNull(
                             ((ToolResult.Success<SkillCommunityView>) completed).value(),
@@ -1841,11 +2021,27 @@ public final class ClientSettingsService implements AutoCloseable {
                             skillActions.currentView(), "current Skill projection");
                     skillCommunityState = updatedCommunity;
                     skillState = updatedSkills;
-                    notice = SettingsNotice.success(successCode, switch (successCode) {
-                        case "skill_catalog_refreshed" -> "Skill community catalog refreshed";
-                        case "skill_package_imported" -> "Skill package imported";
-                        default -> "Community Skill installed";
-                    });
+                    {
+final java.lang.String $oaSwitch7_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch7_exit_result;
+$oaSwitch7_exit: {
+switch ((successCode)) {
+case "skill_catalog_refreshed":
+{
+$oaSwitch7_exit_result = "Skill community catalog refreshed"; break $oaSwitch7_exit;
+}
+case "skill_package_imported":
+{
+$oaSwitch7_exit_result = "Skill package imported"; break $oaSwitch7_exit;
+}
+default:
+{
+$oaSwitch7_exit_result = "Community Skill installed"; break $oaSwitch7_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch7_exit_result_prior0, $oaSwitch7_exit_result);
+}
                     result = new ToolResult.Success<>(Boolean.TRUE);
                 } catch (RuntimeException failure) {
                     notice = SettingsNotice.failure(
@@ -1862,9 +2058,11 @@ public final class ClientSettingsService implements AutoCloseable {
                 } catch (RuntimeException ignored) {
                     // Preserve the last immutable catalog projection when refresh recovery fails.
                 }
-                ToolResult.Failure<SkillCommunityView> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<SkillCommunityView> value
-                                ? value
+                final class $oaPattern11_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.skill.SkillCommunityView> value; ToolResult.Failure<SkillCommunityView> bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+ToolResult.Failure<SkillCommunityView> failure =
+                        thrown == null && (($oaPattern11_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern11_holder.bound = (ToolResult.Failure<SkillCommunityView>) $oaPattern11_holder.value) != null))
+                                ? $oaPattern11_holder.bound
                                 : new ToolResult.Failure<>(
                                         "skill_community_operation_failed",
                                         "Unable to update Skills");
@@ -1888,19 +2086,37 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (thrown == null
-                    && completed instanceof ToolResult.Success<ExtensionSettingsView> success) {
+            final class $oaPattern12_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.extension.ExtensionSettingsView> value; ToolResult.Success<ExtensionSettingsView> bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+if (thrown == null
+                    && (($oaPattern12_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern12_holder.bound = (ToolResult.Success<ExtensionSettingsView>) $oaPattern12_holder.value) != null))) {
                 extensionState = Objects.requireNonNull(
-                        success.value(), "updated Extension projection");
-                notice = SettingsNotice.success(successCode, switch (successCode) {
-                    case "extension_capability_saved" ->
-                            "Extension capability settings saved";
-                    case "extension_catalog_refreshed" ->
-                            "Extension community catalog refreshed";
-                    case "extension_package_imported" ->
-                            "Extension package staged; restart Minecraft to activate it";
-                    default -> "Community Extension staged; restart Minecraft to activate it";
-                });
+                        $oaPattern12_holder.bound.value(), "updated Extension projection");
+                {
+final java.lang.String $oaSwitch10_exit_result_prior0 = successCode;
+java.lang.String $oaSwitch10_exit_result;
+$oaSwitch10_exit: {
+switch ((successCode)) {
+case "extension_capability_saved":
+{
+$oaSwitch10_exit_result = "Extension capability settings saved"; break $oaSwitch10_exit;
+}
+case "extension_catalog_refreshed":
+{
+$oaSwitch10_exit_result = "Extension community catalog refreshed"; break $oaSwitch10_exit;
+}
+case "extension_package_imported":
+{
+$oaSwitch10_exit_result = "Extension package staged; restart Minecraft to activate it"; break $oaSwitch10_exit;
+}
+default:
+{
+$oaSwitch10_exit_result = "Community Extension staged; restart Minecraft to activate it"; break $oaSwitch10_exit;
+}
+}
+}
+notice = SettingsNotice.success($oaSwitch10_exit_result_prior0, $oaSwitch10_exit_result);
+}
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
                 try {
@@ -1909,12 +2125,14 @@ public final class ClientSettingsService implements AutoCloseable {
                 } catch (RuntimeException ignored) {
                     // Preserve the last immutable Extension projection on recovery failure.
                 }
-                ToolResult.Failure<ExtensionSettingsView> failure =
+                final class $oaPattern13_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.extension.ExtensionSettingsView> value; ToolResult.Failure<
+                                                        ExtensionSettingsView> bound; }
+final $oaPattern13_Holder $oaPattern13_holder = new $oaPattern13_Holder();
+ToolResult.Failure<ExtensionSettingsView> failure =
                         thrown == null
-                                        && completed
-                                                instanceof ToolResult.Failure<
-                                                        ExtensionSettingsView> value
-                                ? value
+                                        && (($oaPattern13_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern13_holder.bound = (ToolResult.Failure<
+                                                        ExtensionSettingsView>) $oaPattern13_holder.value) != null))
+                                ? $oaPattern13_holder.bound
                                 : new ToolResult.Failure<>(
                                         "extension_community_operation_failed",
                                         "Unable to update Extensions");
@@ -1937,8 +2155,10 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<GuideDisplayConfig> success) {
-                display = success.value();
+            final class $oaPattern14_Holder { dev.openallay.tool.ToolResult<dev.openallay.guide.ui.GuideDisplayConfig> value; ToolResult.Success<GuideDisplayConfig> bound; }
+final $oaPattern14_Holder $oaPattern14_holder = new $oaPattern14_Holder();
+if ((($oaPattern14_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern14_holder.bound = (ToolResult.Success<GuideDisplayConfig>) $oaPattern14_holder.value) != null))) {
+                display = $oaPattern14_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("display_reloaded")
@@ -1967,8 +2187,10 @@ public final class ClientSettingsService implements AutoCloseable {
                 return;
             }
             operation = SettingsOperation.idle();
-            if (completed instanceof ToolResult.Success<CommandCapabilityConfig> success) {
-                commandState = success.value();
+            final class $oaPattern15_Holder { dev.openallay.tool.ToolResult<dev.openallay.script.command.CommandCapabilityConfig> value; ToolResult.Success<CommandCapabilityConfig> bound; }
+final $oaPattern15_Holder $oaPattern15_holder = new $oaPattern15_Holder();
+if ((($oaPattern15_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern15_holder.bound = (ToolResult.Success<CommandCapabilityConfig>) $oaPattern15_holder.value) != null))) {
+                commandState = $oaPattern15_holder.bound.value();
                 notice = SettingsNotice.success(
                         successCode,
                         successCode.equals("experimental_commands_reloaded")
@@ -2010,11 +2232,27 @@ public final class ClientSettingsService implements AutoCloseable {
         CompletableFuture<ToolResult<Boolean>> result = new CompletableFuture<>();
         CompletableFuture<ToolResult<Boolean>> operationFuture;
         try {
-            operationFuture = switch (action) {
-                case DELETE_CURRENT -> historyActions.deleteCurrentHistory();
-                case DELETE_ACTOR -> historyActions.deleteActorHistory();
-                case RESET_DATABASE -> historyActions.resetHistoryDatabase();
-            };
+            {
+java.util.concurrent.CompletableFuture<dev.openallay.tool.ToolResult<java.lang.Boolean>> $oaSwitch5_exit_result;
+$oaSwitch5_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch5_exit_result = historyActions.deleteCurrentHistory(); break $oaSwitch5_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch5_exit_result = historyActions.deleteActorHistory(); break $oaSwitch5_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch5_exit_result = historyActions.resetHistoryDatabase(); break $oaSwitch5_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+operationFuture = $oaSwitch5_exit_result;
+}
             Objects.requireNonNull(operationFuture, "history action future");
         } catch (RuntimeException failure) {
             operationFuture = CompletableFuture.completedFuture(new ToolResult.Failure<>(
@@ -2044,18 +2282,34 @@ public final class ClientSettingsService implements AutoCloseable {
             }
             operation = SettingsOperation.idle();
             historyState = refreshed;
-            if (thrown == null && completed instanceof ToolResult.Success<Boolean>) {
-                String code = switch (action) {
-                    case DELETE_CURRENT -> "history_current_deleted";
-                    case DELETE_ACTOR -> "history_actor_deleted";
-                    case RESET_DATABASE -> "history_database_reset";
-                };
+            if (thrown == null && completed instanceof ToolResult.Success<?>) {
+                java.lang.String $oaSwitch4_exit_result;
+$oaSwitch4_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch4_exit_result = "history_current_deleted"; break $oaSwitch4_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch4_exit_result = "history_actor_deleted"; break $oaSwitch4_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch4_exit_result = "history_database_reset"; break $oaSwitch4_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+String code = $oaSwitch4_exit_result;
                 notice = SettingsNotice.success(code, "Guide history updated");
                 result = new ToolResult.Success<>(Boolean.TRUE);
             } else {
-                ToolResult.Failure<Boolean> failure =
-                        thrown == null && completed instanceof ToolResult.Failure<Boolean> value
-                                ? value
+                final class $oaPattern16_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern16_Holder $oaPattern16_holder = new $oaPattern16_Holder();
+ToolResult.Failure<Boolean> failure =
+                        thrown == null && (($oaPattern16_holder.value = completed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern16_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern16_holder.value) != null))
+                                ? $oaPattern16_holder.bound
                                 : new ToolResult.Failure<>(
                                         "history_delete_failed",
                                         "Unable to update Guide history");
@@ -2074,7 +2328,7 @@ public final class ClientSettingsService implements AutoCloseable {
             Map<ModelMetadata.Key, ModelMetadata> entries) {
         worker.execute(() -> {
             ToolResult<PreparedModels> prepared = safely(
-                    () -> models.prepare(config, Map.copyOf(entries)),
+                    () -> models.prepare(config, dev.openallay.util.Java8Collections.mapCopyOf(entries)),
                     "metadata_unavailable",
                     "Model metadata reconciliation is unavailable");
             dispatcher.execute(() -> finishMetadataReconciliation(
@@ -2101,10 +2355,13 @@ public final class ClientSettingsService implements AutoCloseable {
                     || metadataGeneration != expectedMetadataGeneration
                     || modelState.config() != preparedConfig) {
                 retry = true;
-            } else if (prepared instanceof ToolResult.Success<PreparedModels> success) {
+            } else {
+final class $oaPattern17_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.ClientSettingsService.PreparedModels> value; ToolResult.Success<PreparedModels> bound; }
+final $oaPattern17_Holder $oaPattern17_holder = new $oaPattern17_Holder();
+if ((($oaPattern17_holder.value = prepared) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern17_holder.bound = (ToolResult.Success<PreparedModels>) $oaPattern17_holder.value) != null))) {
                 try {
-                    if (success.value().publish().getAsBoolean()) {
-                        modelState = success.value().state();
+                    if ($oaPattern17_holder.bound.value().publish().getAsBoolean()) {
+                        modelState = $oaPattern17_holder.bound.value().state();
                         publishLocked();
                     } else {
                         // Registry publication, including capabilities, advanced before this callback.
@@ -2121,6 +2378,7 @@ public final class ClientSettingsService implements AutoCloseable {
                 metadataFailure = new GuideFailure(failure.code(), failure.message());
                 publishLocked();
             }
+}
         }
         if (retry) {
             reconcileCurrentMetadata();
@@ -2250,11 +2508,11 @@ public final class ClientSettingsService implements AutoCloseable {
                                 historyState.guide(),
                                 historyState.activity(),
                                 historyState.scopeKind(),
-                                sourceState.sources().stream().map(source ->
+                                dev.openallay.util.Java8Collections.toList(sourceState.sources().stream().map(source ->
                                         new SettingsDiagnosticsAggregator.SourceStatus(
                                                 source.sourceId(), source.generation(),
                                                 SettingsDiagnosticsAggregator.SourceState.valueOf(source.state().name()),
-                                                source.itemCount(), source.failureCode())).toList(),
+                                                source.itemCount(), source.failureCode()))),
                                 sourceState.loaded(),
                                 sourceState.retained(),
                                 historyState.estimatedContextTokens())),
@@ -2281,11 +2539,11 @@ public final class ClientSettingsService implements AutoCloseable {
 
     private static GuideFailure historyFailure(
             HistoryRuntimeState state, HistoryAction action) {
-        if (!state.configured() || state.guide().isEmpty()) {
+        if (!state.configured() || dev.openallay.util.Java8ApiSupport.isEmpty(state.guide())) {
             return new GuideFailure(
                     "history_unavailable", "Durable Guide history is unavailable");
         }
-        GuideSnapshot guide = state.guide().orElseThrow();
+        GuideSnapshot guide = state.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         long active = activeRequestCount(guide);
         if (!state.activity().idleForDeletion()
                 || active > 0
@@ -2305,38 +2563,73 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     private static HistorySettingsView historyView(HistoryRuntimeState state) {
-        if (state.guide().isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(state.guide())) {
             return HistorySettingsView.disconnected();
         }
-        GuideSnapshot guide = state.guide().orElseThrow();
+        GuideSnapshot guide = state.guide().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         long active = activeRequestCount(guide);
         boolean busy = !state.activity().idleForDeletion()
                 || active > 0
                 || guide.persistence().state() == GuidePersistenceSnapshot.State.SAVING;
-        HistorySettingsView.Health health = !state.configured()
-                ? HistorySettingsView.Health.UNAVAILABLE
-                : switch (guide.persistence().state()) {
-                    case AVAILABLE -> busy
+        dev.openallay.settings.history.HistorySettingsView.Health $oaSwitch9_exit_result_conditional0;
+if (!state.configured()) {
+$oaSwitch9_exit_result_conditional0 = HistorySettingsView.Health.UNAVAILABLE;
+} else {
+dev.openallay.settings.history.HistorySettingsView.Health $oaSwitch9_exit_result;
+$oaSwitch9_exit: {
+switch ((guide.persistence().state())) {
+case AVAILABLE:
+{
+$oaSwitch9_exit_result = busy
                             ? HistorySettingsView.Health.WORKING
-                            : HistorySettingsView.Health.READY;
-                    case LOADING, SAVING -> HistorySettingsView.Health.WORKING;
-                    case DISABLED -> HistorySettingsView.Health.ATTENTION;
-                    case UNAVAILABLE -> HistorySettingsView.Health.UNAVAILABLE;
-                };
+                            : HistorySettingsView.Health.READY; break $oaSwitch9_exit;
+}
+case LOADING:
+case SAVING:
+{
+$oaSwitch9_exit_result = HistorySettingsView.Health.WORKING; break $oaSwitch9_exit;
+}
+case DISABLED:
+{
+$oaSwitch9_exit_result = HistorySettingsView.Health.ATTENTION; break $oaSwitch9_exit;
+}
+case UNAVAILABLE:
+{
+$oaSwitch9_exit_result = HistorySettingsView.Health.UNAVAILABLE; break $oaSwitch9_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+$oaSwitch9_exit_result_conditional0 = $oaSwitch9_exit_result;
+}
+HistorySettingsView.Health health = $oaSwitch9_exit_result_conditional0;
         boolean normalAvailable = state.configured()
                 && !busy
                 && guide.persistence().state() == GuidePersistenceSnapshot.State.AVAILABLE;
         boolean resetAvailable = state.configured()
                 && !busy
                 && guide.persistence().state() != GuidePersistenceSnapshot.State.LOADING;
-        return new HistorySettingsView(
-                switch (state.scopeKind()) {
-                    case NONE -> HistorySettingsView.ConnectionKind.NONE;
-                    case SINGLEPLAYER_WORLD ->
-                            HistorySettingsView.ConnectionKind.SINGLEPLAYER_WORLD;
-                    case MULTIPLAYER_SERVER ->
-                            HistorySettingsView.ConnectionKind.MULTIPLAYER_SERVER;
-                },
+        {
+dev.openallay.settings.history.HistorySettingsView.ConnectionKind $oaSwitch8_exit_result;
+$oaSwitch8_exit: {
+switch ((state.scopeKind())) {
+case NONE:
+{
+$oaSwitch8_exit_result = HistorySettingsView.ConnectionKind.NONE; break $oaSwitch8_exit;
+}
+case SINGLEPLAYER_WORLD:
+{
+$oaSwitch8_exit_result = HistorySettingsView.ConnectionKind.SINGLEPLAYER_WORLD; break $oaSwitch8_exit;
+}
+case MULTIPLAYER_SERVER:
+{
+$oaSwitch8_exit_result = HistorySettingsView.ConnectionKind.MULTIPLAYER_SERVER; break $oaSwitch8_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return new HistorySettingsView(
+                $oaSwitch8_exit_result,
                 health,
                 state.activity().pendingWrites(),
                 state.activity().deleting(),
@@ -2344,6 +2637,7 @@ public final class ClientSettingsService implements AutoCloseable {
                 normalAvailable,
                 normalAvailable,
                 resetAvailable);
+}
     }
 
     private static long activeRequestCount(GuideSnapshot guide) {
@@ -2354,11 +2648,27 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     private static SettingsOperation historyOperation(HistoryAction action) {
-        return SettingsOperation.domain(switch (action) {
-            case DELETE_CURRENT -> SettingsOperation.Kind.DELETING_CURRENT_HISTORY;
-            case DELETE_ACTOR -> SettingsOperation.Kind.DELETING_ACTOR_HISTORY;
-            case RESET_DATABASE -> SettingsOperation.Kind.RESETTING_HISTORY_DATABASE;
-        });
+        {
+dev.openallay.settings.SettingsOperation.Kind $oaSwitch6_exit_result;
+$oaSwitch6_exit: {
+switch ((action)) {
+case DELETE_CURRENT:
+{
+$oaSwitch6_exit_result = SettingsOperation.Kind.DELETING_CURRENT_HISTORY; break $oaSwitch6_exit;
+}
+case DELETE_ACTOR:
+{
+$oaSwitch6_exit_result = SettingsOperation.Kind.DELETING_ACTOR_HISTORY; break $oaSwitch6_exit;
+}
+case RESET_DATABASE:
+{
+$oaSwitch6_exit_result = SettingsOperation.Kind.RESETTING_HISTORY_DATABASE; break $oaSwitch6_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return SettingsOperation.domain($oaSwitch6_exit_result);
+}
     }
 
     private static <T> ToolResult<T> confirmationRequired() {
@@ -2374,10 +2684,23 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     private static ToolResult<Boolean> failed(String code) {
-        return new ToolResult.Failure<>(code, switch (code) {
-            case "settings_closed" -> "Settings are closed";
-            default -> "Another settings operation is already running";
-        });
+        {
+final java.lang.String $oaSwitch0_exit_result_prior0 = code;
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((code)) {
+case "settings_closed":
+{
+$oaSwitch0_exit_result = "Settings are closed"; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = "Another settings operation is already running"; break $oaSwitch0_exit;
+}
+}
+}
+return new ToolResult.Failure<>($oaSwitch0_exit_result_prior0, $oaSwitch0_exit_result);
+}
     }
 
     private static ModelConnectionResult.Failure connectionFailure(
@@ -2386,11 +2709,26 @@ public final class ClientSettingsService implements AutoCloseable {
     }
 
     private static String safeProbeMessage(String code) {
-        return switch (code) {
-            case "model_not_configured" -> "The configured credential is unavailable";
-            case "model_disabled" -> "The model profile is disabled";
-            default -> "The model profile is invalid";
-        };
+        {
+java.lang.String $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((code)) {
+case "model_not_configured":
+{
+$oaSwitch2_exit_result = "The configured credential is unavailable"; break $oaSwitch2_exit;
+}
+case "model_disabled":
+{
+$oaSwitch2_exit_result = "The model profile is disabled"; break $oaSwitch2_exit;
+}
+default:
+{
+$oaSwitch2_exit_result = "The model profile is invalid"; break $oaSwitch2_exit;
+}
+}
+}
+return $oaSwitch2_exit_result;
+}
     }
 
     private static <T> ToolResult<T> safely(
@@ -2547,27 +2885,113 @@ public final class ClientSettingsService implements AutoCloseable {
         }
     }
 
-    private record Reservation(long id, String failureCode) {
-        private static Reservation accepted(long id) {
+    @dev.openallay.value.ValueType(Reservation.ValueSchemaProvider.class)
+private static final class Reservation {
+    private final long id;
+    private final String failureCode;
+    private Reservation(long id, String failureCode) {
+        this.id = id;
+        this.failureCode = failureCode;
+    }
+    public long id() { return id; }
+    public String failureCode() { return failureCode; }
+private static Reservation accepted(long id) {
             return new Reservation(id, null);
         }
-
-        private static Reservation rejected(String code) {
+private static Reservation rejected(String code) {
             return new Reservation(-1, code);
         }
-
-        private boolean accepted() {
+private boolean accepted() {
             return failureCode == null;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Reservation)) return false;
+        Reservation that = (Reservation) other;
+        return id == that.id && java.util.Objects.equals(failureCode, that.failureCode);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(failureCode);
+        return hash;
+    }
+    @Override public String toString() { return "Reservation[id=" + id + ", failureCode=" + failureCode + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Reservation> schema() {
+            return new dev.openallay.value.ValueSchema<>(Reservation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Reservation>>asList(new dev.openallay.value.ValueSchema.Component<>(Reservation.class, "id", Reservation::id), new dev.openallay.value.ValueSchema.Component<>(Reservation.class, "failureCode", Reservation::failureCode)), arguments -> new Reservation((Long) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
-    private record ActiveProbe(
-            long id,
-            CancellationSignal cancellation,
-            CompletableFuture<ModelConnectionResult> result) {}
+    @dev.openallay.value.ValueType(ActiveProbe.ValueSchemaProvider.class)
+private static final class ActiveProbe {
+    private final long id;
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<ModelConnectionResult> result;
+    private ActiveProbe(long id, CancellationSignal cancellation, CompletableFuture<ModelConnectionResult> result) {
+        this.id = id;
+        this.cancellation = cancellation;
+        this.result = result;
+    }
+    public long id() { return id; }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<ModelConnectionResult> result() { return result; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ActiveProbe)) return false;
+        ActiveProbe that = (ActiveProbe) other;
+        return id == that.id && java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(result, that.result);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(result);
+        return hash;
+    }
+    @Override public String toString() { return "ActiveProbe[id=" + id + ", cancellation=" + cancellation + ", result=" + result + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ActiveProbe> schema() {
+            return new dev.openallay.value.ValueSchema<>(ActiveProbe.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ActiveProbe>>asList(new dev.openallay.value.ValueSchema.Component<>(ActiveProbe.class, "id", ActiveProbe::id), new dev.openallay.value.ValueSchema.Component<>(ActiveProbe.class, "cancellation", ActiveProbe::cancellation), new dev.openallay.value.ValueSchema.Component<>(ActiveProbe.class, "result", ActiveProbe::result)), arguments -> new ActiveProbe((Long) arguments[0], (CancellationSignal) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 
-    private record ActiveCatalog(
-            long id,
-            CancellationSignal cancellation,
-            CompletableFuture<ToolResult<ModelCatalog>> result) {}
+    @dev.openallay.value.ValueType(ActiveCatalog.ValueSchemaProvider.class)
+private static final class ActiveCatalog {
+    private final long id;
+    private final CancellationSignal cancellation;
+    private final CompletableFuture<ToolResult<ModelCatalog>> result;
+    private ActiveCatalog(long id, CancellationSignal cancellation, CompletableFuture<ToolResult<ModelCatalog>> result) {
+        this.id = id;
+        this.cancellation = cancellation;
+        this.result = result;
+    }
+    public long id() { return id; }
+    public CancellationSignal cancellation() { return cancellation; }
+    public CompletableFuture<ToolResult<ModelCatalog>> result() { return result; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ActiveCatalog)) return false;
+        ActiveCatalog that = (ActiveCatalog) other;
+        return id == that.id && java.util.Objects.equals(cancellation, that.cancellation) && java.util.Objects.equals(result, that.result);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(cancellation);
+        hash = 31 * hash + java.util.Objects.hashCode(result);
+        return hash;
+    }
+    @Override public String toString() { return "ActiveCatalog[id=" + id + ", cancellation=" + cancellation + ", result=" + result + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ActiveCatalog> schema() {
+            return new dev.openallay.value.ValueSchema<>(ActiveCatalog.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ActiveCatalog>>asList(new dev.openallay.value.ValueSchema.Component<>(ActiveCatalog.class, "id", ActiveCatalog::id), new dev.openallay.value.ValueSchema.Component<>(ActiveCatalog.class, "cancellation", ActiveCatalog::cancellation), new dev.openallay.value.ValueSchema.Component<>(ActiveCatalog.class, "result", ActiveCatalog::result)), arguments -> new ActiveCatalog((Long) arguments[0], (CancellationSignal) arguments[1], (CompletableFuture) arguments[2]));
+        }
+    }
+}
 }

@@ -47,6 +47,6 @@ final class WorldObservationEvidence {
                 provenance,
                 platform.gameVersion(),
                 platform.platformName(),
-                Map.of("minecraft:dimension", dimension));
+                dev.openallay.util.Java8Collections.mapOf("minecraft:dimension", dimension));
     }
 }

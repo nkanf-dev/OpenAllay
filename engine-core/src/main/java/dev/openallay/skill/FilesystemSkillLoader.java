@@ -15,32 +15,86 @@ import java.util.stream.Stream;
 
 /** Read-only discovery of local Agent Skills below one trusted configuration root. */
 public final class FilesystemSkillLoader {
-    private static final Set<String> EXECUTABLE_EXTENSIONS = Set.of(
-            "sh", "bash", "zsh", "command", "bat", "cmd", "ps1", "exe", "dll", "dylib",
-            "so", "class", "jar", "py", "pyc", "js", "mjs", "cjs");
+    private static final Set<String> EXECUTABLE_EXTENSIONS = dev.openallay.util.Java8Collections.setOf("sh", "bash", "zsh", "command", "bat", "cmd", "ps1", "exe", "dll", "dylib", "so", "class", "jar", "py", "pyc", "js", "mjs", "cjs");
 
-    public record RejectedSkill(String skillName, SkillDiagnostic diagnostic) {
-        public RejectedSkill {
-            if (skillName == null || skillName.isBlank()) {
+    @dev.openallay.value.ValueType(RejectedSkill.ValueSchemaProvider.class)
+public static final class RejectedSkill {
+    private final String skillName;
+    private final SkillDiagnostic diagnostic;
+    public RejectedSkill(String skillName, SkillDiagnostic diagnostic) {
+
+            if (skillName == null || dev.openallay.util.Java8Strings.isBlank(skillName)) {
                 throw new IllegalArgumentException("Rejected Skill name must not be blank");
             }
             diagnostic = java.util.Objects.requireNonNull(diagnostic, "diagnostic");
-        }
-    }
 
-    public record LoadResult(List<SkillSource> sources, List<RejectedSkill> rejected) {
-        public LoadResult {
-            sources = List.copyOf(sources);
-            rejected = List.copyOf(rejected);
+        this.skillName = skillName;
+        this.diagnostic = diagnostic;
+    }
+    public String skillName() { return skillName; }
+    public SkillDiagnostic diagnostic() { return diagnostic; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof RejectedSkill)) return false;
+        RejectedSkill that = (RejectedSkill) other;
+        return java.util.Objects.equals(skillName, that.skillName) && java.util.Objects.equals(diagnostic, that.diagnostic);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(skillName);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostic);
+        return hash;
+    }
+    @Override public String toString() { return "RejectedSkill[skillName=" + skillName + ", diagnostic=" + diagnostic + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<RejectedSkill> schema() {
+            return new dev.openallay.value.ValueSchema<>(RejectedSkill.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<RejectedSkill>>asList(new dev.openallay.value.ValueSchema.Component<>(RejectedSkill.class, "skillName", RejectedSkill::skillName), new dev.openallay.value.ValueSchema.Component<>(RejectedSkill.class, "diagnostic", RejectedSkill::diagnostic)), arguments -> new RejectedSkill((String) arguments[0], (SkillDiagnostic) arguments[1]));
         }
     }
+}
+
+    @dev.openallay.value.ValueType(LoadResult.ValueSchemaProvider.class)
+public static final class LoadResult {
+    private final List<SkillSource> sources;
+    private final List<RejectedSkill> rejected;
+    public LoadResult(List<SkillSource> sources, List<RejectedSkill> rejected) {
+
+            sources = dev.openallay.util.Java8Collections.listCopyOf(sources);
+            rejected = dev.openallay.util.Java8Collections.listCopyOf(rejected);
+
+        this.sources = sources;
+        this.rejected = rejected;
+    }
+    public List<SkillSource> sources() { return sources; }
+    public List<RejectedSkill> rejected() { return rejected; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof LoadResult)) return false;
+        LoadResult that = (LoadResult) other;
+        return java.util.Objects.equals(sources, that.sources) && java.util.Objects.equals(rejected, that.rejected);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + java.util.Objects.hashCode(rejected);
+        return hash;
+    }
+    @Override public String toString() { return "LoadResult[sources=" + sources + ", rejected=" + rejected + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<LoadResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(LoadResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<LoadResult>>asList(new dev.openallay.value.ValueSchema.Component<>(LoadResult.class, "sources", LoadResult::sources), new dev.openallay.value.ValueSchema.Component<>(LoadResult.class, "rejected", LoadResult::rejected)), arguments -> new LoadResult((List) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 
     public LoadResult load(Path configuredRoot) {
         Path root = java.util.Objects.requireNonNull(configuredRoot, "configuredRoot")
                 .toAbsolutePath()
                 .normalize();
         if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
-            return new LoadResult(List.of(), List.of());
+            return new LoadResult(dev.openallay.util.Java8Collections.listOf(), dev.openallay.util.Java8Collections.listOf());
         }
         if (Files.isSymbolicLink(root) || !Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
             return rootFailure(root, "Skill configuration root must be a real directory");
@@ -48,7 +102,7 @@ public final class FilesystemSkillLoader {
         List<SkillSource> sources = new ArrayList<>();
         List<RejectedSkill> rejected = new ArrayList<>();
         try (Stream<Path> children = Files.list(root)) {
-            for (Path child : children.sorted(Comparator.comparing(path -> path.getFileName().toString())).toList()) {
+            for (Path child : dev.openallay.util.Java8Collections.toList(children.sorted(Comparator.comparing(path -> path.getFileName().toString())))) {
                 if (child.getFileName().toString().startsWith(".")) {
                     // Atomic settings staging/tombstones are never discoverable Skill packages.
                     continue;
@@ -85,7 +139,7 @@ public final class FilesystemSkillLoader {
         }
         Map<String, String> files = new LinkedHashMap<>();
         try (Stream<Path> tree = Files.walk(directory)) {
-            for (Path path : tree.sorted().toList()) {
+            for (Path path : dev.openallay.util.Java8Collections.toList(tree.sorted())) {
                 if (path.equals(directory)) {
                     continue;
                 }
@@ -117,7 +171,7 @@ public final class FilesystemSkillLoader {
                 if (isExecutable(relative)) {
                     throw new IllegalArgumentException("Executable Skill files are not supported: " + relative);
                 }
-                files.put(name + "/" + relative, Files.readString(path));
+                files.put(name + "/" + relative, dev.openallay.util.Java8Files.readString(path));
             }
         }
         return new SkillSource(
@@ -134,7 +188,7 @@ public final class FilesystemSkillLoader {
     }
 
     private static RejectedSkill rejected(Path directory, String message) {
-        String safeMessage = message == null || message.isBlank()
+        String safeMessage = message == null || dev.openallay.util.Java8Strings.isBlank(message)
                 ? "Unable to read local Skill"
                 : message;
         return new RejectedSkill(
@@ -145,8 +199,8 @@ public final class FilesystemSkillLoader {
 
     private static LoadResult rootFailure(Path root, String message) {
         return new LoadResult(
-                List.of(),
-                List.of(new RejectedSkill(
+                dev.openallay.util.Java8Collections.listOf(),
+                dev.openallay.util.Java8Collections.listOf(new RejectedSkill(
                         ".",
                         new SkillDiagnostic("skill_discovery_failed", message, "local:" + root))));
     }

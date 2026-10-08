@@ -13,14 +13,23 @@ import net.minecraft.client.Screenshot;
  */
 public final class MinecraftNativeImageCapture {
     private MinecraftNativeImageCapture() {}
+    public static void write(GuideImageBitmap image, java.nio.file.Path path) throws java.io.IOException {
+        java.awt.image.BufferedImage pixels = new java.awt.image.BufferedImage(image.width(), image.height(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        pixels.setRGB(0, 0, image.width(), image.height(), image.argb(), 0, image.width());
+        if (!javax.imageio.ImageIO.write(pixels, "png", path.toFile())) throw new java.io.IOException("PNG encoder is unavailable");
+    }
+    public static int width(net.minecraft.client.Minecraft client) { return dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client).width; }
+    public static int height(net.minecraft.client.Minecraft client) { return dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client).height; }
 
-    public static CompletableFuture<NativeImage> capture(RenderTarget target) {
-        CompletableFuture<NativeImage> result = new CompletableFuture<>();
+    public static CompletableFuture<GuideImageBitmap> capture(net.minecraft.client.Minecraft client) {
+        RenderTarget target = dev.openallay.client.gui.MinecraftClientWindow.mainRenderTarget(client);
+        CompletableFuture<GuideImageBitmap> result = new CompletableFuture<>();
         try {
             Screenshot.takeScreenshot(Objects.requireNonNull(target, "target"), image -> {
                 // Never throw from the native callback: Screenshot still owns a GPU buffer until it returns.
                 try {
-                    if (!result.complete(image)) image.close();
+                    GuideImageBitmap owned = GuideImageBitmaps.wrap(image);
+                    if (!result.complete(owned)) owned.close();
                 } catch (Throwable failure) {
                     result.completeExceptionally(failure);
                 }

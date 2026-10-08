@@ -53,18 +53,40 @@ public final class OpenAllayWidgetTheme {
     }
 
     public static ButtonColors buttonColors(ButtonVisualState state) {
-        return switch (state) {
-            case IDLE -> new ButtonColors(
-                    CHARCOAL_RAISED, SLATE_BORDER, CHARCOAL, WHITE, SLATE_BORDER);
-            case HOVERED -> new ButtonColors(
-                    CHARCOAL_HOVERED, MINT, CHARCOAL, WHITE, MINT);
-            case FOCUSED -> new ButtonColors(
-                    CHARCOAL_HOVERED, AMBER, CHARCOAL, WHITE, AMBER);
-            case SELECTED -> new ButtonColors(
-                    MINT_DARK, MINT, CHARCOAL, WHITE, MINT);
-            case DISABLED -> new ButtonColors(
-                    CHARCOAL_DISABLED, SLATE_DISABLED, CHARCOAL, MUTED, SLATE_DISABLED);
-        };
+        {
+dev.openallay.client.gui.OpenAllayWidgetTheme.ButtonColors $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((state)) {
+case IDLE:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_RAISED, SLATE_BORDER, CHARCOAL, WHITE, SLATE_BORDER); break $oaSwitch0_exit;
+}
+case HOVERED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_HOVERED, MINT, CHARCOAL, WHITE, MINT); break $oaSwitch0_exit;
+}
+case FOCUSED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_HOVERED, AMBER, CHARCOAL, WHITE, AMBER); break $oaSwitch0_exit;
+}
+case SELECTED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    MINT_DARK, MINT, CHARCOAL, WHITE, MINT); break $oaSwitch0_exit;
+}
+case DISABLED:
+{
+$oaSwitch0_exit_result = new ButtonColors(
+                    CHARCOAL_DISABLED, SLATE_DISABLED, CHARCOAL, MUTED, SLATE_DISABLED); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     public enum ButtonVisualState {
@@ -75,5 +97,46 @@ public final class OpenAllayWidgetTheme {
         DISABLED
     }
 
-    public record ButtonColors(int fill, int border, int shadow, int text, int marker) {}
+    @dev.openallay.value.ValueType(ButtonColors.ValueSchemaProvider.class)
+public static final class ButtonColors {
+    private final int fill;
+    private final int border;
+    private final int shadow;
+    private final int text;
+    private final int marker;
+    public ButtonColors(int fill, int border, int shadow, int text, int marker) {
+        this.fill = fill;
+        this.border = border;
+        this.shadow = shadow;
+        this.text = text;
+        this.marker = marker;
+    }
+    public int fill() { return fill; }
+    public int border() { return border; }
+    public int shadow() { return shadow; }
+    public int text() { return text; }
+    public int marker() { return marker; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ButtonColors)) return false;
+        ButtonColors that = (ButtonColors) other;
+        return fill == that.fill && border == that.border && shadow == that.shadow && text == that.text && marker == that.marker;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(fill);
+        hash = 31 * hash + Integer.hashCode(border);
+        hash = 31 * hash + Integer.hashCode(shadow);
+        hash = 31 * hash + Integer.hashCode(text);
+        hash = 31 * hash + Integer.hashCode(marker);
+        return hash;
+    }
+    @Override public String toString() { return "ButtonColors[fill=" + fill + ", border=" + border + ", shadow=" + shadow + ", text=" + text + ", marker=" + marker + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ButtonColors> schema() {
+            return new dev.openallay.value.ValueSchema<>(ButtonColors.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ButtonColors>>asList(new dev.openallay.value.ValueSchema.Component<>(ButtonColors.class, "fill", ButtonColors::fill), new dev.openallay.value.ValueSchema.Component<>(ButtonColors.class, "border", ButtonColors::border), new dev.openallay.value.ValueSchema.Component<>(ButtonColors.class, "shadow", ButtonColors::shadow), new dev.openallay.value.ValueSchema.Component<>(ButtonColors.class, "text", ButtonColors::text), new dev.openallay.value.ValueSchema.Component<>(ButtonColors.class, "marker", ButtonColors::marker)), arguments -> new ButtonColors((Integer) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (Integer) arguments[4]));
+        }
+    }
+}
 }

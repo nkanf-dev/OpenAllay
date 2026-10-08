@@ -22,7 +22,7 @@ public final class BenchmarkRunner {
             Executor executor) {
         Objects.requireNonNull(executor, "executor");
         ArrayList<BenchmarkReport.CaseReport> reports = new ArrayList<>();
-        for (BenchmarkCase testCase : List.copyOf(cases)) {
+        for (BenchmarkCase testCase : dev.openallay.util.Java8Collections.listCopyOf(cases)) {
             ArrayList<BenchmarkReport.AttemptReport> attemptReports = new ArrayList<>();
             int successes = 0;
             long modelTurns = 0;
@@ -55,15 +55,13 @@ public final class BenchmarkRunner {
                     successes,
                     successes / (double) attempts,
                     modelTurns / (double) attempts,
-                    median(attemptReports.stream()
+                    median(dev.openallay.util.Java8Collections.toList(attemptReports.stream()
                             .map(BenchmarkReport.AttemptReport::metrics)
-                            .map(BenchmarkMetrics::modelTurns)
-                            .toList()),
+                            .map(BenchmarkMetrics::modelTurns))),
                     toolCalls / (double) attempts,
-                    median(attemptReports.stream()
+                    median(dev.openallay.util.Java8Collections.toList(attemptReports.stream()
                             .map(BenchmarkReport.AttemptReport::metrics)
-                            .map(BenchmarkMetrics::toolCalls)
-                            .toList()),
+                            .map(BenchmarkMetrics::toolCalls))),
                     attemptReports));
         }
         return new BenchmarkReport(reports);
@@ -89,18 +87,37 @@ public final class BenchmarkRunner {
             BenchmarkReport.FailureKind failureKind,
             BenchmarkOutcome outcome,
             BenchmarkVerifier.Verification verification) {
-        return switch (failureKind) {
-            case NONE -> "";
-            case RUNTIME_TERMINAL -> outcome.metrics().terminalCode().isBlank()
+        {
+java.lang.String $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((failureKind)) {
+case NONE:
+{
+$oaSwitch0_exit_result = ""; break $oaSwitch0_exit;
+}
+case RUNTIME_TERMINAL:
+{
+$oaSwitch0_exit_result = dev.openallay.util.Java8Strings.isBlank(outcome.metrics().terminalCode())
                     ? "runtime terminal failure"
-                    : "runtime terminal: " + outcome.metrics().terminalCode();
-            case VERIFICATION -> verification.diagnostic();
-            case MODEL_TURN_BUDGET -> "model turn budget exceeded";
-        };
+                    : "runtime terminal: " + outcome.metrics().terminalCode(); break $oaSwitch0_exit;
+}
+case VERIFICATION:
+{
+$oaSwitch0_exit_result = verification.diagnostic(); break $oaSwitch0_exit;
+}
+case MODEL_TURN_BUDGET:
+{
+$oaSwitch0_exit_result = "model turn budget exceeded"; break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static double median(List<Integer> values) {
-        List<Integer> ordered = values.stream().sorted().toList();
+        List<Integer> ordered = dev.openallay.util.Java8Collections.toList(values.stream().sorted());
         int middle = ordered.size() / 2;
         return ordered.size() % 2 == 1
                 ? ordered.get(middle)

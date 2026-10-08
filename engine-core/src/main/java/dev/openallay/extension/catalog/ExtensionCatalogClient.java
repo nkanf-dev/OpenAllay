@@ -97,7 +97,7 @@ public final class ExtensionCatalogClient {
                             .build(),
                     cancellation,
                     (status, headers, body) -> new Response(
-                            status, new String(body.readAllBytes(), StandardCharsets.UTF_8)));
+                            status, new String(dev.openallay.util.Java8Streams.readAllBytes(body), StandardCharsets.UTF_8)));
         } catch (RuntimeException failure) {
             return CompletableFuture.completedFuture(refreshFailure());
         }
@@ -132,7 +132,7 @@ public final class ExtensionCatalogClient {
             return;
         }
         try {
-            current = codec.decode(Files.readString(cachePath));
+            current = codec.decode(dev.openallay.util.Java8Files.readString(cachePath));
         } catch (Exception ignored) {
             // Invalid cache is absent state; the next refresh may establish a valid generation.
         }
@@ -164,5 +164,34 @@ public final class ExtensionCatalogClient {
                         + "the last valid catalog remains available");
     }
 
-    private record Response(int status, String body) {}
+    @dev.openallay.value.ValueType(Response.ValueSchemaProvider.class)
+private static final class Response {
+    private final int status;
+    private final String body;
+    private Response(int status, String body) {
+        this.status = status;
+        this.body = body;
+    }
+    public int status() { return status; }
+    public String body() { return body; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Response)) return false;
+        Response that = (Response) other;
+        return status == that.status && java.util.Objects.equals(body, that.body);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(status);
+        hash = 31 * hash + java.util.Objects.hashCode(body);
+        return hash;
+    }
+    @Override public String toString() { return "Response[status=" + status + ", body=" + body + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Response> schema() {
+            return new dev.openallay.value.ValueSchema<>(Response.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Response>>asList(new dev.openallay.value.ValueSchema.Component<>(Response.class, "status", Response::status), new dev.openallay.value.ValueSchema.Component<>(Response.class, "body", Response::body)), arguments -> new Response((Integer) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 }

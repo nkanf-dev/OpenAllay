@@ -61,8 +61,8 @@ public final class ClientToolExecutionEndpoint {
     }
 
     private static final ResultImages NO_IMAGES = (request, invocation, session, references, cancellation) ->
-            references.isEmpty() ? CompletableFuture.completedFuture(List.of())
-                    : CompletableFuture.failedFuture(new IllegalStateException("Client image custody is unavailable"));
+            references.isEmpty() ? CompletableFuture.completedFuture(dev.openallay.util.Java8Collections.listOf())
+                    : dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Client image custody is unavailable"));
     private volatile ResultImages resultImages = NO_IMAGES;
 
     public void configureResultImages(ResultImages images) {
@@ -123,25 +123,27 @@ public final class ClientToolExecutionEndpoint {
                 .map(tool -> tool.freezeCommandCapability(requestId.toString()))
                 .orElse(false);
         ToolRuntimeCatalog requestTools = ToolRuntimeCatalog.from(
-                frozenTools.registrations().stream()
-                        .map(registration -> registration.tool() instanceof LoadSkillTool skill
+                dev.openallay.util.Java8Collections.toList(frozenTools.registrations().stream()
+                        .map(registration -> {
+final class $oaPattern0_Holder { dev.openallay.tool.Tool<?, ?> value; LoadSkillTool bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+return (($oaPattern0_holder.value = registration.tool()) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern0_holder.bound = (LoadSkillTool) $oaPattern0_holder.value) != null))
                                 ? new RegisteredTool(registration.providerId(),
-                                        skill.forRequest(false, commandsEnabled, "client"))
-                                : registration)
-                        .toList(),
-                Set.of());
+                                        $oaPattern0_holder.bound.forRequest(false, commandsEnabled, "client"))
+                                : registration;
+})),
+                dev.openallay.util.Java8Collections.setOf());
         SkillCatalogManifest skillDocuments = requestTools.find("openallay:load_skill")
                 .filter(LoadSkillTool.class::isInstance)
                 .map(LoadSkillTool.class::cast)
                 .map(LoadSkillTool::catalogManifest)
                 .orElse(SkillCatalogManifest.EMPTY);
         java.util.ArrayList<String> exported = new java.util.ArrayList<>(
-                requestTools.descriptors().stream()
+                dev.openallay.util.Java8Collections.toList(requestTools.descriptors().stream()
                 .filter(descriptor -> descriptor.access() == ToolAccess.READ_ONLY
                         || descriptor.access() == ToolAccess.EXPERIMENTAL_ACTION)
                 .map(descriptor -> descriptor.id())
-                .sorted()
-                .toList());
+                .sorted()));
         if (commandsEnabled) exported.add(EXPERIMENTAL_COMMANDS_CAPABILITY);
         RequestState state = new RequestState(
                 sessionId,
@@ -149,13 +151,13 @@ public final class ClientToolExecutionEndpoint {
                 resultImages,
                 exported.stream()
                         .filter(id -> !id.equals(EXPERIMENTAL_COMMANDS_CAPABILITY))
-                        .collect(java.util.stream.Collectors.toUnmodifiableSet()));
+                        .collect(dev.openallay.util.Java8ApiSupport.toUnmodifiableSet()));
         if (requests.putIfAbsent(requestId, state) != null) {
             return new ToolResult.Failure<>(
                     "duplicate_request", "Client Tool request ID is already active");
         }
         return new ToolResult.Success<>(
-                new OpenedRequest(requestId, sessionId, List.copyOf(exported), skillDocuments));
+                new OpenedRequest(requestId, sessionId, dev.openallay.util.Java8Collections.listCopyOf(exported), skillDocuments));
     }
 
     public ToolResult<VoidResult> handle(ClientToolCallPayload payload) {
@@ -243,7 +245,7 @@ public final class ClientToolExecutionEndpoint {
     }
 
     public int disconnect() {
-        List<UUID> active = List.copyOf(requests.keySet());
+        List<UUID> active = dev.openallay.util.Java8Collections.listCopyOf(requests.keySet());
         active.forEach(this::close);
         return active.size();
     }
@@ -271,8 +273,10 @@ public final class ClientToolExecutionEndpoint {
         }
         ToolResult<?> decoded = arguments.decode(
                 parsed.getAsJsonObject(), tool.descriptor().inputType());
-        if (decoded instanceof ToolResult.Failure<?> failure) {
-            return CompletableFuture.completedFuture(failure);
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Failure<?> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = decoded) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<?>) $oaPattern1_holder.value) != null))) {
+            return CompletableFuture.completedFuture($oaPattern1_holder.bound);
         }
         cancellation.throwIfCancelled();
         try {
@@ -293,15 +297,19 @@ public final class ClientToolExecutionEndpoint {
         if (!current(payload, request, cancellation)) return;
         try {
             com.google.gson.JsonObject normalized = normalizer.normalize(result, tool.descriptor().outputType());
-            List<dev.openallay.model.image.ImageReference> images = result instanceof ToolResult.Success<?> success
-                    && success.value() instanceof dev.openallay.agent.tool.ModelImageToolOutput visual
-                    ? List.copyOf(visual.images()) : List.of();
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<?> value; ToolResult.Success<?> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+final class $oaPattern3_Holder { java.lang.Object value; dev.openallay.agent.tool.ModelImageToolOutput bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+List<dev.openallay.model.image.ImageReference> images = (($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<?>) $oaPattern2_holder.value) != null))
+                    && (($oaPattern3_holder.value = $oaPattern2_holder.bound.value()) instanceof dev.openallay.agent.tool.ModelImageToolOutput && (($oaPattern3_holder.bound = (dev.openallay.agent.tool.ModelImageToolOutput) $oaPattern3_holder.value) != null))
+                    ? dev.openallay.util.Java8Collections.listCopyOf($oaPattern3_holder.bound.images()) : dev.openallay.util.Java8Collections.listOf();
             dev.openallay.model.image.ModelImages.unique(images);
             request.images.prepare(payload.requestId(), payload.invocationId(), request.sessionId,
                             images, cancellation)
                     .thenAcceptAsync(attachments -> {
                         if (!current(payload, request, cancellation)) return;
-                        var message = new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, attachments);
+                        dev.openallay.bridge.protocol.ToolExecutionMessage message = new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, attachments);
                         message.requireImages(images);
                         sendMessage(payload.requestId(), payload.invocationId(), message);
                         request.remove(payload.invocationId());
@@ -336,7 +344,7 @@ public final class ClientToolExecutionEndpoint {
     private void sendNormalized(
             UUID requestId, UUID invocationId, com.google.gson.JsonObject normalized) {
         sendMessage(requestId, invocationId,
-                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, List.of()));
+                new dev.openallay.bridge.protocol.ToolExecutionMessage(normalized, dev.openallay.util.Java8Collections.listOf()));
     }
 
     private void sendMessage(UUID requestId, UUID invocationId,
@@ -359,27 +367,84 @@ public final class ClientToolExecutionEndpoint {
             ToolInvocationContext context,
             Object input,
             CancellationSignal cancellation) {
-        if (raw instanceof LoadSkillTool skill) {
+        final class $oaPattern4_Holder { dev.openallay.tool.Tool<?, ?> value; LoadSkillTool bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = raw) instanceof dev.openallay.skill.LoadSkillTool && (($oaPattern4_holder.bound = (LoadSkillTool) $oaPattern4_holder.value) != null))) {
             // The server projection owns retained plaintext. The client has no delivery receipts.
             return CompletableFuture.completedFuture(
-                    skill.invokeFresh(context, (LoadSkillTool.Input) input));
+                    $oaPattern4_holder.bound.invokeFresh(context, (LoadSkillTool.Input) input));
         }
         return ((Tool<I, O>) raw)
                 .invokeAsync(context, (I) input, cancellation)
                 .thenApply(result -> result);
     }
 
-    public record OpenedRequest(
-            UUID requestId, String sessionId, List<String> clientToolIds,
-            SkillCatalogManifest skillDocuments) {
-        public OpenedRequest {
+    @dev.openallay.value.ValueType(OpenedRequest.ValueSchemaProvider.class)
+public static final class OpenedRequest {
+    private final UUID requestId;
+    private final String sessionId;
+    private final List<String> clientToolIds;
+    private final SkillCatalogManifest skillDocuments;
+    public OpenedRequest(UUID requestId, String sessionId, List<String> clientToolIds, SkillCatalogManifest skillDocuments) {
+
             java.util.Objects.requireNonNull(requestId, "requestId");
-            clientToolIds = List.copyOf(clientToolIds);
+            clientToolIds = dev.openallay.util.Java8Collections.listCopyOf(clientToolIds);
             java.util.Objects.requireNonNull(skillDocuments, "skillDocuments");
+
+        this.requestId = requestId;
+        this.sessionId = sessionId;
+        this.clientToolIds = clientToolIds;
+        this.skillDocuments = skillDocuments;
+    }
+    public UUID requestId() { return requestId; }
+    public String sessionId() { return sessionId; }
+    public List<String> clientToolIds() { return clientToolIds; }
+    public SkillCatalogManifest skillDocuments() { return skillDocuments; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof OpenedRequest)) return false;
+        OpenedRequest that = (OpenedRequest) other;
+        return java.util.Objects.equals(requestId, that.requestId) && java.util.Objects.equals(sessionId, that.sessionId) && java.util.Objects.equals(clientToolIds, that.clientToolIds) && java.util.Objects.equals(skillDocuments, that.skillDocuments);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(requestId);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionId);
+        hash = 31 * hash + java.util.Objects.hashCode(clientToolIds);
+        hash = 31 * hash + java.util.Objects.hashCode(skillDocuments);
+        return hash;
+    }
+    @Override public String toString() { return "OpenedRequest[requestId=" + requestId + ", sessionId=" + sessionId + ", clientToolIds=" + clientToolIds + ", skillDocuments=" + skillDocuments + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<OpenedRequest> schema() {
+            return new dev.openallay.value.ValueSchema<>(OpenedRequest.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<OpenedRequest>>asList(new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "requestId", OpenedRequest::requestId), new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "sessionId", OpenedRequest::sessionId), new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "clientToolIds", OpenedRequest::clientToolIds), new dev.openallay.value.ValueSchema.Component<>(OpenedRequest.class, "skillDocuments", OpenedRequest::skillDocuments)), arguments -> new OpenedRequest((UUID) arguments[0], (String) arguments[1], (List) arguments[2], (SkillCatalogManifest) arguments[3]));
         }
     }
+}
 
-    public record VoidResult() {}
+    @dev.openallay.value.ValueType(VoidResult.ValueSchemaProvider.class)
+public static final class VoidResult {
+    public VoidResult() {
+    }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof VoidResult)) return false;
+        VoidResult that = (VoidResult) other;
+        return true;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        return hash;
+    }
+    @Override public String toString() { return "VoidResult[]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<VoidResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(VoidResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VoidResult>>asList(), arguments -> new VoidResult());
+        }
+    }
+}
 
     private enum Registration {
         REGISTERED,
@@ -429,7 +494,7 @@ public final class ClientToolExecutionEndpoint {
                     return;
                 }
                 closed = true;
-                cancellations = List.copyOf(pending.values());
+                cancellations = dev.openallay.util.Java8Collections.listCopyOf(pending.values());
                 pending.clear();
             }
             cancellations.forEach(CancellationSignal::cancel);

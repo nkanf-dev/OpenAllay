@@ -12,10 +12,10 @@ import java.util.TreeMap;
 
 /** Parser for the safe OpenAllay subset of the public Agent Skills format. */
 public final class SkillParser {
-    private static final Set<String> AGENT_SKILL_FIELDS = Set.of(
+    private static final Set<String> AGENT_SKILL_FIELDS = dev.openallay.util.Java8Collections.setOf(
             "name", "description", "license", "compatibility", "metadata", "allowed-tools");
     private static final String REQUIRED_MODS_ATTRIBUTE = "openallay/required-mods";
-    private static final Set<String> EXECUTABLE_EXTENSIONS = Set.of(
+    private static final Set<String> EXECUTABLE_EXTENSIONS = dev.openallay.util.Java8Collections.setOf(
             "sh", "bash", "zsh", "fish", "command", "bat", "cmd", "ps1", "exe", "dll",
             "dylib", "so", "class", "jar", "py", "pyc", "js", "mjs", "cjs");
 
@@ -40,7 +40,7 @@ public final class SkillParser {
      */
     public SkillDocument parsePackage(
             String provenance, Map<String, String> relativeFiles, SkillSource.Origin origin) {
-        Map<String, String> files = Map.copyOf(relativeFiles);
+        Map<String, String> files = dev.openallay.util.Java8Collections.mapCopyOf(relativeFiles);
         String markdown = files.get("SKILL.md");
         if (markdown == null) {
             throw new IllegalArgumentException("Skill package requires root SKILL.md");
@@ -79,7 +79,7 @@ public final class SkillParser {
                 attributes,
                 requiredMods,
                 allowedTools,
-                List.copyOf(references.keySet()),
+                dev.openallay.util.Java8Collections.listCopyOf(references.keySet()),
                 source.provenance() + ":" + source.entryPath(),
                 source.origin());
         return new SkillDocument(metadata, parsed.body(), references);
@@ -109,9 +109,9 @@ public final class SkillParser {
                 parsed.requiredScalar("description"),
                 Optional.empty(),
                 Optional.empty(),
-                Map.of(),
-                Set.copyOf(parsed.list("required-mods")),
-                Set.copyOf(parsed.list("allowed-tools")),
+                dev.openallay.util.Java8Collections.mapOf(),
+                dev.openallay.util.Java8Collections.setCopyOf(parsed.list("required-mods")),
+                dev.openallay.util.Java8Collections.setCopyOf(parsed.list("allowed-tools")),
                 referencePaths,
                 source.provenance() + ":" + source.entryPath(),
                 source.origin());
@@ -152,17 +152,17 @@ public final class SkillParser {
                 references.put(path.substring(root.length()), contents);
             }
         });
-        return Map.copyOf(references);
+        return dev.openallay.util.Java8Collections.mapCopyOf(references);
     }
 
     private static Set<String> splitDependencies(String value) {
         LinkedHashSet<String> dependencies = new LinkedHashSet<>();
         for (String item : value.split("[,\\s]+")) {
-            if (!item.isBlank()) {
+            if (!dev.openallay.util.Java8Strings.isBlank(item)) {
                 dependencies.add(item);
             }
         }
-        return Set.copyOf(dependencies);
+        return dev.openallay.util.Java8Collections.setCopyOf(dependencies);
     }
 
     private static ParsedFrontmatter frontmatter(String value) {
@@ -180,14 +180,14 @@ public final class SkillParser {
         String activeCollection = null;
         CollectionKind collectionKind = null;
         for (String raw : normalized.substring(4, end).split("\n", -1)) {
-            if (raw.isBlank() || raw.stripLeading().startsWith("#")) {
+            if (dev.openallay.util.Java8Strings.isBlank(raw) || dev.openallay.util.Java8Strings.stripLeading(raw).startsWith("#")) {
                 continue;
             }
             if (Character.isWhitespace(raw.charAt(0))) {
                 if (activeCollection == null) {
                     throw new IllegalArgumentException("Indented frontmatter value has no key");
                 }
-                String stripped = raw.stripLeading();
+                String stripped = dev.openallay.util.Java8Strings.stripLeading(raw);
                 if (collectionKind == CollectionKind.LIST && stripped.startsWith("- ")) {
                     lists.get(activeCollection).add(unquote(stripped.substring(2).trim()));
                     continue;
@@ -199,7 +199,7 @@ public final class SkillParser {
                     }
                     String key = stripped.substring(0, separator).trim();
                     String rawValue = stripped.substring(separator + 1).trim();
-                    if (key.isBlank() || rawValue.isBlank()) {
+                    if (dev.openallay.util.Java8Strings.isBlank(key) || dev.openallay.util.Java8Strings.isBlank(rawValue)) {
                         throw new IllegalArgumentException("Skill metadata keys and values must be strings");
                     }
                     String previous = stringMaps.get(activeCollection)
@@ -244,8 +244,8 @@ public final class SkillParser {
                 scalars.put(key, unquote(content));
             }
         }
-        String body = normalized.substring(end + 5).strip();
-        if (body.isBlank()) {
+        String body = dev.openallay.util.Java8Strings.strip(normalized.substring(end + 5));
+        if (dev.openallay.util.Java8Strings.isBlank(body)) {
             throw new IllegalArgumentException("Skill instructions must not be blank");
         }
         return new ParsedFrontmatter(scalars, lists, stringMaps, body);
@@ -285,42 +285,70 @@ public final class SkillParser {
         STRING_MAP
     }
 
-    private record ParsedFrontmatter(
-            Map<String, String> scalars,
-            Map<String, List<String>> lists,
-            Map<String, Map<String, String>> stringMaps,
-            String body) {
-        private Set<String> keys() {
+    @dev.openallay.value.ValueType(ParsedFrontmatter.ValueSchemaProvider.class)
+private static final class ParsedFrontmatter {
+    private final Map<String, String> scalars;
+    private final Map<String, List<String>> lists;
+    private final Map<String, Map<String, String>> stringMaps;
+    private final String body;
+    private ParsedFrontmatter(Map<String, String> scalars, Map<String, List<String>> lists, Map<String, Map<String, String>> stringMaps, String body) {
+        this.scalars = scalars;
+        this.lists = lists;
+        this.stringMaps = stringMaps;
+        this.body = body;
+    }
+    public Map<String, String> scalars() { return scalars; }
+    public Map<String, List<String>> lists() { return lists; }
+    public Map<String, Map<String, String>> stringMaps() { return stringMaps; }
+    public String body() { return body; }
+private Set<String> keys() {
             LinkedHashSet<String> keys = new LinkedHashSet<>(scalars.keySet());
             keys.addAll(lists.keySet());
             keys.addAll(stringMaps.keySet());
-            return Set.copyOf(keys);
+            return dev.openallay.util.Java8Collections.setCopyOf(keys);
         }
-
-        private String requiredScalar(String key) {
+private String requiredScalar(String key) {
             return optionalScalar(key).orElseThrow(
                     () -> new IllegalArgumentException("Missing Skill frontmatter field: " + key));
         }
-
-        private Optional<String> optionalScalar(String key) {
+private Optional<String> optionalScalar(String key) {
             if (lists.containsKey(key) || stringMaps.containsKey(key)) {
                 throw new IllegalArgumentException("Skill frontmatter field must be a string: " + key);
             }
             return Optional.ofNullable(scalars.get(key));
         }
-
-        private List<String> list(String key) {
+private List<String> list(String key) {
             if (scalars.containsKey(key) || stringMaps.containsKey(key)) {
                 throw new IllegalArgumentException("Skill frontmatter field must be a list: " + key);
             }
-            return List.copyOf(lists.getOrDefault(key, List.of()));
+            return dev.openallay.util.Java8Collections.listCopyOf(lists.getOrDefault(key, dev.openallay.util.Java8Collections.listOf()));
         }
-
-        private Map<String, String> stringMap(String key) {
+private Map<String, String> stringMap(String key) {
             if (scalars.containsKey(key) || lists.containsKey(key)) {
                 throw new IllegalArgumentException("Skill frontmatter field must be a string map: " + key);
             }
-            return Map.copyOf(stringMaps.getOrDefault(key, Map.of()));
+            return dev.openallay.util.Java8Collections.mapCopyOf(stringMaps.getOrDefault(key, dev.openallay.util.Java8Collections.mapOf()));
+        }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ParsedFrontmatter)) return false;
+        ParsedFrontmatter that = (ParsedFrontmatter) other;
+        return java.util.Objects.equals(scalars, that.scalars) && java.util.Objects.equals(lists, that.lists) && java.util.Objects.equals(stringMaps, that.stringMaps) && java.util.Objects.equals(body, that.body);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(scalars);
+        hash = 31 * hash + java.util.Objects.hashCode(lists);
+        hash = 31 * hash + java.util.Objects.hashCode(stringMaps);
+        hash = 31 * hash + java.util.Objects.hashCode(body);
+        return hash;
+    }
+    @Override public String toString() { return "ParsedFrontmatter[scalars=" + scalars + ", lists=" + lists + ", stringMaps=" + stringMaps + ", body=" + body + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ParsedFrontmatter> schema() {
+            return new dev.openallay.value.ValueSchema<>(ParsedFrontmatter.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ParsedFrontmatter>>asList(new dev.openallay.value.ValueSchema.Component<>(ParsedFrontmatter.class, "scalars", ParsedFrontmatter::scalars), new dev.openallay.value.ValueSchema.Component<>(ParsedFrontmatter.class, "lists", ParsedFrontmatter::lists), new dev.openallay.value.ValueSchema.Component<>(ParsedFrontmatter.class, "stringMaps", ParsedFrontmatter::stringMaps), new dev.openallay.value.ValueSchema.Component<>(ParsedFrontmatter.class, "body", ParsedFrontmatter::body)), arguments -> new ParsedFrontmatter((Map) arguments[0], (Map) arguments[1], (Map) arguments[2], (String) arguments[3]));
         }
     }
+}
 }

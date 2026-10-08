@@ -17,6 +17,9 @@ def api(path):
     return json.loads(subprocess.check_output(['gh', 'api', path]))
 
 def validate_provider(group, repository):
+    require_name = (group['jobName'].startswith('build-packages ('+group['target']+',') or
+                    group['jobName'].startswith('package-only-products ('+group['target']+','))
+    if not require_name: raise ValueError('Only the exact normal compile or package-only group job is an approved provider')
     run = api(f"repos/{repository}/actions/runs/{group['runId']}")
     if (run['head_sha'] != group['sourceSha'] or run['run_attempt'] != group['runAttempt']
             or run['status'] != 'completed' or run['path'] != '.github/workflows/minecraft-native.yml'):
@@ -92,8 +95,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--verify-only', action='store_true')
+    parser.add_argument('--selection', type=Path, default=ROOT / 'distribution/release-build-selection.json')
+    parser.add_argument('--targets', help='Exact comma-separated approved targets')
     args = parser.parse_args()
-    selection = json.loads((ROOT / 'distribution/release-build-selection.json').read_text())
+    allowed = {ROOT / 'distribution/release-build-selection.json', ROOT / 'distribution/builder-package-originals.json'}
+    if args.selection not in allowed: raise ValueError('Only checked-in release provider authorities are accepted')
+    selection = json.loads(args.selection.read_text())
+    if args.selection == ROOT / 'distribution/builder-package-originals.json':
+        from package_canonical_builder import originals
+        originals(ROOT)
+    targets = None if args.targets is None else args.targets.split(',')
+    if targets is not None and (not all(targets) or len(targets) != len(set(targets)) or not set(targets).issubset({row['target'] for row in selection['groups']})):
+        raise ValueError('Exact approved original targets required')
     repository = os.environ['GITHUB_REPOSITORY']
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
         raise ValueError('Invalid repository')
@@ -102,6 +115,7 @@ def main():
     if args.output is not None:
         args.output.mkdir(parents=True, exist_ok=True)
     for group in selection['groups']:
+        if targets is not None and group['target'] not in targets: continue
         artifact = validate_provider(group, repository)
         if not args.verify_only:
             fetch(group, artifact, repository, args.output)

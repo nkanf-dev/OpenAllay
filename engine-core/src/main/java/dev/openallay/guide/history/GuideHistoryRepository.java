@@ -117,6 +117,7 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
     @Override
     public synchronized CompletableFuture<Void> delete(GuideHistoryDeleteScope scope) {
         Objects.requireNonNull(scope, "scope");
+        GuideHistoryDeleteScope.requireKnown(scope);
         return reserveDeletion(() -> store.delete(scope));
     }
 
@@ -181,17 +182,44 @@ public final class GuideHistoryRepository implements GuideHistoryAccess {
         return new ReservationFutures<>(internal, outward);
     }
 
-    private record ReservationFutures<T>(
-            CompletableFuture<T> internal,
-            CompletableFuture<T> outward) {}
+    @dev.openallay.value.ValueType(ReservationFutures.ValueSchemaProvider.class)
+private static final class ReservationFutures<T> {
+    private final CompletableFuture<T> internal;
+    private final CompletableFuture<T> outward;
+    private ReservationFutures(CompletableFuture<T> internal, CompletableFuture<T> outward) {
+        this.internal = internal;
+        this.outward = outward;
+    }
+    public CompletableFuture<T> internal() { return internal; }
+    public CompletableFuture<T> outward() { return outward; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ReservationFutures)) return false;
+        ReservationFutures that = (ReservationFutures) other;
+        return java.util.Objects.equals(internal, that.internal) && java.util.Objects.equals(outward, that.outward);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(internal);
+        hash = 31 * hash + java.util.Objects.hashCode(outward);
+        return hash;
+    }
+    @Override public String toString() { return "ReservationFutures[internal=" + internal + ", outward=" + outward + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ReservationFutures> schema() {
+            return new dev.openallay.value.ValueSchema<>(ReservationFutures.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ReservationFutures>>asList(new dev.openallay.value.ValueSchema.Component<>(ReservationFutures.class, "internal", ReservationFutures::internal), new dev.openallay.value.ValueSchema.Component<>(ReservationFutures.class, "outward", ReservationFutures::outward)), arguments -> new ReservationFutures((CompletableFuture) arguments[0], (CompletableFuture) arguments[1]));
+        }
+    }
+}
 
     private static <T> CompletableFuture<T> busyFailure() {
-        return CompletableFuture.failedFuture(new GuideHistoryException(
+        return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                 "history_delete_busy", "Guide history is busy"));
     }
 
     private static <T> CompletableFuture<T> closedFailure() {
-        return CompletableFuture.failedFuture(new GuideHistoryException(
+        return dev.openallay.util.Java8Futures.failedFuture(new GuideHistoryException(
                 "history_repository_closed", "Guide history repository is closed"));
     }
 

@@ -6,12 +6,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 
 /** Native event objects converted to typed player facts. */
 final class NeoForgeNativeServerLifecycle {
     private NeoForgeNativeServerLifecycle() {}
     static void register(Consumer<MinecraftServer> started, Consumer<ServerPlayer> joined,
-            Consumer<ServerPlayer> disconnected) {
+            Consumer<ServerPlayer> disconnected, Consumer<MinecraftServer> stopped) {
+        MinecraftForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> stopped.accept(event.getServer()));
         MinecraftForge.EVENT_BUS.addListener((ServerStartedEvent event) -> started.accept(event.getServer()));
         MinecraftForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent event) -> {
             if (event.getEntity() instanceof ServerPlayer player) joined.accept(player);

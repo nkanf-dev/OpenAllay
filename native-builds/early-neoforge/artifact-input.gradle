@@ -5,7 +5,7 @@ import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.java.TargetJvmVersion
 
 // No sources, compiler, fake alias, or publication. Expose the existing real JAR.
-def record = rootProject.ext.earlyInputs[project.name == 'extension-api' ? 'sdk' : 'rhino']
+def record = rootProject.ext.earlyInputs[['extension-api': 'sdk', 'runtime-rhino': 'rhino', 'runtime-commonmark': 'commonmark'][project.name]]
 if (record.name != project.name || record.group != 'dev.openallay') {
     throw new GradleException('Reused artifact project identity differs')
 }
@@ -19,7 +19,7 @@ configurations.create('runtimeElements') {
         attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.JAR))
         attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
-        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, project.name == 'extension-api' ? 8 : 17)
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 8)
         attribute(Attribute.of('jarJarRange', String), "[${record.version}]".toString())
     }
     outgoing.artifact(file(record.path))

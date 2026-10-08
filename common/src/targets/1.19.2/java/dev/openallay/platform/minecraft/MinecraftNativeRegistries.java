@@ -14,4 +14,5 @@ public final class MinecraftNativeRegistries {
     public static final Registry<net.minecraft.world.effect.MobEffect> MOB_EFFECT = Registry.MOB_EFFECT;
     public static final Registry<net.minecraft.world.item.alchemy.Potion> POTION = Registry.POTION;
     public static final Registry<net.minecraft.world.item.crafting.RecipeType<?>> RECIPE_TYPE = Registry.RECIPE_TYPE;
+    public static java.util.Collection<net.minecraft.resources.ResourceLocation> blockKeys() { return BLOCK.keySet(); }
 }

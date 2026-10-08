@@ -23,22 +23,45 @@ import java.util.concurrent.Executors;
 
 /** Ordered asynchronous cache for validated, credential-free provider metadata. */
 public final class ModelMetadataCache {
-    private static final Set<String> ROOT_FIELDS = Set.of("entries");
-    private static final Set<String> ENTRY_FIELDS = Set.of(
-            "source", "providerModelId", "canonicalModelId", "contextWindowTokens",
-            "maxOutputTokens", "capturedAt", "imageInputCapability");
+    private static final Set<String> ROOT_FIELDS = dev.openallay.util.Java8Collections.setOf("entries");
+    private static final Set<String> ENTRY_FIELDS = dev.openallay.util.Java8Collections.setOf("source", "providerModelId", "canonicalModelId", "contextWindowTokens", "maxOutputTokens", "capturedAt", "imageInputCapability");
 
-    public record Snapshot(
-            Map<ModelMetadata.Key, ModelMetadata> entries,
-            GuideFailure failure) {
-        public Snapshot {
+    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
+public static final class Snapshot {
+    private final Map<ModelMetadata.Key, ModelMetadata> entries;
+    private final GuideFailure failure;
+    public Snapshot(Map<ModelMetadata.Key, ModelMetadata> entries, GuideFailure failure) {
+
             entries = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(entries));
-        }
 
-        public ModelMetadata find(String source, String providerModelId) {
+        this.entries = entries;
+        this.failure = failure;
+    }
+    public Map<ModelMetadata.Key, ModelMetadata> entries() { return entries; }
+    public GuideFailure failure() { return failure; }
+public ModelMetadata find(String source, String providerModelId) {
             return entries.get(new ModelMetadata.Key(source, providerModelId));
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Snapshot)) return false;
+        Snapshot that = (Snapshot) other;
+        return java.util.Objects.equals(entries, that.entries) && java.util.Objects.equals(failure, that.failure);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(entries);
+        hash = 31 * hash + java.util.Objects.hashCode(failure);
+        return hash;
+    }
+    @Override public String toString() { return "Snapshot[entries=" + entries + ", failure=" + failure + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
+            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "entries", Snapshot::entries), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "failure", Snapshot::failure)), arguments -> new Snapshot((Map) arguments[0], (GuideFailure) arguments[1]));
+        }
+    }
+}
 
     private final Path path;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(
@@ -74,7 +97,7 @@ public final class ModelMetadataCache {
 
     private synchronized <T> CompletableFuture<T> submit(java.util.function.Supplier<T> task) {
         if (closed) {
-            return CompletableFuture.failedFuture(new IllegalStateException(
+            return dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException(
                     "model metadata cache is closed"));
         }
         return CompletableFuture.supplyAsync(task, worker);
@@ -85,14 +108,14 @@ public final class ModelMetadataCache {
             return state;
         }
         if (!Files.exists(path)) {
-            state = new Snapshot(Map.of(), null);
+            state = new Snapshot(dev.openallay.util.Java8Collections.mapOf(), null);
             return state;
         }
         try {
-            state = new Snapshot(decode(Files.readString(path)), null);
+            state = new Snapshot(decode(dev.openallay.util.Java8Files.readString(path)), null);
         } catch (IOException | RuntimeException failure) {
             state = new Snapshot(
-                    Map.of(),
+                    dev.openallay.util.Java8Collections.mapOf(),
                     new GuideFailure(
                             "metadata_cache_invalid",
                             "The local model metadata cache is invalid"));
@@ -109,7 +132,7 @@ public final class ModelMetadataCache {
                 new LinkedHashMap<>(loaded.entries());
         updated.put(metadata.key(), metadata);
         try {
-            writeAtomically(encode(updated.values().stream().toList()));
+            writeAtomically(encode(dev.openallay.util.Java8Collections.toList(updated.values().stream())));
             state = new Snapshot(updated, null);
             return state;
         } catch (IOException failure) {
@@ -127,11 +150,11 @@ public final class ModelMetadataCache {
             Files.createDirectories(parent);
         }
         Path temporary = Files.createTempFile(
-                parent == null ? Path.of(".") : parent,
+                parent == null ? java.nio.file.Paths.get(".") : parent,
                 path.getFileName().toString(),
                 ".tmp");
         try {
-            Files.writeString(temporary, json);
+            dev.openallay.util.Java8Files.writeString(temporary, json);
             try {
                 Files.move(
                         temporary,
@@ -208,7 +231,7 @@ public final class ModelMetadataCache {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be text");
         }
         return value.getAsString();

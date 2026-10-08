@@ -11,18 +11,7 @@ import java.util.TreeSet;
 
 /** Strict codec for {@value ExtensionPackageManifest#JAR_PATH}. */
 public final class ExtensionPackageManifestCodec {
-    private static final Set<String> FIELDS = Set.of(
-            "schemaVersion",
-            "id",
-            "name",
-            "version",
-            "provider",
-            "summary",
-            "loaders",
-            "minecraftVersionRange",
-            "openAllayApiVersionRange",
-            "modIds",
-            "source");
+    private static final Set<String> FIELDS = dev.openallay.util.Java8Collections.setOf("schemaVersion", "id", "name", "version", "provider", "summary", "loaders", "minecraftVersionRange", "openAllayApiVersionRange", "modIds", "source");
 
     public ExtensionPackageManifest decode(String json) {
         try {
@@ -92,7 +81,7 @@ public final class ExtensionPackageManifestCodec {
         if (value == null
                 || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be a non-blank string");
         }
         return value.getAsString();
@@ -107,13 +96,13 @@ public final class ExtensionPackageManifestCodec {
         for (JsonElement item : value.getAsJsonArray()) {
             if (!item.isJsonPrimitive()
                     || !item.getAsJsonPrimitive().isString()
-                    || item.getAsString().isBlank()
+                    || dev.openallay.util.Java8Strings.isBlank(item.getAsString())
                     || !values.add(item.getAsString())) {
                 throw new IllegalArgumentException(
                         field + " must contain unique strings");
             }
         }
-        return Set.copyOf(values);
+        return dev.openallay.util.Java8Collections.setCopyOf(values);
     }
 
     private static int integer(JsonObject object, String field) {

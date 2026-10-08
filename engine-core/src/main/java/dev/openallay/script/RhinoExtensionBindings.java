@@ -27,7 +27,7 @@ final class RhinoExtensionBindings {
     static Map<String, Scriptable> bind(Context context, ScriptableObject scope,
             RhinoHostAdapter adapter, RhinoJsonNormalizer normalizer,
             JavascriptInvocationScope invocation) {
-        if (invocation == null) return Map.of();
+        if (invocation == null) return dev.openallay.util.Java8Collections.mapOf();
         Map<String, Scriptable> bound = new LinkedHashMap<>();
         for (JavascriptHostBinding binding : invocation.hostBindings()) {
             ScriptableObject root = (ScriptableObject) context.newObject(scope);
@@ -56,7 +56,7 @@ final class RhinoExtensionBindings {
                             // Argument/result transport and all interpreter work remain budgeted.
                             // Only the trusted implementation's native waiting/execution is excluded.
                             result = ((OpenAllayRhinoContext) cx).callNative(() ->
-                                    invocation.invokeHostMethod(binding.id(), method.name(), List.copyOf(detached)));
+                                    invocation.invokeHostMethod(binding.id(), method.name(), dev.openallay.util.Java8Collections.listCopyOf(detached)));
                         } catch (JavascriptExecutionException | ModelClientException failure) {
                             throw failure;
                         } catch (Throwable failure) {
@@ -85,7 +85,7 @@ final class RhinoExtensionBindings {
             root.preventExtensions();
             bound.put(binding.id(), root);
         }
-        return Map.copyOf(bound);
+        return dev.openallay.util.Java8Collections.mapCopyOf(bound);
     }
 
     /** Exact detached return shape. This is transport, not a truncated model-result preview. */
@@ -95,24 +95,30 @@ final class RhinoExtensionBindings {
             throw invalid("Host method must return a detached JSON value within the nesting limit");
         }
         if (value == JsonNull.INSTANCE) return JsonNull.INSTANCE;
-        if (value instanceof JsonPrimitive primitive) {
-            if (primitive.isBoolean()) return new JsonPrimitive(primitive.getAsBoolean());
-            if (primitive.isString()) return new JsonPrimitive(primitive.getAsString());
-            if (primitive.isNumber() && Double.isFinite(primitive.getAsDouble())) {
-                return new JsonPrimitive(new com.google.gson.internal.LazilyParsedNumber(primitive.getAsString()));
+        final class $oaPattern0_Holder { com.google.gson.JsonElement value; JsonPrimitive bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = value) instanceof com.google.gson.JsonPrimitive && (($oaPattern0_holder.bound = (JsonPrimitive) $oaPattern0_holder.value) != null))) {
+            if ($oaPattern0_holder.bound.isBoolean()) return new JsonPrimitive($oaPattern0_holder.bound.getAsBoolean());
+            if ($oaPattern0_holder.bound.isString()) return new JsonPrimitive($oaPattern0_holder.bound.getAsString());
+            if ($oaPattern0_holder.bound.isNumber() && Double.isFinite($oaPattern0_holder.bound.getAsDouble())) {
+                return new JsonPrimitive(new com.google.gson.internal.LazilyParsedNumber($oaPattern0_holder.bound.getAsString()));
             }
             throw invalid("Host method returned a non-finite or unsupported JSON scalar");
         }
         if (ancestors.put(value, Boolean.TRUE) != null) throw invalid("Host method returned a cycle");
         try {
-            if (value instanceof JsonArray array) {
+            final class $oaPattern1_Holder { com.google.gson.JsonElement value; JsonArray bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = value) instanceof com.google.gson.JsonArray && (($oaPattern1_holder.bound = (JsonArray) $oaPattern1_holder.value) != null))) {
                 JsonArray copy = new JsonArray();
-                for (JsonElement child : array) copy.add(copyResult(child, ancestors, depth + 1));
+                for (JsonElement child : $oaPattern1_holder.bound) copy.add(copyResult(child, ancestors, depth + 1));
                 return copy;
             }
-            if (value instanceof JsonObject object) {
+            final class $oaPattern2_Holder { com.google.gson.JsonElement value; JsonObject bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = value) instanceof com.google.gson.JsonObject && (($oaPattern2_holder.bound = (JsonObject) $oaPattern2_holder.value) != null))) {
                 JsonObject copy = new JsonObject();
-                object.entrySet().forEach(entry -> copy.add(entry.getKey(),
+                $oaPattern2_holder.bound.entrySet().forEach(entry -> copy.add(entry.getKey(),
                         copyResult(entry.getValue(), ancestors, depth + 1)));
                 return copy;
             }

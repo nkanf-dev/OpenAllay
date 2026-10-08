@@ -43,13 +43,15 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     private final SkillSettingsStore store;
     private final CommunityCatalogClient communityCatalog;
     private final SkillPackageInstaller installer;
+    private final String minecraftVersion;
     private volatile SkillSettingsView current = SkillSettingsView.empty();
     private volatile SkillCommunityView community = SkillCommunityView.unavailable();
 
     public SkillSettingsBackend(
             Path localRoot,
             SkillRepository repository,
-            Set<String> installedMods) {
+            Set<String> installedMods,
+            String minecraftVersion) {
         this(
                 localRoot,
                 repository,
@@ -58,7 +60,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 installedMods,
                 new FilesystemSkillLoader(),
                 defaultCatalog(localRoot),
-                new SkillPackageInstaller(localRoot, new SkillParser(), installedMods));
+                new SkillPackageInstaller(localRoot, new SkillParser(), minecraftVersion, installedMods),
+                minecraftVersion);
     }
 
     public SkillSettingsBackend(
@@ -66,7 +69,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
             SkillRepository repository,
             SkillParser parser,
             Collection<SkillSource> bundledSources,
-            Set<String> installedMods) {
+            Set<String> installedMods,
+            String minecraftVersion) {
         this(
                 localRoot,
                 repository,
@@ -75,7 +79,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 installedMods,
                 new FilesystemSkillLoader(),
                 null,
-                new SkillPackageInstaller(localRoot, parser, installedMods));
+                new SkillPackageInstaller(localRoot, parser, minecraftVersion, installedMods),
+                minecraftVersion);
     }
 
     SkillSettingsBackend(
@@ -84,7 +89,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
             SkillParser parser,
             Collection<SkillSource> bundledSources,
             Set<String> installedMods,
-            FilesystemSkillLoader localLoader) {
+            FilesystemSkillLoader localLoader,
+            String minecraftVersion) {
         this(
                 localRoot,
                 repository,
@@ -93,7 +99,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                 installedMods,
                 localLoader,
                 null,
-                new SkillPackageInstaller(localRoot, parser, installedMods));
+                new SkillPackageInstaller(localRoot, parser, minecraftVersion, installedMods),
+                minecraftVersion);
     }
 
     SkillSettingsBackend(
@@ -104,18 +111,23 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
             Set<String> installedMods,
             FilesystemSkillLoader localLoader,
             CommunityCatalogClient communityCatalog,
-            SkillPackageInstaller installer) {
+            SkillPackageInstaller installer,
+            String minecraftVersion) {
         this.localRoot = Objects.requireNonNull(localRoot, "localRoot")
                 .toAbsolutePath()
                 .normalize();
         this.repository = Objects.requireNonNull(repository, "repository");
         this.parser = Objects.requireNonNull(parser, "parser");
-        this.bundledSources = List.copyOf(bundledSources);
-        this.installedMods = Set.copyOf(installedMods);
+        this.bundledSources = dev.openallay.util.Java8Collections.listCopyOf(bundledSources);
+        this.installedMods = dev.openallay.util.Java8Collections.setCopyOf(installedMods);
         this.localLoader = Objects.requireNonNull(localLoader, "localLoader");
         this.store = new SkillSettingsStore(this.localRoot, parser);
         this.communityCatalog = communityCatalog;
         this.installer = Objects.requireNonNull(installer, "installer");
+        if (minecraftVersion == null || dev.openallay.util.Java8Strings.isBlank(minecraftVersion)) {
+            throw new IllegalArgumentException("minecraftVersion must not be blank");
+        }
+        this.minecraftVersion = minecraftVersion;
         reloadInternal();
         community = buildCommunity(Optional.empty());
     }
@@ -142,7 +154,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
                     "catalog_unavailable", "The Skill community catalog is not configured"));
         }
         return communityCatalog.refresh(cancellation).thenApply(result -> {
-            if (result instanceof ToolResult.Success<CommunityCatalogManifest>) {
+            if (result instanceof ToolResult.Success<?>) {
                 community = buildCommunity(Optional.empty());
                 return new ToolResult.Success<>(community);
             }
@@ -164,9 +176,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         CommunityCatalogManifest.PackageEntry entry = communityCatalog.current()
                 .flatMap(catalog -> catalog.packages().stream()
                         .filter(candidate -> candidate.id().equals(id))
-                        .filter(candidate -> candidate.compatibility().minecraft().equals("26.2")
-                                && candidate.compatibility().openallayApi().equals(
-                                        OpenAllayConstants.SKILL_API_VERSION))
+                        .filter(this::compatible)
                         .max((left, right) -> compareVersions(left.version(), right.version())))
                 .orElse(null);
         if (entry == null) {
@@ -182,8 +192,10 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     private ToolResult<PreparedPackageInstall> refreshing(ToolResult<PreparedSkillInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedSkillInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.skill.install.PreparedSkillInstall> value; ToolResult.Failure<PreparedSkillInstall> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<PreparedSkillInstall>) $oaPattern0_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
         }
         PreparedSkillInstall candidate = ((ToolResult.Success<PreparedSkillInstall>) result).value();
         return new ToolResult.Success<>(new RefreshingPreparedPackageInstall(candidate, this, () -> {
@@ -204,13 +216,17 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     private ToolResult<SkillCommunityView> commitPrepared(ToolResult<PreparedPackageInstall> result) {
-        if (result instanceof ToolResult.Failure<PreparedPackageInstall> failure) {
-            return new ToolResult.Failure<>(failure.code(), failure.message());
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.settings.requirement.PreparedPackageInstall> value; ToolResult.Failure<PreparedPackageInstall> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern1_holder.bound = (ToolResult.Failure<PreparedPackageInstall>) $oaPattern1_holder.value) != null))) {
+            return new ToolResult.Failure<>($oaPattern1_holder.bound.code(), $oaPattern1_holder.bound.message());
         }
         try (PreparedPackageInstall candidate = ((ToolResult.Success<PreparedPackageInstall>) result).value()) {
             ToolResult<Boolean> committed = candidate.commit();
-            if (committed instanceof ToolResult.Failure<Boolean> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Failure<Boolean> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = committed) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern2_holder.bound = (ToolResult.Failure<Boolean>) $oaPattern2_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern2_holder.bound.code(), $oaPattern2_holder.bound.message());
             }
             return new ToolResult.Success<>(community);
         }
@@ -233,7 +249,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         if (selected == null) {
             return new ToolResult.Failure<>("skill_not_found", "The selected Skill is unavailable");
         }
-        if (markdown == null || markdown.isBlank()) {
+        if (markdown == null || dev.openallay.util.Java8Strings.isBlank(markdown)) {
             return new ToolResult.Failure<>("skill_override_invalid", "Skill Markdown must not be blank");
         }
 
@@ -321,23 +337,25 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
     }
 
     private SkillCommunityView buildCommunity(Optional<SkillCommunityView.Notice> notice) {
-        if (communityCatalog == null || communityCatalog.current().isEmpty()) {
-            return new SkillCommunityView(false, Optional.empty(), List.of(), notice);
+        if (communityCatalog == null || dev.openallay.util.Java8ApiSupport.isEmpty(communityCatalog.current())) {
+            return new SkillCommunityView(false, Optional.empty(), dev.openallay.util.Java8Collections.listOf(), notice);
         }
-        CommunityCatalogManifest catalog = communityCatalog.current().orElseThrow();
-        List<SkillCommunityView.Package> packages = catalog.packages().stream().map(entry -> {
+        CommunityCatalogManifest catalog = communityCatalog.current().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
+        List<SkillCommunityView.Package> packages = dev.openallay.util.Java8Collections.toList(catalog.packages().stream().map(entry -> {
             Optional<String> installedVersion = current.find(entry.id())
                     .flatMap(skill -> Optional.ofNullable(
                             skill.metadata().attributes().get("openallay/version")));
             boolean installed = current.find(entry.id()).isPresent();
-            boolean compatible = entry.compatibility().minecraft().equals("26.2")
-                    && entry.compatibility().openallayApi().equals(
-                            OpenAllayConstants.SKILL_API_VERSION);
+            boolean compatible = compatible(entry);
             return SkillCommunityView.Package.from(
                     entry, installed, installedVersion, compatible);
-        }).toList();
+        }));
         return new SkillCommunityView(
                 true, Optional.of(catalog.generatedAt()), packages, notice);
+    }
+
+    private boolean compatible(CommunityCatalogManifest.PackageEntry entry) {
+        return entry.compatibility().supports(minecraftVersion, OpenAllayConstants.SKILL_API_VERSION);
     }
 
     private static CommunityCatalogClient defaultCatalog(Path localRoot) {
@@ -387,9 +405,9 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         }
 
         List<SkillSettingsView.Skill> skills = new ArrayList<>();
-        for (var metadata : repository.metadata()) {
-            SkillDocument document = repository.find(metadata.name()).orElseThrow();
-            String markdown = parsedSources.getOrDefault(metadata.name(), List.of()).stream()
+        for (dev.openallay.skill.SkillMetadata metadata : repository.metadata()) {
+            SkillDocument document = repository.find(metadata.name()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
+            String markdown = parsedSources.getOrDefault(metadata.name(), dev.openallay.util.Java8Collections.listOf()).stream()
                     .filter(parsed -> parsed.document().metadata().origin() == metadata.origin())
                     .filter(parsed -> sameContent(parsed.document(), document))
                     .map(parsed -> entryMarkdown(parsed.source()))
@@ -468,8 +486,8 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         if (actual == null) {
             return false;
         }
-        var left = expected.metadata();
-        var right = actual.metadata();
+        dev.openallay.skill.SkillMetadata left = expected.metadata();
+        dev.openallay.skill.SkillMetadata right = actual.metadata();
         return left.name().equals(right.name())
                 && left.description().equals(right.description())
                 && left.license().equals(right.license())
@@ -484,7 +502,7 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
 
     private static String entryMarkdown(SkillSource source) {
         String markdown = source.files().get(source.entryPath());
-        if (markdown == null || markdown.isBlank()) {
+        if (markdown == null || dev.openallay.util.Java8Strings.isBlank(markdown)) {
             throw new IllegalStateException("Skill entry Markdown is unavailable");
         }
         return markdown;
@@ -495,8 +513,37 @@ public final class SkillSettingsBackend implements ClientSettingsService.SkillAc
         String detail = failure.getMessage();
         return new ToolResult.Failure<>(
                 code,
-                detail == null || detail.isBlank() ? message : message + ": " + detail);
+                detail == null || dev.openallay.util.Java8Strings.isBlank(detail) ? message : message + ": " + detail);
     }
 
-    private record ParsedSource(SkillSource source, SkillDocument document) {}
+    @dev.openallay.value.ValueType(ParsedSource.ValueSchemaProvider.class)
+private static final class ParsedSource {
+    private final SkillSource source;
+    private final SkillDocument document;
+    private ParsedSource(SkillSource source, SkillDocument document) {
+        this.source = source;
+        this.document = document;
+    }
+    public SkillSource source() { return source; }
+    public SkillDocument document() { return document; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ParsedSource)) return false;
+        ParsedSource that = (ParsedSource) other;
+        return java.util.Objects.equals(source, that.source) && java.util.Objects.equals(document, that.document);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + java.util.Objects.hashCode(document);
+        return hash;
+    }
+    @Override public String toString() { return "ParsedSource[source=" + source + ", document=" + document + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ParsedSource> schema() {
+            return new dev.openallay.value.ValueSchema<>(ParsedSource.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ParsedSource>>asList(new dev.openallay.value.ValueSchema.Component<>(ParsedSource.class, "source", ParsedSource::source), new dev.openallay.value.ValueSchema.Component<>(ParsedSource.class, "document", ParsedSource::document)), arguments -> new ParsedSource((SkillSource) arguments[0], (SkillDocument) arguments[1]));
+        }
+    }
+}
 }

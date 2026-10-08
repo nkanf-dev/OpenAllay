@@ -21,8 +21,44 @@ public final class ClientObservationAnchorJson {
     private ClientObservationAnchorJson() {}
 
     /** Nullable image at this one wire seam avoids reflecting into Optional internals. */
-    private record Shape(UUID associationId, Instant capturedAt, WorldFocusObservation focus,
-                         WorldViewCapture image) {}
+    @dev.openallay.value.ValueType(Shape.ValueSchemaProvider.class)
+private static final class Shape {
+    private final UUID associationId;
+    private final Instant capturedAt;
+    private final WorldFocusObservation focus;
+    private final WorldViewCapture image;
+    private Shape(UUID associationId, Instant capturedAt, WorldFocusObservation focus, WorldViewCapture image) {
+        this.associationId = associationId;
+        this.capturedAt = capturedAt;
+        this.focus = focus;
+        this.image = image;
+    }
+    public UUID associationId() { return associationId; }
+    public Instant capturedAt() { return capturedAt; }
+    public WorldFocusObservation focus() { return focus; }
+    public WorldViewCapture image() { return image; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Shape)) return false;
+        Shape that = (Shape) other;
+        return java.util.Objects.equals(associationId, that.associationId) && java.util.Objects.equals(capturedAt, that.capturedAt) && java.util.Objects.equals(focus, that.focus) && java.util.Objects.equals(image, that.image);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(associationId);
+        hash = 31 * hash + java.util.Objects.hashCode(capturedAt);
+        hash = 31 * hash + java.util.Objects.hashCode(focus);
+        hash = 31 * hash + java.util.Objects.hashCode(image);
+        return hash;
+    }
+    @Override public String toString() { return "Shape[associationId=" + associationId + ", capturedAt=" + capturedAt + ", focus=" + focus + ", image=" + image + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Shape> schema() {
+            return new dev.openallay.value.ValueSchema<>(Shape.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Shape>>asList(new dev.openallay.value.ValueSchema.Component<>(Shape.class, "associationId", Shape::associationId), new dev.openallay.value.ValueSchema.Component<>(Shape.class, "capturedAt", Shape::capturedAt), new dev.openallay.value.ValueSchema.Component<>(Shape.class, "focus", Shape::focus), new dev.openallay.value.ValueSchema.Component<>(Shape.class, "image", Shape::image)), arguments -> new Shape((UUID) arguments[0], (Instant) arguments[1], (WorldFocusObservation) arguments[2], (WorldViewCapture) arguments[3]));
+        }
+    }
+}
 
     public static JsonElement encode(Optional<ClientObservationAnchor> observation) {
         return observation.map(anchor -> GSON.toJsonTree(new Shape(anchor.associationId(),
@@ -59,7 +95,7 @@ public final class ClientObservationAnchorJson {
             if (!supplied.isJsonObject() || !JsonTrees.keys(supplied.getAsJsonObject()).equals(JsonTrees.keys(typed.getAsJsonObject()))) {
                 throw new IllegalArgumentException("Input metadata fields do not match the current shape");
             }
-            for (var entry : typed.getAsJsonObject().entrySet()) {
+            for (java.util.Map.Entry<String, JsonElement> entry : typed.getAsJsonObject().entrySet()) {
                 exact(supplied.getAsJsonObject().get(entry.getKey()), entry.getValue());
             }
         } else if (typed.isJsonArray()) {
@@ -71,8 +107,8 @@ public final class ClientObservationAnchorJson {
             }
         } else if (typed.isJsonPrimitive()) {
             if (!supplied.isJsonPrimitive()) throw new IllegalArgumentException("Input metadata must be scalar");
-            var expected = typed.getAsJsonPrimitive();
-            var actual = supplied.getAsJsonPrimitive();
+            com.google.gson.JsonPrimitive expected = typed.getAsJsonPrimitive();
+            com.google.gson.JsonPrimitive actual = supplied.getAsJsonPrimitive();
             boolean equal = expected.isNumber() && actual.isNumber()
                     ? expected.getAsBigDecimal().compareTo(actual.getAsBigDecimal()) == 0 : expected.equals(actual);
             if (expected.isString() != actual.isString() || expected.isBoolean() != actual.isBoolean()

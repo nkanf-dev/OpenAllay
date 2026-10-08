@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import dev.openallay.util.Java8Collections;
 
 /** Typed engine timestamps. The current JSON shape is {seconds, nanos}, not JDK private fields. */
 public final class EngineJson {
@@ -37,7 +38,7 @@ public final class EngineJson {
 
     /** Create a bound engine Gson with the default public builder configuration. */
     public static Gson create() {
-        return new Recipe(List.of(), List.of()).create();
+        return new Recipe(Java8Collections.listOf(), Java8Collections.listOf()).create();
     }
 
     /** Create a bound engine Gson from repeatable public builder configuration.
@@ -52,7 +53,7 @@ public final class EngineJson {
      * record implementation are not supported; use an explicit record adapter instead.
      */
     public static Gson create(Consumer<GsonBuilder> configuration) {
-        return new Recipe(List.of(Objects.requireNonNull(configuration, "configuration")), List.of()).create();
+        return new Recipe(Java8Collections.listOf(Objects.requireNonNull(configuration, "configuration")), Java8Collections.listOf()).create();
     }
 
     /** Create a separate bound owner by replaying the original recipe, then this overlay.
@@ -91,18 +92,40 @@ public final class EngineJson {
 
     private static Recipe owner(Gson source) {
         Objects.requireNonNull(source, "source");
-        if (source.getDelegateAdapter(BINDING_BOUNDARY, TypeToken.get(Binding.class)) instanceof BindingAdapter binding) return binding.owner;
+        TypeAdapter<Binding> binding = source.getDelegateAdapter(BINDING_BOUNDARY, TypeToken.get(Binding.class));
+        if (binding instanceof BindingAdapter) return ((BindingAdapter) binding).owner;
         throw new JsonIOException("Unbound Gson: use EngineJson.create(configuration) to preserve caller options and adapters");
     }
 
-    private record Hierarchy(Class<?> baseType, Object adapter) {}
+    private static final class Hierarchy {
+        private final Class<?> baseType;
+        private final Object adapter;
+        private Hierarchy(Class<?> baseType, Object adapter) {
+            this.baseType = baseType;
+            this.adapter = adapter;
+        }
+        private Class<?> baseType() { return baseType; }
+        private Object adapter() { return adapter; }
+        @Override public boolean equals(Object value) {
+            if (this == value) return true;
+            if (!(value instanceof Hierarchy)) return false;
+            Hierarchy other = (Hierarchy) value;
+            return Objects.equals(baseType, other.baseType) && Objects.equals(adapter, other.adapter);
+        }
+        @Override public int hashCode() {
+            return 31 * Objects.hashCode(baseType) + Objects.hashCode(adapter);
+        }
+        @Override public String toString() {
+            return "Hierarchy[baseType=" + baseType + ", adapter=" + adapter + "]";
+        }
+    }
 
     private static final class Recipe {
         private final List<Consumer<GsonBuilder>> steps;
         private final List<Hierarchy> hierarchy;
         private Recipe(List<Consumer<GsonBuilder>> steps, List<Hierarchy> hierarchy) {
-            this.steps = List.copyOf(steps);
-            this.hierarchy = List.copyOf(hierarchy);
+            this.steps = Java8Collections.listCopyOf(steps);
+            this.hierarchy = Java8Collections.listCopyOf(hierarchy);
         }
 
         private GsonBuilder builder(TypeAdapterFactory lower) {
@@ -161,7 +184,9 @@ public final class EngineJson {
             };
             RecordJsonAdapter.Fields fields = RecordJsonAdapter.fields(
                     builder(boundary).registerTypeAdapterFactory(metadata), type);
-            return RecordJsonAdapter.create(bound, type, fields).nullSafe();
+            return dev.openallay.value.ValueSchemas.supports(type.getRawType())
+                    ? ConstructorValueJsonAdapter.create(bound, type, fields).nullSafe()
+                    : RecordJsonAdapter.create(bound, type, fields).nullSafe();
         }
 
         private <T> TypeAdapter<T> hierarchyAdapter(Gson bound, TypeToken<T> type, int start,
@@ -251,7 +276,7 @@ public final class EngineJson {
         @Override public <T> TypeAdapter<T> create(Gson gson, com.google.gson.reflect.TypeToken<T> type) {
             Class<?> raw = type.getRawType();
             if (raw == Binding.class) return (TypeAdapter<T>) new BindingAdapter(owner);
-            if (raw != Instant.class && !raw.isRecord()) return null;
+            if (raw != Instant.class && !dev.openallay.value.ValueSchemas.isValue(raw)) return null;
             if (!owner.nativeReached(gson, type)) return gson.getDelegateAdapter(this, type);
             return owner.hierarchyAdapter(gson, type, owner.hierarchy.size() - 1,
                     () -> owner.defaultAdapter(gson, type));
@@ -273,15 +298,15 @@ public final class EngineJson {
             in.beginObject();
             while (in.hasNext()) {
                 switch (in.nextName()) {
-                    case "seconds" -> {
+                    case "seconds":
                         if (seconds != null) throw invalid("Duplicate Instant seconds");
                         seconds = integer(in);
-                    }
-                    case "nanos" -> {
+                        break;
+                    case "nanos":
                         if (nanos != null) throw invalid("Duplicate Instant nanos");
                         nanos = integer(in);
-                    }
-                    default -> throw invalid("Unknown Instant field");
+                        break;
+                    default: throw invalid("Unknown Instant field");
                 }
             }
             in.endObject();

@@ -9,15 +9,42 @@ import dev.openallay.trace.model.TraceExpectation;
 import java.math.BigDecimal;
 
 public final class ExpectationMatcher {
-    public record MatchResult(boolean matches, String error) {
-        public static MatchResult passed() {
+    @dev.openallay.value.ValueType(MatchResult.ValueSchemaProvider.class)
+public static final class MatchResult {
+    private final boolean matches;
+    private final String error;
+    public MatchResult(boolean matches, String error) {
+        this.matches = matches;
+        this.error = error;
+    }
+    public boolean matches() { return matches; }
+    public String error() { return error; }
+public static MatchResult passed() {
             return new MatchResult(true, null);
         }
-
-        public static MatchResult failed(String error) {
+public static MatchResult failed(String error) {
             return new MatchResult(false, error);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof MatchResult)) return false;
+        MatchResult that = (MatchResult) other;
+        return matches == that.matches && java.util.Objects.equals(error, that.error);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Boolean.hashCode(matches);
+        hash = 31 * hash + java.util.Objects.hashCode(error);
+        return hash;
+    }
+    @Override public String toString() { return "MatchResult[matches=" + matches + ", error=" + error + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<MatchResult> schema() {
+            return new dev.openallay.value.ValueSchema<>(MatchResult.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<MatchResult>>asList(new dev.openallay.value.ValueSchema.Component<>(MatchResult.class, "matches", MatchResult::matches), new dev.openallay.value.ValueSchema.Component<>(MatchResult.class, "error", MatchResult::error)), arguments -> new MatchResult((Boolean) arguments[0], (String) arguments[1]));
+        }
+    }
+}
 
     public MatchResult match(TraceExpectation expectation, JsonObject actual) {
         String actualStatus = stringField(actual, "status");
@@ -62,7 +89,7 @@ public final class ExpectationMatcher {
                 return false;
             }
             JsonObject actualObject = actual.getAsJsonObject();
-            for (var entry : expected.getAsJsonObject().entrySet()) {
+            for (java.util.Map.Entry<java.lang.String, com.google.gson.JsonElement> entry : expected.getAsJsonObject().entrySet()) {
                 if (!actualObject.has(entry.getKey())
                         || !contains(actualObject.get(entry.getKey()), entry.getValue())) {
                     return false;

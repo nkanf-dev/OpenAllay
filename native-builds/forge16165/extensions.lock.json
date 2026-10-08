@@ -1,0 +1,11 @@
+{
+  "source": {
+    "repository": "https://github.com/nkanf-dev/OpenAllay-Extensions.git",
+    "revision": "fe6422454450ceb739d1174d87c681e76df1ab84"
+  },
+  "project": "extensions/minecraft-builder",
+  "version": "0.4.0",
+  "extensionId": "openallay:builder",
+  "openAllayApiVersion": "0.4.0",
+  "artifact": "universal/build/libs/openallay-builder-universal-0.4.0.jar"
+}

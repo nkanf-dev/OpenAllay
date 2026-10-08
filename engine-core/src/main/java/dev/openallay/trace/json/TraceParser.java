@@ -28,12 +28,12 @@ import java.util.Set;
 
 public final class TraceParser {
     private static final Set<String> TRACE_FIELDS =
-            Set.of("id", "userMessage", "requiredContext", "steps");
+            dev.openallay.util.Java8Collections.setOf("id", "userMessage", "requiredContext", "steps");
     private static final Set<String> TOOL_STEP_FIELDS =
-            Set.of("type", "tool", "arguments", "expect");
-    private static final Set<String> MESSAGE_STEP_FIELDS = Set.of("type", "content");
+            dev.openallay.util.Java8Collections.setOf("type", "tool", "arguments", "expect");
+    private static final Set<String> MESSAGE_STEP_FIELDS = dev.openallay.util.Java8Collections.setOf("type", "content");
     private static final Set<String> EXPECTATION_FIELDS =
-            Set.of("status", "match", "value", "outputType");
+            dev.openallay.util.Java8Collections.setOf("status", "match", "value", "outputType");
 
     public ToolResult<AgentTrace> parse(Reader source) {
         try {
@@ -47,7 +47,7 @@ public final class TraceParser {
         } catch (IOException | JsonParseException | IllegalArgumentException exception) {
             String message = exception.getMessage();
             return new ToolResult.Failure<>(
-                    "invalid_trace", message == null || message.isBlank() ? "Invalid trace" : message);
+                    "invalid_trace", message == null || dev.openallay.util.Java8Strings.isBlank(message) ? "Invalid trace" : message);
         }
     }
 
@@ -60,13 +60,32 @@ public final class TraceParser {
         JsonArray requiredContext = requireArray(object.get("requiredContext"), "$.requiredContext");
         for (int index = 0; index < requiredContext.size(); index++) {
             String value = requireString(requiredContext.get(index), "$.requiredContext[" + index + "]");
-            ContextCapability capability = switch (value) {
-                case "registries" -> ContextCapability.REGISTRIES;
-                case "recipes" -> ContextCapability.RECIPES;
-                case "player" -> ContextCapability.PLAYER;
-                case "observable_game_state" -> ContextCapability.OBSERVABLE_GAME_STATE;
-                default -> throw invalid("Unknown context capability: " + value);
-            };
+            dev.openallay.context.ContextCapability $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((value)) {
+case "registries":
+{
+$oaSwitch0_exit_result = ContextCapability.REGISTRIES; break $oaSwitch0_exit;
+}
+case "recipes":
+{
+$oaSwitch0_exit_result = ContextCapability.RECIPES; break $oaSwitch0_exit;
+}
+case "player":
+{
+$oaSwitch0_exit_result = ContextCapability.PLAYER; break $oaSwitch0_exit;
+}
+case "observable_game_state":
+{
+$oaSwitch0_exit_result = ContextCapability.OBSERVABLE_GAME_STATE; break $oaSwitch0_exit;
+}
+default:
+{
+throw invalid("Unknown context capability: " + value);
+}
+}
+}
+ContextCapability capability = $oaSwitch0_exit_result;
             if (!capabilities.add(capability)) {
                 throw invalid("Duplicate context capability: " + value);
             }
@@ -83,25 +102,40 @@ public final class TraceParser {
     private TraceStep parseStep(JsonObject object, int index) {
         String path = "$.steps[" + index + "]";
         String type = requireString(object, "type", path);
-        return switch (type) {
-            case "tool_call" -> {
+        {
+dev.openallay.trace.model.TraceStep $oaSwitch2_exit_result;
+$oaSwitch2_exit: {
+switch ((type)) {
+case "tool_call":
+{
+{
                 requireFields(object, path, TOOL_STEP_FIELDS, TOOL_STEP_FIELDS);
-                yield new ToolCallStep(
+                { $oaSwitch2_exit_result = new ToolCallStep(
                         requireString(object, "tool", path),
                         requireObject(object.get("arguments"), path + ".arguments"),
-                        parseExpectation(requireObject(object.get("expect"), path + ".expect"), path));
+                        parseExpectation(requireObject(object.get("expect"), path + ".expect"), path)); break $oaSwitch2_exit; }
             }
-            case "assistant_message" -> {
+}
+case "assistant_message":
+{
+{
                 requireFields(object, path, MESSAGE_STEP_FIELDS, MESSAGE_STEP_FIELDS);
-                yield new AssistantMessageStep(requireString(object, "content", path));
+                { $oaSwitch2_exit_result = new AssistantMessageStep(requireString(object, "content", path)); break $oaSwitch2_exit; }
             }
-            default -> throw invalid("Unknown step type at " + path + ": " + type);
-        };
+}
+default:
+{
+throw invalid("Unknown step type at " + path + ": " + type);
+}
+}
+}
+return $oaSwitch2_exit_result;
+}
     }
 
     private TraceExpectation parseExpectation(JsonObject object, String stepPath) {
         String path = stepPath + ".expect";
-        requireFields(object, path, EXPECTATION_FIELDS, Set.of("status", "match"));
+        requireFields(object, path, EXPECTATION_FIELDS, dev.openallay.util.Java8Collections.setOf("status", "match"));
         String status = requireString(object, "status", path);
         String matchName = requireString(object, "match", path);
         ExpectationMatch match;
@@ -125,18 +159,45 @@ public final class TraceParser {
     }
 
     private static JsonElement readElement(JsonReader reader, String path) throws IOException {
-        return switch (reader.peek()) {
-            case BEGIN_OBJECT -> readObject(reader, path);
-            case BEGIN_ARRAY -> readArray(reader, path);
-            case STRING -> new JsonPrimitive(reader.nextString());
-            case NUMBER -> new JsonPrimitive(new BigDecimal(reader.nextString()));
-            case BOOLEAN -> new JsonPrimitive(reader.nextBoolean());
-            case NULL -> {
+        {
+com.google.gson.JsonElement $oaSwitch1_exit_result;
+$oaSwitch1_exit: {
+switch ((reader.peek())) {
+case BEGIN_OBJECT:
+{
+$oaSwitch1_exit_result = readObject(reader, path); break $oaSwitch1_exit;
+}
+case BEGIN_ARRAY:
+{
+$oaSwitch1_exit_result = readArray(reader, path); break $oaSwitch1_exit;
+}
+case STRING:
+{
+$oaSwitch1_exit_result = new JsonPrimitive(reader.nextString()); break $oaSwitch1_exit;
+}
+case NUMBER:
+{
+$oaSwitch1_exit_result = new JsonPrimitive(new BigDecimal(reader.nextString())); break $oaSwitch1_exit;
+}
+case BOOLEAN:
+{
+$oaSwitch1_exit_result = new JsonPrimitive(reader.nextBoolean()); break $oaSwitch1_exit;
+}
+case NULL:
+{
+{
                 reader.nextNull();
-                yield JsonNull.INSTANCE;
+                { $oaSwitch1_exit_result = JsonNull.INSTANCE; break $oaSwitch1_exit; }
             }
-            default -> throw invalid("Unexpected JSON token at " + path + ": " + reader.peek());
-        };
+}
+default:
+{
+throw invalid("Unexpected JSON token at " + path + ": " + reader.peek());
+}
+}
+}
+return $oaSwitch1_exit_result;
+}
     }
 
     private static JsonObject readObject(JsonReader reader, String path) throws IOException {

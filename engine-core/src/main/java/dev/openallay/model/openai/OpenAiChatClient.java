@@ -48,7 +48,7 @@ public final class OpenAiChatClient implements ModelClient {
         } catch (RuntimeException failure) {
             // Missing/unauthorized assets and invalid payloads must finish the
             // agent request through its future, not throw before pending state is cleared.
-            return CompletableFuture.failedFuture(failure);
+            return dev.openallay.util.Java8Futures.failedFuture(failure);
         }
         return transport.execute(httpRequest, cancellation, events, (status, headers, body, safeEvents) -> {
             ModelHttpErrors.requireSuccess(status, headers, body);
@@ -65,7 +65,7 @@ public final class OpenAiChatClient implements ModelClient {
             InputStream body,
             Consumer<ModelEvent> events,
             CancellationSignal cancellation) throws java.io.IOException {
-        byte[] encoded = body.readAllBytes();
+        byte[] encoded = dev.openallay.util.Java8Streams.readAllBytes(body);
         cancellation.throwIfCancelled();
         return codec.parseTurn(new String(encoded, StandardCharsets.UTF_8), events);
     }

@@ -72,8 +72,10 @@ public final class RecipeClientRuntime {
             return new ToolResult.Success<>(config);
         }
         ToolResult<RecipeClientConfig> loaded = loader.load(path);
-        if (loaded instanceof ToolResult.Success<RecipeClientConfig> success) {
-            config = success.value();
+        final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.recipe.config.RecipeClientConfig> value; ToolResult.Success<RecipeClientConfig> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = loaded) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (ToolResult.Success<RecipeClientConfig>) $oaPattern0_holder.value) != null))) {
+            config = $oaPattern0_holder.bound.value();
             failure = null;
         } else {
             failure = (ToolResult.Failure<RecipeClientConfig>) loaded;
@@ -111,15 +113,15 @@ public final class RecipeClientRuntime {
     public RecipeNavigationResult openExact(RecipeReference reference) {
         Objects.requireNonNull(reference, "reference");
         Optional<RecipeViewerNavigator> navigator = navigator(reference.sourceId());
-        if (navigator.isEmpty()) {
+        if (!navigator.isPresent()) {
             return RecipeNavigationResult.failed(
                     "exact_unsupported", "No enabled viewer owns this recipe reference");
         }
-        if (!navigator.orElseThrow().supportsExactRecipe()) {
+        if (!navigator.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).supportsExactRecipe()) {
             return RecipeNavigationResult.failed(
                     "exact_unsupported", "The selected viewer cannot open an exact recipe");
         }
-        return navigator.orElseThrow().openExact(reference);
+        return navigator.orElseThrow(() -> new java.util.NoSuchElementException("No value present")).openExact(reference);
     }
 
     private Optional<RecipeViewerNavigator> preferredNavigator() {
@@ -144,10 +146,9 @@ public final class RecipeClientRuntime {
     }
 
     private List<RecipeViewerNavigator> availableNavigators() {
-        return List.copyOf(navigators.get()).stream()
+        return dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8Collections.listCopyOf(navigators.get()).stream()
                 .filter(value -> sourceEnabled(value.viewerId()))
-                .sorted(Comparator.comparing(RecipeViewerNavigator::viewerId))
-                .toList();
+                .sorted(Comparator.comparing(RecipeViewerNavigator::viewerId)));
     }
 
     private RecipeNavigationResult unavailable() {
@@ -156,11 +157,29 @@ public final class RecipeClientRuntime {
     }
 
     private static int viewerRank(String viewerId) {
-        return switch (viewerId) {
-            case "viewer:jei" -> 0;
-            case "viewer:rei" -> 1;
-            case "viewer:emi" -> 2;
-            default -> 100;
-        };
+        {
+int $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((viewerId)) {
+case "viewer:jei":
+{
+$oaSwitch0_exit_result = 0; break $oaSwitch0_exit;
+}
+case "viewer:rei":
+{
+$oaSwitch0_exit_result = 1; break $oaSwitch0_exit;
+}
+case "viewer:emi":
+{
+$oaSwitch0_exit_result = 2; break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = 100; break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 }

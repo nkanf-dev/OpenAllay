@@ -1,0 +1,67 @@
+name: Stock Forge 1.12.2 Java8 packaged acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        type: choice
+        default: builder-restricted
+        options: [boot, world, persistence, builder-suite, builder-restricted, builder-partial, builder-cancel, builder-undo, builder-legacy-shapes, menus]
+permissions:
+  contents: read
+concurrency:
+  group: stock-forge1122-java8-${{ github.ref }}-${{ inputs.scenario }}
+  cancel-in-progress: false
+jobs:
+  ordinary-client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with: {persist-credentials: false}
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with: {distribution: temurin, java-version: '8.0.482+8'}
+      - name: Share immutable official download cache, never player profiles
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: |
+            build/e2e/runtime/forge1122-stock8/minecraft/.provision/owner.json
+            build/e2e/runtime/forge1122-stock8/minecraft/launcher_profiles.json
+            build/e2e/runtime/forge1122-stock8/minecraft/libraries
+            build/e2e/runtime/forge1122-stock8/minecraft/versions/1.12.2
+            build/e2e/runtime/assets
+          key: stock-forge1122-java8-official-2864-linux
+      - name: Install actual isolated display support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth x11-xserver-utils xdotool openbox libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 libopenal1
+      - name: Run original real-client scenario on one retained packaged Java8 JAR
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: >-
+          xvfb-run -a -s '-screen 0 1280x960x24'
+          python3 -B scripts/run-forge1122-stock8-acceptance.py
+          --product-pin native-builds/forge1122-census/accepted-stock8-product.json
+          --scenario '${{ inputs.scenario }}'
+          --run-id '${{ inputs.scenario }}-${{ github.run_id }}-${{ github.run_attempt }}'
+      - name: Retain only bounded reports, logs and real UI frames
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stock-forge1122-java8-${{ inputs.scenario }}-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            build/e2e/forge1122-stock8/*/*.json
+            build/e2e/forge1122-stock8/*/sqlite-proof/*.json
+            build/e2e/forge1122-stock8/*/sqlite-proof/*.log
+            build/e2e/forge1122-stock8/*/scenario/*.json
+            build/e2e/forge1122-stock8/*/scenario/*.log
+            build/e2e/forge1122-stock8/*/scenario/frames/
+            build/e2e/forge1122-stock8/*/suite/*/scenario/*.json
+            build/e2e/forge1122-stock8/*/suite/*/scenario/*.log
+            build/e2e/forge1122-stock8/*/suite/*/scenario/frames/
+            build/e2e/forge1122-stock8/*/persist/*.json
+            build/e2e/forge1122-stock8/*/persist/*.log
+            build/e2e/forge1122-stock8/*/reload/*.json
+            build/e2e/forge1122-stock8/*/reload/*.log
+            build/e2e/runtime/forge1122-stock8/minecraft/.provision/*.json
+            build/e2e/runtime/forge1122-stock8/minecraft/.provision/*.log

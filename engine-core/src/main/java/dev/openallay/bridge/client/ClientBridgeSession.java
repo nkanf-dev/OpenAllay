@@ -42,12 +42,40 @@ public class ClientBridgeSession {
     }
 
     /** Immutable actor identity plus an exact native connection identity check, not an API handle. */
-    public record Connection(UUID actorId, BooleanSupplier current) {
-        public Connection {
+    @dev.openallay.value.ValueType(Connection.ValueSchemaProvider.class)
+public static final class Connection {
+    private final UUID actorId;
+    private final BooleanSupplier current;
+    public Connection(UUID actorId, BooleanSupplier current) {
+
             java.util.Objects.requireNonNull(actorId, "actorId");
             java.util.Objects.requireNonNull(current, "current");
+
+        this.actorId = actorId;
+        this.current = current;
+    }
+    public UUID actorId() { return actorId; }
+    public BooleanSupplier current() { return current; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Connection)) return false;
+        Connection that = (Connection) other;
+        return java.util.Objects.equals(actorId, that.actorId) && java.util.Objects.equals(current, that.current);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actorId);
+        hash = 31 * hash + java.util.Objects.hashCode(current);
+        return hash;
+    }
+    @Override public String toString() { return "Connection[actorId=" + actorId + ", current=" + current + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Connection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Connection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Connection>>asList(new dev.openallay.value.ValueSchema.Component<>(Connection.class, "actorId", Connection::actorId), new dev.openallay.value.ValueSchema.Component<>(Connection.class, "current", Connection::current)), arguments -> new Connection((UUID) arguments[0], (BooleanSupplier) arguments[1]));
         }
     }
+}
 
     private final NativeHost host;
     private final ClientEventDispatcher dispatcher;
@@ -169,15 +197,14 @@ public class ClientBridgeSession {
                 synchronized (serverRequestLock) {
                     request = serverRequests.get(requestId);
                     if (!current(requestId, request) || !request.sessionId.equals(sessionId)) {
-                        return java.util.concurrent.CompletableFuture.failedFuture(
-                                new IllegalStateException("Client image request is no longer active"));
+                        return dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException("Client image request is no longer active"));
                     }
                 }
-                var captured = dev.openallay.model.image.ModelImages.unique(references);
+                java.util.List<dev.openallay.model.image.ImageReference> captured = dev.openallay.model.image.ModelImages.unique(references);
                 return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
                     java.util.List<dev.openallay.bridge.protocol.ServerAgentImageAttachment> attachments =
                             new java.util.ArrayList<>();
-                    for (var reference : captured) {
+                    for (dev.openallay.model.image.ImageReference reference : captured) {
                         cancellation.throwIfCancelled();
                         requireCurrent(requestId, request);
                         try {
@@ -191,7 +218,7 @@ public class ClientBridgeSession {
                     }
                     cancellation.throwIfCancelled();
                     requireCurrent(requestId, request);
-                    return java.util.List.copyOf(attachments);
+                    return dev.openallay.util.Java8Collections.listCopyOf(attachments);
                 }, resultImageWorker);
             }
 
@@ -277,32 +304,35 @@ public class ClientBridgeSession {
         }
         ClientToolExecutionEndpoint endpoint = clientTools;
         ServerAgentRequestPayload outbound = request.withClientTools(
-                java.util.List.of(), dev.openallay.skill.SkillCatalogManifest.EMPTY);
+                dev.openallay.util.Java8Collections.listOf(), dev.openallay.skill.SkillCatalogManifest.EMPTY);
         if (endpoint != null) {
             Supplier<ToolRuntimeCatalog> catalogs = localToolCatalog;
             if (catalogs == null) return false;
             dev.openallay.tool.ToolResult<ClientToolExecutionEndpoint.OpenedRequest> opened =
                     endpoint.open(request.requestId(), request.sessionId(), catalogs.get());
-            if (!(opened instanceof dev.openallay.tool.ToolResult.Success<
-                    ClientToolExecutionEndpoint.OpenedRequest> success)) {
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.bridge.client.ClientToolExecutionEndpoint.OpenedRequest> value; dev.openallay.tool.ToolResult.Success<
+                    ClientToolExecutionEndpoint.OpenedRequest> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if (!((($oaPattern0_holder.value = opened) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern0_holder.bound = (dev.openallay.tool.ToolResult.Success<
+                    ClientToolExecutionEndpoint.OpenedRequest>) $oaPattern0_holder.value) != null)))) {
                 return false;
             }
             outbound = request.withClientTools(
-                    success.value().clientToolIds(), success.value().skillDocuments());
+                    $oaPattern0_holder.bound.value().clientToolIds(), $oaPattern0_holder.bound.value().skillDocuments());
         }
         synchronized (serverRequestLock) {
             Optional<Connection> connection = host.captureConnection();
-            if (connection.isEmpty()) {
+            if (!connection.isPresent()) {
                 if (endpoint != null) endpoint.close(request.requestId());
                 return false;
             }
-            Connection captured = connection.orElseThrow();
+            Connection captured = connection.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             serverRequests.put(request.requestId(), new ServerRequest(
                     events, request.sessionId(), captured.actorId(), captured.current(), connectionScope,
                     request.userInput().toModelMessage().inputObservation()));
         }
         try {
-            for (var chunk : requestChunker.split(
+            for (dev.openallay.bridge.protocol.ServerAgentRequestChunkPayload chunk : requestChunker.split(
                     outbound.requestId(), codec.encode(outbound),
                     dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {
                 send("agent_request_chunk", chunk);
@@ -326,7 +356,7 @@ public class ClientBridgeSession {
                 if (payload.operation() == ServerAgentSteerPayload.Operation.REMOVE) {
                     send("agent_steer", payload);
                 } else {
-                    for (var chunk : steerChunker.split(
+                    for (dev.openallay.bridge.protocol.ServerAgentSteerChunkPayload chunk : steerChunker.split(
                             payload.requestId(), payload.messageId(), codec.encode(payload),
                             dev.openallay.bridge.protocol.BridgeProtocol.TRANSPORT_CHUNK_BYTES)) {
                         send("agent_steer_chunk", chunk);
@@ -357,35 +387,64 @@ public class ClientBridgeSession {
     }
 
     protected final void receive(String kind, String json) {
-        switch (kind) {
-            case "capabilities" -> {
+        switch ((kind)) {
+case "capabilities":
+{
+{
                 capabilities.replace(codec.decode(json, CapabilityPayload.class));
                 capabilityListeners.forEach(Runnable::run);
             }
-            case "tool_result" -> remoteTools.receive(
+break;
+}
+case "tool_result":
+{
+remoteTools.receive(
                     codec.decode(json, RemoteToolResultChunkPayload.class));
-            case "client_tool_call" -> {
+break;
+}
+case "client_tool_call":
+{
+{
                 ClientToolExecutionEndpoint endpoint = clientTools;
                 if (endpoint != null) {
                     endpoint.handle(codec.decode(json, ClientToolCallPayload.class));
                 }
             }
-            case "client_tool_cancel" -> {
+break;
+}
+case "client_tool_cancel":
+{
+{
                 ClientToolExecutionEndpoint endpoint = clientTools;
                 if (endpoint != null) {
                     endpoint.cancel(codec.decode(json, ClientToolCancelPayload.class));
                 }
             }
-            case "agent_event" -> receiveAgentEvent(
+break;
+}
+case "agent_event":
+{
+receiveAgentEvent(
                     codec.decode(json, ServerAgentEventPayload.class));
-            case "agent_event_chunk" -> {
+break;
+}
+case "agent_event_chunk":
+{
+{
                 ServerAgentEventChunkPayload chunk =
                         codec.decode(json, ServerAgentEventChunkPayload.class);
                 receiveAgentEventChunk(chunk);
             }
-            default -> dev.openallay.OpenAllayConstants.LOGGER.warn(
+break;
+}
+default:
+{
+dev.openallay.OpenAllayConstants.LOGGER.warn(
                     "Ignored unknown client bridge packet {}", kind);
-        }
+break;
+}
+}
+
     }
 
     private void receiveAgentEventChunk(ServerAgentEventChunkPayload chunk) {
@@ -399,11 +458,11 @@ public class ClientBridgeSession {
                     .add(chunk.eventId());
             try {
                 java.util.Optional<String> json = agentEventChunks.accept(chunk.asRemoteChunk());
-                if (json.isEmpty()) {
+                if (!json.isPresent()) {
                     return;
                 }
                 forgetAgentEventChunkLocked(chunk.requestId(), chunk.eventId());
-                completed = codec.decode(json.orElseThrow(), ServerAgentEventPayload.class);
+                completed = codec.decode(json.orElseThrow(() -> new java.util.NoSuchElementException("No value present")), ServerAgentEventPayload.class);
                 if (!completed.requestId().equals(chunk.requestId())) {
                     throw new IllegalArgumentException(
                             "Server Agent event request correlation changed");

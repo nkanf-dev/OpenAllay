@@ -12,7 +12,7 @@ import dev.openallay.net.HttpTransportPolicy;
 import dev.openallay.net.JdkHttpTransport;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.http.HttpTimeoutException;
+import dev.openallay.net.HttpTimeoutException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -90,8 +90,10 @@ public final class HttpModelTransport {
             }
             Throwable cause = unwrap(failure);
             ModelTransportDiagnostics.failure(diagnosticExchange, receivedStatus.get(), cause);
-            if (cause instanceof ModelClientException exception) {
-                result.completeExceptionally(exception);
+            final class $oaPattern0_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern0_holder.bound = (ModelClientException) $oaPattern0_holder.value) != null))) {
+                result.completeExceptionally($oaPattern0_holder.bound);
             } else {
                 boolean cancelled = cancellation.isCancelled()
                         || cause instanceof java.util.concurrent.CancellationException;

@@ -16,7 +16,7 @@ import java.util.function.UnaryOperator;
 /** Strict current-schema decoder for local capability policy. */
 public final class CapabilityPolicyLoader {
     private static final Set<String> ROOT_FIELDS =
-            Set.of("disabledTools", "disabledSkills");
+            dev.openallay.util.Java8Collections.setOf("disabledTools", "disabledSkills");
 
     public ToolResult<CapabilityPolicy> load(Path path) {
         Objects.requireNonNull(path, "path");

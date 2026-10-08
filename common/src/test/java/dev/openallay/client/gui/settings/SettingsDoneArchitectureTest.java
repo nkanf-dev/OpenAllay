@@ -54,7 +54,8 @@ final class SettingsDoneArchitectureTest {
         String source = Files.readString(Path.of("src/main/java/dev/openallay/client/gui/OpenAllaySettingsScreen.java"));
         String ports = source.substring(source.indexOf("public void e2eChooseSection"), source.indexOf("public E2eSettingsState"));
         assertTrue(ports.contains("requireE2eControls()"));
-        assertTrue(ports.contains("GuideNativeInput.press(button, GuideNativeInput.keyEvent(InputConstants.KEY_RETURN, 0))"));
+        assertTrue(ports.contains("instanceof dev.openallay.client.gui.GuideNativeButton"));
+        assertTrue(java.util.regex.Pattern.compile("GuideNativeInput\\.press\\(\\$oaPattern[0-9]+_holder\\.bound, GuideNativeInput\\.keyEvent\\(dev\\.openallay\\.client\\.gui\\.GuideInputCodes\\.KEY_RETURN, 0\\)\\)").matcher(ports).find());
         String binding = Files.readString(Path.of("src/main/java/dev/openallay/client/gui/GuideNativeInput.java"));
         assertTrue(binding.contains("public static void press(Button button, GuideInputKey event)"));
         assertTrue(binding.contains("button.onPress(nativeKey(event))"));

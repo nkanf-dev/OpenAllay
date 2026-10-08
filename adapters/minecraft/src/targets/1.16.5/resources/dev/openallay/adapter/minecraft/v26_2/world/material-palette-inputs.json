@@ -1,0 +1,242 @@
+{
+  "air": {
+    "id": "minecraft:air"
+  },
+  "beetroots_mature": {
+    "id": "minecraft:beetroots",
+    "properties": {
+      "age": "3"
+    }
+  },
+  "blue_stained_glass": {
+    "id": "minecraft:blue_stained_glass"
+  },
+  "bricks": {
+    "id": "minecraft:bricks"
+  },
+  "campfire_lit_north": {
+    "id": "minecraft:campfire",
+    "properties": {
+      "facing": "north",
+      "lit": "true",
+      "signal_fire": "false",
+      "waterlogged": "false"
+    }
+  },
+  "carrots_mature": {
+    "id": "minecraft:carrots",
+    "properties": {
+      "age": "7"
+    }
+  },
+  "chest_north_single": {
+    "id": "minecraft:chest",
+    "properties": {
+      "facing": "north",
+      "type": "single",
+      "waterlogged": "false"
+    }
+  },
+  "cobblestone": {
+    "id": "minecraft:cobblestone"
+  },
+  "cobblestone_stairs_south": {
+    "id": "minecraft:cobblestone_stairs",
+    "properties": {
+      "facing": "south",
+      "half": "bottom",
+      "shape": "straight",
+      "waterlogged": "false"
+    }
+  },
+  "cyan_stained_glass": {
+    "id": "minecraft:cyan_stained_glass"
+  },
+  "dark_oak_slab_bottom": {
+    "id": "minecraft:dark_oak_slab",
+    "properties": {
+      "type": "bottom",
+      "waterlogged": "false"
+    }
+  },
+  "dark_oak_stairs_east": {
+    "id": "minecraft:dark_oak_stairs",
+    "properties": {
+      "facing": "east",
+      "half": "bottom",
+      "shape": "straight",
+      "waterlogged": "false"
+    }
+  },
+  "dark_oak_stairs_west": {
+    "id": "minecraft:dark_oak_stairs",
+    "properties": {
+      "facing": "west",
+      "half": "bottom",
+      "shape": "straight",
+      "waterlogged": "false"
+    }
+  },
+  "dirt": {
+    "id": "minecraft:dirt"
+  },
+  "farmland_hydrated": {
+    "id": "minecraft:farmland",
+    "properties": {
+      "moisture": "7"
+    }
+  },
+  "furnace_north": {
+    "id": "minecraft:furnace",
+    "properties": {
+      "facing": "north",
+      "lit": "false"
+    }
+  },
+  "glass_pane": {
+    "id": "minecraft:glass_pane"
+  },
+  "iron_bars": {
+    "id": "minecraft:iron_bars"
+  },
+  "iron_block": {
+    "id": "minecraft:iron_block"
+  },
+  "ladder_north": {
+    "id": "minecraft:ladder",
+    "properties": {
+      "facing": "north",
+      "waterlogged": "false"
+    }
+  },
+  "lantern_hanging": {
+    "id": "minecraft:lantern",
+    "properties": {
+      "hanging": "true",
+      "waterlogged": "false"
+    }
+  },
+  "lantern_standing": {
+    "id": "minecraft:lantern",
+    "properties": {
+      "hanging": "false",
+      "waterlogged": "false"
+    }
+  },
+  "light_blue_stained_glass": {
+    "id": "minecraft:light_blue_stained_glass"
+  },
+  "oak_fence": {
+    "id": "minecraft:oak_fence"
+  },
+  "oak_fence_gate_north": {
+    "id": "minecraft:oak_fence_gate",
+    "properties": {
+      "facing": "north",
+      "in_wall": "false",
+      "open": "false",
+      "powered": "false"
+    }
+  },
+  "oak_log_x": {
+    "id": "minecraft:oak_log",
+    "properties": {
+      "axis": "x"
+    }
+  },
+  "oak_log_y": {
+    "id": "minecraft:oak_log",
+    "properties": {
+      "axis": "y"
+    }
+  },
+  "oak_log_z": {
+    "id": "minecraft:oak_log",
+    "properties": {
+      "axis": "z"
+    }
+  },
+  "oak_planks": {
+    "id": "minecraft:oak_planks"
+  },
+  "oak_pressure_plate_unpowered": {
+    "id": "minecraft:oak_pressure_plate",
+    "properties": {
+      "powered": "false"
+    }
+  },
+  "polished_andesite": {
+    "id": "minecraft:polished_andesite"
+  },
+  "potatoes_mature": {
+    "id": "minecraft:potatoes",
+    "properties": {
+      "age": "7"
+    }
+  },
+  "sea_lantern": {
+    "id": "minecraft:sea_lantern"
+  },
+  "smooth_stone": {
+    "id": "minecraft:smooth_stone"
+  },
+  "smooth_stone_slab_bottom": {
+    "id": "minecraft:smooth_stone_slab",
+    "properties": {
+      "type": "bottom",
+      "waterlogged": "false"
+    }
+  },
+  "spruce_fence": {
+    "id": "minecraft:spruce_fence"
+  },
+  "spruce_log_y": {
+    "id": "minecraft:spruce_log",
+    "properties": {
+      "axis": "y"
+    }
+  },
+  "spruce_planks": {
+    "id": "minecraft:spruce_planks"
+  },
+  "stone_brick_slab_bottom": {
+    "id": "minecraft:stone_brick_slab",
+    "properties": {
+      "type": "bottom",
+      "waterlogged": "false"
+    }
+  },
+  "stone_brick_stairs_south": {
+    "id": "minecraft:stone_brick_stairs",
+    "properties": {
+      "facing": "south",
+      "half": "bottom",
+      "shape": "straight",
+      "waterlogged": "false"
+    }
+  },
+  "stone_brick_wall": {
+    "id": "minecraft:stone_brick_wall"
+  },
+  "stone_bricks": {
+    "id": "minecraft:stone_bricks"
+  },
+  "water_source": {
+    "id": "minecraft:water",
+    "properties": {
+      "level": "0"
+    }
+  },
+  "wheat_mature": {
+    "id": "minecraft:wheat",
+    "properties": {
+      "age": "7"
+    }
+  },
+  "white_concrete": {
+    "id": "minecraft:white_concrete"
+  },
+  "white_wool": {
+    "id": "minecraft:white_wool"
+  }
+}

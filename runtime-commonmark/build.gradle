@@ -1,0 +1,101 @@
+plugins { id 'java-library' }
+
+// One source-compiled CommonMark core + tables runtime serves every native target.
+base { archivesName = 'openallay-commonmark' }
+version = commonmark_version
+def canonicalSourceRoot = projectDir.parentFile
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-Xpkginfo:always')
+}
+tasks.withType(Jar).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+configurations {
+    upstreamCoreSources { canBeConsumed = false; canBeResolved = true; transitive = false }
+    upstreamTablesSources { canBeConsumed = false; canBeResolved = true; transitive = false }
+}
+dependencies {
+    upstreamCoreSources("org.commonmark:commonmark:${commonmark_version}:sources@jar")
+    upstreamTablesSources("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}:sources@jar")
+}
+def generatedSources = layout.buildDirectory.dir('generated/upstream')
+def prepare = tasks.register('prepareUpstreamSources', Exec) {
+    inputs.files(configurations.upstreamCoreSources, configurations.upstreamTablesSources)
+    inputs.files('patches/commonmark-source-manifest.json', 'patches/commonmark-java8-hunks.json',
+            'patches/commonmark-java8.patch', new File(canonicalSourceRoot, 'scripts/prepare-commonmark-sources.py'))
+    outputs.dir(generatedSources)
+    doFirst {
+        commandLine 'python3', '-B', new File(canonicalSourceRoot, 'scripts/prepare-commonmark-sources.py'),
+                configurations.upstreamCoreSources.singleFile, configurations.upstreamTablesSources.singleFile,
+                file('patches/commonmark-source-manifest.json'), file('patches/commonmark-java8-hunks.json'),
+                generatedSources.get().asFile
+    }
+}
+sourceSets.main.java.setSrcDirs([generatedSources.map { it.dir('java') }])
+sourceSets.main.resources.setSrcDirs([generatedSources.map { it.dir('resources') }])
+tasks.named('compileJava') { dependsOn prepare }
+tasks.named('processResources') { dependsOn prepare }
+tasks.named('sourcesJar', Jar) {
+    dependsOn prepare
+    from('patches') { into 'META-INF/openallay/commonmark-source-changes' }
+    from(['THIRD-PARTY-NOTICES.txt', 'LICENSE-commonmark.txt']) { into 'META-INF/licenses/commonmark' }
+}
+tasks.named('jar', Jar) {
+    from('patches') { into 'META-INF/openallay/commonmark-source-changes' }
+    from(['THIRD-PARTY-NOTICES.txt', 'LICENSE-commonmark.txt']) { into 'META-INF/licenses/commonmark' }
+    manifest.attributes('Implementation-Title': 'OpenAllay CommonMark Java8 runtime',
+            'Implementation-Version': project.version,
+            'CommonMark-Upstream-Core': "org.commonmark:commonmark:${commonmark_version}",
+            'CommonMark-Upstream-Tables': "org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
+}
+tasks.named('assemble') { dependsOn 'sourcesJar' }
+
+// Runs only on the remote build host. The actual Java8 executable is an input.
+configurations {
+    upstreamCoreBinary { canBeConsumed = false; canBeResolved = true; transitive = false }
+    upstreamTablesBinary { canBeConsumed = false; canBeResolved = true; transitive = false }
+}
+dependencies {
+    upstreamCoreBinary("org.commonmark:commonmark:${commonmark_version}")
+    upstreamTablesBinary("org.commonmark:commonmark-ext-gfm-tables:${commonmark_version}")
+}
+def proofCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+def proofRuntime = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+tasks.register('java8Proof', Exec) {
+    group = 'verification'
+    description = 'Verify the complete CommonMark runtime/API and real parser on an actual Java8 VM.'
+    dependsOn 'jar', 'sourcesJar'
+    inputs.files(configurations.upstreamCoreBinary, configurations.upstreamTablesBinary,
+            configurations.upstreamCoreSources, configurations.upstreamTablesSources)
+    inputs.files(fileTree('src/java8Test'), 'patches', new File(canonicalSourceRoot, 'scripts/prepare-commonmark-sources.py'))
+    outputs.upToDateWhen { false }
+    doFirst {
+        def java8 = providers.gradleProperty('commonmarkJava8Executable').orNull
+        if (java8 == null || !new File(java8).isFile()) {
+            throw new GradleException('Supply -PcommonmarkJava8Executable=/absolute/path/to/actual/java8/bin/java')
+        }
+        def proofOutput = layout.buildDirectory.dir('java8-proof').get().asFile
+        if (proofOutput.exists()) throw new GradleException('Preserve then retire the previous java8-proof output before rerunning')
+        def compilerHome = proofCompiler.get().metadata.installationPath.asFile
+        commandLine 'python3', '-B', file('src/java8Test/run-remote-goldens.py'),
+                '--source-root', canonicalSourceRoot,
+                '--javac', new File(compilerHome, 'bin/javac'),
+                '--javap', new File(compilerHome, 'bin/javap'),
+                '--java8', java8, '--java17', proofRuntime.get().executablePath.asFile,
+                '--core', configurations.upstreamCoreBinary.singleFile,
+                '--tables', configurations.upstreamTablesBinary.singleFile,
+                '--source-core', configurations.upstreamCoreSources.singleFile,
+                '--source-tables', configurations.upstreamTablesSources.singleFile,
+                '--ported-jar', tasks.named('jar', Jar).get().archiveFile.get().asFile,
+                '--sources-jar', tasks.named('sourcesJar', Jar).get().archiveFile.get().asFile,
+                '--output', proofOutput
+    }
+}
