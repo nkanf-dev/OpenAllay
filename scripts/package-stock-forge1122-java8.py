@@ -100,6 +100,29 @@ def main():
     legacy.require(all(s in contents for s in ['mcmod.info','pack.mcmeta','openallay.refmap.json',
         'openallay.client.mixins.json','openallay.world.mixins.json','openallay.forge.mixins.json']),
         'Exact Forge14 native descriptors/refmap/bindings required')
+    # Forge14's real mcmod.info is a selected source template. Materialize only its declared JSON fields.
+    properties={}
+    for line in (root/'gradle.properties').read_text().splitlines():
+        if line and not line.lstrip().startswith('#') and '=' in line:
+            key,value=line.split('=',1);properties[key]=value
+    original_mcmod=contents['mcmod.info']
+    templates=json.loads(original_mcmod)
+    declared={'modid':'mod_id','name':'mod_name','description':'description','version':'version','credits':'credits'}
+    legacy.require(isinstance(templates,list) and len(templates)==1,'One genuine Forge14 mcmod.info template required')
+    model=dict(templates[0])
+    for field,key in declared.items():
+        legacy.require(key in properties,'Missing current resource property '+key)
+        legacy.require(model[field]=='${'+key+'}' or model[field]==properties[key],'Unknown Forge14 metadata template field '+field)
+        model[field]=properties[key]
+    legacy.require(model['mcversion']=='1.12.2','Selected Forge14 native Minecraft metadata differs')
+    legacy.require(model['authorList']==['${mod_author}'] or model['authorList']==[properties['mod_author']],'Unknown native author template')
+    model['authorList']=[properties['mod_author']]
+    generated_mcmod=(json.dumps([model],ensure_ascii=False,indent=2)+'\n').encode()
+    legacy.require('${' not in generated_mcmod.decode(),'Unresolved native metadata expansion')
+    contents['mcmod.info']=generated_mcmod
+    metadata_expansion={'resource':'mcmod.info','inputSha256':legacy.sha(original_mcmod),'outputSha256':legacy.sha(generated_mcmod),
+        'propertiesFileSha256':legacy.sha((root/'gradle.properties').read_bytes()),'expandedPropertyKeys':sorted(set(declared.values())|{'mod_author'}),
+        'minecraftVersion':'1.12.2','originalInputJarUnchanged':True,'jsonEscaping':True}
     descriptor=json.loads(contents['mcmod.info']);legacy.require(len(descriptor)==1 and descriptor[0]['modid']=='openallay' and descriptor[0]['version']==request['version'],
         'Real Forge14 release metadata required, not a filename rename')
     for name in ['openallay.client.mixins.json','openallay.world.mixins.json','openallay.forge.mixins.json']:
@@ -125,7 +148,7 @@ def main():
     result={'target':'forge1122','version':request['version'],'sourceRevision':source,'outputSha256':legacy.sha(raw),
         'entries':legacy.inventory(raw),'owners':owners,'inputs':inputs,'engineReceiptSha256':request['engineReceipt']['sha256'],
         'nativeReceiptSha256':request['nativeReceipt']['sha256'],'builderSha256':legacy.sha(builder),
-        'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'exact fixed SQLite JVM-runtime role projection; other physical entries preserved and Java8 scanned','runtimeRoleProjections':role_projections,'engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
+        'helperBuild':None,'javaRequired':8,'ordinaryModsJar':True,'gameExecuted':False,'runtimeAccepted':False,'bootstrapOwner':'manifest MixinTweaker only','MixinConfigsOwner':'manifest','hostNamespacesReplaced':False,'allPhysicalClassesAtMost52':True,'functionalMrPolicy':'exact fixed SQLite JVM-runtime role projection; other physical entries preserved and Java8 scanned','runtimeRoleProjections':role_projections,'nativeMetadataExpansion':metadata_expansion,'engineProducerSource':request['engineSource'],'builderSource':builder_lock['source']['revision']}
     legacy.write_new(a.receipt,legacy.encoded(result))
 
 if __name__=='__main__':main()
