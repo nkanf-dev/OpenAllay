@@ -9,4 +9,10 @@ public final class MinecraftServerResources {
     public static IResourceManager resources(MinecraftServer server) {
         return server.getDataPackRegistries().getResourceManager();
     }
+    /** Capture the actual native resource owner once for this typed callback. */
+    public static <T> T withResources(MinecraftServer server,
+            java.util.function.Function<? super IResourceManager, ? extends T> action) {
+        IResourceManager resources = resources(server);
+        return java.util.Objects.requireNonNull(action, "action").apply(resources);
+    }
 }

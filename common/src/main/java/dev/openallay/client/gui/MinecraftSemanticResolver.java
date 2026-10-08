@@ -65,12 +65,11 @@ public static final class ItemPresentation {
         if (!MinecraftClientWindow.ownerThread(minecraft)) {
             return new ItemPresentation(itemId, fallback, count, net.minecraft.world.item.ItemStack.EMPTY, false);
         }
-        net.minecraft.resources.ResourceLocation id = MinecraftResourceIds.tryParse(itemId);
-        if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
+        if (!dev.openallay.client.gui.GuideNativeItemLookup.validItemId(itemId)) {
             return new ItemPresentation(itemId, fallback, count, net.minecraft.world.item.ItemStack.EMPTY, false);
         }
         net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(
-                dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
+                dev.openallay.client.gui.GuideNativeItemLookup.item(itemId),
                 (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
         String label = suppliedLabel == null || dev.openallay.util.Java8Strings.isBlank(suppliedLabel)
                 ? GuideNativeItemLookup.displayName(stack) : suppliedLabel;

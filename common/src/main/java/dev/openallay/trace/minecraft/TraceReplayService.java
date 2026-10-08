@@ -68,14 +68,15 @@ if ((($oaPattern1_holder.value = loaded) instanceof dev.openallay.tool.ToolResul
     }
 
     private ToolResult<TraceRepository.LoadedTraces> load(net.minecraft.commands.CommandSourceStack source) {
-        dev.openallay.platform.minecraft.MinecraftResourceAccess.Source resources = dev.openallay.platform.minecraft.MinecraftServerResources.resources(
-                dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source));
-        List<TraceRepository.TraceSource> sources = dev.openallay.util.Java8Collections.toList(MinecraftResourceAccess
-                .listIds(resources, "agent_traces", id -> dev.openallay.platform.minecraft.MinecraftResourceId.from(id.toString()).path().endsWith(".json"))
-                .stream()
-                .map(id -> new TraceRepository.TraceSource(
-                        id.toString(), () -> MinecraftResourceAccess.openSelectedReader(resources, id))));
-        return repository.load(sources);
+        return dev.openallay.platform.minecraft.MinecraftServerResources.withResources(
+                dev.openallay.context.minecraft.MinecraftCommandSourceFacts.server(source), resources -> {
+            List<TraceRepository.TraceSource> sources = dev.openallay.util.Java8Collections.toList(MinecraftResourceAccess
+                    .listIds(resources, "agent_traces", id -> dev.openallay.platform.minecraft.MinecraftResourceId.from(id.toString()).path().endsWith(".json"))
+                    .stream()
+                    .map(id -> new TraceRepository.TraceSource(
+                            id.toString(), () -> MinecraftResourceAccess.openSelectedReader(resources, id))));
+            return repository.load(sources);
+        });
     }
 
     private static void requireServerThread(net.minecraft.commands.CommandSourceStack source) {

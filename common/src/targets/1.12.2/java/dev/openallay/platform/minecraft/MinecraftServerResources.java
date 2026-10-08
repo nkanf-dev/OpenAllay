@@ -11,4 +11,10 @@ public final class MinecraftServerResources {
         java.util.Objects.requireNonNull(server, "server");
         return BUNDLED;
     }
+    /** Capture the actual native resource owner once for this typed callback. */
+    public static <T> T withResources(MinecraftServer server,
+            java.util.function.Function<? super MinecraftResourceAccess.Source, ? extends T> action) {
+        MinecraftResourceAccess.Source resources = resources(server);
+        return java.util.Objects.requireNonNull(action, "action").apply(resources);
+    }
 }

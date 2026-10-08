@@ -157,13 +157,12 @@ private static void renderSlot(
                 int mouseY) {
             graphics.fill(x, y, x + 18, y + 18, SLOT);
             graphics.outline(x, y, 18, 18, BORDER);
-            net.minecraft.resources.ResourceLocation id = MinecraftResourceIds.tryParse(itemId);
-            if (id == null || !MinecraftNativeRegistries.ITEM.containsKey(id)) {
+            if (!dev.openallay.client.gui.GuideNativeItemLookup.validItemId(itemId)) {
                 graphics.text(font, "?", x + 6, y + 5, MUTED, false);
                 return;
             }
             net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(
-                    dev.openallay.client.gui.GuideNativeItemLookup.item(id.toString()),
+                    dev.openallay.client.gui.GuideNativeItemLookup.item(itemId),
                     (int) Math.min(Integer.MAX_VALUE, Math.max(1, count)));
             graphics.item(stack, x + 1, y + 1);
             graphics.itemDecorations(font, stack, x + 1, y + 1);
