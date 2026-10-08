@@ -10,9 +10,9 @@ import java.util.TreeSet;
 /**
  * Generic stable-ID recipe settings.
  *
- * @param visibility recipe visibility policy
- * @param preferredViewer preferred recipe-viewer source or {@value #AUTO}
- * @param disabledSources source IDs excluded from recipe discovery
+ * <p>{@code visibility}: recipe visibility policy</p>
+ * <p>{@code preferredViewer}: preferred recipe-viewer source or {@value #AUTO}</p>
+ * <p>{@code disabledSources}: source IDs excluded from recipe discovery</p>
  */
 @dev.openallay.value.ValueType(RecipeClientConfig.ValueSchemaProvider.class)
 public final class RecipeClientConfig {

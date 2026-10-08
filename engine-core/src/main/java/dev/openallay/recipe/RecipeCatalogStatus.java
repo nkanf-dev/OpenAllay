@@ -7,11 +7,11 @@ import java.util.List;
 /**
  * Deterministic status projection that exposes source health without duplicating recipes.
  *
- * @param completeness completeness of the aggregated catalog
- * @param recipeCount number of normalized recipes
- * @param semanticGroupCount number of semantic recipe groups
- * @param providers per-provider readiness and coverage
- * @param conflicts normalization diagnostics and conflicts
+ * <p>{@code completeness}: completeness of the aggregated catalog</p>
+ * <p>{@code recipeCount}: number of normalized recipes</p>
+ * <p>{@code semanticGroupCount}: number of semantic recipe groups</p>
+ * <p>{@code providers}: per-provider readiness and coverage</p>
+ * <p>{@code conflicts}: normalization diagnostics and conflicts</p>
  */
 @dev.openallay.value.ValueType(RecipeCatalogStatus.ValueSchemaProvider.class)
 public final class RecipeCatalogStatus {

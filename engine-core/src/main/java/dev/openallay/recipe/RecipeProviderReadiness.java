@@ -5,9 +5,9 @@ import java.util.Objects;
 /**
  * Development-probe view of whether required recipe viewers can be sampled safely.
  *
- * @param state readiness state
- * @param code stable diagnostic code
- * @param message human-readable diagnostic
+ * <p>{@code state}: readiness state</p>
+ * <p>{@code code}: stable diagnostic code</p>
+ * <p>{@code message}: human-readable diagnostic</p>
  */
 @dev.openallay.value.ValueType(RecipeProviderReadiness.ValueSchemaProvider.class)
 public final class RecipeProviderReadiness {

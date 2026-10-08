@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Evidence-only post-run classification for failed benchmark attempts.
  *
- * @param attempts failed-attempt audits in report order
+ * <p>{@code attempts}: failed-attempt audits in report order</p>
  */
 @dev.openallay.value.ValueType(BenchmarkTraceAudit.ValueSchemaProvider.class)
 public final class BenchmarkTraceAudit {
