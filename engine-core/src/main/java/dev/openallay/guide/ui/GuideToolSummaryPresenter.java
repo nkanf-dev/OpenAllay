@@ -160,7 +160,7 @@ public static final class Recipe implements Capsule {
         GuideToolDetailView detail = tool.detail();
         List<Capsule> capsules = new ArrayList<>();
         // Never infer a result capsule from narration, arbitrary fields, or a private JSON envelope.
-        if (detail.failure().isEmpty() && detail.displayStatus() == GuideToolDisplayStatus.SUCCEEDED) {
+        if (!detail.failure().isPresent() && detail.displayStatus() == GuideToolDisplayStatus.SUCCEEDED) {
             for (int cardIndex = 0; cardIndex < detail.cards().size() && capsules.size() < MAX_CAPSULES; cardIndex++) {
                 GuideDetailCard card = detail.cards().get(cardIndex);
                 String cardId = id + ":card:" + cardIndex;

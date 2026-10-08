@@ -72,9 +72,9 @@ private Group(Identity identity, List<GuideSource> records) {
             this(identity, records,
                     records.stream().map(source -> new SourceObservation(
                                     source.evidence(), source.lastCapturedAt()).firstCapturedAt())
-                            .min(Instant::compareTo).orElseThrow(),
+                            .min(Instant::compareTo).orElseThrow(() -> new java.util.NoSuchElementException("No value present")),
                     records.stream().map(GuideSource::lastCapturedAt)
-                            .max(Instant::compareTo).orElseThrow());
+                            .max(Instant::compareTo).orElseThrow(() -> new java.util.NoSuchElementException("No value present")));
         }
 public GuideEvidencePresentation presentation() { return from(records.get(0)); }
     @Override public boolean equals(Object other) {

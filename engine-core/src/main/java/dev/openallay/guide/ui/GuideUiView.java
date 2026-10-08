@@ -66,7 +66,7 @@ public final class GuideUiView {
     public String capabilityMessage() { return capabilityMessage; }
 public GuideUiModelChoice selectedModel() {
         return modelChoices.stream().filter(GuideUiModelChoice::selected)
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
     }
 public dev.openallay.model.image.ImageInputCapability selectedImageInputCapability() {
         return selectedModel().imageInput();
@@ -86,7 +86,7 @@ public static GuideUiView from(GuideSnapshot snapshot, GuideDisplayConfig displa
         java.util.Objects.requireNonNull(displayConfig, "displayConfig");
         GuideSessionSnapshot selected = snapshot.sessions().stream()
                 .filter(value -> value.sessionId().equals(snapshot.selectedSession()))
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         GuideRequestSnapshot active = selected.requests().stream()
                 .filter(value -> !value.terminal()).reduce((first, second) -> second).orElse(null);
         GuideRequestSnapshot retry = selected.requests().stream()
@@ -97,7 +97,7 @@ public static GuideUiView from(GuideSnapshot snapshot, GuideDisplayConfig displa
         List<GuideUiModelChoice> modelChoices = modelChoices(snapshot, active);
         GuideUiModelChoice selectedModel = modelChoices.stream()
                 .filter(GuideUiModelChoice::selected)
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         boolean targetAvailable = selectedModel.available();
         List<GuideUiSession> sessions = dev.openallay.util.Java8Collections.toList(snapshot.sessions().stream()
                 .map(value -> new GuideUiSession(

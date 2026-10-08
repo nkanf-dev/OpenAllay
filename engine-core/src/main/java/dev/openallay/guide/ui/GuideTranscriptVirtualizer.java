@@ -143,7 +143,7 @@ public static final class Window {
     }
 
     public int offset(int rowIndex) {
-        if (rowIndex < 0 || rowIndex > rows.size()) throw new IndexOutOfBoundsException(rowIndex);
+        if (rowIndex < 0 || rowIndex > rows.size()) throw new IndexOutOfBoundsException("Index out of range: " + rowIndex);
         return offsets[rowIndex];
     }
 

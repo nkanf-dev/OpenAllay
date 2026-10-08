@@ -319,7 +319,7 @@ public final class GuideService implements GuideHistoryAdministration {
             return new ToolResult.Failure<>("invalid_question", "Enter text or attach an image");
         }
         if (input.inputObservation().isPresent()
-                && !actor.equals(input.inputObservation().orElseThrow().focus().actorId())) {
+                && !actor.equals(input.inputObservation().orElseThrow(() -> new java.util.NoSuchElementException("No value present")).focus().actorId())) {
             return new ToolResult.Failure<>("input_source_actor_mismatch", "Input reference belongs to another player");
         }
         boolean images = dev.openallay.model.image.ModelImages.hasImages(dev.openallay.util.Java8Collections.listOf(input));
@@ -343,7 +343,7 @@ public final class GuideService implements GuideHistoryAdministration {
             return new ToolResult.Failure<>("invalid_question", "Enter text or attach an image");
         }
         if (input.inputObservation().isPresent()
-                && !actor.equals(input.inputObservation().orElseThrow().focus().actorId())) {
+                && !actor.equals(input.inputObservation().orElseThrow(() -> new java.util.NoSuchElementException("No value present")).focus().actorId())) {
             return new ToolResult.Failure<>("input_source_actor_mismatch", "Input reference belongs to another player");
         }
         return validateImageCapability(input, requestImageCapabilities.getOrDefault(requestId,
@@ -1354,7 +1354,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                     long sequence = fork.page().first().sequence() + originals.size();
                     UUID sourceId = source.requestSequences.entrySet().stream()
                             .filter(entry -> entry.getValue() == sequence).map(Map.Entry::getKey)
-                            .findFirst().orElseThrow();
+                            .findFirst().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
                     originals.put(inherited.requestId(), source.originalContext.getOrDefault(sourceId, dev.openallay.util.Java8Collections.listOf()));
                     GuideHistoryMutation.CaptureRequestBoundary boundary = source.forkBoundaries.get(sourceId);
                     if (boundary != null) boundaries.put(inherited.requestId(),
@@ -1866,7 +1866,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
             // retained if that receipt does not contain their references.
             remote.disconnect();
             List<CompletableFuture<Void>> endpointBarriers = dev.openallay.util.Java8Collections.listCopyOf(endpointSettled.values());
-            CompletableFuture.allOf(endpointBarriers.toArray(CompletableFuture[]::new))
+            CompletableFuture.allOf(endpointBarriers.toArray(new CompletableFuture[0]))
                     .whenComplete((ignored, failure) -> dispatcher.execute(() ->
                             finishDisconnect(detachedControls, result)));
         });
@@ -1882,7 +1882,7 @@ if ((($oaPattern5_holder.value = valid) instanceof dev.openallay.tool.ToolResult
                     releaseObservationImages(session, request.requestId())));
         }
         CompletableFuture<Void> imagesSettled = CompletableFuture.allOf(
-                imageHandoffs.toArray(CompletableFuture[]::new));
+                imageHandoffs.toArray(new CompletableFuture[0]));
         CompletableFuture<Void> controlsSettled = CompletableFuture.allOf(detachedControls.stream()
                 .map(control -> control.settled).toArray(CompletableFuture[]::new));
         CompletableFuture<Void> ordinaryWrites = history != null && allowHistoryWrites
@@ -2906,7 +2906,7 @@ if ((($oaPattern16_holder.value = failure) instanceof dev.openallay.guide.GuideM
             return;
         }
         if (loaded.isPresent()) {
-            GuideHistoryMetadata metadata = loaded.orElseThrow();
+            GuideHistoryMetadata metadata = loaded.orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             if (!metadata.scope().equals(historyScope)) {
                 allowHistoryWrites = false;
                 persistence = new GuidePersistenceSnapshot(
