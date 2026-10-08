@@ -75,7 +75,7 @@ public static final class TextLayer {
         try (ResourceStack stack = new ResourceStack(resources.getAllResources(id))) {
             for (IResource resource : stack.resources()) {
                 layers.add(new TextLayer(resource.getResourcePackName(),
-                        new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8)));
+                        new String(dev.openallay.util.Java8Streams.readAllBytes(resource.getInputStream()), StandardCharsets.UTF_8)));
             }
         }
         return dev.openallay.util.Java8Collections.listCopyOf(layers);

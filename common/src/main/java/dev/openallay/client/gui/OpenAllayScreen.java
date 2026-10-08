@@ -1507,8 +1507,8 @@ if ((($oaPattern4_holder.value = row) instanceof dev.openallay.guide.ui.GuideUiR
         long minutes = seconds % 3600 / 60;
         long remainder = seconds % 60;
         return hours > 0
-                ? "%d:%02d:%02d".formatted(hours, minutes, remainder)
-                : "%d:%02d".formatted(minutes, remainder);
+                ? dev.openallay.util.Java8ApiSupport.formatted("%d:%02d:%02d", hours, minutes, remainder)
+                : dev.openallay.util.Java8ApiSupport.formatted("%d:%02d", minutes, remainder);
     }
 
     private void renderTranscript(GuideGraphics graphics, int mouseX, int mouseY) {
@@ -1971,7 +1971,7 @@ if ((($oaPattern19_holder.value = intent) instanceof dev.openallay.client.gui.Mi
 
     static List<net.minecraft.network.chat.Component> toolFailureComponents(GuideToolDetailView detail, String toolId) {
         if (detail.failure().isPresent()) {
-            GuideToolDetailView.Failure failure = detail.failure().orElseThrow();
+            GuideToolDetailView.Failure failure = dev.openallay.util.Java8ApiSupport.orElseThrow(detail.failure());
             List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
             if (!dev.openallay.util.Java8Strings.isBlank(failure.code())) lines.add(MinecraftComponents.literal(failure.code()));
             if (!dev.openallay.util.Java8Strings.isBlank(failure.message())) lines.add(MinecraftComponents.literal(failure.message()));
@@ -2313,7 +2313,7 @@ case RESULT:
                         for (net.minecraft.network.chat.Component reason : toolFailureComponents(toolDetail, selectedTool.activity().toolId())) {
                             y = detailLine(graphics, MinecraftComponents.style(MinecraftComponents.copy(reason), net.minecraft.ChatFormatting.RED), detail, y);
                         }
-                        if (toolDetail.failure().isEmpty()) {
+                        if (dev.openallay.util.Java8ApiSupport.isEmpty(toolDetail.failure())) {
                             y = detailLine(graphics, MinecraftComponents.translatable("screen.openallay.detail.output"), detail, y + 4);
                         }
                         for (GuideToolMessage message : toolResultMessages(toolDetail)) {
@@ -2372,7 +2372,7 @@ case DEBUG:
                         y = detailDisclosure(graphics, MinecraftComponents.translatable("screen.openallay.debug.section"),
                                 detail, y + 4, "debug-result");
                         if (expandedDetails.contains("debug-result")) {
-                            GuideToolDetailView.Debug debug = toolDetail.debug().orElseThrow();
+                            GuideToolDetailView.Debug debug = dev.openallay.util.Java8ApiSupport.orElseThrow(toolDetail.debug());
                             y = detailValues(graphics, "screen.openallay.detail.input.handles",
                                     toolDetail.invocation().handles(), detail, y);
                             y = detailValues(graphics, "screen.openallay.detail.input.modules",
@@ -2428,8 +2428,8 @@ break;
     }
 
     static String toolProgram(GuideToolDetailView detail) {
-        if (detail.debug().isEmpty()) return "";
-        GuideToolDetailView.Debug debug = detail.debug().orElseThrow();
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(detail.debug())) return "";
+        GuideToolDetailView.Debug debug = dev.openallay.util.Java8ApiSupport.orElseThrow(detail.debug());
         JsonObject arguments = debug.invocationArguments();
         return debug.toolId().endsWith(":run_javascript") && arguments != null
                 && arguments.has("source") && arguments.get("source").isJsonPrimitive()
@@ -2692,7 +2692,7 @@ if ((($oaPattern46_holder.value = card) instanceof dev.openallay.guide.ui.GuideD
         java.util.Optional<dev.openallay.context.RecipeReference> exact = card.references().stream().filter(recipeClient::supportsExact).findFirst();
         recipeAction(graphics, MinecraftComponents.translatable(exact.isPresent()
                         ? "screen.openallay.recipe.open_exact" : "screen.openallay.recipe.open_exact_unavailable"),
-                left + 7, y + 2, exact.isPresent(), () -> navigate(recipeClient.openExact(exact.orElseThrow())));
+                left + 7, y + 2, exact.isPresent(), () -> navigate(recipeClient.openExact(dev.openallay.util.Java8ApiSupport.orElseThrow(exact))));
         y += 16;
         if (!recipeClient.canBrowse()) {
             y = detailLine(graphics, MinecraftComponents.style(MinecraftComponents.translatable("screen.openallay.recipe.viewer_unavailable"), net.minecraft.ChatFormatting.YELLOW), detail, y);
@@ -3474,7 +3474,7 @@ break;
     private GuideUiLayout.Rect renderObservationComposer(GuideGraphics graphics,
             GuideUiLayout.Rect strip, int mouseX, int mouseY) {
         java.util.Optional<dev.openallay.world.ClientObservationAnchor> anchor = uiState.observation(view.selectedSession());
-        if (anchor.isEmpty() && observationActions == null) return strip;
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(anchor) && observationActions == null) return strip;
         ObservationComposerLayout observationLayout = ObservationComposerLayout.calculate(strip, !composerImages.empty());
         GuideUiLayout.Rect row = observationLayout.row();
         int rowHeight = row.height();
@@ -3487,7 +3487,7 @@ break;
                 Math.max(0, row.width() - controls - imageControls - 2), rowHeight);
         net.minecraft.network.chat.Component text = MinecraftComponents.empty();
         if (anchor.isPresent()) {
-            for (dev.openallay.client.observation.ObservationAnchorPresentation.Chip chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
+            for (dev.openallay.client.observation.ObservationAnchorPresentation.Chip chip : ObservationAnchorPresentation.chips(dev.openallay.util.Java8ApiSupport.orElseThrow(anchor))) {
                 if (!MinecraftComponents.getString(text).isEmpty()) text = MinecraftComponents.append(MinecraftComponents.copy(text), " · ");
                 text = MinecraftComponents.append(MinecraftComponents.copy(text), MinecraftComponents.translatable(chip.key(), chip.value()));
             }
@@ -3496,7 +3496,7 @@ break;
         if (label.contains(mouseX, mouseY)) graphics.setTooltipForNextFrame(font, text, mouseX, mouseY);
         int x = Math.max(row.x(), row.right() - controls - imageControls);
         if (imageControls > 0) {
-            ImageReference reference = anchor.orElseThrow().image().orElseThrow().image();
+            ImageReference reference = dev.openallay.util.Java8ApiSupport.orElseThrow(dev.openallay.util.Java8ApiSupport.orElseThrow(anchor).image()).image();
             GuideUiLayout.Rect image = new GuideUiLayout.Rect(x, row.y(), 32, rowHeight);
             observationComposerAction(graphics, image, MinecraftComponents.translatable("screen.openallay.observation.frame"),
                     () -> openObservationImage(reference), "observation:frame", mouseX, mouseY);
@@ -4115,9 +4115,9 @@ if ((($oaPattern56_holder.value = row) instanceof dev.openallay.guide.ui.GuideUi
 
     private List<GuideRequestSnapshot> selectedRequests() {
         GuideSnapshot snapshot = service.snapshot();
-        return snapshot.sessions().stream()
+        return dev.openallay.util.Java8ApiSupport.orElseThrow(snapshot.sessions().stream()
                 .filter(value -> value.sessionId().equals(snapshot.selectedSession()))
-                .findFirst().orElseThrow().requests();
+                .findFirst()).requests();
     }
 
     private <T> void accept(

@@ -584,7 +584,7 @@ public final class GuideClientE2EController {
         dev.openallay.context.ToolInvocationContext capture = new dev.openallay.client.context.ClientContextCapture(gson,
                 dev.openallay.platform.PlatformServices.load(), runtime).capture(client,
                 dev.openallay.util.Java8Collections.setOf(dev.openallay.context.ContextCapability.RECIPES), "e2e-native-recipe-bootstrap");
-        java.util.List<dev.openallay.context.RecipeEntrySnapshot> recipes = capture.recipes().orElseThrow().recipes();
+        java.util.List<dev.openallay.context.RecipeEntrySnapshot> recipes = dev.openallay.util.Java8ApiSupport.orElseThrow(capture.recipes()).recipes();
         java.util.List<dev.openallay.context.RecipeEntrySnapshot> positive = dev.openallay.util.Java8Collections.toList(recipes.stream()
                 .filter(recipe -> "minecraft:client_recipe_book".equals(recipe.reference().sourceId())
                         && recipe.unlockState() == dev.openallay.recipe.RecipeUnlockState.UNLOCKED
@@ -619,9 +619,9 @@ public final class GuideClientE2EController {
         java.nio.file.Path retained = dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e")
                 .resolve(world + ".anchor.json");
         if (config.scenario().equals("builder-reload") || config.scenario().equals("builder-live-undo")) {
-            dev.openallay.guide.e2e.GuideBuilderE2EProbe.Anchor persisted = gson.fromJson(Files.readString(retained), GuideBuilderE2EProbe.Anchor.class);
+            dev.openallay.guide.e2e.GuideBuilderE2EProbe.Anchor persisted = gson.fromJson(dev.openallay.util.Java8Files.readString(retained), GuideBuilderE2EProbe.Anchor.class);
             String suffix = config.scenario().equals("builder-reload") ? ".acceptance.json" : ".live-copy.json";
-            com.google.gson.JsonObject proof = dev.openallay.json.JsonTrees.parse(Files.readString(retained.resolveSibling(world + suffix))).getAsJsonObject();
+            com.google.gson.JsonObject proof = dev.openallay.json.JsonTrees.parse(dev.openallay.util.Java8Files.readString(retained.resolveSibling(world + suffix))).getAsJsonObject();
             return GuideBuilderE2EProbe.retainedOrigin(anchor, persisted, proof, world);
         }
         writeAtomically(retained, gson.toJson(anchor));
@@ -654,7 +654,7 @@ public final class GuideClientE2EController {
     }
 
     private void verifyReloadPersistence(GuideRequestSnapshot request, com.google.gson.JsonObject probe) throws IOException {
-        com.google.gson.JsonObject retained = dev.openallay.json.JsonTrees.parse(Files.readString(builderProofPath(".acceptance.json"))).getAsJsonObject();
+        com.google.gson.JsonObject retained = dev.openallay.json.JsonTrees.parse(dev.openallay.util.Java8Files.readString(builderProofPath(".acceptance.json"))).getAsJsonObject();
         if (!"PASSED".equals(retained.get("outcome").getAsString())) throw new IllegalStateException("Reload lacks prior independently passed acceptance receipt");
         boolean matched = GuideBuilderE2EProbe.persistedOperationsMatch(retained, builderReceipt(request));
         probe.addProperty("exactPersistencePassed", matched);
@@ -843,9 +843,9 @@ cancelOnToolStartAccepted = (($oaPattern4_holder.value = cancelled) instanceof d
         LinkedHashMap<String, String> hashes = new LinkedHashMap<>();
         hashes.put("assistantTextSha256", sha256(request.assistantText()));
         hashes.put("userMessageSha256", sha256(request.userMessage()));
-        GuideSessionSnapshot session = snapshot.sessions().stream()
+        GuideSessionSnapshot session = dev.openallay.util.Java8ApiSupport.orElseThrow(snapshot.sessions().stream()
                 .filter(value -> value.sessionId().equals(request.sessionId()))
-                .findFirst().orElseThrow();
+                .findFirst());
         SemanticSummary semantic = summarize(request);
         SemanticLayoutCache.Stats cache = SemanticLayoutCache.globalStats();
         LinkedHashMap<String, Long> historyMetrics = new LinkedHashMap<>();
@@ -961,7 +961,7 @@ if ((($oaPattern7_holder.value = value) instanceof dev.openallay.guide.GuideTime
         java.util.Optional<String> trace = traceLookup.apply(pendingTraceProfile, requestId);
         if (trace.isPresent()) {
             try {
-                writeAtomically(config.tracePath(), trace.orElseThrow());
+                writeAtomically(config.tracePath(), dev.openallay.util.Java8ApiSupport.orElseThrow(trace));
             } catch (IOException failure) {
                 failWithoutRequest(
                         "trace_write_failed",
@@ -1335,11 +1335,11 @@ break;
     }
 
     private void requireScreenshotProfile(String id, boolean automatic) {
-        dev.openallay.model.config.ModelProfileDefinition profile = clientSettings.snapshot().models().config().profiles().stream()
-                .filter(value -> value.id().equals(id)).findFirst().orElseThrow();
+        dev.openallay.model.config.ModelProfileDefinition profile = dev.openallay.util.Java8ApiSupport.orElseThrow(clientSettings.snapshot().models().config().profiles().stream()
+                .filter(value -> value.id().equals(id)).findFirst());
         if (automatic) {
             if (profile.enabled() || profile.contextWindowTokens() != null
-                    || dev.openallay.model.metadata.BuiltinModelCatalog.bundled().catalog().match(profile.model()).isEmpty())
+                    || dev.openallay.util.Java8ApiSupport.isEmpty(dev.openallay.model.metadata.BuiltinModelCatalog.bundled().catalog().match(profile.model())))
                 throw new IllegalStateException("Automatic screenshot profile must be a disabled known public model without a manual context value");
         } else if (!Integer.valueOf(1_000_000).equals(profile.contextWindowTokens())) {
             throw new IllegalStateException("Manual screenshot profile must retain the user's explicit one-million-token context");
@@ -1726,7 +1726,7 @@ private static final class SemanticSummary {
         java.nio.file.Path temporary = Files.createTempFile(
                 directory, ".openallay-e2e-", ".tmp");
         try {
-            Files.writeString(temporary, value, StandardCharsets.UTF_8);
+            dev.openallay.util.Java8Files.writeString(temporary, value, StandardCharsets.UTF_8);
             try {
                 Files.move(
                         temporary,

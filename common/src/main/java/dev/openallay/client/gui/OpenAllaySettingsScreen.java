@@ -279,7 +279,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 confirmation = Confirmation.NONE;
             }
             if (!previous.skills().equals(next.skills())) {
-                if (selectedSkillName == null || next.skills().find(selectedSkillName).isEmpty()) {
+                if (selectedSkillName == null || dev.openallay.util.Java8ApiSupport.isEmpty(next.skills().find(selectedSkillName))) {
                     selectedSkillName = next.skills().skills().isEmpty()
                             ? null
                             : next.skills().skills().get(0).metadata().name();
@@ -289,7 +289,7 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             }
             SkillSettingsProjection.Community community = skillProjection().community();
             if (selectedCommunitySkillId == null
-                    || community.find(selectedCommunitySkillId).isEmpty()) {
+                    || dev.openallay.util.Java8ApiSupport.isEmpty(community.find(selectedCommunitySkillId))) {
                 selectedCommunitySkillId = community.packages().isEmpty()
                         ? null
                         : community.packages().get(0).id();
@@ -2579,7 +2579,7 @@ return $oaSwitch8_exit_result;
         }
         if (diagnostics.debug().isPresent()) {
             y = renderDebugDiagnostics(
-                    graphics, diagnostics.debug().orElseThrow(), x, y + 4, width);
+                    graphics, dev.openallay.util.Java8ApiSupport.orElseThrow(diagnostics.debug()), x, y + 4, width);
         }
         pageContentHeight = Math.max(0, y + pageScroll - area.y() + 8);
         graphics.disableScissor();
@@ -2618,7 +2618,7 @@ return $oaSwitch8_exit_result;
                         + " · tools=" + capabilities.tools()
                         + " · skills=" + capabilities.skills());
         if (debug.guide().isPresent()) {
-            SettingsDiagnosticsSnapshot.DebugGuide guide = debug.guide().orElseThrow();
+            SettingsDiagnosticsSnapshot.DebugGuide guide = dev.openallay.util.Java8ApiSupport.orElseThrow(debug.guide());
             y = debugLine(graphics, x, y, width,
                     "screen.openallay.settings.diagnostics.debug.guide",
                     guide.scopeKind() + " · session=" + guide.selectedSessionId()
@@ -2630,7 +2630,7 @@ return $oaSwitch8_exit_result;
                             + " · active=" + guide.activeRequestCount());
             if (guide.request().isPresent()) {
                 SettingsDiagnosticsSnapshot.DebugRequest request =
-                        guide.request().orElseThrow();
+                        dev.openallay.util.Java8ApiSupport.orElseThrow(guide.request());
                 y = debugLine(graphics, x, y, width,
                         "screen.openallay.settings.diagnostics.debug.request",
                         request.requestId() + " · " + request.topology()
@@ -3301,7 +3301,7 @@ return $oaSwitch8_exit_result;
                 area.y() + 12,
                 ACCENT,
                 false);
-        if (selected.isEmpty()) {
+        if (dev.openallay.util.Java8ApiSupport.isEmpty(selected)) {
             graphics.text(
                     font,
                     MinecraftComponents.translatable("screen.openallay.settings.skills.empty"),
@@ -3311,7 +3311,7 @@ return $oaSwitch8_exit_result;
                     false);
             return;
         }
-        SkillSettingsProjection.Skill skill = selected.orElseThrow();
+        SkillSettingsProjection.Skill skill = dev.openallay.util.Java8ApiSupport.orElseThrow(selected);
         graphics.text(font, skill.name(), area.x() + 10, area.y() + 30, TEXT, false);
         graphics.text(
                 font,
@@ -3489,7 +3489,7 @@ return $oaSwitch8_exit_result;
                     10);
         }
         if (community.notice().isPresent()) {
-            y = renderWrapped(graphics, MinecraftComponents.literal(community.notice().orElseThrow().message()),
+            y = renderWrapped(graphics, MinecraftComponents.literal(dev.openallay.util.Java8ApiSupport.orElseThrow(community.notice()).message()),
                     x, y + 18, width, ERROR, 10);
         }
         skillDetailContentHeight = y - start + 8;
@@ -3946,7 +3946,7 @@ return $oaSwitch3_exit_result;
     static boolean shouldRefreshSkillCommunity(
             SkillSettingsProjection.Community community, boolean attempted) {
         Objects.requireNonNull(community, "community");
-        return !attempted && community.notice().isEmpty();
+        return !attempted && dev.openallay.util.Java8ApiSupport.isEmpty(community.notice());
     }
 
     static boolean shouldRefreshExtensionCommunity(
@@ -4293,10 +4293,9 @@ if ((($oaPattern10_holder.value = result) instanceof dev.openallay.tool.ToolResu
     }
 
     private void select(String profileId) {
-        ModelProfileDefinition definition = snapshot.models().config().profiles().stream()
+        ModelProfileDefinition definition = dev.openallay.util.Java8ApiSupport.orElseThrow(snapshot.models().config().profiles().stream()
                 .filter(profile -> profile.id().equals(profileId))
-                .findFirst()
-                .orElseThrow();
+                .findFirst());
         selectedProfileId = definition.id();
         selectedServerModel = false;
         draft = ModelProfileDraft.from(definition);

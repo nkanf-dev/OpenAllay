@@ -42,7 +42,7 @@ final class GuideNativeCommandE2EProbe {
             if (!Boolean.getBoolean(GuideClientE2EConfig.ENABLED) || !dev.openallay.client.gui.MinecraftClientWindow.ownerThread(client)
                     || client.player == null || !actor.equals(dev.openallay.client.gui.MinecraftClientWindow.actor(client)))
                 throw new IllegalStateException("Native command warmup requires the development client owner and actor");
-            dev.openallay.tool.Tool<?, ?> registered = runtime.tools().find(RunJavascriptTool.ID).orElseThrow();
+            dev.openallay.tool.Tool<?, ?> registered = dev.openallay.util.Java8ApiSupport.orElseThrow(runtime.tools().find(RunJavascriptTool.ID));
             final class $oaPattern0_Holder { dev.openallay.tool.Tool<?, ?> value; RunJavascriptTool bound; }
 final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
 if (!((($oaPattern0_holder.value = registered) instanceof dev.openallay.tool.builtin.RunJavascriptTool && (($oaPattern0_holder.bound = (RunJavascriptTool) $oaPattern0_holder.value) != null))))
@@ -56,7 +56,7 @@ if (!((($oaPattern1_holder.value = captured) instanceof dev.openallay.tool.ToolR
                 throw new IllegalStateException("Actual player context capture failed: " + captured);
             context = $oaPattern1_holder.bound.value();
             if (!context.unrestrictedJavascript() || !runtime.commands().availableFor(correlation)
-                    || !actor.equals(context.player().orElseThrow().uuid()))
+                    || !actor.equals(dev.openallay.util.Java8ApiSupport.orElseThrow(context.player()).uuid()))
                 throw new IllegalStateException("Native command warmup requires captured client-local full access");
             receipt.addProperty("unrestrictedCaptured", true);
             receipt.addProperty("commandOnlySetting", runtime.commands().enabled());
@@ -86,8 +86,7 @@ if (!((($oaPattern1_holder.value = captured) instanceof dev.openallay.tool.ToolR
         String source = dev.openallay.util.Java8ApiSupport.formatted("var catalog = commands.list();\nvar helpNode = commands.describe('help');\nvar messageNode = commands.describe('me <action>');\nvar help = commands.run('/help me');\nvar message = commands.run('/me %s');\nvar error = commands.run('/help %s_missing');\nreturn JSON.stringify({helpNode: helpNode.path, messageNode: messageNode.path,\n  help: help, signed: message, error: error});\n", token, token);
         // The real Tool owns its bounded command waits and its existing daemon worker.
         // Neither the client nor server owner thread waits on this future.
-        tool.invokeAsync(context, new RunJavascriptTool.Input(source, dev.openallay.util.Java8Collections.listOf()), cancellation)
-                .orTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        dev.openallay.util.Java8Futures.orTimeout(tool.invokeAsync(context, new RunJavascriptTool.Input(source, dev.openallay.util.Java8Collections.listOf()), cancellation), 15, java.util.concurrent.TimeUnit.SECONDS)
                 .thenCompose(result -> {
                     final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.tool.builtin.RunJavascriptTool.Output> value; ToolResult.Success<RunJavascriptTool.Output> bound; }
 final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
@@ -115,7 +114,7 @@ if (!((($oaPattern2_holder.value = result) instanceof dev.openallay.tool.ToolRes
                     }
                     cancellation.cancel();
                     receipt.addProperty("closedCapabilityRemoved", !runtime.commands().availableFor(correlation));
-                    receipt.addProperty("closedBridgeRemoved", runtime.commands().bridge(correlation, cancellation).isEmpty());
+                    receipt.addProperty("closedBridgeRemoved", dev.openallay.util.Java8ApiSupport.isEmpty(runtime.commands().bridge(correlation, cancellation)));
                     return tool.invokeAsync(context,
                             new RunJavascriptTool.Input("return commands.run('/me " + token + "_cancelled');", dev.openallay.util.Java8Collections.listOf()),
                             cancellation).handle((ignored, failure) -> {

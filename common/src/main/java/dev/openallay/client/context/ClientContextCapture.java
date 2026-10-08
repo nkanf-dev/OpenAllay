@@ -354,7 +354,7 @@ public final class ClientContextCapture {
         List<SectionDiagnostic> diagnostics = new ArrayList<>();
         diagnostics.add(new SectionDiagnostic(
                 "sampled_client_diagnostics", "Values are a detached sample and may change after capture"));
-        if (gpuUtilization.isEmpty()) {
+        if ((!(gpuUtilization).isPresent())) {
             diagnostics.add(new SectionDiagnostic(
                     "gpu_utilization_unknown",
                     "GPU utilization is UNKNOWN because the native client has no available measurement"));

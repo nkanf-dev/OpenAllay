@@ -64,7 +64,7 @@ public final class NeoForgeServerBridge {
         java.util.List<Runnable> cleanup = new java.util.ArrayList<>();
         cleanup.add(retire);
         actors.forEach(actor -> cleanup.add(() -> value.session.disconnected(actor)));
-        NativeServerActorHandoffs.cleanup(cleanup.toArray(Runnable[]::new));
+        NativeServerActorHandoffs.cleanup(dev.openallay.util.Java8ApiSupport.toArray(cleanup, Runnable[]::new));
     }
     void receive(NeoForgeBridgePayloads.Packet packet, net.minecraft.server.level.ServerPlayer player) {
         net.minecraft.server.MinecraftServer server = server(player); owner(server);

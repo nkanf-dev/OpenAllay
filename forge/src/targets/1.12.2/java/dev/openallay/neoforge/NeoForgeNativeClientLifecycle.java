@@ -31,7 +31,7 @@ public final class NeoForgeNativeClientLifecycle {
             java.util.List<Runnable> cleanup = new java.util.ArrayList<>();
             cleanup.add(dev.openallay.client.lifecycle.MinecraftClientShutdownCallbacks::onClose);
             cleanup.addAll(stopping);
-            dev.openallay.server.NativeServerActorHandoffs.cleanup(cleanup.toArray(Runnable[]::new));
+            dev.openallay.server.NativeServerActorHandoffs.cleanup(dev.openallay.util.Java8ApiSupport.toArray(cleanup, Runnable[]::new));
         }
     }
 }

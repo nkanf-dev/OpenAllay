@@ -65,7 +65,7 @@ public final class MinecraftGuideContextProvider implements GuideContextProvider
             java.util.Optional<dev.openallay.world.ClientObservationAnchor> observation) {
         java.util.Objects.requireNonNull(correlationId, "correlationId");
         java.util.Objects.requireNonNull(observation, "observation");
-        if (observation.isPresent()) inputObservations.put(correlationId, observation.orElseThrow());
+        if (observation.isPresent()) inputObservations.put(correlationId, dev.openallay.util.Java8ApiSupport.orElseThrow(observation));
         else inputObservations.remove(correlationId);
     }
 
@@ -150,7 +150,7 @@ if ((($oaPattern0_holder.value = refreshed) instanceof dev.openallay.tool.ToolRe
                             correlationId)));
             dev.openallay.world.ClientObservationAnchor observation = inputObservations.get(correlationId);
             if (observation != null && context.player().isPresent()) {
-                if (!observation.focus().actorId().equals(context.player().orElseThrow().uuid())) {
+                if (!observation.focus().actorId().equals(dev.openallay.util.Java8ApiSupport.orElseThrow(context.player()).uuid())) {
                     throw new IllegalArgumentException("Input reference belongs to another player");
                 }
                 runtime.worldObservations().associate(correlationId, observation);

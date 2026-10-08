@@ -166,11 +166,11 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         java.util.Optional<dev.openallay.world.ClientObservationAnchor> anchor = state.observation(session);
         if (anchor.isPresent()) {
             label = MinecraftComponents.empty();
-            for (dev.openallay.client.observation.ObservationAnchorPresentation.Chip chip : ObservationAnchorPresentation.chips(anchor.orElseThrow())) {
+            for (dev.openallay.client.observation.ObservationAnchorPresentation.Chip chip : ObservationAnchorPresentation.chips(dev.openallay.util.Java8ApiSupport.orElseThrow(anchor))) {
                 if (!MinecraftComponents.getString(label).isEmpty()) label = MinecraftComponents.append(MinecraftComponents.copy(label), " · ");
                 label = MinecraftComponents.append(MinecraftComponents.copy(label), MinecraftComponents.translatable(chip.key(), chip.value()));
             }
-            if (anchor.orElseThrow().image().isPresent()) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "),
+            if (dev.openallay.util.Java8ApiSupport.orElseThrow(anchor).image().isPresent()) label = MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.copy(label), " · "),
                     MinecraftComponents.translatable("screen.openallay.observation.frame"));
         }
         int labelWidth = Math.max(0, observationBounds.width() - 66);
@@ -366,8 +366,8 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         GuideClientUiState.IntentCapture intentCapture = state.captureIntent(session);
         GuideClientUiState.DraftIntent intent = intentCapture.intent();
         GuideClientUiState.ObservationCapture observation = state.captureObservation(session);
-        List<dev.openallay.model.image.ImageReference> observedImages = dev.openallay.util.Java8Collections.toList(observation.anchor().stream()
-                .flatMap(value -> value.image().stream()).map(value -> value.image()));
+        List<dev.openallay.model.image.ImageReference> observedImages = dev.openallay.util.Java8Collections.toList(dev.openallay.util.Java8ApiSupport.stream(observation.anchor())
+                .flatMap(value -> dev.openallay.util.Java8ApiSupport.stream(value.image())).map(value -> value.image()));
         if (dev.openallay.util.Java8Strings.isBlank(text) && observedImages.isEmpty() && (!intent.editing() || state.images().empty())) return;
         GuideClientUiState.Insertion captured = state.captureInsertion(session);
         SlashCommandDispatcher.Dispatch dispatch = dispatchDraft(text, intent,

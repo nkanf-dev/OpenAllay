@@ -50,7 +50,7 @@ public final class MinecraftBundledResources implements MinecraftResourceAccess.
             URL url = resources.nextElement();
             try (java.io.InputStream input = url.openStream()) {
                 layers.add(new MinecraftResourceAccess.TextLayer("classpath:" + url.toExternalForm(),
-                        new String(input.readAllBytes(), StandardCharsets.UTF_8)));
+                        new String(dev.openallay.util.Java8Streams.readAllBytes(input), StandardCharsets.UTF_8)));
             }
         }
         // ClassLoader selects the first match; native client callers select the final layer.

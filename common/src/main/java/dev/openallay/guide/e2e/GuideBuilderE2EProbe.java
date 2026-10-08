@@ -459,7 +459,7 @@ Landmark(String name, int x, int y, int z, String id) {
                     .resolve("config/openallay-builder/templates/openallay_e2e_legacy_shapes.json");
             if (!java.nio.file.Files.isRegularFile(file) || java.nio.file.Files.isSymbolicLink(file)
                     || java.nio.file.Files.size(file) > 65536) return false;
-            JsonObject persisted = dev.openallay.json.JsonTrees.parse(java.nio.file.Files.readString(file)).getAsJsonObject();
+            JsonObject persisted = dev.openallay.json.JsonTrees.parse(dev.openallay.util.Java8Files.readString(file)).getAsJsonObject();
             JsonObject template = receipt.getAsJsonObject("template");
             return persisted.equals(template.get("value")) && persisted.getAsJsonArray("blocks").size() == 6
                     && persisted.getAsJsonArray("size").toString().equals("[3,1,2]")

@@ -37,7 +37,7 @@ final class GuideNativeWorldAccessProbe {
         int x = (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(client.player)) + 6;
         int z = (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(client.player)) + 6;
         int y = Math.max(5, Math.min(250, (int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(client.player)) + 3));
-        dev.openallay.api.extension.MinecraftWorldAccess access = OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
+        dev.openallay.api.extension.MinecraftWorldAccess access = dev.openallay.util.Java8ApiSupport.orElseThrow(OpenAllayBootstrap.initialize().platform().minecraftWorldAccess());
         Thread worker = new Thread(() -> {
             Map<String,Object> report = new LinkedHashMap<>();
             List<Map<String,Object>> checks = new ArrayList<>();
@@ -49,9 +49,9 @@ final class GuideNativeWorldAccessProbe {
                 require(context.get("minY").getAsInt()==0 && context.get("maxY").getAsInt()==256, "actual vertical bounds");
                 require(!context.getAsJsonObject("materialPalette").has("lightning_rod_up"), "honest unavailable role");
                 checks.add(dev.openallay.util.Java8Collections.mapOf("check", "context", "status", "PASS", "native", context));
-                require(session.existingWorldId().isEmpty(), "fresh identity read must not create");
+                require(dev.openallay.util.Java8ApiSupport.isEmpty(session.existingWorldId()), "fresh identity read must not create");
                 String worldId = session.worldId(); UUID.fromString(worldId);
-                require(session.existingWorldId().orElseThrow().equals(worldId), "identity readback");
+                require(dev.openallay.util.Java8ApiSupport.orElseThrow(session.existingWorldId()).equals(worldId), "identity readback");
                 report.put("worldId", worldId);
                 checks.add(dev.openallay.util.Java8Collections.mapOf("check", "native-world-identity", "status", "PASS"));
                 String[] before = session.call(() -> new String[]{session.read(x,y,z),session.read(x+1,y,z)});
@@ -123,14 +123,14 @@ final class GuideNativeWorldAccessProbe {
         }
         String dimension = dev.openallay.world.MinecraftWorldObservationFacts.dimension(dev.openallay.client.MinecraftLocalPlayerLevel.get(client.player));
         int freshX=(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.x(client.player))+5, freshY=Math.max(5,Math.min(250,(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.y(client.player))+3)), freshZ=(int)Math.floor(dev.openallay.client.context.MinecraftClientContextFacts.z(client.player))+5;
-        dev.openallay.api.extension.MinecraftWorldAccess access=OpenAllayBootstrap.initialize().platform().minecraftWorldAccess().orElseThrow();
+        dev.openallay.api.extension.MinecraftWorldAccess access=dev.openallay.util.Java8ApiSupport.orElseThrow(OpenAllayBootstrap.initialize().platform().minecraftWorldAccess());
         java.nio.file.Path retained=dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay/e2e/native-world-persistence.json");
         Thread worker=new Thread(() -> {
             Map<String,Object> report=new LinkedHashMap<>();
             report.put("scenario","native-world-sdk");report.put("phase",phase);report.put("world",world);report.put("modelUsed",false);
             try (WorldSession session=access.open(new Invocation(actor,dimension))) {
                 if (!reload) {
-                    require(session.existingWorldId().isEmpty(),"fresh persistence identity read");
+                    require(dev.openallay.util.Java8ApiSupport.isEmpty(session.existingWorldId()),"fresh persistence identity read");
                     String id=session.worldId();
                     String before=session.call(() -> session.read(freshX,freshY,freshZ));
                     String actual=session.call(() -> {
@@ -145,11 +145,10 @@ final class GuideNativeWorldAccessProbe {
                     receipt.addProperty("x",freshX);receipt.addProperty("y",freshY);receipt.addProperty("z",freshZ);
                     receipt.addProperty("before",before);receipt.addProperty("actual",actual);
                     java.nio.file.Files.createDirectories(retained.getParent());
-                    java.nio.file.Files.writeString(retained,receipt.toString(),java.nio.charset.StandardCharsets.UTF_8,
-                            java.nio.file.StandardOpenOption.CREATE_NEW,java.nio.file.StandardOpenOption.WRITE);
+                    dev.openallay.util.Java8Files.writeString(retained, receipt.toString(), java.nio.charset.StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
                     report.put("worldId",id);report.put("actual",actual);report.put("saveAdmission","Native client shutdown owns game/chunk/SavedData save; reload must prove persisted bytes");
                 } else {
-                    JsonObject receipt=JsonTrees.parse(java.nio.file.Files.readString(retained,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                    JsonObject receipt=JsonTrees.parse(dev.openallay.util.Java8Files.readString(retained, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
                     require(world.equals(receipt.get("world").getAsString()),"retained world receipt");
                     String id=session.existingWorldId().orElseThrow(() -> new IllegalStateException("Native identity missing after reload"));
                     require(id.equals(receipt.get("worldId").getAsString()),"native UUID persisted across new process");

@@ -543,10 +543,10 @@ case 27:
                         "HUD wheel did not expose全文 bottom");
                 require(receipt.has("renderedNodeIds") && !(receipt.getAsJsonArray("renderedNodeIds").size() == 0),
                         "HUD bottom has no actually extracted semantic text-node identity");
-                dev.openallay.guide.GuideTimelineEntry.Assistant finalAssistant = request.timeline().stream()
+                dev.openallay.guide.GuideTimelineEntry.Assistant finalAssistant = dev.openallay.util.Java8ApiSupport.orElseThrow(request.timeline().stream()
                         .filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
                         .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
-                        .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
+                        .reduce((earlierAssistant, laterAssistant) -> laterAssistant));
                 String tailNode = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
                 require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedNodeIds")).stream()
                                 .anyMatch(value -> tailNode.equals(value.getAsString())),
@@ -650,7 +650,7 @@ case 37:
                 Path exported = exports.resolve(name).normalize();
                 require(exported.getParent().equals(exports) && Files.isRegularFile(exported), "Actual export file is unavailable");
                 try {
-                    String text = Files.readString(exported, StandardCharsets.UTF_8);
+                    String text = dev.openallay.util.Java8Files.readString(exported, StandardCharsets.UTF_8);
                     require(text.contains(config.question()) && text.contains("原生图形长回复验收"), "Actual export lost current conversation text");
                     report.put("export", dev.openallay.util.Java8Collections.mapOf("filename", name, "bytes", Files.size(exported), "sha256", sha256(text), "actualCallbackReceipt", receipt, "containsCurrentQuestionAndAnswer", true));
                 } catch (IOException failure) { throw new IllegalStateException("Actual export readback failed", failure); }
@@ -684,10 +684,10 @@ case 39:
 {
                 require(traceLookup != null, "Actual client trace lookup is unavailable");
                 java.util.Optional<java.lang.String> trace = traceLookup.apply(request.modelSelection().profileId(), request.requestId());
-                if (trace.isEmpty()) { waitFor("actual request trace publication"); return; }
+                if (dev.openallay.util.Java8ApiSupport.isEmpty(trace)) { waitFor("actual request trace publication"); return; }
                 try {
                     Files.createDirectories(config.tracePath().toAbsolutePath().getParent());
-                    Files.writeString(config.tracePath(), trace.orElseThrow(), StandardCharsets.UTF_8);
+                    dev.openallay.util.Java8Files.writeString(config.tracePath(), dev.openallay.util.Java8ApiSupport.orElseThrow(trace), StandardCharsets.UTF_8);
                 } catch (IOException failure) { throw new IllegalStateException("Actual trace retention failed", failure); }
                 advance();
             }
@@ -1823,7 +1823,7 @@ throw new IllegalStateException("Unknown live native stage " + stage);
                 "Reader reopen source is not the attached scenario service/session");
         require(client.player != null && dev.openallay.client.gui.MinecraftClientWindow.world(client) != null, "Reader reopen lost its native connection");
         liveGuideReopenOwner = new LiveGuideReopenOwner(reader, state, state.generation(),
-                dev.openallay.client.gui.MinecraftClientWindow.world(client), dev.openallay.client.gui.MinecraftClientWindow.actor(client), service.presentationSessionOwner(config.sessionId()).orElseThrow());
+                dev.openallay.client.gui.MinecraftClientWindow.world(client), dev.openallay.client.gui.MinecraftClientWindow.actor(client), dev.openallay.util.Java8ApiSupport.orElseThrow(service.presentationSessionOwner(config.sessionId())));
         requireReaderGuideReopenOwner();
         require(liveGuideReopen == null, "Reader Guide reopen was already requested");
         liveGuideReopen = new NativeScreenTransition<>(reader);
@@ -1947,8 +1947,8 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
     }
 
     private dev.openallay.guide.GuideSessionSnapshot session() {
-        return service.snapshot().sessions().stream().filter(value -> value.sessionId().equals(config.sessionId()))
-                .findFirst().orElseThrow();
+        return dev.openallay.util.Java8ApiSupport.orElseThrow(service.snapshot().sessions().stream().filter(value -> value.sessionId().equals(config.sessionId()))
+                .findFirst());
     }
 
     private GuideRequestSnapshot requestFor(String question) {
@@ -1978,8 +1978,8 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
         if (found == null) {
             dev.openallay.guide.ui.GuideTranscriptVirtualizer virtualizer = (dev.openallay.guide.ui.GuideTranscriptVirtualizer) readField(guide(), "virtualizer");
             java.util.List<dev.openallay.guide.ui.GuideTranscriptVirtualizer.Row> rows = virtualizer.rows();
-            int rowIndex = java.util.stream.IntStream.range(0, rows.size())
-                    .filter(row -> rows.get(row).id().equals(expected)).findFirst().orElseThrow();
+            int rowIndex = (java.util.stream.IntStream.range(0, rows.size())
+                    .filter(row -> rows.get(row).id().equals(expected)).findFirst()).orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
             int currentScroll = (Integer) readField(guide(), "scroll");
             double direction = virtualizer.offset(rowIndex) < currentScroll ? 2 : -2;
             dev.openallay.guide.ui.GuideUiLayout layout = (dev.openallay.guide.ui.GuideUiLayout) readField(guide(), "layout");
@@ -2029,9 +2029,9 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
     private void requireHudLatest(JsonObject receipt, GuideRequestSnapshot source) {
         require(number(receipt, "maximumScroll") > 0 && number(receipt, "scroll") == number(receipt, "maximumScroll"),
                 "Actual native HUD did not render measured latest-tail offset");
-        dev.openallay.guide.GuideTimelineEntry.Assistant finalAssistant = source.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
+        dev.openallay.guide.GuideTimelineEntry.Assistant finalAssistant = dev.openallay.util.Java8ApiSupport.orElseThrow(source.timeline().stream().filter(dev.openallay.guide.GuideTimelineEntry.Assistant.class::isInstance)
                 .map(dev.openallay.guide.GuideTimelineEntry.Assistant.class::cast)
-                .reduce((earlierAssistant, laterAssistant) -> laterAssistant).orElseThrow();
+                .reduce((earlierAssistant, laterAssistant) -> laterAssistant));
         String nodeId = finalAssistant.semantic().blocks().get(finalAssistant.semantic().blocks().size() - 1).nodeId();
         require(dev.openallay.json.JsonReaders.elements(receipt.getAsJsonArray("renderedRowIds")).stream()
                         .anyMatch(value -> value.getAsString().contains(source.requestId().toString())),
@@ -2173,12 +2173,12 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
     }
 
     private String readCurrentConfig(String name) {
-        try { return Files.readString(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay").resolve(name), StandardCharsets.UTF_8); }
+        try { return dev.openallay.util.Java8Files.readString(dev.openallay.client.gui.MinecraftClientWindow.gameDirectory(client).resolve("config/openallay").resolve(name), StandardCharsets.UTF_8); }
         catch (IOException failure) { throw new IllegalStateException("Current native config is unavailable: " + name, failure); }
     }
 
     private CompletableFuture<Integer> releaseLiveTransport() {
-        dev.openallay.model.config.ModelProfileDefinition profile = settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).findFirst().orElseThrow();
+        dev.openallay.model.config.ModelProfileDefinition profile = dev.openallay.util.Java8ApiSupport.orElseThrow(settings.snapshot().models().config().profiles().stream().filter(value -> value.enabled()).findFirst());
         require("127.0.0.1".equals(profile.baseUri().getHost()) && "http".equals(profile.baseUri().getScheme()), "Fixture release must stay loopback");
         java.net.URI uri = profile.baseUri().resolve("/__e2e/live-ux/release");
         dev.openallay.net.HttpExchangeRequest request = dev.openallay.net.HttpExchangeRequest.newBuilder(uri)
@@ -2362,9 +2362,9 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
 
     private boolean selectReplySlider(int selected) {
         String label = MinecraftComponents.getString(MinecraftComponents.translatable("screen.openallay.settings.ui.reply_lines"));
-        GuideNativeSlider slider = ((dev.openallay.client.gui.GuideNativeScreen) settingsScreen()).guideWidgetChildren().stream()
+        GuideNativeSlider slider = dev.openallay.util.Java8ApiSupport.orElseThrow(((dev.openallay.client.gui.GuideNativeScreen) settingsScreen()).guideWidgetChildren().stream()
                 .filter(GuideNativeSlider.class::isInstance).map(GuideNativeSlider.class::cast)
-                .filter(value -> MinecraftComponents.getString(value.getMessage()).startsWith(label + " · ")).findFirst().orElseThrow();
+                .filter(value -> MinecraftComponents.getString(value.getMessage()).startsWith(label + " · ")).findFirst());
         if (!slider.visible) {
             settingsScreen().guideMouseScrolled(settingsScreen().width / 2.0, settingsScreen().height / 2.0, 0, -2);
             recordAction("native-wheel", "reveal-reply-slider");
@@ -2392,7 +2392,7 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
             displayBackup = displayPath.resolveSibling("display.e2e-preserved-" + UUID.randomUUID());
             Files.move(displayPath, displayBackup);
             Files.createDirectory(displayPath);
-            Files.writeString(displayPath.resolve("e2e-nonempty-directory"), "controlled test-only replacement conflict", StandardCharsets.UTF_8);
+            dev.openallay.util.Java8Files.writeString(displayPath.resolve("e2e-nonempty-directory"), "controlled test-only replacement conflict", StandardCharsets.UTF_8);
             synchronized (report) {
                 report.put("displayFileFault", dev.openallay.util.Java8Collections.mapOf("e2eScope", true, "oldSha256", bytesSha256(displayBefore), "originalBytes", displayBefore.length, "preservedAttributes", "original file moved without rewriting"));
             }
@@ -2641,7 +2641,7 @@ require((($oaPattern1_holder.value = custody.join()) instanceof dev.openallay.to
         // Do not block a native render tick waiting for GPU readback or disk IO. If the GPU cannot
         // finish after a failure, keep the actual finished receipts and identify unfinished frames.
         CompletableFuture<Void> framePublication = CompletableFuture.allOf(
-                frames.values().toArray(CompletableFuture[]::new)).handle((ignored, frameFailure) -> (Void) null)
+                dev.openallay.util.Java8ApiSupport.toArray(frames.values(), CompletableFuture[]::new)).handle((ignored, frameFailure) -> (Void) null)
                 .completeOnTimeout(null, 15, java.util.concurrent.TimeUnit.SECONDS);
         cleanup.handle((ignored, cleanupFailure) -> cleanupFailure)
                 .thenCombine(framePublication, (cleanupFailure, ignored) -> cleanupFailure)

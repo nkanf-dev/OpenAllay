@@ -17,7 +17,7 @@ public final class Minecraft26WorldAccess implements MinecraftWorldAccess {
         if (invocation.isCancelled())
             throw new ExtensionException("session_closed", "The world invocation is cancelled");
         if (invocation.callerKind() != ExtensionInvocation.CallerKind.PLAYER
-                || invocation.callerUuid() == null || invocation.playerDimension().isEmpty())
+                || invocation.callerUuid() == null || dev.openallay.util.Java8ApiSupport.isEmpty(invocation.playerDimension()))
             throw new ExtensionException("player_required", "An exact local player invocation is required");
         OwnerThreadBridge bridge = new OwnerThreadBridge(invocation::requireActive, NativeWorldBinding::isAnyOwnerThread);
         // The callback retains only revocation state, not a native world session.
