@@ -74,7 +74,11 @@ final class GuideGraphicsArchitectureTest {
         assertTrue(read(root, "common/src/targets/1.21.8/java/" + GUI + "GuideNativeCursor.java")
                 .contains("GuideLegacyCursor.requestResize()"));
         assertTrue(read(root, "common/src/main/java/dev/openallay/integration/jei/JeiNativeRecipeViewProvider.java")
-                .contains("context.graphics().nativeGraphics()"));
+                .contains("layout.drawRecipe(context.graphics(), context.mouseX(), context.mouseY())"));
+        assertTrue(read(root, "common/src/main/java/dev/openallay/integration/jei/JeiNativeRecipeViewProvider.java")
+                .contains("layout.drawOverlays(context.graphics(), context.mouseX(), context.mouseY())"));
+        assertFalse(read(root, "common/src/main/java/dev/openallay/integration/jei/JeiNativeRecipeViewProvider.java")
+                .contains("context.graphics().nativeGraphics()"), "Optional native ABI stays in its typed layout adapter");
     }
 
     @Test void immediatePaintAndWidgetTooltipCustodyStayInTheirSingleAlgorithm() throws IOException {
@@ -182,10 +186,19 @@ final class GuideGraphicsArchitectureTest {
         return result;
     }
 
+    private static String normalizedTypeSignature(String signature) {
+        return signature.replace("net.minecraft.client.gui.Font", "Font")
+                .replace("net.minecraft.network.chat.Component", "Component")
+                .replace("net.minecraft.world.item.ItemStack", "ItemStack")
+                .replace("dev.openallay.client.gui.GuideTextLine", "GuideTextLine")
+                .replace("java.util.List", "List")
+                .replace("net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner", "ClientTooltipPositioner")
+                .replaceAll("\\s+", " ");
+    }
     private static List<String> primitiveSignatures(String source) {
         var matcher = Pattern.compile("protected final (void|int) (native\\w+)\\(([^)]*)\\)").matcher(source);
         var signatures = new java.util.ArrayList<String>();
-        while (matcher.find()) signatures.add((matcher.group(1) + " " + matcher.group(2) + "(" + matcher.group(3) + ")").replaceAll("\\s+", " "));
+        while (matcher.find()) signatures.add(normalizedTypeSignature(matcher.group(1) + " " + matcher.group(2) + "(" + matcher.group(3) + ")"));
         return signatures.stream().sorted().toList();
     }
 
@@ -194,8 +207,14 @@ final class GuideGraphicsArchitectureTest {
         var matcher = Pattern.compile("public (void|int) \\w+\\(([^)]*)\\)\\s*\\{\\s*(?:return\\s+)?(native\\w+)\\(").matcher(source);
         var signatures = new java.util.ArrayList<String>();
         while (matcher.find()) {
-            signatures.add((matcher.group(1) + " " + matcher.group(3) + "(" + matcher.group(2) + ")").replaceAll("\\s+", " "));
+            signatures.add(normalizedTypeSignature(matcher.group(1) + " " + matcher.group(3) + "(" + matcher.group(2) + ")"));
         }
+        String cursor = source.substring(source.indexOf("public boolean requestResizeCursor()"),
+                source.indexOf("public void enableScissor("));
+        assertTrue(cursor.contains("if (!nativeResizeCursorAvailable()) return false"));
+        assertEquals(1, occurrences(cursor, "nativeRequestResizeCursor()"));
+        assertTrue(cursor.indexOf("nativeRequestResizeCursor()") > cursor.indexOf("nativeResizeCursorAvailable()"));
+        signatures.add("void nativeRequestResizeCursor()");
         return signatures.stream().sorted().toList();
     }
 

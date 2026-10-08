@@ -46,14 +46,14 @@ final class OpenAllayScreenHeaderContractsTest {
             assertEquals(130, layout.header().title().width());
         }
         String screen = screenSource();
-        int initStart = screen.indexOf("protected void init()");
+        int initStart = screen.indexOf("protected void initGuideScreen()");
         int initEnd = screen.indexOf("protected void resizeGuide(", initStart);
         assertTrue(initStart >= 0 && initEnd > initStart);
         String init = screen.substring(initStart, initEnd);
-        assertTrue(init.contains("Component title = headerTitle()"));
-        assertTrue(init.contains("font.width(title.getVisualOrderText())"));
+        assertTrue(init.contains("net.minecraft.network.chat.Component title = headerTitle()"));
+        assertTrue(init.contains("GuideNativeFont.width(font, GuideNativeFont.visual(title))"));
         assertTrue(init.contains("new HeaderTitle(title, header.title())"));
-        assertFalse(init.contains("font.width(Component.translatable(\"screen.openallay.guide\"))"));
+        assertFalse(init.contains("font.width(MinecraftComponents.translatable(\"screen.openallay.guide\"))"));
     }
 
     @Test
@@ -61,7 +61,7 @@ final class OpenAllayScreenHeaderContractsTest {
         for (String name : new String[] {"OpenAllay", "小羽", "建筑与探险助手小羽", "OpenAllay · session-123456789", "小羽".repeat(80)}) {
             Component full = Component.literal(name).withStyle(OpenAllayScreen.headerTitle().getStyle());
             AtomicInteger measured = new AtomicInteger();
-            full.getVisualOrderText().accept((index, style, codePoint) -> {
+            GuideNativeFont.visual(full).accept((index, style, codePoint) -> {
                 measured.addAndGet((codePoint > 127 ? 9 : 6) + (style.isBold() ? 1 : 0));
                 return true;
             });
@@ -87,7 +87,7 @@ final class OpenAllayScreenHeaderContractsTest {
         assertTrue(start >= 0 && end > start);
         String title = screen.substring(start, end);
         assertTrue(title.contains("super(bounds.x(), bounds.y(), bounds.width(), bounds.height(), title)"));
-        assertTrue(title.contains("setTooltip(Tooltip.create(title))"));
+        assertTrue(title.contains("setTooltip(GuideTooltip.create(title))"));
         assertTrue(title.contains("protected void paintGuideWidget("));
         Path root = Path.of("").toAbsolutePath();
         while (root != null && !Files.isRegularFile(root.resolve("settings.gradle"))) root = root.getParent();
@@ -99,13 +99,13 @@ final class OpenAllayScreenHeaderContractsTest {
         assertTrue(widgetBinding.contains("GuideGraphics guide = GuideGraphics.wrap(graphics)"));
         assertTrue(widgetBinding.contains("guide.paint(() -> paintGuideWidget(guide, mouseX, mouseY, delta))"));
         assertTrue(title.contains("getMessage()"));
-        assertTrue(title.contains("full.getVisualOrderText()"));
-        assertTrue(title.contains("plainHeadByWidth(full.getString()"));
+        assertTrue(title.contains("GuideNativeFont.visual(full)"));
+        assertTrue(title.contains("GuideNativeFont.plainSubstrByWidth(font, MinecraftComponents.getString(full)"));
         assertTrue(title.contains("full.getStyle()"));
         assertTrue(title.contains("prefix + \"…\""));
         assertTrue(title.contains("boundedHeaderText(graphics, visible"));
         assertTrue(title.contains("isFocused()"));
-        assertTrue(title.contains("output.add(NarratedElementType.TITLE, getMessage())"));
+        assertTrue(title.contains("output.add(GuideNarration.Part.TITLE, getMessage())"));
         assertFalse(title.contains("onPress"));
         assertFalse(title.contains("active = false"));
         assertFalse(title.contains("nextFocusPath"), "keep native AbstractWidget Tab navigation");
@@ -115,16 +115,16 @@ final class OpenAllayScreenHeaderContractsTest {
     @Test
     void compactHeaderControlsKeepSemanticTooltipsAndNativeButtonNarration() throws Exception {
         String screen = screenSource();
-        assertTrue(screen.contains("Component.literal(\"≡\")"));
-        assertTrue(screen.contains(".tooltip(Tooltip.create(sessionsLabel))"));
-        assertTrue(screen.contains(".createNarration(ignored -> sessionsLabel.copy())"));
-        assertTrue(screen.contains(".createNarration(ignored -> Component.translatable(\"screen.openallay.action.more\"))"));
-        assertTrue(screen.contains(".createNarration(ignored -> Component.translatable(\"screen.openallay.settings.title\"))"));
+        assertTrue(screen.contains("MinecraftComponents.literal(\"≡\")"));
+        assertTrue(screen.contains(".tooltip(GuideTooltip.create(sessionsLabel))"));
+        assertTrue(screen.contains(".createNarration(ignored -> MinecraftComponents.copy(sessionsLabel))"));
+        assertTrue(screen.contains(".createNarration(ignored -> MinecraftComponents.translatable(\"screen.openallay.action.more\"))"));
+        assertTrue(screen.contains(".createNarration(ignored -> MinecraftComponents.translatable(\"screen.openallay.settings.title\"))"));
         assertTrue(screen.contains(".createNarration(ignored -> modelButtonDescription())"));
-        assertTrue(screen.contains("model.setTooltip(Tooltip.create(modelButtonDescription()))"));
-        assertTrue(screen.contains("Component.translatable(\"screen.openallay.action.models\")"));
-        assertTrue(screen.contains("if (available < 24) return Component.literal(\"▾\")"));
-        assertTrue(screen.contains(".append(modelStatus()).append(\" · \").append(modelLabel())"));
+        assertTrue(screen.contains("dev.openallay.client.gui.GuideNativeWidgetTooltips.set(model, GuideTooltip.create(modelButtonDescription()))"));
+        assertTrue(screen.contains("MinecraftComponents.translatable(\"screen.openallay.action.models\")"));
+        assertTrue(screen.contains("if (available < 24) return MinecraftComponents.literal(\"▾\")"));
+        assertTrue(screen.contains("MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.append(MinecraftComponents.translatable(\"screen.openallay.action.models\"), \" · \"), modelStatus()), \" · \"), modelLabel())"));
     }
 
     @Test
@@ -140,9 +140,9 @@ final class OpenAllayScreenHeaderContractsTest {
         assertTrue(receipts.contains("headerTitleWidget.paintedTitle != null"));
         assertTrue(receipts.contains("styledWidth <= headerTitleWidget.getWidth()"));
         assertTrue(receipts.contains("area.equals(renderedTelemetryBounds) ? renderedTelemetryRows : 0"));
-        assertTrue(receipts.contains("telemetryContext.getString()"));
-        assertTrue(receipts.contains("telemetryInput.getString()"));
-        assertTrue(receipts.contains("telemetryCost.getString()"));
+        assertTrue(receipts.contains("MinecraftComponents.getString(telemetryContext)"));
+        assertTrue(receipts.contains("MinecraftComponents.getString(telemetryInput)"));
+        assertTrue(receipts.contains("MinecraftComponents.getString(telemetryCost)"));
         for (String forbidden : new String[] {"service.", "setScreen(", "setMessage(", "init()", "rebuild", "onPress("}) {
             assertFalse(receipts.contains(forbidden), forbidden);
         }
@@ -169,12 +169,12 @@ final class OpenAllayScreenHeaderContractsTest {
         assertTrue(action.contains("requireDevelopmentProbe()"));
         assertTrue(action.contains("exportSession()"));
         assertFalse(action.contains("exportRunning ="));
-        assertTrue(tools.contains("List.copyOf(renderedToolIds)"));
-        assertTrue(tools.contains("List.copyOf(renderedResultCardIds)"));
-        assertTrue(tools.contains("List.copyOf(renderedToolSummaries)"));
-        assertTrue(tools.contains("List.copyOf(renderedSummaryCapsuleIds)"));
-        assertTrue(tools.contains("List.copyOf(renderedDetailCardIds)"));
-        assertTrue(tools.contains("List.copyOf(renderedDetailNativeRecipeIds)"));
+        assertTrue(tools.contains("dev.openallay.util.Java8Collections.listCopyOf(renderedToolIds)"));
+        assertTrue(tools.contains("dev.openallay.util.Java8Collections.listCopyOf(renderedResultCardIds)"));
+        assertTrue(tools.contains("dev.openallay.util.Java8Collections.listCopyOf(renderedToolSummaries)"));
+        assertTrue(tools.contains("dev.openallay.util.Java8Collections.listCopyOf(renderedSummaryCapsuleIds)"));
+        assertTrue(tools.contains("dev.openallay.util.Java8Collections.listCopyOf(renderedDetailCardIds)"));
+        assertTrue(tools.contains("dev.openallay.util.Java8Collections.listCopyOf(renderedDetailNativeRecipeIds)"));
         assertFalse(tools.contains("expandedToolCount"));
         assertFalse(tools.contains("toolsCollapsedDefault"));
         assertTrue(screen.contains("intersects(card, layout.transcript())"));
@@ -220,8 +220,8 @@ final class OpenAllayScreenHeaderContractsTest {
         assertTrue(refresh.contains("context.budget().inputTokens()"));
         assertTrue(refresh.contains("context.budget().reservedTokens()"));
         assertTrue(refresh.contains("context.budget().maxOutputTokens()"));
-        assertTrue(refresh.contains("rate == null ? Component.translatable(\"screen.openallay.telemetry.cache_compact_unknown\")"));
-        assertTrue(refresh.contains("telemetryCost = Component.translatable(\"screen.openallay.telemetry.cost_compact\", cost)"));
+        assertTrue(refresh.contains("rate == null ? MinecraftComponents.translatable(\"screen.openallay.telemetry.cache_compact_unknown\")"));
+        assertTrue(refresh.contains("telemetryCost = MinecraftComponents.translatable(\"screen.openallay.telemetry.cost_compact\", cost)"));
         assertTrue(refresh.contains("usage.costIncomplete() && usage.estimatedUsd() != null"));
         assertTrue(refresh.contains("cost += \"+\""));
     }

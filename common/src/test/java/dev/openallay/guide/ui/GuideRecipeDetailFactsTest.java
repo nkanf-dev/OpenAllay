@@ -176,10 +176,10 @@ final class GuideRecipeDetailFactsTest {
         String drawerCard = screen.substring(cardStart, cardEnd);
         assertTrue(drawerCard.contains("int canvasHeight = 126;"));
         assertTrue(drawerCard.contains("y += canvasHeight + 5;"));
-        String factLoop = "for (var line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card))";
+        String factLoop = "for (dev.openallay.guide.ui.GuideRecipeDetailFacts.Line line : dev.openallay.guide.ui.GuideRecipeDetailFacts.project(card))";
         assertTrue(drawerCard.contains(factLoop));
         assertTrue(drawerCard.indexOf(factLoop) > drawerCard.indexOf("y += canvasHeight + 5;"));
-        assertTrue(drawerCard.contains("y = detailLine(graphics, Component.translatable(line.key(), arguments), detail, y);"));
+        assertTrue(drawerCard.contains("y = detailLine(graphics, MinecraftComponents.translatable(line.key(), arguments), detail, y);"));
         assertEquals(1, screen.split("GuideRecipeDetailFacts\\.project", -1).length - 1);
     }
 

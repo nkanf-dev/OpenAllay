@@ -51,7 +51,7 @@ final class FullscreenSettingsDefaultsTest {
     void fullscreenSettingsOfferNoToolFoldToggle() throws Exception {
         String source = Files.readString(Path.of("src/main/java/dev/openallay/client/gui/OpenAllaySettingsScreen.java"));
         String fullscreen = source.substring(source.indexOf("private void addUiPage()"),
-                source.indexOf("case HUD ->", source.indexOf("private void addUiPage()")));
+                source.indexOf("case HUD:", source.indexOf("private void addUiPage()")));
         assertTrue(fullscreen.contains("uiButton(\"density\""));
         assertTrue(fullscreen.contains("uiToggle(\"session_rail\""));
         assertTrue(fullscreen.contains("uiButton(\"theme\""));

@@ -26,7 +26,13 @@ final class GuideLegacyButtonDispatchTest {
         assertTrue(button.contains("extends GuiButton implements GuideWidgetInput, GuideWidget"));
         assertFalse(button.contains("extends GuideNativeWidget"));
         String screen = source("GuideNativeScreen");
-        assertTrue(screen.contains("if (button instanceof GuideNativeButton guideButton) guideButton.onPress();"));
+        String action = method(screen, "@Override protected void actionPerformed(",
+                "@Override protected final void paintNativeGuideScreen(");
+        assertTrue(action.contains("= button) instanceof dev.openallay.client.gui.GuideNativeButton"));
+        assertTrue(action.contains("bound = (GuideNativeButton)"));
+        assertTrue(action.contains("bound.onPress();"));
+        assertEquals(1, action.split("\\.onPress\\(", -1).length - 1,
+                "The lowered native button type check still dispatches exactly once");
     }
     @Test void physicalAndTypedClicksEnterTheSameNativeButtonRouteExactlyOnce() throws Exception {
         String callbacks = source("GuideNativeScreenCallbacks");

@@ -57,14 +57,14 @@ final class GuideNotificationLayerArchitectureTest {
         String port = source("common/src/main/java/dev/openallay/client/gui/hud/GuideNativeToastPort.java");
         assertTrue(toast.contains("notification.fence().valid()"));
         assertTrue(toast.contains("if (!valid()) return"));
-        assertTrue(port.contains("MinecraftClientWindow.toastManager(minecraft).addToast(toast)"));
+        assertTrue(port.contains("GuideNativeToastAccess.add(minecraft, toast)"));
         String window = source("common/src/main/java/dev/openallay/client/gui/MinecraftClientWindow.java");
         assertTrue(window.contains("public static ToastManager toastManager(Minecraft minecraft)"));
         assertTrue(window.contains("return minecraft.gui.toastManager()"));
         assertFalse(port.contains(".clear()"));
         assertFalse(toast.contains("markSeen("));
         String settings = source("common/src/main/java/dev/openallay/client/gui/OpenAllaySettingsScreen.java");
-        assertTrue(settings.contains("case NOTIFICATIONS ->"));
+        assertTrue(settings.contains("case NOTIFICATIONS:"));
         assertTrue(settings.contains("previewNotification(uiDraft.ui().notifications())"));
         assertTrue(settings.contains("VoiceSettingsActions"));
         assertTrue(settings.contains("SettingsSection.VOICE"));

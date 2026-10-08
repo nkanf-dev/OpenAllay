@@ -40,8 +40,8 @@ final class FullscreenDraftArchitectureTest {
         assertTrue(screen.contains("uiState.completeIntentSubmission("));
         assertTrue(screen.contains("uiState.clearAcceptedIntent("));
         assertTrue(screen.contains("uiState.invalidatePendingEdit("));
-        String removed = screen.substring(screen.indexOf("public void removed()"),
-                screen.indexOf("protected void repositionElements()"));
+        String removed = screen.substring(screen.indexOf("protected void guideRemoved()"),
+                screen.indexOf("protected void repositionGuideElements()"));
         assertTrue(removed.contains("attachment.close()"));
         assertTrue(removed.contains("uiState.setText("));
         assertFalse(removed.contains("uiState.close()"));

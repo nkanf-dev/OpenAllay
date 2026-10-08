@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 final class GuideToolSummaryIntegrationTest {
     @Test void toolRowsPaintAndMeasureTheSameCompactSummaryGeometry() throws Exception {
         String source = screen();
-        String row = between(source, "    private int renderRow(", "    static Component factualRowText(");
-        assertTrue(row.contains("return renderToolSummaryCard(graphics, tool, x, y, width, mouseX, mouseY)"));
+        String row = between(source, "    private int renderRow(", "    static net.minecraft.network.chat.Component factualRowText(");
+        assertTrue(row.contains("instanceof dev.openallay.guide.ui.GuideUiRow.Tool"));
+        assertTrue(java.util.regex.Pattern.compile("return renderToolSummaryCard\\(graphics, \\$oaPattern[0-9]+_holder\\.bound, x, y, width, mouseX, mouseY\\)").matcher(row).find());
         String measured = between(source, "    private int measureRow(",
                 "    private dev.openallay.guide.ui.GuideToolSummaryGeometry toolSummaryGeometry(");
-        assertTrue(measured.contains("toolSummaryGeometry(tool, 0, 0, width).rowHeight()"));
+        assertTrue(measured.contains("instanceof dev.openallay.guide.ui.GuideUiRow.Tool"));
+        assertTrue(java.util.regex.Pattern.compile("toolSummaryGeometry\\(\\$oaPattern[0-9]+_holder\\.bound, 0, 0, width\\)\\.rowHeight\\(\\)").matcher(measured).find());
         String geometry = between(source,
                 "    private dev.openallay.guide.ui.GuideToolSummaryGeometry toolSummaryGeometry(",
                 "    private int renderToolSummaryCard(");
@@ -24,7 +26,7 @@ final class GuideToolSummaryIntegrationTest {
         assertTrue(geometry.contains("summary.status().translationKey()"));
         assertTrue(geometry.contains("capsules, summary.hasDescription(), rowSpacing()"));
         String card = summaryCard(source);
-        assertTrue(card.contains("var geometry = toolSummaryGeometry(tool, x, y, width)"));
+        assertTrue(card.contains("dev.openallay.guide.ui.GuideToolSummaryGeometry geometry = toolSummaryGeometry(tool, x, y, width)"));
         assertTrue(card.contains("GuideUiLayout.Rect card = geometry.card()"));
         assertTrue(card.contains("return y + geometry.rowHeight()"));
         assertTrue(card.contains("geometry.title()"));
@@ -36,19 +38,19 @@ final class GuideToolSummaryIntegrationTest {
     @Test void summaryUsesLiteralIntentAndActualStatusWithoutInlineResultsOrFoldControls() throws Exception {
         String source = screen();
         String card = summaryCard(source);
-        assertTrue(card.contains("switch (summary.status())"));
-        assertTrue(card.contains("case FAILED ->"));
-        assertTrue(card.contains("case SUCCEEDED ->"));
-        assertTrue(card.contains("case RUNNING ->"));
-        assertTrue(card.contains("case NO_RESULT_RECORDED ->"));
+        assertTrue(card.contains("switch ((summary.status()))"));
+        assertTrue(card.contains("case FAILED:"));
+        assertTrue(card.contains("case SUCCEEDED:"));
+        assertTrue(card.contains("case RUNNING:"));
+        assertTrue(card.contains("case NO_RESULT_RECORDED:"));
         assertTrue(card.contains("intentTitle(tool.detail().intent(), summary.titleKey())"));
         assertTrue(card.contains("if (summary.hasDescription())"));
-        assertTrue(card.contains("Component.literal(summary.description())"));
-        assertTrue(card.contains("Component.translatable(summary.status().translationKey())"));
-        String title = between(source, "    private static Component intentTitle(",
-                "    static Component toolDescription(");
+        assertTrue(card.contains("MinecraftComponents.literal(summary.description())"));
+        assertTrue(card.contains("MinecraftComponents.translatable(summary.status().translationKey())"));
+        String title = between(source, "    private static net.minecraft.network.chat.Component intentTitle(",
+                "    static net.minecraft.network.chat.Component toolDescription(");
         assertTrue(title.contains("intent.title().isEmpty()"));
-        assertTrue(title.contains("Component.translatable(titleKey) : Component.literal(intent.title())"));
+        assertTrue(title.contains("MinecraftComponents.translatable(titleKey) : MinecraftComponents.literal(intent.title())"));
         assertFalse(card.contains("semanticRenderer.render("));
         assertFalse(card.contains("detailCard("));
         assertFalse(card.contains("tool.detail().cards()"));
@@ -71,8 +73,10 @@ final class GuideToolSummaryIntegrationTest {
         assertTrue(capsule.contains("MinecraftSemanticRenderer.Intent intent = toolSummaryCapsuleIntent(capsule)"));
         String capsuleIntent = between(source, "    private MinecraftSemanticRenderer.Intent toolSummaryCapsuleIntent(",
                 "    private Map<String, Object> toolSummaryCapsuleReceipt(");
-        assertTrue(capsuleIntent.contains("MinecraftSemanticRenderer.Intent.BrowseRecipes(value.item().itemId())"));
-        assertTrue(capsuleIntent.contains("MinecraftSemanticRenderer.Intent.ExactRecipe(value.recipe().references().stream()"));
+        assertTrue(capsuleIntent.contains("instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Item"));
+        assertTrue(java.util.regex.Pattern.compile("new MinecraftSemanticRenderer\\.Intent\\.BrowseRecipes\\(\\$oaPattern[0-9]+_holder\\.bound\\.item\\(\\)\\.itemId\\(\\)\\)").matcher(capsuleIntent).find());
+        assertTrue(capsuleIntent.contains("instanceof dev.openallay.guide.ui.GuideToolSummaryPresenter.Recipe"));
+        assertTrue(java.util.regex.Pattern.compile("new MinecraftSemanticRenderer\\.Intent\\.ExactRecipe\\(\\$oaPattern[0-9]+_holder\\.bound\\.recipe\\(\\)\\.references\\(\\)\\.stream\\(\\)").matcher(capsuleIntent).find());
         assertTrue(capsuleIntent.contains("filter(recipeClient::supportsExact)"));
         assertTrue(capsule.contains("toolSummaryHit(bounds, () -> semanticIntent(intent), capsule.id()"));
         String hit = between(source, "    private void toolSummaryHit(",
@@ -86,13 +90,15 @@ final class GuideToolSummaryIntegrationTest {
         assertTrue(hit.contains("HitKind.CONTENT, action, id, narration"));
         String mouse = between(source, "    public boolean guideMouseClicked(",
                 "    protected void paintGuideScreen(");
-        String contentLoop = mouse.substring(mouse.lastIndexOf("for (Hit hit : List.copyOf(hits))"));
+        String contentLoop = mouse.substring(mouse.lastIndexOf("for (Hit hit : dev.openallay.util.Java8Collections.listCopyOf(hits))"));
         assertBefore(contentLoop, "hit.rect().contains(event.x(), event.y())", "hit.action().run()");
         assertBefore(contentLoop, "hit.action().run()", "return true");
         String intent = between(source, "    private void semanticIntent(",
                 "    private static String semanticIntentNarration(");
-        assertTrue(intent.contains("recipeClient.openRecipes(value.itemId())"));
-        assertTrue(intent.contains("recipeClient.openExact(value.reference())"));
+        assertTrue(intent.contains("instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.BrowseRecipes"));
+        assertTrue(java.util.regex.Pattern.compile("recipeClient\\.openRecipes\\(\\$oaPattern[0-9]+_holder\\.bound\\.itemId\\(\\)\\)").matcher(intent).find());
+        assertTrue(intent.contains("instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe"));
+        assertTrue(java.util.regex.Pattern.compile("recipeClient\\.openExact\\(\\$oaPattern[0-9]+_holder\\.bound\\.reference\\(\\)\\)").matcher(intent).find());
         assertFalse(capsule.contains("service.submit("));
         assertFalse(intent.contains("service.submit("));
     }
@@ -117,13 +123,13 @@ final class GuideToolSummaryIntegrationTest {
         String transcript = between(source, "    private void renderTranscript(", "    private int renderRow(");
         assertFalse(transcript.contains("renderedToolIds.add("),
                 "nominal virtual-row spacing is not actual summary paint");
-        assertTrue(card.contains("receipt.put(\"capsuleIds\", List.copyOf(paintedCapsules))"));
-        assertTrue(card.contains("receipt.put(\"capsules\", List.copyOf(capsuleReceipts))"));
+        assertTrue(card.contains("receipt.put(\"capsuleIds\", dev.openallay.util.Java8Collections.listCopyOf(paintedCapsules))"));
+        assertTrue(card.contains("receipt.put(\"capsules\", dev.openallay.util.Java8Collections.listCopyOf(capsuleReceipts))"));
         assertTrue(card.contains("receipt.put(\"bounds\", toolPaintBounds(card))"));
         assertTrue(card.contains("receipt.put(\"titleBounds\", toolPaintBounds(geometry.title()))"));
         assertTrue(card.contains("receipt.put(\"blankClickX\", card.x() + 2)"));
         assertTrue(card.contains("receipt.put(\"blankClickY\", visibleTop + (visibleBottom - visibleTop) / 2)"));
-        assertTrue(card.contains("renderedToolSummaries.add(Map.copyOf(receipt))"));
+        assertTrue(card.contains("renderedToolSummaries.add(dev.openallay.util.Java8Collections.mapCopyOf(receipt))"));
         assertBefore(paintedIds, "if (renderToolSummaryCapsule(",
                 "capsuleReceipts.add(toolSummaryCapsuleReceipt(capsule, capsuleBounds))");
         String capsuleReceipt = between(source, "    private Map<String, Object> toolSummaryCapsuleReceipt(",
@@ -131,8 +137,9 @@ final class GuideToolSummaryIntegrationTest {
         assertTrue(capsuleReceipt.contains("MinecraftSemanticRenderer.Intent intent = toolSummaryCapsuleIntent(capsule)"),
                 "receipt action is the same native intent used by the hit target");
         assertTrue(capsuleReceipt.contains("receipt.put(\"originInvocationId\", capsule.originInvocationId())"));
-        assertTrue(capsuleReceipt.contains("receipt.put(\"reference\", exact.reference())"));
-        assertTrue(source.contains("receipt.put(\"summaryCapsuleIds\", List.copyOf(renderedSummaryCapsuleIds))"));
+        assertTrue(capsuleReceipt.contains("instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe"));
+        assertTrue(java.util.regex.Pattern.compile("receipt\\.put\\(\"reference\", \\$oaPattern[0-9]+_holder\\.bound\\.reference\\(\\)\\)").matcher(capsuleReceipt).find());
+        assertTrue(source.contains("receipt.put(\"summaryCapsuleIds\", dev.openallay.util.Java8Collections.listCopyOf(renderedSummaryCapsuleIds))"));
     }
 
     @Test void completeDetailUsesIndependentNativeRecipeRegistryAndReportsOnlyRealPaint() throws Exception {
@@ -158,8 +165,8 @@ final class GuideToolSummaryIntegrationTest {
                 "nominal detail-card height is not actual paint");
         assertTrue(detail.contains("sourceGroups(graphics, selectedTool.activity().sources()"));
         String dispatch = between(source, "    private int detailCard(", "    private int tableCard(");
-        assertTrue(dispatch.contains("card instanceof GuideDetailCard.Recipe recipe"));
-        assertTrue(dispatch.contains("recipeCard(graphics, recipe.recipe(), cardId, detail, y, mouseX, mouseY)"));
+        assertTrue(dispatch.contains("= card) instanceof dev.openallay.guide.ui.GuideDetailCard.Recipe"));
+        assertTrue(java.util.regex.Pattern.compile("recipeCard\\(graphics, \\$oaPattern[0-9]+_holder\\.bound\\.recipe\\(\\), cardId, detail, y, mouseX, mouseY\\)").matcher(dispatch).find());
         String recipe = between(source, "    private int recipeCard(", "    private int recipeAction(");
         assertTrue(recipe.contains("toolDetailRecipeNodeId(cardId), card.reference()"),
                 "semantic recipe nodes need a hash, not the player-facing card identity");
@@ -167,7 +174,7 @@ final class GuideToolSummaryIntegrationTest {
                 "native lifecycle and receipts keep the actual Tool/card origin identity");
         String nativeNode = between(source, "    private static String toolDetailRecipeNodeId(",
                 "    private int recipeAction(");
-        assertTrue(nativeNode.contains("java.util.HexFormat.of().formatHex"));
+        assertTrue(nativeNode.contains("dev.openallay.util.Java8Hex.formatHex"));
         assertTrue(nativeNode.contains("MessageDigest.getInstance(\"SHA-256\")"));
         assertTrue(nativeNode.contains("cardId.getBytes(java.nio.charset.StandardCharsets.UTF_8)"));
         assertTrue(recipe.contains("boolean painted = detailNativeViews.render(binding, new NativeDomainView.RenderContext("));
@@ -180,10 +187,10 @@ final class GuideToolSummaryIntegrationTest {
         assertTrue(recipe.contains("for (GuideRecipeCard.Output output : card.outputs())"));
         assertTrue(recipe.contains("recipeClient.openRecipes(output.itemId())"));
         assertTrue(recipe.contains("recipeClient.openUsages(output.itemId())"));
-        assertTrue(recipe.contains("recipeClient.openExact(exact.orElseThrow())"));
+        assertTrue(recipe.contains("recipeClient.openExact(dev.openallay.util.Java8ApiSupport.orElseThrow(exact))"));
         assertTrue(source.contains("detailNativeViews.tick()"));
         assertTrue(source.contains("detailNativeViews.close()"));
-        assertTrue(source.contains("receipt.put(\"detailNativeRecipeIds\", List.copyOf(renderedDetailNativeRecipeIds))"));
+        assertTrue(source.contains("receipt.put(\"detailNativeRecipeIds\", dev.openallay.util.Java8Collections.listCopyOf(renderedDetailNativeRecipeIds))"));
     }
 
     private static String summaryCard(String source) {

@@ -169,7 +169,7 @@ final class ClientArchitectureTest {
         assertTrue(coordinator.contains("voice.input().setFeedbackVisible(feedback)"));
         assertTrue(host.contains("screen instanceof OpenAllayScreen ? Surface.GUIDE"));
         assertTrue(host.contains("screen instanceof GuideChatLiteScreen ? Surface.HUD_INPUT"));
-        assertTrue(host.contains("OpenAllayKeyMappings.VOICE_PTT.isDown()"));
+        assertTrue(host.contains("GuideNativeKeyMappings.down(OpenAllayKeyMappings.VOICE_PTT)"));
         assertTrue(coordinator.contains("voice.input().pressPtt()"));
         assertTrue(coordinator.contains("voice.input().release()"));
         assertTrue(coordinator.contains("voice.input().tick(current.windowActive(), current.connected(), physicalDown, feedback)"));

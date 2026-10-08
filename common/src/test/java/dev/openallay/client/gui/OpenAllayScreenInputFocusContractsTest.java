@@ -72,7 +72,10 @@ final class OpenAllayScreenInputFocusContractsTest {
                 "dev/openallay/client/gui/hud/GuideChatLiteScreen.java"}) {
             String helper = method(source(path), "private boolean composerContains(");
             assertTrue(helper.contains("if (composer == null) return false"));
-            assertTrue(helper.contains("GuideNativeWidgetGeometry.x(composer.widget()), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer.widget()), composer.widget().getWidth(), composer.widget().getHeight()"));
+            boolean nativeCoordinates = helper.contains("GuideNativeWidgetGeometry.x(composer.widget()), dev.openallay.client.gui.GuideNativeWidgetGeometry.y(composer.widget())");
+            boolean productWidgetCoordinates = helper.contains("composer.widget().getX(), composer.widget().getY()");
+            assertTrue(nativeCoordinates || productWidgetCoordinates, "Rectangle must use the actual registered widget coordinates");
+            assertTrue(helper.contains("composer.widget().getWidth(), composer.widget().getHeight()"));
             assertTrue(helper.contains("input.contains(x, y) && composer.widget().isMouseOver(x, y)"));
             assertFalse(helper.contains("layout.composer()"));
             assertFalse(helper.contains("composerExtras"));
@@ -96,12 +99,12 @@ final class OpenAllayScreenInputFocusContractsTest {
         String helper = method(source("dev/openallay/client/gui/OpenAllayScreen.java"),
                 "public boolean focusComposerAfterVoiceDraft()");
         for (String guard : new String[] {"minecraft == null", "MinecraftClientWindow.screen(minecraft) != this", "composer == null",
-                "!composer.widget().active", "!composer.widget().visible", "getFocused() != null", "sessionOverlay",
+                "!composer.widget().guideActive()", "!composer.widget().guideVisible()", "getFocused() != null", "sessionOverlay",
                 "overflowOpen", "modelSelectorOpen", "detailOpen()", "draftIntent().editing()"}) {
             assertTrue(helper.contains(guard), guard);
         }
         assertTrue(helper.indexOf("return false") < helper.indexOf("setFocused(composer.widget())"));
-        assertTrue(helper.contains("return getFocused() == composer.widget()"));
+        assertTrue(helper.contains("return guideWidgetFocused(composer.widget())"));
         assertNoDraftMutation(helper);
         assertFalse(helper.contains("service."));
         assertFalse(helper.contains("GuideNativeFocus.clear(this)"));
@@ -111,23 +114,23 @@ final class OpenAllayScreenInputFocusContractsTest {
     @Test
     void firstInitializationOwnsTextFocusButNativeResizeRebuildPreservesPriorFocus() throws Exception {
         String screen = source("dev/openallay/client/gui/OpenAllayScreen.java");
-        String init = method(screen, "protected void init()");
+        String init = method(screen, "protected void initGuideScreen()");
         assertTrue(init.contains("else if (!presentationInitialized) setInitialFocus(composer.widget())"));
         assertTrue(init.contains("presentationInitialized = true"));
         String nativeInitial = method(screen, "protected void guideInitialFocus()");
         assertFalse(nativeInitial.contains("super.setInitialFocus"));
         assertFalse(nativeInitial.contains("setFocused("));
         String rebuild = method(screen, "private void rebuildPresentationWidgets()");
-        assertTrue(rebuild.indexOf("getFocused() == composer.widget()") < rebuild.indexOf("guideRebuildWidgets()"));
-        assertTrue(rebuild.contains("getFocused() instanceof AbstractWidget widget ? widget : null"));
+        assertTrue(rebuild.indexOf("guideWidgetFocused(composer.widget())") < rebuild.indexOf("guideRebuildWidgets()"));
+        assertTrue(rebuild.contains("GuideWidget previous = getGuideWidgetFocused()"));
         assertTrue(rebuild.indexOf("GuideNativeFocus.clear(this)") > rebuild.indexOf("guideRebuildWidgets()"));
         assertTrue(rebuild.contains("if (composerFocused) setFocused(composer.widget())"));
         assertTrue(rebuild.contains("else if (previous != null)"));
-        assertTrue(rebuild.contains("children().stream()"));
-        assertTrue(rebuild.contains("widget.getClass() == previous.getClass()"));
-        assertTrue(rebuild.contains("widget.getMessage().equals(previous.getMessage()) && widget.active && widget.visible"));
+        assertTrue(rebuild.contains("guideWidgetChildren().stream()"));
+        assertTrue(rebuild.contains("widget.guideNativeType() == previous.guideNativeType()"));
+        assertTrue(rebuild.contains("widget.getMessage().equals(previous.getMessage()) && widget.guideActive() && widget.guideVisible()"));
         assertFalse(rebuild.contains("setFocused(previous)"), "old widgets must not be reattached");
-        assertTrue(method(screen, "protected void repositionElements()").contains("rebuildPresentationWidgets()"));
+        assertTrue(method(screen, "protected void repositionGuideElements()").contains("rebuildPresentationWidgets()"));
         assertNoDraftMutation(rebuild);
     }
 
@@ -149,9 +152,9 @@ final class OpenAllayScreenInputFocusContractsTest {
         String projection = method(screen, "private void applyProjection(");
         assertTrue(projection.indexOf("invalidateContentHits()") < projection.indexOf("retainedSources"));
         String transcript = method(screen, "private boolean scrollTranscriptKey(");
-        assertTrue(transcript.indexOf("invalidateContentHits()") < transcript.indexOf("scroll = Mth.clamp"));
+        assertTrue(transcript.indexOf("invalidateContentHits()") < transcript.indexOf("scroll = net.minecraft.util.Mth.clamp"));
         String detail = method(screen, "private boolean scrollDetailKey(");
-        assertTrue(detail.indexOf("invalidateContentHits()") < detail.indexOf("detailScroll = Mth.clamp"));
+        assertTrue(detail.indexOf("invalidateContentHits()") < detail.indexOf("detailScroll = net.minecraft.util.Mth.clamp"));
         assertNoDraftMutation(invalidate);
     }
 
@@ -183,7 +186,7 @@ final class OpenAllayScreenInputFocusContractsTest {
         int actualSession = edit.indexOf("service.snapshot().selectedSession()");
         int lookup = edit.indexOf("currentPending(service.pendingMessages(currentSession), pending.id())");
         int missing = edit.indexOf("if (pending == null)");
-        int draftGuard = edit.indexOf("if (!draft.isBlank() || !composerImages.empty())");
+        int draftGuard = edit.indexOf("if (!dev.openallay.util.Java8Strings.isBlank(draft) || !composerImages.empty())");
         assertTrue(sync >= 0 && actualSession > sync && lookup > actualSession && missing > lookup && draftGuard > missing);
         assertTrue(edit.contains("view.selectedSession().equals(currentSession)"));
         String refusal = edit.substring(missing, draftGuard);

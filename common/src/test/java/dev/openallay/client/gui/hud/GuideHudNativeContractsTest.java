@@ -43,19 +43,21 @@ class GuideHudNativeContractsTest {
         assertTrue(lite.contains("presenter.projectInteractive("));
         assertTrue(lite.contains("results.scroll().wheel(scrollY)"));
         String keyInput = source("common/src/main/java/dev/openallay/client/gui/GuideKeyInput.java");
-        assertTrue(keyInput.contains("dev.openallay.client.gui.GuideInputCodes.KEY_PAGEUP -> GuideKeyIntent.PAGE_UP"));
-        assertTrue(keyInput.contains("dev.openallay.client.gui.GuideInputCodes.KEY_PAGEDOWN -> GuideKeyIntent.PAGE_DOWN"));
+        assertTrue(java.util.regex.Pattern.compile("case dev\\.openallay\\.client\\.gui\\.GuideInputCodes\\.KEY_PAGEUP:\\s*\\{\\s*\\$oaSwitch[0-9]+_exit_result = GuideKeyIntent\\.PAGE_UP;").matcher(keyInput).find());
+        assertTrue(java.util.regex.Pattern.compile("case dev\\.openallay\\.client\\.gui\\.GuideInputCodes\\.KEY_PAGEDOWN:\\s*\\{\\s*\\$oaSwitch[0-9]+_exit_result = GuideKeyIntent\\.PAGE_DOWN;").matcher(keyInput).find());
         String nativeCodes = source("common/src/main/java/dev/openallay/client/gui/GuideInputCodes.java");
         assertTrue(nativeCodes.contains("KEY_PAGEUP = GLFW.GLFW_KEY_PAGE_UP"));
         assertTrue(nativeCodes.contains("KEY_PAGEDOWN = GLFW.GLFW_KEY_PAGE_DOWN"));
-        assertTrue(lite.contains("case PAGE_UP -> { scrollResults(() -> results.scroll().page(-1))"));
-        assertTrue(lite.contains("case PAGE_DOWN -> { scrollResults(() -> results.scroll().page(1))"));
+        assertTrue(java.util.regex.Pattern.compile("case PAGE_UP:\\s*\\{\\s*scrollResults\\(\\(\\) -> results\\.scroll\\(\\)\\.page\\(-1\\)\\)").matcher(lite).find());
+        assertTrue(java.util.regex.Pattern.compile("case PAGE_DOWN:\\s*\\{\\s*scrollResults\\(\\(\\) -> results\\.scroll\\(\\)\\.page\\(1\\)\\)").matcher(lite).find());
         assertTrue(lite.contains("scrollbarThumbHeight()"));
-        assertTrue(lite.contains("recipes.openExact(value.reference())"));
+        assertTrue(lite.contains("instanceof dev.openallay.client.gui.MinecraftSemanticRenderer.Intent.ExactRecipe"));
+        assertTrue(java.util.regex.Pattern.compile("recipes\\.openExact\\(\\$oaPattern[0-9]+_holder\\.bound\\.reference\\(\\)\\)").matcher(lite).find());
         assertFalse(lite.contains("Math.min(6, lines.size())"));
         assertFalse(lite.contains("font.split(Component.literal(preview)"));
         assertTrue(results.contains("new MinecraftSemanticRenderer(new MinecraftSemanticResolver())"));
-        assertTrue(results.contains("GuideHudToolCards.project(tool"));
+        assertTrue(results.contains("instanceof dev.openallay.guide.ui.GuideUiRow.Tool"));
+        assertTrue(java.util.regex.Pattern.compile("GuideHudToolCards\\.project\\(\\$oaPattern[0-9]+_holder\\.bound,").matcher(results).find());
         assertTrue(results.contains("new NativeDomainViewBinding.Recipe("));
         assertTrue(results.contains("nativeViews.endFrame()"));
         assertTrue(results.contains("nativeViews.close()"));
@@ -66,7 +68,7 @@ class GuideHudNativeContractsTest {
         assertTrue(results.contains("boolean painted = nativeRecipe("));
         assertTrue(results.contains("if (painted && bounds.x() < viewport.right()"));
         assertTrue(results.contains("paintedRecipes.contains(line.nodeId())"));
-        assertTrue(results.contains("List.copyOf(paintedNodes), lastPaintedText"));
+        assertTrue(results.contains("dev.openallay.util.Java8Collections.listCopyOf(paintedNodes), lastPaintedText"));
         assertFalse(results.contains("lastPaintedText = row.layout().narration()"));
         for (String forbidden : new String[]{"new GuideService", "Files.", "requestHistoryWindow(", "ModelProvider"}) assertFalse(results.contains(forbidden));
     }
@@ -137,7 +139,7 @@ class GuideHudNativeContractsTest {
         String factorySource = source("common/src/main/java/dev/openallay/client/voice/VoiceClientRuntimes.java");
         assertTrue(facade.contains("drafts -> VoiceClientRuntimes.create(configDirectory, drafts, dispatcher::execute)"));
         assertTrue(factorySource.contains("return new VoiceClientRuntime(configDirectory, drafts, clientDispatcher,"));
-        assertTrue(factorySource.contains("Map.copyOf(credentialEnvironment), new OpenAlCapture()"));
+        assertTrue(factorySource.contains("Java8Collections.mapCopyOf(credentialEnvironment), new OpenAlCapture()"));
         assertTrue(host.contains("withVoiceActions(voice)"));
         assertTrue(host.contains(".withNotifications(view.notifications()).withVoice(view.voice())"));
         assertTrue(coordinator.contains("state.selectSession(bound.snapshot().selectedSession())"));
@@ -214,7 +216,9 @@ class GuideHudNativeContractsTest {
         String lite = source("common/src/main/java/dev/openallay/client/gui/hud/GuideChatLiteScreen.java");
         assertTrue(lite.contains("GuideVoiceIndicator.extract(graphics, minecraft, voice)"));
         String presentation = source("engine-core/src/main/java/dev/openallay/client/voice/VoiceStatusPresentation.java");
-        assertTrue(presentation.contains("default -> notice(\"failed\", \"retry\", true)"));
+        int fallback = presentation.indexOf("default:");
+        int closedFailure = presentation.indexOf("notice(\"failed\", \"retry\", true)", fallback);
+        assertTrue(fallback >= 0 && closedFailure > fallback, "Unknown codes use the same closed retry presentation");
         assertFalse(presentation.contains("PREFIX + code"));
     }
 }
