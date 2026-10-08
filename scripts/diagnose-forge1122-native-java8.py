@@ -40,10 +40,10 @@ def main():
     # Current normal Gradle engine publication is the authentic external type oracle.
     # It is never labeled Java8 runtime output, even if all current source lowering is accepted.
     engine_env=dict(os.environ)
-    engine_home=engine_env['JAVA_HOME_21_X64']
+    engine_home=engine_env['JAVA_HOME_25_X64']
     engine_env['JAVA_HOME']=engine_home;engine_env['PATH']=engine_home+'/bin:'+engine_env['PATH']
     engine_metadata=work/'current-engine-classpath.json'
-    engine_command=[str(ROOT/'gradlew'),'--no-daemon','--max-workers=2',':engine-core:jar',
+    engine_command=[str(ROOT/'gradlew'),'--no-daemon','--max-workers=2',':engine-core:jar',':runtime-rhino:jar',
         ':engine-core:exportCanonicalVarCompileClasspath',
         '-PcanonicalVarClasspathOutput='+str(engine_metadata),'--stacktrace']
     with (reports/'current-engine-producer.log').open('w') as log:
@@ -74,6 +74,32 @@ def main():
         'sourceRevision':os.environ['GITHUB_SHA'],'engine':engine_row,'classMajors':major_hist,
         'metadataSha256':transport.sha(engine_metadata),'typeOracleOnly':True,'runtimeJava8Accepted':False,
         'completeCanonicalSourceCount':len(expected_sources)})
+    rhino_jars=[p for p in (ROOT/'runtime-rhino/build/libs').glob('*.jar') if not p.name.endswith(('-sources.jar','-javadoc.jar'))]
+    if len(rhino_jars)!=1:raise ValueError('One current ordinary Rhino production JAR required')
+    rhino_jar=rhino_jars[0];rhino_majors={}
+    with zipfile.ZipFile(rhino_jar) as archive:
+        for name in archive.namelist():
+            if name.endswith('.class'):
+                major=int.from_bytes(archive.read(name)[6:8],'big');rhino_majors[str(major)]=rhino_majors.get(str(major),0)+1
+                if major>52:raise ValueError('Current ordinary Rhino production archive exceeds Java8')
+    if rhino_majors.get('52',0)==0:raise ValueError('Current actual Rhino class output absent')
+    rhino_row=next(r for r in closure if r['role']=='rhino')
+    rhino_row.update(path=str(rhino_jar.resolve()),sha256=transport.sha(rhino_jar))
+    transport.write(reports/'current-rhino-producer.json',{'sourceRevision':os.environ['GITHUB_SHA'],
+        'jarSha256':rhino_row['sha256'],'classMajors':rhino_majors,'ordinaryRuntimeArchive':True,
+        'productionRelease':8,'fullTestSuiteReexecuted':False})
+    # Compile inputs contain one actual engine and one actual Rhino class owner.
+    actual_compile=[r for r in closure if r['compile']]
+    class_owners={};competing=[]
+    for r in actual_compile:
+        with zipfile.ZipFile(r['path']) as archive:
+            for name in archive.namelist():
+                if not name.endswith('.class') or name.startswith('META-INF/versions/') or name=='module-info.class':continue
+                previous=class_owners.setdefault(name,r['role'])
+                if previous!=r['role']:competing.append({'entry':name,'firstRole':previous,'secondRole':r['role']})
+    transport.write(reports/'current-type-oracle-class-owners.json',{'compileRoles':[r['role'] for r in actual_compile],
+        'competingClassOwners':competing,'runtimeClosureAccepted':False})
+    if competing:raise ValueError('Competing actual current engine/Rhino/compiler input owner')
     tool=os.environ['JAVA_HOME_17_X64']
     request={'canonicalSourceRoot':str(ROOT),'javac17':tool+'/bin/javac','java17':tool+'/bin/java',
         'closure':closure,'actualMcpUnits':transport.actual_units(),
