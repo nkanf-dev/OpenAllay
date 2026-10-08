@@ -104,9 +104,52 @@ final class GuideGraphicalRegressionProbe {
     private long liveHeaderFrame;
     private NativeScreenTransition<Screen> liveGuideReopen;
     private LiveGuideReopenOwner liveGuideReopenOwner;
-    private record LiveGuideReopenOwner(GuideChatLiteScreen reader,
-            dev.openallay.client.gui.GuideClientUiState state, long generation,
-            Object world, UUID actor, UUID sessionOwner) {}
+    @dev.openallay.value.ValueType(LiveGuideReopenOwner.ValueSchemaProvider.class)
+private static final class LiveGuideReopenOwner {
+    private final GuideChatLiteScreen reader;
+    private final dev.openallay.client.gui.GuideClientUiState state;
+    private final long generation;
+    private final Object world;
+    private final UUID actor;
+    private final UUID sessionOwner;
+    private LiveGuideReopenOwner(GuideChatLiteScreen reader, dev.openallay.client.gui.GuideClientUiState state, long generation, Object world, UUID actor, UUID sessionOwner) {
+        this.reader = reader;
+        this.state = state;
+        this.generation = generation;
+        this.world = world;
+        this.actor = actor;
+        this.sessionOwner = sessionOwner;
+    }
+    public GuideChatLiteScreen reader() { return reader; }
+    public dev.openallay.client.gui.GuideClientUiState state() { return state; }
+    public long generation() { return generation; }
+    public Object world() { return world; }
+    public UUID actor() { return actor; }
+    public UUID sessionOwner() { return sessionOwner; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof LiveGuideReopenOwner)) return false;
+        LiveGuideReopenOwner that = (LiveGuideReopenOwner) other;
+        return java.util.Objects.equals(reader, that.reader) && java.util.Objects.equals(state, that.state) && generation == that.generation && java.util.Objects.equals(world, that.world) && java.util.Objects.equals(actor, that.actor) && java.util.Objects.equals(sessionOwner, that.sessionOwner);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(reader);
+        hash = 31 * hash + java.util.Objects.hashCode(state);
+        hash = 31 * hash + Long.hashCode(generation);
+        hash = 31 * hash + java.util.Objects.hashCode(world);
+        hash = 31 * hash + java.util.Objects.hashCode(actor);
+        hash = 31 * hash + java.util.Objects.hashCode(sessionOwner);
+        return hash;
+    }
+    @Override public String toString() { return "LiveGuideReopenOwner[reader=" + reader + ", state=" + state + ", generation=" + generation + ", world=" + world + ", actor=" + actor + ", sessionOwner=" + sessionOwner + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<LiveGuideReopenOwner> schema() {
+            return new dev.openallay.value.ValueSchema<>(LiveGuideReopenOwner.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<LiveGuideReopenOwner>>asList(new dev.openallay.value.ValueSchema.Component<>(LiveGuideReopenOwner.class, "reader", LiveGuideReopenOwner::reader), new dev.openallay.value.ValueSchema.Component<>(LiveGuideReopenOwner.class, "state", LiveGuideReopenOwner::state), new dev.openallay.value.ValueSchema.Component<>(LiveGuideReopenOwner.class, "generation", LiveGuideReopenOwner::generation), new dev.openallay.value.ValueSchema.Component<>(LiveGuideReopenOwner.class, "world", LiveGuideReopenOwner::world), new dev.openallay.value.ValueSchema.Component<>(LiveGuideReopenOwner.class, "actor", LiveGuideReopenOwner::actor), new dev.openallay.value.ValueSchema.Component<>(LiveGuideReopenOwner.class, "sessionOwner", LiveGuideReopenOwner::sessionOwner)), arguments -> new LiveGuideReopenOwner((GuideChatLiteScreen) arguments[0], (dev.openallay.client.gui.GuideClientUiState) arguments[1], (Long) arguments[2], (Object) arguments[3], (UUID) arguments[4], (UUID) arguments[5]));
+        }
+    }
+}
     private final Path frameRoot;
     private final int originalWindowWidth;
     private final int originalWindowHeight;

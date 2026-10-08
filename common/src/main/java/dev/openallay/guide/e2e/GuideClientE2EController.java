@@ -1380,10 +1380,40 @@ public final class GuideClientE2EController {
         private long components;
     }
 
-    private record SemanticSummary(
-            Map<String, Long> metrics,
-            List<String> diagnosticCodes,
-            List<String> componentTypes) {}
+    @dev.openallay.value.ValueType(SemanticSummary.ValueSchemaProvider.class)
+private static final class SemanticSummary {
+    private final Map<String, Long> metrics;
+    private final List<String> diagnosticCodes;
+    private final List<String> componentTypes;
+    private SemanticSummary(Map<String, Long> metrics, List<String> diagnosticCodes, List<String> componentTypes) {
+        this.metrics = metrics;
+        this.diagnosticCodes = diagnosticCodes;
+        this.componentTypes = componentTypes;
+    }
+    public Map<String, Long> metrics() { return metrics; }
+    public List<String> diagnosticCodes() { return diagnosticCodes; }
+    public List<String> componentTypes() { return componentTypes; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SemanticSummary)) return false;
+        SemanticSummary that = (SemanticSummary) other;
+        return java.util.Objects.equals(metrics, that.metrics) && java.util.Objects.equals(diagnosticCodes, that.diagnosticCodes) && java.util.Objects.equals(componentTypes, that.componentTypes);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(metrics);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnosticCodes);
+        hash = 31 * hash + java.util.Objects.hashCode(componentTypes);
+        return hash;
+    }
+    @Override public String toString() { return "SemanticSummary[metrics=" + metrics + ", diagnosticCodes=" + diagnosticCodes + ", componentTypes=" + componentTypes + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SemanticSummary> schema() {
+            return new dev.openallay.value.ValueSchema<>(SemanticSummary.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SemanticSummary>>asList(new dev.openallay.value.ValueSchema.Component<>(SemanticSummary.class, "metrics", SemanticSummary::metrics), new dev.openallay.value.ValueSchema.Component<>(SemanticSummary.class, "diagnosticCodes", SemanticSummary::diagnosticCodes), new dev.openallay.value.ValueSchema.Component<>(SemanticSummary.class, "componentTypes", SemanticSummary::componentTypes)), arguments -> new SemanticSummary((Map) arguments[0], (List) arguments[1], (List) arguments[2]));
+        }
+    }
+}
 
     /** Bounded opt-in startup observations. No screen changes or readiness are manufactured. */
     private void startupGate(String phase, UUID actor) {

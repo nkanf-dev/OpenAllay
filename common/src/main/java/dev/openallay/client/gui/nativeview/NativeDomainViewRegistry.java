@@ -168,5 +168,34 @@ public final class NativeDomainViewRegistry implements AutoCloseable {
         }
     }
 
-    private record Entry(NativeDomainViewBinding binding, NativeDomainView view) {}
+    @dev.openallay.value.ValueType(Entry.ValueSchemaProvider.class)
+private static final class Entry {
+    private final NativeDomainViewBinding binding;
+    private final NativeDomainView view;
+    private Entry(NativeDomainViewBinding binding, NativeDomainView view) {
+        this.binding = binding;
+        this.view = view;
+    }
+    public NativeDomainViewBinding binding() { return binding; }
+    public NativeDomainView view() { return view; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Entry)) return false;
+        Entry that = (Entry) other;
+        return java.util.Objects.equals(binding, that.binding) && java.util.Objects.equals(view, that.view);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(binding);
+        hash = 31 * hash + java.util.Objects.hashCode(view);
+        return hash;
+    }
+    @Override public String toString() { return "Entry[binding=" + binding + ", view=" + view + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Entry> schema() {
+            return new dev.openallay.value.ValueSchema<>(Entry.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Entry>>asList(new dev.openallay.value.ValueSchema.Component<>(Entry.class, "binding", Entry::binding), new dev.openallay.value.ValueSchema.Component<>(Entry.class, "view", Entry::view)), arguments -> new Entry((NativeDomainViewBinding) arguments[0], (NativeDomainView) arguments[1]));
+        }
+    }
+}
 }

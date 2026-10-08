@@ -24,8 +24,64 @@ public class GuidePrimitiveMultilineEditor extends GuideNativeWidget implements 
     public int e2eCharacterLimit() { return characterLimit; }
     private long paintedFrames;
     private ProbeReceipt painted;
-    public record ProbeReceipt(long frame, int cursor, int start, int end, int lines,
-            int width, int caretX, int caretY, boolean focused) {}
+    @dev.openallay.value.ValueType(ProbeReceipt.ValueSchemaProvider.class)
+public static final class ProbeReceipt {
+    private final long frame;
+    private final int cursor;
+    private final int start;
+    private final int end;
+    private final int lines;
+    private final int width;
+    private final int caretX;
+    private final int caretY;
+    private final boolean focused;
+    public ProbeReceipt(long frame, int cursor, int start, int end, int lines, int width, int caretX, int caretY, boolean focused) {
+        this.frame = frame;
+        this.cursor = cursor;
+        this.start = start;
+        this.end = end;
+        this.lines = lines;
+        this.width = width;
+        this.caretX = caretX;
+        this.caretY = caretY;
+        this.focused = focused;
+    }
+    public long frame() { return frame; }
+    public int cursor() { return cursor; }
+    public int start() { return start; }
+    public int end() { return end; }
+    public int lines() { return lines; }
+    public int width() { return width; }
+    public int caretX() { return caretX; }
+    public int caretY() { return caretY; }
+    public boolean focused() { return focused; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ProbeReceipt)) return false;
+        ProbeReceipt that = (ProbeReceipt) other;
+        return frame == that.frame && cursor == that.cursor && start == that.start && end == that.end && lines == that.lines && width == that.width && caretX == that.caretX && caretY == that.caretY && focused == that.focused;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(frame);
+        hash = 31 * hash + Integer.hashCode(cursor);
+        hash = 31 * hash + Integer.hashCode(start);
+        hash = 31 * hash + Integer.hashCode(end);
+        hash = 31 * hash + Integer.hashCode(lines);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(caretX);
+        hash = 31 * hash + Integer.hashCode(caretY);
+        hash = 31 * hash + Boolean.hashCode(focused);
+        return hash;
+    }
+    @Override public String toString() { return "ProbeReceipt[frame=" + frame + ", cursor=" + cursor + ", start=" + start + ", end=" + end + ", lines=" + lines + ", width=" + width + ", caretX=" + caretX + ", caretY=" + caretY + ", focused=" + focused + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ProbeReceipt> schema() {
+            return new dev.openallay.value.ValueSchema<>(ProbeReceipt.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ProbeReceipt>>asList(new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "frame", ProbeReceipt::frame), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "cursor", ProbeReceipt::cursor), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "start", ProbeReceipt::start), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "end", ProbeReceipt::end), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "lines", ProbeReceipt::lines), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "width", ProbeReceipt::width), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "caretX", ProbeReceipt::caretX), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "caretY", ProbeReceipt::caretY), new dev.openallay.value.ValueSchema.Component<>(ProbeReceipt.class, "focused", ProbeReceipt::focused)), arguments -> new ProbeReceipt((Long) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Integer) arguments[5], (Integer) arguments[6], (Integer) arguments[7], (Boolean) arguments[8]));
+        }
+    }
+}
     /** Cached actual paint facts; does not advance input or render. */
     public ProbeReceipt e2eReceipt() { return painted; }
 

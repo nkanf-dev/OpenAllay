@@ -14,7 +14,36 @@ import net.minecraft.util.ResourceLocation;
 
 /** Real client resource owners and a distinct bundled-source seam for pre-data-pack servers. */
 public final class MinecraftResourceAccess {
-    public record TextLayer(String packId, String content) {}
+    @dev.openallay.value.ValueType(TextLayer.ValueSchemaProvider.class)
+public static final class TextLayer {
+    private final String packId;
+    private final String content;
+    public TextLayer(String packId, String content) {
+        this.packId = packId;
+        this.content = content;
+    }
+    public String packId() { return packId; }
+    public String content() { return content; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof TextLayer)) return false;
+        TextLayer that = (TextLayer) other;
+        return java.util.Objects.equals(packId, that.packId) && java.util.Objects.equals(content, that.content);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(packId);
+        hash = 31 * hash + java.util.Objects.hashCode(content);
+        return hash;
+    }
+    @Override public String toString() { return "TextLayer[packId=" + packId + ", content=" + content + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<TextLayer> schema() {
+            return new dev.openallay.value.ValueSchema<>(TextLayer.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<TextLayer>>asList(new dev.openallay.value.ValueSchema.Component<>(TextLayer.class, "packId", TextLayer::packId), new dev.openallay.value.ValueSchema.Component<>(TextLayer.class, "content", TextLayer::content)), arguments -> new TextLayer((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
     public interface Source {
         List<ResourceLocation> listIds(String prefix, Predicate<ResourceLocation> filter);
         List<TextLayer> textLayers(ResourceLocation id) throws IOException;
@@ -71,8 +100,14 @@ public final class MinecraftResourceAccess {
             throw failure;
         }
     }
-    private record ResourceStack(List<IResource> resources) implements AutoCloseable {
-        @Override public void close() throws IOException {
+    @dev.openallay.value.ValueType(ResourceStack.ValueSchemaProvider.class)
+private static final class ResourceStack implements AutoCloseable {
+    private final List<IResource> resources;
+    private ResourceStack(List<IResource> resources) {
+        this.resources = resources;
+    }
+    public List<IResource> resources() { return resources; }
+@Override public void close() throws IOException {
             IOException failure = null;
             for (IResource resource : resources) {
                 try { resource.close(); }
@@ -82,5 +117,23 @@ public final class MinecraftResourceAccess {
             }
             if (failure != null) throw failure;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ResourceStack)) return false;
+        ResourceStack that = (ResourceStack) other;
+        return java.util.Objects.equals(resources, that.resources);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(resources);
+        return hash;
+    }
+    @Override public String toString() { return "ResourceStack[resources=" + resources + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ResourceStack> schema() {
+            return new dev.openallay.value.ValueSchema<>(ResourceStack.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ResourceStack>>asList(new dev.openallay.value.ValueSchema.Component<>(ResourceStack.class, "resources", ResourceStack::resources)), arguments -> new ResourceStack((List) arguments[0]));
+        }
+    }
+}
 }

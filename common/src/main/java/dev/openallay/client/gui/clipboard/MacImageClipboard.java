@@ -74,7 +74,36 @@ final class MacImageClipboard {
         return new Capture(representations);
     }
 
-    private record Representation(long object, boolean fileUrl) {}
+    @dev.openallay.value.ValueType(Representation.ValueSchemaProvider.class)
+private static final class Representation {
+    private final long object;
+    private final boolean fileUrl;
+    private Representation(long object, boolean fileUrl) {
+        this.object = object;
+        this.fileUrl = fileUrl;
+    }
+    public long object() { return object; }
+    public boolean fileUrl() { return fileUrl; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Representation)) return false;
+        Representation that = (Representation) other;
+        return object == that.object && fileUrl == that.fileUrl;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(object);
+        hash = 31 * hash + Boolean.hashCode(fileUrl);
+        return hash;
+    }
+    @Override public String toString() { return "Representation[object=" + object + ", fileUrl=" + fileUrl + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Representation> schema() {
+            return new dev.openallay.value.ValueSchema<>(Representation.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Representation>>asList(new dev.openallay.value.ValueSchema.Component<>(Representation.class, "object", Representation::object), new dev.openallay.value.ValueSchema.Component<>(Representation.class, "fileUrl", Representation::fileUrl)), arguments -> new Representation((Long) arguments[0], (Boolean) arguments[1]));
+        }
+    }
+}
 
     private static final class Capture implements ImageClipboard {
         private final List<Representation> representations;

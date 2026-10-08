@@ -139,5 +139,46 @@ public final class GuideHudRenderer {
         return ((int) Math.round(opacity * 255) << 24) | (OpenAllayWidgetTheme.SLATE_BORDER & 0xFFFFFF);
     }
     public static int textColor() { return OpenAllayWidgetTheme.WHITE; }
-    private record CacheKey(String preview, int width, int height, Font font, Object language) {}
+    @dev.openallay.value.ValueType(CacheKey.ValueSchemaProvider.class)
+private static final class CacheKey {
+    private final String preview;
+    private final int width;
+    private final int height;
+    private final Font font;
+    private final Object language;
+    private CacheKey(String preview, int width, int height, Font font, Object language) {
+        this.preview = preview;
+        this.width = width;
+        this.height = height;
+        this.font = font;
+        this.language = language;
+    }
+    public String preview() { return preview; }
+    public int width() { return width; }
+    public int height() { return height; }
+    public Font font() { return font; }
+    public Object language() { return language; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CacheKey)) return false;
+        CacheKey that = (CacheKey) other;
+        return java.util.Objects.equals(preview, that.preview) && width == that.width && height == that.height && java.util.Objects.equals(font, that.font) && java.util.Objects.equals(language, that.language);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(preview);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(height);
+        hash = 31 * hash + java.util.Objects.hashCode(font);
+        hash = 31 * hash + java.util.Objects.hashCode(language);
+        return hash;
+    }
+    @Override public String toString() { return "CacheKey[preview=" + preview + ", width=" + width + ", height=" + height + ", font=" + font + ", language=" + language + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CacheKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(CacheKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CacheKey>>asList(new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "preview", CacheKey::preview), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "width", CacheKey::width), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "height", CacheKey::height), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "font", CacheKey::font), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "language", CacheKey::language)), arguments -> new CacheKey((String) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Font) arguments[3], (Object) arguments[4]));
+        }
+    }
+}
 }

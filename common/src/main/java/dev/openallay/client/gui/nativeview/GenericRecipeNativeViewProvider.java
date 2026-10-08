@@ -43,18 +43,22 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
         return new Attempt.Ready(new View(recipe.recipe()));
     }
 
-    private record View(GuideRecipeCard recipe) implements NativeDomainView {
-        @Override
+    @dev.openallay.value.ValueType(View.ValueSchemaProvider.class)
+private static final class View implements NativeDomainView {
+    private final GuideRecipeCard recipe;
+    private View(GuideRecipeCard recipe) {
+        this.recipe = recipe;
+    }
+    public GuideRecipeCard recipe() { return recipe; }
+@Override
         public String providerId() {
             return "openallay:generic";
         }
-
-        @Override
+@Override
         public NativeDomainViewBinding.Family family() {
             return NativeDomainViewBinding.Family.RECIPE;
         }
-
-        @Override
+@Override
         public void render(RenderContext context) {
             GuideGraphics graphics = context.graphics();
             Font font = context.font();
@@ -118,8 +122,7 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                         bounds.x() + 6, factsY + 11, TEXT, false);
             }
         }
-
-        private static String processingFacts(GuideRecipeCard.Processing processing) {
+private static String processingFacts(GuideRecipeCard.Processing processing) {
             List<String> values = new ArrayList<>();
             if (processing.durationTicks() != null) {
                 values.add(MinecraftComponents.getString(MinecraftComponents.translatable(
@@ -138,14 +141,12 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
             }
             return String.join(" · ", values);
         }
-
-        private static String ingredientItem(GuideRecipeCard.Ingredient ingredient) {
+private static String ingredientItem(GuideRecipeCard.Ingredient ingredient) {
             GuideRecipeCard.Alternative alternative = ingredient.alternatives().get(0);
             return alternative.resolvedItems().isEmpty()
                     ? alternative.id() : alternative.resolvedItems().get(0);
         }
-
-        private static void renderSlot(
+private static void renderSlot(
                 GuideGraphics graphics,
                 Font font,
                 String itemId,
@@ -170,5 +171,23 @@ final class GenericRecipeNativeViewProvider implements NativeDomainViewProvider 
                 graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
             }
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof View)) return false;
+        View that = (View) other;
+        return java.util.Objects.equals(recipe, that.recipe);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(recipe);
+        return hash;
+    }
+    @Override public String toString() { return "View[recipe=" + recipe + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<View> schema() {
+            return new dev.openallay.value.ValueSchema<>(View.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<View>>asList(new dev.openallay.value.ValueSchema.Component<>(View.class, "recipe", View::recipe)), arguments -> new View((GuideRecipeCard) arguments[0]));
+        }
+    }
+}
 }

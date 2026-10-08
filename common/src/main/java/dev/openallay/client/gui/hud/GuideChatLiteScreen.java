@@ -688,11 +688,47 @@ public final class GuideChatLiteScreen extends dev.openallay.client.gui.GuideNat
         draggingScrollbar = false;
     }
 
-    public record Card(int x, int y, int width, int height) {
-        public static Card calculate(int viewportWidth, int viewportHeight) {
+    @dev.openallay.value.ValueType(Card.ValueSchemaProvider.class)
+public static final class Card {
+    private final int x;
+    private final int y;
+    private final int width;
+    private final int height;
+    public Card(int x, int y, int width, int height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+    public int x() { return x; }
+    public int y() { return y; }
+    public int width() { return width; }
+    public int height() { return height; }
+public static Card calculate(int viewportWidth, int viewportHeight) {
             int width = Math.max(1, Math.min(440, viewportWidth - 12));
             int height = Math.max(1, Math.min(400, viewportHeight - 12));
             return new Card(Math.max(0, (viewportWidth - width) / 2), Math.max(0, viewportHeight - height - 6), width, height);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Card)) return false;
+        Card that = (Card) other;
+        return x == that.x && y == that.y && width == that.width && height == that.height;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(x);
+        hash = 31 * hash + Integer.hashCode(y);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(height);
+        return hash;
+    }
+    @Override public String toString() { return "Card[x=" + x + ", y=" + y + ", width=" + width + ", height=" + height + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Card> schema() {
+            return new dev.openallay.value.ValueSchema<>(Card.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Card>>asList(new dev.openallay.value.ValueSchema.Component<>(Card.class, "x", Card::x), new dev.openallay.value.ValueSchema.Component<>(Card.class, "y", Card::y), new dev.openallay.value.ValueSchema.Component<>(Card.class, "width", Card::width), new dev.openallay.value.ValueSchema.Component<>(Card.class, "height", Card::height)), arguments -> new Card((Integer) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3]));
+        }
+    }
+}
 }

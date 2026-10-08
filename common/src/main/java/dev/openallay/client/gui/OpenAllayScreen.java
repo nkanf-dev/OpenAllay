@@ -123,7 +123,40 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     private boolean overflowOpen;
     private int sessionScroll;
     private ToolFlowOwner toolSummaryOwner;
-    private record ToolFlowOwner(UUID actor, String session, Object world) {}
+    @dev.openallay.value.ValueType(ToolFlowOwner.ValueSchemaProvider.class)
+private static final class ToolFlowOwner {
+    private final UUID actor;
+    private final String session;
+    private final Object world;
+    private ToolFlowOwner(UUID actor, String session, Object world) {
+        this.actor = actor;
+        this.session = session;
+        this.world = world;
+    }
+    public UUID actor() { return actor; }
+    public String session() { return session; }
+    public Object world() { return world; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ToolFlowOwner)) return false;
+        ToolFlowOwner that = (ToolFlowOwner) other;
+        return java.util.Objects.equals(actor, that.actor) && java.util.Objects.equals(session, that.session) && java.util.Objects.equals(world, that.world);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(actor);
+        hash = 31 * hash + java.util.Objects.hashCode(session);
+        hash = 31 * hash + java.util.Objects.hashCode(world);
+        return hash;
+    }
+    @Override public String toString() { return "ToolFlowOwner[actor=" + actor + ", session=" + session + ", world=" + world + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ToolFlowOwner> schema() {
+            return new dev.openallay.value.ValueSchema<>(ToolFlowOwner.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ToolFlowOwner>>asList(new dev.openallay.value.ValueSchema.Component<>(ToolFlowOwner.class, "actor", ToolFlowOwner::actor), new dev.openallay.value.ValueSchema.Component<>(ToolFlowOwner.class, "session", ToolFlowOwner::session), new dev.openallay.value.ValueSchema.Component<>(ToolFlowOwner.class, "world", ToolFlowOwner::world)), arguments -> new ToolFlowOwner((UUID) arguments[0], (String) arguments[1], (Object) arguments[2]));
+        }
+    }
+}
     private final Map<String, GuideUiLayout.Rect> renderedRows = new LinkedHashMap<>();
     private final String imageDraftOwner = UUID.randomUUID().toString();
     private final Map<UUID, String> imageTextures = new LinkedHashMap<>();
@@ -2536,17 +2569,80 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         return List.copyOf(lines);
     }
 
-    record SourceDetailLayout(
-            GuideEvidencePresentation.Group group, int width, String locale, List<GuideTextLine> lines) {
-        SourceDetailLayout { lines = List.copyOf(lines); }
-
-        boolean matches(GuideEvidencePresentation.Group current, int currentWidth, String currentLocale) {
+    @dev.openallay.value.ValueType(SourceDetailLayout.ValueSchemaProvider.class)
+static final class SourceDetailLayout {
+    private final GuideEvidencePresentation.Group group;
+    private final int width;
+    private final String locale;
+    private final List<GuideTextLine> lines;
+    SourceDetailLayout(GuideEvidencePresentation.Group group, int width, String locale, List<GuideTextLine> lines) {
+ lines = List.copyOf(lines);
+        this.group = group;
+        this.width = width;
+        this.locale = locale;
+        this.lines = lines;
+    }
+    public GuideEvidencePresentation.Group group() { return group; }
+    public int width() { return width; }
+    public String locale() { return locale; }
+    public List<GuideTextLine> lines() { return lines; }
+boolean matches(GuideEvidencePresentation.Group current, int currentWidth, String currentLocale) {
             // The groups are immutable. Identity avoids comparing thousands of retained records each frame.
             return group == current && width == currentWidth && locale.equals(currentLocale);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SourceDetailLayout)) return false;
+        SourceDetailLayout that = (SourceDetailLayout) other;
+        return java.util.Objects.equals(group, that.group) && width == that.width && java.util.Objects.equals(locale, that.locale) && java.util.Objects.equals(lines, that.lines);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(group);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + java.util.Objects.hashCode(locale);
+        hash = 31 * hash + java.util.Objects.hashCode(lines);
+        return hash;
+    }
+    @Override public String toString() { return "SourceDetailLayout[group=" + group + ", width=" + width + ", locale=" + locale + ", lines=" + lines + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SourceDetailLayout> schema() {
+            return new dev.openallay.value.ValueSchema<>(SourceDetailLayout.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SourceDetailLayout>>asList(new dev.openallay.value.ValueSchema.Component<>(SourceDetailLayout.class, "group", SourceDetailLayout::group), new dev.openallay.value.ValueSchema.Component<>(SourceDetailLayout.class, "width", SourceDetailLayout::width), new dev.openallay.value.ValueSchema.Component<>(SourceDetailLayout.class, "locale", SourceDetailLayout::locale), new dev.openallay.value.ValueSchema.Component<>(SourceDetailLayout.class, "lines", SourceDetailLayout::lines)), arguments -> new SourceDetailLayout((GuideEvidencePresentation.Group) arguments[0], (Integer) arguments[1], (String) arguments[2], (List) arguments[3]));
+        }
+    }
+}
 
-    record VisibleDetailLines(int first, int end) {}
+    @dev.openallay.value.ValueType(VisibleDetailLines.ValueSchemaProvider.class)
+static final class VisibleDetailLines {
+    private final int first;
+    private final int end;
+    VisibleDetailLines(int first, int end) {
+        this.first = first;
+        this.end = end;
+    }
+    public int first() { return first; }
+    public int end() { return end; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof VisibleDetailLines)) return false;
+        VisibleDetailLines that = (VisibleDetailLines) other;
+        return first == that.first && end == that.end;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(first);
+        hash = 31 * hash + Integer.hashCode(end);
+        return hash;
+    }
+    @Override public String toString() { return "VisibleDetailLines[first=" + first + ", end=" + end + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<VisibleDetailLines> schema() {
+            return new dev.openallay.value.ValueSchema<>(VisibleDetailLines.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VisibleDetailLines>>asList(new dev.openallay.value.ValueSchema.Component<>(VisibleDetailLines.class, "first", VisibleDetailLines::first), new dev.openallay.value.ValueSchema.Component<>(VisibleDetailLines.class, "end", VisibleDetailLines::end)), arguments -> new VisibleDetailLines((Integer) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
 
     static VisibleDetailLines visibleDetailLines(GuideUiLayout.Rect detail, int y, int count) {
         // Keep native int geometry arithmetic; negate the divisor, never the possibly MIN_VALUE numerator.
@@ -2697,8 +2793,40 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
         focusDetail();
     }
 
-    private record CodeLayout(
-            String source, int width, List<GuideTextLine> lines) {}
+    @dev.openallay.value.ValueType(CodeLayout.ValueSchemaProvider.class)
+private static final class CodeLayout {
+    private final String source;
+    private final int width;
+    private final List<GuideTextLine> lines;
+    private CodeLayout(String source, int width, List<GuideTextLine> lines) {
+        this.source = source;
+        this.width = width;
+        this.lines = lines;
+    }
+    public String source() { return source; }
+    public int width() { return width; }
+    public List<GuideTextLine> lines() { return lines; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CodeLayout)) return false;
+        CodeLayout that = (CodeLayout) other;
+        return java.util.Objects.equals(source, that.source) && width == that.width && java.util.Objects.equals(lines, that.lines);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + java.util.Objects.hashCode(lines);
+        return hash;
+    }
+    @Override public String toString() { return "CodeLayout[source=" + source + ", width=" + width + ", lines=" + lines + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CodeLayout> schema() {
+            return new dev.openallay.value.ValueSchema<>(CodeLayout.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CodeLayout>>asList(new dev.openallay.value.ValueSchema.Component<>(CodeLayout.class, "source", CodeLayout::source), new dev.openallay.value.ValueSchema.Component<>(CodeLayout.class, "width", CodeLayout::width), new dev.openallay.value.ValueSchema.Component<>(CodeLayout.class, "lines", CodeLayout::lines)), arguments -> new CodeLayout((String) arguments[0], (Integer) arguments[1], (List) arguments[2]));
+        }
+    }
+}
 
     private void rebuildPresentationWidgets() {
         invalidateContentHits();
@@ -4102,14 +4230,49 @@ public final class OpenAllayScreen extends dev.openallay.client.gui.GuideNativeS
     }
 
     private enum HitKind { MENU, SESSION, CONTENT, DETAIL, MODEL, COMPOSER }
-    private record Hit(
-            GuideUiLayout.Rect rect,
-            HitKind kind,
-            Runnable action,
-            String focusId,
-            String narration) {
-        private Hit(GuideUiLayout.Rect rect, HitKind kind, Runnable action) {
+    @dev.openallay.value.ValueType(Hit.ValueSchemaProvider.class)
+private static final class Hit {
+    private final GuideUiLayout.Rect rect;
+    private final HitKind kind;
+    private final Runnable action;
+    private final String focusId;
+    private final String narration;
+    private Hit(GuideUiLayout.Rect rect, HitKind kind, Runnable action, String focusId, String narration) {
+        this.rect = rect;
+        this.kind = kind;
+        this.action = action;
+        this.focusId = focusId;
+        this.narration = narration;
+    }
+    public GuideUiLayout.Rect rect() { return rect; }
+    public HitKind kind() { return kind; }
+    public Runnable action() { return action; }
+    public String focusId() { return focusId; }
+    public String narration() { return narration; }
+private Hit(GuideUiLayout.Rect rect, HitKind kind, Runnable action) {
             this(rect, kind, action, null, "");
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Hit)) return false;
+        Hit that = (Hit) other;
+        return java.util.Objects.equals(rect, that.rect) && java.util.Objects.equals(kind, that.kind) && java.util.Objects.equals(action, that.action) && java.util.Objects.equals(focusId, that.focusId) && java.util.Objects.equals(narration, that.narration);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(rect);
+        hash = 31 * hash + java.util.Objects.hashCode(kind);
+        hash = 31 * hash + java.util.Objects.hashCode(action);
+        hash = 31 * hash + java.util.Objects.hashCode(focusId);
+        hash = 31 * hash + java.util.Objects.hashCode(narration);
+        return hash;
+    }
+    @Override public String toString() { return "Hit[rect=" + rect + ", kind=" + kind + ", action=" + action + ", focusId=" + focusId + ", narration=" + narration + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Hit> schema() {
+            return new dev.openallay.value.ValueSchema<>(Hit.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Hit>>asList(new dev.openallay.value.ValueSchema.Component<>(Hit.class, "rect", Hit::rect), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "kind", Hit::kind), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "action", Hit::action), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "focusId", Hit::focusId), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "narration", Hit::narration)), arguments -> new Hit((GuideUiLayout.Rect) arguments[0], (HitKind) arguments[1], (Runnable) arguments[2], (String) arguments[3], (String) arguments[4]));
+        }
+    }
+}
 }

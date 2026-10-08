@@ -27,18 +27,237 @@ public final class MinecraftSemanticRenderer {
 
     public sealed interface Intent permits Intent.BrowseRecipes, Intent.BrowseUsages,
             Intent.ExactRecipe, Intent.Source, Intent.Evidence, Intent.Choice {
-        record BrowseRecipes(String itemId) implements Intent {}
-        record BrowseUsages(String itemId) implements Intent {}
-        record ExactRecipe(RecipeReference reference) implements Intent {}
-        record Source(String sourceId, String originInvocationId) implements Intent {}
-        record Evidence(String evidenceId, String originInvocationId) implements Intent {}
-        record Choice(String componentNodeId, String choiceId) implements Intent {}
+        @dev.openallay.value.ValueType(BrowseRecipes.ValueSchemaProvider.class)
+public static final class BrowseRecipes implements Intent {
+    private final String itemId;
+    public BrowseRecipes(String itemId) {
+        this.itemId = itemId;
+    }
+    public String itemId() { return itemId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof BrowseRecipes)) return false;
+        BrowseRecipes that = (BrowseRecipes) other;
+        return java.util.Objects.equals(itemId, that.itemId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(itemId);
+        return hash;
+    }
+    @Override public String toString() { return "BrowseRecipes[itemId=" + itemId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<BrowseRecipes> schema() {
+            return new dev.openallay.value.ValueSchema<>(BrowseRecipes.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<BrowseRecipes>>asList(new dev.openallay.value.ValueSchema.Component<>(BrowseRecipes.class, "itemId", BrowseRecipes::itemId)), arguments -> new BrowseRecipes((String) arguments[0]));
+        }
+    }
+}
+        @dev.openallay.value.ValueType(BrowseUsages.ValueSchemaProvider.class)
+public static final class BrowseUsages implements Intent {
+    private final String itemId;
+    public BrowseUsages(String itemId) {
+        this.itemId = itemId;
+    }
+    public String itemId() { return itemId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof BrowseUsages)) return false;
+        BrowseUsages that = (BrowseUsages) other;
+        return java.util.Objects.equals(itemId, that.itemId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(itemId);
+        return hash;
+    }
+    @Override public String toString() { return "BrowseUsages[itemId=" + itemId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<BrowseUsages> schema() {
+            return new dev.openallay.value.ValueSchema<>(BrowseUsages.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<BrowseUsages>>asList(new dev.openallay.value.ValueSchema.Component<>(BrowseUsages.class, "itemId", BrowseUsages::itemId)), arguments -> new BrowseUsages((String) arguments[0]));
+        }
+    }
+}
+        @dev.openallay.value.ValueType(ExactRecipe.ValueSchemaProvider.class)
+public static final class ExactRecipe implements Intent {
+    private final RecipeReference reference;
+    public ExactRecipe(RecipeReference reference) {
+        this.reference = reference;
+    }
+    public RecipeReference reference() { return reference; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ExactRecipe)) return false;
+        ExactRecipe that = (ExactRecipe) other;
+        return java.util.Objects.equals(reference, that.reference);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(reference);
+        return hash;
+    }
+    @Override public String toString() { return "ExactRecipe[reference=" + reference + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ExactRecipe> schema() {
+            return new dev.openallay.value.ValueSchema<>(ExactRecipe.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ExactRecipe>>asList(new dev.openallay.value.ValueSchema.Component<>(ExactRecipe.class, "reference", ExactRecipe::reference)), arguments -> new ExactRecipe((RecipeReference) arguments[0]));
+        }
+    }
+}
+        @dev.openallay.value.ValueType(Source.ValueSchemaProvider.class)
+public static final class Source implements Intent {
+    private final String sourceId;
+    private final String originInvocationId;
+    public Source(String sourceId, String originInvocationId) {
+        this.sourceId = sourceId;
+        this.originInvocationId = originInvocationId;
+    }
+    public String sourceId() { return sourceId; }
+    public String originInvocationId() { return originInvocationId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Source)) return false;
+        Source that = (Source) other;
+        return java.util.Objects.equals(sourceId, that.sourceId) && java.util.Objects.equals(originInvocationId, that.originInvocationId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sourceId);
+        hash = 31 * hash + java.util.Objects.hashCode(originInvocationId);
+        return hash;
+    }
+    @Override public String toString() { return "Source[sourceId=" + sourceId + ", originInvocationId=" + originInvocationId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Source> schema() {
+            return new dev.openallay.value.ValueSchema<>(Source.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Source>>asList(new dev.openallay.value.ValueSchema.Component<>(Source.class, "sourceId", Source::sourceId), new dev.openallay.value.ValueSchema.Component<>(Source.class, "originInvocationId", Source::originInvocationId)), arguments -> new Source((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
+        @dev.openallay.value.ValueType(Evidence.ValueSchemaProvider.class)
+public static final class Evidence implements Intent {
+    private final String evidenceId;
+    private final String originInvocationId;
+    public Evidence(String evidenceId, String originInvocationId) {
+        this.evidenceId = evidenceId;
+        this.originInvocationId = originInvocationId;
+    }
+    public String evidenceId() { return evidenceId; }
+    public String originInvocationId() { return originInvocationId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Evidence)) return false;
+        Evidence that = (Evidence) other;
+        return java.util.Objects.equals(evidenceId, that.evidenceId) && java.util.Objects.equals(originInvocationId, that.originInvocationId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(evidenceId);
+        hash = 31 * hash + java.util.Objects.hashCode(originInvocationId);
+        return hash;
+    }
+    @Override public String toString() { return "Evidence[evidenceId=" + evidenceId + ", originInvocationId=" + originInvocationId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Evidence> schema() {
+            return new dev.openallay.value.ValueSchema<>(Evidence.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Evidence>>asList(new dev.openallay.value.ValueSchema.Component<>(Evidence.class, "evidenceId", Evidence::evidenceId), new dev.openallay.value.ValueSchema.Component<>(Evidence.class, "originInvocationId", Evidence::originInvocationId)), arguments -> new Evidence((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
+        @dev.openallay.value.ValueType(Choice.ValueSchemaProvider.class)
+public static final class Choice implements Intent {
+    private final String componentNodeId;
+    private final String choiceId;
+    public Choice(String componentNodeId, String choiceId) {
+        this.componentNodeId = componentNodeId;
+        this.choiceId = choiceId;
+    }
+    public String componentNodeId() { return componentNodeId; }
+    public String choiceId() { return choiceId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Choice)) return false;
+        Choice that = (Choice) other;
+        return java.util.Objects.equals(componentNodeId, that.componentNodeId) && java.util.Objects.equals(choiceId, that.choiceId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(componentNodeId);
+        hash = 31 * hash + java.util.Objects.hashCode(choiceId);
+        return hash;
+    }
+    @Override public String toString() { return "Choice[componentNodeId=" + componentNodeId + ", choiceId=" + choiceId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Choice> schema() {
+            return new dev.openallay.value.ValueSchema<>(Choice.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Choice>>asList(new dev.openallay.value.ValueSchema.Component<>(Choice.class, "componentNodeId", Choice::componentNodeId), new dev.openallay.value.ValueSchema.Component<>(Choice.class, "choiceId", Choice::choiceId)), arguments -> new Choice((String) arguments[0], (String) arguments[1]));
+        }
+    }
+}
     }
 
-    public record Hit(GuideUiLayout.Rect bounds, Intent intent) {}
-    public record Result(int bottom, List<Hit> hits) {
-        public Result { hits = List.copyOf(hits); }
+    @dev.openallay.value.ValueType(Hit.ValueSchemaProvider.class)
+public static final class Hit {
+    private final GuideUiLayout.Rect bounds;
+    private final Intent intent;
+    public Hit(GuideUiLayout.Rect bounds, Intent intent) {
+        this.bounds = bounds;
+        this.intent = intent;
     }
+    public GuideUiLayout.Rect bounds() { return bounds; }
+    public Intent intent() { return intent; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Hit)) return false;
+        Hit that = (Hit) other;
+        return java.util.Objects.equals(bounds, that.bounds) && java.util.Objects.equals(intent, that.intent);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(bounds);
+        hash = 31 * hash + java.util.Objects.hashCode(intent);
+        return hash;
+    }
+    @Override public String toString() { return "Hit[bounds=" + bounds + ", intent=" + intent + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Hit> schema() {
+            return new dev.openallay.value.ValueSchema<>(Hit.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Hit>>asList(new dev.openallay.value.ValueSchema.Component<>(Hit.class, "bounds", Hit::bounds), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "intent", Hit::intent)), arguments -> new Hit((GuideUiLayout.Rect) arguments[0], (Intent) arguments[1]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Result.ValueSchemaProvider.class)
+public static final class Result {
+    private final int bottom;
+    private final List<Hit> hits;
+    public Result(int bottom, List<Hit> hits) {
+ hits = List.copyOf(hits);
+        this.bottom = bottom;
+        this.hits = hits;
+    }
+    public int bottom() { return bottom; }
+    public List<Hit> hits() { return hits; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Result)) return false;
+        Result that = (Result) other;
+        return bottom == that.bottom && java.util.Objects.equals(hits, that.hits);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(bottom);
+        hash = 31 * hash + java.util.Objects.hashCode(hits);
+        return hash;
+    }
+    @Override public String toString() { return "Result[bottom=" + bottom + ", hits=" + hits + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Result> schema() {
+            return new dev.openallay.value.ValueSchema<>(Result.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Result>>asList(new dev.openallay.value.ValueSchema.Component<>(Result.class, "bottom", Result::bottom), new dev.openallay.value.ValueSchema.Component<>(Result.class, "hits", Result::hits)), arguments -> new Result((Integer) arguments[0], (List) arguments[1]));
+        }
+    }
+}
 
     @FunctionalInterface
     public interface RecipeGridRenderer {

@@ -23,12 +23,93 @@ import net.minecraft.server.level.ServerLevel;
 
 /** Explicit development-only oracle. No Builder classes or model-facing capability. */
 final class GuideBuilderE2EProbe {
-    record Anchor(int x, int y, int z, String dimension) {}
-    record Landmark(String name, int x, int y, int z, String id, Map<String, String> properties) {
-        Landmark(String name, int x, int y, int z, String id) {
-            this(name, x, y, z, "minecraft:" + id, Map.of());
+    @dev.openallay.value.ValueType(Anchor.ValueSchemaProvider.class)
+static final class Anchor {
+    private final int x;
+    private final int y;
+    private final int z;
+    private final String dimension;
+    Anchor(int x, int y, int z, String dimension) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.dimension = dimension;
+    }
+    public int x() { return x; }
+    public int y() { return y; }
+    public int z() { return z; }
+    public String dimension() { return dimension; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Anchor)) return false;
+        Anchor that = (Anchor) other;
+        return x == that.x && y == that.y && z == that.z && java.util.Objects.equals(dimension, that.dimension);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(x);
+        hash = 31 * hash + Integer.hashCode(y);
+        hash = 31 * hash + Integer.hashCode(z);
+        hash = 31 * hash + java.util.Objects.hashCode(dimension);
+        return hash;
+    }
+    @Override public String toString() { return "Anchor[x=" + x + ", y=" + y + ", z=" + z + ", dimension=" + dimension + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Anchor> schema() {
+            return new dev.openallay.value.ValueSchema<>(Anchor.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Anchor>>asList(new dev.openallay.value.ValueSchema.Component<>(Anchor.class, "x", Anchor::x), new dev.openallay.value.ValueSchema.Component<>(Anchor.class, "y", Anchor::y), new dev.openallay.value.ValueSchema.Component<>(Anchor.class, "z", Anchor::z), new dev.openallay.value.ValueSchema.Component<>(Anchor.class, "dimension", Anchor::dimension)), arguments -> new Anchor((Integer) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (String) arguments[3]));
         }
     }
+}
+    @dev.openallay.value.ValueType(Landmark.ValueSchemaProvider.class)
+static final class Landmark {
+    private final String name;
+    private final int x;
+    private final int y;
+    private final int z;
+    private final String id;
+    private final Map<String, String> properties;
+    Landmark(String name, int x, int y, int z, String id, Map<String, String> properties) {
+        this.name = name;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.id = id;
+        this.properties = properties;
+    }
+    public String name() { return name; }
+    public int x() { return x; }
+    public int y() { return y; }
+    public int z() { return z; }
+    public String id() { return id; }
+    public Map<String, String> properties() { return properties; }
+Landmark(String name, int x, int y, int z, String id) {
+            this(name, x, y, z, "minecraft:" + id, Map.of());
+        }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Landmark)) return false;
+        Landmark that = (Landmark) other;
+        return java.util.Objects.equals(name, that.name) && x == that.x && y == that.y && z == that.z && java.util.Objects.equals(id, that.id) && java.util.Objects.equals(properties, that.properties);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + Integer.hashCode(x);
+        hash = 31 * hash + Integer.hashCode(y);
+        hash = 31 * hash + Integer.hashCode(z);
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(properties);
+        return hash;
+    }
+    @Override public String toString() { return "Landmark[name=" + name + ", x=" + x + ", y=" + y + ", z=" + z + ", id=" + id + ", properties=" + properties + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Landmark> schema() {
+            return new dev.openallay.value.ValueSchema<>(Landmark.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Landmark>>asList(new dev.openallay.value.ValueSchema.Component<>(Landmark.class, "name", Landmark::name), new dev.openallay.value.ValueSchema.Component<>(Landmark.class, "x", Landmark::x), new dev.openallay.value.ValueSchema.Component<>(Landmark.class, "y", Landmark::y), new dev.openallay.value.ValueSchema.Component<>(Landmark.class, "z", Landmark::z), new dev.openallay.value.ValueSchema.Component<>(Landmark.class, "id", Landmark::id), new dev.openallay.value.ValueSchema.Component<>(Landmark.class, "properties", Landmark::properties)), arguments -> new Landmark((String) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (String) arguments[4], (Map) arguments[5]));
+        }
+    }
+}
     private GuideBuilderE2EProbe() {}
 
     static boolean enabled(String scenario) {

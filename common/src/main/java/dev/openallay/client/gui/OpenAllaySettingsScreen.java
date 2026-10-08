@@ -4362,9 +4362,56 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 uiDraft.ui().fullscreen().theme(), snapshot.display().ui().fullscreen().theme());
     }
 
-    public record E2eSettingsState(SettingsSection section, boolean ready, boolean saving,
-            SettingsOperation.Kind operation, boolean uiDirty,
-            GuideUiConfig.Theme previewTheme, GuideUiConfig.Theme savedTheme) {}
+    @dev.openallay.value.ValueType(E2eSettingsState.ValueSchemaProvider.class)
+public static final class E2eSettingsState {
+    private final SettingsSection section;
+    private final boolean ready;
+    private final boolean saving;
+    private final SettingsOperation.Kind operation;
+    private final boolean uiDirty;
+    private final GuideUiConfig.Theme previewTheme;
+    private final GuideUiConfig.Theme savedTheme;
+    public E2eSettingsState(SettingsSection section, boolean ready, boolean saving, SettingsOperation.Kind operation, boolean uiDirty, GuideUiConfig.Theme previewTheme, GuideUiConfig.Theme savedTheme) {
+        this.section = section;
+        this.ready = ready;
+        this.saving = saving;
+        this.operation = operation;
+        this.uiDirty = uiDirty;
+        this.previewTheme = previewTheme;
+        this.savedTheme = savedTheme;
+    }
+    public SettingsSection section() { return section; }
+    public boolean ready() { return ready; }
+    public boolean saving() { return saving; }
+    public SettingsOperation.Kind operation() { return operation; }
+    public boolean uiDirty() { return uiDirty; }
+    public GuideUiConfig.Theme previewTheme() { return previewTheme; }
+    public GuideUiConfig.Theme savedTheme() { return savedTheme; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof E2eSettingsState)) return false;
+        E2eSettingsState that = (E2eSettingsState) other;
+        return java.util.Objects.equals(section, that.section) && ready == that.ready && saving == that.saving && java.util.Objects.equals(operation, that.operation) && uiDirty == that.uiDirty && java.util.Objects.equals(previewTheme, that.previewTheme) && java.util.Objects.equals(savedTheme, that.savedTheme);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(section);
+        hash = 31 * hash + Boolean.hashCode(ready);
+        hash = 31 * hash + Boolean.hashCode(saving);
+        hash = 31 * hash + java.util.Objects.hashCode(operation);
+        hash = 31 * hash + Boolean.hashCode(uiDirty);
+        hash = 31 * hash + java.util.Objects.hashCode(previewTheme);
+        hash = 31 * hash + java.util.Objects.hashCode(savedTheme);
+        return hash;
+    }
+    @Override public String toString() { return "E2eSettingsState[section=" + section + ", ready=" + ready + ", saving=" + saving + ", operation=" + operation + ", uiDirty=" + uiDirty + ", previewTheme=" + previewTheme + ", savedTheme=" + savedTheme + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<E2eSettingsState> schema() {
+            return new dev.openallay.value.ValueSchema<>(E2eSettingsState.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<E2eSettingsState>>asList(new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "section", E2eSettingsState::section), new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "ready", E2eSettingsState::ready), new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "saving", E2eSettingsState::saving), new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "operation", E2eSettingsState::operation), new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "uiDirty", E2eSettingsState::uiDirty), new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "previewTheme", E2eSettingsState::previewTheme), new dev.openallay.value.ValueSchema.Component<>(E2eSettingsState.class, "savedTheme", E2eSettingsState::savedTheme)), arguments -> new E2eSettingsState((SettingsSection) arguments[0], (Boolean) arguments[1], (Boolean) arguments[2], (SettingsOperation.Kind) arguments[3], (Boolean) arguments[4], (GuideUiConfig.Theme) arguments[5], (GuideUiConfig.Theme) arguments[6]));
+        }
+    }
+}
 
     /** Screenshot-harness navigation only; inert in every normal client launch. */
     public void e2eOpenExtensions() {
@@ -4488,19 +4535,21 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
                 snapshot.notice());
     }
 
-    record Projection(
-            List<SettingsSection> sections,
-            List<ModelSettingsProjection.ModelCard> models,
-            GeneralSettingsProjection general,
-            UiSettingsProjection ui,
-            RecipeSettingsProjection recipes,
-            SkillSettingsProjection skills,
-            ExtensionSettingsProjection extensions,
-            HistorySettingsProjection history,
-            DiagnosticsSettingsProjection diagnostics,
-            SettingsOperation operation,
-            SettingsNotice notice) {
-        Projection {
+    @dev.openallay.value.ValueType(Projection.ValueSchemaProvider.class)
+static final class Projection {
+    private final List<SettingsSection> sections;
+    private final List<ModelSettingsProjection.ModelCard> models;
+    private final GeneralSettingsProjection general;
+    private final UiSettingsProjection ui;
+    private final RecipeSettingsProjection recipes;
+    private final SkillSettingsProjection skills;
+    private final ExtensionSettingsProjection extensions;
+    private final HistorySettingsProjection history;
+    private final DiagnosticsSettingsProjection diagnostics;
+    private final SettingsOperation operation;
+    private final SettingsNotice notice;
+    Projection(List<SettingsSection> sections, List<ModelSettingsProjection.ModelCard> models, GeneralSettingsProjection general, UiSettingsProjection ui, RecipeSettingsProjection recipes, SkillSettingsProjection skills, ExtensionSettingsProjection extensions, HistorySettingsProjection history, DiagnosticsSettingsProjection diagnostics, SettingsOperation operation, SettingsNotice notice) {
+
             sections = List.copyOf(sections);
             models = List.copyOf(models);
             Objects.requireNonNull(general, "general");
@@ -4510,16 +4559,124 @@ public final class OpenAllaySettingsScreen extends dev.openallay.client.gui.Guid
             Objects.requireNonNull(extensions, "extensions");
             Objects.requireNonNull(history, "history");
             Objects.requireNonNull(diagnostics, "diagnostics");
+
+        this.sections = sections;
+        this.models = models;
+        this.general = general;
+        this.ui = ui;
+        this.recipes = recipes;
+        this.skills = skills;
+        this.extensions = extensions;
+        this.history = history;
+        this.diagnostics = diagnostics;
+        this.operation = operation;
+        this.notice = notice;
+    }
+    public List<SettingsSection> sections() { return sections; }
+    public List<ModelSettingsProjection.ModelCard> models() { return models; }
+    public GeneralSettingsProjection general() { return general; }
+    public UiSettingsProjection ui() { return ui; }
+    public RecipeSettingsProjection recipes() { return recipes; }
+    public SkillSettingsProjection skills() { return skills; }
+    public ExtensionSettingsProjection extensions() { return extensions; }
+    public HistorySettingsProjection history() { return history; }
+    public DiagnosticsSettingsProjection diagnostics() { return diagnostics; }
+    public SettingsOperation operation() { return operation; }
+    public SettingsNotice notice() { return notice; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Projection)) return false;
+        Projection that = (Projection) other;
+        return java.util.Objects.equals(sections, that.sections) && java.util.Objects.equals(models, that.models) && java.util.Objects.equals(general, that.general) && java.util.Objects.equals(ui, that.ui) && java.util.Objects.equals(recipes, that.recipes) && java.util.Objects.equals(skills, that.skills) && java.util.Objects.equals(extensions, that.extensions) && java.util.Objects.equals(history, that.history) && java.util.Objects.equals(diagnostics, that.diagnostics) && java.util.Objects.equals(operation, that.operation) && java.util.Objects.equals(notice, that.notice);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sections);
+        hash = 31 * hash + java.util.Objects.hashCode(models);
+        hash = 31 * hash + java.util.Objects.hashCode(general);
+        hash = 31 * hash + java.util.Objects.hashCode(ui);
+        hash = 31 * hash + java.util.Objects.hashCode(recipes);
+        hash = 31 * hash + java.util.Objects.hashCode(skills);
+        hash = 31 * hash + java.util.Objects.hashCode(extensions);
+        hash = 31 * hash + java.util.Objects.hashCode(history);
+        hash = 31 * hash + java.util.Objects.hashCode(diagnostics);
+        hash = 31 * hash + java.util.Objects.hashCode(operation);
+        hash = 31 * hash + java.util.Objects.hashCode(notice);
+        return hash;
+    }
+    @Override public String toString() { return "Projection[sections=" + sections + ", models=" + models + ", general=" + general + ", ui=" + ui + ", recipes=" + recipes + ", skills=" + skills + ", extensions=" + extensions + ", history=" + history + ", diagnostics=" + diagnostics + ", operation=" + operation + ", notice=" + notice + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Projection> schema() {
+            return new dev.openallay.value.ValueSchema<>(Projection.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Projection>>asList(new dev.openallay.value.ValueSchema.Component<>(Projection.class, "sections", Projection::sections), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "models", Projection::models), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "general", Projection::general), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "ui", Projection::ui), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "recipes", Projection::recipes), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "skills", Projection::skills), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "extensions", Projection::extensions), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "history", Projection::history), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "diagnostics", Projection::diagnostics), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "operation", Projection::operation), new dev.openallay.value.ValueSchema.Component<>(Projection.class, "notice", Projection::notice)), arguments -> new Projection((List) arguments[0], (List) arguments[1], (GeneralSettingsProjection) arguments[2], (UiSettingsProjection) arguments[3], (RecipeSettingsProjection) arguments[4], (SkillSettingsProjection) arguments[5], (ExtensionSettingsProjection) arguments[6], (HistorySettingsProjection) arguments[7], (DiagnosticsSettingsProjection) arguments[8], (SettingsOperation) arguments[9], (SettingsNotice) arguments[10]));
         }
     }
+}
 
-    private record Action(String translationKey, Runnable action) {}
+    @dev.openallay.value.ValueType(Action.ValueSchemaProvider.class)
+private static final class Action {
+    private final String translationKey;
+    private final Runnable action;
+    private Action(String translationKey, Runnable action) {
+        this.translationKey = translationKey;
+        this.action = action;
+    }
+    public String translationKey() { return translationKey; }
+    public Runnable action() { return action; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Action)) return false;
+        Action that = (Action) other;
+        return java.util.Objects.equals(translationKey, that.translationKey) && java.util.Objects.equals(action, that.action);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(translationKey);
+        hash = 31 * hash + java.util.Objects.hashCode(action);
+        return hash;
+    }
+    @Override public String toString() { return "Action[translationKey=" + translationKey + ", action=" + action + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Action> schema() {
+            return new dev.openallay.value.ValueSchema<>(Action.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Action>>asList(new dev.openallay.value.ValueSchema.Component<>(Action.class, "translationKey", Action::translationKey), new dev.openallay.value.ValueSchema.Component<>(Action.class, "action", Action::action)), arguments -> new Action((String) arguments[0], (Runnable) arguments[1]));
+        }
+    }
+}
 
-    private record ContributionLine(String labelKey, List<String> values) {
-        private ContributionLine {
+    @dev.openallay.value.ValueType(ContributionLine.ValueSchemaProvider.class)
+private static final class ContributionLine {
+    private final String labelKey;
+    private final List<String> values;
+    private ContributionLine(String labelKey, List<String> values) {
+
             values = List.copyOf(values);
+
+        this.labelKey = labelKey;
+        this.values = values;
+    }
+    public String labelKey() { return labelKey; }
+    public List<String> values() { return values; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof ContributionLine)) return false;
+        ContributionLine that = (ContributionLine) other;
+        return java.util.Objects.equals(labelKey, that.labelKey) && java.util.Objects.equals(values, that.values);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(labelKey);
+        hash = 31 * hash + java.util.Objects.hashCode(values);
+        return hash;
+    }
+    @Override public String toString() { return "ContributionLine[labelKey=" + labelKey + ", values=" + values + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<ContributionLine> schema() {
+            return new dev.openallay.value.ValueSchema<>(ContributionLine.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<ContributionLine>>asList(new dev.openallay.value.ValueSchema.Component<>(ContributionLine.class, "labelKey", ContributionLine::labelKey), new dev.openallay.value.ValueSchema.Component<>(ContributionLine.class, "values", ContributionLine::values)), arguments -> new ContributionLine((String) arguments[0], (List) arguments[1]));
         }
     }
+}
 
     private enum SkillTab {
         INSTALLED,

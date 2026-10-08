@@ -180,7 +180,36 @@ public final class NativeServerActorHandoffs {
         if (failure instanceof Error fatal) throw fatal;
         if (failure instanceof RuntimeException runtime) throw runtime;
     }
-    private record Admission(ServerPlayer player, BooleanSupplier connection) {}
+    @dev.openallay.value.ValueType(Admission.ValueSchemaProvider.class)
+private static final class Admission {
+    private final ServerPlayer player;
+    private final BooleanSupplier connection;
+    private Admission(ServerPlayer player, BooleanSupplier connection) {
+        this.player = player;
+        this.connection = connection;
+    }
+    public ServerPlayer player() { return player; }
+    public BooleanSupplier connection() { return connection; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Admission)) return false;
+        Admission that = (Admission) other;
+        return java.util.Objects.equals(player, that.player) && java.util.Objects.equals(connection, that.connection);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(player);
+        hash = 31 * hash + java.util.Objects.hashCode(connection);
+        return hash;
+    }
+    @Override public String toString() { return "Admission[player=" + player + ", connection=" + connection + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Admission> schema() {
+            return new dev.openallay.value.ValueSchema<>(Admission.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Admission>>asList(new dev.openallay.value.ValueSchema.Component<>(Admission.class, "player", Admission::player), new dev.openallay.value.ValueSchema.Component<>(Admission.class, "connection", Admission::connection)), arguments -> new Admission((ServerPlayer) arguments[0], (BooleanSupplier) arguments[1]));
+        }
+    }
+}
     private enum State { PENDING, CLAIMED, RETIRED }
     private static final class Handoff {
         final UUID actor; final Admission token; final Runnable action; final Runnable retired;

@@ -192,5 +192,34 @@ public final class JavaSoundCapture implements dev.openallay.client.voice.AudioC
         }
     }
 
-    private record MixerDevice(String id, Mixer.Info info) {}
+    @dev.openallay.value.ValueType(MixerDevice.ValueSchemaProvider.class)
+private static final class MixerDevice {
+    private final String id;
+    private final Mixer.Info info;
+    private MixerDevice(String id, Mixer.Info info) {
+        this.id = id;
+        this.info = info;
+    }
+    public String id() { return id; }
+    public Mixer.Info info() { return info; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof MixerDevice)) return false;
+        MixerDevice that = (MixerDevice) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(info, that.info);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(info);
+        return hash;
+    }
+    @Override public String toString() { return "MixerDevice[id=" + id + ", info=" + info + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<MixerDevice> schema() {
+            return new dev.openallay.value.ValueSchema<>(MixerDevice.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<MixerDevice>>asList(new dev.openallay.value.ValueSchema.Component<>(MixerDevice.class, "id", MixerDevice::id), new dev.openallay.value.ValueSchema.Component<>(MixerDevice.class, "info", MixerDevice::info)), arguments -> new MixerDevice((String) arguments[0], (Mixer.Info) arguments[1]));
+        }
+    }
+}
 }

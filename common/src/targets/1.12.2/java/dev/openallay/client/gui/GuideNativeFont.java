@@ -22,12 +22,36 @@ public final class GuideNativeFont {
     }
 
     public static int lineHeight(FontRenderer font) { return font.FONT_HEIGHT; }
-    private record Line(String nativeLine) implements GuideTextLine {
-        private Line { Objects.requireNonNull(nativeLine, "nativeLine"); }
-        @Override public String plainText() {
+    @dev.openallay.value.ValueType(Line.ValueSchemaProvider.class)
+private static final class Line implements GuideTextLine {
+    private final String nativeLine;
+    private Line(String nativeLine) {
+ Objects.requireNonNull(nativeLine, "nativeLine");
+        this.nativeLine = nativeLine;
+    }
+    public String nativeLine() { return nativeLine; }
+@Override public String plainText() {
             return net.minecraft.util.text.TextFormatting.getTextWithoutFormattingCodes(nativeLine);
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Line)) return false;
+        Line that = (Line) other;
+        return java.util.Objects.equals(nativeLine, that.nativeLine);
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(nativeLine);
+        return hash;
+    }
+    @Override public String toString() { return "Line[nativeLine=" + nativeLine + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Line> schema() {
+            return new dev.openallay.value.ValueSchema<>(Line.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Line>>asList(new dev.openallay.value.ValueSchema.Component<>(Line.class, "nativeLine", Line::nativeLine)), arguments -> new Line((String) arguments[0]));
+        }
+    }
+}
     public static GuideTextLine line(String text) { return new Line(text); }
     public static GuideTextLine plain(String text) { return line(text); }
     public static int width(FontRenderer font, GuideTextLine line) { return font.getStringWidth(nativeLine(line)); }

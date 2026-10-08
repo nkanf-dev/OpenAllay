@@ -50,5 +50,42 @@ public final class GuideVoiceIndicator {
     private static List<GuideTextLine> wrap(Font font, String key, int width) {
         return key.isEmpty() ? List.of() : GuideNativeFont.split(font, MinecraftComponents.translatable(key), Math.max(1, width));
     }
-    private record CacheKey(VoiceStatusPresentation.Notice feedback, int width, Font font, Object language) {}
+    @dev.openallay.value.ValueType(CacheKey.ValueSchemaProvider.class)
+private static final class CacheKey {
+    private final VoiceStatusPresentation.Notice feedback;
+    private final int width;
+    private final Font font;
+    private final Object language;
+    private CacheKey(VoiceStatusPresentation.Notice feedback, int width, Font font, Object language) {
+        this.feedback = feedback;
+        this.width = width;
+        this.font = font;
+        this.language = language;
+    }
+    public VoiceStatusPresentation.Notice feedback() { return feedback; }
+    public int width() { return width; }
+    public Font font() { return font; }
+    public Object language() { return language; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof CacheKey)) return false;
+        CacheKey that = (CacheKey) other;
+        return java.util.Objects.equals(feedback, that.feedback) && width == that.width && java.util.Objects.equals(font, that.font) && java.util.Objects.equals(language, that.language);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(feedback);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + java.util.Objects.hashCode(font);
+        hash = 31 * hash + java.util.Objects.hashCode(language);
+        return hash;
+    }
+    @Override public String toString() { return "CacheKey[feedback=" + feedback + ", width=" + width + ", font=" + font + ", language=" + language + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<CacheKey> schema() {
+            return new dev.openallay.value.ValueSchema<>(CacheKey.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<CacheKey>>asList(new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "feedback", CacheKey::feedback), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "width", CacheKey::width), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "font", CacheKey::font), new dev.openallay.value.ValueSchema.Component<>(CacheKey.class, "language", CacheKey::language)), arguments -> new CacheKey((VoiceStatusPresentation.Notice) arguments[0], (Integer) arguments[1], (Font) arguments[2], (Object) arguments[3]));
+        }
+    }
+}
 }

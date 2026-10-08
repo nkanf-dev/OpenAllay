@@ -36,34 +36,273 @@ import dev.openallay.client.gui.GuideNativeFont;
 /** Shared native result viewport for passive HUD pages and explicit compact interaction. */
 public final class GuideHudResultRenderer implements AutoCloseable {
     public sealed interface Action permits Action.Tool, Action.Semantic, Action.Sources {
-        record Tool(String rowId) implements Action {}
-        record Semantic(MinecraftSemanticRenderer.Intent intent) implements Action {}
-        record Sources(List<GuideSource> sources) implements Action {
-            public Sources { sources = List.copyOf(sources); }
+        @dev.openallay.value.ValueType(Tool.ValueSchemaProvider.class)
+public static final class Tool implements Action {
+    private final String rowId;
+    public Tool(String rowId) {
+        this.rowId = rowId;
+    }
+    public String rowId() { return rowId; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Tool)) return false;
+        Tool that = (Tool) other;
+        return java.util.Objects.equals(rowId, that.rowId);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(rowId);
+        return hash;
+    }
+    @Override public String toString() { return "Tool[rowId=" + rowId + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Tool> schema() {
+            return new dev.openallay.value.ValueSchema<>(Tool.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Tool>>asList(new dev.openallay.value.ValueSchema.Component<>(Tool.class, "rowId", Tool::rowId)), arguments -> new Tool((String) arguments[0]));
         }
     }
-    public record Hit(GuideUiLayout.Rect bounds, Action action, String narration) {}
+}
+        @dev.openallay.value.ValueType(Semantic.ValueSchemaProvider.class)
+public static final class Semantic implements Action {
+    private final MinecraftSemanticRenderer.Intent intent;
+    public Semantic(MinecraftSemanticRenderer.Intent intent) {
+        this.intent = intent;
+    }
+    public MinecraftSemanticRenderer.Intent intent() { return intent; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Semantic)) return false;
+        Semantic that = (Semantic) other;
+        return java.util.Objects.equals(intent, that.intent);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(intent);
+        return hash;
+    }
+    @Override public String toString() { return "Semantic[intent=" + intent + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Semantic> schema() {
+            return new dev.openallay.value.ValueSchema<>(Semantic.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Semantic>>asList(new dev.openallay.value.ValueSchema.Component<>(Semantic.class, "intent", Semantic::intent)), arguments -> new Semantic((MinecraftSemanticRenderer.Intent) arguments[0]));
+        }
+    }
+}
+        @dev.openallay.value.ValueType(Sources.ValueSchemaProvider.class)
+public static final class Sources implements Action {
+    private final List<GuideSource> sources;
+    public Sources(List<GuideSource> sources) {
+ sources = List.copyOf(sources);
+        this.sources = sources;
+    }
+    public List<GuideSource> sources() { return sources; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Sources)) return false;
+        Sources that = (Sources) other;
+        return java.util.Objects.equals(sources, that.sources);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        return hash;
+    }
+    @Override public String toString() { return "Sources[sources=" + sources + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Sources> schema() {
+            return new dev.openallay.value.ValueSchema<>(Sources.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Sources>>asList(new dev.openallay.value.ValueSchema.Component<>(Sources.class, "sources", Sources::sources)), arguments -> new Sources((List) arguments[0]));
+        }
+    }
+}
+    }
+    @dev.openallay.value.ValueType(Hit.ValueSchemaProvider.class)
+public static final class Hit {
+    private final GuideUiLayout.Rect bounds;
+    private final Action action;
+    private final String narration;
+    public Hit(GuideUiLayout.Rect bounds, Action action, String narration) {
+        this.bounds = bounds;
+        this.action = action;
+        this.narration = narration;
+    }
+    public GuideUiLayout.Rect bounds() { return bounds; }
+    public Action action() { return action; }
+    public String narration() { return narration; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Hit)) return false;
+        Hit that = (Hit) other;
+        return java.util.Objects.equals(bounds, that.bounds) && java.util.Objects.equals(action, that.action) && java.util.Objects.equals(narration, that.narration);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(bounds);
+        hash = 31 * hash + java.util.Objects.hashCode(action);
+        hash = 31 * hash + java.util.Objects.hashCode(narration);
+        return hash;
+    }
+    @Override public String toString() { return "Hit[bounds=" + bounds + ", action=" + action + ", narration=" + narration + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Hit> schema() {
+            return new dev.openallay.value.ValueSchema<>(Hit.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Hit>>asList(new dev.openallay.value.ValueSchema.Component<>(Hit.class, "bounds", Hit::bounds), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "action", Hit::action), new dev.openallay.value.ValueSchema.Component<>(Hit.class, "narration", Hit::narration)), arguments -> new Hit((GuideUiLayout.Rect) arguments[0], (Action) arguments[1], (String) arguments[2]));
+        }
+    }
+}
     /** Last extracted frame only. Read-only probes do not cause game or service operations. */
-    public record Receipt(long extractedFrame, List<String> renderedRowIds, int assistantRows, int toolRows,
-            int toolCards, int semanticNodes, int nativeItemNodes, int recipeNodes, int contentHeight, int viewportHeight,
-            int scroll, int maximumScroll, int cacheEntries, int nativeViews,
-            List<String> renderedNodeIds, String lastRenderedText) {
-        public Receipt {
+    @dev.openallay.value.ValueType(Receipt.ValueSchemaProvider.class)
+public static final class Receipt {
+    private final long extractedFrame;
+    private final List<String> renderedRowIds;
+    private final int assistantRows;
+    private final int toolRows;
+    private final int toolCards;
+    private final int semanticNodes;
+    private final int nativeItemNodes;
+    private final int recipeNodes;
+    private final int contentHeight;
+    private final int viewportHeight;
+    private final int scroll;
+    private final int maximumScroll;
+    private final int cacheEntries;
+    private final int nativeViews;
+    private final List<String> renderedNodeIds;
+    private final String lastRenderedText;
+    public Receipt(long extractedFrame, List<String> renderedRowIds, int assistantRows, int toolRows, int toolCards, int semanticNodes, int nativeItemNodes, int recipeNodes, int contentHeight, int viewportHeight, int scroll, int maximumScroll, int cacheEntries, int nativeViews, List<String> renderedNodeIds, String lastRenderedText) {
+
             renderedRowIds = List.copyOf(renderedRowIds);
             renderedNodeIds = List.copyOf(renderedNodeIds);
             java.util.Objects.requireNonNull(lastRenderedText, "lastRenderedText");
-        }
-        public Receipt(long extractedFrame, List<String> renderedRowIds, int assistantRows, int toolRows,
+
+        this.extractedFrame = extractedFrame;
+        this.renderedRowIds = renderedRowIds;
+        this.assistantRows = assistantRows;
+        this.toolRows = toolRows;
+        this.toolCards = toolCards;
+        this.semanticNodes = semanticNodes;
+        this.nativeItemNodes = nativeItemNodes;
+        this.recipeNodes = recipeNodes;
+        this.contentHeight = contentHeight;
+        this.viewportHeight = viewportHeight;
+        this.scroll = scroll;
+        this.maximumScroll = maximumScroll;
+        this.cacheEntries = cacheEntries;
+        this.nativeViews = nativeViews;
+        this.renderedNodeIds = renderedNodeIds;
+        this.lastRenderedText = lastRenderedText;
+    }
+    public long extractedFrame() { return extractedFrame; }
+    public List<String> renderedRowIds() { return renderedRowIds; }
+    public int assistantRows() { return assistantRows; }
+    public int toolRows() { return toolRows; }
+    public int toolCards() { return toolCards; }
+    public int semanticNodes() { return semanticNodes; }
+    public int nativeItemNodes() { return nativeItemNodes; }
+    public int recipeNodes() { return recipeNodes; }
+    public int contentHeight() { return contentHeight; }
+    public int viewportHeight() { return viewportHeight; }
+    public int scroll() { return scroll; }
+    public int maximumScroll() { return maximumScroll; }
+    public int cacheEntries() { return cacheEntries; }
+    public int nativeViews() { return nativeViews; }
+    public List<String> renderedNodeIds() { return renderedNodeIds; }
+    public String lastRenderedText() { return lastRenderedText; }
+public Receipt(long extractedFrame, List<String> renderedRowIds, int assistantRows, int toolRows,
                 int toolCards, int semanticNodes, int nativeItemNodes, int recipeNodes, int contentHeight, int viewportHeight,
                 int scroll, int maximumScroll, int cacheEntries, int nativeViews) {
             this(extractedFrame, renderedRowIds, assistantRows, toolRows, toolCards, semanticNodes,
                     nativeItemNodes, recipeNodes, contentHeight, viewportHeight, scroll, maximumScroll,
                     cacheEntries, nativeViews, List.of(), "");
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Receipt)) return false;
+        Receipt that = (Receipt) other;
+        return extractedFrame == that.extractedFrame && java.util.Objects.equals(renderedRowIds, that.renderedRowIds) && assistantRows == that.assistantRows && toolRows == that.toolRows && toolCards == that.toolCards && semanticNodes == that.semanticNodes && nativeItemNodes == that.nativeItemNodes && recipeNodes == that.recipeNodes && contentHeight == that.contentHeight && viewportHeight == that.viewportHeight && scroll == that.scroll && maximumScroll == that.maximumScroll && cacheEntries == that.cacheEntries && nativeViews == that.nativeViews && java.util.Objects.equals(renderedNodeIds, that.renderedNodeIds) && java.util.Objects.equals(lastRenderedText, that.lastRenderedText);
     }
-    private record Row(String id, GuideUiRow source, String narration, List<GuideTextLine> header,
-            SemanticLayout layout, Map<String, GuideRecipeCard> recipes,
-            List<GuideTextLine> sources, int height) {}
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(extractedFrame);
+        hash = 31 * hash + java.util.Objects.hashCode(renderedRowIds);
+        hash = 31 * hash + Integer.hashCode(assistantRows);
+        hash = 31 * hash + Integer.hashCode(toolRows);
+        hash = 31 * hash + Integer.hashCode(toolCards);
+        hash = 31 * hash + Integer.hashCode(semanticNodes);
+        hash = 31 * hash + Integer.hashCode(nativeItemNodes);
+        hash = 31 * hash + Integer.hashCode(recipeNodes);
+        hash = 31 * hash + Integer.hashCode(contentHeight);
+        hash = 31 * hash + Integer.hashCode(viewportHeight);
+        hash = 31 * hash + Integer.hashCode(scroll);
+        hash = 31 * hash + Integer.hashCode(maximumScroll);
+        hash = 31 * hash + Integer.hashCode(cacheEntries);
+        hash = 31 * hash + Integer.hashCode(nativeViews);
+        hash = 31 * hash + java.util.Objects.hashCode(renderedNodeIds);
+        hash = 31 * hash + java.util.Objects.hashCode(lastRenderedText);
+        return hash;
+    }
+    @Override public String toString() { return "Receipt[extractedFrame=" + extractedFrame + ", renderedRowIds=" + renderedRowIds + ", assistantRows=" + assistantRows + ", toolRows=" + toolRows + ", toolCards=" + toolCards + ", semanticNodes=" + semanticNodes + ", nativeItemNodes=" + nativeItemNodes + ", recipeNodes=" + recipeNodes + ", contentHeight=" + contentHeight + ", viewportHeight=" + viewportHeight + ", scroll=" + scroll + ", maximumScroll=" + maximumScroll + ", cacheEntries=" + cacheEntries + ", nativeViews=" + nativeViews + ", renderedNodeIds=" + renderedNodeIds + ", lastRenderedText=" + lastRenderedText + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Receipt> schema() {
+            return new dev.openallay.value.ValueSchema<>(Receipt.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Receipt>>asList(new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "extractedFrame", Receipt::extractedFrame), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "renderedRowIds", Receipt::renderedRowIds), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "assistantRows", Receipt::assistantRows), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "toolRows", Receipt::toolRows), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "toolCards", Receipt::toolCards), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "semanticNodes", Receipt::semanticNodes), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "nativeItemNodes", Receipt::nativeItemNodes), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "recipeNodes", Receipt::recipeNodes), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "contentHeight", Receipt::contentHeight), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "viewportHeight", Receipt::viewportHeight), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "scroll", Receipt::scroll), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "maximumScroll", Receipt::maximumScroll), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "cacheEntries", Receipt::cacheEntries), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "nativeViews", Receipt::nativeViews), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "renderedNodeIds", Receipt::renderedNodeIds), new dev.openallay.value.ValueSchema.Component<>(Receipt.class, "lastRenderedText", Receipt::lastRenderedText)), arguments -> new Receipt((Long) arguments[0], (List) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Integer) arguments[5], (Integer) arguments[6], (Integer) arguments[7], (Integer) arguments[8], (Integer) arguments[9], (Integer) arguments[10], (Integer) arguments[11], (Integer) arguments[12], (Integer) arguments[13], (List) arguments[14], (String) arguments[15]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Row.ValueSchemaProvider.class)
+private static final class Row {
+    private final String id;
+    private final GuideUiRow source;
+    private final String narration;
+    private final List<GuideTextLine> header;
+    private final SemanticLayout layout;
+    private final Map<String, GuideRecipeCard> recipes;
+    private final List<GuideTextLine> sources;
+    private final int height;
+    private Row(String id, GuideUiRow source, String narration, List<GuideTextLine> header, SemanticLayout layout, Map<String, GuideRecipeCard> recipes, List<GuideTextLine> sources, int height) {
+        this.id = id;
+        this.source = source;
+        this.narration = narration;
+        this.header = header;
+        this.layout = layout;
+        this.recipes = recipes;
+        this.sources = sources;
+        this.height = height;
+    }
+    public String id() { return id; }
+    public GuideUiRow source() { return source; }
+    public String narration() { return narration; }
+    public List<GuideTextLine> header() { return header; }
+    public SemanticLayout layout() { return layout; }
+    public Map<String, GuideRecipeCard> recipes() { return recipes; }
+    public List<GuideTextLine> sources() { return sources; }
+    public int height() { return height; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Row)) return false;
+        Row that = (Row) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(source, that.source) && java.util.Objects.equals(narration, that.narration) && java.util.Objects.equals(header, that.header) && java.util.Objects.equals(layout, that.layout) && java.util.Objects.equals(recipes, that.recipes) && java.util.Objects.equals(sources, that.sources) && height == that.height;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(source);
+        hash = 31 * hash + java.util.Objects.hashCode(narration);
+        hash = 31 * hash + java.util.Objects.hashCode(header);
+        hash = 31 * hash + java.util.Objects.hashCode(layout);
+        hash = 31 * hash + java.util.Objects.hashCode(recipes);
+        hash = 31 * hash + java.util.Objects.hashCode(sources);
+        hash = 31 * hash + Integer.hashCode(height);
+        return hash;
+    }
+    @Override public String toString() { return "Row[id=" + id + ", source=" + source + ", narration=" + narration + ", header=" + header + ", layout=" + layout + ", recipes=" + recipes + ", sources=" + sources + ", height=" + height + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Row> schema() {
+            return new dev.openallay.value.ValueSchema<>(Row.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Row>>asList(new dev.openallay.value.ValueSchema.Component<>(Row.class, "id", Row::id), new dev.openallay.value.ValueSchema.Component<>(Row.class, "source", Row::source), new dev.openallay.value.ValueSchema.Component<>(Row.class, "narration", Row::narration), new dev.openallay.value.ValueSchema.Component<>(Row.class, "header", Row::header), new dev.openallay.value.ValueSchema.Component<>(Row.class, "layout", Row::layout), new dev.openallay.value.ValueSchema.Component<>(Row.class, "recipes", Row::recipes), new dev.openallay.value.ValueSchema.Component<>(Row.class, "sources", Row::sources), new dev.openallay.value.ValueSchema.Component<>(Row.class, "height", Row::height)), arguments -> new Row((String) arguments[0], (GuideUiRow) arguments[1], (String) arguments[2], (List) arguments[3], (SemanticLayout) arguments[4], (Map) arguments[5], (List) arguments[6], (Integer) arguments[7]));
+        }
+    }
+}
     private final MinecraftSemanticRenderer semantic = new MinecraftSemanticRenderer(new MinecraftSemanticResolver());
     private final SemanticLayoutCache layouts = new SemanticLayoutCache();
     private final GuideHudScrollState scroll = new GuideHudScrollState();
@@ -72,13 +311,53 @@ public final class GuideHudResultRenderer implements AutoCloseable {
     private long hitEpoch;
     private PaintedHits paintedHits;
     /** Identity and geometry of the actual interactive extraction, not a synthetic fresh frame. */
-    record PaintedHits(long epoch, Object font, Object language, GuideUiLayout.Rect viewport, int offset) {
-        boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
+    @dev.openallay.value.ValueType(PaintedHits.ValueSchemaProvider.class)
+static final class PaintedHits {
+    private final long epoch;
+    private final Object font;
+    private final Object language;
+    private final GuideUiLayout.Rect viewport;
+    private final int offset;
+    PaintedHits(long epoch, Object font, Object language, GuideUiLayout.Rect viewport, int offset) {
+        this.epoch = epoch;
+        this.font = font;
+        this.language = language;
+        this.viewport = viewport;
+        this.offset = offset;
+    }
+    public long epoch() { return epoch; }
+    public Object font() { return font; }
+    public Object language() { return language; }
+    public GuideUiLayout.Rect viewport() { return viewport; }
+    public int offset() { return offset; }
+boolean current(long currentEpoch, Object currentFont, Object currentLanguage,
                 GuideUiLayout.Rect currentViewport, int currentOffset) {
             return epoch == currentEpoch && font == currentFont && language == currentLanguage
                     && viewport.equals(currentViewport) && offset == currentOffset;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PaintedHits)) return false;
+        PaintedHits that = (PaintedHits) other;
+        return epoch == that.epoch && java.util.Objects.equals(font, that.font) && java.util.Objects.equals(language, that.language) && java.util.Objects.equals(viewport, that.viewport) && offset == that.offset;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Long.hashCode(epoch);
+        hash = 31 * hash + java.util.Objects.hashCode(font);
+        hash = 31 * hash + java.util.Objects.hashCode(language);
+        hash = 31 * hash + java.util.Objects.hashCode(viewport);
+        hash = 31 * hash + Integer.hashCode(offset);
+        return hash;
+    }
+    @Override public String toString() { return "PaintedHits[epoch=" + epoch + ", font=" + font + ", language=" + language + ", viewport=" + viewport + ", offset=" + offset + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<PaintedHits> schema() {
+            return new dev.openallay.value.ValueSchema<>(PaintedHits.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<PaintedHits>>asList(new dev.openallay.value.ValueSchema.Component<>(PaintedHits.class, "epoch", PaintedHits::epoch), new dev.openallay.value.ValueSchema.Component<>(PaintedHits.class, "font", PaintedHits::font), new dev.openallay.value.ValueSchema.Component<>(PaintedHits.class, "language", PaintedHits::language), new dev.openallay.value.ValueSchema.Component<>(PaintedHits.class, "viewport", PaintedHits::viewport), new dev.openallay.value.ValueSchema.Component<>(PaintedHits.class, "offset", PaintedHits::offset)), arguments -> new PaintedHits((Long) arguments[0], (Object) arguments[1], (Object) arguments[2], (GuideUiLayout.Rect) arguments[3], (Integer) arguments[4]));
+        }
+    }
+}
     private List<Row> rows = List.of();
     private List<GuideUiRow> sourceRows;
     private Font cachedFont;

@@ -238,7 +238,66 @@ public final class MinecraftClientViewCapture implements AutoCloseable {
         }
     }
 
-    private record Frame(String id, Instant capturedAt, WorldViewRequest.Target target, int width, int height,
-            int guiScale, WorldFocusObservation.Camera camera, WorldFocusObservation.Screen screen,
-            boolean hud, boolean gameUi) {}
+    @dev.openallay.value.ValueType(Frame.ValueSchemaProvider.class)
+private static final class Frame {
+    private final String id;
+    private final Instant capturedAt;
+    private final WorldViewRequest.Target target;
+    private final int width;
+    private final int height;
+    private final int guiScale;
+    private final WorldFocusObservation.Camera camera;
+    private final WorldFocusObservation.Screen screen;
+    private final boolean hud;
+    private final boolean gameUi;
+    private Frame(String id, Instant capturedAt, WorldViewRequest.Target target, int width, int height, int guiScale, WorldFocusObservation.Camera camera, WorldFocusObservation.Screen screen, boolean hud, boolean gameUi) {
+        this.id = id;
+        this.capturedAt = capturedAt;
+        this.target = target;
+        this.width = width;
+        this.height = height;
+        this.guiScale = guiScale;
+        this.camera = camera;
+        this.screen = screen;
+        this.hud = hud;
+        this.gameUi = gameUi;
+    }
+    public String id() { return id; }
+    public Instant capturedAt() { return capturedAt; }
+    public WorldViewRequest.Target target() { return target; }
+    public int width() { return width; }
+    public int height() { return height; }
+    public int guiScale() { return guiScale; }
+    public WorldFocusObservation.Camera camera() { return camera; }
+    public WorldFocusObservation.Screen screen() { return screen; }
+    public boolean hud() { return hud; }
+    public boolean gameUi() { return gameUi; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Frame)) return false;
+        Frame that = (Frame) other;
+        return java.util.Objects.equals(id, that.id) && java.util.Objects.equals(capturedAt, that.capturedAt) && java.util.Objects.equals(target, that.target) && width == that.width && height == that.height && guiScale == that.guiScale && java.util.Objects.equals(camera, that.camera) && java.util.Objects.equals(screen, that.screen) && hud == that.hud && gameUi == that.gameUi;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(id);
+        hash = 31 * hash + java.util.Objects.hashCode(capturedAt);
+        hash = 31 * hash + java.util.Objects.hashCode(target);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(height);
+        hash = 31 * hash + Integer.hashCode(guiScale);
+        hash = 31 * hash + java.util.Objects.hashCode(camera);
+        hash = 31 * hash + java.util.Objects.hashCode(screen);
+        hash = 31 * hash + Boolean.hashCode(hud);
+        hash = 31 * hash + Boolean.hashCode(gameUi);
+        return hash;
+    }
+    @Override public String toString() { return "Frame[id=" + id + ", capturedAt=" + capturedAt + ", target=" + target + ", width=" + width + ", height=" + height + ", guiScale=" + guiScale + ", camera=" + camera + ", screen=" + screen + ", hud=" + hud + ", gameUi=" + gameUi + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Frame> schema() {
+            return new dev.openallay.value.ValueSchema<>(Frame.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Frame>>asList(new dev.openallay.value.ValueSchema.Component<>(Frame.class, "id", Frame::id), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "capturedAt", Frame::capturedAt), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "target", Frame::target), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "width", Frame::width), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "height", Frame::height), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "guiScale", Frame::guiScale), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "camera", Frame::camera), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "screen", Frame::screen), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "hud", Frame::hud), new dev.openallay.value.ValueSchema.Component<>(Frame.class, "gameUi", Frame::gameUi)), arguments -> new Frame((String) arguments[0], (Instant) arguments[1], (WorldViewRequest.Target) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Integer) arguments[5], (WorldFocusObservation.Camera) arguments[6], (WorldFocusObservation.Screen) arguments[7], (Boolean) arguments[8], (Boolean) arguments[9]));
+        }
+    }
+}
 }

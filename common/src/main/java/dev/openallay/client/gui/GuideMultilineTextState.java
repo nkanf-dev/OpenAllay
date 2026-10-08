@@ -9,8 +9,70 @@ import java.util.function.ToIntFunction;
 
 /** Product text primitive for native families without a multiline widget. No screen decisions. */
 public final class GuideMultilineTextState {
-    public record Line(int start, int end) {}
-    private record Snapshot(String value, int cursor, int anchor) {}
+    @dev.openallay.value.ValueType(Line.ValueSchemaProvider.class)
+public static final class Line {
+    private final int start;
+    private final int end;
+    public Line(int start, int end) {
+        this.start = start;
+        this.end = end;
+    }
+    public int start() { return start; }
+    public int end() { return end; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Line)) return false;
+        Line that = (Line) other;
+        return start == that.start && end == that.end;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(start);
+        hash = 31 * hash + Integer.hashCode(end);
+        return hash;
+    }
+    @Override public String toString() { return "Line[start=" + start + ", end=" + end + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Line> schema() {
+            return new dev.openallay.value.ValueSchema<>(Line.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Line>>asList(new dev.openallay.value.ValueSchema.Component<>(Line.class, "start", Line::start), new dev.openallay.value.ValueSchema.Component<>(Line.class, "end", Line::end)), arguments -> new Line((Integer) arguments[0], (Integer) arguments[1]));
+        }
+    }
+}
+    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
+private static final class Snapshot {
+    private final String value;
+    private final int cursor;
+    private final int anchor;
+    private Snapshot(String value, int cursor, int anchor) {
+        this.value = value;
+        this.cursor = cursor;
+        this.anchor = anchor;
+    }
+    public String value() { return value; }
+    public int cursor() { return cursor; }
+    public int anchor() { return anchor; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Snapshot)) return false;
+        Snapshot that = (Snapshot) other;
+        return java.util.Objects.equals(value, that.value) && cursor == that.cursor && anchor == that.anchor;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(value);
+        hash = 31 * hash + Integer.hashCode(cursor);
+        hash = 31 * hash + Integer.hashCode(anchor);
+        return hash;
+    }
+    @Override public String toString() { return "Snapshot[value=" + value + ", cursor=" + cursor + ", anchor=" + anchor + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
+            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "value", Snapshot::value), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "cursor", Snapshot::cursor), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "anchor", Snapshot::anchor)), arguments -> new Snapshot((String) arguments[0], (Integer) arguments[1], (Integer) arguments[2]));
+        }
+    }
+}
     private String value = "";
     private int cursor;
     private int anchor;

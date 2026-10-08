@@ -13,7 +13,48 @@ import org.lwjgl.opengl.GL11;
 /** Typed LWJGL 2 immediate primitives; no screen, layout or provider algorithm lives here. */
 public final class GuideImmediateGraphicsPrimitives {
     private GuideImmediateGraphicsPrimitives() {}
-    private record SavedClip(boolean enabled, int x, int y, int width, int height) {}
+    @dev.openallay.value.ValueType(SavedClip.ValueSchemaProvider.class)
+private static final class SavedClip {
+    private final boolean enabled;
+    private final int x;
+    private final int y;
+    private final int width;
+    private final int height;
+    private SavedClip(boolean enabled, int x, int y, int width, int height) {
+        this.enabled = enabled;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+    public boolean enabled() { return enabled; }
+    public int x() { return x; }
+    public int y() { return y; }
+    public int width() { return width; }
+    public int height() { return height; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SavedClip)) return false;
+        SavedClip that = (SavedClip) other;
+        return enabled == that.enabled && x == that.x && y == that.y && width == that.width && height == that.height;
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Boolean.hashCode(enabled);
+        hash = 31 * hash + Integer.hashCode(x);
+        hash = 31 * hash + Integer.hashCode(y);
+        hash = 31 * hash + Integer.hashCode(width);
+        hash = 31 * hash + Integer.hashCode(height);
+        return hash;
+    }
+    @Override public String toString() { return "SavedClip[enabled=" + enabled + ", x=" + x + ", y=" + y + ", width=" + width + ", height=" + height + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<SavedClip> schema() {
+            return new dev.openallay.value.ValueSchema<>(SavedClip.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<SavedClip>>asList(new dev.openallay.value.ValueSchema.Component<>(SavedClip.class, "enabled", SavedClip::enabled), new dev.openallay.value.ValueSchema.Component<>(SavedClip.class, "x", SavedClip::x), new dev.openallay.value.ValueSchema.Component<>(SavedClip.class, "y", SavedClip::y), new dev.openallay.value.ValueSchema.Component<>(SavedClip.class, "width", SavedClip::width), new dev.openallay.value.ValueSchema.Component<>(SavedClip.class, "height", SavedClip::height)), arguments -> new SavedClip((Boolean) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (Integer) arguments[4]));
+        }
+    }
+}
     private static final ThreadLocal<java.util.ArrayDeque<SavedClip>> CLIPS = ThreadLocal.withInitial(java.util.ArrayDeque::new);
     public static int guiWidth() { return new ScaledResolution(Minecraft.getMinecraft()).getScaledWidth(); }
     public static int guiHeight() { return new ScaledResolution(Minecraft.getMinecraft()).getScaledHeight(); }

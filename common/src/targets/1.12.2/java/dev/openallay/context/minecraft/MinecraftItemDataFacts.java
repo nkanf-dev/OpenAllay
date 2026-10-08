@@ -14,9 +14,37 @@ import net.minecraftforge.oredict.OreDictionary;
 
 /** Actual pre-flattening metadata, native SNBT and ore dictionary facts. No component aliases. */
 public final class MinecraftItemDataFacts {
-    public record Defaults(Set<String> componentIds, Map<String, JsonElement> properties) {
-        public Defaults { componentIds = Set.copyOf(componentIds); properties = Map.copyOf(properties); }
+    @dev.openallay.value.ValueType(Defaults.ValueSchemaProvider.class)
+public static final class Defaults {
+    private final Set<String> componentIds;
+    private final Map<String, JsonElement> properties;
+    public Defaults(Set<String> componentIds, Map<String, JsonElement> properties) {
+ componentIds = Set.copyOf(componentIds); properties = Map.copyOf(properties);
+        this.componentIds = componentIds;
+        this.properties = properties;
     }
+    public Set<String> componentIds() { return componentIds; }
+    public Map<String, JsonElement> properties() { return properties; }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Defaults)) return false;
+        Defaults that = (Defaults) other;
+        return java.util.Objects.equals(componentIds, that.componentIds) && java.util.Objects.equals(properties, that.properties);
+    }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(componentIds);
+        hash = 31 * hash + java.util.Objects.hashCode(properties);
+        return hash;
+    }
+    @Override public String toString() { return "Defaults[componentIds=" + componentIds + ", properties=" + properties + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Defaults> schema() {
+            return new dev.openallay.value.ValueSchema<>(Defaults.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Defaults>>asList(new dev.openallay.value.ValueSchema.Component<>(Defaults.class, "componentIds", Defaults::componentIds), new dev.openallay.value.ValueSchema.Component<>(Defaults.class, "properties", Defaults::properties)), arguments -> new Defaults((Set) arguments[0], (Map) arguments[1]));
+        }
+    }
+}
     private MinecraftItemDataFacts() {}
     public static Defaults defaults(Item item) {
         JsonObject facts = new JsonObject();

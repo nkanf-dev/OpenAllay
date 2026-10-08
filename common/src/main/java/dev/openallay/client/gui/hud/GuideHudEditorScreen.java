@@ -368,10 +368,30 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
     }
 
     /** Fixed footer and bounded form rows. Short viewports retain every control through scrolling. */
-    record Form(int bodyTop, int bodyBottom, int footerY, int footerHeight, int rowHeight, int rowStep) {
-        private static final int ROWS = 6;
-
-        static Form calculate(int panelY, int panelHeight) {
+    @dev.openallay.value.ValueType(Form.ValueSchemaProvider.class)
+static final class Form {
+    private final int bodyTop;
+    private final int bodyBottom;
+    private final int footerY;
+    private final int footerHeight;
+    private final int rowHeight;
+    private final int rowStep;
+    Form(int bodyTop, int bodyBottom, int footerY, int footerHeight, int rowHeight, int rowStep) {
+        this.bodyTop = bodyTop;
+        this.bodyBottom = bodyBottom;
+        this.footerY = footerY;
+        this.footerHeight = footerHeight;
+        this.rowHeight = rowHeight;
+        this.rowStep = rowStep;
+    }
+    public int bodyTop() { return bodyTop; }
+    public int bodyBottom() { return bodyBottom; }
+    public int footerY() { return footerY; }
+    public int footerHeight() { return footerHeight; }
+    public int rowHeight() { return rowHeight; }
+    public int rowStep() { return rowStep; }
+private static final int ROWS = 6;
+static Form calculate(int panelY, int panelHeight) {
             int footerHeight = Math.min(18, Math.max(0, panelHeight - 6));
             int footerY = panelY + Math.max(0, panelHeight - footerHeight - 4);
             int bodyBottom = Math.max(panelY, footerY - 4);
@@ -381,20 +401,40 @@ public final class GuideHudEditorScreen extends dev.openallay.client.gui.GuideNa
             int rowHeight = bodyHeight >= 106 && bodyHeight < 118 ? 16 : 18;
             return new Form(bodyTop, bodyBottom, footerY, footerHeight, rowHeight, rowHeight + 2);
         }
-
-        int maximumScroll() {
+int maximumScroll() {
             return Math.max(0, (ROWS - 1) * rowStep + rowHeight - (bodyBottom - bodyTop));
         }
-
-        int rowY(int row, int scroll) {
+int rowY(int row, int scroll) {
             return bodyTop + row * rowStep - scroll;
         }
-
-        boolean rowVisible(int row, int scroll) {
+boolean rowVisible(int row, int scroll) {
             int y = rowY(row, scroll);
             return y >= bodyTop && y + rowHeight <= bodyBottom;
         }
+    @Override public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Form)) return false;
+        Form that = (Form) other;
+        return bodyTop == that.bodyTop && bodyBottom == that.bodyBottom && footerY == that.footerY && footerHeight == that.footerHeight && rowHeight == that.rowHeight && rowStep == that.rowStep;
     }
+    @Override public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(bodyTop);
+        hash = 31 * hash + Integer.hashCode(bodyBottom);
+        hash = 31 * hash + Integer.hashCode(footerY);
+        hash = 31 * hash + Integer.hashCode(footerHeight);
+        hash = 31 * hash + Integer.hashCode(rowHeight);
+        hash = 31 * hash + Integer.hashCode(rowStep);
+        return hash;
+    }
+    @Override public String toString() { return "Form[bodyTop=" + bodyTop + ", bodyBottom=" + bodyBottom + ", footerY=" + footerY + ", footerHeight=" + footerHeight + ", rowHeight=" + rowHeight + ", rowStep=" + rowStep + "]"; }
+    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
+        public ValueSchemaProvider() {}
+        @Override public dev.openallay.value.ValueSchema<Form> schema() {
+            return new dev.openallay.value.ValueSchema<>(Form.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Form>>asList(new dev.openallay.value.ValueSchema.Component<>(Form.class, "bodyTop", Form::bodyTop), new dev.openallay.value.ValueSchema.Component<>(Form.class, "bodyBottom", Form::bodyBottom), new dev.openallay.value.ValueSchema.Component<>(Form.class, "footerY", Form::footerY), new dev.openallay.value.ValueSchema.Component<>(Form.class, "footerHeight", Form::footerHeight), new dev.openallay.value.ValueSchema.Component<>(Form.class, "rowHeight", Form::rowHeight), new dev.openallay.value.ValueSchema.Component<>(Form.class, "rowStep", Form::rowStep)), arguments -> new Form((Integer) arguments[0], (Integer) arguments[1], (Integer) arguments[2], (Integer) arguments[3], (Integer) arguments[4], (Integer) arguments[5]));
+        }
+    }
+}
 
     /** Pure transaction used by native callbacks. It cannot write settings or apply more than once. */
     static final class Draft {
