@@ -39,7 +39,7 @@ class SqliteCrossFamilyTest(unittest.TestCase):
   with self.assertRaises(ValueError):m.sqlite_cross_family_payload(extra,{'packagingRecipe':'forge-flat'})
  def test_original_receipt_hash_check_not_rewritten(self):
   text=(ROOT/'scripts/build-minecraft-artifacts.py').read_text()
-  self.assertIn('require(sqlite == receipt["sqlite"]',text)
+  self.assertIn('require(sqlite == comparison_receipt["sqlite"]',text)
   self.assertIn('"SQLite bytes changed after package checks"',text)
   self.assertIn('"73a3c5413e82e8d3ffceea4b78690e9539b8e64d82764696dff52b8efbd81839"',text)
 
