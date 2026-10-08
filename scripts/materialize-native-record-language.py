@@ -75,4 +75,16 @@ def main():
         'patchSha256':sha(patch.encode()),'runtimeAcceptance':False,'sourceRewrite':False,'featureAlgorithmsCopied':False,
         'pending':'Actual native Java8 compile/API/type attribution; rejected owners unchanged'},indent=2)+'\n')
 
+    parse_request=output/'candidate-post-parse.tsv'
+    parse_request.write_text('\n'.join('\t'.join([row['path'],str(packet/'pre'/row['path']),row['preSha256'],
+        str(packet/'post'/row['path']),row['postSha256']]) for row in files)+'\n')
+    run([a.java,'-cp',tools,'dev.openallay.build.NativeRecordOwnerRequest','--verify-post',parse_request,packet/'post-parse-proof.tsv'],
+        'actual-all-candidate-post-parse')
+    proof=(packet/'post-parse-proof.tsv').read_text().splitlines()
+    if len(proof)!=len(files):raise ValueError('Incomplete actual post parse proof')
+    (packet/'post-parse-proof.json').write_text(json.dumps({'candidateOwners':len(files),
+        'proofSha256':sha((packet/'post-parse-proof.tsv').read_bytes()),'zeroRecordDeclarations':True,
+        'packageClassPrivacyIdentityPreserved':True,'parser':'public JavacTask --source17 parse-only',
+        'nativeTypeAttribution':False,'Java8RuntimeAcceptance':False},indent=2)+'\n')
+
 if __name__=='__main__':main()
