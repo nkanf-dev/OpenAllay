@@ -54,10 +54,17 @@ def main():
     subprocess.run(['python3','-B',str(ROOT/'scripts/package-stock-forge1122-java8.py'),'--inputs',str(request),'--output',str(out/'openallay-forge-1.12.2-0.4.4.jar'),'--receipt',str(out/'package-custody.json')],check=True)
     fixture_classes=work/'sqlite-fixture-classes';fixture_classes.mkdir()
     java8=Path(os.environ['JAVA_HOME_8_X64'])/'bin'
-    subprocess.run([str(java8/'javac'),'-source','8','-target','8','-encoding','UTF-8','-d',str(fixture_classes),
-        str(ROOT/'scripts/fixtures/SqliteGameRuntimeJava8Fixture.java')],check=True)
+    fixture_source=ROOT/'scripts/fixtures/SqliteGameRuntimeJava8Fixture.java'
+    product=out/'openallay-forge-1.12.2-0.4.4.jar'
     with (reports/'actual-product-sqlite-java8.log').open('w') as log:
-        subprocess.run([str(java8/'java'),'-cp',str(fixture_classes)+os.pathsep+str(out/'openallay-forge-1.12.2-0.4.4.jar'),
-            'SqliteGameRuntimeJava8Fixture',str(work/'sqlite-proof/database.sqlite')],stdout=log,stderr=subprocess.STDOUT,check=True)
+        compiled=subprocess.run([str(java8/'javac'),'-source','8','-target','8','-encoding','UTF-8','-d',str(fixture_classes),
+            str(fixture_source)],stdout=log,stderr=subprocess.STDOUT,timeout=120)
+        if compiled.returncode:raise SystemExit(compiled.returncode)
+        sqlrun=subprocess.run([str(java8/'java'),'-cp',str(fixture_classes)+os.pathsep+str(product),
+            'SqliteGameRuntimeJava8Fixture',str(work/'sqlite-proof/database.sqlite')],stdout=log,stderr=subprocess.STDOUT,timeout=120)
+        if sqlrun.returncode:raise SystemExit(sqlrun.returncode)
+    transport.write(out/'sqlite-final-product-java8-proof.json',{'productSha256':sha(product),'sourceSha256':sha(fixture_source),
+        'javac':str(java8/'javac'),'java':str(java8/'java'),'databaseExistingProfile':False,'compileExitCode':compiled.returncode,
+        'runtimeExitCode':sqlrun.returncode,'logSha256':sha(reports/'actual-product-sqlite-java8.log'),'upstreamSqliteRebuilt':False})
     transport.write(out/'native-producer-custody.json',{'provider':pin,'originalNativeReceipt':receipt,'originalNativeReceiptSha256':sha(original_receipt),'namespaceReceiptSha256':sha(namespace_path),'selectedSourceHashes':source_pairs,'nativeProducerSource':pin['nativeSource'],'packingSource':os.environ['GITHUB_SHA'],'currentEngineSha256':sha(engine_jars[0]),'nativeRecompiled':False,'fullEngineTestsReexecuted':False,'gameExecuted':False})
 if __name__=='__main__':main()
