@@ -271,7 +271,10 @@ final class CommandSettingsRequestBindingTest {
         assertFalse(nativeCapture.contains("unrestrictedJavascript"));
         assertTrue(nativeCapture.contains("cancellation.throwIfCancelled()"));
         assertTrue(nativeCapture.contains("client.player.getUUID().equals(expectedActor)"));
-        assertTrue(nativeCapture.contains("client.getConnection().sendCommand(command)"));
+        assertTrue(nativeCapture.contains("MinecraftNativeCommandSubmission.send(client, command)"));
+        String submission = Files.readString(root.resolve(
+                "common/src/main/java/dev/openallay/script/command/MinecraftNativeCommandSubmission.java"));
+        assertTrue(submission.contains("client.getConnection().sendCommand(command)"));
     }
 
     @Test
