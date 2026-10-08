@@ -14,7 +14,7 @@ import subprocess
 import sys
 import zipfile
 from minecraft_target_loaders import target_loaders
-from stock8_selection_custody import group_change_paths, verify_group_pair
+from stock8_selection_custody import group_change_paths, verify_group_pair, early_producer_paths, verify_inactive_early_producer
 from release_comment_custody import PATHS as COMMENT_PATHS, POLICY_PATH as COMMENT_POLICY_PATH, verify_pair as verify_comment_pair
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -447,6 +447,8 @@ REUSE_ORCHESTRATION_PATHS = {
     "distribution/stock8-nonselected-native-deltas.json", "scripts/stock8_selection_custody.py",
     "scripts/test_stock8_nonselected_custody.py", "scripts/test_release_native_api_family_sources.py",
     "scripts/capture-commonmark-provider-nested.py", "scripts/test_commonmark_provider_custody.py",
+    "scripts/test_release_publication.py",
+    "scripts/verify-native-target-package.py", "scripts/test_early_neoforge_recipe.py",
     COMMENT_POLICY_PATH, "scripts/release_comment_custody.py", "scripts/test_release_comment_custody.py",
 }
 REUSE_NATIVE_PATHS = {
@@ -531,9 +533,15 @@ def verify_reused_source(old_source, current_source, families):
     changed = git_output("diff", "--no-renames", "--name-only", "-z", old_source, current_source).split("\0")
     native_units = set()
     finite_native = group_change_paths(ROOT)
+    early_paths = early_producer_paths(ROOT)
     old_tree = set(git_output("ls-tree", "-r", "--name-only", "-z", old_source).split("\0"))
     current_tree = set(git_output("ls-tree", "-r", "--name-only", "-z", current_source).split("\0"))
     for path in filter(None, changed):
+        if path in early_paths:
+            original = git_output("show", old_source + ":" + path, binary=True) if path in old_tree else None
+            current = git_output("show", current_source + ":" + path, binary=True) if path in current_tree else None
+            verify_inactive_early_producer(ROOT,path,original,current,families)
+            continue
         if path in COMMENT_PATHS:
             verify_comment_pair(ROOT, path, git_output("show", old_source + ":" + path, binary=True),
                                 git_output("show", current_source + ":" + path, binary=True))

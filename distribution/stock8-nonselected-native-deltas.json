@@ -1,5 +1,5 @@
 {
-  "reviewedPatchSha256": "693e961f7904b4ac222f27c0cc04d93c379e4f02c2fa28d54cac080e082ebe85",
+  "reviewedPatchSha256": "fdf2518876ff5bcffca7ab6d6f153f70292846b4a176d3a03ed568ac90b30da7",
   "files": [
     {
       "path": "common/src/targets/1.21.8/java/dev/openallay/client/gui/GuideNativeWidget.java",
@@ -132,6 +132,24 @@
       "preSha256": "c071b0d4d7ad0c096a7bbe769f296bf10d74d4c34e7337a7bfa658b799665f10",
       "postSha256": "ea50ce4c2eef52370aef788665c293278cc0b553caef4dd5a808f655de9950f6",
       "bytes": 965
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/client/gui/MinecraftClientWindow.java",
+      "preSha256": "1358c4c0c630b892b64257a2ca7bd56da36947960731f93f955ec2033ea080d8",
+      "postSha256": "89dbfda0bfad901f639106ace4b19c7ab88efbbe0c25bf554bb6d9052da97668",
+      "bytes": 5384
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/client/gui/GuideNativeButton.java",
+      "preSha256": "599f13f4cec8fc695ba254ea8b6fc49f3d1d6a47b89e4a7630e7b2280b849060",
+      "postSha256": "7a5e281f9dd823ecb891a75b3bf0a5a0f135cab7fced4e343b7ea338586af483",
+      "bytes": 3142
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/platform/minecraft/MinecraftOptions.java",
+      "preSha256": "5b99dd0caf62e84382d60e808a309816701ab765d3e0354dfd5b58e43743d411",
+      "postSha256": "08b904fa9f0f78c66db659f82af5f26f0dba5704988e09ad332d78ca26e053c0",
+      "bytes": 613
     }
   ],
   "shadowEvidence": [
@@ -288,6 +306,27 @@
       "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/client/gui/GuideNativeItemLookup.java",
       "selectedBytesUnchanged": true,
       "selectedSha256": "aa038eb44fbc3d3bd1ca0220c4b6534539f3929a56869afc43140d52bf1d8c50"
+    },
+    {
+      "changedPath": "common/src/targets/1.16.5/java/dev/openallay/client/gui/MinecraftClientWindow.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/client/gui/MinecraftClientWindow.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/client/gui/MinecraftClientWindow.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "105aadbf1f49a609c1df59b7b9ca9c60294f23b956e30eadc289dd8db464f97e"
+    },
+    {
+      "changedPath": "common/src/targets/1.16.5/java/dev/openallay/client/gui/GuideNativeButton.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/client/gui/GuideNativeButton.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/client/gui/GuideNativeButton.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "d20ebc165192888c83eae60a2f9c93db06a462c015bf9a8a28c159590dd286b7"
+    },
+    {
+      "changedPath": "common/src/targets/1.16.5/java/dev/openallay/platform/minecraft/MinecraftOptions.java",
+      "selectedStock12Before": "common/src/targets/1.12.2/java/dev/openallay/platform/minecraft/MinecraftOptions.java",
+      "selectedStock12After": "common/src/targets/1.12.2/java/dev/openallay/platform/minecraft/MinecraftOptions.java",
+      "selectedBytesUnchanged": true,
+      "selectedSha256": "5d27594b3cded6d4569d0fff5386250ba129fd38322349f9ffe565c114c55af6"
     }
   ],
   "selectorInputs": [
@@ -367,6 +406,57 @@
       "path": "common/src/targets/26.3/java/dev/openallay/guide/e2e/GuideProbeNativeCursor.java",
       "preSha256": "c071b0d4d7ad0c096a7bbe769f296bf10d74d4c34e7337a7bfa658b799665f10",
       "postSha256": "ea50ce4c2eef52370aef788665c293278cc0b553caef4dd5a808f655de9950f6"
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/client/gui/MinecraftClientWindow.java",
+      "preSha256": "1358c4c0c630b892b64257a2ca7bd56da36947960731f93f955ec2033ea080d8",
+      "postSha256": "89dbfda0bfad901f639106ace4b19c7ab88efbbe0c25bf554bb6d9052da97668"
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/client/gui/GuideNativeButton.java",
+      "preSha256": "599f13f4cec8fc695ba254ea8b6fc49f3d1d6a47b89e4a7630e7b2280b849060",
+      "postSha256": "7a5e281f9dd823ecb891a75b3bf0a5a0f135cab7fced4e343b7ea338586af483"
+    },
+    {
+      "path": "common/src/targets/1.16.5/java/dev/openallay/platform/minecraft/MinecraftOptions.java",
+      "preSha256": "5b99dd0caf62e84382d60e808a309816701ab765d3e0354dfd5b58e43743d411",
+      "postSha256": "08b904fa9f0f78c66db659f82af5f26f0dba5704988e09ad332d78ca26e053c0"
     }
-  ]
+  ],
+  "inactiveEarlyProducerChanges": [
+    {
+      "path": "gradle/early-neoforge-inputs.gradle",
+      "preSha256": "5d5985607c52030661f36d63f967d7b4e62af0b102996e9b8587fe853b462d43",
+      "postSha256": "b01e4b6c5366d8eab11e864452bf9f468c3765d1b821c138dc281e7a1815cb99",
+      "physicalPostSha256": "b2c1af7102da1c9f28488d3a30478d14b45dd50afbcff6c4847e0d55bc625c9a"
+    },
+    {
+      "path": "native-builds/early-neoforge/build.gradle",
+      "preSha256": "1ae2baa3c643dc34b5ae8675a9b4514038de5c5aeedd63f62f847ff1f31b1e16",
+      "postSha256": "5988161939311cf639e66648b1224bffbe83b305da7312b9d7268205ed219994",
+      "physicalPostSha256": "284e5183a58fe35c323a5513a93fe376e10bdc2e6a41b9b04ebdca3b31240a6c"
+    },
+    {
+      "path": "native-builds/early-neoforge/settings.gradle",
+      "preSha256": "446204b78d68908a9f670512d4ee110e6f2b9423dddbf570b7b4cd2712732ff6",
+      "postSha256": "d86bd6bf981acdb7d20ab7d5166e79fa670aea7f2c61bf21a93235695089f4e4",
+      "physicalPostSha256": "495e0d58893ac3f6937ad4a7e8202f467ee6a23b509a8f93fff0a1e8eb0cf6eb"
+    },
+    {
+      "path": "native-builds/early-neoforge/artifact-input.gradle",
+      "preSha256": "d0a53850e81c03c6418d20f3f9d354010cc74e969f2f6f8897f9dff13f4751f9",
+      "postSha256": "df9a54d73129d0b0d56f3b96d2f2880745cf5c136f48b1a1e148076278aa4d42",
+      "physicalPostSha256": "0690b7bc2262088e3cae9fd0493d1e5b8f800bda64092106a103e90fa1a108fc"
+    },
+    {
+      "path": "native-builds/early-neoforge/runtime-commonmark/build.gradle",
+      "preSha256": null,
+      "postSha256": "28ae981d96e3aa9f792db54bca38937a06a9df7426ba333b9528282853a4ee9f",
+      "physicalPostSha256": "5a8c1c2bc931de8d0f33adcf86337dc1b094d25acde619b563c36a75b1354a83"
+    }
+  ],
+  "inactiveEarlyRouting": {
+    "neoforge/build.gradle": "b66a54922851db4b2c7545a5160e07ba3a54b741221a4d45ddb9d8b7e5f98892",
+    "scripts/compile-native-target.py": "b84df1bf413427de8d3cf9ddaf7ea7ccb2693f4298ae12d40e7736936ce500ac"
+  }
 }

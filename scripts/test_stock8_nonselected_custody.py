@@ -38,7 +38,7 @@ class SelectionCustodyTest(unittest.TestCase):
             return m.verify_selection(ROOT,self.expected,'b'*40)
 
     def test_full263_effective_ledger_passes(self):
-        result=self.verify();self.assertEqual(result,{'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':22})
+        result=self.verify();self.assertEqual(result,{'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':25})
 
     def test_added_shadow_deleted_owner_changed_selected_bytes_fail(self):
         for mutate in (lambda v:v.append({'origin':'common/src/targets/1.12.2/java/New.java','logicalPath':'New.java','sha256':'e'*64}),
@@ -86,7 +86,7 @@ class SelectionCustodyTest(unittest.TestCase):
 
     def test_finite_group_operations_and_nullable_deleted_leaf(self):
         repairs=self.policy['approvedGroupChanges']
-        self.assertEqual(len(repairs),9)
+        self.assertEqual(len(repairs),12)
         deleted=next(r for r in repairs if r['postSha256'] is None)
         self.assertEqual(deleted['path'],'common/src/targets/1.21.11/java/dev/openallay/platform/minecraft/MinecraftNativeRegistries.java')
         with patch.object(m,'policy',return_value=self.policy),patch.object(m,'sha',return_value=deleted['preSha256']):m.verify_group_pair(ROOT,deleted['path'],b'old',None)
@@ -96,6 +96,16 @@ class SelectionCustodyTest(unittest.TestCase):
         self.assertIsNone(original['preSha256']);self.assertIsNone(original['postSha256'])
         m.verify_unselected_pair(ROOT,deleted['path'],None,None)
         with self.assertRaises(ValueError):m.verify_unselected_pair(ROOT,deleted['path'],None,b'resurrected')
+
+    def test_early_producer_is_inactive_only_for_real_other_targets(self):
+        row=self.policy['inactiveEarlyProducerChanges'][0]
+        original=b'original';current=b'current'
+        with patch.object(m,'policy',return_value=self.policy),patch.object(m.Path,'read_bytes',return_value=b'routing'), \
+                patch.object(m,'sha',side_effect=list(self.policy['inactiveEarlyRouting'].values())+[row['preSha256'],row['postSha256']]):
+            m.verify_inactive_early_producer(ROOT,row['path'],original,current,[{'loader':'neoforge','buildTarget':'26.2'}])
+        for target in ('1.20.2','1.20.3','1.20.5'):
+            with self.assertRaises(ValueError):m.verify_inactive_early_producer(ROOT,row['path'],original,current,[{'loader':'neoforge','buildTarget':target}])
+        with self.assertRaises(ValueError):m.verify_inactive_early_producer(ROOT,'native-builds/unknown/build.gradle',original,current,[])
 
     def test_original_physical_and_source_custody_guards_remain(self):
         text=(ROOT/'scripts/materialize-stock8-release.py').read_text()

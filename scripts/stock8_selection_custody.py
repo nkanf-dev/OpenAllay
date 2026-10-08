@@ -8,7 +8,7 @@ import subprocess
 from forge1122_source_selection import selected_native_units
 
 POLICY_PATH="distribution/stock8-nonselected-native-deltas.json"
-POLICY_SHA256="17f2c977364cfc123b9a2c60a282bede70a919858c6dc8b62e5e1b7837aad1ba"
+POLICY_SHA256="0cbe9e420e2df5b2d652d178cf51d3543d8f317f731af5b0b8bc5c1aba0dbed6"
 CONTROL_PATHS=frozenset(('gradle/minecraft-source-selection.gradle','native-builds/forge16165/source-selection.json',
     'native-builds/forge1122-census/source-retirements.json','native-builds/forge1122-census/core-compile-profile.json',
     'native-builds/forge1122-census/curated-classes.tsv','scripts/forge1122_source_selection.py'))
@@ -25,20 +25,27 @@ def policy(root):
     raw=(root/POLICY_PATH).read_bytes()
     require(sha(raw)==POLICY_SHA256, 'Reviewed finite native custody policy bytes changed')
     value=json.loads(raw)
-    require(set(value)=={'reviewedPatchSha256','files','shadowEvidence','selectorInputs','approvedGroupChanges'} and
-            value['reviewedPatchSha256']=='693e961f7904b4ac222f27c0cc04d93c379e4f02c2fa28d54cac080e082ebe85',
+    require(set(value)=={'reviewedPatchSha256','files','shadowEvidence','selectorInputs','approvedGroupChanges','inactiveEarlyProducerChanges','inactiveEarlyRouting'} and
+            value['reviewedPatchSha256']=='fdf2518876ff5bcffca7ab6d6f153f70292846b4a176d3a03ed568ac90b30da7',
             'Exact reviewed finite native cohort required')
     rows=value['files'];evidence=value['shadowEvidence']
-    require(len(rows)==22 and len({row['path'] for row in rows})==22 and
-            {row['path'] for row in rows}=={row['changedPath'] for row in evidence}, 'Exact22 cohort/shadow evidence required')
+    require(len(rows)==25 and len({row['path'] for row in rows})==25 and
+            {row['path'] for row in rows}=={row['changedPath'] for row in evidence}, 'Exact25 cohort/shadow evidence required')
     require(len(value['selectorInputs'])==6 and {row['path'] for row in value['selectorInputs']}==CONTROL_PATHS, 'Exact native selector input scope required')
     for row in rows:
         require(set(row)=={'path','preSha256','postSha256','bytes'} and row['path'].startswith('common/src/targets/') and
                 '/java/' in row['path'] and row['path'].endswith('.java') and
                 (row['preSha256'] is None or re.fullmatch(r'[0-9a-f]{64}',row['preSha256'])) and
                 (row['postSha256'] is None or re.fullmatch(r'[0-9a-f]{64}',row['postSha256'])), 'Exact cohort raw source row required')
+    early=value['inactiveEarlyProducerChanges']
+    require(len(early)==5 and len({row['path'] for row in early})==5 and
+            set(value['inactiveEarlyRouting'])=={'neoforge/build.gradle','scripts/compile-native-target.py'}, 'Exact inactive early producer scope required')
+    for row in early:
+        require(set(row)=={'path','preSha256','postSha256','physicalPostSha256'} and
+                (row['preSha256'] is None or re.fullmatch(r'[0-9a-f]{64}',row['preSha256'])) and
+                all(re.fullmatch(r'[0-9a-f]{64}',row[key]) for key in ('postSha256','physicalPostSha256')), 'Exact inactive producer raw pair required')
     repairs=value['approvedGroupChanges']
-    require(len(repairs)==9 and len({row['path'] for row in repairs})==9 and {row['path'] for row in repairs}.issubset({row['path'] for row in rows}), 'Exact9 accepted-group repair operations required')
+    require(len(repairs)==12 and len({row['path'] for row in repairs})==12 and {row['path'] for row in repairs}.issubset({row['path'] for row in rows}), 'Exact12 accepted-group repair operations required')
     for row in repairs:
         require(set(row)=={'path','preSha256','postSha256'} and all(row[key] is None or re.fullmatch(r'[0-9a-f]{64}',row[key]) for key in ('preSha256','postSha256')), 'Exact accepted-group raw pair required')
     for row in value['selectorInputs']:
@@ -60,10 +67,28 @@ def group_change_paths(root):
 
 def verify_group_pair(root,path,original,current):
     rows={row['path']:row for row in policy(root)['approvedGroupChanges']}
-    require(len(rows)==9 and path in rows, 'Unknown accepted-group native repair')
+    require(len(rows)==12 and path in rows, 'Unknown accepted-group native repair')
     row=rows[path]
     require((None if original is None else sha(original))==row['preSha256'] and
             (None if current is None else sha(current))==row['postSha256'], 'Accepted-group repair raw pair differs')
+
+
+def early_producer_paths(root):
+    return {row['path'] for row in policy(root)['inactiveEarlyProducerChanges']}
+
+
+def verify_inactive_early_producer(root,path,original,current,families):
+    value=policy(root)
+    affected={'1.20.2','1.20.3','1.20.5'}
+    require(families and all(not(family['loader']=='neoforge' and family['buildTarget'] in affected) for family in families),
+            'Changed isolated early NeoForge producer requires rebuilding its actual targets')
+    for routing,digest in value['inactiveEarlyRouting'].items():
+        require(sha((root/routing).read_bytes())==digest, 'Actual isolated producer routing changed')
+    rows={row['path']:row for row in value['inactiveEarlyProducerChanges']}
+    require(len(rows)==5 and path in rows, 'Unknown isolated producer path cannot be reused')
+    row=rows[path]
+    require((None if original is None else sha(original))==row['preSha256'] and
+            (None if current is None else sha(current))==row['postSha256'], 'Isolated inactive producer raw Git pair differs')
 
 
 def verify_control_bytes(row,raw):
@@ -95,4 +120,4 @@ def verify_selection(root,original_selected,native_source):
                 row['selectedBytesUnchanged'] is True and
                 logical[row['changedPath'].split('/java/',1)[1]]==(row['selectedStock12After'],row['selectedSha256']),
                 'Reviewed native leaf is not shadowed by exact unchanged Forge12 owner')
-    return {'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':22}
+    return {'selectedSources':263,'selectedJava':251,'selectedResources':12,'nonselectedCohortLeaves':25}

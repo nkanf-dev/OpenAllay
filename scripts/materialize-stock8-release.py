@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import zipfile
 
-from stock8_selection_custody import POLICY_PATH as NATIVE_DELTA_POLICY, policy as native_delta_policy, verify_unselected_pair, verify_selection
+from stock8_selection_custody import POLICY_PATH as NATIVE_DELTA_POLICY, policy as native_delta_policy, verify_unselected_pair, verify_selection, early_producer_paths, verify_inactive_early_producer
 from release_comment_custody import PATHS as COMMENT_PATHS, POLICY_PATH as COMMENT_POLICY_PATH, verify_pair as verify_comment_pair
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +93,17 @@ def source_custody(root, packing_source, native_custody, release_source):
                 "native-builds/forge16165/build.gradle", PIN_PATH, CUSTODY_PATH, COMMENT_POLICY_PATH, NATIVE_DELTA_POLICY, "distribution/release-build-selection.json"}
     native_delta_paths={row['path'] for row in native_delta_policy(root)['files']}
     original_tree=set(git(root,"ls-tree","-r","--name-only","-z",packing_source).decode().split("\0"))
+    early_paths=early_producer_paths(root)
     for path in filter(None, changed):
+        if path in early_paths:
+            original=git(root,"show",packing_source+":"+path) if path in original_tree else None
+            value=native_delta_policy(root)
+            row=next(row for row in value['inactiveEarlyProducerChanges'] if row['path']==path)
+            raw=(root/path).read_bytes()
+            require(digest(raw) in (row['physicalPostSha256'],row['postSha256']), 'Exact isolated producer checkout bytes differ')
+            current=raw.replace(b"\r\n",b"\n") if digest(raw)==row['physicalPostSha256'] else raw
+            verify_inactive_early_producer(root,path,original,current,[{'loader':'forge','buildTarget':'1.12.2'}])
+            continue
         if path in native_delta_paths:
             original=git(root,"show",packing_source+":"+path) if path in original_tree else None
             verify_unselected_pair(root,path,original,(root/path).read_bytes() if (root/path).is_file() else None)
