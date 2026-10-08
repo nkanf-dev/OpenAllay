@@ -108,8 +108,7 @@ public final class MinecraftAgentHostGraph {
                 "registryEntries",
                 "All captured registry rows across kinds",
                 "registries"));
-        for (String name : List.of(
-                "items", "blocks", "fluids", "effects", "enchantments", "entities")) {
+        for (String name : dev.openallay.util.Java8Collections.listOf("items", "blocks", "fluids", "effects", "enchantments", "entities")) {
             declared.add(requestScoped(
                     name,
                     "registryEntries",
@@ -209,8 +208,7 @@ public final class MinecraftAgentHostGraph {
                 "All captured registry rows across kinds",
                 "registries",
                 () -> registrySnapshot.orElseThrow().entries()));
-        for (String name : List.of(
-                "items", "blocks", "fluids", "effects", "enchantments", "entities")) {
+        for (String name : dev.openallay.util.Java8Collections.listOf("items", "blocks", "fluids", "effects", "enchantments", "entities")) {
             add(declared, descriptor(
                     name,
                     type("registryEntries"),
@@ -310,14 +308,13 @@ public final class MinecraftAgentHostGraph {
                 true,
                 "Currently available declared host roots",
                 "catalog",
-                () -> declared.values().stream()
+                () -> dev.openallay.util.Java8Collections.toList(declared.values().stream()
                         .filter(HostRootDescriptor::available)
                         .map(root -> new Capability(
                                 root.name(),
                                 root.providerId(),
                                 root.schema().kind(),
-                                root.evidenceOwner()))
-                        .toList()));
+                                root.evidenceOwner())))));
         roots = Collections.unmodifiableMap(declared);
         schemaCatalog = new HostSchemaCatalog(roots.values());
     }
@@ -326,7 +323,7 @@ public final class MinecraftAgentHostGraph {
     public InvocationData open() {
         SourceObservationCollector sources = new SourceObservationCollector();
         return new InvocationData(
-                new LazyRootMap(roots, List.copyOf(roots.keySet()), schemaCatalog,
+                new LazyRootMap(roots, dev.openallay.util.Java8Collections.listCopyOf(roots.keySet()), schemaCatalog,
                         evidenceOwners(), sources), sources, schemaCatalog);
     }
 
@@ -338,19 +335,19 @@ public final class MinecraftAgentHostGraph {
         Map<String, Supplier<List<SourceObservation>>> owners = new LinkedHashMap<>();
         owners.put("player", () -> playerSnapshot.map(value -> sourceSummaries(
                         java.util.stream.Stream.of(value.evidence(), value.inventory().evidence())))
-                .orElseGet(List::of));
+                .orElseGet(dev.openallay.util.Java8Collections::listOf));
         owners.put("registries", () -> registrySnapshot.map(value ->
-                        List.of(new SourceObservation(value.evidence())))
-                .orElseGet(List::of));
+                        dev.openallay.util.Java8Collections.listOf(new SourceObservation(value.evidence())))
+                .orElseGet(dev.openallay.util.Java8Collections::listOf));
         owners.put("recipes", () -> recipeSnapshot.map(value -> sourceSummaries(
                         java.util.stream.Stream.concat(
                                 java.util.stream.Stream.of(value.evidence()),
                                 java.util.stream.Stream.concat(
                                         value.recipes().stream().map(RecipeEntrySnapshot::evidence),
                                         value.groups().stream().flatMap(group -> group.evidence().stream())))))
-                .orElseGet(List::of));
+                .orElseGet(dev.openallay.util.Java8Collections::listOf));
         owners.put("game", () -> gameSnapshot.map(value -> sourceSummaries(gameEvidence(value).stream()))
-                .orElseGet(List::of));
+                .orElseGet(dev.openallay.util.Java8Collections::listOf));
         owners.put("knowledge", () -> {
             KnowledgeSnapshot snapshot = knowledgeSnapshot(KnowledgeSnapshot.class, knowledgeSnapshot);
             return sourceSummaries(java.util.stream.Stream.concat(
@@ -358,7 +355,7 @@ public final class MinecraftAgentHostGraph {
         });
         owners.put("extensions", () -> sourceSummaries(extensionSnapshot(
                         JavascriptDataModuleRegistry.Snapshot.class, extensionSnapshot).evidence().stream()));
-        return Map.copyOf(owners);
+        return dev.openallay.util.Java8Collections.mapCopyOf(owners);
     }
 
     /** Retains distinct real origins without constructing a second per-row metadata collection. */
@@ -386,7 +383,7 @@ public final class MinecraftAgentHostGraph {
     }
 
     private static List<EvidenceMetadata> distinct(Collection<EvidenceMetadata> values) {
-        return List.copyOf(new LinkedHashSet<>(values));
+        return dev.openallay.util.Java8Collections.listCopyOf(new LinkedHashSet<>(values));
     }
 
     public static final class InvocationData extends AbstractMap<String, Object>
@@ -454,14 +451,14 @@ public final class MinecraftAgentHostGraph {
 
     private static List<RegistryEntrySnapshot> groupedRegistryRows(
             RegistrySnapshot snapshot, String name) {
-        return group(snapshot.entries()).getOrDefault(name, List.of());
+        return group(snapshot.entries()).getOrDefault(name, dev.openallay.util.Java8Collections.listOf());
     }
 
     private static RecipeCatalogView recipeCatalog(RecipeSnapshot snapshot) {
         return new RecipeCatalogView(
                 snapshot.evidence(),
                 snapshot.recipes().size(),
-                snapshot.providers().stream().map(RecipeProviderStatus::from).toList(),
+                dev.openallay.util.Java8Collections.toList(snapshot.providers().stream().map(RecipeProviderStatus::from)),
                 snapshot.groups(),
                 snapshot.diagnostics());
     }
@@ -485,7 +482,7 @@ public final class MinecraftAgentHostGraph {
                     ignored -> new ArrayList<>()).add(entry);
         }
         LinkedHashMap<String, List<RegistryEntrySnapshot>> result = new LinkedHashMap<>();
-        mutable.forEach((name, values) -> result.put(name, List.copyOf(values)));
+        mutable.forEach((name, values) -> result.put(name, dev.openallay.util.Java8Collections.listCopyOf(values)));
         return Collections.unmodifiableMap(result);
     }
 
@@ -554,7 +551,7 @@ public static final class RegistryCatalog {
     private final Map<String, Integer> kinds;
     public RegistryCatalog(EvidenceMetadata evidence, int entryCount, Map<String, Integer> kinds) {
 
-            kinds = Map.copyOf(kinds);
+            kinds = dev.openallay.util.Java8Collections.mapCopyOf(kinds);
 
         this.evidence = evidence;
         this.entryCount = entryCount;
@@ -594,9 +591,9 @@ public static final class RecipeCatalogView {
     private final List<RecipeCatalogDiagnostic> diagnostics;
     public RecipeCatalogView(EvidenceMetadata evidence, int recipeCount, List<RecipeProviderStatus> providers, List<RecipeSemanticGroup> groups, List<RecipeCatalogDiagnostic> diagnostics) {
 
-            providers = List.copyOf(providers);
-            groups = List.copyOf(groups);
-            diagnostics = List.copyOf(diagnostics);
+            providers = dev.openallay.util.Java8Collections.listCopyOf(providers);
+            groups = dev.openallay.util.Java8Collections.listCopyOf(groups);
+            diagnostics = dev.openallay.util.Java8Collections.listCopyOf(diagnostics);
 
         this.evidence = evidence;
         this.recipeCount = recipeCount;
@@ -641,8 +638,8 @@ public static final class KnowledgeCatalog {
     private final List<EvidenceMetadata> evidence;
     public KnowledgeCatalog(Instant createdAt, int documentCount, Map<String, Integer> sources, List<EvidenceMetadata> evidence) {
 
-            sources = Map.copyOf(sources);
-            evidence = List.copyOf(evidence);
+            sources = dev.openallay.util.Java8Collections.mapCopyOf(sources);
+            evidence = dev.openallay.util.Java8Collections.listCopyOf(evidence);
 
         this.createdAt = createdAt;
         this.documentCount = documentCount;
