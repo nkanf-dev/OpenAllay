@@ -33,9 +33,9 @@ final class NativeWorldBinding implements WorldBinding {
         invocation.requireActive();
         if(!client.isCallingFromMinecraftThread())throw new ExtensionException("wrong_owner","Capture requires the client owner thread");
         this.client=client;
-        if(invocation.callerKind()!=ExtensionInvocation.CallerKind.PLAYER || invocation.callerUuid()==null || dev.openallay.util.Java8ApiSupport.isEmpty(invocation.playerDimension()))
+        if(invocation.callerKind()!=ExtensionInvocation.CallerKind.PLAYER || invocation.callerUuid()==null || !invocation.playerDimension().isPresent())
             throw new ExtensionException("player_required","An exact local player invocation is required");
-        actor=invocation.callerUuid();dimension=dev.openallay.util.Java8ApiSupport.orElseThrow(invocation.playerDimension());
+        actor=invocation.callerUuid();dimension=invocation.playerDimension().orElseThrow(() -> new java.util.NoSuchElementException("No value present"));
         server=client.getIntegratedServer();connection=client.getConnection();clientPlayer=client.player;clientLevel=client.world;
         artifacts=client.mcDataDir.toPath().resolve("config/openallay-builder");
         if(server==null)throw new ExtensionException("unsupported_topology","World access requires the active integrated server; a remote server is not an authoritative local backend");

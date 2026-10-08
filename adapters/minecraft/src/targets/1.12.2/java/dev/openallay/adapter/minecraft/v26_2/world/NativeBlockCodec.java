@@ -39,7 +39,7 @@ final class NativeBlockCodec {
     private static final int WRITE_FLAGS = 18;
     // Native 1.12 chest/shulker metadata; attached Forge data is opaque and rejected for nonidentity transforms.
     // Only exact native container payload fields may retain nonidentity transforms.
-    private static final Set<String> CONTAINER_FIELDS = dev.openallay.util.Java8Collections.setOf("id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", "Lock", "CustomName");
+    private static final Set<String> CONTAINER_FIELDS = java.util.Collections.unmodifiableSet(new java.util.HashSet<String>(java.util.Arrays.asList("id", "x", "y", "z", "Items", "LootTable", "LootTableSeed", "Lock", "CustomName")));
 
     // Native states are canonical immutable values. Keep a bounded, owner-thread-local
     // palette, never world handles, live entities, positions or mutable SNBT compounds.
@@ -61,7 +61,6 @@ final class NativeBlockCodec {
     public static String read(WorldServer level, BlockPos pos) { return snapshot(level,pos).json(); }
 
     /** Owner-only pre-hook snapshot. Non-BE states remain immutable native values until needed. */
-    @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
 static final class Snapshot {
     private final IBlockState state;
     private final NBTTagCompound tag;
@@ -85,12 +84,6 @@ String json(){return encode(state,tag);}
         return hash;
     }
     @Override public String toString() { return "Snapshot[state=" + state + ", tag=" + tag + "]"; }
-    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
-        public ValueSchemaProvider() {}
-        @Override public dev.openallay.value.ValueSchema<Snapshot> schema() {
-            return new dev.openallay.value.ValueSchema<>(Snapshot.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Snapshot>>asList(new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "state", Snapshot::state), new dev.openallay.value.ValueSchema.Component<>(Snapshot.class, "tag", Snapshot::tag)), arguments -> new Snapshot((IBlockState) arguments[0], (NBTTagCompound) arguments[1]));
-        }
-    }
 }
     static Snapshot snapshot(WorldServer level,BlockPos pos) {
         checkOwnerAndPosition(level,pos);
@@ -277,7 +270,6 @@ Mirror nativeMirror = $oaSwitch0_exit_result;
     }
 
     /** Reuses the exact native verification readback; callers must not serialize it again. */
-    @dev.openallay.value.ValueType(VerifiedWrite.ValueSchemaProvider.class)
 static final class VerifiedWrite {
     private final String actual;
     private final boolean changed;
@@ -300,12 +292,6 @@ static final class VerifiedWrite {
         return hash;
     }
     @Override public String toString() { return "VerifiedWrite[actual=" + actual + ", changed=" + changed + "]"; }
-    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
-        public ValueSchemaProvider() {}
-        @Override public dev.openallay.value.ValueSchema<VerifiedWrite> schema() {
-            return new dev.openallay.value.ValueSchema<>(VerifiedWrite.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<VerifiedWrite>>asList(new dev.openallay.value.ValueSchema.Component<>(VerifiedWrite.class, "actual", VerifiedWrite::actual), new dev.openallay.value.ValueSchema.Component<>(VerifiedWrite.class, "changed", VerifiedWrite::changed)), arguments -> new VerifiedWrite((String) arguments[0], (Boolean) arguments[1]));
-        }
-    }
 }
     static VerifiedWrite writeVerified(WorldServer level, BlockPos pos, String stateJson, Runnable requireActive) {
         checkOwnerAndPosition(level, pos);
@@ -546,8 +532,6 @@ if (!((($oaPattern0_holder.value = value) instanceof com.google.gson.JsonPrimiti
     private static ExtensionException placementFailed(BlockPos pos, String reason) {
         return new ExtensionException("placement_failed", reason + " at " + pos);
     }
-
-    @dev.openallay.value.ValueType(Prepared.ValueSchemaProvider.class)
 private static final class Prepared {
     private final IBlockState state;
     private final TileEntity entity;
@@ -574,11 +558,5 @@ private static final class Prepared {
         return hash;
     }
     @Override public String toString() { return "Prepared[state=" + state + ", entity=" + entity + ", tag=" + tag + "]"; }
-    public static final class ValueSchemaProvider implements dev.openallay.value.ValueSchema.Provider {
-        public ValueSchemaProvider() {}
-        @Override public dev.openallay.value.ValueSchema<Prepared> schema() {
-            return new dev.openallay.value.ValueSchema<>(Prepared.class, java.util.Arrays.<dev.openallay.value.ValueSchema.Component<Prepared>>asList(new dev.openallay.value.ValueSchema.Component<>(Prepared.class, "state", Prepared::state), new dev.openallay.value.ValueSchema.Component<>(Prepared.class, "entity", Prepared::entity), new dev.openallay.value.ValueSchema.Component<>(Prepared.class, "tag", Prepared::tag)), arguments -> new Prepared((IBlockState) arguments[0], (TileEntity) arguments[1], (NBTTagCompound) arguments[2]));
-        }
-    }
 }
 }
