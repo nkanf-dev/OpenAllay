@@ -61,7 +61,7 @@ final class OpenAllayScreenHeaderContractsTest {
         for (String name : new String[] {"OpenAllay", "小羽", "建筑与探险助手小羽", "OpenAllay · session-123456789", "小羽".repeat(80)}) {
             Component full = Component.literal(name).withStyle(OpenAllayScreen.headerTitle().getStyle());
             AtomicInteger measured = new AtomicInteger();
-            GuideNativeFont.visual(full).accept((index, style, codePoint) -> {
+            full.getVisualOrderText().accept((index, style, codePoint) -> {
                 measured.addAndGet((codePoint > 127 ? 9 : 6) + (style.isBold() ? 1 : 0));
                 return true;
             });
