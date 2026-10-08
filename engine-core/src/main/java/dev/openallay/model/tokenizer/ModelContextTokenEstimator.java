@@ -76,12 +76,23 @@ public final class ModelContextTokenEstimator implements ContextTokenEstimator {
     @Override
     public int estimate(String systemPrompt, List<ModelMessage> messages, List<ModelToolDefinition> tools) {
         Objects.requireNonNull(systemPrompt, "systemPrompt");
-        List<ModelMessage> detachedMessages = List.copyOf(messages);
-        List<ModelToolDefinition> detachedTools = List.copyOf(tools);
-        JsonObject input = switch (protocol) {
-            case OPENAI_CHAT -> openAi.contextInput(systemPrompt, detachedMessages, detachedTools);
-            case ANTHROPIC_MESSAGES -> anthropic.contextInput(systemPrompt, detachedMessages, detachedTools);
-        };
+        List<ModelMessage> detachedMessages = dev.openallay.util.Java8Collections.listCopyOf(messages);
+        List<ModelToolDefinition> detachedTools = dev.openallay.util.Java8Collections.listCopyOf(tools);
+        com.google.gson.JsonObject $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((protocol)) {
+case OPENAI_CHAT:
+{
+$oaSwitch0_exit_result = openAi.contextInput(systemPrompt, detachedMessages, detachedTools); break $oaSwitch0_exit;
+}
+case ANTHROPIC_MESSAGES:
+{
+$oaSwitch0_exit_result = anthropic.contextInput(systemPrompt, detachedMessages, detachedTools); break $oaSwitch0_exit;
+}
+default: throw new java.lang.IncompatibleClassChangeError();
+}
+}
+JsonObject input = $oaSwitch0_exit_result;
         // Includes role/content fields, tool-call IDs/arguments, tool-result JSON,
         // reasoning and full tool schemas. Image blocks are metadata placeholders,
         // not the HTTP Base64 payload and not an estimate of image token costs.

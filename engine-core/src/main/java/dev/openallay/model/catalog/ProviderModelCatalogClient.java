@@ -104,12 +104,12 @@ public final class ProviderModelCatalogClient {
             JsonElement id = element.getAsJsonObject().get("id");
             if (id == null || !id.isJsonPrimitive()
                     || !id.getAsJsonPrimitive().isString()
-                    || id.getAsString().isBlank()) {
+                    || dev.openallay.util.Java8Strings.isBlank(id.getAsString())) {
                 throw new IllegalArgumentException("catalog model id");
             }
             ids.add(id.getAsString());
         }
-        return new ModelCatalog(ids.stream().toList());
+        return new ModelCatalog(dev.openallay.util.Java8Collections.toList(ids.stream()));
     }
 
     private static String read(InputStream body) throws java.io.IOException {
@@ -117,17 +117,33 @@ public final class ProviderModelCatalogClient {
     }
 
     private static ToolResult.Failure<ModelCatalog> statusFailure(int status) {
-        return switch (status) {
-            case 401, 403 -> failure(
+        {
+dev.openallay.tool.ToolResult.Failure<dev.openallay.model.catalog.ModelCatalog> $oaSwitch0_exit_result;
+$oaSwitch0_exit: {
+switch ((status)) {
+case 401:
+case 403:
+{
+$oaSwitch0_exit_result = failure(
                     "model_catalog_auth_failed",
-                    "The model provider rejected catalog authentication");
-            case 429 -> failure(
+                    "The model provider rejected catalog authentication"); break $oaSwitch0_exit;
+}
+case 429:
+{
+$oaSwitch0_exit_result = failure(
                     "model_catalog_rate_limited",
-                    "The model provider rate-limited the catalog request");
-            default -> failure(
+                    "The model provider rate-limited the catalog request"); break $oaSwitch0_exit;
+}
+default:
+{
+$oaSwitch0_exit_result = failure(
                     "model_catalog_unavailable",
-                    "The model provider catalog is unavailable");
-        };
+                    "The model provider catalog is unavailable"); break $oaSwitch0_exit;
+}
+}
+}
+return $oaSwitch0_exit_result;
+}
     }
 
     private static ToolResult.Failure<ModelCatalog> classify(

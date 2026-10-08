@@ -23,10 +23,8 @@ import java.util.concurrent.Executors;
 
 /** Ordered asynchronous cache for validated, credential-free provider metadata. */
 public final class ModelMetadataCache {
-    private static final Set<String> ROOT_FIELDS = Set.of("entries");
-    private static final Set<String> ENTRY_FIELDS = Set.of(
-            "source", "providerModelId", "canonicalModelId", "contextWindowTokens",
-            "maxOutputTokens", "capturedAt", "imageInputCapability");
+    private static final Set<String> ROOT_FIELDS = dev.openallay.util.Java8Collections.setOf("entries");
+    private static final Set<String> ENTRY_FIELDS = dev.openallay.util.Java8Collections.setOf("source", "providerModelId", "canonicalModelId", "contextWindowTokens", "maxOutputTokens", "capturedAt", "imageInputCapability");
 
     @dev.openallay.value.ValueType(Snapshot.ValueSchemaProvider.class)
 public static final class Snapshot {
@@ -99,7 +97,7 @@ public ModelMetadata find(String source, String providerModelId) {
 
     private synchronized <T> CompletableFuture<T> submit(java.util.function.Supplier<T> task) {
         if (closed) {
-            return CompletableFuture.failedFuture(new IllegalStateException(
+            return dev.openallay.util.Java8Futures.failedFuture(new IllegalStateException(
                     "model metadata cache is closed"));
         }
         return CompletableFuture.supplyAsync(task, worker);
@@ -110,14 +108,14 @@ public ModelMetadata find(String source, String providerModelId) {
             return state;
         }
         if (!Files.exists(path)) {
-            state = new Snapshot(Map.of(), null);
+            state = new Snapshot(dev.openallay.util.Java8Collections.mapOf(), null);
             return state;
         }
         try {
             state = new Snapshot(decode(Files.readString(path)), null);
         } catch (IOException | RuntimeException failure) {
             state = new Snapshot(
-                    Map.of(),
+                    dev.openallay.util.Java8Collections.mapOf(),
                     new GuideFailure(
                             "metadata_cache_invalid",
                             "The local model metadata cache is invalid"));
@@ -134,7 +132,7 @@ public ModelMetadata find(String source, String providerModelId) {
                 new LinkedHashMap<>(loaded.entries());
         updated.put(metadata.key(), metadata);
         try {
-            writeAtomically(encode(updated.values().stream().toList()));
+            writeAtomically(encode(dev.openallay.util.Java8Collections.toList(updated.values().stream())));
             state = new Snapshot(updated, null);
             return state;
         } catch (IOException failure) {
@@ -152,7 +150,7 @@ public ModelMetadata find(String source, String providerModelId) {
             Files.createDirectories(parent);
         }
         Path temporary = Files.createTempFile(
-                parent == null ? Path.of(".") : parent,
+                parent == null ? java.nio.file.Paths.get(".") : parent,
                 path.getFileName().toString(),
                 ".tmp");
         try {
@@ -233,7 +231,7 @@ public ModelMetadata find(String source, String providerModelId) {
         JsonElement value = object.get(field);
         if (value == null || !value.isJsonPrimitive()
                 || !value.getAsJsonPrimitive().isString()
-                || value.getAsString().isBlank()) {
+                || dev.openallay.util.Java8Strings.isBlank(value.getAsString())) {
             throw new IllegalArgumentException(field + " must be text");
         }
         return value.getAsString();

@@ -119,7 +119,7 @@ public final class ModelRequestScheduler implements ModelClient {
         long remaining = gateUntilNanos - System.nanoTime();
         if (remaining > 0) {
             scheduleWakeLocked(remaining);
-            return List.of();
+            return dev.openallay.util.Java8Collections.listOf();
         }
         gateUntilNanos = 0;
         List<Pending> dispatch = new ArrayList<>();
@@ -178,21 +178,25 @@ public final class ModelRequestScheduler implements ModelClient {
                                 expireRecovery(pending);
                                 return;
                             }
-                            if (event instanceof ModelEvent.AttemptStarted started) {
-                                if (started.attemptTimeoutMillis() != null) {
+                            final class $oaPattern0_Holder { dev.openallay.model.ModelEvent value; ModelEvent.AttemptStarted bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = event) instanceof dev.openallay.model.ModelEvent.AttemptStarted && (($oaPattern0_holder.bound = (ModelEvent.AttemptStarted) $oaPattern0_holder.value) != null))) {
+                                if ($oaPattern0_holder.bound.attemptTimeoutMillis() != null) {
                                     pending.attemptDeadlineNanos = attemptStartedNanos
-                                            + TimeUnit.MILLISECONDS.toNanos(started.attemptTimeoutMillis());
+                                            + TimeUnit.MILLISECONDS.toNanos($oaPattern0_holder.bound.attemptTimeoutMillis());
                                 }
                             } else {
                                 responseProgress.set(true);
                             }
                             if (!pending.cancellation.isCancelled()
                                     && !pending.result.isDone()) {
-                                pending.events.accept(
-                                        event instanceof ModelEvent.AttemptStarted started
+                                final class $oaPattern1_Holder { dev.openallay.model.ModelEvent value; ModelEvent.AttemptStarted bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+pending.events.accept(
+                                        (($oaPattern1_holder.value = event) instanceof dev.openallay.model.ModelEvent.AttemptStarted && (($oaPattern1_holder.bound = (ModelEvent.AttemptStarted) $oaPattern1_holder.value) != null))
                                                 ? new ModelEvent.AttemptStarted(
                                                         pending.attempt,
-                                                        attemptBudgetMillis(pending, started.attemptTimeoutMillis()))
+                                                        attemptBudgetMillis(pending, $oaPattern1_holder.bound.attemptTimeoutMillis()))
                                                 : event);
                             }
                         },
@@ -211,12 +215,14 @@ public final class ModelRequestScheduler implements ModelClient {
                         return;
                     }
                     Throwable cause = unwrap(throwable);
-                    if (cause instanceof ModelRateLimitException limited
+                    final class $oaPattern2_Holder { java.lang.Throwable value; ModelRateLimitException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = cause) instanceof dev.openallay.model.ModelRateLimitException && (($oaPattern2_holder.bound = (ModelRateLimitException) $oaPattern2_holder.value) != null))
                             && !responseProgress.get()
                             && !pending.cancellation.isCancelled()) {
-                        Duration delay = limited.retryAfter() == null
+                        Duration delay = $oaPattern2_holder.bound.retryAfter() == null
                                 ? fallbackDelay(pending.attempt)
-                                : limited.retryAfter();
+                                : $oaPattern2_holder.bound.retryAfter();
                         pending.events.accept(
                                 new ModelEvent.RateLimited(delay.toMillis(), pending.attempt));
                         closeGate(delay);
@@ -234,18 +240,22 @@ public final class ModelRequestScheduler implements ModelClient {
     }
 
     private boolean retryableTransport(Throwable cause, boolean responseProgress, Pending pending) {
-        return !responseProgress
-                && cause instanceof ModelClientException modelFailure
-                && (modelFailure.failure().code().equals("model_transport_error")
+        final class $oaPattern3_Holder { java.lang.Throwable value; ModelClientException bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+return !responseProgress
+                && (($oaPattern3_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern3_holder.bound = (ModelClientException) $oaPattern3_holder.value) != null))
+                && ($oaPattern3_holder.bound.failure().code().equals("model_transport_error")
                         || cause instanceof ModelUpstreamException)
                 && pending.attempt <= transportRetries;
     }
 
     private boolean scheduleTransportRetry(Pending pending, Throwable cause) {
         Duration delay = transportRetryDelay.multipliedBy(Math.max(1, pending.attempt));
-        if (cause instanceof ModelUpstreamException upstream
-                && upstream.retryAfter() != null && upstream.retryAfter().compareTo(delay) > 0) {
-            delay = upstream.retryAfter();
+        final class $oaPattern4_Holder { java.lang.Throwable value; ModelUpstreamException bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = cause) instanceof dev.openallay.model.ModelUpstreamException && (($oaPattern4_holder.bound = (ModelUpstreamException) $oaPattern4_holder.value) != null))
+                && $oaPattern4_holder.bound.retryAfter() != null && $oaPattern4_holder.bound.retryAfter().compareTo(delay) > 0) {
+            delay = $oaPattern4_holder.bound.retryAfter();
         }
         synchronized (this) {
             if (pending.result.isDone() || pending.cancellation.isCancelled()) {
@@ -350,7 +360,7 @@ public final class ModelRequestScheduler implements ModelClient {
                 synchronized (ModelRequestScheduler.this) {
                     wakeScheduled = false;
                     dispatch = drainLocked();
-                    ready = gateUntilNanos == 0 ? List.copyOf(gateWaiters) : List.of();
+                    ready = gateUntilNanos == 0 ? dev.openallay.util.Java8Collections.listCopyOf(gateWaiters) : dev.openallay.util.Java8Collections.listOf();
                     if (!ready.isEmpty()) {
                         gateWaiters.clear();
                     }

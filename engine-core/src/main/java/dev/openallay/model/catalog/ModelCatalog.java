@@ -8,8 +8,8 @@ public final class ModelCatalog {
     private final List<String> modelIds;
     public ModelCatalog(List<String> modelIds) {
 
-        modelIds = List.copyOf(modelIds);
-        if (modelIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+        modelIds = dev.openallay.util.Java8Collections.listCopyOf(modelIds);
+        if (modelIds.stream().anyMatch(id -> id == null || dev.openallay.util.Java8Strings.isBlank(id))) {
             throw new IllegalArgumentException("model catalog IDs must be nonblank");
         }
         if (modelIds.size() != new java.util.LinkedHashSet<>(modelIds).size()) {

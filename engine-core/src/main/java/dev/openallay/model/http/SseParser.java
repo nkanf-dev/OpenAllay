@@ -94,7 +94,7 @@ public final class SseParser {
             }
             consumeLine(line);
         }
-        if (end && !pendingText.isEmpty()) {
+        if (end && !((pendingText).length() == 0)) {
             consumeLine(pendingText.toString());
             pendingText.setLength(0);
         }
@@ -108,7 +108,7 @@ public final class SseParser {
         } else if (line.startsWith("event:")) {
             event = fieldValue(line, "event:");
         } else if (line.startsWith("data:")) {
-            if (!data.isEmpty()) {
+            if (!((data).length() == 0)) {
                 data.append('\n');
             }
             data.append(fieldValue(line, "data:"));
@@ -116,7 +116,7 @@ public final class SseParser {
     }
 
     private void dispatch() {
-        if (!data.isEmpty()) {
+        if (!((data).length() == 0)) {
             consumer.accept(new SseEvent(event, data.toString()));
         }
         event = "message";

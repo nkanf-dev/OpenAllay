@@ -166,7 +166,7 @@ private static final class BadRequestClassifier {
 
     private static Duration retryAfter(HttpResponseHeaders headers) {
         String value = headers.firstValue("retry-after").orElse(null);
-        if (value == null || value.isBlank()) {
+        if (value == null || dev.openallay.util.Java8Strings.isBlank(value)) {
             return null;
         }
         try {
