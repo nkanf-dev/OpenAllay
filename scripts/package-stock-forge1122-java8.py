@@ -19,7 +19,7 @@ ROOT=Path(__file__).resolve().parents[1]
 SPEC=importlib.util.spec_from_file_location('legacy_pack',ROOT/'scripts/package-legacy-forge-release.py')
 legacy=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(legacy)
 REQUIRED={'engine','sdk','rhino','commonmark','jtokkit','sqlite','mixin'}
-OPTIONAL={'tables','jsr305','checkerqual','errorprone','j2objc'}
+OPTIONAL={'tables','jsr305','checkerqual','errorprone','j2objc','slf4j'}
 FORBIDDEN=('java/','net/minecraft/','net/minecraftforge/','org/objectweb/asm/',
     'com/google/gson/','com/google/common/','org/apache/logging/log4j/',
     'dev/openallay/forge1122agent/','dev/openallay/forge36probe/')

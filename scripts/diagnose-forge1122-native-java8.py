@@ -107,6 +107,7 @@ def main():
         'closure':closure,'actualMcpUnits':transport.actual_units(),
         'output':str(Path(os.environ['RUNNER_TEMP'])/'forge1122-java8-native')}
     transport.write(work/'request.json',request)
+    transport.write(work/'compile-closure.json',closure)
     transport.write(reports/'input-custody.json',{'sourceRevision':os.environ['GITHUB_SHA'],'typeOracleProvider':pin,
         'runtimeClosureAccepted':False,'packagedProduct':False,'engineJava8Acceptance':False})
     command=['python3','-B',str(ROOT/'scripts/run-forge1122-native-census.py'),
@@ -120,6 +121,23 @@ def main():
     transport.write(reports/'RESULT.json',{'command':command,'exitCode':result.returncode,
         'scope':'actual whole native source Java8 syntax/API compiler frontier','runtimeAcceptance':False,'gameLaunch':False})
     print((reports/'driver.log').read_text()[-16000:])
+    if result.returncode==0 and a.native_package_probe:
+        package_output=ROOT/'build/forge1122-stock8-product';package_output.mkdir(exist_ok=False)
+        # Reuse the current engine producer from this same job; never relabel an older accepted JAR.
+        source_metadata={**metadata,'sourceRevision':os.environ['GITHUB_SHA']}
+        current_metadata=work/'source-bound-current-engine-classpath.json';transport.write(current_metadata,source_metadata)
+        current_engine_receipt=work/'source-bound-current-engine8-receipt.json'
+        commands=[
+            ['python3','-B',str(ROOT/'scripts/verify-normal-engine-java8-artifact.py'),'--project',str(ROOT),'--classpath-metadata',str(current_metadata),'--output',str(current_engine_receipt)],
+            ['python3','-B',str(ROOT/'scripts/classify-stock-forge1122-java8-runtime.py'),'--metadata',str(current_metadata),'--engine-receipt',str(current_engine_receipt),'--native-root',request['output'],'--closure',str(work/'compile-closure.json'),'--output',str(work/'ordinary-stock8-package-inputs.json')],
+            ['python3','-B',str(ROOT/'scripts/package-stock-forge1122-java8.py'),'--inputs',str(work/'ordinary-stock8-package-inputs.json'),'--output',str(package_output/'openallay-forge-1.12.2-0.4.4.jar'),'--receipt',str(package_output/'package-custody.json')]]
+        for number,command in enumerate(commands):
+            with (reports/('flat-package-step-'+str(number)+'.log')).open('w') as log:
+                outcome=subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,timeout=300)
+            if outcome.returncode:
+                transport.write(reports/'flat-package-result.json',{'status':'failed','step':number,'command':command,'exitCode':outcome.returncode,'gameExecuted':False})
+                raise SystemExit(outcome.returncode)
+        transport.write(reports/'flat-package-result.json',{'status':'passed','sourceRevision':os.environ['GITHUB_SHA'],'sameJobCurrentEngine':True,'normalNativeApReobfRequired':True,'fullEngineTestsReexecuted':False,'gameExecuted':False,'ordinaryModsJar':str(package_output/'openallay-forge-1.12.2-0.4.4.jar')})
     raise SystemExit(result.returncode)
 
 if __name__=='__main__':main()

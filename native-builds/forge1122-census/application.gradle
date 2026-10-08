@@ -34,8 +34,14 @@ if (!(roles.keySet().containsAll(['engine','sdk','builder'])) || req.closure.any
     }
 }
 // No publication, SDK, Builder or engine rebuild. The canonical feature/native owners remain one each.
-configurations { nativeApplicationProcessor }
-dependencies { nativeApplicationProcessor 'org.spongepowered:mixin:0.8.5:processor' }
+configurations {
+    nativeApplicationProcessor
+    nativeApplicationRuntime { transitive = false }
+}
+dependencies {
+    nativeApplicationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    nativeApplicationRuntime 'org.spongepowered:mixin:0.8.5'
+}
 def staging=new File(out,'generated-java'); def classes=new File(out,'classes')
 def toolClasses=new File(out,'namespace-tool'); def ap=new File(out,'ap')
 def toolSources=['MinecraftClassNamespaceProducer','MinecraftClassNamespaceProducerMain','NamespaceMetadataAcceptance','CuratedNamespaceAcceptanceMain'].collect {
@@ -167,3 +173,19 @@ if (project.hasProperty('nativeLanguageCandidates')) {
         }
     }
 }
+
+// Runtime publication is distinct from the fat annotation processor classifier.
+task exportNativeApplicationRuntime {
+    dependsOn compileNativeApplication
+    doLast {
+        def records=configurations.nativeApplicationRuntime.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+            [coordinate:artifact.moduleVersion.id.toString(),classifier:artifact.classifier ?: '',
+             path:artifact.file.canonicalPath,sha256:sha(artifact.file)]
+        }
+        if (records.size()!=1 || records[0].coordinate!='org.spongepowered:mixin:0.8.5' || records[0].classifier!='')
+            throw new GradleException('One genuine unclassified Mixin runtime artifact required')
+        out.mkdirs()
+        new File(out,'normal-runtime-dependency-inputs.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(records))+'\n','UTF-8')
+    }
+}
+tasks.getByName('buildNativeApplication').dependsOn exportNativeApplicationRuntime

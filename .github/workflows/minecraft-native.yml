@@ -262,7 +262,7 @@ jobs:
         with: {distribution: temurin, java-version: '8.0.482+8'}
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
         with: {cache-provider: basic, cache-read-only: false}
-      - name: Normal native Java8 compilation and Mixin AP/reobf/JAR probe only
+      - name: Normal native Java8 AP/reobf then same-job ordinary flat package
         env: {GH_TOKEN: '${{ github.token }}'}
         run: python3 -B scripts/diagnose-forge1122-native-java8.py --native-package-probe
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -273,6 +273,11 @@ jobs:
           if-no-files-found: warn
           path: |
             build/forge1122-java8-diagnostic/
+            build/forge1122-stock8-product/
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/source-bound-current-engine-classpath.json
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/source-bound-current-engine8-receipt.json
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/ordinary-stock8-package-inputs.json
+            ${{ runner.temp }}/forge1122-java8-diagnostic-inputs/actual-runtime-classification.json
             ${{ runner.temp }}/forge1122-java8-tooling/*.json
             ${{ runner.temp }}/forge1122-java8-tooling/*.log
             ${{ runner.temp }}/forge1122-java8-native/namespace-receipt.json
