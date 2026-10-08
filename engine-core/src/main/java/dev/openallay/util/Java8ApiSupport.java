@@ -49,6 +49,27 @@ public final class Java8ApiSupport {
         try { return java.net.URLEncoder.encode(value, "UTF-8"); }
         catch (java.io.UnsupportedEncodingException impossible) { throw new AssertionError(impossible); }
     }
+    /** External running JVM feature fact. This never selects another Java runtime. */
+    public static int runtimeVersionFeature() {
+        try {
+            Object version = Runtime.class.getMethod("version").invoke(null);
+            return (Integer) version.getClass().getMethod("feature").invoke(version);
+        } catch (NoSuchMethodException java8) {
+            String value = java.lang.management.ManagementFactory.getRuntimeMXBean().getSpecVersion();
+            if (value == null) throw new IllegalStateException("Missing java.specification.version");
+            String feature = value.startsWith("1.") ? value.substring(2) : value;
+            int dot = feature.indexOf('.');
+            if (dot >= 0) feature = feature.substring(0, dot);
+            return Integer.parseInt(feature);
+        } catch (java.lang.reflect.InvocationTargetException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause;
+            if (cause instanceof Error) throw (Error) cause;
+            throw new IllegalStateException("Cannot obtain public JVM version fact", cause);
+        } catch (IllegalAccessException impossible) {
+            throw new IllegalStateException("Cannot access public JVM version fact", impossible);
+        }
+    }
     public static String formatted(String format, Object... arguments) {
         Objects.requireNonNull(format);
         return String.format(format, arguments);
