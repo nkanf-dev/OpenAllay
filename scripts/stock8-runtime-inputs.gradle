@@ -13,7 +13,7 @@ allprojects {
                 }
                 if(records.size()!=1 || records[0].classifier!='' || records[0].coordinate!='org.spongepowered:mixin:0.8.5')
                     throw new GradleException('One normal genuine Mixin runtime artifact required')
-                def output=file(property('stock8RuntimeInputsOutput'));output.parentFile.mkdirs()
+                def output=project.file(project.property('stock8RuntimeInputsOutput'));output.parentFile.mkdirs()
                 if(output.exists())throw new GradleException('Fresh runtime metadata path required')
                 output.setText(JsonOutput.prettyPrint(JsonOutput.toJson(records))+'\n','UTF-8')
             }
