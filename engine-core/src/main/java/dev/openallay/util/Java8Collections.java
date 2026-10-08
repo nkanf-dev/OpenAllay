@@ -79,6 +79,87 @@ public final class Java8Collections {
         return Collections.unmodifiableMap(copy);
     }
 
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        putUnique(copy, k4, v4);
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4, K k5, V v5) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        putUnique(copy, k4, v4);
+        putUnique(copy, k5, v5);
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4, K k5, V v5, K k6, V v6, K k7, V v7) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        putUnique(copy, k4, v4);
+        putUnique(copy, k5, v5);
+        putUnique(copy, k6, v6);
+        putUnique(copy, k7, v7);
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4, K k5, V v5, K k6, V v6, K k7, V v7, K k8, V v8) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        putUnique(copy, k4, v4);
+        putUnique(copy, k5, v5);
+        putUnique(copy, k6, v6);
+        putUnique(copy, k7, v7);
+        putUnique(copy, k8, v8);
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4, K k5, V v5, K k6, V v6, K k7, V v7, K k8, V v8, K k9, V v9) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        putUnique(copy, k4, v4);
+        putUnique(copy, k5, v5);
+        putUnique(copy, k6, v6);
+        putUnique(copy, k7, v7);
+        putUnique(copy, k8, v8);
+        putUnique(copy, k9, v9);
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4, K k5, V v5, K k6, V v6, K k7, V v7, K k8, V v8, K k9, V v9, K k10, V v10) {
+        Map<K, V> copy = new LinkedHashMap<K, V>();
+        putUnique(copy, k1, v1);
+        putUnique(copy, k2, v2);
+        putUnique(copy, k3, v3);
+        putUnique(copy, k4, v4);
+        putUnique(copy, k5, v5);
+        putUnique(copy, k6, v6);
+        putUnique(copy, k7, v7);
+        putUnique(copy, k8, v8);
+        putUnique(copy, k9, v9);
+        putUnique(copy, k10, v10);
+        return Collections.unmodifiableMap(copy);
+    }
+
     public static <K, V> Map.Entry<K, V> entry(K key, V value) {
         return new java.util.AbstractMap.SimpleImmutableEntry<K, V>(
                 Objects.requireNonNull(key, "key"), Objects.requireNonNull(value, "value"));

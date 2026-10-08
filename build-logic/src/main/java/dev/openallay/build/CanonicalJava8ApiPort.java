@@ -30,7 +30,7 @@ public final class CanonicalJava8ApiPort {
     private static String helper(String owner,String method,int arity){return switch(owner){
         case "java.util.List" -> "dev.openallay.util.Java8Collections."+(method.equals("of")?"listOf":"listCopyOf");
         case "java.util.Set" -> "dev.openallay.util.Java8Collections."+(method.equals("of")?"setOf":"setCopyOf");
-        case "java.util.Map" -> switch(method){case "of" -> {if(!Set.of(0,2,4,12).contains(arity))throw new IllegalArgumentException("Map.of arity has no approved evaluation-preserving helper overload: "+arity);yield "dev.openallay.util.Java8Collections.mapOf";}case "copyOf"->"dev.openallay.util.Java8Collections.mapCopyOf";case "entry"->"dev.openallay.util.Java8Collections.entry";case "ofEntries"->"dev.openallay.util.Java8Collections.mapOfEntries";default->throw new IllegalArgumentException();};
+        case "java.util.Map" -> switch(method){case "of" -> {if(arity < 0 || arity > 20 || arity % 2 != 0)throw new IllegalArgumentException("Map.of arity has no approved evaluation-preserving helper overload: "+arity);yield "dev.openallay.util.Java8Collections.mapOf";}case "copyOf"->"dev.openallay.util.Java8Collections.mapCopyOf";case "entry"->"dev.openallay.util.Java8Collections.entry";case "ofEntries"->"dev.openallay.util.Java8Collections.mapOfEntries";default->throw new IllegalArgumentException();};
         case "java.util.stream.Stream" -> "dev.openallay.util.Java8Collections.toList";
         case "java.lang.String" -> "dev.openallay.util.Java8Strings."+method;
         case "java.util.concurrent.CompletableFuture" -> "dev.openallay.util.Java8Futures.failedFuture";
