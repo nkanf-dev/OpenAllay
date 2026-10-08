@@ -23,6 +23,19 @@ class LegacyInputTest(unittest.TestCase):
         for field,value in [('expired',True),('digest','sha256:'+'0'*64),('id',1)]:
             with self.assertRaises(ValueError):m.provider_matches({**meta,field:value},pin,run,42)
         with self.assertRaises(ValueError):m.provider_matches(meta,pin,{**run,'head_repository':{'id':7}},42)
+    def test_actual_repository_endpoint_and_full_history_checkout(self):
+        from unittest.mock import patch
+        import inspect
+        source=inspect.getsource(m.retained)
+        self.assertNotIn("'repos/'+repo+'/'+endpoint",source)
+        self.assertIn("'/'+endpoint if endpoint else ''",source)
+        root=Path(__file__).resolve().parents[1]
+        workflow=(root/'.github/workflows/minecraft-native.yml').read_text()
+        build=workflow.split('  build-packages:',1)[1].split('  stage:',1)[0]
+        checkout=build.split('uses: actions/checkout@',1)[1].split('uses: actions/setup-java@',1)[0]
+        self.assertIn('fetch-depth: 0',checkout)
+        self.assertIn('persist-credentials: false',checkout)
+
     def test_source_version_never_ambient_or_renamed(self):
         with tempfile.TemporaryDirectory() as t:
             root=Path(t);(root/'gradle.properties').write_text('version=0.4.4\n')

@@ -161,7 +161,7 @@ def provider_matches(meta, pin, run, repo_id):
 def retained(pin, work, label):
     require(os.environ.get('GITHUB_ACTIONS')=='true', 'Remote runner only')
     repo = os.environ['GITHUB_REPOSITORY']
-    api = lambda endpoint: json.loads(subprocess.check_output(['gh','api','repos/'+repo+'/'+endpoint]))
+    api = lambda endpoint: json.loads(subprocess.check_output(['gh','api','repos/'+repo+('/'+endpoint if endpoint else '')]))
     meta = api('actions/artifacts/'+str(pin['artifactId']))
     run = api('actions/runs/'+str(pin['runId']))
     repo_id = api('')['id']
