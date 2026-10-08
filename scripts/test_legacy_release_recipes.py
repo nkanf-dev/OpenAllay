@@ -44,21 +44,22 @@ class LegacyRecipeTest(unittest.TestCase):
 
     def test_exact_release_math_and_modern_identities_preserved(self):
         families = self.data["acceptedFamilies"]
-        self.assertEqual((len(families), len(self.data["targetOrder"]), sum(len(f["supportedTargets"]) for f in families)), (34, 27, 49))
+        self.assertEqual((len(families), len(self.data["targetOrder"]), sum(len(f["supportedTargets"]) for f in families)), (35, 27, 50))
         modern = [{key: value for key, value in f.items() if key not in ("packagingRecipe", "artifactKind", "publicationChannels")}
                   for f in families if f["packagingRecipe"] == "nested-mod"]
         self.assertEqual(len(modern), 33)
         self.assertEqual(hashlib.sha256(json.dumps(modern, sort_keys=True, separators=(",", ":")).encode()).hexdigest(), "b3ade78e4f9490c90b4cfca39f3a27a345fec67d7d9ae2b97d48e7abe849b0e1")
         modrinth = [f for f in families if "modrinth" in f["publicationChannels"]]
         self.assertEqual((len(modrinth), sum(len(f["supportedTargets"]) for f in modrinth),
-                          len({t for f in modrinth for t in f["supportedTargets"]})), (34, 49, 26))
-        self.assertEqual(len(WIRING.groups(self.data)), 19)
+                          len({t for f in modrinth for t in f["supportedTargets"]})), (35, 50, 27))
+        self.assertEqual(len(WIRING.groups(self.data)), 20)
 
     def test_legacy_kind_recipe_channels_are_exact_not_inferred(self):
-        with self.assertRaisesRegex(ValueError, "candidates do not publish"):
-            CATALOG.resolve(self.data, "1.12.2", "forge")
-        self.assertIn({"loaders":["forge"],"buildTarget":"1.12.2","targets":["1.12.2"],"publishing":False},
-                      self.data["candidateIntervals"])
+        f12 = CATALOG.resolve(self.data, "1.12.2", "forge")
+        self.assertEqual((f12["artifactKind"], f12["packagingRecipe"], f12["publicationChannels"]),
+                         ("jar", "forge-stock8", ["github", "modrinth"]))
+        self.assertNotIn({"loaders":["forge"],"buildTarget":"1.12.2","targets":["1.12.2"],"publishing":False},
+                         self.data["candidateIntervals"])
         self.assertEqual((self.f16["artifactKind"], self.f16["packagingRecipe"], self.f16["publicationChannels"]),
                          ("jar", "forge-flat", ["github", "modrinth"]))
         for family in (self.f16, CATALOG.resolve(self.data, "26.2", "fabric")):
@@ -119,9 +120,13 @@ class LegacyRecipeTest(unittest.TestCase):
                 COMPILER.compile_target(ROOT, target, environment={}, artifact_ids=family["id"], execute=lambda *a, **k: calls.append(a))
             self.assertEqual(calls, [])
 
-    def test_forge12_candidate_cannot_use_obsolete_or_root_release_recipe(self):
-        for options in ({}, {"artifact_ids":"forge-1.12.2"}, {"candidate_ids":"forge-1.12.2"}):
-            with self.assertRaisesRegex(ValueError, "Java8 port is in progress"):
+    def test_forge12_uses_exact_retained_product_without_native_alias(self):
+        commands = COMPILER.commands(ROOT, "1.12.2", loaders=("forge",), artifact_ids="forge-1.12.2")
+        self.assertEqual([runtime for _, runtime in commands], ["root", "retained-stock8"])
+        self.assertIn("-PminecraftTarget=26.2", commands[0][0])
+        self.assertEqual(commands[1][0][:3], ["python3", "-B", str(ROOT / "scripts/materialize-stock8-release.py")])
+        for options in ({}, {"candidate_ids":"forge-1.12.2"}, {"artifact_ids":"forge-1.16.5"}):
+            with self.assertRaisesRegex(ValueError, "exact accepted ordinary Java8 JAR family"):
                 COMPILER.commands(ROOT,"1.12.2",**options)
 
     def test_modern_compiler_command_semantics_unchanged(self):
