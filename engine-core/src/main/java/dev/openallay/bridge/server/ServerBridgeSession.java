@@ -47,11 +47,15 @@ public final class ServerBridgeSession {
             try { retired.run(); }
             catch (RuntimeException | Error failure) {
                 if (fatalFailure != null) { if (fatalFailure != failure) fatalFailure.addSuppressed(failure); }
-                else if (failure instanceof Error fatal) {
-                    if (runtimeFailure != null && (Throwable) fatal != runtimeFailure) fatal.addSuppressed(runtimeFailure);
-                    fatalFailure = fatal;
+                else {
+final class $oaPattern0_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = failure) instanceof java.lang.Error && (($oaPattern0_holder.bound = (Error) $oaPattern0_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern0_holder.bound != runtimeFailure) $oaPattern0_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern0_holder.bound;
                 } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
                 else runtimeFailure = (RuntimeException) failure;
+}
             }
             if (fatalFailure != null) throw fatalFailure;
             if (runtimeFailure != null) throw runtimeFailure;
@@ -89,9 +93,11 @@ public final class ServerBridgeSession {
         if (requestChunks != null) requestChunks.clearActor(actor);
         steerChunks.clearActor(actor);
         if (remoteTools != null) remoteTools.disconnect(actor);
-        if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
-            success.value().service().disconnect(actor);
-            success.value().clientTools().disconnect(actor);
+        final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern1_holder.value) != null))) {
+            $oaPattern1_holder.bound.value().service().disconnect(actor);
+            $oaPattern1_holder.bound.value().clientTools().disconnect(actor);
         }
     }
 
@@ -124,21 +130,26 @@ break;
 case "agent_request_chunk":
 {
 {
-                    if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
+                    final class $oaPattern2_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern2_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern2_holder.value) != null))) {
                         ServerAgentRequestChunkPayload chunk = codec.decode(
                                 json, ServerAgentRequestChunkPayload.class);
                         requestChunks.accept(actor, chunk).ifPresent(assembled -> {
                             ServerAgentRequestPayload request =
                                     codec.decode(assembled, ServerAgentRequestPayload.class);
                             ToolResult<ServerAgentService.Accepted> accepted =
-                                    success.value().service().ask(actor, request);
-                            if (accepted instanceof ToolResult.Failure<
-                                    ServerAgentService.Accepted> failure
-                                        && !success.value().service().hasRequest(actor, request.requestId())) {
+                                    $oaPattern2_holder.bound.value().service().ask(actor, request);
+                            final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerAgentService.Accepted> value; ToolResult.Failure<
+                                    ServerAgentService.Accepted> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if ((($oaPattern3_holder.value = accepted) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern3_holder.bound = (ToolResult.Failure<
+                                    ServerAgentService.Accepted>) $oaPattern3_holder.value) != null))
+                                        && !$oaPattern2_holder.bound.value().service().hasRequest(actor, request.requestId())) {
                                 sendAgentEvent(actor, agentEvents.encode(
                                         request.requestId(),
                                         new dev.openallay.agent.AgentEvent.Failed(
-                                                failure.code(), failure.message())));
+                                                $oaPattern3_holder.bound.code(), $oaPattern3_holder.bound.message())));
                                 sendAgentEvent(actor, agentEvents.encode(request.requestId(),
                                         new dev.openallay.agent.AgentEvent.RequestReleased()));
                             }
@@ -161,13 +172,15 @@ break;
 case "agent_cancel":
 {
 {
-                    if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
+                    final class $oaPattern4_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern4_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern4_holder.value) != null))) {
                         UUID requestId = codec.decode(
                                 json, ServerAgentCancelPayload.class).requestId();
                         steerChunks.clearRequest(actor, requestId);
                         boolean assembling = requestChunks.cancel(actor, requestId);
-                        if (!success.value().service().cancel(actor, requestId)
-                                && assembling && !success.value().service().hasRequest(actor, requestId)) {
+                        if (!$oaPattern4_holder.bound.value().service().cancel(actor, requestId)
+                                && assembling && !$oaPattern4_holder.bound.value().service().hasRequest(actor, requestId)) {
                             sendAgentEvent(actor, agentEvents.encode(requestId,
                                     new dev.openallay.agent.AgentEvent.Failed("agent_cancelled", "Agent request was cancelled")));
                             sendAgentEvent(actor, agentEvents.encode(requestId,
@@ -180,8 +193,10 @@ break;
 case "client_tool_result":
 {
 {
-                    if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
-                        success.value().clientTools().receive(
+                    final class $oaPattern5_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern5_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern5_holder.value) != null))) {
+                        $oaPattern5_holder.bound.value().clientTools().receive(
                                 actor,
                                 codec.decode(
                                         json,
@@ -200,8 +215,10 @@ throw new IllegalArgumentException("Unknown bridge packet " + kind);
                 if ("agent_request_chunk".equals(kind)) {
                     BridgeFrameCorrelation.read(json).ifPresent(requestId -> {
                         if (requestChunks != null) requestChunks.cancel(actor, requestId);
-                        if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success
-                                && !success.value().service().hasRequest(actor, requestId)) {
+                        final class $oaPattern6_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern6_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern6_holder.value) != null))
+                                && !$oaPattern6_holder.bound.value().service().hasRequest(actor, requestId)) {
                             sendAgentEvent(actor, agentEvents.encode(requestId,
                                     new dev.openallay.agent.AgentEvent.Failed(
                                             "server_protocol_error", "The server rejected this malformed request")));
@@ -235,16 +252,20 @@ throw new IllegalArgumentException("Unknown bridge packet " + kind);
     }
 
     private boolean ownsRequest(UUID actor, UUID requestId) {
-        return serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success
-                && success.value().service().ownsRequest(actor, requestId);
+        final class $oaPattern7_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+return (($oaPattern7_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern7_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern7_holder.value) != null))
+                && $oaPattern7_holder.bound.value().service().ownsRequest(actor, requestId);
     }
 
     private void receiveSteer(UUID actor, ServerAgentSteerPayload steer) {
         if (steer.operation() == ServerAgentSteerPayload.Operation.REMOVE) {
             steerChunks.cancel(actor, steer.requestId(), steer.messageId());
         }
-        if (serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success) {
-            success.value().service().steer(actor, steer);
+        final class $oaPattern8_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern8_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern8_holder.value) != null))) {
+            $oaPattern8_holder.bound.value().service().steer(actor, steer);
         } else if (steer.operation() == ServerAgentSteerPayload.Operation.PUT) {
             sendAgentEvent(actor, agentEvents.encode(steer.requestId(),
                     new dev.openallay.agent.AgentEvent.SteerRejected(steer.messageId())));
@@ -312,15 +333,19 @@ throw new IllegalArgumentException("Unknown bridge packet " + kind);
                     }
                 },
                 imageDirectory);
-        requestChunks = new ServerAgentRequestChunker.Reassembler(
-                serverGuide instanceof ToolResult.Success<ServerGuideRuntime> imageRuntime
-                        ? imageRuntime.value().requestBodyLimit()
+        final class $oaPattern9_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+requestChunks = new ServerAgentRequestChunker.Reassembler(
+                (($oaPattern9_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern9_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern9_holder.value) != null))
+                        ? $oaPattern9_holder.bound.value().requestBodyLimit()
                         : dev.openallay.bridge.protocol.BridgeProtocol.MAX_OPENAI_REQUEST_BYTES);
-        if (serverGuide instanceof ToolResult.Failure<ServerGuideRuntime> failure) {
+        final class $oaPattern10_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Failure<ServerGuideRuntime> bound; }
+final $oaPattern10_Holder $oaPattern10_holder = new $oaPattern10_Holder();
+if ((($oaPattern10_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern10_holder.bound = (ToolResult.Failure<ServerGuideRuntime>) $oaPattern10_holder.value) != null))) {
             dev.openallay.OpenAllayConstants.LOGGER.info(
                     "Server model is not advertised ({}): {}",
-                    failure.code(),
-                    failure.message());
+                    $oaPattern10_holder.bound.code(),
+                    $oaPattern10_holder.bound.message());
         }
     }
 
@@ -343,13 +368,17 @@ throw new IllegalArgumentException("Unknown bridge packet " + kind);
                 .map(descriptor -> new CapabilityPayload.RemoteToolCapability(
                         descriptor.id(), descriptor.description(),
                         schemas.generate(descriptor.inputType()).toString())));
-        return ServerModelCapabilityProjection.from(
+        final class $oaPattern11_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern11_Holder $oaPattern11_holder = new $oaPattern11_Holder();
+final class $oaPattern12_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerGuideRuntime> value; ToolResult.Success<ServerGuideRuntime> bound; }
+final $oaPattern12_Holder $oaPattern12_holder = new $oaPattern12_Holder();
+return ServerModelCapabilityProjection.from(
                 tools,
-                serverGuide instanceof ToolResult.Success<ServerGuideRuntime> success
-                        ? java.util.Optional.of(success.value().contextSpec())
+                (($oaPattern11_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern11_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern11_holder.value) != null))
+                        ? java.util.Optional.of($oaPattern11_holder.bound.value().contextSpec())
                         : java.util.Optional.empty(),
-                serverGuide instanceof ToolResult.Success<ServerGuideRuntime> imageRuntime
-                        ? imageRuntime.value().imageCapability()
+                (($oaPattern12_holder.value = serverGuide) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern12_holder.bound = (ToolResult.Success<ServerGuideRuntime>) $oaPattern12_holder.value) != null))
+                        ? $oaPattern12_holder.bound.value().imageCapability()
                         : dev.openallay.model.metadata.ModelImageCapabilityResolution.unknown());
     }
 

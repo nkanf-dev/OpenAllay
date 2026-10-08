@@ -275,14 +275,20 @@ public final class CommandCapabilityRuntime {
             throw failure;
         } catch (RuntimeException | java.util.concurrent.ExecutionException failure) {
             Throwable cause = failure.getCause();
-            if (cause instanceof dev.openallay.model.ModelClientException cancelled) {
-                throw cancelled;
+            final class $oaPattern0_Holder { java.lang.Throwable value; dev.openallay.model.ModelClientException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = cause) instanceof dev.openallay.model.ModelClientException && (($oaPattern0_holder.bound = (dev.openallay.model.ModelClientException) $oaPattern0_holder.value) != null))) {
+                throw $oaPattern0_holder.bound;
             }
-            if (cause instanceof JavascriptExecutionException rejected) {
-                throw rejected;
+            final class $oaPattern1_Holder { java.lang.Throwable value; JavascriptExecutionException bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+if ((($oaPattern1_holder.value = cause) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern1_holder.bound = (JavascriptExecutionException) $oaPattern1_holder.value) != null))) {
+                throw $oaPattern1_holder.bound;
             }
-            if (failure instanceof JavascriptExecutionException rejected) {
-                throw rejected;
+            final class $oaPattern2_Holder { java.lang.Exception value; JavascriptExecutionException bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if ((($oaPattern2_holder.value = failure) instanceof dev.openallay.script.JavascriptExecutionException && (($oaPattern2_holder.bound = (JavascriptExecutionException) $oaPattern2_holder.value) != null))) {
+                throw $oaPattern2_holder.bound;
             }
             throw new JavascriptExecutionException(
                     "command_submission_failed",

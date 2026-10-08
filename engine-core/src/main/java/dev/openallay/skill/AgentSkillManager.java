@@ -273,8 +273,10 @@ public static final class Result {
             prior = null;
             return replacement;
         } catch (IOException | RuntimeException failure) {
-            throw failure instanceof SkillManagementException managed
-                    ? managed
+            final class $oaPattern0_Holder { java.lang.Exception value; SkillManagementException bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+throw (($oaPattern0_holder.value = failure) instanceof dev.openallay.skill.SkillManagementException && (($oaPattern0_holder.bound = (SkillManagementException) $oaPattern0_holder.value) != null))
+                    ? $oaPattern0_holder.bound
                     : new SkillManagementException(
                             "skill_write_failed", "Unable to publish the managed Skill", failure);
         } finally {

@@ -17,11 +17,15 @@ public interface ServerGuideEvents {
         try { retired.run(); }
         catch (RuntimeException | Error failure) {
             if (fatalFailure != null) { if (fatalFailure != failure) fatalFailure.addSuppressed(failure); }
-            else if (failure instanceof Error fatal) {
-                if (runtimeFailure != null && (Throwable) fatal != runtimeFailure) fatal.addSuppressed(runtimeFailure);
-                fatalFailure = fatal;
+            else {
+final class $oaPattern0_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = failure) instanceof java.lang.Error && (($oaPattern0_holder.bound = (Error) $oaPattern0_holder.value) != null))) {
+                if (runtimeFailure != null && (Throwable) $oaPattern0_holder.bound != runtimeFailure) $oaPattern0_holder.bound.addSuppressed(runtimeFailure);
+                fatalFailure = $oaPattern0_holder.bound;
             } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
             else runtimeFailure = (RuntimeException) failure;
+}
         }
         if (fatalFailure != null) throw fatalFailure;
         if (runtimeFailure != null) throw runtimeFailure;

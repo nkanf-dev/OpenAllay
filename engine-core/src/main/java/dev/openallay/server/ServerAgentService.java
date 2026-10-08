@@ -162,8 +162,10 @@ public final class ServerAgentService {
                 return new ToolResult.Failure<>("image_unavailable", "The server image store is unavailable");
             }
             ToolResult<RequestRuntime> prepared = runtimes.create(sender, payload);
-            if (prepared instanceof ToolResult.Failure<RequestRuntime> failure) {
-                return new ToolResult.Failure<>(failure.code(), failure.message());
+            final class $oaPattern0_Holder { dev.openallay.tool.ToolResult<dev.openallay.server.ServerAgentService.RequestRuntime> value; ToolResult.Failure<RequestRuntime> bound; }
+final $oaPattern0_Holder $oaPattern0_holder = new $oaPattern0_Holder();
+if ((($oaPattern0_holder.value = prepared) instanceof dev.openallay.tool.ToolResult.Failure && (($oaPattern0_holder.bound = (ToolResult.Failure<RequestRuntime>) $oaPattern0_holder.value) != null))) {
+                return new ToolResult.Failure<>($oaPattern0_holder.bound.code(), $oaPattern0_holder.bound.message());
             }
             RequestRuntime runtime = ((ToolResult.Success<RequestRuntime>) prepared).value();
             created[0] = runtime;
@@ -333,7 +335,9 @@ public final class ServerAgentService {
             } else {
                 ToolResult<Boolean> result = sessions.steer(
                         owner.key(), payload.requestId(), payload.messageId(), message);
-                accepted = result instanceof ToolResult.Success<Boolean> success && success.value();
+                final class $oaPattern1_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern1_Holder $oaPattern1_holder = new $oaPattern1_Holder();
+accepted = (($oaPattern1_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern1_holder.bound = (ToolResult.Success<Boolean>) $oaPattern1_holder.value) != null)) && $oaPattern1_holder.bound.value();
             }
             if (!accepted) rejectSteer(owner.events, owner.actorId(), payload);
             return accepted;
@@ -554,8 +558,10 @@ private static final class Disconnect {
 
     private void publish(UUID requestId, Owner owner, AgentEvent event) {
         synchronized (owner) {
-            if (!owner.reserved && event instanceof AgentEvent.StateChanged state
-                    && state.state() == dev.openallay.agent.AgentState.PREPARING) {
+            final class $oaPattern2_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.StateChanged bound; }
+final $oaPattern2_Holder $oaPattern2_holder = new $oaPattern2_Holder();
+if (!owner.reserved && (($oaPattern2_holder.value = event) instanceof dev.openallay.agent.AgentEvent.StateChanged && (($oaPattern2_holder.bound = (AgentEvent.StateChanged) $oaPattern2_holder.value) != null))
+                    && $oaPattern2_holder.bound.state() == dev.openallay.agent.AgentState.PREPARING) {
                 owner.reserved = true;
                 if (!owns(requestId, owner) || owner.cancellation().isCancelled() || owner.disconnected) {
                     owner.inbox.clear();
@@ -567,7 +573,9 @@ private static final class Disconnect {
                 for (java.util.Map.Entry<java.util.UUID, dev.openallay.model.ModelMessage> pending : owner.inbox.entrySet()) {
                     ToolResult<Boolean> result = sessions.steer(
                             owner.key(), requestId, pending.getKey(), pending.getValue());
-                    if (!(result instanceof ToolResult.Success<Boolean> success && success.value())) {
+                    final class $oaPattern3_Holder { dev.openallay.tool.ToolResult<java.lang.Boolean> value; ToolResult.Success<Boolean> bound; }
+final $oaPattern3_Holder $oaPattern3_holder = new $oaPattern3_Holder();
+if (!((($oaPattern3_holder.value = result) instanceof dev.openallay.tool.ToolResult.Success && (($oaPattern3_holder.bound = (ToolResult.Success<Boolean>) $oaPattern3_holder.value) != null)) && $oaPattern3_holder.bound.value())) {
                         owner.events.send(owner.actorId(), eventCodec.encode(requestId,
                                 new AgentEvent.SteerRejected(pending.getKey())));
                     }
@@ -592,7 +600,9 @@ private static final class Disconnect {
             boolean numeric = event instanceof AgentEvent.ModelUsageStarted
                     || event instanceof AgentEvent.ModelUsageObserved;
             if (owner.terminal && !numeric) return;
-            if (event instanceof AgentEvent.ModelUsageStarted started) owner.pendingCalls.add(started.callId());
+            final class $oaPattern4_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelUsageStarted bound; }
+final $oaPattern4_Holder $oaPattern4_holder = new $oaPattern4_Holder();
+if ((($oaPattern4_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelUsageStarted && (($oaPattern4_holder.bound = (AgentEvent.ModelUsageStarted) $oaPattern4_holder.value) != null))) owner.pendingCalls.add($oaPattern4_holder.bound.callId());
             if (event instanceof AgentEvent.FinalText || event instanceof AgentEvent.Failed) {
                 owner.terminal = true;
                 owner.inbox.clear();
@@ -610,7 +620,9 @@ private static final class Disconnect {
                 }
                 if (!owner.disconnected) owner.events.send(owner.actorId(), eventCodec.encode(requestId, event));
             } finally {
-                if (event instanceof AgentEvent.ModelUsageObserved observed) owner.pendingCalls.remove(observed.callId());
+                final class $oaPattern5_Holder { dev.openallay.agent.AgentEvent value; AgentEvent.ModelUsageObserved bound; }
+final $oaPattern5_Holder $oaPattern5_holder = new $oaPattern5_Holder();
+if ((($oaPattern5_holder.value = event) instanceof dev.openallay.agent.AgentEvent.ModelUsageObserved && (($oaPattern5_holder.bound = (AgentEvent.ModelUsageObserved) $oaPattern5_holder.value) != null))) owner.pendingCalls.remove($oaPattern5_holder.bound.callId());
                 releaseIfFinished(requestId, owner);
             }
         }
@@ -639,11 +651,15 @@ private static final class Disconnect {
                 dev.openallay.OpenAllayConstants.LOGGER.warn("Server request image cleanup failed", failure);
             } catch (RuntimeException | Error failure) {
                 if (fatalFailure != null) { if (fatalFailure != failure) fatalFailure.addSuppressed(failure); }
-                else if (failure instanceof Error fatal) {
-                    if (runtimeFailure != null && (Throwable) fatal != runtimeFailure) fatal.addSuppressed(runtimeFailure);
-                    fatalFailure = fatal;
+                else {
+final class $oaPattern6_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern6_Holder $oaPattern6_holder = new $oaPattern6_Holder();
+if ((($oaPattern6_holder.value = failure) instanceof java.lang.Error && (($oaPattern6_holder.bound = (Error) $oaPattern6_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern6_holder.bound != runtimeFailure) $oaPattern6_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern6_holder.bound;
                 } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
                 else runtimeFailure = (RuntimeException) failure;
+}
             }
             synchronized (requestAdmissionLock) { active.remove(requestId, owner); }
             Runnable retired = () -> retireRelease(requestId, owner);
@@ -660,11 +676,15 @@ private static final class Disconnect {
                     } else if (eventFailure != retirementFailure) eventFailure.addSuppressed(retirementFailure);
                 }
                 if (fatalFailure != null) { if (fatalFailure != eventFailure) fatalFailure.addSuppressed(eventFailure); }
-                else if (eventFailure instanceof Error fatal) {
-                    if (runtimeFailure != null && (Throwable) fatal != runtimeFailure) fatal.addSuppressed(runtimeFailure);
-                    fatalFailure = fatal;
+                else {
+final class $oaPattern7_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern7_Holder $oaPattern7_holder = new $oaPattern7_Holder();
+if ((($oaPattern7_holder.value = eventFailure) instanceof java.lang.Error && (($oaPattern7_holder.bound = (Error) $oaPattern7_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern7_holder.bound != runtimeFailure) $oaPattern7_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern7_holder.bound;
                 } else if (runtimeFailure != null) { if (runtimeFailure != failure) runtimeFailure.addSuppressed(failure); }
                 else runtimeFailure = (RuntimeException) failure;
+}
             }
             if (fatalFailure != null) throw fatalFailure;
             if (runtimeFailure != null) throw runtimeFailure;
@@ -717,11 +737,15 @@ private static final class Disconnect {
                 synchronized (owner) { owner.imageOperations--; releaseIfFinished(requestId, owner); }
             } catch (RuntimeException | Error cleanupFailure) {
                 if (fatalFailure != null) { if (fatalFailure != cleanupFailure) fatalFailure.addSuppressed(cleanupFailure); }
-                else if (cleanupFailure instanceof Error fatal) {
-                    if (runtimeFailure != null && (Throwable) fatal != runtimeFailure) fatal.addSuppressed(runtimeFailure);
-                    fatalFailure = fatal;
+                else {
+final class $oaPattern8_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern8_Holder $oaPattern8_holder = new $oaPattern8_Holder();
+if ((($oaPattern8_holder.value = cleanupFailure) instanceof java.lang.Error && (($oaPattern8_holder.bound = (Error) $oaPattern8_holder.value) != null))) {
+                    if (runtimeFailure != null && (Throwable) $oaPattern8_holder.bound != runtimeFailure) $oaPattern8_holder.bound.addSuppressed(runtimeFailure);
+                    fatalFailure = $oaPattern8_holder.bound;
                 } else if (runtimeFailure != null) { if (runtimeFailure != cleanupFailure) runtimeFailure.addSuppressed(cleanupFailure); }
                 else runtimeFailure = (RuntimeException) cleanupFailure;
+}
             }
             if (fatalFailure != null) throw fatalFailure;
             if (runtimeFailure != null && !completed.isCompletedExceptionally()) throw runtimeFailure;
@@ -736,7 +760,9 @@ private static final class Disconnect {
                     if (failure != secondary) failure.addSuppressed(secondary);
                 }
             }
-            if (failure instanceof Error fatal) throw fatal;
+            final class $oaPattern9_Holder { java.lang.Throwable value; Error bound; }
+final $oaPattern9_Holder $oaPattern9_holder = new $oaPattern9_Holder();
+if ((($oaPattern9_holder.value = failure) instanceof java.lang.Error && (($oaPattern9_holder.bound = (Error) $oaPattern9_holder.value) != null))) throw $oaPattern9_holder.bound;
         }
         return completed;
     }
