@@ -86,7 +86,7 @@ jobs:
         with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '17.0.18+8'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: false
@@ -359,7 +359,7 @@ jobs:
         run: printf 'OPENALLAY_NATIVE_JAVA17_HOME=%s\n' "$JAVA_HOME" >> "$GITHUB_ENV"
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '8.0.482+8'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: false}
       - name: Compile native Java17 against the exact stock named FG3 island
         env: {GH_TOKEN: '${{ github.token }}'}
@@ -393,7 +393,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '25'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: false}
       - name: Compile shared modern native code and test affected UI and voice fixtures only
         run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :common:test --tests dev.openallay.client.gui.GuideLegacyButtonDispatchTest -x :engine-core:test -x :runtime-maven:test
@@ -419,7 +419,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '8.0.482+8'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: false}
       - name: Normal FG3 reobf only; preserve accepted Java17 native input
         env: {GH_TOKEN: '${{ github.token }}'}
@@ -450,7 +450,7 @@ jobs:
         with: {distribution: temurin, java-version: '21.0.10+7.0.LTS'}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '25'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: false}
       - name: Prepare actual current legacy release bytes through central recipe
         env: {GH_TOKEN: '${{ github.token }}'}

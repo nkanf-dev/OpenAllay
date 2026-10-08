@@ -25,7 +25,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -55,7 +55,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -93,7 +93,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -122,7 +122,7 @@ jobs:
           java-version: |
             8
             17
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -156,7 +156,7 @@ jobs:
           java-version: |
             8
             21
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -186,7 +186,7 @@ jobs:
             8
             17
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -257,7 +257,7 @@ jobs:
             8
             17
             21
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -295,7 +295,7 @@ jobs:
             8
             21
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with:
           cache-provider: basic
           cache-read-only: true
@@ -327,7 +327,7 @@ jobs:
           java-version: |
             8
             21
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Compare original records with genuine Java 8 values and emit review-only candidates
         run: ./gradlew --no-daemon -p build-logic/src/recordConversionTest/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" recordConversionTest
@@ -353,7 +353,7 @@ jobs:
           java-version: |
             8
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Compile and execute the typed metadata subset on genuine Java 8
         run: |
@@ -387,7 +387,7 @@ jobs:
             8
             21
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Verify only actual Java 8 incomplete response framing cases
         run: ./gradlew --no-daemon -p engine-core/src/java8Test/http -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" java8CompatibilityTest --args="--case incomplete-response"
@@ -412,7 +412,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '25'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Verify canonical registry value consumers and closed script results
         run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.JavascriptTypedResultTest --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.script.host.ExplicitHostValueTest --tests dev.openallay.script.schema.ExplicitHostSchemaTest --tests dev.openallay.json.ExplicitValueSchemaTest
@@ -439,7 +439,7 @@ jobs:
             8
             21
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Preserve exact original canonical owner input for the behavior oracle
         run: "python3 -c 'from pathlib import Path; import subprocess; root=Path(\"build/query-original-inputs\"); root.mkdir(parents=True,exist_ok=False); files=['\"'\"'engine-core/src/main/java/dev/openallay/tool/query/RegistryQueryEngine.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/tool/query/QueryOperation.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RegistryEntrySnapshot.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/RegistrySnapshot.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/EvidenceMetadata.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/ContextValidation.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataAuthority.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/context/DataCompleteness.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueType.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchema.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/value/ValueSchemas.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Collections.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/util/Java8Strings.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/agent/tool/ToolDescription.java'\"'\"', '\"'\"'engine-core/src/main/java/dev/openallay/agent/tool/ToolOptional.java'\"'\"', '\"'\"'runtime-json/src/main/java/dev/openallay/json/JsonTrees.java'\"'\"']; '\"'\"'a2eff926602ca8e8bf94fde01a03dca53ec3bef6'\"'\"'\nfor name in files:\n p=root/name; p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(subprocess.check_output([\"git\",\"show\",\"a2eff926602ca8e8bf94fde01a03dca53ec3bef6:\"+name]))'"
@@ -474,7 +474,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -514,7 +514,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -550,7 +550,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -584,7 +584,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -660,7 +660,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -696,7 +696,7 @@ jobs:
             8
             21
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Generate only the legitimate local test TLS identity
         run: ./gradlew --no-daemon -p engine-core/src/java8Test/voice-http -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" fixtureTls
@@ -725,7 +725,7 @@ jobs:
             8
             17
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Verify canonical result values and constructor JSON on genuine Java 8
         run: |
@@ -760,7 +760,7 @@ jobs:
             8
             17
             25
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Verify the real engine JSON owner on genuine Java 8 with both Gson hosts
         run: |
@@ -797,7 +797,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -854,7 +854,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -928,7 +928,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -971,7 +971,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1011,7 +1011,7 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
         with: {distribution: temurin, java-version: '25'}
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
         with: {cache-provider: basic, cache-read-only: true}
       - name: Verify only the actual canonical schema and codec consumers
         run: |
@@ -1043,7 +1043,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1094,7 +1094,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1132,7 +1132,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1239,7 +1239,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1280,7 +1280,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1334,7 +1334,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1363,7 +1363,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1446,7 +1446,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1557,7 +1557,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1727,7 +1727,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1800,7 +1800,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1843,7 +1843,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -1913,7 +1913,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2016,7 +2016,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2056,7 +2056,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2191,7 +2191,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2224,7 +2224,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2293,7 +2293,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2477,7 +2477,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2520,7 +2520,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2591,7 +2591,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2630,7 +2630,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2742,7 +2742,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2893,7 +2893,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -2933,7 +2933,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3052,7 +3052,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3095,7 +3095,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3200,7 +3200,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3236,7 +3236,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3275,7 +3275,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3421,7 +3421,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3475,7 +3475,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3513,7 +3513,7 @@ jobs:
         java-version: '8
 
           21'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3545,7 +3545,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3623,7 +3623,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3658,7 +3658,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3695,7 +3695,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3733,7 +3733,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3775,7 +3775,7 @@ jobs:
           21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3818,7 +3818,7 @@ jobs:
         java-version: '21
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3859,7 +3859,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -3906,7 +3906,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4047,7 +4047,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4098,7 +4098,7 @@ jobs:
         java-version: '8
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4137,7 +4137,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4208,7 +4208,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4272,7 +4272,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4307,7 +4307,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4426,7 +4426,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4474,7 +4474,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4515,7 +4515,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4558,7 +4558,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4592,7 +4592,7 @@ jobs:
           17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4651,7 +4651,7 @@ jobs:
         java-version: '17
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4755,7 +4755,7 @@ jobs:
         java-version: '8
 
           25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4793,7 +4793,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '25'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
@@ -4931,7 +4931,7 @@ jobs:
       with:
         distribution: temurin
         java-version: '17'
-    - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+    - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6
       with:
         cache-provider: basic
         cache-read-only: true
