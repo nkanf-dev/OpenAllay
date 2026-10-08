@@ -45,6 +45,9 @@ def main():
     legacy.require(source==request['sourceRevision'],'Exact current release source required')
     legacy.require(re.search(r'(?m)^version='+re.escape(request['version'])+r'$',(root/'gradle.properties').read_text()) is not None,'Current release version differs')
     native_path=legacy.reference(request['native']);native_raw=native_path.read_bytes();native=scan8(native_raw,'native')
+    companion_spec=importlib.util.spec_from_file_location('mixin_companion_audit',ROOT/'scripts/audit-configured-mixin-companions.py')
+    companion_audit=importlib.util.module_from_spec(companion_spec);companion_spec.loader.exec_module(companion_audit)
+    companion_audit.audit(native_path,a.receipt.with_name('configured-mixin-companions.json'))
     native_receipt=legacy.load(legacy.reference(request['nativeReceipt']))
     legacy.require(native_receipt['nativeRelease']==8 and native_receipt['jarSha256']==legacy.sha(native_raw),
         'Actual normal FG native --release8/reobf receipt required')
