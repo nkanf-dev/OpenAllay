@@ -1,0 +1,11 @@
+{
+  "provider": {
+    "artifactId": 11537456494,
+    "runId": 37749666349,
+    "sourceRevision": "655b42213590ba48767435343794ed2e63037904",
+    "sha256": "794cb8990a7e578c83521b7ead54954dfb9d036d59093710e4d3de92e9cad932"
+  },
+  "jarSha256": "a4c51aca3d026acc95e1024be5657c2fbbcd9419b86d1c5cc3797a3472c41085",
+  "jarName": "openallay-forge-1.12.2-0.4.4.jar",
+  "productSource": "655b42213590ba48767435343794ed2e63037904"
+}
