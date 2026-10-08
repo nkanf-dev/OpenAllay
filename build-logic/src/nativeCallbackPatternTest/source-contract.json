@@ -1,0 +1,29 @@
+{
+  "scope": "CanonicalPatternPort native3inferredwildcardcallbacks+2directenhancedforIfbody finitepubliccompilerflow policy; engine706/nativeproduction unchanged",
+  "sources": [
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/CanonicalPatternPort.java",
+      "sha256": "3ff140a382a46deae290004b192a412fe480aa73e003c9884612fe2ba9059404"
+    },
+    {
+      "path": "build-logic/src/main/java/dev/openallay/build/AttributedVarTypes.java",
+      "sha256": "057afdcc43bd313e283af59446ac8687eacac3e62a802fe03b9dc3c6826b805c"
+    },
+    {
+      "path": "scripts/pattern-language-port/CanonicalNativeCallbackPatternFixture.java",
+      "sha256": "82f0430fc9fa682d476559575fc6e5f22845a633fee210e77d9a3b051bb2d068"
+    }
+  ],
+  "runner_sha256": "5fa42e8987c43a98f2a0fad15f2b31ef4103ccb845b0db2979cc51ad2f1c74f5",
+  "previous_tool_sha256": "7f124439307315f0e713539c9270d38f61f874d24ae4919c4dea786553fb0537",
+  "boundaryPolicy": "OnlyactualIfTree asdirectEnhancedForLoopTree.getStatement accepts body boundary; wraps generatedblock atsameperiteration statement. No switchcase/super/forinitializer/while/generalfor admission.",
+  "capturePolicy": "OnlydirectIdentifier VariableElement PARAMETER sourcedfromactualLambdaExpressionTree andcapture# TypeVariable. PublicfunctionalTypes.asMemberOf descriptor parameter arity/provenlower-superinput erasure +TypeVarupperDeclared denotable/nonvariable/accessible +expression+declaredassignable/erasure proof; no guessedObject/rawbound/fakeDTO/namedgenericparam widen.",
+  "actualNativeArtifacts": {
+    "pipeline": 37734846506,
+    "apiPreGuideNativeScreenSha256": "dffc5ba33de4c5a5e46f5de5bee443b395d430c0944b416b6ea863efa2fd99dd",
+    "settingsPreSha256": "2dc5f0634af78f9442908d1db45c49593eb074f96a3439d3d6963144c73e412c",
+    "chatPreSha256": "3ee16dee9684fe6981b12f75e2eb01aa7077fb5cca997bfc7f93e7f83c6ce3b2",
+    "OpenScreenPostnote": "whole-normalized reflectsvarstage+laterAPIreject remainsactualcandidate; originalPatternoffset changedbyearliervartypes, do not claimoffsetexactsourcehash"
+  },
+  "oldRuntimeProofs": "Engine706 genuinecompile/runtime acceptedunchanged; prioracceptedpatternfixtures notrerun exceptnewfinite nativecase oracle; no native4targetsource patch beforeactualproof/classification."
+}

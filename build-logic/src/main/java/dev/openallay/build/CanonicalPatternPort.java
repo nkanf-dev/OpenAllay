@@ -43,8 +43,11 @@ public final class CanonicalPatternPort {
         if(anchor==null)reason="Pattern has no supported statement/lambda evaluation boundary";
         Tree owner=anchor==null?null:anchor.getLeaf();
         if(owner instanceof VariableTree && !(anchor.getParentPath().getLeaf() instanceof BlockTree))reason="Field/resource/for-initializer pattern lacks a local block boundary";
+        boolean enhancedForBody = owner instanceof IfTree
+                && anchor.getParentPath().getLeaf() instanceof EnhancedForLoopTree loop
+                && loop.getStatement() == owner;
         if(owner!=null && !(owner instanceof LambdaExpressionTree) && !(anchor.getParentPath().getLeaf() instanceof BlockTree)
-                && !(anchor.getParentPath().getLeaf() instanceof IfTree))reason="Statement boundary is not a direct block or if branch";
+                && !(anchor.getParentPath().getLeaf() instanceof IfTree) && !enhancedForBody)reason="Statement boundary is not a direct block, if branch or enhanced-for if body";
         if(!binding.getVariable().getModifiers().getAnnotations().isEmpty())reason="Annotated binding declaration needs an explicit attributed target policy";
         return new Candidate(unit,path,pattern,binding,owner,anchor,false,reason);
     }
@@ -140,6 +143,53 @@ public final class CanonicalPatternPort {
             if (!task.getTypes().isAssignable(expression, declared)
                     || !task.getTypes().isSameType(task.getTypes().erasure(expression), task.getTypes().erasure(declared))) throw captured;
             accessible(declared, scope, trees);
+            if (declared.getKind() == javax.lang.model.type.TypeKind.TYPEVAR
+                    && symbol.getKind() == ElementKind.PARAMETER) {
+                TreePath declaration = trees.getPath(symbol);
+                if (declaration == null || !(declaration.getLeaf() instanceof VariableTree parameter)
+                        || !(declaration.getParentPath().getLeaf() instanceof LambdaExpressionTree lambda)
+                        || !lambda.getParameters().contains(parameter)
+                        || !declared.toString().startsWith("capture#")) throw captured;
+                // Actual inferred wildcard callback parameter, not an arbitrary named type variable.
+                javax.lang.model.type.TypeMirror target = trees.getTypeMirror(declaration.getParentPath());
+                if (target.getKind() != javax.lang.model.type.TypeKind.DECLARED) throw captured;
+                TypeElement functional = (TypeElement) ((javax.lang.model.type.DeclaredType) target).asElement();
+                List<ExecutableElement> descriptors = new ArrayList<>();
+                for (Element member : task.getElements().getAllMembers(functional)) {
+                    if (member instanceof ExecutableElement executable && member.getModifiers().contains(Modifier.ABSTRACT)) {
+                        descriptors.add(executable);
+                    }
+                }
+                if (descriptors.size() != 1) throw captured;
+                javax.lang.model.type.TypeMirror member = task.getTypes().asMemberOf(
+                        (javax.lang.model.type.DeclaredType) task.getTypes().capture(target), descriptors.get(0));
+                if (member.getKind() != javax.lang.model.type.TypeKind.EXECUTABLE
+                        || ((javax.lang.model.type.ExecutableType) member).getParameterTypes().size() != lambda.getParameters().size()) throw captured;
+                int parameterIndex = lambda.getParameters().indexOf(parameter);
+                javax.lang.model.type.TypeMirror descriptorParameter = ((javax.lang.model.type.ExecutableType) member)
+                        .getParameterTypes().get(parameterIndex);
+                javax.lang.model.type.TypeMirror descriptorInput = descriptorParameter;
+                if (descriptorInput.getKind() == javax.lang.model.type.TypeKind.TYPEVAR) {
+                    javax.lang.model.type.TypeMirror lower = ((javax.lang.model.type.TypeVariable) descriptorInput).getLowerBound();
+                    if (lower.getKind() != javax.lang.model.type.TypeKind.NULL) descriptorInput = lower;
+                }
+                if (descriptorInput.getKind() == javax.lang.model.type.TypeKind.WILDCARD
+                        && ((javax.lang.model.type.WildcardType) descriptorInput).getSuperBound() != null) {
+                    descriptorInput = ((javax.lang.model.type.WildcardType) descriptorInput).getSuperBound();
+                }
+                if (!task.getTypes().isSameType(task.getTypes().erasure(declared), task.getTypes().erasure(descriptorInput))) {
+                    throw new IllegalArgumentException("Inferred callback descriptor differs: parameter=" + declared
+                            + " descriptor=" + descriptorParameter + " input=" + descriptorInput);
+                }
+                javax.lang.model.type.TypeMirror upper = ((javax.lang.model.type.TypeVariable) declared).getUpperBound();
+                if (upper.getKind() != javax.lang.model.type.TypeKind.DECLARED || containsTypeVariable(upper)
+                        || !task.getTypes().isAssignable(expression, upper)
+                        || !task.getTypes().isAssignable(declared, upper)
+                        || !task.getTypes().isSameType(task.getTypes().erasure(expression), task.getTypes().erasure(upper))) throw captured;
+                accessible(upper, scope, trees);
+                AttributedVarTypes.denotable(upper, false);
+                return upper;
+            }
             AttributedVarTypes.denotable(declared, false);
             return declared;
         }
