@@ -150,10 +150,19 @@ def provenance_check(proof, root, version):
             'Current canonical engine/source compile proof required')
     require(engine['engine']['sha256'] and re.fullmatch(r'[0-9a-f]{64}',engine['engine']['sha256']),
             'Actual canonical engine archive hash required')
+    current=engine['currentRuntimeArtifacts']
+    require(isinstance(current,list) and len(current)==15 and len({row['role'] for row in current})==15,
+            'Exact current runtime graph ledger required')
+    require({'engine','sdk','rhino','commonmark'}.issubset({row['role'] for row in current}) and
+            'tables' not in {row['role'] for row in current}, 'Current CommonMark must own core and tables together')
+    for row in current:
+        exact(row,('role','coordinate','sha256'),'current runtime graph row')
+        require(isinstance(row['coordinate'],str) and re.fullmatch(r'[0-9a-f]{64}',row['sha256']), 'Current runtime coordinate/hash required')
     native=value['native']
     require(native['commands'] and all(record['exitCode']==0 and record['command'] for record in native['commands'])
             and isinstance(native['metadata'],dict) and native['metadata'],
             'Actual successful native producer commands/normal Forge metadata required')
+    require(native['metadata']['sourceRevision']==source['revision'], 'Current native source must match actual release source')
     custody=value['custody']
     historical=custody['historicalProvider']
     require(historical['runId']>0 and historical['artifactId']>0

@@ -207,36 +207,81 @@ def home(major):
     return p
 
 
+def current_runtime(spec, jars, metadata, version):
+    """Use actual normal runtime paths; keep historical providers as evidence only."""
+    byrole={row['role']:dict(row) for row in spec['artifacts']}
+    known={('com.google.code.gson','gson'):'gson',('com.google.guava','guava'):'guava',
+        ('com.google.guava','failureaccess'):'failureaccess',('com.google.guava','listenablefuture'):'listenablefuture',
+        ('com.knuddels','jtokkit'):'jtokkit',('org.xerial','sqlite-jdbc'):'sqlite',
+        ('com.google.code.findbugs','jsr305'):'jsr305',('org.checkerframework','checker-qual'):'checkerqual',
+        ('com.google.errorprone','error_prone_annotations'):'errorprone',('com.google.j2objc','j2objc-annotations'):'j2objc'}
+    projects={'runtime-rhino':'rhino','runtime-commonmark':'commonmark','extension-api':'sdk'}
+    current={}; engine_entries=entries(jars['engine'])
+    for raw in metadata['runtimeClasspath']:
+        path=Path(raw)
+        if path.is_dir():
+            for file in path.rglob('*'):
+                if file.is_file():
+                    name=file.relative_to(path).as_posix()
+                    require(engine_entries.get(name)==file.read_bytes(), 'Runtime output is not canonical engine-owned: '+name)
+            continue
+        require(path.is_file() and path.suffix=='.jar', 'Actual runtime input must be an ordinary JAR')
+        match=re.search(r'/files-2.1/([^/]+)/([^/]+)/([^/]+)/',raw)
+        if match:
+            group,artifact,release=match.groups();role=known.get((group,artifact))
+            require(role is not None, 'Unknown actual runtime coordinate: '+group+':'+artifact)
+            coordinate=group+':'+artifact+':'+release
+        else:
+            found=[(module,role) for module,role in projects.items() if '/'+module+'/build/libs/' in raw]
+            if '/runtime-json/' in raw or '/runtime-maven/' in raw:
+                for name,data in entries(path).items():
+                    if name.endswith('.class'):
+                        require(engine_entries.get(name)==data, 'Constituent class differs from current engine')
+                continue
+            require(len(found)==1, 'Unknown actual project runtime JAR: '+raw)
+            module,role=found[0]
+            coordinate={'sdk':'dev.openallay:openallay-extension-api:0.4.0',
+                'rhino':'dev.openallay:openallay-rhino:2101.2.8-build.91',
+                'commonmark':'dev.openallay:openallay-commonmark:0.28.0'}[role]
+        require(role not in current, 'Competing current runtime role: '+role)
+        current[role]={'role':role,'coordinate':coordinate,'path':str(path),'sha256':sha(path)}
+    require(set(current)==set(known.values())|set(projects.values()), 'Exact current engine runtime role graph required')
+    for role in known.values():
+        require(current[role]['sha256']==byrole[role]['sha256'], 'Unchanged external product owner differs from actual current graph: '+role)
+    byrole={**current,'engine':{'role':'engine','path':str(jars['engine']),'sha256':sha(jars['engine']),
+                              'coordinate':'dev.openallay:openallay-engine-core:'+version},'builder':byrole['builder']}
+    # JSON/Maven proof-only publications stay in historical evidence, not the current runtime graph.
+    # The current engine already owns their exact runtime classes.
+    return [byrole[role] for role in sorted(byrole)]
+
+
 def canonical(work, version, spec):
-    # This is the normal root build; 26.2 configures only its genuine native
-    # profile. It is never an alias for either legacy game.
     jars={role:ROOT/module_name/'build/libs'/filename for role,module_name,filename in [
         ('engine','engine-core','openallay-engine-core-'+version+'.jar'),
         ('sdk','extension-api','openallay-extension-api-0.4.0.jar'),
         ('rhino','runtime-rhino','openallay-rhino-2101.2.8-build.91.jar'),
+        ('commonmark','runtime-commonmark','openallay-commonmark-0.28.0.jar'),
         ('json-proof','runtime-json','openallay-runtime-json-'+version+'.jar')]}
+    metadata_path=work/'current-runtime-classpath.json'
     command=[ROOT/'gradlew','--max-workers=2','--stacktrace','-PminecraftTarget=26.2',
-        '-PtestBundledExtensions=false',':engine-core:assemble',':runtime-json:assemble',':extension-api:assemble',':runtime-rhino:assemble']
+        '-PtestBundledExtensions=false',':engine-core:assemble',':runtime-json:assemble',
+        ':extension-api:assemble',':runtime-rhino:assemble',':runtime-commonmark:assemble',
+        ':engine-core:exportCanonicalVarCompileClasspath','-PcanonicalVarClasspathOutput='+str(metadata_path)]
     receipt=execute(command,work/'canonical.log',home(25))
     engine_payload=entries(jars['engine'])
     require(any(n.endswith('.class') for n in engine_payload), 'Canonical engine classes required')
     native=('net/minecraft/','net/minecraftforge/','net/fabricmc/','net/neoforged/','com/mojang/','org/lwjgl/')
-    for name,data in engine_payload.items():
-        if name.endswith('.class'):
-            require(data[:4]==b'\xca\xfe\xba\xbe' and int.from_bytes(data[6:8],'big')<=61 and
-                not name.startswith(native),'Canonical Java17 native-free engine required: '+name)
+    for role in ('engine','sdk','rhino','commonmark'):
+        for name,data in entries(jars[role]).items():
+            if name.endswith('.class'):
+                require(len(data)>=8 and data[:4]==b'\xca\xfe\xba\xbe' and 45<=int.from_bytes(data[6:8],'big')<=52 and
+                    not name.startswith(native),'Current canonical Java8 native-free component required: '+role+'!'+name)
+    metadata=load(metadata_path)
+    current=current_runtime(spec,jars,metadata,version)
     receipt.update(sourceRevision=git('rev-parse','HEAD'),version=version,engine=ref(jars['engine']),
-        engineEntries=inventory(engine_payload),canonical=True)
-    # Source declarations are unchanged for these independent public components.
-    # Normal root-produced bytes must equal the retained class/resource inventory,
-    # excluding only versioned container metadata and legal resources.
-    for role in ('sdk','rhino'):
-        previous=next(a for a in spec['artifacts'] if a['role']==role)
-        old=entries(previous['path']); new=entries(jars[role])
-        old_owned={n:d for n,d in old.items() if n.endswith('.class') or n.startswith('META-INF/services/')}
-        new_owned={n:d for n,d in new.items() if n.endswith('.class') or n.startswith('META-INF/services/')}
-        require(old_owned==new_owned, 'SDK/Rhino canonical class/API bytes changed: '+role)
-    return jars,receipt
+        engineEntries=inventory(engine_payload),canonical=True,currentRuntimeClasspath=ref(metadata_path),
+        currentRuntimeArtifacts=[{k:row[k] for k in ('role','coordinate','sha256')} for row in current])
+    return jars,receipt,current
 
 
 def closure(work, version):
@@ -259,13 +304,15 @@ def closure(work, version):
     current_builder=ROOT/'build/bundled-extensions/openallay-builder-universal-0.4.0.jar'
     if current_builder.is_file():
         require(sha(current_builder)==BUILDER_SHA, 'Central universal Builder bytes differ')
-    jars,receipt=canonical(work,version,spec)
+    jars,receipt,current=canonical(work,version,spec)
+    spec['artifacts']=current
     for row in spec['artifacts']:
         if row['role']=='engine':
             row.update(path=str(jars['engine']),sha256=sha(jars['engine']),
                 coordinate='dev.openallay:openallay-engine-core:'+version)
         elif row['role']=='builder':
             row.update(path=str(builder),sha256=BUILDER_SHA)
+    receipt['currentRuntimeArtifacts']=[{k:row[k] for k in ('role','coordinate','sha256')} for row in spec['artifacts']]
     spec['sourceRevision']=git('rev-parse','HEAD')
     resolution=write(work/'resolution.json',{'sourceRevision':spec['sourceRevision'],
         'runtimeCoordinates':sorted(r['coordinate'] for r in spec['artifacts'] if not r['role'].endswith('-proof'))})
@@ -336,7 +383,7 @@ def replace_owner(payload, previous, current, mapping):
         if name not in mapping:
             if excluded(name):
                 continue
-            target='META-INF/licenses/engine/'+name.replace('/','_') if re.search(r'(?:LICENSE|NOTICE|COPYING)',name,re.I) else name
+            target='META-INF/licenses/engine/'+name.replace('/','_') if not name.endswith('.class') and re.search(r'(?:LICENSE|NOTICE|COPYING)',name,re.I) else name
         if name.startswith('META-INF/services/') and target in result:
             # Service union was regenerated above from real old/new contributors.
             continue
@@ -372,6 +419,60 @@ def distribution(payload,builder):
         'openAllayApiVersion':lock['openAllayApiVersion'],'artifact':{'path':RESOURCE,'sha256':BUILDER_SHA}})
 
 
+def replace_shared_owners(payload, rows, original, current):
+    """Replace complete shared publications; preserve all other physical owners."""
+    roles={'engine','sdk','rhino','commonmark','tables'}
+    result=dict(payload); removed={}; service_kept={}
+    for row in rows:
+        owners=row['owners']; changing=[owner for owner in owners if owner['role'] in roles]
+        if not changing:
+            continue
+        target=row['name']
+        require(target in result and digest(result[target])==row['sha256'], 'Historical physical owner differs: '+target)
+        for owner in changing:
+            source=original[owner['role']][owner['name']]
+            require(digest(source)==owner['sha256'], 'Historical whole input owner differs')
+            if not target.startswith('META-INF/services/'):
+                require(source==result[target], 'Historical copied owner bytes differ: '+target)
+        others=[owner for owner in owners if owner['role'] not in roles]
+        if target.startswith('META-INF/services/'):
+            old_lines={line for owner in changing for line in original[owner['role']][owner['name']].decode().splitlines()}
+            service_kept[target]=[line for line in result[target].decode().splitlines() if line not in old_lines]
+            del result[target]
+        elif not others:
+            removed[target]=digest(result.pop(target))
+        else:
+            require(all(owner['sha256']==row['sha256'] for owner in others), 'Mixed unchanged ownership requires exact byte parity')
+    added=[]; services={name:list(lines) for name,lines in service_kept.items()}
+    for role in ('engine','sdk','rhino','commonmark'):
+        for name,data in current[role].items():
+            if excluded(name):
+                continue
+            if name.startswith('META-INF/services/'):
+                services.setdefault(name,[]).extend(data.decode().splitlines())
+                continue
+            target='META-INF/licenses/'+role+'/'+name if not name.endswith('.class') and re.search(r'(?:LICENSE|NOTICE|COPYING)',name,re.I) else name
+            if target in result:
+                require(result[target]==data, 'Current shared owner collides with unchanged physical input: '+target)
+            else:
+                result[target]=data
+            added.append({'role':role,'input':name,'output':target,'sha256':digest(data)})
+    for name,lines in services.items():
+        # Preserve real contributor bytes as UTF8 line membership, not a guessed provider.
+        kept=[line for line in lines if line and not line.startswith('#')]
+        if name in result:
+            kept=result[name].decode().splitlines()+kept
+        result[name]=('\n'.join(dict.fromkeys(kept))+'\n').encode()
+    unchanged={row['name']:row['sha256'] for row in rows if not any(owner['role'] in roles for owner in row['owners'])}
+    require(all(digest(result[name])==expected for name,expected in unchanged.items()), 'Non-shared physical custody changed')
+    for role in ('engine','sdk','rhino','commonmark'):
+        for name,data in current[role].items():
+            if name.endswith('.class'):
+                require(result.get(name)==data, 'Current runtime class missing/moved/edited: '+role+'!'+name)
+    return result,{'replaced':added,'unchanged':unchanged,'removedHistoricalEntries':removed,
+                  'historicalRoles':sorted(roles),'currentRoles':['engine','sdk','rhino','commonmark']}
+
+
 def prepared16(work,spec,native,builder,version):
     kept=retained(PRODUCT16,work,'accepted-product')
     oldjar=exact_jar(kept,PRODUCT16_SHA); payload=entries(oldjar)
@@ -379,27 +480,12 @@ def prepared16(work,spec,native,builder,version):
     require(receipt['outputSha256']==PRODUCT16_SHA, 'Accepted16 product receipt binding')
     rows=receipt['source']['entries']
     require({r['name']:r['sha256'] for r in rows}==inventory(payload),'Accepted16 whole-entry custody')
-    engine_rows={r['name']:r for r in rows if any(o['role']=='engine' for o in r['owners'])}
-    accepted_engine=work/'base-closure'
-    oldenginejar=exact_jar(accepted_engine,next(r['sha256'] for r in receipt['source']['originalArtifacts'] if r['role']=='engine'))
-    oldengineinputs=entries(oldenginejar)
-    oldengine={n:payload[n] for n in engine_rows}
-    current=entries(next(r['path'] for r in spec['artifacts'] if r['role']=='engine'))
-    mapping={n:n for n in oldengine}
-    # Container/legal paths are mapped using the retained input owner, not guessed FQNs.
-    for target,row in engine_rows.items():
-        owners=[o for o in row['owners'] if o['role']=='engine']; require(len(owners)==1,'Sole engine row')
-        name=owners[0]['name']
-        if name!=target:
-            oldengine[name]=oldengine.pop(target); mapping.pop(target);mapping[name]=target
-    for name in current:
-        if excluded(name) and name not in mapping:
-            mapping[name]=None
-    previous={n:(oldengineinputs[n] if n in oldengineinputs else current[n]) for n in mapping}
-    for name in oldengineinputs:
-        if name not in mapping:
-            mapping[name]=None;previous[name]=oldengineinputs[name]
-    payload,engine_custody=replace_owner(payload,previous,current,mapping)
+    original_rows={r['role']:r for r in receipt['source']['originalArtifacts']}
+    shared_old={role:entries(exact_jar(work/'base-closure',original_rows[role]['sha256']))
+        for role in ('engine','sdk','rhino','commonmark','tables')}
+    shared_new={role:entries(next(r['path'] for r in spec['artifacts'] if r['role']==role))
+        for role in ('engine','sdk','rhino','commonmark')}
+    payload,engine_custody=replace_shared_owners(payload,rows,shared_old,shared_new)
     native_pin=dict(artifactId=11435042093,runId=37510699083,
         sourceRevision='19d09199cd7272d92e9e14758e8826a7b3c012df',
         sha256='714f8b1252f9c8891a7d348339677f30d546be0ca99a7f22c3f0d35f5794fa66')
@@ -407,15 +493,18 @@ def prepared16(work,spec,native,builder,version):
     oldnative=entries(exact_jar(oldroot,receipt['source']['nativeReobf']['sha256']))
     fresh=entries(native); mapping=native_mapping(oldnative)
     mapping['META-INF/mods.toml']='META-INF/mods.toml'
+    shared_outputs={row['output'] for row in engine_custody['replaced']}
     for name in oldnative:
-        if name in engine_rows and not name.startswith('META-INF/services/'):
-            require(fresh.get(name)==oldnative[name], 'Shared native/engine owner differs')
+        if name in shared_outputs and not name.startswith('META-INF/services/'):
+            require(fresh.get(name)==payload.get(name), 'Current shared/native physical owner differs')
             mapping[name]=None
     payload,native_custody=replace_owner(payload,oldnative,fresh,mapping)
     require(version in payload['META-INF/mods.toml'].decode(), 'Actual current native mods.toml version required')
     distribution(payload,builder);manifest_version(payload,version)
     product=work/'current-product.jar';archive(product,payload)
-    return {'product':product}, {'historicalProvider':PRODUCT16,'engineCustody':engine_custody,'nativeCustody':native_custody}
+    return {'product':product}, {'historicalProvider':PRODUCT16,'historicalNativeProvider':native_pin,
+        'historicalNativeSource':receipt['source']['nativeSourceRevision'],
+        'engineCustody':engine_custody,'nativeCustody':native_custody}
 
 
 def prepare(args):

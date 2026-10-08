@@ -32,17 +32,17 @@ if (plan.keySet() != (['minecraft', 'forge', 'forgeGradle', 'gradle', 'sourceFam
     throw new GradleException('Private exact tuple/source selection plan differs')
 }
 if (closure.keySet() != (['sourceRevision', 'artifacts', 'resolution'] as Set) ||
-        !(closure.artifacts instanceof List) || closure.artifacts.size() != 18 ||
-        closure.artifacts.collect { it.role }.toSet().size() != 18) {
-    throw new GradleException('Retained current component closure must have18 unique explicit roles')
+        !(closure.artifacts instanceof List) || closure.artifacts.size() != 15 ||
+        closure.artifacts.collect { it.role }.toSet().size() != 15) {
+    throw new GradleException('Retained current component closure must have15 unique explicit roles')
 }
 def roles = closure.artifacts.collectEntries { [(it.role): it] }
-def requiredRoles = ['engine','sdk','rhino','builder','json-proof','maven-proof','gson','guava',
-        'failureaccess','listenablefuture','commonmark','tables','jtokkit','sqlite',
+def requiredRoles = ['engine','sdk','rhino','builder','gson','guava',
+        'failureaccess','listenablefuture','commonmark','jtokkit','sqlite',
         'jsr305','checkerqual','errorprone','j2objc'] as Set
 if (roles.keySet() != requiredRoles) throw new GradleException('Retained closure role set differs')
 // Root-reviewed immutable artifact records, not guessed file basenames or a newly resolved release.
-def compileRoles = ['engine', 'sdk', 'rhino', 'commonmark', 'tables', 'jtokkit']
+def compileRoles = ['engine', 'sdk', 'rhino', 'commonmark', 'jtokkit']
 def product = new Properties()
 new File(source, 'gradle.properties').withInputStream { product.load(it) }
 version = product.getProperty('version')
