@@ -196,6 +196,20 @@ def run_client(args,java,jar,root,assets,vanilla,forge,launch,game,out,phase='')
         'openallayDiscovered':bool(re.search(r'openallay@0\.4\.4|openallay[^\n]+0\.4\.4',text)),
         'realLinkageFailure':any(t in line for line in text.splitlines() if not line.startswith('[Loaded ') for t in ('NoSuchMethodError','AbstractMethodError','IncompatibleClassChangeError'))}
     write(out/'ordinary-class-origins.json',origins)
+    if args.scenario=='menus':
+        with zipfile.ZipFile(jar) as product:
+            chinese=json.loads(product.read('assets/openallay/lang/zh_cn.json'))
+        checkpoints=report.get('checkpoints',[])
+        native_headers=[point['header']['fullName'] for point in checkpoints if isinstance(point.get('header'),dict) and 'fullName' in point['header']]
+        native_labels=[value for point in checkpoints for value in point.get('telemetry',{}).values() if isinstance(value,str)]
+        translated=bool(native_headers) and all(value==chinese['screen.openallay.guide'] for value in native_headers)
+        translated=translated and bool(native_labels) and all(not value.startswith(('screen.openallay.','button.openallay.','tooltip.openallay.')) for value in native_labels)
+        write(out/'native-localization-acceptance.json',{'accepted':translated,'locale':'zh_cn',
+            'expectedNativeHeader':chinese['screen.openallay.guide'],'actualNativeHeaders':native_headers,
+            'actualTelemetryStrings':native_labels,'actualCheckpointCount':len(checkpoints),
+            'canonicalJsonSha256':hashlib.sha256(json.dumps(chinese,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
+            'source':'actual native Component.getString report, not UI fallback'})
+        completed=completed and translated
     checks=report.get('checks',[]);worldok=completed and (phase in ('persist','reload') or bool(checks) and all(c.get('status')=='PASS' for c in checks))
     clean=receipt['gameExit']['finalExitCode']==0 and receipt['gameExit']['signals']==[]
     receipt.update(reportOutcome=report.get('outcome'),bindingAccepted=binding.get('accepted'),accepted=clean and completed and (native if scenario.startswith('builder-') else worldok if scenario=='native-world-sdk' else bool(list((out/'frames').glob('*.png')))))
