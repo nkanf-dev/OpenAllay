@@ -21,7 +21,7 @@ public abstract class GuideNativeButton extends Button implements GuideNativeToo
     public final boolean isGuideHovered() { return isHovered; }
     public final void setTooltip(GuideTooltip tooltip) { guideTooltip = tooltip; }
     @Override protected final MutableComponent createNarrationMessage() {
-        MutableComponent text = guideNarration.create(() -> super.createNarrationMessage());
+        MutableComponent text = guideNarration.create(() -> super.createNarrationMessage()).copy();
         return guideTooltip == null ? text : text.append(dev.openallay.platform.minecraft.MinecraftComponents.literal(", ")).append(guideTooltip.text());
     }
     @Override public final void renderButton(PoseStack pose, int mouseX, int mouseY, float delta) {
