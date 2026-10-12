@@ -32,7 +32,7 @@ jobs:
         run: python3 -B scripts/forge16165-engine-prerequisite/focused-tooling-acceptance.py --output "$PWD/build/forge16165-focused-tooling-report" ${{ inputs.mode == 'abi' && '--pending-bodies' || '' }}
       - name: Retain tiny text evidence, never game or library binaries
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-focused-tooling-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7
@@ -56,7 +56,7 @@ jobs:
         run: python3 -B scripts/forge16165-engine-prerequisite/build-changed-engine.py
       - name: Retain new engine once
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-effective-engine-${{ github.sha }}
           retention-days: 30
@@ -64,7 +64,7 @@ jobs:
           path: build/forge36-shared/
       - name: Retain focused test and producer evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-engine-evidence-${{ github.sha }}
           retention-days: 30
@@ -95,7 +95,7 @@ jobs:
         run: python3 -B scripts/build-forge16165-native.py
       - name: Retain native compile and mapping evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-native-${{ github.sha }}
           retention-days: 30
@@ -122,7 +122,7 @@ jobs:
         run: python3 -B scripts/run-forge16165-pack-only.py
       - name: Retain product once
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-product-${{ github.sha }}
           retention-days: 30
@@ -130,7 +130,7 @@ jobs:
           path: build/forge16165-product/
       - name: Retain packaging evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-pack-evidence-${{ github.sha }}
           retention-days: 30
@@ -161,7 +161,7 @@ jobs:
         run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py ${{ inputs.mode == 'builder-call' && '--builder-call' || inputs.mode == 'ui' && '--ui' || inputs.mode == 'persistence' || inputs.mode == 'builder-call' && '--persistence' || inputs.mode == 'world' && '--world' || '' }}
       - name: Retain actual product/native evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-product-boot-${{ github.sha }}
           retention-days: 30
@@ -203,7 +203,7 @@ jobs:
       - name: Build only the changed Builder candidate declaration
         env: {GH_TOKEN: '${{ github.token }}'}
         run: python3 -B scripts/build-forge16165-builder-candidate.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: ${{ inputs.mode }}-builder-candidate-${{ github.sha }}
@@ -237,7 +237,7 @@ jobs:
         run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py --builder-call --builder-scenario ${{ matrix.scenario }}
       - name: Retain actual product/native evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-builder-${{ matrix.scenario }}-${{ github.sha }}
           retention-days: 30
@@ -287,7 +287,7 @@ jobs:
         run: build/acceptance-tools/bin/python -B scripts/forge16165-product-native-acceptance.py --builder-call --builder-scenario acceptance --builder-reload --bundled-builder --product-inputs native-builds/forge16165/preset-product-inputs.json
       - name: Retain actual product/native evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-builder-presets-${{ github.sha }}
           retention-days: 30
@@ -339,7 +339,7 @@ jobs:
         run: python3 -B scripts/run-forge1122-native-census.py --workspace "$RUNNER_TEMP/forge1122-tool" --output "$RUNNER_TEMP/forge1122-census" --javap "$CENSUS_JAVAP"
       - name: Retain bounded text evidence, not game binaries or caches
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge1122-native-census-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7
@@ -366,7 +366,7 @@ jobs:
         run: python3 -B scripts/build-forge1122-native.py
       - name: Retain concrete diagnostics and supplementary API even on failure
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge1122-native-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 30
@@ -399,7 +399,7 @@ jobs:
         run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :common:test --tests dev.openallay.client.gui.GuideLegacyButtonDispatchTest -x :engine-core:test -x :runtime-maven:test
       - name: Retain affected representative compile and test diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge1122-affected-modern-${{ github.sha }}
           retention-days: 30
@@ -426,7 +426,7 @@ jobs:
         run: python3 -B scripts/run-forge1122-reobf-only.py
       - name: Retain normal reobf custody and product native jar
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge1122-reobf-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 30
@@ -460,7 +460,7 @@ jobs:
           --target '1.16.5'
           --families 'forge-1.16.5'
       - name: Retain current product and exact stage receipts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: legacy-release-${{ inputs.mode }}-${{ github.sha }}
           retention-days: 30
@@ -468,7 +468,7 @@ jobs:
           path: build/legacy-release-stage/
       - name: Retain input/producer diagnosis without game files
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: legacy-release-input-evidence-${{ inputs.mode }}-${{ github.sha }}
           retention-days: 30

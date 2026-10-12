@@ -33,7 +33,7 @@ jobs:
         else
           python3 -B scripts/verify-minecraft-binary-intervals.py matrix --families "$FAMILIES" --feature-acceptance-json scripts/fixtures/mainline-feature-acceptance.json --feature-evidence-directory feature-evidence --repository "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT" > binary-interval-plan.json
         fi
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: binary-interval-plan-${{ github.sha }}-${{ github.run_attempt }}
         retention-days: 7
@@ -76,7 +76,7 @@ jobs:
       run: python3 -B scripts/verify-minecraft-binary-intervals.py build-and-stage --target "$TARGET" --families "$FAMILIES"
         --directory build/ci-binary-production | tee candidate-build.json
     - name: Retain original interval JARs and SHA256SUMS
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: binary-production-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
         retention-days: 7
@@ -84,7 +84,7 @@ jobs:
         path: build/ci-binary-production/
     - name: Retain failed package/native diagnostics too
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: binary-build-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
         retention-days: 7
@@ -164,7 +164,7 @@ jobs:
       run: build/ci-tools/bin/python -B scripts/compact-ci-game-evidence.py --loader "$LOADER" --batch-id "${{ steps.game.outputs.batch_id }}"
     - name: Retain mechanical acceptance or failed linkage with exact source/SHA identity
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: binary-client-${{ matrix.family }}-${{ matrix.target }}-${{ github.sha }}-${{ github.run_attempt }}
         retention-days: 7

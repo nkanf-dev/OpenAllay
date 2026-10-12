@@ -115,7 +115,7 @@ jobs:
             --output build/commonmark-provider-nested-capture
       - name: Preserve exact small CommonMark capture
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-commonmark-provider-nested-${{ matrix.target }}-${{ github.sha }}
           retention-days: 14
@@ -123,7 +123,7 @@ jobs:
           path: build/commonmark-provider-nested-capture/
       - name: Preserve new packages and source-bound package receipts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-packages-${{ matrix.target }}-${{ github.sha }}
           retention-days: 14
@@ -131,7 +131,7 @@ jobs:
           path: release-group/
       - name: Preserve small package metadata separately
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-metadata-${{ matrix.target }}-${{ github.sha }}
           retention-days: 30
@@ -141,7 +141,7 @@ jobs:
             release-group/SHA256SUMS
       - name: Preserve compiler diagnostics
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-build-diagnostics-${{ matrix.target }}-${{ github.sha }}
           retention-days: 7
@@ -196,7 +196,7 @@ jobs:
       - name: Package only canonical Builder resources
         env: {GH_TOKEN: '${{ github.token }}', TARGET: '${{ matrix.target }}'}
         run: python3 -B scripts/run-builder-package-only-group.py --target "$TARGET"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-packages-${{ matrix.target }}-${{ github.sha }}
           retention-days: 30
@@ -235,7 +235,7 @@ jobs:
       - name: Bind all current packages to exact compile or package-only evidence
         env: {OPENALLAY_ORIGINAL_PACKAGE_DIRECTORY: '${{ github.workspace }}/build/builder-package-original-cache'}
         run: python3 -B scripts/build-minecraft-artifacts.py merge-staged build/release-groups release
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-staged-${{ github.sha }}
           retention-days: 30
@@ -262,7 +262,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B scripts/collect-release-group-metadata.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-small-metadata-${{ github.sha }}
           retention-days: 14
@@ -287,7 +287,7 @@ jobs:
         run: python3 -B scripts/diagnose-forge1122-native-java8.py
       - name: Keep complete native compiler/source/classpath diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge1122-java8-source-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 14
@@ -312,7 +312,7 @@ jobs:
         with: {distribution: temurin, java-version: '17.0.18+8'}
       - name: One parse-only exact native record source candidate packet
         run: python3 -B scripts/materialize-native-record-language.py --project "$PWD" --javac "$JAVA_HOME/bin/javac" --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/native-record-candidate"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: native-record-candidate-${{ github.sha }}-${{ github.run_attempt }}
@@ -340,7 +340,7 @@ jobs:
       - name: One real normalized whole native source language cohort candidate
         env: {GH_TOKEN: '${{ github.token }}'}
         run: python3 -B scripts/diagnose-forge1122-native-java8.py --language-candidates ${{ inputs.native_residual_api_candidates && '--residual-api-only' || (inputs.native_held_candidates && '--selected-owners native-builds/forge1122-census/held-language-owners.txt' || '') }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: native-language-candidate-${{ github.sha }}-${{ github.run_attempt }}
@@ -375,7 +375,7 @@ jobs:
       - name: Normal native Java8 AP/reobf then same-job ordinary flat package
         env: {GH_TOKEN: '${{ github.token }}'}
         run: python3 -B scripts/diagnose-forge1122-native-java8.py --native-package-probe
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: native-java8-package-probe-${{ github.sha }}-${{ github.run_attempt }}
@@ -415,7 +415,7 @@ jobs:
       - name: Package only after exact retained native/source custody and current engine byte parity
         env: {GH_TOKEN: '${{ github.token }}'}
         run: python3 -B scripts/package-retained-stock8-native.py --native-pin native-builds/forge1122-census/accepted-stock8-native.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: stock8-flat-package-${{ github.sha }}-${{ github.run_attempt }}
@@ -468,7 +468,7 @@ jobs:
         github.run_id }}-${{ github.run_attempt }}'
     - name: Retain only bounded reports, logs and real UI frames
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: stock-forge1122-java8-${{ inputs.stock8_acceptance }}-${{ github.sha }}
         retention-days: 30

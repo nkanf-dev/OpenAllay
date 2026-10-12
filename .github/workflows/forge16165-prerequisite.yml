@@ -34,7 +34,7 @@ jobs:
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24 +extension GLX +render -noreset" --error-file="$PWD/build/stock-xvfb.log" build/stock-ci-tools/bin/python -B scripts/forge16165-prerequisite/stock-forge36-prerequisite.py --repo "$PWD" --java "$JAVA_HOME/bin/java" --java-release '17.0.18+8' --minecraft-root "$PWD/build/e2e/runtime/forge16165-stock/minecraft" --output "$PWD/build/e2e/forge16165-stock-client"
       - name: Retain exact installer and client outcome
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: forge16165-stock-java17-${{ github.sha }}-${{ github.run_attempt }}
           retention-days: 7

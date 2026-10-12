@@ -44,7 +44,7 @@ jobs:
           --run-id '${{ inputs.scenario }}-${{ github.run_id }}-${{ github.run_attempt }}'
       - name: Retain only bounded reports, logs and real UI frames
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: stock-forge1122-java8-${{ inputs.scenario }}-${{ github.sha }}
           retention-days: 30
