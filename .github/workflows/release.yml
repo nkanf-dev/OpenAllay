@@ -73,7 +73,7 @@ jobs:
         run: env GITHUB_SHA="$PACKAGE_SOURCE_SHA" ./scripts/publish-modrinth.sh "$RELEASE_TAG" release
       - name: Preserve exact publication records
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-publication-${{ inputs.release_tag }}-${{ github.sha }}
           retention-days: 30

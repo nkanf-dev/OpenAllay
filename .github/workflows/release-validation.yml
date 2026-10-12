@@ -33,7 +33,7 @@ jobs:
         run: ./gradlew --max-workers=2 --stacktrace :engine-core:test --tests dev.openallay.settings.skill.SkillSettingsBackendTest --tests dev.openallay.skill.install.SkillPackageInstallerTest --tests dev.openallay.community.CommunityCatalogCodecTest
       - name: Retain focused test diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-skill-runtime-${{ github.sha }}
           retention-days: 30
@@ -65,7 +65,7 @@ jobs:
         run: ./gradlew --max-workers=2 --stacktrace -PminecraftTarget=26.2 :extension-api:test :common:test :fabric:build :neoforge:build
       - name: Retain original shared and loader verification diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-shared-modern-${{ github.sha }}
           retention-days: 30
@@ -101,7 +101,7 @@ jobs:
         run: ./gradlew --max-workers=2 --stacktrace :engine-core:test --tests dev.openallay.bridge.server.ServerBridgeArchitectureTest --tests dev.openallay.guide.semantic.SemanticDependencyPackagingTest --tests dev.openallay.server.ServerAgentImageServiceTest
       - name: Retain original focused fixture results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-shared-fixtures-${{ github.sha }}
           retention-days: 30
@@ -132,7 +132,7 @@ jobs:
         run: ./gradlew -p runtime-json/src/java8Test/gradle --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_17_X64" :runtime-json:java8CompatibilityTest -PjsonVerificationGsonVersion=2.13.2
       - name: Retain canonical Java 8 JSON artifact and diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-runtime-json-${{ github.sha }}
           retention-days: 30
@@ -164,7 +164,7 @@ jobs:
         run: ./gradlew --no-daemon -p engine-core/src/java8Test/primitives -Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.java.installations.auto-download=false -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" modernOracleTest java8CompatibilityTest
       - name: Retain Java 8 primitive fixture classes and diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-primitives-${{ github.sha }}
           retention-days: 30
@@ -198,7 +198,7 @@ jobs:
         run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.json.ExplicitValueSchemaTest --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.json.EngineJsonHierarchyTest --tests dev.openallay.agent.tool.ToolSchemaGeneratorTest
       - name: Retain original value schema and consumer test results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-values-${{ github.sha }}
           retention-days: 30
@@ -233,7 +233,7 @@ jobs:
         run: python3 -B scripts/verify-rhino-java8-leaves.py build/rhino-java8-inputs/rhino-sources.jar --javac "$JAVA_HOME_17_X64/bin/javac" --java8 "$JAVA_HOME_8_X64/bin/java" --annotations build/rhino-java8-inputs/annotations.jar --output build/rhino-java8-leaf-proof
       - name: Retain exact Rhino leaf proof without claiming full runtime acceptance
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-rhino-leaves-${{ github.sha }}
           retention-days: 30
@@ -270,7 +270,7 @@ jobs:
           --source-tables "$(find "$HOME/.gradle/caches/modules-2/files-2.1/org.commonmark/commonmark-ext-gfm-tables/0.28.0" -name '*-sources.jar' -print -quit)"
       - name: Retain full parser API and golden behavior evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-commonmark-${{ github.sha }}
           retention-days: 30
@@ -305,7 +305,7 @@ jobs:
         run: ./gradlew --max-workers=2 --no-daemon :engine-core:test --tests dev.openallay.net.JdkHttpTransportTest --tests dev.openallay.model.catalog.ProviderModelCatalogClientTest --tests dev.openallay.model.http.ModelTransportDiagnosticsTest --tests dev.openallay.model.scheduling.ModelUpstreamRecoveryHttpTest
       - name: Retain transport result and blocked-owner diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-http-${{ github.sha }}
           retention-days: 30
@@ -333,7 +333,7 @@ jobs:
         run: ./gradlew --no-daemon -p build-logic/src/recordConversionTest/gradle -Dorg.gradle.java.installations.paths="$JAVA_HOME_8_X64,$JAVA_HOME_21_X64" recordConversionTest
       - name: Retain actual conversion receipts and oracle results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-record-converter-${{ github.sha }}
           retention-days: 30
@@ -364,7 +364,7 @@ jobs:
         run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.host.RhinoHostAdapterTest --tests dev.openallay.script.host.ExplicitHostValueTest --tests dev.openallay.script.schema.HostSchemaCatalogTest --tests dev.openallay.script.schema.ExplicitHostSchemaTest --tests dev.openallay.architecture.DirectRhinoHostArchitectureTest
       - name: Retain original typed metadata and script results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-host-values-${{ github.sha }}
           retention-days: 30
@@ -395,7 +395,7 @@ jobs:
         run: ./gradlew --max-workers=2 :engine-core:test --tests 'dev.openallay.model.scheduling.ModelUpstreamRecoveryHttpTest.rejected400WithAnIncompleteErrorBodyDoesNotBecomeATransportRetry'
       - name: Retain original selected regression evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-http-incomplete-${{ github.sha }}
           retention-days: 30
@@ -418,7 +418,7 @@ jobs:
         run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.JavascriptTypedResultTest --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.script.host.ExplicitHostValueTest --tests dev.openallay.script.schema.ExplicitHostSchemaTest --tests dev.openallay.json.ExplicitValueSchemaTest
       - name: Retain canonical value consumer test results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-query-values-${{ github.sha }}
           retention-days: 30
@@ -453,7 +453,7 @@ jobs:
         run: ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.script.JavascriptTypedResultTest --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.script.host.ExplicitHostValueTest --tests dev.openallay.script.schema.ExplicitHostSchemaTest --tests dev.openallay.json.ExplicitValueSchemaTest
       - name: Retain original owner and genuine Java 8 oracle outputs
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-full-query-${{ github.sha }}
           retention-days: 30
@@ -489,7 +489,7 @@ jobs:
         --tests dev.openallay.script.UnrestrictedJavaAccessTest --tests dev.openallay.extension.JavascriptHostBindingTest'
     - name: Retain original scoped diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-values-${{ github.sha }}
         retention-days: 30
@@ -529,7 +529,7 @@ jobs:
         --tests dev.openallay.client.voice.NativeModelInstallerHttpTest --tests dev.openallay.client.voice.NativeSpeechToTextTest'
     - name: Retain original scoped diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: voice-http-java8-${{ github.sha }}
         retention-days: 30
@@ -560,7 +560,7 @@ jobs:
         --tests dev.openallay.guide.semantic.SemanticStreamingStateTest --tests dev.openallay.guide.semantic.RichComponentRegistryTest
     - name: Retain original scoped diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: semantic-integration-${{ github.sha }}
         retention-days: 30
@@ -636,7 +636,7 @@ jobs:
         \ --tests dev.openallay.script.schema.HostSchemaCatalogTest"
     - name: Retain original proof and consumer results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: context-java8-${{ github.sha }}
         retention-days: 30
@@ -673,7 +673,7 @@ jobs:
         --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain original proof and consumer results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-carriers-${{ github.sha }}
         retention-days: 30
@@ -704,7 +704,7 @@ jobs:
         run: OPENALLAY_VOICE_TLS_KEYS="$PWD/engine-core/src/java8Test/voice-http/build/tls/fixture.jks" ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.client.voice.HttpSpeechToTextTest --tests dev.openallay.client.voice.NativeModelInstallerHttpTest --tests dev.openallay.client.voice.NativeSpeechToTextTest
       - name: Retain original consumer and TLS-fixture diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: voice-consumers-${{ github.sha }}
           retention-days: 30
@@ -737,7 +737,7 @@ jobs:
           ./gradlew --no-daemon --max-workers=2 :engine-core:test --tests dev.openallay.tool.ToolResultExplicitValueTest -PjsonVerificationGsonVersion=2.13.2
       - name: Retain original canonical result proof and consumer diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-tool-result-${{ github.sha }}
           retention-days: 30
@@ -772,7 +772,7 @@ jobs:
           ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.json.RecordJsonAdapterTest --tests dev.openallay.json.EngineJsonOwnerTest --tests dev.openallay.json.EngineJsonHierarchyTest --tests dev.openallay.json.EngineJsonTest --tests dev.openallay.json.ExplicitValueSchemaTest -PjsonVerificationGsonVersion=2.13.2
       - name: Retain original engine JSON proof and caller regression results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: java8-engine-json-${{ github.sha }}
           retention-days: 30
@@ -826,7 +826,7 @@ jobs:
         --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain exact collection proof and current consumer results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-collections-${{ github.sha }}
         retention-days: 30
@@ -902,7 +902,7 @@ jobs:
         \ --tests dev.openallay.script.data.MinecraftAgentHostGraphTest --tests dev.openallay.context.ContextSnapshotMetricsJsonTest"
     - name: Retain exact original owner and caller proof outputs
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: recipe-context-java8-${{ github.sha }}
         retention-days: 30
@@ -948,7 +948,7 @@ jobs:
         -PjsonVerificationGsonVersion=2.13.2'
     - name: Retain exact original owner and caller proof outputs
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: tool-schema-java8-${{ github.sha }}
         retention-days: 30
@@ -993,7 +993,7 @@ jobs:
         '
     - name: Retain source attribution receipts and exact candidates
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-var-tool-${{ github.sha }}
         retention-days: 30
@@ -1019,7 +1019,7 @@ jobs:
           ./gradlew --max-workers=2 :engine-core:test --tests dev.openallay.agent.tool.ToolSchemaJava8CompatibilityTest -PjsonVerificationGsonVersion=2.13.2
       - name: Retain original consumer regressions
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: tool-schema-consumers-${{ github.sha }}
           retention-days: 30
@@ -1071,7 +1071,7 @@ jobs:
         --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain exact conversion, oracle and actual consumer receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: observation-java8-${{ github.sha }}
         retention-days: 30
@@ -1106,7 +1106,7 @@ jobs:
         --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain exact runtime compile and current consumer diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-var-consumers-${{ github.sha }}
         retention-days: 30
@@ -1166,7 +1166,7 @@ jobs:
         \ --tests dev.openallay.client.voice.VoiceConfigStoreTest -PjsonVerificationGsonVersion=2.8.0"
     - name: Retain synthetic-store proof and current caller results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: credentials-java8-${{ github.sha }}
         retention-days: 30
@@ -1216,7 +1216,7 @@ jobs:
         --output build/model-values-proof/gson-2.13.2'
     - name: Retain original conversion and actual model value receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-values-java8-${{ github.sha }}
         retention-days: 30
@@ -1254,7 +1254,7 @@ jobs:
         "$RUNNER_TEMP/core-var-proof"'
     - name: Retain actual compiler, oracle and immutable source packet outputs
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: core-var-tool-${{ github.sha }}
         retention-days: 30
@@ -1313,7 +1313,7 @@ jobs:
         --tests dev.openallay.agent.ModelEventAdmissionTest'
     - name: Retain original catalog, compiler and admission evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-catalog-java8-${{ github.sha }}
         retention-days: 30
@@ -1342,7 +1342,7 @@ jobs:
       run: ./gradlew --max-workers=2 --stacktrace :engine-core:test
     - name: Retain complete engine consumer results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: core-var-consumers-${{ github.sha }}
         retention-days: 30
@@ -1377,7 +1377,7 @@ jobs:
         --tests dev.openallay.script.schema.HostSchemaCatalogTest --tests dev.openallay.script.RhinoJavascriptStringGuardTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-binding-consumers-${{ github.sha }}
         retention-days: 30
@@ -1416,7 +1416,7 @@ jobs:
         --prepare'
     - name: Retain authentic converter outputs and source custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: bridge-transport-prepare-${{ github.sha }}
         retention-days: 30
@@ -1477,7 +1477,7 @@ jobs:
         dev.openallay.bridge.client.RemoteToolExecutorAliasTest'
     - name: Retain original Java 8 bridge runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: bridge-transport-java8-${{ github.sha }}
         retention-days: 30
@@ -1521,7 +1521,7 @@ jobs:
         --output "$RUNNER_TEMP/retained-skill-source-custody"'
     - name: Retain exact converter passes and generated canonical source packet
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: retained-skill-prepare-${{ github.sha }}
         retention-days: 30
@@ -1591,7 +1591,7 @@ jobs:
         --tests dev.openallay.skill.SkillInstructionCoverageIndexTest'
     - name: Retain exact model original and Java 8 behavioral evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-message-image-java8-${{ github.sha }}
         retention-days: 30
@@ -1647,7 +1647,7 @@ jobs:
         --gson "$RUNNER_TEMP/skill-dependencies/gson-2.13.2.jar" --output "$RUNNER_TEMP/retained-skill-runtime"'
     - name: Retain original compiler and lifecycle oracle evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: retained-skill-java8-${{ github.sha }}
         retention-days: 30
@@ -1698,7 +1698,7 @@ jobs:
         --gson "$RUNNER_TEMP/provider-dependencies/gson-2.13.2.jar" --output "$RUNNER_TEMP/provider-oracle"'
     - name: Retain original complete provider converter and runtime diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: provider-codec-java8-${{ github.sha }}
         retention-days: 30
@@ -1738,7 +1738,7 @@ jobs:
         --tests dev.openallay.model.ModelImageProviderEncodingTest --tests dev.openallay.model.ProviderToolIdsTest
     - name: Retain actual provider consumer test results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: provider-consumers-${{ github.sha }}
         retention-days: 30
@@ -1774,7 +1774,7 @@ jobs:
         --prepare'
     - name: Retain exact authentic history converter output and custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: bridge-history-prepare-${{ github.sha }}
         retention-days: 30
@@ -1819,7 +1819,7 @@ jobs:
         subprocess.run(["python3","-B",str(temp/"function-baseline-input/run-baseline-oracle.py"),str(temp/"rhino-sources.jar"),"--project",str(Path.cwd()),"--javac",str(home/"bin/javac"),"--java",str(home/"bin/java"),"--classpath",cp[0],"--output",str(temp/"function-baseline-proof")],check=True)'' '
     - name: Retain narrow historical behavior receipt
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-function-baseline-${{ github.sha }}
         retention-days: 30
@@ -1874,7 +1874,7 @@ jobs:
         --tests dev.openallay.bridge.protocol.BridgeImagePayloadTest --tests dev.openallay.bridge.protocol.ServerAgentSteerProtocolTest'
     - name: Retain exact original and Java 8 evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: bridge-history-java8-${{ github.sha }}
         retention-days: 30
@@ -1945,7 +1945,7 @@ jobs:
         dev.openallay.guide.ToolObservationImageIndexTest'
     - name: Retain exact original and Java 8 evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: image-attachment-java8-${{ github.sha }}
         retention-days: 30
@@ -1991,7 +1991,7 @@ jobs:
         --output "$RUNNER_TEMP/provider-source-custody"'
     - name: Retain exact normalized provider source replay receipt
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: provider-source-custody-${{ github.sha }}
         retention-days: 30
@@ -2035,7 +2035,7 @@ jobs:
         and meta["release"]==17; subprocess.run([str(Path(os.environ["JAVA_HOME_21_X64"])/"bin/java"),"-cp",str(temp/"canonical-inventory-tool"),"dev.openallay.build.CanonicalLanguageInventory",meta["sourceRoot"],meta["classpath"],str(temp/"canonical-language-inventory.json")],check=True)'' '
     - name: Retain genuine production compiler inventory
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: canonical-language-inventory-${{ github.sha }}
         retention-days: 30
@@ -2072,7 +2072,7 @@ jobs:
         subprocess.run(["python3","-B","scripts/diagnose-rhino-java8-sources.py",str(temp/"rhino-sources.jar"),"--javac",str(Path(os.environ["JAVA_HOME"])/"bin/javac"),"--classpath",cp[0],"--output",str(temp/"rhino-java8-diagnostics")],check=True)'' '
     - name: Retain original all-source Java 8 errors and source custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-java8-diagnostics-${{ github.sha }}
         retention-days: 30
@@ -2119,7 +2119,7 @@ jobs:
         --gson "$RUNNER_TEMP/profile-dependencies/gson-2.13.2.jar" --output "$RUNNER_TEMP/profile-oracle"'
     - name: Retain original profile converter runtime and configuration evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-profiles-java8-${{ github.sha }}
         retention-days: 30
@@ -2161,7 +2161,7 @@ jobs:
         --prepare'
     - name: Retain exact authentic request conversion outputs and custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: agent-request-prepare-${{ github.sha }}
         retention-days: 30
@@ -2201,7 +2201,7 @@ jobs:
         --tests dev.openallay.model.config.ModelProfileImageCapabilityTest --tests dev.openallay.model.config.ModelTokenEncodingConfigTest
     - name: Retain actual model profile consumer test results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-profile-consumers-${{ github.sha }}
         retention-days: 30
@@ -2257,7 +2257,7 @@ jobs:
         --tests dev.openallay.model.ModelMessageImageTest'
     - name: Retain exact original and Java 8 evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: agent-request-java8-${{ github.sha }}
         retention-days: 30
@@ -2312,7 +2312,7 @@ jobs:
         subprocess.run(["python3","-B",str(temp/"null-baseline-input/run-baseline-oracle.py"),str(temp/"rhino-sources.jar"),"--project",str(Path.cwd()),"--javac",str(home/"bin/javac"),"--java",str(home/"bin/java"),"--classpath",cp[0],"--output",str(temp/"null-baseline-proof")],check=True)'' '
     - name: Retain authentic full-source null conversion baseline receipt
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-null-baseline-${{ github.sha }}
         retention-days: 30
@@ -2343,7 +2343,7 @@ jobs:
         --output "$RUNNER_TEMP/profile-source-custody"'
     - name: Retain exact normalized profile source replay receipt
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-profile-source-custody-${{ github.sha }}
         retention-days: 30
@@ -2371,7 +2371,7 @@ jobs:
         --javac "$JAVA_HOME/bin/javac" --java "$JAVA_HOME/bin/java" --output "$RUNNER_TEMP/guide-record-materialization"
     - name: Retain supported source bytes and named unsupported record shapes
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-record-language-${{ github.sha }}
         retention-days: 30
@@ -2414,7 +2414,7 @@ jobs:
         --prepare'
     - name: Retain authentic session converter outputs and custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: agent-session-prepare-${{ github.sha }}
         retention-days: 30
@@ -2453,7 +2453,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain exact compiler flow fixtures and unsupported status
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: canonical-pattern-oracle-${{ github.sha }}
         retention-days: 30
@@ -2496,7 +2496,7 @@ jobs:
         subprocess.run(["python3","-B",str(temp/"scalar-baseline-input/run-baseline-oracle.py"),str(temp/"rhino-sources.jar"),"--project",str(Path.cwd()),"--javac",str(home/"bin/javac"),"--java",str(home/"bin/java"),"--classpath",cp[0],"--output",str(temp/"scalar-baseline-proof")],check=True)'' '
     - name: Retain exact full-source scalar baseline vectors
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-scalar-baseline-${{ github.sha }}
         retention-days: 30
@@ -2552,7 +2552,7 @@ jobs:
         --tests dev.openallay.agent.context.ContextStructureTest'
     - name: Retain exact original and Java 8 evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: agent-session-java8-${{ github.sha }}
         retention-days: 30
@@ -2605,7 +2605,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java" --output "$RUNNER_TEMP/guide-pattern-materialization"'
     - name: Retain exact supported and rejected pattern owner receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-pattern-language-${{ github.sha }}
         retention-days: 30
@@ -2643,7 +2643,7 @@ jobs:
         --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain actual binding runtime and interoperability evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-context-generic-${{ github.sha }}
         retention-days: 30
@@ -2671,7 +2671,7 @@ jobs:
         "$RUNNER_TEMP/client-settings-record-materialization"
     - name: Retain exact supported and unsupported client settings source receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-settings-record-language-${{ github.sha }}
         retention-days: 30
@@ -2712,7 +2712,7 @@ jobs:
         --prepare'
     - name: Retain exact full algorithm converter outputs and custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: context-compactor-prepare-${{ github.sha }}
         retention-days: 30
@@ -2777,7 +2777,7 @@ jobs:
         dev.openallay.agent.context.ContextProjectionAdmissionTest --tests dev.openallay.model.ObservingModelClientTest'
     - name: Retain exact original and Java 8 evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: context-compactor-java8-${{ github.sha }}
         retention-days: 30
@@ -2829,7 +2829,7 @@ jobs:
         assert len(packets)==1,packets; subprocess.run(["python3","-B","build-logic/src/recordConstructorTypeTest/verify.py","--source-root",str(Path.cwd()),"--jdk17",os.environ["JAVA_HOME_17_X64"],"--jdk8",os.environ["JAVA_HOME_8_X64"],"--baseline-packet",str(packets[0].parent),"--output",str(temp/"constructor-type-proof")],check=True)'' '
     - name: Retain original overload ABI and converter output diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: record-constructor-types-${{ github.sha }}
         retention-days: 30
@@ -2868,7 +2868,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain actual switch compiler fixture and unsupported source status
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: canonical-switch-oracle-${{ github.sha }}
         retention-days: 30
@@ -2906,7 +2906,7 @@ jobs:
         --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/guide-switch-materialization"'
     - name: Retain exact supported and named unsupported Guide switch source receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-switch-language-${{ github.sha }}
         retention-days: 30
@@ -2946,7 +2946,7 @@ jobs:
         "$JAVA_HOME_21_X64/bin/javac" --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/client-pattern-materialization"'
     - name: Retain actual supported and rejected client settings source outputs
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-settings-pattern-language-${{ github.sha }}
         retention-days: 30
@@ -2984,7 +2984,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain exact API original converted and rejected source receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: canonical-java8-api-oracle-${{ github.sha }}
         retention-days: 30
@@ -3025,7 +3025,7 @@ jobs:
         --prepare'
     - name: Retain exact closed event conversion bytes and custody
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: agent-event-trace-prepare-${{ github.sha }}
         retention-days: 30
@@ -3065,7 +3065,7 @@ jobs:
         --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/guide-api-materialization"'
     - name: Retain actual mapped and rejected Guide source API receipts
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-java8-api-language-${{ github.sha }}
         retention-days: 30
@@ -3126,7 +3126,7 @@ jobs:
         --tests dev.openallay.agent.trace.LiveTraceStoreTest'
     - name: Retain exact original and Java 8 evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: agent-event-trace-java8-${{ github.sha }}
         retention-days: 30
@@ -3170,7 +3170,7 @@ jobs:
         "$RUNNER_TEMP/captured-pattern-proof"
     - name: Retain exact public compiler capture proof and true JVM vectors
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: pattern-captured-identifier-${{ github.sha }}
         retention-days: 30
@@ -3213,7 +3213,7 @@ jobs:
         --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/captured-owner-materialization"'
     - name: Retain exact whole-owner wildcard pattern source outputs
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-captured-owner-pattern-${{ github.sha }}
         retention-days: 30
@@ -3252,7 +3252,7 @@ jobs:
         meta=json.loads((temp/"sealed-classpath.json").read_text()); subprocess.run([str(Path(os.environ["JAVA_HOME_21_X64"])/"bin/java"),"-cp",str(temp/"seal-tool"),"dev.openallay.build.CanonicalSealedInventory",meta["sourceRoot"],meta["classpath"],str(temp/"sealed-ingress-inventory.json")],check=True)'''
     - name: Retain read-only exact union inventory
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-sealed-inventory-${{ github.sha }}
         retention-days: 30
@@ -3294,7 +3294,7 @@ jobs:
         subprocess.run(["python3","-B",str(temp/"parser-baseline-input/run-baseline-oracle.py"),str(temp/"rhino-sources.jar"),"--project",str(Path.cwd()),"--javac",str(home/"bin/javac"),"--java",str(home/"bin/java"),"--classpath",cp[0],"--output",str(temp/"parser-baseline-proof")],check=True)'' '
     - name: Retain complete actual pre-lowering parser vectors
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-parser-baseline-${{ github.sha }}
         retention-days: 30
@@ -3321,7 +3321,7 @@ jobs:
         "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --output "$RUNNER_TEMP/futures-async-proof"
     - name: Retain exact native modern and actual Java 8 future vectors
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: exceptional-future-java8-${{ github.sha }}
         retention-days: 30
@@ -3350,7 +3350,7 @@ jobs:
         "$PWD" --jdk17 "$JAVA_HOME" --output "$RUNNER_TEMP/final-agent-preparation"
     - name: Retain actual prompt and agent source conversion receipt
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: final-agent-language-prepare-${{ github.sha }}
         retention-days: 30
@@ -3387,7 +3387,7 @@ jobs:
         assert len(inputs)==1; subprocess.run(["python3","-B","engine-core/src/remainingRecordLanguagePreparation/prepare.py","--source-root",str(Path.cwd()),"--inventory",str(inputs[0]),"--jdk17",os.environ["JAVA_HOME"],"--output",str(temp/"remaining-record-materialization")],check=True)'''
     - name: Retain supported complete source targets and named unsupported records
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: remaining-record-language-${{ github.sha }}
         retention-days: 30
@@ -3446,7 +3446,7 @@ jobs:
         for v in versions]'' '
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-union-semantic-java8-${{ github.sha }}
         retention-days: 30
@@ -3488,7 +3488,7 @@ jobs:
         --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/client-api-materialization"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-settings-java8-api-language-${{ github.sha }}
         retention-days: 30
@@ -3523,7 +3523,7 @@ jobs:
         attributedRecordTest
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: attributed-record-proof-${{ github.sha }}
         retention-days: 30
@@ -3566,7 +3566,7 @@ jobs:
         metadata=json.loads((temp/"three-record-classpath.json").read_text()); subprocess.run([str(Path(os.environ["JAVA_HOME_21_X64"])/"bin/java"),"-cp",str(temp/"three-record-tool"),"dev.openallay.build.AttributedRecordProof",metadata["sourceRoot"],metadata["classpath"],str(root/"build-logic/src/attributedRecordTest/remaining-three-request.tsv"),str(temp/"three-record-materialization")],check=True)'' '
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: attributed-remaining-records-${{ github.sha }}
         retention-days: 30
@@ -3600,7 +3600,7 @@ jobs:
         "$JAVA_HOME_17_X64/bin/java" "$JAVA_HOME_8_X64/bin/javac" "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: java8-objects-oracle-${{ github.sha }}
         retention-days: 30
@@ -3636,7 +3636,7 @@ jobs:
         "$JAVA_HOME_21_X64/bin/javac" --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/client-switch-materialization"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-settings-switch-language-${{ github.sha }}
         retention-days: 30
@@ -3672,7 +3672,7 @@ jobs:
         --tests dev.openallay.script.schema.HostSchemaCatalogTest'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-native-api-consumers-${{ github.sha }}
         retention-days: 30
@@ -3708,7 +3708,7 @@ jobs:
         --java "$JAVA_HOME_21_X64/bin/java" --output "$RUNNER_TEMP/native-api-materialization"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-native-speech-java8-api-${{ github.sha }}
         retention-days: 30
@@ -3746,7 +3746,7 @@ jobs:
         --javac8 "$JAVA_HOME_8_X64/bin/javac" --output "$RUNNER_TEMP/whole-engine-java8-diagnostic"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: whole-engine-java8-diagnostic-${{ github.sha }}
         retention-days: 30
@@ -3792,7 +3792,7 @@ jobs:
         subprocess.run(["python3","-B","scripts/rhino-default-existing-loader-prototype/run-prototype.py",str(temp/"rhino-sources.jar"),"--project",os.getcwd(),"--api-recipe",os.getcwd()+"/runtime-rhino/patches","--javac",os.environ["JAVA_HOME_21_X64"]+"/bin/javac","--java8",os.environ["JAVA_HOME_8_X64"]+"/bin/java","--classpath",cp[0],"--output",str(temp/"rhino-default-prototype")],check=True)'''
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-existing-default-prototype-${{ github.sha }}
         retention-days: 30
@@ -3835,7 +3835,7 @@ jobs:
         subprocess.run(["python3","-B","scripts/rhino-complete-regexp-baseline/run-baseline-oracle.py",str(temp/"rhino-sources.jar"),"--project",os.getcwd(),"--javac",os.environ["JAVA_HOME_21_X64"]+"/bin/javac","--java",os.environ["JAVA_HOME_21_X64"]+"/bin/java","--classpath",cp[0],"--output",str(temp/"rhino-regexp-baseline")],check=True)'''
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-complete-regexp-baseline-${{ github.sha }}
         retention-days: 30
@@ -3880,7 +3880,7 @@ jobs:
         --output "$RUNNER_TEMP/host-contract-oracle"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: complete-host-schema-modern-${{ github.sha }}
         retention-days: 30
@@ -3923,7 +3923,7 @@ jobs:
         "$JAVA_HOME_17_X64" --phase api --output "$RUNNER_TEMP/remaining-api-cohort"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: remaining-engine-api-cohort-${{ github.sha }}
         retention-days: 30
@@ -3960,7 +3960,7 @@ jobs:
         "$JAVA_HOME_17_X64/bin/javac" --java "$JAVA_HOME_17_X64/bin/java" --output "$RUNNER_TEMP/client-native-syntax"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: client-native-syntax-frontier-${{ github.sha }}
         retention-days: 30
@@ -3995,7 +3995,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: canonical-textblock-oracle-${{ github.sha }}
         retention-days: 30
@@ -4023,7 +4023,7 @@ jobs:
         "$JAVA_HOME_17_X64/bin/javac" --java "$JAVA_HOME_17_X64/bin/java" --output "$RUNNER_TEMP/guide-textblocks"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: guide-textblock-language-${{ github.sha }}
         retention-days: 30
@@ -4064,7 +4064,7 @@ jobs:
         "$JAVA_HOME_17_X64" --phase pattern --output "$RUNNER_TEMP/remaining-pattern-cohort"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: remaining-engine-pattern-cohort-${{ github.sha }}
         retention-days: 30
@@ -4114,7 +4114,7 @@ jobs:
         if x.startswith("/") and ".jar" in x]; assert len(cp)==1,lines; subprocess.run(["python3","-B","scripts/verify-rhino-canonical-java8.py",str(t/"rhino-sources.jar"),"--javac8",os.environ["JAVA_HOME_8_X64"]+"/bin/javac","--java8",os.environ["JAVA_HOME_8_X64"]+"/bin/java","--classpath",cp[0],"--output",str(t/"rhino-canonical-java8")],check=True)'''
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-canonical-java8-${{ github.sha }}
         retention-days: 30
@@ -4151,7 +4151,7 @@ jobs:
         --tests dev.openallay.script.RhinoJavascriptRuntimeTest --tests dev.openallay.script.RhinoJavascriptArrayConstructorTest'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-canonical-default-modern-${{ github.sha }}
         retention-days: 30
@@ -4187,7 +4187,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: union-catch-pattern-oracle-${{ github.sha }}
         retention-days: 30
@@ -4220,7 +4220,7 @@ jobs:
         --tests dev.openallay.settings.diagnostics.SettingsDiagnosticsAggregatorTest
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-result-closed-modern-${{ github.sha }}
         retention-days: 30
@@ -4246,7 +4246,7 @@ jobs:
         --source-root "$PWD" --jdk17 "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/specialized-source"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: specialized-trace-try-literal-prepare-${{ github.sha }}
         retention-days: 30
@@ -4283,7 +4283,7 @@ jobs:
         python3 -B scripts/verify-rhino-java8-package.py "$PWD"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: rhino-java8-package-${{ github.sha }}
         retention-days: 30
@@ -4324,7 +4324,7 @@ jobs:
         "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/remaining-switch-cohort"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: remaining-switch-language-cohort-${{ github.sha }}
         retention-days: 30
@@ -4366,7 +4366,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: captured-call-pattern-oracle-${{ github.sha }}
         retention-days: 30
@@ -4401,7 +4401,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: while-pattern-oracle-${{ github.sha }}
         retention-days: 30
@@ -4443,7 +4443,7 @@ jobs:
         "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/five-union"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: five-union-pattern-prepare-${{ github.sha }}
         retention-days: 30
@@ -4491,7 +4491,7 @@ jobs:
         --tests dev.openallay.script.command.CommandCapabilityConfigTest
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: specialized-script-trace-modern-${{ github.sha }}
         retention-days: 30
@@ -4532,7 +4532,7 @@ jobs:
         "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/four-pattern"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: four-remaining-pattern-prepare-${{ github.sha }}
         retention-days: 30
@@ -4568,7 +4568,7 @@ jobs:
         --tests dev.openallay.script.UnrestrictedJava8PublicApiTest
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: unrestricted-java8-public-api-modern-${{ github.sha }}
         retention-days: 30
@@ -4619,7 +4619,7 @@ jobs:
         "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/four-pattern"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: peer-pattern-final-batch-${{ github.sha }}
         retention-days: 30
@@ -4667,7 +4667,7 @@ jobs:
         "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/model-whole-domain"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: model-whole-domain-prepare-${{ github.sha }}
         retention-days: 30
@@ -4702,7 +4702,7 @@ jobs:
         "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --output "$RUNNER_TEMP/residual-six-api"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: residual-six-api-java8-${{ github.sha }}
         retention-days: 30
@@ -4731,7 +4731,7 @@ jobs:
         --jdk17 "$JAVA_HOME_17_X64" --output "$RUNNER_TEMP/public-charset-write-probe"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: public-charset-write-probe-${{ github.sha }}
         retention-days: 30
@@ -4769,7 +4769,7 @@ jobs:
         --java8 "$JAVA_HOME_8_X64/bin/java" --expected-sources 706 --output "$RUNNER_TEMP/whole-engine-java8-runtime"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: whole-engine-java8-runtime-${{ github.sha }}
         retention-days: 30
@@ -4806,7 +4806,7 @@ jobs:
         "$RUNNER_TEMP/normal-engine-classpath.json" --output "$RUNNER_TEMP/normal-engine-java8-receipt.json"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: normal-engine-java8-publication-${{ github.sha }}
         retention-days: 30
@@ -4845,7 +4845,7 @@ jobs:
         "$JAVA_HOME_8_X64/bin/java" "$PWD/engine-core/src/main/java/dev/openallay/util/Java8Collections.java"'
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: fixed-map-all-arities-java8-${{ github.sha }}
         retention-days: 30
@@ -4875,7 +4875,7 @@ jobs:
         "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --output "$RUNNER_TEMP/native-callback-pattern"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: native-callback-pattern-java8-${{ github.sha }}
         retention-days: 30
@@ -4907,7 +4907,7 @@ jobs:
         "$RUNNER_TEMP/native-harness-textblock"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: native-harness-textblock-prepare-${{ github.sha }}
         retention-days: 30
@@ -4944,7 +4944,7 @@ jobs:
         "$PWD" --jdk17 "$JAVA_HOME_17_X64" --jdk8 "$JAVA_HOME_8_X64" --output "$RUNNER_TEMP/native-standard-future-timeout-java8"
     - name: Retain actual source compiler and runtime evidence
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
         name: native-standard-future-timeout-java8-${{ github.sha }}
         retention-days: 30
